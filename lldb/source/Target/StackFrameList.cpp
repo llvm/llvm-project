@@ -212,10 +212,9 @@ bool StackFrameList::WereAllFramesFetched() const {
 }
 
 /// A sequence of calls that comprise some portion of a backtrace. Each frame
-/// is represented as a pair of a callee (Function *) and an address within the
-/// callee.
+/// is represented as a pair of a callee and an address within the callee.
 struct CallDescriptor {
-  Function *func;
+  SymbolContext callee;
   CallEdge::AddrType address_type = CallEdge::AddrType::Call;
   addr_t address = LLDB_INVALID_ADDRESS;
 };
@@ -248,12 +247,12 @@ static void FindInterveningFrames(Function &begin, Function &end,
   }
 
   // The first callee may not be resolved, or there may be nothing to fill in.
-  Function *first_callee = first_edge->GetCallee(images, exe_ctx);
-  if (!first_callee) {
+  SymbolContext first_callee = first_edge->GetCallee(images, exe_ctx);
+  if (!first_callee.function) {
     LLDB_LOG_VERBOSE(log, "Could not resolve callee");
     return;
   }
-  if (first_callee == &end) {
+  if (first_callee.function == &end) {
     LLDB_LOG_VERBOSE(
         log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
         end.GetDisplayName(), return_pc);
@@ -277,16 +276,16 @@ static void FindInterveningFrames(Function &begin, Function &end,
         ExecutionContext &context)
         : end(end), images(images), target(target), context(context) {}
 
-    void search(CallEdge &first_edge, Function &first_callee,
+    void search(CallEdge &first_edge, const SymbolContext &first_callee,
                 CallSequence &path) {
       dfs(first_edge, first_callee);
       if (!ambiguous)
         path = std::move(solution_path);
     }
 
-    void dfs(CallEdge &current_edge, Function &callee) {
+    void dfs(CallEdge &current_edge, const SymbolContext &callee) {
       // Found a path to the target function.
-      if (&callee == end) {
+      if (callee.function == end) {
         if (solution_path.empty())
           solution_path = active_path;
         else
@@ -298,22 +297,22 @@ static void FindInterveningFrames(Function &begin, Function &end,
       // there's more than one way to reach a target. This errs on the side of
       // caution: it conservatively stops searching when some solutions are
       // still possible to save time in the average case.
-      if (!visited_nodes.insert(&callee).second) {
+      if (!visited_nodes.insert(callee.function).second) {
         ambiguous = true;
         return;
       }
 
       // Search the calls made from this callee.
-      active_path.push_back(CallDescriptor{&callee});
-      for (const auto &edge : callee.GetTailCallingEdges()) {
-        Function *next_callee = edge->GetCallee(images, context);
-        if (!next_callee)
+      active_path.push_back(CallDescriptor{callee});
+      for (const auto &edge : callee.function->GetTailCallingEdges()) {
+        SymbolContext next_callee = edge->GetCallee(images, context);
+        if (!next_callee.function)
           continue;
 
         std::tie(active_path.back().address_type, active_path.back().address) =
-            edge->GetCallerAddress(callee, target);
+            edge->GetCallerAddress(*callee.function, target);
 
-        dfs(*edge, *next_callee);
+        dfs(*edge, next_callee);
         if (ambiguous)
           return;
       }
@@ -321,7 +320,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images, target, exe_ctx).search(*first_edge, *first_callee, path);
+  DFS(&end, images, target, exe_ctx).search(*first_edge, first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize
@@ -384,8 +383,8 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
                         path, images, log);
 
   // Push synthetic tail call frames.
-  for (auto calleeInfo : llvm::reverse(path)) {
-    Function *callee = calleeInfo.func;
+  for (const auto &calleeInfo : llvm::reverse(path)) {
+    Function *callee = calleeInfo.callee.function;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
     addr_t cfa = LLDB_INVALID_ADDRESS;

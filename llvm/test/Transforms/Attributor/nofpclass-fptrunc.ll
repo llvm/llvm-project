@@ -134,7 +134,7 @@ define float @ret_fptrunc_nonorm(double nofpclass(norm) %arg0) {
 }
 
 define float @ret_fptrunc_posonly(double nofpclass(ninf nnorm nsub nzero) %arg0) {
-; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fptrunc_posonly
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fptrunc_posonly
 ; CHECK-SAME: (double nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -164,7 +164,7 @@ define float @ret_fptrunc_posonly_zero_nan(double nofpclass(ninf nnorm nsub nan)
 }
 
 define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_fptrunc_posonly_nan
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_fptrunc_posonly_nan
 ; CHECK-SAME: (double nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -174,7 +174,7 @@ define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan
 }
 
 define float @ret_fptrunc_negonly(double nofpclass(pinf pnorm psub pzero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_negonly
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fptrunc_negonly
 ; CHECK-SAME: (double nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -184,7 +184,7 @@ define float @ret_fptrunc_negonly(double nofpclass(pinf pnorm psub pzero) %arg0)
 }
 
 define float @ret_fptrunc_negonly_zero(double nofpclass(pinf pnorm psub) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_negonly_zero
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_fptrunc_negonly_zero
 ; CHECK-SAME: (double nofpclass(pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -194,7 +194,7 @@ define float @ret_fptrunc_negonly_zero(double nofpclass(pinf pnorm psub) %arg0) 
 }
 
 define float @ret_fptrunc_negonly_zero_nan(double nofpclass(pinf pnorm psub nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_negonly_zero_nan
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_negonly_zero_nan
 ; CHECK-SAME: (double nofpclass(nan pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -206,7 +206,7 @@ define float @ret_fptrunc_negonly_zero_nan(double nofpclass(pinf pnorm psub nan)
 define float @ret_fptrunc_round(double %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -216,7 +216,7 @@ define float @ret_fptrunc_round(double %arg0) {
 define float @ret_fptrunc_round_nonan(double nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan
 ; CHECK-SAME: (double nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -226,7 +226,7 @@ define float @ret_fptrunc_round_nonan(double nofpclass(nan) %arg0) {
 define float @ret_fptrunc_round_noqnan(double nofpclass(qnan) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_noqnan
 ; CHECK-SAME: (double nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(qnan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(qnan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -236,7 +236,7 @@ define float @ret_fptrunc_round_noqnan(double nofpclass(qnan) %arg0) {
 define float @ret_fptrunc_round_nosnan(double nofpclass(snan) %arg0) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_fptrunc_round_nosnan
 ; CHECK-SAME: (double nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(snan) float @llvm.fptrunc.round.f32.f64(double nofpclass(snan) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(snan) float @llvm.fptrunc.round.f32.f64(double nofpclass(snan) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -246,7 +246,7 @@ define float @ret_fptrunc_round_nosnan(double nofpclass(snan) %arg0) {
 define float @ret_fptrunc_round_noinf(double nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_noinf
 ; CHECK-SAME: (double nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(inf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -256,7 +256,7 @@ define float @ret_fptrunc_round_noinf(double nofpclass(inf) %arg0) {
 define float @ret_fptrunc_round_nopinf(double nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nopinf
 ; CHECK-SAME: (double nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pinf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -266,7 +266,7 @@ define float @ret_fptrunc_round_nopinf(double nofpclass(pinf) %arg0) {
 define float @ret_fptrunc_round_noninf(double nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_noninf
 ; CHECK-SAME: (double nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(ninf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -276,7 +276,7 @@ define float @ret_fptrunc_round_noninf(double nofpclass(ninf) %arg0) {
 define float @ret_fptrunc_round_nozero(double nofpclass(zero) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nozero
 ; CHECK-SAME: (double nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(zero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(zero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -286,7 +286,7 @@ define float @ret_fptrunc_round_nozero(double nofpclass(zero) %arg0) {
 define float @ret_fptrunc_round_nopzero(double nofpclass(pzero) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nopzero
 ; CHECK-SAME: (double nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pzero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(pzero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -296,7 +296,7 @@ define float @ret_fptrunc_round_nopzero(double nofpclass(pzero) %arg0) {
 define float @ret_fptrunc_round_nonzero(double nofpclass(nzero) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nonzero
 ; CHECK-SAME: (double nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(nzero) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(nzero) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -306,7 +306,7 @@ define float @ret_fptrunc_round_nonzero(double nofpclass(nzero) %arg0) {
 define float @ret_fptrunc_round_nonan_noinf(double nofpclass(nan inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_round_nonan_noinf
 ; CHECK-SAME: (double nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -316,7 +316,7 @@ define float @ret_fptrunc_round_nonan_noinf(double nofpclass(nan inf) %arg0) {
 define float @ret_fptrunc_round_nosub(double nofpclass(sub) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nosub
 ; CHECK-SAME: (double nofpclass(sub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(sub) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(sub) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -326,12 +326,265 @@ define float @ret_fptrunc_round_nosub(double nofpclass(sub) %arg0) {
 define float @ret_fptrunc_round_nonorm(double nofpclass(norm) %arg0) {
 ; CHECK-LABEL: define float @ret_fptrunc_round_nonorm
 ; CHECK-SAME: (double nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
   ret float %ext
 }
+
+define float @ret_fptrunc_f64_f32__negnormal_negsubnormal__mode_dynamic_dynamic(double nofpclass(nan inf zero psub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_f64_f32__negnormal_negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (double nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define float @ret_fptrunc_f64_f32__negnormal_negsubnormal__mode_ftpz_dapz(double nofpclass(nan inf zero psub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_f64_f32__negnormal_negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (double nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define float @ret_fptrunc_f64_f32__negnormal__mode_dynamic_dynamic(double nofpclass(nan inf zero sub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_f64_f32__negnormal__mode_dynamic_dynamic
+; CHECK-SAME: (double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define float @ret_fptrunc_f64_f32__negnormal__mode_ftpz_dapz(double nofpclass(nan inf zero sub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_f64_f32__negnormal__mode_ftpz_dapz
+; CHECK-SAME: (double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic(double nofpclass(nan inf zero psub norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (double nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define float @ret_fptrunc_f64_f32__negsubnormal__mode_ftpz_dapz(double nofpclass(nan inf zero psub norm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fptrunc_f64_f32__negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (double nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %trunc = fptrunc double %arg0 to float
+  ret float %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__sub(float nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_fptrunc_f32_bf16__sub
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__psub(float nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) bfloat @ret_fptrunc_f32_bf16__psub
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__nsub(float nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) bfloat @ret_fptrunc_f32_bf16__nsub
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__norm(float nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fptrunc_f32_bf16__norm
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__sub(fp128 nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_fptrunc_f128_f80__sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__psub(fp128 nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) x86_fp80 @ret_fptrunc_f128_f80__psub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__nsub(fp128 nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) x86_fp80 @ret_fptrunc_f128_f80__nsub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__norm(fp128 nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fptrunc_f128_f80__norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+; f32 and bf16 share an exponent range, so an f32 normal cannot underflow and
+; an f32 subnormal becomes either a bf16 subnormal or a zero. The bf16
+; subnormal result is then exposed to the output mode. The ieee_* modes
+; exercise only the input flush and the *_ieee modes only the output flush;
+; the combined modes cannot tell the two apart, since they pass if either one
+; alone is applied.
+
+define bfloat @ret_fptrunc_f32_bf16__no_zero(float nofpclass(zero) %arg0) {
+; CHECK-LABEL: define bfloat @ret_fptrunc_f32_bf16__no_zero
+; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negsubnormal(float nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) bfloat @ret_fptrunc_f32_bf16__negsubnormal
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal(float nofpclass(nan inf zero psub pnorm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define float @ret_fptrunc_round_f64_f32__negnormal(double nofpclass(nan inf zero sub pnorm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @ret_fptrunc_round_f64_f32__negnormal
+; CHECK-SAME: (double nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(nan pinf pzero psub pnorm) float @llvm.fptrunc.round.f32.f64(double nofpclass(nan inf zero sub pnorm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
+  ret float %ext
+}
+
+; bf16 and f32 have the exact same exponent range, so a subnormal result
+; survives, and both the input and the output mode can flush it to a zero.
+
+define bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal__mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negnormal_negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero sub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negnormal__mode_ftpz_dapz(float nofpclass(nan inf zero sub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negsubnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+define bfloat @ret_fptrunc_f32_bf16__negsubnormal__mode_ftpz_dapz(float nofpclass(nan inf zero psub norm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) bfloat @ret_fptrunc_f32_bf16__negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[TRUNC]]
+;
+  %trunc = fptrunc float %arg0 to bfloat
+  ret bfloat %trunc
+}
+
+attributes #0 = { denormal_fpenv(dynamic|dynamic) }
+attributes #1 = { denormal_fpenv(positivezero|positivezero) }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}

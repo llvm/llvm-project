@@ -58,7 +58,7 @@ declare double @llvm.fabs.f64(double)
 ; Function Attrs: nounwind readnone
 define fp128 @fabs_quad_var(fp128 %0) {
 ; CHECK-LABEL: fabs_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s1, (, %s11)
 ; CHECK-NEXT:    st %s0, 8(, %s11)
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)

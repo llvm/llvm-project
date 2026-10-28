@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Parsing dwarfdump's output to determine whether the location list for the
 # parameter "b" covers all of the function. The script searches for information

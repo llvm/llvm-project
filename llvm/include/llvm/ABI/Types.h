@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -61,14 +62,42 @@ protected:
   TypeKind Kind;
   TypeSize SizeInBits;
   Align ABIAlignment;
+  Align UnadjustedAlignment;
 
   Type(TypeKind K, TypeSize SizeInBits, Align ABIAlign)
-      : Kind(K), SizeInBits(SizeInBits), ABIAlignment(ABIAlign) {}
+      : Type(K, SizeInBits, ABIAlign, ABIAlign) {}
+  Type(TypeKind K, TypeSize SizeInBits, Align ABIAlign, Align UnadjustedAlign)
+      : Kind(K), SizeInBits(SizeInBits), ABIAlignment(ABIAlign),
+        UnadjustedAlignment(UnadjustedAlign) {}
 
 public:
   TypeKind getKind() const { return Kind; }
   TypeSize getSizeInBits() const { return SizeInBits; }
+
+  /// Returns the size in bits if it is fixed, otherwise 0.
+  uint64_t getFixedSizeInBitsOrZero() const {
+    return SizeInBits.isFixed() ? SizeInBits.getFixedValue() : 0;
+  }
+
+  /// Returns the size in bits that the source language gives this type,
+  /// including any padding.
+  ///
+  /// An integer is rounded up to whole bytes.  A _BitInt or a floating-point
+  /// type is rounded up further, to its alignment.  That alignment must be the
+  /// one its size is padded to, not one an aligned attribute raised or lowered.
+  /// A complex type is twice the ABI size of its element type.  A fixed-length
+  /// vector counts an integer element other than a _BitInt at its bit width and
+  /// every other element at its own ABI size, so a bool element takes one bit.
+  /// The total is rounded up to a power of two of at least 8 bits.  Any other
+  /// type returns the size it was created with, and a scalable type returns 0.
+  LLVM_ABI uint64_t getABISizeInBits() const;
+
   Align getAlignment() const { return ABIAlignment; }
+
+  /// Alignment before record-level adjustments such as aligned attributes.
+  /// Equal to getAlignment() unless a distinct unadjusted alignment was
+  /// provided when the type was created.
+  Align getUnadjustedAlignment() const { return UnadjustedAlignment; }
 
   TypeSize getTypeAllocSize() const {
     return alignTo(getTypeStoreSize(), getAlignment().value());
@@ -86,6 +115,11 @@ public:
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
   bool isComplex() const { return Kind == TypeKind::Complex; }
   bool isZeroSize() const { return getSizeInBits().isZero(); }
+
+  LLVM_ABI bool isSVESizelessType() const;
+
+  /// True if this type is a record that is empty for ABI purposes.
+  LLVM_ABI bool isEmptyRecord() const;
 };
 
 class VoidType : public Type {
@@ -181,10 +215,19 @@ public:
 };
 
 class PointerType : public PointerLikeType {
+  bool HasAddressSpaceQualifier;
+
 public:
-  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0)
+  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0,
+              bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
-                        AddressSpace) {}
+                        AddressSpace),
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
+    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
+           "an unqualified pointer is in address space 0");
+  }
+
+  bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -286,6 +329,11 @@ public:
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
   bool isSVECount() const { return VecKind == VectorKind::SVECount; }
 
+  bool isFixedLengthSVEData() const { return isFixedLength() && isSVEData(); }
+  bool isFixedLengthSVEPredicate() const {
+    return isFixedLength() && isSVEPredicate();
+  }
+
   /// Returns true for any of the AArch64 SVE flavors.
   bool isSVEType() const { return VecKind != VectorKind::Generic; }
 
@@ -359,12 +407,12 @@ private:
 
 public:
   RecordType(ArrayRef<FieldInfo> StructFields, ArrayRef<FieldInfo> Bases,
-             ArrayRef<FieldInfo> VBases, TypeSize Size, Align Align,
-             StructPacking Pack = StructPacking::Default,
+             ArrayRef<FieldInfo> VBases, TypeSize Size, Align ABIAlign,
+             Align UnadjustedAlign, StructPacking Pack = StructPacking::Default,
              RecordFlags RecFlags = RecordFlags::None)
-      : Type(TypeKind::Record, Size, Align), Fields(StructFields),
-        BaseClasses(Bases), VirtualBaseClasses(VBases), Packing(Pack),
-        Flags(RecFlags) {}
+      : Type(TypeKind::Record, Size, ABIAlign, UnadjustedAlign),
+        Fields(StructFields), BaseClasses(Bases), VirtualBaseClasses(VBases),
+        Packing(Pack), Flags(RecFlags) {}
   uint32_t getNumFields() const { return Fields.size(); }
   StructPacking getPacking() const { return Packing; }
 
@@ -448,9 +496,10 @@ public:
   }
 
   const PointerType *getPointerType(uint64_t Size, Align Align,
-                                    unsigned Addrspace = 0) {
+                                    unsigned Addrspace = 0,
+                                    bool HasAddressSpaceQualifier = false) {
     return new (Allocator.Allocate<PointerType>())
-        PointerType(Size, Align, Addrspace);
+        PointerType(Size, Align, Addrspace, HasAddressSpaceQualifier);
   }
 
   const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements,
@@ -475,18 +524,21 @@ public:
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
-  /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
-  /// modeled with the shape of svbool_t: a scalable vector of 16 one-bit
-  /// elements.
-  const VectorType *getSVECountType(Align ABIAlign) {
+  /// Creates a scalable predicate or count vector.
+  /// Note: The AArch64 __SVCount_t type is opaque, so it is modeled with the
+  /// shape of svbool_t: a scalable vector of 16 one-bit elements.
+  const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
+                                                          VectorKind Kind) {
+    assert((Kind == VectorKind::SVEPredicate || Kind == VectorKind::SVECount) &&
+           "expected predicate or count vector kind");
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
-                         VectorKind::SVECount);
+                         Kind);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                  Align Align,
+                                  Align ABIAlign, Align UnadjustedAlign,
                                   StructPacking Pack = StructPacking::Default,
                                   ArrayRef<FieldInfo> BaseClasses = {},
                                   ArrayRef<FieldInfo> VirtualBaseClasses = {},
@@ -512,11 +564,12 @@ public:
     ArrayRef<FieldInfo> VBasesRef(VBaseArray, VirtualBaseClasses.size());
 
     return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, BasesRef, VBasesRef, Size, Align, Pack, RecFlags);
+        RecordType(FieldsRef, BasesRef, VBasesRef, Size, ABIAlign,
+                   UnadjustedAlign, Pack, RecFlags);
   }
 
   const RecordType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                 Align Align,
+                                 Align ABIAlign, Align UnadjustedAlign,
                                  StructPacking Pack = StructPacking::Default,
                                  RecordFlags RecFlags = RecordFlags::None) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
@@ -529,9 +582,9 @@ public:
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
 
-    return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(),
-                   Size, Align, Pack, RecFlags | RecordFlags::IsUnion);
+    return new (Allocator.Allocate<RecordType>()) RecordType(
+        FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(), Size, ABIAlign,
+        UnadjustedAlign, Pack, RecFlags | RecordFlags::IsUnion);
   }
 
   const ComplexType *getComplexType(const Type *ElementType, Align Align) {

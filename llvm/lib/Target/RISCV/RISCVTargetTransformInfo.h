@@ -72,6 +72,20 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind) const;
 
+  /// Return the type used to cost vzip.vv, whose LMUL represents the
+  /// interleaved destination EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVZIPCostVT(MVT InterleavedVT) const;
+
+  /// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
+  /// the interleaved source EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
+
+  /// If a fixed-length shuffle can be lowered to a vzip.vv instruction,
+  /// return its cost.
+  InstructionCost getVZIPCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                              VectorType *SrcTy, ArrayRef<int> Mask,
+                              TTI::TargetCostKind CostKind) const;
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -88,6 +102,8 @@ public:
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
                                     Instruction *Inst = nullptr) const override;
+  bool preferLoopExitWithEqualityComparison(
+      const ICmpInst &Cond, const APInt &PostIncExitValue) const override;
   InstructionCost
   getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                       Type *Ty, TTI::TargetCostKind CostKind) const override;
@@ -178,7 +194,7 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr,
+                 const Instruction *CtxI = nullptr,
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override;
 
@@ -228,7 +244,7 @@ public:
   std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
       unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
+      ArrayRef<const Value *> Args, const Instruction *CtxI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -273,7 +289,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
@@ -546,7 +562,8 @@ public:
   bool canSplatOperand(Instruction *I, int Operand) const;
   /// Return true if a vector instruction will lower to a target instruction
   /// able to splat the given operand.
-  bool canSplatOperand(unsigned Opcode, int Operand) const;
+  bool canSplatOperand(unsigned Opcode, int Operand,
+                       Intrinsic::ID IntrinsicID) const;
 
   TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
       ArrayRef<int> Mask, ArrayRef<Value *> Scalars,

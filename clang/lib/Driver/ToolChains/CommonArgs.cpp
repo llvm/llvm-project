@@ -211,10 +211,10 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
     return false;
 
   case llvm::Triple::aarch64:
-    // Arm64 Windows requires that the frame chain is valid, as there is no
-    // way to indicate during a stack walk that a frame has used the frame
-    // pointer as a general purpose register.
-    return Triple.isOSWindows();
+    // Arm64 Windows (and UEFI, which follows the same ABI) requires that the
+    // frame chain is valid, as there is no way to indicate during a stack walk
+    // that a frame has used the frame pointer as a general purpose register.
+    return Triple.isOSWindowsOrUEFI();
   }
 }
 
@@ -1303,7 +1303,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                 options::OPT_fno_split_machine_functions)) {
     if (A->getOption().matches(options::OPT_fsplit_machine_functions))
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                           "-split-machine-functions"));
+                                           "-function-splitting=all"));
   }
 
   if (auto *A =
@@ -1744,11 +1744,14 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   if (SanArgs.needsAsanRt())
     HelperStaticRuntimes.push_back("asan_static");
 
-  // Offloading images can live in DSOs, the host interceptors must follow.
-  if (NeedsOffloadRt) {
+  // Offloading images can live in DSOs, the host interceptors must follow. The
+  // shared UBSan runtime already contains them.
+  if (NeedsOffloadRt && !SanArgs.needsSharedRt()) {
     NonWholeStaticRuntimes.push_back("ubsan_offload");
     RequiredSymbols.push_back("__ubsan_offload_init");
   }
+  if (NeedsOffloadRt && !Args.hasArg(options::OPT_shared))
+    HelperStaticRuntimes.push_back("ubsan_offload-preinit");
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
@@ -1792,6 +1795,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     StaticRuntimes.push_back("dfsan");
   if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
+  if (SanArgs.needsCopyProfRt())
+    StaticRuntimes.push_back("copyprof");
   if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
@@ -1838,7 +1843,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("scudo_standalone_cxx");
   }
   if (SanArgs.needsUbsanLoopDetectRt())
-    NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
+    StaticRuntimes.push_back("ubsan_loop_detect");
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
@@ -2932,7 +2937,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return true;
     }
-    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    D.Diag(diag::err_drv_device_lib_not_found) << /*libclc*/ 0 << LibclcFile;
     return false;
   }
 
@@ -2999,7 +3004,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       return true;
   }
 
-  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
+  D.Diag(diag::err_drv_device_lib_not_found) << /*libclc*/ 0 << "libclc.bc";
   return false;
 }
 
