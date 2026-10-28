@@ -61,6 +61,13 @@ class RemarkEngine;
 ///    processRequest(request, cxt);
 ///  }
 ///
+/// Clients that manage their own threads can enable thread-safe context access
+/// without creating a thread pool or enabling parallel execution within MLIR.
+/// Required dialects must be loaded before accessing the context concurrently:
+///
+///  MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
+///  ctx.enableThreadSafeLocking();
+///
 class MLIRContext {
 public:
   enum class Threading { DISABLED, ENABLED };
@@ -190,6 +197,8 @@ public:
   };
 
   /// Return true if multi-threading is enabled by the context.
+  /// This controls parallel execution within MLIR. Use
+  /// isThreadSafeLockingEnabled() to query locking for context access.
 #if LLVM_ENABLE_THREADS
   bool isMultithreadingEnabled();
 #else
@@ -197,12 +206,36 @@ public:
 #endif
 
   /// Set the flag specifying if multi-threading is disabled by the context.
+  /// Enabling multi-threading also enables thread-safe locking. Disabling it
+  /// also disables thread-safe locking, which can be re-enabled independently
+  /// with enableThreadSafeLocking().
   /// The command line debugging flag `--mlir-disable-threading` is overriding
   /// this call and making it a no-op!
   void disableMultithreading(bool disable = true);
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
   }
+
+  /// Return true if thread-safe locking is enabled for context access.
+  /// This does not imply that parallel execution within MLIR is enabled.
+#if LLVM_ENABLE_THREADS
+  bool isThreadSafeLockingEnabled();
+#else
+  bool isThreadSafeLockingEnabled() { return false; }
+#endif
+
+  /// Enable thread-safe locking for context access, including
+  /// uniquing types, attributes, affine expressions, and operation names.
+  /// This does not create a thread pool or change isMultithreadingEnabled().
+  /// For example, clients using their own threads can construct a context with
+  /// Threading::DISABLED and then call enableThreadSafeLocking().
+  ///
+  /// Disabling multi-threading also disables locking. This method must be
+  /// called when no other threads are accessing the context. Dialects
+  /// must still be loaded before accessing the context concurrently.
+  /// Unlike enableMultithreading(), this is not overridden by the debugging
+  /// flag --mlir-disable-threading.
+  void enableThreadSafeLocking();
 
   /// Set a new thread pool to be used in this context. This method requires
   /// that multithreading is disabled for this context prior to the call. This
