@@ -156,7 +156,7 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    bitop 0101, r3, r4, 0
 ; CHECK-NEXT:    mov_imm r5l, 1
-; CHECK-NEXT:    mov_imm r6l, 1
+; CHECK-NEXT:    mov_imm r6, 1
 ; CHECK-NEXT:    // implicit-def: $r4
 ; CHECK-NEXT:    if_icmp r0l, nueq, r1, r3, 1
 ; CHECK-NEXT:  // %bb.3: // %inner.c
@@ -167,7 +167,6 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:  // %bb.4: // %Flow
 ; CHECK-NEXT:    // in Loop: Header=BB3_2 Depth=2
 ; CHECK-NEXT:    pop_exec r0l, 1
-; CHECK-NEXT:    bitop 0101, r6, r6l, 0
 ; CHECK-NEXT:    while_icmp r0l, ueq, r6, 0, 1
 ; CHECK-NEXT:    jmp_exec_any .LBB3_2
 ; CHECK-NEXT:  // %bb.5: // %loop.exit.guard
@@ -175,7 +174,7 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    xor r4l, r5l, 1
 ; CHECK-NEXT:    bitop 0101, r5, r4l, 0
-; CHECK-NEXT:    mov_imm r4l, 1
+; CHECK-NEXT:    mov_imm r4, 1
 ; CHECK-NEXT:    if_icmp r0l, nueq, r5, 0, 1
 ; CHECK-NEXT:  // %bb.6: // %outer.latch
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
@@ -185,7 +184,6 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:  // %bb.7: // %Flow3
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    pop_exec r0l, 1
-; CHECK-NEXT:    bitop 0101, r4, r4l, 0
 ; CHECK-NEXT:    while_icmp r0l, ueq, r4, 0, 1
 ; CHECK-NEXT:    jmp_exec_any .LBB3_1
 ; CHECK-NEXT:  // %bb.8: // %exit
