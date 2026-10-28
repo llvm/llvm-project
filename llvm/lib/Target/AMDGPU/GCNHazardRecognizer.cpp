@@ -2771,7 +2771,7 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
   bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
   unsigned Category = 0;
 
-  unsigned Latency = TII->getInstrLatency(MI);
+  unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
   case 4:
     // Dense 4-cycle WMMA (gfx1250 16x16x64 FP8/BF8 and f8f6f4 with both
@@ -3278,7 +3278,8 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
       Register DstReg = MI.getOperand(0).getReg();
       if (DstReg == Reg)
         return false;
-      HazardDefLatency = std::max(HazardDefLatency, TII.getInstrLatency(MI));
+      HazardDefLatency =
+          std::max(HazardDefLatency, TSchedModel.computeInstrLatency(&MI));
       return TRI.regsOverlap(DstReg, Reg);
     };
 
@@ -3354,7 +3355,8 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
       if (!SIInstrInfo::isMFMA(MI))
         return false;
       Register Reg = TII.getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
-      HazardDefLatency = std::max(HazardDefLatency, TII.getInstrLatency(MI));
+      HazardDefLatency =
+          std::max(HazardDefLatency, TSchedModel.computeInstrLatency(&MI));
       return TRI.regsOverlap(Reg, DstReg);
     };
 
@@ -3480,7 +3482,7 @@ int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
     break;
   }
 
-  int NumPasses = TII.getInstrLatency(*Writer);
+  int NumPasses = TSchedModel.computeInstrLatency(Writer);
   if (ST.hasGFX940Insts()) {
     if (!TII.isXDL(*Writer))
       return GFX940_SMFMA_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
@@ -3535,7 +3537,8 @@ int GCNHazardRecognizer::getMFMAReadWaitStates(const MachineInstr &Consumer,
           (Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
            Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64))
         NeedWaitStates = DMFMA4x4WritesVGPRFullSrcCWaitStates;
-      else if (ST.hasGFX940Insts() && TII.getInstrLatency(Producer) == 2)
+      else if (ST.hasGFX940Insts() &&
+               TSchedModel.computeInstrLatency(&Producer) == 2)
         NeedWaitStates = GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates;
 
       // The accumulator forwarding path that allows zero wait states is only
@@ -3565,7 +3568,7 @@ int GCNHazardRecognizer::getMFMAReadWaitStates(const MachineInstr &Consumer,
       NeedWaitStates = DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates;
       break;
     default:
-      int NumPasses = TII.getInstrLatency(Producer);
+      int NumPasses = TSchedModel.computeInstrLatency(&Producer);
 
       if (ST.hasGFX940Insts()) {
         NeedWaitStates =
@@ -3888,7 +3891,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
       }
 
       auto MFMAWindow = [&](const MachineInstr &Producer) {
-        int NumPasses = TII.getInstrLatency(Producer);
+        int NumPasses = TSchedModel.computeInstrLatency(&Producer);
         int NeedWaitStates = MaxWaitStates;
 
         if (SIInstrInfo::isDGEMM(Producer.getOpcode())) {
@@ -3992,7 +3995,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
 
     auto MFMAWawWindow = [&](const MachineInstr &Producer) {
       int NeedWaitStates = MaxWaitStates;
-      int NumPasses = TII.getInstrLatency(Producer);
+      int NumPasses = TSchedModel.computeInstrLatency(&Producer);
 
       if (SIInstrInfo::isDGEMM(Producer.getOpcode())) {
         switch (NumPasses) {
@@ -4062,7 +4065,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
       if (!SrcC->isReg() || !TRI.regsOverlap(SrcC->getReg(), Reg))
         return std::nullopt;
 
-      switch (TII.getInstrLatency(Reader)) {
+      switch (TSchedModel.computeInstrLatency(&Reader)) {
       case 2:
         return SMFMA4x4ReadVgprVALUWarWaitStates;
       case 4:
@@ -4102,7 +4105,7 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (IsMFMAFn(*MI)) {
     int W = getWaitStatesSince(IsMFMAFn, 16);
     if (MAI)
-      return W < (int)TII.getInstrLatency(*MAI);
+      return W < (int)TSchedModel.computeInstrLatency(MAI);
   }
 
   return false;

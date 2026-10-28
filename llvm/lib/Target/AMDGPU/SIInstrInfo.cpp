@@ -12150,18 +12150,9 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
 }
 
 unsigned SIInstrInfo::getDSLatencyMultiplier(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-
-  // Only apply latency multiplier for coexec scheduler
-  if (AMDGPU::getSchedStrategy(F) != "coexec" &&
-      !LDSContentionMultiplier.getNumOccurrences())
-    return 100;
-
   // Check for LDS contention detected by AMDGPUPerfHintAnalysis
   const AMDGPUMachineFunctionInfo *MFI =
       MF.getInfo<AMDGPUMachineFunctionInfo>();
-  if (MFI->hasLDSContention())
-    return LDSContentionMultiplier;
 
-  return 100;
+  return MFI->hasLDSContention() ? LDSContentionMultiplier : 100;
 }

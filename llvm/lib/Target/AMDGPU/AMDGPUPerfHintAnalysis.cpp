@@ -106,7 +106,6 @@ private:
   AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
   static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
   static bool needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &F);
-  static bool hasLDSCont(const AMDGPUPerfHintAnalysis::FuncInfo &F);
 
   bool isIndirectAccess(const Instruction *Inst) const;
 
@@ -227,29 +226,24 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
 
   LLVM_DEBUG(dbgs() << "[AMDGPUPerfHint] process " << F.getName() << '\n');
 
-  auto IsInnermostCycle = [this](const BasicBlock &B) {
-    CycleRef C = CI.getCycle(&B);
-    if (!C.isValid())
-      return false;
-
-    return llvm::none_of(CI.getBlocks(C), [&](const BasicBlock *CB) {
-      CycleRef InnerC = CI.getCycle(CB);
-      return InnerC != C && CI.contains(C, InnerC);
-    });
-  };
+  // Track LDS and matrix instruction counts per innermost cycle to compute
+  // contention ratio per-cycle rather than aggregating across all cycles.
+  DenseMap<CycleRef, std::pair<unsigned, unsigned>> CycleCounts;
 
   for (const BasicBlock &B : F) {
     LastAccess = MemAccessInfo();
     unsigned UsedGlobalLoadsInBB = 0;
 
-    bool InInnermostCycle = IsInnermostCycle(B);
+    CycleRef BlockCycle = CI.getCycle(&B);
+    bool InInnermostCycle =
+        BlockCycle.isValid() && CI.children(BlockCycle).empty();
 
     for (const Instruction &I : B) {
       if (InInnermostCycle) {
         if (isMatrixIntrinsic(&I))
-          ++FI.MatrixInstLoopCost;
+          ++CycleCounts[BlockCycle].second;
         else if (isLDSLoad(&I))
-          ++FI.LDSInstLoopCost;
+          ++CycleCounts[BlockCycle].first;
       }
       if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
         unsigned Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
@@ -308,8 +302,22 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
     }
   }
 
-  // Check for LDS contention after visiting all basic blocks
-  FI.HasLDSContention = hasLDSCont(FI);
+  // Check for LDS contention per innermost cycle. Flag contention if any
+  // individual cycle has LDS loads >= threshold ratio of matrix ops.
+  // Only apply this heuristic when using the coexec scheduler.
+  bool UseCoExecScheduler = AMDGPU::getSchedStrategy(F) == "coexec";
+  for (const auto &[Cycle, Counts] : CycleCounts) {
+    unsigned LDSCount = Counts.first;
+    unsigned MatrixCount = Counts.second;
+    if (UseCoExecScheduler && !FI.HasLDSContention && MatrixCount > 0 &&
+        LDSCount * 100 / MatrixCount >= LDSContentionThreshold) {
+      LLVM_DEBUG(dbgs() << "Found cycle with LDS contention: " << LDSCount
+                        << " LDS loads, " << MatrixCount << " matrix ops\n"
+                        << "Threshold for LDS/MatrixOp ratio: "
+                        << LDSContentionThreshold << "\n");
+      FI.HasLDSContention = true;
+    }
+  }
 
   return &FI;
 }
@@ -366,20 +374,6 @@ bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
   return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
 }
 
-bool AMDGPUPerfHint::hasLDSCont(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
-  if (FI.MatrixInstLoopCost > 0 &&
-      FI.LDSInstLoopCost * 100 / FI.MatrixInstLoopCost >=
-          LDSContentionThreshold) {
-    LLVM_DEBUG(
-        dbgs() << "Found cycle with LDS contention: " << FI.LDSInstLoopCost
-               << " LDS loads, " << FI.MatrixInstLoopCost << " matrix ops\n"
-               << "Threshold for LDS/MatrixOp ratio: " << LDSContentionThreshold
-               << "\n");
-    return true;
-  }
-
-  return false;
-}
 
 bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
   return ((FI.MemInstCost + FI.IAMInstCost * IAWeight +
@@ -401,6 +395,9 @@ bool AMDGPUPerfHint::isLocalAddr(const Value *V) const {
   return false;
 }
 
+// Check if the instruction is an LDS load. This is not exact and may match
+// intrinsics like llvm.memmove, but since the LDS contention heuristic is
+// designed to be loose, this is not problematic.
 bool AMDGPUPerfHint::isLDSLoad(const Instruction *I) const {
   if (const auto *LdI = dyn_cast<LoadInst>(I))
     return isLocalAddr(LdI->getPointerOperand());

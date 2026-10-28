@@ -3,10 +3,11 @@
 
 ; Test that all matrix intrinsic families (wmma, mfma, swmmac, smfmac) are
 ; recognized by the perf hint analysis for LDS contention detection.
+; The LDS contention heuristic only applies when using the coexec scheduler.
 
 ; CHECK: [AMDGPUPerfHint] process test_wmma_contention
 ; CHECK: Found cycle with LDS contention: 2 LDS loads, 1 matrix ops
-define void @test_wmma_contention(ptr addrspace(3) %lds, <16 x half> %a, <16 x half> %b, <16 x half> %c, ptr addrspace(1) %out) {
+define void @test_wmma_contention(ptr addrspace(3) %lds, <16 x half> %a, <16 x half> %b, <16 x half> %c, ptr addrspace(1) %out) #0 {
 entry:
   br label %loop
 
@@ -31,7 +32,7 @@ exit:
 
 ; CHECK: [AMDGPUPerfHint] process test_mfma_contention
 ; CHECK: Found cycle with LDS contention: 2 LDS loads, 1 matrix ops
-define void @test_mfma_contention(ptr addrspace(3) %lds, float %a, float %b, <32 x float> %c, ptr addrspace(1) %out) {
+define void @test_mfma_contention(ptr addrspace(3) %lds, float %a, float %b, <32 x float> %c, ptr addrspace(1) %out) #0 {
 entry:
   br label %loop
 
@@ -56,7 +57,7 @@ exit:
 
 ; CHECK: [AMDGPUPerfHint] process test_swmmac_contention
 ; CHECK: Found cycle with LDS contention: 2 LDS loads, 1 matrix ops
-define void @test_swmmac_contention(ptr addrspace(3) %lds, <8 x half> %a, <16 x half> %b, <8 x float> %c, i16 %idx, ptr addrspace(1) %out) {
+define void @test_swmmac_contention(ptr addrspace(3) %lds, <8 x half> %a, <16 x half> %b, <8 x float> %c, i16 %idx, ptr addrspace(1) %out) #0 {
 entry:
   br label %loop
 
@@ -81,7 +82,7 @@ exit:
 
 ; CHECK: [AMDGPUPerfHint] process test_smfmac_contention
 ; CHECK: Found cycle with LDS contention: 2 LDS loads, 1 matrix ops
-define void @test_smfmac_contention(ptr addrspace(3) %lds, <4 x half> %a, <8 x half> %b, <4 x float> %c, ptr addrspace(1) %out) {
+define void @test_smfmac_contention(ptr addrspace(3) %lds, <4 x half> %a, <8 x half> %b, <4 x float> %c, ptr addrspace(1) %out) #0 {
 entry:
   br label %loop
 
@@ -103,6 +104,8 @@ exit:
   store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
+
+attributes #0 = { "amdgpu-sched-strategy"="coexec" }
 
 declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half>, <16 x half>, <16 x half>, i1 immarg)
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32 immarg, i32 immarg, i32 immarg)
