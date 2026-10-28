@@ -14,9 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/DebugLoc.h"
-#include <optional>
 
 namespace llvm {
 
