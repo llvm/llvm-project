@@ -55,6 +55,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <variant>
 
 namespace clang {
@@ -2942,6 +2943,11 @@ public:
                                SourceLocation RParenLoc,
                                ComparisonCategoryResult Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc, StringRef Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            bool IsStoredAsBool,
                                            unsigned NumArgs);
@@ -2959,6 +2965,10 @@ public:
     return TypeTraitExprBits.IsComparisonResult;
   }
 
+  bool isStoredAsStringLiteral() const {
+    return TypeTraitExprBits.IsStringLiteral;
+  }
+
   bool getBoolValue() const {
     assert(!isValueDependent() && TypeTraitExprBits.IsBooleanTypeTrait);
     return TypeTraitExprBits.Value;
@@ -2968,6 +2978,11 @@ public:
     assert(!isValueDependent() && !TypeTraitExprBits.IsBooleanTypeTrait);
     return *getTrailingObjects<APValue>();
   }
+
+  std::string getStringValue() const;
+
+  /// Create a string literal for the value of a string trait.
+  StringLiteral *createStringLiteral(const ASTContext &Context) const;
 
   /// Determine the number of arguments to this type trait.
   unsigned getNumArgs() const { return TypeTraitExprBits.NumArgs; }
