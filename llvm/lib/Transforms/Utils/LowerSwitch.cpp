@@ -27,6 +27,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -71,9 +73,11 @@ struct CaseRange {
   ConstantInt *Low;
   ConstantInt *High;
   BasicBlock *BB;
+  uint32_t Weight;
 
-  CaseRange(ConstantInt *low, ConstantInt *high, BasicBlock *bb)
-      : Low(low), High(high), BB(bb) {}
+  CaseRange(ConstantInt *low, ConstantInt *high, BasicBlock *bb,
+            uint32_t weight = 0)
+      : Low(low), High(high), BB(bb), Weight(weight) {}
 };
 
 using CaseVector = std::vector<CaseRange>;
@@ -191,7 +195,12 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  BranchInst *BI = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  if (Leaf.Weight > 0) {
+    MDBuilder MDB(NewLeaf->getContext());
+    BI->setMetadata(LLVMContext::MD_prof,
+                    MDB.createBranchWeights(Leaf.Weight, 0));
+  }
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
@@ -307,13 +316,21 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
 unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
   unsigned NumSimpleCases = 0;
 
+  SmallVector<uint32_t, 8> Weights;
+  bool HasWeights = extractBranchWeights(*SI, Weights);
+
   // Start with "simple" cases
+  unsigned CaseIdx = 0;
   for (auto Case : SI->cases()) {
-    if (Case.getCaseSuccessor() == SI->getDefaultDest())
+    if (Case.getCaseSuccessor() == SI->getDefaultDest()) {
+      ++CaseIdx;
       continue;
+    }
+    uint32_t W = (HasWeights && CaseIdx + 1 < Weights.size()) ? Weights[CaseIdx + 1] : 0;
     Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
-                              Case.getCaseSuccessor()));
+                              Case.getCaseSuccessor(), W));
     ++NumSimpleCases;
+    ++CaseIdx;
   }
 
   llvm::sort(Cases, CaseCmp());
@@ -333,7 +350,7 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
              "Cases should be strictly ascending");
       if ((nextValue == currentValue + 1) && (currentBB == nextBB)) {
         I->High = J->High;
-        // FIXME: Combine branch weights.
+        I->Weight = (UINT32_MAX - I->Weight > J->Weight) ? I->Weight + J->Weight : UINT32_MAX;
       } else if (++I != J) {
         *I = *J;
       }
