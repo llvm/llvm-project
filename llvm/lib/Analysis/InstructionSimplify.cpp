@@ -6213,7 +6213,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
         (match(Op1, m_FSub(m_AnyZeroFP(), m_Value(X))) ||
-         match(Op1, m_FNegOrFSubNegZero(m_Value(X)))))
+         match(Op1, m_FNeg(m_Value(X)))))
       return X;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
