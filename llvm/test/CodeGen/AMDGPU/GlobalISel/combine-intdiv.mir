@@ -1,0 +1,410 @@
+# RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -run-pass=amdgpu-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name: udiv_shifted_pow2
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_pow2
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[LOG:%.+]]:_(s32) = G_CONSTANT i32 12
+    ; CHECK: [[TOTAL:%.+]]:_(s32) = G_ADD [[Y]], [[LOG]]
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_LSHR [[X]], [[TOTAL]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %c:_(s32) = G_CONSTANT i32 4096
+    %den:_(s32) = G_SHL %c, %y
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_one
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_one
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_LSHR [[X]], [[Y]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %c:_(s32) = G_CONSTANT i32 1
+    %den:_(s32) = G_SHL %c, %y
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_pow2_exact
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_pow2_exact
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[LOG:%.+]]:_(s32) = G_CONSTANT i32 3
+    ; CHECK: [[TOTAL:%.+]]:_(s32) = G_ADD [[Y]], [[LOG]]
+    ; CHECK: [[RESULT:%.+]]:_(s32) = exact G_LSHR [[X]], [[TOTAL]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %c:_(s32) = G_CONSTANT i32 8
+    %den:_(s32) = G_SHL %c, %y
+    %r:_(s32) = exact G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_pow2_s64
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_pow2_s64
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[WIDE:%.+]]:_(s64) = G_ZEXT {{.+}}
+    ; CHECK: [[LOG:%.+]]:_(s32) = G_CONSTANT i32 12
+    ; CHECK: [[TOTAL:%.+]]:_(s32) = G_ADD [[Y]], [[LOG]]
+    ; CHECK: [[RESULT:%.+]]:_(s64) = G_LSHR [[WIDE]], [[TOTAL]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %wide:_(s64) = G_ZEXT %x
+    %c:_(s64) = G_CONSTANT i64 4096
+    %den:_(s64) = G_SHL %c, %y
+    %r:_(s64) = G_UDIV %wide, %den
+    %out:_(s32) = G_TRUNC %r
+    $vgpr0 = COPY %out
+...
+
+---
+name: udiv_shifted_pow2_s8_amount
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_pow2_s8_amount
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[AMT:%.+]]:_(s8) = G_TRUNC {{.+}}
+    ; CHECK: [[LOG:%.+]]:_(s8) = G_CONSTANT i8 4
+    ; CHECK: [[TOTAL:%.+]]:_(s8) = G_ADD [[AMT]], [[LOG]]
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_LSHR [[X]], [[TOTAL]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %amt:_(s8) = G_TRUNC %y
+    %c:_(s32) = G_CONSTANT i32 16
+    %den:_(s32) = G_SHL %c, %amt
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_nonpow2
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_nonpow2
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[DEN:%.+]]:_(s32) = G_SHL {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_UDIV [[X]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %c:_(s32) = G_CONSTANT i32 3
+    %den:_(s32) = G_SHL %c, %y
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_zero
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_zero
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%.+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_UDIV [[X]], [[C]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %c:_(s32) = G_CONSTANT i32 0
+    %den:_(s32) = G_SHL %c, %y
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_pow2_narrow_amount
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_pow2_narrow_amount
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[DEN:%.+]]:_(s32) = G_SHL {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_UDIV [[X]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %amt:_(s1) = G_TRUNC %y
+    %c:_(s32) = G_CONSTANT i32 16
+    %den:_(s32) = G_SHL %c, %amt
+    %r:_(s32) = G_UDIV %x, %den
+    $vgpr0 = COPY %r
+...
+
+---
+name: udiv_shifted_vector
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_vector
+    ; CHECK: [[NUM:%.+]]:_(<2 x s32>) = G_BUILD_VECTOR {{.+}}
+    ; CHECK: [[AMT:%.+]]:_(<2 x s32>) = G_BUILD_VECTOR {{.+}}
+    ; CHECK: [[C0:%.+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[C12:%.+]]:_(s32) = G_CONSTANT i32 12
+    ; CHECK: [[LOG:%.+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C0]](s32), [[C12]](s32)
+    ; CHECK: [[TOTAL:%.+]]:_(<2 x s32>) = G_ADD [[AMT]], [[LOG]]
+    ; CHECK: [[RESULT:%.+]]:_(<2 x s32>) = G_LSHR [[NUM]], [[TOTAL]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %num:_(<2 x s32>) = G_BUILD_VECTOR %x, %x
+    %amt:_(<2 x s32>) = G_BUILD_VECTOR %y, %y
+    %c0:_(s32) = G_CONSTANT i32 1
+    %c1:_(s32) = G_CONSTANT i32 4096
+    %base:_(<2 x s32>) = G_BUILD_VECTOR %c0, %c1
+    %den:_(<2 x s32>) = G_SHL %base, %amt
+    %r:_(<2 x s32>) = G_UDIV %num, %den
+    %lo:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %r
+    $vgpr0 = COPY %lo
+    $vgpr1 = COPY %hi
+...
+
+---
+name: udiv_shifted_vector_nonpow2
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_vector_nonpow2
+    ; CHECK: [[NUM:%.+]]:_(<2 x s32>) = G_BUILD_VECTOR {{.+}}
+    ; CHECK: [[DEN:%.+]]:_(<2 x s32>) = G_SHL {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(<2 x s32>) = G_UDIV [[NUM]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %num:_(<2 x s32>) = G_BUILD_VECTOR %x, %x
+    %amt:_(<2 x s32>) = G_BUILD_VECTOR %y, %y
+    %c0:_(s32) = G_CONSTANT i32 4
+    %c1:_(s32) = G_CONSTANT i32 3
+    %base:_(<2 x s32>) = G_BUILD_VECTOR %c0, %c1
+    %den:_(<2 x s32>) = G_SHL %base, %amt
+    %r:_(<2 x s32>) = G_UDIV %num, %den
+    %lo:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %r
+    $vgpr0 = COPY %lo
+    $vgpr1 = COPY %hi
+...
+
+---
+name: udiv_shifted_vector_undef
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: udiv_shifted_vector_undef
+    ; CHECK: [[NUM:%.+]]:_(<2 x s32>) = G_BUILD_VECTOR {{.+}}
+    ; CHECK: [[DEN:%.+]]:_(<2 x s32>) = G_SHL {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(<2 x s32>) = G_UDIV [[NUM]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %num:_(<2 x s32>) = G_BUILD_VECTOR %x, %x
+    %amt:_(<2 x s32>) = G_BUILD_VECTOR %y, %y
+    %c0:_(s32) = G_CONSTANT i32 4
+    %c1:_(s32) = G_IMPLICIT_DEF
+    %base:_(<2 x s32>) = G_BUILD_VECTOR %c0, %c1
+    %den:_(<2 x s32>) = G_SHL %base, %amt
+    %r:_(<2 x s32>) = G_UDIV %num, %den
+    %lo:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %r
+    $vgpr0 = COPY %lo
+    $vgpr1 = COPY %hi
+...
+
+---
+name: sdiv_nonnegative
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: sdiv_nonnegative
+    ; CHECK: [[LHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_UDIV [[LHS]], [[RHS]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %lhs:_(s32) = G_AND %x, %mask
+    %rhs:_(s32) = G_AND %y, %mask
+    %r:_(s32) = G_SDIV %lhs, %rhs
+    $vgpr0 = COPY %r
+...
+
+---
+name: sdiv_exact_nonnegative
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: sdiv_exact_nonnegative
+    ; CHECK: [[LHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = exact G_UDIV [[LHS]], [[RHS]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %lhs:_(s32) = G_AND %x, %mask
+    %rhs:_(s32) = G_AND %y, %mask
+    %r:_(s32) = exact G_SDIV %lhs, %rhs
+    $vgpr0 = COPY %r
+...
+
+---
+name: srem_nonnegative
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: srem_nonnegative
+    ; CHECK: [[LHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_UREM [[LHS]], [[RHS]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %lhs:_(s32) = G_AND %x, %mask
+    %rhs:_(s32) = G_AND %y, %mask
+    %r:_(s32) = G_SREM %lhs, %rhs
+    $vgpr0 = COPY %r
+...
+
+---
+name: sdiv_unknown_lhs
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: sdiv_unknown_lhs
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[RHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_SDIV [[X]], [[RHS]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %rhs:_(s32) = G_AND %y, %mask
+    %r:_(s32) = G_SDIV %x, %rhs
+    $vgpr0 = COPY %r
+...
+
+---
+name: sdiv_unknown_rhs
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: sdiv_unknown_rhs
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[LHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_SDIV [[LHS]], [[Y]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %lhs:_(s32) = G_AND %x, %mask
+    %r:_(s32) = G_SDIV %lhs, %y
+    $vgpr0 = COPY %r
+...
+
+---
+name: srem_unknown_lhs
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: srem_unknown_lhs
+    ; CHECK: [[X:%.+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[RHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_SREM [[X]], [[RHS]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %rhs:_(s32) = G_AND %y, %mask
+    %r:_(s32) = G_SREM %x, %rhs
+    $vgpr0 = COPY %r
+...
+
+---
+name: srem_unknown_rhs
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: srem_unknown_rhs
+    ; CHECK: [[Y:%.+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[LHS:%.+]]:_(s32) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(s32) = G_SREM [[LHS]], [[Y]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %lhs:_(s32) = G_AND %x, %mask
+    %r:_(s32) = G_SREM %lhs, %y
+    $vgpr0 = COPY %r
+...
+
+---
+name: sdiv_nonnegative_vector
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: sdiv_nonnegative_vector
+    ; CHECK: [[LHS:%.+]]:_(<2 x s32>) = G_AND {{.+}}
+    ; CHECK: [[DEN:%.+]]:_(<2 x s32>) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(<2 x s32>) = G_UDIV [[LHS]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %num:_(<2 x s32>) = G_BUILD_VECTOR %x, %y
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %masks:_(<2 x s32>) = G_BUILD_VECTOR %mask, %mask
+    %lhs:_(<2 x s32>) = G_AND %num, %masks
+    %ys:_(<2 x s32>) = G_BUILD_VECTOR %y, %y
+    %den:_(<2 x s32>) = G_AND %ys, %masks
+    %r:_(<2 x s32>) = G_SDIV %lhs, %den
+    %lo:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %r
+    $vgpr0 = COPY %lo
+    $vgpr1 = COPY %hi
+...
+
+---
+name: srem_nonnegative_vector
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: srem_nonnegative_vector
+    ; CHECK: [[LHS:%.+]]:_(<2 x s32>) = G_AND {{.+}}
+    ; CHECK: [[DEN:%.+]]:_(<2 x s32>) = G_AND {{.+}}
+    ; CHECK: [[RESULT:%.+]]:_(<2 x s32>) = G_UREM [[LHS]], [[DEN]]
+    %x:_(s32) = COPY $vgpr0
+    %y:_(s32) = COPY $vgpr1
+    %num:_(<2 x s32>) = G_BUILD_VECTOR %x, %y
+    %mask:_(s32) = G_CONSTANT i32 2147483647
+    %masks:_(<2 x s32>) = G_BUILD_VECTOR %mask, %mask
+    %lhs:_(<2 x s32>) = G_AND %num, %masks
+    %ys:_(<2 x s32>) = G_BUILD_VECTOR %y, %y
+    %den:_(<2 x s32>) = G_AND %ys, %masks
+    %r:_(<2 x s32>) = G_SREM %lhs, %den
+    %lo:_(s32), %hi:_(s32) = G_UNMERGE_VALUES %r
+    $vgpr0 = COPY %lo
+    $vgpr1 = COPY %hi
+...
