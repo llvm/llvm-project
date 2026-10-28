@@ -51,8 +51,11 @@ subroutine f06
 end
 
 subroutine f07
+  type :: t
+    integer :: m
+  end type
   !$omp metadirective &
   !$omp& default( &
 ! Ok
-  !$omp& declare reduction(plus : integer : omp_out = omp_out + omp_in))
+  !$omp& declare reduction(+ : t : omp_out%m = omp_out%m + omp_in%m))
 end
