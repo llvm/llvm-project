@@ -372,6 +372,7 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     scalarizeAggregateStores(M, PTM);
     fixTensorRuntimeArgTypes(M, PTM);
     fixAccessTypeMismatch(M, PTM);
+    fixAtomicPointerArgs(M, PTM);
 
     lowerConstantExprs(M);
     normalizeArrayGlobalGEPs(M);

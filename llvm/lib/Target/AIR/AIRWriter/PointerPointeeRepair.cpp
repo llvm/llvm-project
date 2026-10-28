@@ -180,6 +180,31 @@ void fixMMAPointerSuffixMismatch(Module &M, PointeeTypeMap &PTM) {
   }
 }
 
+void fixAtomicPointerArgs(Module &M, PointeeTypeMap &PTM) {
+  auto &Ctx = M.getContext();
+  auto Calls = collectInsts<CallInst>(M, [](CallInst *CI) {
+    Function *Callee = CI->getCalledFunction();
+    return Callee && Callee->getName().starts_with("air.atomic.") &&
+           CI->arg_size() > 0 && CI->getArgOperand(0)->getType()->isPointerTy();
+  });
+  for (auto *CI : Calls) {
+    StringRef Name = CI->getCalledFunction()->getName();
+    Type *Want = Name.ends_with(".i32")   ? Type::getInt32Ty(Ctx)
+                 : Name.ends_with(".f32") ? Type::getFloatTy(Ctx)
+                                          : nullptr;
+    Value *Ptr = CI->getArgOperand(0);
+    unsigned AS = Ptr->getType()->getPointerAddressSpace();
+    if (!Want || (AS != 1 && AS != 3) || isa<ConstantPointerNull>(Ptr))
+      continue;
+    Type *Have = isa<GlobalVariable>(Ptr)
+                     ? cast<GlobalVariable>(Ptr)->getValueType()
+                     : effectivePointee(Ptr, PTM);
+    if (!Have || Have == Want)
+      continue;
+    CI->setArgOperand(0, retypePointerVia(Ptr, Want, CI, PTM));
+  }
+}
+
 void removeRedundantBitcasts(Module &M, PointeeTypeMap &PTM) {
   for (auto &F : M) {
     if (F.isDeclaration())

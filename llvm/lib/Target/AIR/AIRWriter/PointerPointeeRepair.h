@@ -25,6 +25,11 @@ void fixSelectPointerArms(Module &M, PointeeTypeMap &PTM);
 
 void fixAccessTypeMismatch(Module &M, PointeeTypeMap &PTM);
 
+/// An air.atomic.* call takes a pointer to its type (i32 / f32): a pointer
+/// with another pointee (a float threadgroup global under an i32
+/// compare-exchange) goes through an identity bitcast of that type.
+void fixAtomicPointerArgs(Module &M, PointeeTypeMap &PTM);
+
 }
 }
 
