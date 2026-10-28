@@ -9198,77 +9198,6 @@ static std::pair<size_t, size_t> generateKeySubkey(
 static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp, const TargetLibraryInfo &TLI);
 
-/// Builds the arguments types vector for the given call instruction with the
-/// given \p ID for the specified vector factor.
-static SmallVector<Type *>
-buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
-                       const unsigned VF, unsigned MinBW,
-                       const TargetTransformInfo *TTI) {
-  SmallVector<Type *> ArgTys;
-  for (auto [Idx, Arg] : enumerate(CI->args())) {
-    if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
-        ArgTys.push_back(Arg->getType());
-        continue;
-      }
-      if (MinBW > 0) {
-        ArgTys.push_back(
-            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
-        continue;
-      }
-    }
-    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
-  }
-  return ArgTys;
-}
-
-/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
-/// function (if possible) calls. Returns invalid cost for the corresponding
-/// calls, if they cannot be vectorized/will be scalarized.
-static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
-                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
-                   const TTI::TargetCostKind CostKind) {
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(getNumElements(VecTy)),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = InstructionCost::getInvalid();
-  if (!CI->isNoBuiltin() && VecFunc) {
-    // Calculate the cost of the vector library call.
-    // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
-  }
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the vector intrinsic call.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  const InstructionCost ScalarLimit = 10000;
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF,
-                                    dyn_cast<IntrinsicInst>(CI),
-                                    LibCost.isValid() ? LibCost : ScalarLimit);
-  auto IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-  if (LibCost.isValid()) {
-    if (IntrinsicCost > LibCost)
-      IntrinsicCost = InstructionCost::getInvalid();
-  } else if (IntrinsicCost > ScalarLimit) {
-    // A type-based query always scalarizes struct-returning intrinsics (e.g.
-    // llvm.sincos), which do not have a VFDatabase name mapping. Retry with an
-    // argument-aware query (as the loop vectorizer does) so such lowerings are
-    // taken into account.
-    SmallVector<const Value *> Args(CI->args());
-    IntrinsicCostAttributes ArgAwareAttrs(
-        ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
-    IntrinsicCost = TTI->getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
-    if (IntrinsicCost > ScalarLimit)
-      IntrinsicCost = InstructionCost::getInvalid();
-  }
-
-  return {IntrinsicCost, LibCost};
-}
-
 /// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
 /// arithmetic op or a vectorizable call).
 static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
@@ -12418,9 +12347,12 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
   // narrow node per column widened back. Costs below the operand nodes are
   // ignored; both shapes pay them.
   InstructionCost MergedCost =
-      ::getMergeInputOpsNodeCost(*TTI, PoolS, Pool, ScalarTy, CostKind);
+      ::getMergeInputOpsNodeCost(*TTI, *TLI, PoolS, Pool, ScalarTy, CostKind);
   if (!MergedCost.isValid())
     return false;
+  // The columns are subsets of the pool, so they form plain states as well,
+  // built the same way as the pool's.
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   InstructionCost NaturalCost = 0;
   for (ArrayRef<Value *> Column : Operands) {
     SmallVector<Value *> Unique;
@@ -12435,11 +12367,12 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
       }
       NaturalMask.push_back(It - Unique.begin());
     }
-    InstructionsState ColumnS = getSameOpcode(Unique, *TLI);
-    if (!ColumnS)
+    InstructionsState ColumnS = Analysis.buildInstructionsState(Unique, *this);
+    if (!ColumnS || ColumnS.isAltShuffle() ||
+        ColumnS.areInstructionsWithCopyableElements())
       return false;
-    InstructionCost ColumnCost =
-        ::getMergeInputOpsNodeCost(*TTI, ColumnS, Unique, ScalarTy, CostKind);
+    InstructionCost ColumnCost = ::getMergeInputOpsNodeCost(
+        *TTI, *TLI, ColumnS, Unique, ScalarTy, CostKind);
     if (!ColumnCost.isValid())
       return false;
     NaturalCost += ColumnCost;
@@ -12534,7 +12467,8 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   // check; copyable lanes would need per-edge scheduling data the single
   // shared edge does not carry; an alternate pool would compute both opcodes
   // over all lanes and discard half.
-  InstructionsState PoolS = getSameOpcode(Pool, *TLI);
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+  InstructionsState PoolS = Analysis.buildInstructionsState(Pool, *this);
   if (!PoolS || PoolS.isAltShuffle() ||
       PoolS.areInstructionsWithCopyableElements())
     return false;
@@ -12543,11 +12477,18 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   StridedPtrInfo SPtrInfo;
   // The pool holds distinct values only, so it never needs a reuse shuffle.
   SmallVector<int> PoolReuseShuffleIndices;
+  // A slow load pool is postponed under the index of the next tree entry.
+  // Without the merge that entry is a natural operand node, so the
+  // postponement is undone.
+  const unsigned NumPostponedLoads = LoadEntriesToVectorize.size();
   if (getScalarsVectorizationState(
           PoolS, Pool,
           /*IsScatterVectorizeUserTE=*/false, PoolOrder, PointerOps, SPtrInfo,
-          PoolReuseShuffleIndices) != TreeEntry::Vectorize)
+          PoolReuseShuffleIndices) != TreeEntry::Vectorize) {
+    if (LoadEntriesToVectorize.size() != NumPostponedLoads)
+      LoadEntriesToVectorize.pop_back();
     return false;
+  }
   if (!isMergeInputOpsProfitable(PoolS, Pool, Operands))
     return false;
   LLVM_DEBUG(dbgs() << "SLP: Merging input operands of a binary operator node "

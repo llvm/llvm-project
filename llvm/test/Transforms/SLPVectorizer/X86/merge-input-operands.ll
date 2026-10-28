@@ -622,20 +622,14 @@ entry:
 define void @merge_select_pool(ptr %A, ptr %B, ptr %Out) {
 ; CHECK-LABEL: @merge_select_pool(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PA2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[TMP2]], <2 x i32> [[TMP0]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[TMP3]], <2 x i32> [[TMP1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -682,22 +676,14 @@ entry:
 define void @merge_cmp_pool(ptr %A, ptr %B, ptr %Out) {
 ; CHECK-LABEL: @merge_cmp_pool(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PA2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP5]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i1> [[TMP11]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -745,15 +731,12 @@ entry:
 define void @merge_call_pool(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_call_pool(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP0]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -789,15 +772,12 @@ entry:
 define void @merge_sitofp_pool(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_sitofp_pool(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
-; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP3]] to <4 x float>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[TMP0]] to <4 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -865,10 +845,9 @@ define void @merge_extractvalue_pool(ptr %A, ptr %Out) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

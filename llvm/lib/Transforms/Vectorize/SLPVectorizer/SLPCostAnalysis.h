@@ -20,7 +20,9 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <tuple>
@@ -28,6 +30,7 @@
 
 namespace llvm {
 class APInt;
+class CallInst;
 class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
@@ -70,15 +73,30 @@ getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo *TTI);
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
+                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
+                   const TargetTransformInfo::TargetCostKind CostKind);
+
 /// Returns the cost of one vector node vectorizing the lanes \p VL with the
-/// opcode of \p S, or an invalid cost if that node kind is not modelled here.
-/// Estimated from the lanes rather than a tree entry, so it can compare the
-/// merged-inputs shape against the natural one before either is built.
-InstructionCost
-getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
-                         const InstructionsState &S, ArrayRef<Value *> VL,
-                         Type *ScalarTy,
-                         TargetTransformInfo::TargetCostKind CostKind);
+/// opcode of \p S. Estimated from the lanes rather than a tree entry, so it can
+/// compare the merged-inputs shape against the natural one before either is
+/// built. \p S must be a plain same-opcode state that can be vectorized as a
+/// node with scalar non-pointer lanes.
+InstructionCost getMergeInputOpsNodeCost(
+    const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+    const InstructionsState &S, ArrayRef<Value *> VL, Type *ScalarTy,
+    TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the cast between the widened strided access type and
 /// the entry vector type.
