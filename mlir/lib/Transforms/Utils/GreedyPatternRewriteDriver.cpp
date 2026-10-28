@@ -418,6 +418,62 @@ private:
   Region *const scope;
 };
 
+/// Provides cached deadness queries that stay valid across rewriter
+/// notifications. All notifications are forwarded to the wrapped listener
+/// after invalidating affected cache entries.
+class DeadnessListener : public RewriterBase::ForwardingListener {
+public:
+  explicit DeadnessListener(RewriterBase::Listener *listener)
+      : RewriterBase::ForwardingListener(listener) {}
+
+  /// Return true if the operation is unused and can be erased.
+  bool isOpTriviallyDead(Operation *op) { return cache.isOpTriviallyDead(op); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    // Moving a block can change the context of every operation it contains.
+    for (Operation &op : *block)
+      cache.invalidate(&op);
+    if (previous)
+      if (Operation *parent = previous->getParentOp())
+        cache.invalidateAncestors(parent);
+    if (Operation *parent = block->getParentOp())
+      cache.invalidateAncestors(parent);
+    ForwardingListener::notifyBlockInserted(block, previous, previousIt);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    if (Operation *parent = block->getParentOp())
+      cache.invalidateAncestors(parent);
+    ForwardingListener::notifyBlockErased(block);
+  }
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    // The old parent loses a child, but its remaining descendants are
+    // unchanged. Scanning them for every move would make block merging
+    // quadratic.
+    if (previous.isSet())
+      if (Operation *parent = previous.getBlock()->getParentOp())
+        cache.invalidateAncestors(parent);
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationInserted(op, previous);
+  }
+
+  void notifyOperationModified(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationModified(op);
+  }
+
+  void notifyOperationErased(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationErased(op);
+  }
+
+private:
+  DeadnessCache cache;
+};
+
 /// This is a worklist-driven driver for the PatternMatcher, which repeatedly
 /// applies the locally optimal patterns.
 ///
@@ -515,6 +571,8 @@ private:
 
   /// The low-level pattern applicator.
   PatternApplicator matcher;
+
+  DeadnessListener deadnessListener;
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   ExpensiveChecks expensiveChecks;
@@ -733,11 +791,12 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
     : rewriter(ctx), config(config),
-      reachabilityListener(this, config.getScope()), matcher(patterns)
+      reachabilityListener(this, config.getScope()), matcher(patterns),
+      deadnessListener(&reachabilityListener)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , expensiveChecks(
-          /*listener=*/&reachabilityListener,
+          /*listener=*/&deadnessListener,
           /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
                                          : nullptr)
 // clang-format on
@@ -748,11 +807,11 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 
   // Set up listener.
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  // Chain notifications through the debug handler, reachability listener, and
-  // worklist driver, in that order.
+  // Forward notifications through expensive checks, deadness, reachability,
+  // and the worklist driver, in that order.
   rewriter.setListener(&expensiveChecks);
 #else
-  rewriter.setListener(&reachabilityListener);
+  rewriter.setListener(&deadnessListener);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
 
@@ -809,7 +868,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (isOpTriviallyDead(op)) {
+    if (deadnessListener.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 
@@ -829,10 +888,9 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         Operation *dumpRootOp = getDumpRootOp(op);
 #endif // NDEBUG
         if (foldResults.empty()) {
-          // Folding modified the op in place without going through the
-          // rewriter.
-          // Notify both the reachability listener and the worklist driver.
-          reachabilityListener.notifyOperationModified(op);
+          // Folding modified the op without using the rewriter. Notify the
+          // cache listeners, which forward the modification to the driver.
+          deadnessListener.notifyOperationModified(op);
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -1182,10 +1240,8 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     worklist.clear();
 
     // `OperationFolder` CSE's constant ops (and may move them into parents
-    // regions to enable more aggressive CSE'ing). It must notify the
-    // reachability listener, which forwards to the driver, so that the
-    // reachability cache sees every CFG change.
-    OperationFolder folder(ctx, &reachabilityListener);
+    // regions to enable more aggressive CSE'ing).
+    OperationFolder folder(ctx, rewriter.getListener());
     auto insertKnownConstant = [&](Operation *op) {
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.

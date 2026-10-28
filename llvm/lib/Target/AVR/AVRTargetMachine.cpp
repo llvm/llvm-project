@@ -126,7 +126,7 @@ MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(
 
 bool AVRPassConfig::addInstSelector() {
   // Install an instruction selector.
-  addPass(createAVRISelDag(getAVRTargetMachine(), getOptLevel()));
+  addPass(createAVRISelDagLegacyPass(getAVRTargetMachine(), getOptLevel()));
   // Create the frame analyzer pass used by the PEI pass.
   addPass(createAVRFrameAnalyzerPass());
 
