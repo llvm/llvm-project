@@ -65,8 +65,14 @@ def portable_air(a, src, tmp):
     """The kernel source as AIR, after the AIR target's portable passes (bitcode)."""
     lowered = os.path.join(tmp, "air.mlir")
     # AIR has no double precision: f64 is emulated (arith-emulate-f64).
+    if a.kernel_suffix:
+        # The kernels under other names (a second build of the same source, e.g. with 32-bit indices).
+        renamed = os.path.join(tmp, "renamed.mlir")
+        open(renamed, "w").write(re.sub(r"(gpu\.func @\w+)", r"\1" + a.kernel_suffix, open(src).read()))
+        src = renamed
+    index = " index-bitwidth=%d" % a.index_bitwidth if a.index_bitwidth else ""
     subprocess.run([a.mlir_opt, src, "--pass-pipeline=builtin.module(gpu.module(arith-emulate-f64,"
-                    "convert-gpu-to-air{use-bare-ptr-memref-call-conv=1}),reconcile-unrealized-casts)",
+                    "convert-gpu-to-air{use-bare-ptr-memref-call-conv=1%s}),reconcile-unrealized-casts)" % index,
                     "-o", lowered], check=True)
     body = os.path.join(tmp, "air.body.mlir")
     open(body, "w").write(gpu_module_body(lowered))
@@ -147,6 +153,9 @@ def main():
     ap.add_argument("--via-air", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("-j", dest="jobs", type=int, default=os.cpu_count() or 1,
                     help="chips to compile at once (default: the processor count)")
+    ap.add_argument("--index-bitwidth", type=int, default=0,
+                    help="the width of MLIR's index type in the kernels (default: 64, from the data layout)")
+    ap.add_argument("--kernel-suffix", default="", help="appended to every kernel's name")
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
