@@ -857,6 +857,7 @@ cc_library(
     name = "DebugInfoDWARF",
     srcs = glob([
         "lib/DebugInfo/DWARF/*.cpp",
+        "lib/DebugInfo/DWARF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/DWARF/*.h"]),
     copts = llvm_copts,

@@ -3710,6 +3710,13 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool InvalidTargetLabel(InterpState &S, CodePtr OpPC, bool IsContinue) {
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_break_continue_label_outside_context)
+      << S.Current->getRange(OpPC) << IsContinue;
+  return false;
+}
+
 inline bool PushIgnoreDiags(InterpState &S) {
   ++S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth != 1)

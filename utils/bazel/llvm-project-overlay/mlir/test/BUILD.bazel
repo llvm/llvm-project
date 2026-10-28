@@ -1083,6 +1083,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
+        "//llvm:Support",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",

@@ -389,7 +389,7 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
     LLVM_DEBUG(dbgs() << NewMI << "\n");
     MIB->removeFromParent();
 
-    // Sign extention doesn't matter if we only use the bottom 8 bits
+    // Sign extension doesn't matter if we only use the bottom 8 bits.
   } else if (MVTSize == MVT::i8 ||
              (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
     LLVM_DEBUG(dbgs() << "MOVEQ\n");
