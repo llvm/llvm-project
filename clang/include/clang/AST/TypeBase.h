@@ -2270,7 +2270,7 @@ protected:
     /// increments towards the beginning.
     /// Positive non-zero number represents the index + 1.
     /// Zero means this is not substituted from an expansion.
-    unsigned PackIndex : 15;
+    unsigned PackIndex : 16;
   };
 
   class SubstPackTypeBitfields {
@@ -2770,6 +2770,7 @@ public:
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
+  bool isMetaInfoType() const;                  // C++26 std::meta::info
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -2796,8 +2797,11 @@ public:
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/HLSLPackedTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
+  bool isHLSLBuiltinPackedType() const;
   bool isHLSLAttributedResourceType() const;
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
@@ -3265,6 +3269,9 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// HLSL packed types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/HLSLPackedTypes.def"
 // SPIRV types
 #define SPIRV_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/SPIRVTypes.def"
@@ -3456,6 +3463,13 @@ protected:
   BoundsAttributedType(TypeClass TC, QualType Wrapped, QualType Canon);
 
 public:
+  enum BoundsAttrKind {
+    CountedBy = 0,
+    SizedBy,
+    CountedByOrNull,
+    SizedByOrNull,
+  };
+
   bool isSugared() const { return true; }
   QualType desugar() const { return WrappedTy; }
 
@@ -3492,10 +3506,7 @@ public:
 
 /// Represents a sugar type with `__counted_by` or `__sized_by` annotations,
 /// including their `_or_null` variants.
-class CountAttributedType final
-    : public BoundsAttributedType,
-      public llvm::TrailingObjects<CountAttributedType,
-                                   TypeCoupledDeclRefInfo> {
+class CountAttributedType final : public BoundsAttributedType {
   friend class ASTContext;
 
   Expr *CountExpr;
@@ -3505,27 +3516,36 @@ class CountAttributedType final
   /// __counted_by_or_null or __sized_by_or_null) \p CoupledDecls contains the
   /// list of declarations referenced by \p CountExpr, which the type depends on
   /// for the bounds information.
+  ///
+  /// \p CountExpr may be null, and \p CoupledDecls empty, for a type created by
+  /// a late-parsed attribute whose argument has not been parsed yet; such a
+  /// type is completed by \c complete once the enclosing scope is known. See
+  /// \c Parser::CompleteLateParsedTypeAttributes.
   CountAttributedType(QualType Wrapped, QualType Canon, Expr *CountExpr,
                       bool CountInBytes, bool OrNull,
                       ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
-  unsigned numTrailingObjects(OverloadToken<TypeCoupledDeclRefInfo>) const {
-    return CountAttributedTypeBits.NumCoupledDecls;
-  }
+  /// Allocate and construct a \c CountAttributedType in \p Ctx, including its
+  /// coupled-declaration array. \p CountExpr may be null (with \p CoupledDecls
+  /// empty) for a late-parsed attribute whose argument is not yet parsed;
+  /// complete such a node later with \c complete.
+  static CountAttributedType *
+  Create(const ASTContext &Ctx, QualType Wrapped, QualType Canon,
+         Expr *CountExpr, bool CountInBytes, bool OrNull,
+         ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
+
+  /// Supply the count expression and coupled declarations for a node created by
+  /// \c Create with a null count -- a late-parsed attribute whose argument has
+  /// now been parsed. Allocates the decl array in \p Ctx, so the node owns it.
+  void complete(const ASTContext &Ctx, Expr *E,
+                ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
 public:
-  enum DynamicCountPointerKind {
-    CountedBy = 0,
-    SizedBy,
-    CountedByOrNull,
-    SizedByOrNull,
-  };
-
   Expr *getCountExpr() const { return CountExpr; }
   bool isCountInBytes() const { return CountAttributedTypeBits.CountInBytes; }
   bool isOrNull() const { return CountAttributedTypeBits.OrNull; }
 
-  DynamicCountPointerKind getKind() const {
+  BoundsAttrKind getKind() const {
     if (isOrNull())
       return isCountInBytes() ? SizedByOrNull : CountedByOrNull;
     return isCountInBytes() ? SizedBy : CountedBy;
@@ -4416,9 +4436,14 @@ class MatrixType : public Type, public llvm::FoldingSetNode {
 protected:
   friend class ASTContext;
 
+public:
+  enum class LayoutKind : uint8_t { RowMajor, ColumnMajor };
+
+private:
   /// The element type of the matrix.
   QualType ElementType;
 
+protected:
   MatrixType(QualType ElementTy, QualType CanonElementTy);
 
   MatrixType(TypeClass TypeClass, QualType ElementTy, QualType CanonElementTy,
@@ -4469,12 +4494,15 @@ protected:
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;
+  std::optional<LayoutKind> Layout;
 
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
   ConstantMatrixType(TypeClass typeClass, QualType MatrixType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
 public:
   /// Returns the number of rows in the matrix.
@@ -4482,6 +4510,8 @@ public:
 
   /// Returns the number of columns in the matrix.
   unsigned getNumColumns() const { return NumColumns; }
+
+  std::optional<LayoutKind> getLayout() const { return Layout; }
 
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
@@ -4528,16 +4558,17 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getNumRows(), getNumColumns(),
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getLayout(),
             getTypeClass());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
                       unsigned NumRows, unsigned NumColumns,
-                      TypeClass TypeClass) {
+                      std::optional<LayoutKind> Layout, TypeClass TypeClass) {
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumRows);
     ID.AddInteger(NumColumns);
+    ID.AddInteger(Layout ? llvm::to_underlying(*Layout) + 1 : 0);
     ID.AddInteger(TypeClass);
   }
 
@@ -6822,14 +6853,8 @@ public:
 
   SplitQualType getSplitUnqualifiedType() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, UnderlyingType, BehaviorKind);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
-                      OverflowBehaviorKind Kind) {
-    ID.AddPointer(Underlying.getAsOpaquePtr());
-    ID.AddInteger((int)Kind);
+  std::pair<QualType, OverflowBehaviorKind> getKey() const {
+    return {UnderlyingType, BehaviorKind};
   }
 
   static bool classof(const Type *T) {
@@ -8966,6 +8991,12 @@ inline bool Type::isOpenCLSpecificType() const {
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/HLSLPackedTypes.def"
+
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   inline bool Type::is##Id##Type() const {                                     \
     return isSpecificBuiltinType(BuiltinType::Id);                             \
@@ -8979,9 +9010,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
       false;
 }
 
+inline bool Type::isHLSLBuiltinPackedType() const {
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) is##Id##Type() ||
+  return
+#include "clang/Basic/HLSLPackedTypes.def"
+      false;
+}
+
 inline bool Type::isHLSLSpecificType() const {
   return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
-         isHLSLInlineSpirvType();
+         isHLSLInlineSpirvType() || isHLSLBuiltinPackedType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {
@@ -9029,6 +9067,10 @@ inline bool Type::isNonOverloadPlaceholderType() const {
 
 inline bool Type::isVoidType() const {
   return isSpecificBuiltinType(BuiltinType::Void);
+}
+
+inline bool Type::isMetaInfoType() const {
+  return isSpecificBuiltinType(BuiltinType::MetaInfo);
 }
 
 inline bool Type::isHalfType() const {

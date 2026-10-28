@@ -50,6 +50,8 @@ union UNuaBigEmpty { [[no_unique_address]] Big32 e; int i; };
 union UNuaEmptyBaseMem { [[no_unique_address]] HasEmptyBase e; int i; };
 union UNuaEmptyUnnamedBits { [[no_unique_address]] Empty e; int : 24; };
 union UNuaEmptyBitInt { [[no_unique_address]] Empty e; int b : 20; int i; };
+union UNuaEmptyAlignedBits { [[no_unique_address]] Aligned e; int b : 8; };
+union UNuaEmptyNarrow { [[no_unique_address]] Empty e; short s; };
 struct SFloatPair { float a, b; };
 union UNuaEmptyFloats { [[no_unique_address]] Empty e; SFloatPair f; };
 union UNuaEmptyBytes16 { [[no_unique_address]] Empty e; char c[16]; };
@@ -213,9 +215,11 @@ HiWord giveHiWord(long hi) {
 
 // CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
 // LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
-// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
-// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
-// LLVM:   ret i64 %[[RVAL]]
+// LLVM:   %[[HIP:.+]] = getelementptr inbounds nuw %struct.HiWord, ptr %[[W:.+]], i32 0, i32 1
+// LLVM-NEXT:   store i64 %{{.+}}, ptr %[[HIP]], align 8
+// LLVM-NEXT:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[W]], i64 8
+// LLVM-NEXT:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM-NEXT:   ret i64 %[[RVAL]]
 
 // Caller-side coercion, on the return received and the argument passed.
 long callerHiWord(long hi) {
@@ -223,15 +227,18 @@ long callerHiWord(long hi) {
 }
 
 // CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_HiWord>
+// CIR:   %[[TMP:.+]] = cir.alloca "agg.tmp0" align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
 // CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
 // CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   cir.copy %[[COERCE]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
 // CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %[[AVAL:.+]] = cir.load align(8) %[[APTR]] : !cir.ptr<!s64i>, !s64i
 // CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
 // LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
 // LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})
@@ -454,11 +461,25 @@ int takeUNuaEmptyUnnamedBits(UNuaEmptyUnnamedBits v, int k) { return k; }
 // LLVM: define dso_local noundef i32 @_Z24takeUNuaEmptyUnnamedBits20UNuaEmptyUnnamedBitsi(i24 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // A named access unit narrower than the int it holds, alongside the empty
-// variant: the plain int member is what satisfies the spanning-data rule.
+// variant.
 int takeUNuaEmptyBitInt(UNuaEmptyBitInt v) { return v.i; }
 
 // CIR: cir.func {{.*}}@_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(i32 %{{[^,]+}})
+
+// The empty variant's alignment alone sets the union's 16 bytes, so the one
+// byte the access unit holds decides the eightbyte and the rest is padding.
+int takeUNuaEmptyAlignedBits(UNuaEmptyAlignedBits v) { return v.b; }
+
+// CIR: cir.func {{.*}}@_Z24takeUNuaEmptyAlignedBits20UNuaEmptyAlignedBits(%arg0: !u64i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z24takeUNuaEmptyAlignedBits20UNuaEmptyAlignedBits(i64 %{{[^,]+}})
+
+// The empty variant supplies no bytes, so the short sizes the eightbyte even
+// though the union's declared size rounds past it.
+short takeUNuaEmptyNarrow(UNuaEmptyNarrow v) { return v.s; }
+
+// CIR: cir.func {{.*}}@_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(%arg0: !s16i {{.*}}) -> (!s16i
+// LLVM: define dso_local noundef i16 @_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(i16 %{{[^,]+}})
 
 // A pair of floats in one eightbyte still coerces to a vector, not an integer.
 float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
@@ -470,14 +491,14 @@ float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
 char takeUNuaEmptyBytes16(UNuaEmptyBytes16 v) { return v.c[0]; }
 
 // CIR: cir.func {{.*}}@_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> (!s8i
-// LLVM: define dso_local noundef signext i8 @_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(i64 %{{[^,]+}}, i64 %{{[^,]+}})
+// LLVM: define dso_local noundef i8 @_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(i64 %{{[^,]+}}, i64 %{{[^,]+}})
 
 // Here the empty variant is what reaches the second eightbyte, which the
 // data variant covers only one byte of, so the high half narrows to i8.
 char takeUNuaEmptyNarrowHi(UNuaEmptyNarrowHi v) { return v.c[0]; }
 
 // CIR: cir.func {{.*}}@_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(%arg0: !u64i {{.*}}, %arg1: !s8i {{.*}}) -> (!s8i
-// LLVM: define dso_local noundef signext i8 @_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(i64 %{{[^,]+}}, i8 %{{[^,]+}})
+// LLVM: define dso_local noundef i8 @_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(i64 %{{[^,]+}}, i8 %{{[^,]+}})
 
 // An all-empty union owns eightbyte 0, so as with takeHiWord the coercion has
 // to start at byte 8 rather than dropping the NoClass half.

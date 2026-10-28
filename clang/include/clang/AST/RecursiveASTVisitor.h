@@ -1469,7 +1469,7 @@ DEF_TRAVERSE_TYPELOC(DecltypeType, {
 })
 
 DEF_TRAVERSE_TYPELOC(PackIndexingType, {
-  TRY_TO(TraverseType(TL.getPattern()));
+  TRY_TO(TraverseTypeLoc(TL.getPatternLoc()));
   TRY_TO(TraverseStmt(TL.getTypePtr()->getIndexExpr()));
 })
 
@@ -3247,6 +3247,9 @@ DEF_TRAVERSE_STMT(OMPFuseDirective,
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFlattenDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPSplitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3587,6 +3590,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDepthClause(OMPDepthClause *C) {
+  TRY_TO(TraverseStmt(C->getDepth()));
   return true;
 }
 

@@ -38,7 +38,7 @@ public:
   /// Construct a BootstrapInfo object from the given Session, Symbols, and
   /// Values.
   BootstrapInfo(Session &S, SimpleSymbolTable Symbols = {},
-                ValueMap Values = {});
+                ValueMap Values = {}) noexcept;
 
   /// Construct with a default initial symbols and values.
   ///
@@ -49,7 +49,7 @@ public:
   static Expected<BootstrapInfo>
   CreateDefault(Session &S,
                 InitialSymbolsBuilder AddInitialSymbols = sps_ci::addAll,
-                InitialValuesBuilder AddInitialValues = {});
+                InitialValuesBuilder AddInitialValues = {}) noexcept;
 
   const Session &session() const noexcept { return S; }
 

@@ -1565,6 +1565,12 @@ bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
   if (Operands.size() < B.Operands.size())
     return false;
 
+  // Instruction matchers involving more predicates have higher priority.
+  if (predicates_size() > B.predicates_size())
+    return true;
+  if (predicates_size() < B.predicates_size())
+    return false;
+
   for (auto &&P : zip(predicates(), B.predicates())) {
     auto L = static_cast<InstructionPredicateMatcher *>(std::get<0>(P).get());
     auto R = static_cast<InstructionPredicateMatcher *>(std::get<1>(P).get());
@@ -1580,11 +1586,6 @@ bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
     if (std::get<1>(Operand)->isHigherPriorityThan(*std::get<0>(Operand)))
       return false;
   }
-  // Instruction matchers involving more predicates have higher priority.
-  if (predicates_size() > B.predicates_size())
-    return true;
-  if (predicates_size() < B.predicates_size())
-    return false;
 
   return false;
 }
@@ -1851,12 +1852,13 @@ void ImmRenderer::emitAddImm(MatchTable &Table, unsigned InsnID, int64_t Imm,
 }
 
 void ImmRenderer::emitRenderOpcodes(MatchTable &Table) const {
-  if (CImmLLT) {
+  if (ConstantLLT) {
     assert(Table.isCombiner() &&
-           "ConstantInt immediate are only for combiners!");
-    Table << MatchTable::Opcode("GIR_AddCImm") << MatchTable::Comment("InsnID")
-          << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type");
-    emitType(Table, *CImmLLT);
+           "ConstantInt/ConstantFP immediates are only for combiners!");
+    Table << MatchTable::Opcode(IsFP ? "GIR_AddCFPImm" : "GIR_AddCImm")
+          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+          << MatchTable::Comment("Type");
+    emitType(Table, *ConstantLLT);
     Table << MatchTable::Comment("Imm") << MatchTable::IntValue(8, Imm)
           << MatchTable::LineBreak;
   } else {

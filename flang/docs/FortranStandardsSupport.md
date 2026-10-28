@@ -8,11 +8,6 @@
 
 # Flang Fortran Standards Support
 
-```{contents}
----
-local:
----
-```
 
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
@@ -58,7 +53,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Using integer arrays to specify rank and bound of an array | N      | |
 | Using an integer constant to specify rank                  | Y      | |
 | Reduction specifier for do concurrent                      | P      | |
-| Enumerations                                               | N      | |
+| Enumerations                                               | P      | New non-interoperable ENUMERATION TYPE supported, named interoperable enum types not yet supported |
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to

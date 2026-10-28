@@ -42,6 +42,10 @@ bool HostNativeThreadBase::EqualsThread(lldb::thread_t thread) const {
   return m_thread == thread;
 }
 
+StructuredData::ObjectSP HostNativeThreadBase::GetExtendedInfo() const {
+  return nullptr;
+}
+
 lldb::thread_t HostNativeThreadBase::Release() {
   lldb::thread_t result = m_thread;
   m_thread = LLDB_INVALID_HOST_THREAD;

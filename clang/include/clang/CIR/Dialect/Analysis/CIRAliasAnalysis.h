@@ -19,15 +19,18 @@
 
 namespace cir {
 
-/// Register all CIR alias analysis implementations with `aa`.
+/// Register all CIR alias analysis implementations with `aa`, which answers
+/// queries about values within `op`. Pass the same operation `aa` was created
+/// for; the implementations use the data layout in effect at `op`, so values
+/// from a different layout scope must not be queried.
 ///
 /// Passes that want full CIR alias information should call this rather than
 /// adding individual implementations:
 ///
 ///   mlir::AliasAnalysis aa(funcOp);
-///   cir::registerCIRAliasAnalyses(aa);
+///   cir::registerCIRAliasAnalyses(aa, funcOp);
 ///
-void registerCIRAliasAnalyses(mlir::AliasAnalysis &aa);
+void registerCIRAliasAnalyses(mlir::AliasAnalysis &aa, mlir::Operation *op);
 
 } // namespace cir
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
+/// \file
 /// This file contains the declaration of the SYCL handler class, which provides
 /// the interface for the commands that can be executed inside the command group
 /// scope.
@@ -24,16 +25,15 @@
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
 
-#include <array>
-#include <cstring>
+#include <cstddef>
 #include <memory>
-#include <type_traits>
+#include <utility>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
-class HandlerImpl;
+struct HandlerImpl;
 class QueueImpl;
 } // namespace detail
 
@@ -124,6 +124,32 @@ public:
   /// \param numBytes is the number of bytes to copy.
   void memcpy(void *dest, const void *src, std::size_t numBytes);
 
+  /// Defines a memory set operation for this command group.
+  ///
+  /// \param ptr is the pointer to the memory to be set.
+  /// \param value is the value the memory should be filled with,
+  /// interpreted as unsigned char.
+  /// \param numBytes is the number of bytes to set.
+  void memset(void *ptr, int value, std::size_t numBytes) {
+    fillImpl(ptr, &value, sizeof(unsigned char), numBytes);
+  }
+
+  /// Defines a fill operation for this command group.
+  ///
+  /// \param ptr is the pointer to the memory to be filled.
+  /// \param pattern is the pattern to be replicated.
+  /// \param count is the number of times the pattern is replicated.
+  template <typename T>
+  void fill(void *ptr, const T &pattern, std::size_t count) {
+    fillImpl(ptr, &pattern, sizeof(T), count);
+  }
+
+  /// Defines a prefetch operation for this command group.
+  ///
+  /// \param ptr is the pointer to the memory to be prefetched to the device.
+  /// \param numBytes is the number of bytes to be prefetched.
+  void prefetch(const void *ptr, std::size_t numBytes);
+
 private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
@@ -137,9 +163,12 @@ private:
   std::shared_ptr<detail::EventImpl> finalize();
 
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
-                        size_t ArgSize);
+                        std::size_t ArgSize);
 
   void setKernelRange(const detail::UnifiedRangeView &Range = {});
+
+  void fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                std::size_t Count);
 
   handler(detail::HandlerImpl &HandlerImplVal) : MImpl(HandlerImplVal) {}
 

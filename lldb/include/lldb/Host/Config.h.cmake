@@ -19,6 +19,8 @@
 
 #cmakedefine01 HAVE_PTSNAME_R
 
+#cmakedefine01 HAVE_GETEXECPATH
+
 #cmakedefine01 HAVE_PROCESS_VM_READV
 
 #cmakedefine01 HAVE_NR_PROCESS_VM_READV
@@ -28,8 +30,6 @@
 #cmakedefine01 LLDB_ENABLE_POSIX
 
 #cmakedefine01 LLDB_ENABLE_TERMIOS
-
-#cmakedefine01 LLDB_ENABLE_LZMA
 
 #cmakedefine01 LLVM_ENABLE_CURL
 

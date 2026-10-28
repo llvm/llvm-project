@@ -230,6 +230,7 @@ set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI 
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
+string(LENGTH "${LIBCXX_ABI_NAMESPACE}" LIBCPP_ABI_NAMESPACE_LEN)
 set(LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
   "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
    version must correspond to the major version of an LLVM release.")
@@ -320,11 +321,15 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
 option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
-if (LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
+if (APPLE)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
+elseif(LIBCXX_ENABLE_THREADS)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
 else()
-  set(LIBCXX_PSTL_BACKEND "serial" CACHE STRING "Which PSTL backend to use")
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "serial")
 endif()
+
+set(LIBCXX_PSTL_BACKEND "${LIBCXX_PSTL_BACKEND_DEFAULT_VALUE}" CACHE STRING "Which PSTL backend to use")
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
@@ -737,6 +742,7 @@ endfunction()
 # Configuration file flags =====================================================
 config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
+config_define(${LIBCPP_ABI_NAMESPACE_LEN} _LIBCPP_ABI_NAMESPACE_LEN)
 config_define(${LIBCXX_ABI_FORCE_ITANIUM} _LIBCPP_ABI_FORCE_ITANIUM)
 config_define(${LIBCXX_ABI_FORCE_MICROSOFT} _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define(${LIBCXX_ENABLE_THREADS} _LIBCPP_HAS_THREADS)
