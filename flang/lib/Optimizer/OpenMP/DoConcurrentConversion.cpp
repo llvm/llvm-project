@@ -18,11 +18,13 @@
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_DOCONCURRENTCONVERSIONPASS
@@ -203,6 +205,105 @@ static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
                                    mlir::ConversionPatternRewriter &rewriter) {
   rewriter.moveOpBefore(local.getDefiningOp(), &allocRegion.front().front());
 }
+
+/// Quick check whether the innermost loop of \p loop is likely to be vectorized
+/// when kept as a serial loop: the body has no calls, no ops with regions other
+/// than `fir.if` and no operations on whole arrays or array sections, and the
+/// innermost index is the first subscript of some array element access that is
+/// contiguous in its first dimension, and never a later subscript.
+static bool isInnermostLoopVectorizable(fir::DoConcurrentLoopOp loop,
+                                        const InductionVariableInfos &ivInfos) {
+  mlir::Value iv = loop.getLoopInductionVars()->back();
+  mlir::Operation *ivMemDef = ivInfos.back().iterVarMemDef;
+
+  // Whether `index` is the innermost index, possibly converted between
+  // integer types.
+  auto isIV = [&](mlir::Value index) {
+    while (auto convert = index.getDefiningOp<fir::ConvertOp>()) {
+      if (!convert.getValue().getType().isIntOrIndex() ||
+          !convert.getType().isIntOrIndex())
+        return false;
+      index = convert.getValue();
+    }
+    if (auto load = index.getDefiningOp<fir::LoadOp>())
+      return load.getMemref().getDefiningOp() == ivMemDef;
+    return index == iv;
+  };
+
+  bool hasContiguousAccess = false;
+  mlir::WalkResult result = loop.getRegion().walk([&](mlir::Operation *op) {
+    if (mlir::isa<fir::CallOp, fir::DispatchOp>(op) ||
+        (op->getNumRegions() != 0 && !mlir::isa<fir::IfOp>(op)))
+      return mlir::WalkResult::interrupt();
+    auto designate = mlir::dyn_cast<hlfir::DesignateOp>(op);
+    if (!designate) {
+      // Operations on whole arrays, such as array expressions or
+      // transformational intrinsics like SUM or DOT_PRODUCT, do their own
+      // array-sized work on every iteration. Loading the descriptor of an
+      // allocatable or pointer array is not such work.
+      auto isArrayData = [](mlir::Type type) {
+        return hlfir::isFortranArrayObject(type) &&
+               !hlfir::isBoxAddressOrValueType(type);
+      };
+      if (llvm::any_of(op->getOperandTypes(), hlfir::isFortranArrayObject) ||
+          llvm::any_of(op->getResultTypes(), isArrayData))
+        return mlir::WalkResult::interrupt();
+      return mlir::WalkResult::advance();
+    }
+    // An array section: its indices hold triplets, so they do not map one to
+    // one to the dimensions.
+    if (hlfir::isFortranArrayObject(designate.getType()))
+      return mlir::WalkResult::interrupt();
+    if (designate.getIndices().empty())
+      return mlir::WalkResult::advance();
+    // Fortran arrays are column-major: only the first subscript walks
+    // consecutive elements in memory. The innermost index in a later subscript
+    // means a strided access on every iteration.
+    if (llvm::any_of(designate.getIndices().drop_front(), isIV))
+      return mlir::WalkResult::interrupt();
+    if (isIV(designate.getIndices().front())) {
+      if (!hlfir::isSimplyContiguous(designate.getMemref(),
+                                     /*checkWhole=*/false))
+        return mlir::WalkResult::interrupt();
+      hasContiguousAccess = true;
+    }
+    return mlir::WalkResult::advance();
+  });
+  return !result.wasInterrupted() && hasContiguousAccess;
+}
+
+/// Whether the loops of \p loop other than the innermost one are known to run
+/// too few iterations to keep the threads busy once the innermost loop is left
+/// out of the collapse. Only compile-time constant bounds are considered.
+static bool hasFewOuterIterations(fir::DoConcurrentLoopOp loop) {
+  constexpr int64_t minOuterIterations = 64;
+  auto getConstant = [](mlir::Value value) {
+    if (auto convert = value.getDefiningOp<fir::ConvertOp>())
+      value = convert.getValue();
+    return mlir::getConstantIntValue(value);
+  };
+  int64_t numIterations = 1;
+  for (auto [lb, ub, st] : llvm::drop_end(llvm::zip_equal(
+           loop.getLowerBound(), loop.getUpperBound(), loop.getStep()))) {
+    std::optional<int64_t> lbCst = getConstant(lb), ubCst = getConstant(ub),
+                           stCst = getConstant(st);
+    if (!lbCst || !ubCst || !stCst || *stCst == 0)
+      return false;
+    std::optional<int64_t> span = llvm::checkedSub(*ubCst, *lbCst);
+    if (span)
+      span = llvm::checkedAdd(*span, *stCst);
+    if (!span)
+      return false;
+    int64_t tripCount = std::max<int64_t>(*span / *stCst, 0);
+    // Also keeps the product below from overflowing.
+    if (tripCount >= minOuterIterations)
+      return false;
+    numIterations *= tripCount;
+    if (numIterations >= minOuterIterations)
+      return false;
+  }
+  return true;
+}
 } // namespace looputils
 
 class DoConcurrentConversion
@@ -304,7 +405,8 @@ public:
               .getIsTargetDevice();
 
       mlir::omp::TargetExtOperands targetClauseOps;
-      genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps,
+      genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, ivInfos,
+                           loopNestClauseOps,
                            isTargetDevice ? nullptr : &targetClauseOps);
 
       LiveInShapeInfoMap liveInShapeInfoMap;
@@ -340,7 +442,8 @@ public:
     parallelOp.setCombined(!mapToDevice);
 
     if (!mapToDevice)
-      genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps);
+      genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, ivInfos,
+                           loopNestClauseOps);
 
     for (mlir::Value local : locals)
       looputils::localizeLoopLocalValue(local, parallelOp.getRegion(),
@@ -464,6 +567,7 @@ private:
   void genLoopNestClauseOps(
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       fir::DoConcurrentLoopOp loop,
+      const looputils::InductionVariableInfos &ivInfos,
       mlir::omp::LoopNestOperands &loopNestClauseOps,
       mlir::omp::TargetExtOperands *targetClauseOps = nullptr) const {
     assert(loopNestClauseOps.loopLowerBounds.empty() &&
@@ -492,8 +596,22 @@ private:
     }
 
     loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
+    auto computeNumCollapse = [&]() -> int64_t {
+      int64_t numLoops = loopNestClauseOps.loopLowerBounds.size();
+      // On the host, keep a vectorizable innermost loop out of the collapse:
+      // collapsing it requires recomputing every index from the collapsed
+      // iteration number on each iteration and prevents its vectorization.
+      // Collapse it anyway when the outer loops alone are too short to keep
+      // the threads busy.
+      if (!mapToDevice && numLoops > 1 &&
+          !looputils::hasFewOuterIterations(loop) &&
+          looputils::isInnermostLoopVectorizable(loop, ivInfos))
+        return numLoops - 1;
+      return numLoops;
+    };
+
     loopNestClauseOps.collapseNumLoops =
-        rewriter.getI64IntegerAttr(loopNestClauseOps.loopLowerBounds.size());
+        rewriter.getI64IntegerAttr(computeNumCollapse());
   }
 
   std::pair<mlir::omp::LoopNestOp, mlir::omp::WsloopOp>
