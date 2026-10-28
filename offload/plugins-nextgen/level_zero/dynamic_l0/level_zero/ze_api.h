@@ -222,6 +222,7 @@ typedef enum _ze_memory_type_t {
 typedef enum _ze_module_format_t {
   ZE_MODULE_FORMAT_IL_SPIRV = 0,
   ZE_MODULE_FORMAT_NATIVE = 1,
+  ZE_MODULE_FORMAT_PISA = 2,
   ZE_MODULE_FORMAT_FORCE_UINT32 = 0x7fffffff
 } ze_module_format_t;
 

@@ -21,6 +21,8 @@ namespace llvm {
 
 class SparcSubtarget;
 class SparcFrameLowering : public TargetFrameLowering {
+  const SparcSubtarget &STI;
+
 public:
   explicit SparcFrameLowering(const SparcSubtarget &ST);
 
@@ -45,6 +47,9 @@ public:
   /// responsible for rounding up the stack frame (probably at emitPrologue
   /// time).
   bool targetHandlesStackFrameRounding() const override { return true; }
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;

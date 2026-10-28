@@ -89,7 +89,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/MergeFunctions.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -981,22 +980,6 @@ static uint64_t getBlockCountForMerging(const BlockFrequencyInfo &BFI,
   return 1;
 }
 
-// The branch weights are relative within a function. Before merging we
-// normalize these to absolute counts.
-// (weight * BlockCount / TotalWeight)
-static uint64_t scaleToBlockCount(uint64_t Weight, uint64_t TotalWeight,
-                                  uint64_t BlockCount) {
-  if (Weight == 0 || TotalWeight == 0 || BlockCount == 0)
-    return 0;
-  APInt Num(128, BlockCount);
-  Num *= APInt(128, Weight);
-  APInt Den(128, TotalWeight);
-  Num = (Num + Den.lshr(1)).udiv(Den);
-  assert(Num.getActiveBits() <= 64 &&
-         "scaleToBlockCount: result exceeds uint64_t; Weight > TotalWeight?");
-  return Num.getLimitedValue();
-}
-
 // Combine the scaled branch_weights of corresponding instructions of F and G.
 static void mergeBranchWeightsOnInstructions(Instruction *DstI,
                                              const Instruction *SrcI,
@@ -1026,8 +1009,13 @@ static void mergeBranchWeightsOnInstructions(Instruction *DstI,
   for (size_t I = 0; I < NumWeights; ++I) {
     uint64_t DstW = HasDst ? DstWeights[I] : 0;
     uint64_t SrcW = HasSrc ? SrcWeights[I] : 0;
-    uint64_t DstAbs = scaleToBlockCount(DstW, DstTotal, DstBlockCount);
-    uint64_t SrcAbs = scaleToBlockCount(SrcW, SrcTotal, SrcBlockCount);
+    // The branch weights are relative within a function. Before merging we
+    // normalize these to absolute counts.
+    // (weight * BlockCount / TotalWeight)
+    uint64_t DstAbs =
+        DstTotal == 0 ? 0 : mulDivNearest(DstBlockCount, DstW, DstTotal);
+    uint64_t SrcAbs =
+        SrcTotal == 0 ? 0 : mulDivNearest(SrcBlockCount, SrcW, SrcTotal);
     MergedWeights.push_back(SaturatingAdd(DstAbs, SrcAbs));
   }
 

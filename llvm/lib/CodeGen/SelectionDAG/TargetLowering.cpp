@@ -860,6 +860,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    SDValue Src = Op.getOperand(0);
+    // Preserve shared casts unless the cast is free and its source is not
+    // shared, or the truncate cancels an extension.
+    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
+                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
+    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
+                      ISD::isExtOpcode(Src.getOpcode()) &&
+                      Src.getOperand(0).getValueType() == VT;
+    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
+      break;
+    unsigned SrcBits = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
+    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
+        DemandedBits.getActiveBits() > SrcBits)
+      SrcDemandedBits.setSignBit();
+
+    // Do not preserve flags that the simplified source may invalidate.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -9383,6 +9409,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
+bool TargetLowering::expandMODF(SDNode *Node, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse = FracPart;
+  if (!Flags.hasNoInfs()) {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  Results.push_back(ResultFrac);
+  Results.push_back(IntPart);
+  return true;
+}
+
 SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -11698,8 +11753,8 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
 
   // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
   // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
-  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
-  bool UseSigned = IsSigned || IsNonNegative;
+  bool UseSigned =
+      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
 
   if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
     SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
