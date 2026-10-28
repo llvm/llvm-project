@@ -1067,7 +1067,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX942-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-FLATSCR-NEXT:    s_mov_b32 s32, 0
 ; GFX942-FLATSCR-NEXT:    v_mov_b32_e32 v41, 0
-; GFX942-FLATSCR-NEXT:    ; implicit-def: $sgpr15
 ; GFX942-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX942-FLATSCR-NEXT:    v_and_b32_e32 v1, 0xff, v0
@@ -1078,8 +1077,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX942-FLATSCR-NEXT:    v_lshl_add_u64 v[0:1], s[34:35], 0, v[0:1]
 ; GFX942-FLATSCR-NEXT:    s_mov_b64 s[0:1], 0x2800
 ; GFX942-FLATSCR-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
-; GFX942-FLATSCR-NEXT:    v_mov_b64_e32 v[2:3], 0
 ; GFX942-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x7f
+; GFX942-FLATSCR-NEXT:    v_mov_b64_e32 v[2:3], 0
 ; GFX942-FLATSCR-NEXT:    s_mov_b64 s[0:1], 0x10000
 ; GFX942-FLATSCR-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX942-FLATSCR-NEXT:    ; =>This Loop Header: Depth=1
@@ -1103,7 +1102,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX942-FLATSCR-NEXT:    global_load_dwordx2 v[24:25], v[8:9], off
 ; GFX942-FLATSCR-NEXT:    global_load_dwordx2 v[26:27], v[18:19], off offset:-2048
 ; GFX942-FLATSCR-NEXT:    v_add_co_u32_e32 v20, vcc, 0x1000, v4
-; GFX942-FLATSCR-NEXT:    s_cmp_gt_u32 s2, 0x3fffff
+; GFX942-FLATSCR-NEXT:    s_cmp_lt_u32 s2, 0x400000
 ; GFX942-FLATSCR-NEXT:    s_nop 0
 ; GFX942-FLATSCR-NEXT:    v_addc_co_u32_e32 v21, vcc, 0, v5, vcc
 ; GFX942-FLATSCR-NEXT:    global_load_dwordx2 v[18:19], v[20:21], off
@@ -1133,7 +1132,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX942-FLATSCR-NEXT:    v_lshl_add_u64 v[2:3], v[28:29], 0, v[2:3]
 ; GFX942-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-FLATSCR-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
-; GFX942-FLATSCR-NEXT:    s_cbranch_scc0 .LBB1_2
+; GFX942-FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX942-FLATSCR-NEXT:  ; %bb.3: ; %while.cond.loopexit
 ; GFX942-FLATSCR-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; GFX942-FLATSCR-NEXT:    v_subrev_co_u32_e32 v6, vcc, 1, v6
@@ -1154,7 +1153,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-FLATSCR-NEXT:    s_load_b64 s[34:35], s[4:5], 0x24
 ; GFX12-FLATSCR-NEXT:    s_mov_b32 s32, 0
-; GFX12-FLATSCR-NEXT:    ; implicit-def: $sgpr15
 ; GFX12-FLATSCR-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 17, v0
@@ -1167,7 +1165,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    v_add_co_u32 v0, s0, s34, v0
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2800, v0
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x2800
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -1192,13 +1190,13 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    global_load_b64 v[24:25], v[4:5], off offset:6144
 ; GFX12-FLATSCR-NEXT:    global_load_b64 v[26:27], v[4:5], off offset:8192
 ; GFX12-FLATSCR-NEXT:    global_load_b64 v[28:29], v[4:5], off offset:10240
-; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, 0x10000, v4
+; GFX12-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-FLATSCR-NEXT:    s_addk_co_i32 s1, 0x2000
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-FLATSCR-NEXT:    s_cmp_gt_u32 s1, 0x3fffff
+; GFX12-FLATSCR-NEXT:    s_cmp_lt_u32 s1, 0x400000
 ; GFX12-FLATSCR-NEXT:    s_wait_loadcnt 0xa
 ; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, s0, v8, v2
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_sdst(0)
@@ -1253,7 +1251,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX12-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, v28, v2
 ; GFX12-FLATSCR-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, v29, v3, vcc_lo
-; GFX12-FLATSCR-NEXT:    s_cbranch_scc0 .LBB1_2
+; GFX12-FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12-FLATSCR-NEXT:  ; %bb.3: ; %while.cond.loopexit
 ; GFX12-FLATSCR-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; GFX12-FLATSCR-NEXT:    v_sub_co_u32 v7, s0, v7, 1
