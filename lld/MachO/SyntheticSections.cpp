@@ -1948,6 +1948,7 @@ ObjCImageInfoSection::parseImageInfo(const InputFile *file) {
   uint32_t flags = read32le(buf + 1);
   info.swiftVersion = (flags >> 8) & 0xff;
   info.hasCategoryClassProperties = flags & 0x40;
+  info.hasSignedClassROs = flags & 0x10;
   return info;
 }
 
@@ -1968,18 +1969,53 @@ static std::string swiftVersionString(uint8_t version) {
   }
 }
 
+// ld64 counts an input as defining classes if it has __objc_classlist entries.
+static bool definesObjCClasses(const InputFile *file) {
+  for (const Section *sec : file->sections)
+    if (sec->name == section_names::objcClassList)
+      for (const Subsection &subsec : sec->subsections)
+        if (!subsec.isec->empty())
+          return true;
+  return false;
+}
+
 // Validate each object file's __objc_imageinfo and use them to generate the
-// image info for the output binary. Only two pieces of info are relevant:
+// image info for the output binary. Only three pieces of info are relevant:
 // 1. The Swift version (should be identical across inputs)
 // 2. `bool hasCategoryClassProperties` (true only if true for all inputs)
+// 3. `bool hasSignedClassROs` (true if some input has it and every input that
+//    defines classes does; an input without classes has no class_ro_t)
 void ObjCImageInfoSection::finalizeContents() {
   assert(files.size() != 0); // should have already been checked via isNeeded()
 
   info.hasCategoryClassProperties = true;
+  // Like ld64, warn about a signed input if an earlier input that defines
+  // classes was unsigned, and about an unsigned input that defines classes if
+  // all earlier ones were signed. Once an input that defines classes is
+  // unsigned, so is the output.
+  enum class ClassROSigning { Unknown, Signed, Unsigned };
+  ClassROSigning classROSigning = ClassROSigning::Unknown;
+  bool anySignedClassROs = false;
   const InputFile *firstFile;
   for (const InputFile *file : files) {
     ImageInfo inputInfo = parseImageInfo(file);
     info.hasCategoryClassProperties &= inputInfo.hasCategoryClassProperties;
+
+    if (inputInfo.hasSignedClassROs) {
+      anySignedClassROs = true;
+      if (classROSigning == ClassROSigning::Unsigned)
+        warn("'" + toString(file) +
+             "' was built with class_ro_t pointer signing enabled, but "
+             "previous .o file was not");
+      else if (definesObjCClasses(file))
+        classROSigning = ClassROSigning::Signed;
+    } else if (definesObjCClasses(file)) {
+      if (classROSigning == ClassROSigning::Signed)
+        warn("'" + toString(file) +
+             "' was not built with class_ro_t pointer signing enabled, but "
+             "previous .o file was");
+      classROSigning = ClassROSigning::Unsigned;
+    }
 
     // swiftVersion 0 means no Swift is present, so no version checking required
     if (inputInfo.swiftVersion == 0)
@@ -1994,10 +2030,14 @@ void ObjCImageInfoSection::finalizeContents() {
       firstFile = file;
     }
   }
+  info.hasSignedClassROs =
+      anySignedClassROs && classROSigning != ClassROSigning::Unsigned;
 }
 
 void ObjCImageInfoSection::writeTo(uint8_t *buf) const {
   uint32_t flags = info.hasCategoryClassProperties ? 0x40 : 0x0;
+  if (info.hasSignedClassROs)
+    flags |= 0x10;
   flags |= info.swiftVersion << 8;
   write32le(buf + 4, flags);
 }
