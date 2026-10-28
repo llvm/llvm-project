@@ -18032,7 +18032,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           unsigned HazardCheckVF = E->Scalars.size();
           if (E->State == TreeEntry::CompressVectorize)
             HazardCheckVF =
-                getNumElements(std::get<1>(getCompressEntryData(*E)));
+                getNumElements(std::get<1>(getCompressEntryData(*E))) /
+                getNumElements(LI0->getType());
           // The vector load is emitted at the main op's address (shifted down
           // by any leading non-load lanes), so LI0 is the load that would
           // stall: skip the charge if some earlier, already-committed tree
@@ -30173,12 +30174,13 @@ bool BoUpSLP::loadConflictsWithSTLFStore(
     // A compressed (masked-load + shuffle) entry's real footprint is the
     // full underlying vector load span, not just the (possibly sparser)
     // set of scalars actually kept by the compress mask.
-    LoadElementSize *=
-        getNumElements(std::get<1>(getCompressEntryData(*WidenedLoadEntry)));
+    LoadElementSize =
+        DL->getTypeStoreSize(
+              std::get<1>(getCompressEntryData(*WidenedLoadEntry)))
+            .getFixedValue();
   } else if (WidenedLoadEntry) {
     LoadElementSize *= WidenedLoadEntry->Scalars.size();
   }
-
   int64_t Offset = *Diff * static_cast<int64_t>(ElementSize);
   // Leading non-load lanes move the emitted vector load below its first load.
   if (WidenedLoadEntry && WidenedLoadEntry->State == TreeEntry::Vectorize)
