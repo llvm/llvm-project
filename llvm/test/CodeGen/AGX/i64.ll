@@ -178,9 +178,7 @@ define agx_kernel void @sext_inreg_i64(ptr addrspace(1) %p, ptr addrspace(1) %o)
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    device_load 0, i8, x, r1l, u0_u1, 0, signed
 ; CHECK-NEXT:    wait 0
-; CHECK-NEXT:    bfi r1l, 0, r1l, 8
-; CHECK-NEXT:    asr r1l, r1l, 8
-; CHECK-NEXT:    convert s16_to_f, r1, r1l, rte
+; CHECK-NEXT:    convert s8_to_f, r1, r1l, rte
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u2_u3, 0, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap

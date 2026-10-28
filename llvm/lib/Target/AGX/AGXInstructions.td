@@ -994,6 +994,25 @@ def : Pat<(f32 (uint_to_fp i16:$a)), (CONVERT_32_16 CVT_U16_TO_F, 0, $a, ROUND_R
 // The byte mode reads the low eight bits directly, without a separate mask.
 def : Pat<(f32 (uint_to_fp (and i16:$a, 255))),
           (CONVERT_32_16 CVT_U8_TO_F, 0, $a, ROUND_RTE)>;
+def : Pat<(f32 (uint_to_fp (and i32:$a, 255))),
+          (CONVERT_32_32 CVT_U8_TO_F, 0, $a, ROUND_RTE)>;
+// Sign-extended bytes (int8 weights): s8_to_f reads the low eight bits as
+// signed (measured on G14C, AGX-Performance-Simulator testsuite
+// convert_s8_to_f_*), in place of a shift pair. Both the sext_inreg and
+// the shl / sra it expands to.
+foreach VT = [i16, i32] in {
+  defvar Cvt32 = !if(!eq(VT, i16), CONVERT_32_16, CONVERT_32_32);
+  defvar Cvt16 = !if(!eq(VT, i16), CONVERT_16_16, CONVERT_16_32);
+  defvar Sh = !if(!eq(VT, i16), 8, 24);
+  def : Pat<(f32 (sint_to_fp (sext_inreg VT:$a, i8))),
+            (Cvt32 CVT_S8_TO_F, 0, $a, ROUND_RTE)>;
+  def : Pat<(f32 (sint_to_fp (sra (shl VT:$a, (i32 Sh)), (i32 Sh)))),
+            (Cvt32 CVT_S8_TO_F, 0, $a, ROUND_RTE)>;
+  def : Pat<(f16 (sint_to_fp (sext_inreg VT:$a, i8))),
+            (Cvt16 CVT_S8_TO_F, 0, $a, ROUND_RTE)>;
+  def : Pat<(f16 (sint_to_fp (sra (shl VT:$a, (i32 Sh)), (i32 Sh)))),
+            (Cvt16 CVT_S8_TO_F, 0, $a, ROUND_RTE)>;
+}
 def : Pat<(f16 (sint_to_fp i32:$a)), (CONVERT_16_32 CVT_S32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f16 (uint_to_fp i32:$a)), (CONVERT_16_32 CVT_U32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f16 (sint_to_fp i16:$a)), (CONVERT_16_16 CVT_S16_TO_F, 0, $a, ROUND_RTE)>;
