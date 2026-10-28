@@ -641,12 +641,23 @@ Value *expandIsFPClass(IRBuilder<> &B, Value *X, FPClassTest Mask) {
 //   is +0.
 // * llvm.roundeven, llvm.nearbyint: crash Metal's compiler; they are
 //   llvm.rint (air.rint) in the fixed rounding mode.
+// * llvm.powi, llvm.lround, llvm.llround, llvm.lrint, llvm.llrint,
+//   llvm.canonicalize, llvm.smul/umul.with.overflow wider than 32 bits: crash
+//   Metal's compiler. llvm.minimumnum, llvm.maximumnum, llvm.sincos:
+//   undefined symbols.
+// * llvm.fabs of half or bfloat: air.fabs.f16 canonicalizes a NaN (0x7E00);
+//   the sign bit is cleared in the bits.
 void expandIntrinsicsMetalMishandles(Module &M) {
   static constexpr Intrinsic::ID Expanded[] = {
       Intrinsic::round,       Intrinsic::roundeven,  Intrinsic::nearbyint,
       Intrinsic::sadd_with_overflow, Intrinsic::ssub_with_overflow,
+      Intrinsic::smul_with_overflow, Intrinsic::umul_with_overflow,
       Intrinsic::fptosi_sat,  Intrinsic::fptoui_sat, Intrinsic::is_fpclass,
-      Intrinsic::ldexp,       Intrinsic::frexp};
+      Intrinsic::ldexp,       Intrinsic::frexp,      Intrinsic::powi,
+      Intrinsic::lround,      Intrinsic::llround,    Intrinsic::lrint,
+      Intrinsic::llrint,      Intrinsic::canonicalize,
+      Intrinsic::minimumnum,  Intrinsic::maximumnum, Intrinsic::sincos,
+      Intrinsic::fabs};
   SmallVector<Instruction *, 16> Work;
   for (Function &F : M)
     for (Instruction &I : instructions(F)) {
@@ -662,6 +673,15 @@ void expandIntrinsicsMetalMishandles(Module &M) {
       if ((II->getIntrinsicID() == Intrinsic::ldexp ||
            II->getIntrinsicID() == Intrinsic::frexp) &&
           airFloatSuffix(II->getArgOperand(0)->getType()).empty())
+        continue;
+      // Metal multiplies 32-bit (and narrower) operands with overflow right.
+      if ((II->getIntrinsicID() == Intrinsic::smul_with_overflow ||
+           II->getIntrinsicID() == Intrinsic::umul_with_overflow) &&
+          II->getArgOperand(0)->getType()->getScalarSizeInBits() <= 32)
+        continue;
+      // Only half and bfloat lose NaN payloads in air.fabs.
+      if (II->getIntrinsicID() == Intrinsic::fabs &&
+          II->getType()->getScalarSizeInBits() != 16)
         continue;
       Work.push_back(II);
     }
@@ -769,6 +789,108 @@ void expandIntrinsicsMetalMishandles(Module &M) {
       R->takeName(CI);
       CI->replaceAllUsesWith(R);
       CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::fabs: {
+      Type *ITy = X->getType()->getWithNewType(B.getInt16Ty());
+      Value *R = B.CreateBitCast(
+          B.CreateAnd(B.CreateBitCast(X, ITy), ConstantInt::get(ITy, 0x7fff)),
+          X->getType());
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::canonicalize: {
+      // The hardware flushes f32 subnormals where they are used, and NaNs
+      // are quiet: the value itself is canonical enough.
+      CI->replaceAllUsesWith(X);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::powi: {
+      // |x|^n by pow (Metal's pow of a negative base is undefined), negated
+      // for a negative base and an odd exponent.
+      Value *N = CI->getArgOperand(1);
+      Type *FTy = X->getType();
+      Value *NF = B.CreateSIToFP(N, FTy);
+      Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+      Value *P = B.CreateBinaryIntrinsic(Intrinsic::pow, Abs, NF, CI);
+      Value *Odd = B.CreateTrunc(N, N->getType()->getWithNewBitWidth(1));
+      Value *Neg =
+          B.CreateAnd(Odd, B.CreateFCmpOLT(X, ConstantFP::get(FTy, 0.0)));
+      // (fsub, not fneg: AIRLowerFNeg has run)
+      Value *R = B.CreateSelect(
+          Neg, B.CreateFSub(ConstantFP::getNegativeZero(FTy), P), P);
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::lround:
+    case Intrinsic::llround:
+    case Intrinsic::lrint:
+    case Intrinsic::llrint: {
+      bool Round = CI->getIntrinsicID() == Intrinsic::lround ||
+                   CI->getIntrinsicID() == Intrinsic::llround;
+      // The integer of the rounded value; out of range it is unspecified.
+      Value *Rounded = B.CreateUnaryIntrinsic(
+          Round ? Intrinsic::round : Intrinsic::rint, X);
+      Value *R = B.CreateFPToSI(Rounded, CI->getType());
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::minimumnum:
+    case Intrinsic::maximumnum: {
+      // minnum / maxnum (a NaN operand is missing), with -0 below +0: for
+      // equal operands, OR (minimum) or AND (maximum) of their encodings.
+      bool Min = CI->getIntrinsicID() == Intrinsic::minimumnum;
+      Value *Y = CI->getArgOperand(1);
+      Type *FTy = X->getType();
+      Type *ITy = FTy->getWithNewType(B.getIntNTy(FTy->getScalarSizeInBits()));
+      Value *MM = B.CreateBinaryIntrinsic(
+          Min ? Intrinsic::minnum : Intrinsic::maxnum, X, Y, CI);
+      Value *XB = B.CreateBitCast(X, ITy), *YB = B.CreateBitCast(Y, ITy);
+      Value *Eq =
+          B.CreateBitCast(Min ? B.CreateOr(XB, YB) : B.CreateAnd(XB, YB), FTy);
+      Value *R = B.CreateSelect(B.CreateFCmpOEQ(X, Y), Eq, MM);
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::sincos: {
+      Value *Sin = B.CreateUnaryIntrinsic(Intrinsic::sin, X, CI);
+      Value *Cos = B.CreateUnaryIntrinsic(Intrinsic::cos, X, CI);
+      replaceStructResult(CI, Sin, Cos);
+      break;
+    }
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow: {
+      // The product overflows iff dividing it by a nonzero x does not give
+      // y back, or (signed) it is -1 * INT_MIN, which the division misses.
+      Value *Y = CI->getArgOperand(1);
+      Type *ITy = X->getType();
+      bool Signed = CI->getIntrinsicID() == Intrinsic::smul_with_overflow;
+      Value *R = B.CreateMul(X, Y);
+      Value *XNZ = B.CreateICmpNE(X, Constant::getNullValue(ITy));
+      // a divisor of 1 where x is 0, so that the division is defined
+      Value *D = B.CreateSelect(XNZ, X, ConstantInt::get(ITy, 1));
+      Value *Q = Signed ? B.CreateSDiv(R, D) : B.CreateUDiv(R, D);
+      Value *Ovf = B.CreateAnd(XNZ, B.CreateICmpNE(Q, Y));
+      if (Signed) {
+        unsigned W = ITy->getScalarSizeInBits();
+        Value *MinInt = ConstantInt::get(ITy, APInt::getSignedMinValue(W));
+        Value *AllOnes = Constant::getAllOnesValue(ITy);
+        Ovf = B.CreateOr(
+            Ovf, B.CreateOr(B.CreateAnd(B.CreateICmpEQ(X, AllOnes),
+                                        B.CreateICmpEQ(Y, MinInt)),
+                            B.CreateAnd(B.CreateICmpEQ(Y, AllOnes),
+                                        B.CreateICmpEQ(X, MinInt))));
+      }
+      replaceStructResult(CI, R, Ovf);
       break;
     }
     case Intrinsic::frexp: {
