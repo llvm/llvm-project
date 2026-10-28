@@ -47,12 +47,12 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (name == k_inner_name)
       return 0;
 
-    return llvm::createStringErrorV("Type has no child named '{}'",
-                                    name.GetStringRef());
+    return llvm::createStringErrorV("Type has no child named '{}'", name);
   }
 
   static ValueObjectSP ContainerFieldName(ValueObject &backend_syn) {
