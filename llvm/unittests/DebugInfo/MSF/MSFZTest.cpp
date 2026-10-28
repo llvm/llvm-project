@@ -382,13 +382,15 @@ TEST(MSFZTest, RejectsInvalidPhysicalLayout) {
       FailedWithMessage(
           "MSFZ uncompressed fragment has non-zero reserved bits"));
 
-  SmallVector<uint8_t, 0> ZeroSizedChunkFile = File;
-  writeU32(ZeroSizedChunkFile,
-           ChunkTableOffset + offsetof(MSFZChunkEntry, CompressedSize), 0);
-  BinaryByteStream ZeroSizedChunkInput(ZeroSizedChunkFile,
-                                       llvm::endianness::little);
-  EXPECT_THAT_EXPECTED(MSFZFile::create(ZeroSizedChunkInput, Allocator),
-                       FailedWithMessage("MSFZ file has a zero-sized chunk"));
+  for (size_t SizeField : {offsetof(MSFZChunkEntry, CompressedSize),
+                           offsetof(MSFZChunkEntry, UncompressedSize)}) {
+    SmallVector<uint8_t, 0> ZeroSizedChunkFile = File;
+    writeU32(ZeroSizedChunkFile, ChunkTableOffset + SizeField, 0);
+    BinaryByteStream ZeroSizedChunkInput(ZeroSizedChunkFile,
+                                         llvm::endianness::little);
+    EXPECT_THAT_EXPECTED(MSFZFile::create(ZeroSizedChunkInput, Allocator),
+                         FailedWithMessage("MSFZ file has a zero-sized chunk"));
+  }
 
   SmallVector<uint8_t, 0> AliasedPayloadFile = File;
   writeU64(AliasedPayloadFile,

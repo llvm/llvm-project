@@ -381,12 +381,9 @@ private:
     if (Decompressed.size() != Entry.UncompressedSize)
       return streamError("MSFZ file has an invalid decompressed chunk");
 
-    ArrayRef<uint8_t> Stable;
-    if (!Decompressed.empty()) {
-      uint8_t *Data = Allocator.Allocate<uint8_t>(Decompressed.size());
-      std::memcpy(Data, Decompressed.data(), Decompressed.size());
-      Stable = ArrayRef<uint8_t>(Data, Decompressed.size());
-    }
+    uint8_t *Data = Allocator.Allocate<uint8_t>(Decompressed.size());
+    std::memcpy(Data, Decompressed.data(), Decompressed.size());
+    ArrayRef<uint8_t> Stable(Data, Decompressed.size());
     CachedChunks[ChunkIndex] = Stable;
     return Stable;
   }
