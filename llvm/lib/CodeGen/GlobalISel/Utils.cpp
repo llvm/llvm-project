@@ -455,9 +455,19 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
-                   Reg->Value);
-  return FPValueAndVReg{FloatVal, Reg->VReg};
+  // Width alone can't tell half from bfloat, or identify x87/PPC formats.
+  const fltSemantics &CstSem =
+      getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF().getSemantics();
+  unsigned Width = Reg->Value.getBitWidth();
+  if (APFloat::getSizeInBits(CstSem) == Width)
+    return FPValueAndVReg{APFloat(CstSem, Reg->Value), Reg->VReg};
+
+  // Resized by a looked-through G_TRUNC/G_SEXT/G_ZEXT: only the width is left,
+  // and it only identifies IEEE formats.
+  if (Width != 16 && Width != 32 && Width != 64 && Width != 128)
+    return std::nullopt;
+  return FPValueAndVReg{
+      APFloat(getFltSemanticForLLT(LLT::scalar(Width)), Reg->Value), Reg->VReg};
 }
 
 const ConstantFP *
