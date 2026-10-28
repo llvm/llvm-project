@@ -173,6 +173,8 @@ static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
       if (OptionalAPIs.find(Sym) == OptionalAPIs.end())
         return false;
 
+      ODBG(OLDT_Init) << "Symbol '" << Sym
+                      << "' is optional, continue without it";
       // Leave the API as nullptr, should be guarded with
       // api_helper::canCall<>()
       *dlwrap::pointer(I) = nullptr;
