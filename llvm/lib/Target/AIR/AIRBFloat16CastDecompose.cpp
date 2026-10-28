@@ -8,6 +8,7 @@
 
 #include "AIRBFloat16CastDecompose.h"
 #include "AIR.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -62,6 +63,78 @@ static bool bfloat16CastDecompose(Module &M) {
       }
     }
   }
+
+  // Phase -1b: AIR's bfloat functions (air.rint.bf16, air.fabs.bf16,
+  // air.fma.bf16, ...) and bfloat compares are computed in f32: Metal's
+  // compiler never finishes compiling those functions on the M2 Max (the
+  // service's runner times out; PTX-formalization cvt.rni.s8.bf16 and the
+  // air-gpu bf16_fabs_bits / bf16_fma cases). Every bfloat is an f32; the
+  // result is rounded back by the fptrunc phase 0 decomposes.
+  auto toF32Name = [](StringRef Name) -> std::string {
+    // air.<fn>.bf16 / air.<fn>.v<N>bf16 -> air.<fn>.f32 / air.<fn>.v<N>f32
+    if (Name.consume_back("bf16"))
+      return (Name + "f32").str();
+    return "";
+  };
+  SmallVector<Function *, 4> BF16Fns;
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (auto It = BB.begin(); It != BB.end();) {
+        Instruction *I = &*It++;
+        if (auto *Cmp = dyn_cast<FCmpInst>(I)) {
+          if (!Cmp->getOperand(0)->getType()->getScalarType()->isBFloatTy())
+            continue;
+          IRBuilder<> B(I);
+          Type *F32T = matchShape(F32, Cmp->getOperand(0)->getType());
+          Value *R = B.CreateFCmp(Cmp->getPredicate(),
+                                  B.CreateFPExt(Cmp->getOperand(0), F32T),
+                                  B.CreateFPExt(Cmp->getOperand(1), F32T));
+          R->takeName(I);
+          I->replaceAllUsesWith(R);
+          I->eraseFromParent();
+          Changed = true;
+          continue;
+        }
+        auto *CI = dyn_cast<CallInst>(I);
+        Function *Callee = CI ? CI->getCalledFunction() : nullptr;
+        // Conversions and atomics name more than one type; they are not
+        // math on bfloat values.
+        if (!Callee || !Callee->getName().starts_with("air.") ||
+            !Callee->getName().ends_with("bf16") ||
+            Callee->getName().starts_with(kAIRConvertPrefix) ||
+            Callee->getName().contains("atomic"))
+          continue;
+        std::string Name = toF32Name(Callee->getName());
+        auto Widen = [&](Type *T) {
+          return T->getScalarType()->isBFloatTy() ? matchShape(F32, T) : T;
+        };
+        IRBuilder<> B(I);
+        SmallVector<Value *, 4> Args;
+        SmallVector<Type *, 4> ArgTys;
+        for (Value *A : CI->args()) {
+          Type *T = Widen(A->getType());
+          Args.push_back(T == A->getType() ? A : B.CreateFPExt(A, T));
+          ArgTys.push_back(T);
+        }
+        Type *RetTy = Widen(CI->getType());
+        FunctionCallee Fn = M.getOrInsertFunction(
+            Name, FunctionType::get(RetTy, ArgTys, false),
+            Callee->getAttributes());
+        Value *R = B.CreateCall(Fn, Args);
+        if (RetTy != CI->getType())
+          R = B.CreateFPTrunc(R, CI->getType());
+        R->takeName(I);
+        I->replaceAllUsesWith(R);
+        I->eraseFromParent();
+        if (!is_contained(BF16Fns, Callee))
+          BF16Fns.push_back(Callee);
+        Changed = true;
+      }
+    }
+  }
+  for (Function *Fn : BF16Fns)
+    if (Fn->use_empty())
+      Fn->eraseFromParent();
 
   // Phase 0: decompose fptrunc f32 -> bfloat (round-to-nearest-even) and
   // fpext bfloat -> f32, both as integer bit manipulation — the native casts
