@@ -541,10 +541,6 @@ int main(int argc, char **argv) {
   std::optional<SourceMgrDiagnosticVerifier> Verifier;
   if (!VerifyPrefixes.empty()) {
     Verifier.emplace(VerifyPrefixes);
-    // Scan the input up front so that its directives are checked even if it
-    // produces no diagnostics.
-    (void)Verifier->computeExpectedDiags(errs(), SrcMgr,
-                                         SrcMgr.getMemoryBuffer(1));
     // Most diagnostics are reported through SrcMgr, but some (e.g. from the
     // CFI checker) are only reported through Ctx, so route both to Ctx.
     Ctx.setDiagnosticHandler([&](const SMDiagnostic &Diag, bool,
