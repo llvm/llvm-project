@@ -781,8 +781,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     }
     QualType SubExprTy = SubExpr->getType();
     OptPrimType FromT = classify(SubExprTy);
-    // Casts from integer/vector to vector.
-    if (E->getType()->isVectorType())
+    // Casts between vectors and integers of the same same size.
+    if (ETy->isVectorType() || SubExprTy->isVectorType())
       return this->emitBuiltinBitCast(E);
 
     OptPrimType ToT = classify(E->getType());

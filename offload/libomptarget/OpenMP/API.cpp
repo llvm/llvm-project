@@ -42,7 +42,6 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-using GenericDeviceTy = llvm::omp::target::plugin::GenericDeviceTy;
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
