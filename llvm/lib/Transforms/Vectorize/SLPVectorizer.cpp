@@ -12255,9 +12255,12 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
   // narrow node per column widened back. Costs below the operand nodes are
   // ignored; both shapes pay them.
   InstructionCost MergedCost =
-      ::getMergeInputOpsNodeCost(*TTI, PoolS, Pool, ScalarTy, CostKind);
+      ::getMergeInputOpsNodeCost(*TTI, *TLI, PoolS, Pool, ScalarTy, CostKind);
   if (!MergedCost.isValid())
     return false;
+  // The columns are subsets of the pool, so they form plain states as well,
+  // built the same way as the pool's.
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   InstructionCost NaturalCost = 0;
   for (ArrayRef<Value *> Column : Operands) {
     SmallVector<Value *> Unique;
@@ -12272,11 +12275,12 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
       }
       NaturalMask.push_back(It - Unique.begin());
     }
-    InstructionsState ColumnS = getSameOpcode(Unique, *TLI);
-    if (!ColumnS)
+    InstructionsState ColumnS = Analysis.buildInstructionsState(Unique, *this);
+    if (!ColumnS || ColumnS.isAltShuffle() ||
+        ColumnS.areInstructionsWithCopyableElements())
       return false;
-    InstructionCost ColumnCost =
-        ::getMergeInputOpsNodeCost(*TTI, ColumnS, Unique, ScalarTy, CostKind);
+    InstructionCost ColumnCost = ::getMergeInputOpsNodeCost(
+        *TTI, *TLI, ColumnS, Unique, ScalarTy, CostKind);
     if (!ColumnCost.isValid())
       return false;
     NaturalCost += ColumnCost;
@@ -12371,7 +12375,8 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   // check; copyable lanes would need per-edge scheduling data the single
   // shared edge does not carry; an alternate pool would compute both opcodes
   // over all lanes and discard half.
-  InstructionsState PoolS = getSameOpcode(Pool, *TLI);
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+  InstructionsState PoolS = Analysis.buildInstructionsState(Pool, *this);
   if (!PoolS || PoolS.isAltShuffle() ||
       PoolS.areInstructionsWithCopyableElements())
     return false;
@@ -12380,11 +12385,18 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   StridedPtrInfo SPtrInfo;
   // The pool holds distinct values only, so it never needs a reuse shuffle.
   SmallVector<int> PoolReuseShuffleIndices;
+  // A slow load pool is postponed under the index of the next tree entry.
+  // Without the merge that entry is a natural operand node, so the
+  // postponement is undone.
+  const unsigned NumPostponedLoads = LoadEntriesToVectorize.size();
   if (getScalarsVectorizationState(
           PoolS, Pool,
           /*IsScatterVectorizeUserTE=*/false, PoolOrder, PointerOps, SPtrInfo,
-          PoolReuseShuffleIndices) != TreeEntry::Vectorize)
+          PoolReuseShuffleIndices) != TreeEntry::Vectorize) {
+    if (LoadEntriesToVectorize.size() != NumPostponedLoads)
+      LoadEntriesToVectorize.pop_back();
     return false;
+  }
   if (!isMergeInputOpsProfitable(PoolS, Pool, Operands))
     return false;
   LLVM_DEBUG(dbgs() << "SLP: Merging input operands of a binary operator node "

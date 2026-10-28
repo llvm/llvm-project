@@ -18,6 +18,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -188,26 +189,21 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
 }
 
 InstructionCost getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
+                                         const TargetLibraryInfo &TLI,
                                          const InstructionsState &S,
                                          ArrayRef<Value *> VL, Type *ScalarTy,
                                          TTI::TargetCostKind CostKind) {
+  assert(S && !S.isAltShuffle() && !S.areInstructionsWithCopyableElements() &&
+         "Expected a plain same-opcode node.");
   Instruction *MainOp = S.getMainOp();
   const unsigned Opcode = S.getOpcode();
-  auto *VecTy = getWidenedType(ScalarTy, VL.size());
-  // A phi or a freeze emits no code of its own; the node is just the
-  // vectorized incoming value.
-  if (Opcode == Instruction::PHI || Opcode == Instruction::Freeze)
-    return TTI::TCC_Free;
-  if (auto *LI = dyn_cast<LoadInst>(MainOp))
-    return TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                               LI->getPointerAddressSpace(), CostKind,
-                               TTI::getOperandInfo(LI->getPointerOperand()));
-  // The lanes of a plain same-opcode node read their matching operands as one
-  // vector; copyable and interchangeable lanes do not, and fall back to the
-  // default info.
+  const unsigned NumLanes = VL.size();
+  auto *VecTy = getWidenedType(ScalarTy, NumLanes);
+  // Interchangeable lanes compute the node's opcode from other operands, so
+  // their operand columns fall back to the default info.
   auto GetOperandInfo = [&](unsigned OpIdx) -> TTI::OperandValueInfo {
     SmallVector<Value *> Column;
-    Column.reserve(VL.size());
+    Column.reserve(NumLanes);
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I || I->getOpcode() != Opcode)
@@ -216,6 +212,108 @@ InstructionCost getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
     }
     return TTI::getOperandInfo(Column);
   };
+  switch (Opcode) {
+  case Instruction::PHI:
+  case Instruction::Freeze:
+    // No code of its own; the node is just the vectorized incoming value.
+    return TTI::TCC_Free;
+  case Instruction::ExtractElement:
+  case Instruction::ExtractValue: {
+    // The node reuses its source vector and only permutes the lanes into
+    // place. Extracts from per-lane struct-returning calls fold into the call
+    // node instead.
+    Value *Src = MainOp->getOperand(0);
+    if (any_of(VL, [&](Value *V) {
+          auto *I = dyn_cast<Instruction>(V);
+          return I && I->getOperand(0) != Src;
+        }))
+      return TTI::TCC_Free;
+    unsigned NumSrcElts;
+    if (auto *SrcVecTy = dyn_cast<FixedVectorType>(Src->getType()))
+      NumSrcElts = SrcVecTy->getNumElements();
+    else if (auto *ArrTy = dyn_cast<ArrayType>(Src->getType()))
+      NumSrcElts = ArrTy->getNumElements();
+    else
+      NumSrcElts = Src->getType()->getStructNumElements();
+    SmallVector<int> Mask(NumLanes, PoisonMaskElem);
+    for (auto [Lane, V] : enumerate(VL))
+      if (auto *I = dyn_cast<Instruction>(V))
+        if (std::optional<unsigned> Idx = getExtractIndex(I))
+          Mask[Lane] = *Idx;
+    if (NumSrcElts == NumLanes &&
+        ShuffleVectorInst::isIdentityMask(Mask, NumLanes))
+      return TTI::TCC_Free;
+    return getShuffleCost(
+        TTI, TTI::SK_PermuteSingleSrc,
+        cast<FixedVectorType>(getWidenedType(ScalarTy, NumSrcElts)), CostKind,
+        Mask);
+  }
+  case Instruction::Load: {
+    auto *LI = cast<LoadInst>(MainOp);
+    return TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                               LI->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI->getPointerOperand()));
+  }
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Select: {
+    Type *ValTy = Opcode == Instruction::Select
+                      ? ScalarTy
+                      : MainOp->getOperand(0)->getType();
+    const CmpInst::Predicate BadPred = ValTy->isFPOrFPVectorTy()
+                                           ? CmpInst::BAD_FCMP_PREDICATE
+                                           : CmpInst::BAD_ICMP_PREDICATE;
+    // The predicate of a compare lane, or of a select lane's compare.
+    auto GetPred = [&](Value *V) -> CmpInst::Predicate {
+      CmpPredicate Pred;
+      auto MatchCmp = m_Cmp(Pred, m_Value(), m_Value());
+      if (match(V, MatchCmp) ||
+          match(V, m_Select(MatchCmp, m_Value(), m_Value())))
+        return Pred;
+      return BadPred;
+    };
+    // Same choice as getEntryCost(): lanes with the swapped predicate swap
+    // their operands in the node; any other mix has no single predicate.
+    CmpInst::Predicate VecPred = GetPred(MainOp);
+    bool AnySwapped = false;
+    for (Value *V : VL) {
+      if (!isa<Instruction>(V))
+        continue;
+      CmpInst::Predicate Pred = GetPred(V);
+      if (Pred == VecPred)
+        continue;
+      if (VecPred != BadPred && Pred == CmpInst::getSwappedPredicate(VecPred)) {
+        AnySwapped = true;
+        continue;
+      }
+      VecPred = BadPred;
+      break;
+    }
+    if (Opcode == Instruction::Select)
+      return TTI.getCmpSelInstrCost(
+          Opcode, VecTy,
+          getWidenedType(MainOp->getOperand(0)->getType(), NumLanes), VecPred,
+          CostKind, GetOperandInfo(1), GetOperandInfo(2), MainOp);
+    // Swapped lanes take their operands in the other order, so the operand
+    // columns are only known without them.
+    const bool KnownOperands = VecPred != BadPred && !AnySwapped;
+    return TTI.getCmpSelInstrCost(
+        Opcode, getWidenedType(ValTy, NumLanes), VecTy, VecPred, CostKind,
+        KnownOperands ? GetOperandInfo(0) : TTI::OperandValueInfo(),
+        KnownOperands ? GetOperandInfo(1) : TTI::OperandValueInfo(), MainOp);
+  }
+  case Instruction::Call: {
+    auto *CI = cast<CallInst>(MainOp);
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+    SmallVector<Type *> ArgTys =
+        buildIntrinsicArgTypes(CI, ID, NumLanes, /*MinBW=*/0, TTI);
+    auto [IntrinsicCost, LibCost] =
+        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+    return std::min(IntrinsicCost, LibCost);
+  }
+  default:
+    break;
+  }
   if (Instruction::isBinaryOp(Opcode))
     return TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind,
                                       GetOperandInfo(0), GetOperandInfo(1), {},
@@ -233,10 +331,12 @@ InstructionCost getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
       CCH = TTI::CastContextHint::None;
     return TTI.getCastInstrCost(
         Opcode, VecTy,
-        getWidenedType(MainOp->getOperand(0)->getType(), VL.size()), CCH,
+        getWidenedType(MainOp->getOperand(0)->getType(), NumLanes), CCH,
         CostKind);
   }
-  return InstructionCost::getInvalid();
+  // Geps, inserts, shuffles and stores produce pointers, vectors or nothing,
+  // so they never feed a binary operator; any other opcode gathers.
+  llvm_unreachable("Unexpected opcode for a merged-inputs operand node.");
 }
 
 InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
