@@ -42,15 +42,14 @@ template <typename Ret, typename... Params> class function_ref<Ret(Params...)> {
 
   template <typename Callable>
   LIBC_INLINE static Ret callback_fn(intptr_t callable, Params... params) {
+    auto &fn = *reinterpret_cast<Callable *>(callable);
     // Discard the result if Ret is void, and convert it implicitly otherwise.
     // Avoiding an explicit cast lets the compiler diagnose narrowing
     // conversions and discarded [[nodiscard]] results.
     if constexpr (cpp::is_void_v<Ret>)
-      (*reinterpret_cast<Callable *>(callable))(
-          cpp::forward<Params>(params)...);
+      fn(cpp::forward<Params>(params)...);
     else
-      return (*reinterpret_cast<Callable *>(callable))(
-          cpp::forward<Params>(params)...);
+      return fn(cpp::forward<Params>(params)...);
   }
 
 public:
