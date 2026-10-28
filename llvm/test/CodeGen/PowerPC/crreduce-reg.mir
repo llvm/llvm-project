@@ -64,3 +64,77 @@ body:             |
     B %bb.1
 
 ...
+---
+# $carry is live out of bb.0, so the block created by the split needs it as a
+# live-in.
+name:            carry_live_across_split
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  ; CHECK-LABEL: name: carry_live_across_split
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x20000000), %bb.3(0x60000000)
+  ; CHECK-NEXT:   liveins: $r3, $r4, $r5, $r6
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprc = COPY $r3
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprc = COPY $r4
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY $r5
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gprc = COPY $r6
+  ; CHECK-NEXT:   [[ADDC:%[0-9]+]]:gprc = ADDC [[COPY]], [[COPY1]], implicit-def $carry
+  ; CHECK-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY2]], 0
+  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
+  ; CHECK-NEXT:   [[LI1:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
+  ; CHECK-NEXT:   BCn [[CMPWI]].sub_eq, %bb.1
+  ; CHECK-NEXT:   B %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x2aaaaaab), %bb.2(0x55555555)
+  ; CHECK-NEXT:   liveins: $carry
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI [[COPY3]], 0
+  ; CHECK-NEXT:   BC killed [[CMPLWI]].sub_gt, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $carry
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $carry
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprc_and_gprc_nor0 = PHI [[LI]], %bb.1, [[LI1]], %bb.3
+  ; CHECK-NEXT:   [[ADDE:%[0-9]+]]:gprc = ADDE [[COPY]], [[COPY1]], implicit-def dead $carry, implicit $carry
+  ; CHECK-NEXT:   $r3 = COPY [[PHI]]
+  ; CHECK-NEXT:   $r4 = COPY [[ADDE]]
+  ; CHECK-NEXT:   $r5 = COPY [[ADDC]]
+  ; CHECK-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r3, $r4, $r5, $r6
+
+    %0:gprc = COPY $r3
+    %1:gprc = COPY $r4
+    %2:gprc = COPY $r5
+    %3:gprc = COPY $r6
+    %4:gprc = ADDC %0, %1, implicit-def $carry
+    %5:crrc = CMPWI %2, 0
+    %6:crrc = CMPLWI %3, 0
+    %7:crbitrc = CRAND %5.sub_eq, %6.sub_gt
+    %8:gprc_and_gprc_nor0 = LI 0
+    %9:gprc_and_gprc_nor0 = LI 1
+    BC killed %7, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    liveins: $carry
+
+  bb.2:
+    liveins: $carry
+
+    %10:gprc_and_gprc_nor0 = PHI %8, %bb.1, %9, %bb.0
+    %11:gprc = ADDE %0, %1, implicit-def dead $carry, implicit $carry
+    $r3 = COPY %10
+    $r4 = COPY %11
+    $r5 = COPY %4
+    BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5
+
+...
