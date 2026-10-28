@@ -592,7 +592,7 @@ MSFZFile::createStream(uint32_t StreamIndex) const {
 
 class MSFZWriter::Impl {
   struct OutputFragment {
-    uint32_t Size;
+    uint32_t Size = 0;
     uint32_t FirstChunk = 0;
     uint32_t Offset = 0;
     uint64_t FileOffset = 0;
