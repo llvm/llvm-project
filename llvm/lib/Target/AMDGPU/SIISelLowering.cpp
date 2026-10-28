@@ -2855,7 +2855,8 @@ SDValue SITargetLowering::getPreloadedValue(
   };
 
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       AMDGPU::isChainCC(CC))) {
     AMDGPU::ClusterDimsAttr ClusterDims = MFI.getClusterDims();
     bool HasFixedDims = ClusterDims.isFixedDims();
 
