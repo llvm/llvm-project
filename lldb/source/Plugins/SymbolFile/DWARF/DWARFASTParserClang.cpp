@@ -469,9 +469,23 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       decl.SetColumn(form_value.Unsigned());
       break;
 
-    case DW_AT_address_class:
-      address_class = form_value.Unsigned();
+    case DW_AT_address_class: {
+      uint64_t val = form_value.Unsigned();
+      if (val != llvm::dwarf::DW_ADDR_none) {
+        constexpr uint64_t max_target_as =
+            clang::Qualifiers::MaxAddressSpace -
+            static_cast<unsigned>(clang::LangAS::FirstTargetAddressSpace);
+        if (val <= max_target_as) {
+          address_class =
+              clang::getLangASFromTargetAS(static_cast<unsigned>(val));
+        } else {
+          die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+              "[{0:x16}]: invalid DW_AT_address_class {1:x}", die.GetOffset(),
+              val);
+        }
+      }
       break;
+    }
 
     case DW_AT_declaration:
       is_forward_declaration = form_value.Boolean();

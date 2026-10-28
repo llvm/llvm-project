@@ -571,8 +571,9 @@ struct ParsedDWARFTypeAttributes {
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
   uint32_t encoding = 0;
-  /// DW_AT_address_class of a pointer or reference type.
-  uint32_t address_class = llvm::dwarf::DW_ADDR_none;
+  /// Address space class (translated from DW_AT_address_class) of a pointer or
+  /// reference type.
+  clang::LangAS address_class = clang::LangAS::Default;
 
   ///< Indicates ref-qualifier of C++ member function if present.
   ///< Is RQ_None otherwise.

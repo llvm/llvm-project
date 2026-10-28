@@ -2477,6 +2477,11 @@ DWARF:
         - AbbrCode: 0x5
           Values:
             - Value: 0x03
+        # DW_TAG_pointer_type -> 0x0f with DW_AT_address_class = 0xffffffff
+        - AbbrCode: 0x3
+          Values:
+            - Value: 0x0f
+            - Value: 0xffffffff
         - AbbrCode: 0x0
 )";
   DWARFASTParserClangYAMLTester tester(yamldata);
@@ -2496,6 +2501,9 @@ DWARF:
 
   DWARFDIE void_ptr_as3_die = ptr_no_as_die.GetSibling();
   ASSERT_EQ(void_ptr_as3_die.Tag(), DW_TAG_pointer_type);
+
+  DWARFDIE ptr_as_invalid_die = void_ptr_as3_die.GetSibling();
+  ASSERT_EQ(ptr_as_invalid_die.Tag(), DW_TAG_pointer_type);
 
   SymbolContext sc;
   auto &parser = tester.GetParser();
@@ -2531,6 +2539,13 @@ DWARF:
   EXPECT_EQ(ct_void_as3.GetTargetAddressSpace(), std::nullopt);
   EXPECT_EQ(ct_void_as3.GetPointeeType().GetTargetAddressSpace(),
             std::optional<uint32_t>(3U));
+
+  lldb::TypeSP ptr_invalid_type = parser.ParseTypeFromDWARF(
+      sc, ptr_as_invalid_die, /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(ptr_invalid_type, nullptr);
+  CompilerType ct_invalid = ptr_invalid_type->GetForwardCompilerType();
+  ASSERT_TRUE(ct_invalid.IsPointerType());
+  EXPECT_EQ(ct_invalid.GetPointeeType().GetTargetAddressSpace(), std::nullopt);
 }
 
 TEST_F(DWARFASTParserClangTests, TestAddressClassUnhandledTags) {
