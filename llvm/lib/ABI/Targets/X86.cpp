@@ -759,9 +759,8 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
       if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy))
-        if (isPromotableInteger(IntTy))
-          return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
-                                               : ArgInfo::getDirect(RetTy);
+        return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
+                                             : ArgInfo::getDirect(RetTy);
     }
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
       assert(Hi == Integer);
