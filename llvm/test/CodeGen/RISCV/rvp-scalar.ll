@@ -3874,7 +3874,8 @@ define i32 @test_sati_i32_w1(i32 %a) {
 ;
 ; RV64-LABEL: test_sati_i32_w1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psati.w a0, a0, 1
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sati a0, a0, 1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 1)
   ret i32 %res
@@ -3888,8 +3889,18 @@ define i32 @test_sati_i32_w32(i32 %a) {
 ;
 ; RV64-LABEL: test_sati_i32_w32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psati.w a0, a0, 32
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sati a0, a0, 32
 ; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 32)
+  ret i32 %res
+}
+
+define signext i32 @test_sati_i32_w32_signext(i32 signext %a) {
+; CHECK-LABEL: test_sati_i32_w32_signext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sati a0, a0, 32
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 32)
   ret i32 %res
 }
@@ -3911,8 +3922,18 @@ define i32 @test_usati_u32_w31(i32 %a) {
 ;
 ; RV64-LABEL: test_usati_u32_w31:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pusati.w a0, a0, 31
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    usati a0, a0, 31
 ; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 31)
+  ret i32 %res
+}
+
+define signext i32 @test_usati_u32_w31_signext(i32 signext %a) {
+; CHECK-LABEL: test_usati_u32_w31_signext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 31
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 31)
   ret i32 %res
 }
