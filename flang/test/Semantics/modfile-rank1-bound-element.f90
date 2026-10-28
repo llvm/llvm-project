@@ -27,6 +27,9 @@
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_parent.f90
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_child.f90
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_consumer.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/reverse_provider.f90
+! RUN: FileCheck %s --check-prefix=REVERSE --input-file=%t/m_reverse.mod
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/reverse_consumer.f90
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/consumer.f90
 
 ! `a` has the default lower bound 1, so UBOUND(a,dim) is exact for every
@@ -221,6 +224,43 @@ program fixedpoint_consumer
   end interface
   procedure(gi), pointer :: pp
   pp => g
+end program
+
+! The reverse orientation: an irreducible rank-1 LOWER bound with a constant
+! rank-1 upper bound.  The constant [5,5] is folded into per-dimension constant
+! bounds at declaration and must be written back as a rank-1 array -- not as
+! the scalar 5 that every dimension happens to share -- so that a separately
+! compiled consumer reads d back with rank 2.  The procedure pointer
+! association compares the read-back interface structurally against one
+! declared locally with the same bounds.
+!--- reverse_provider.f90
+module m_reverse
+contains
+  subroutine s(n, m, c, d)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real, intent(inout) :: d(merge(n, m, c) : [5, 5])
+    d = 0.0
+  end subroutine
+end module
+! REVERSE-LABEL: subroutine s(n,m,c,d)
+! REVERSE: real(4),intent(inout)::d(__builtin_int(merge(n,m,c),kind=8):[INTEGER(8)::5_8,5_8])
+! REVERSE-NOT: {{[%][Rr][Oo][Bb][Ee]}}
+
+!--- reverse_consumer.f90
+program reverse_consumer
+  use m_reverse, only: s
+  interface
+    subroutine si(n, m, c, d)
+      integer, intent(in) :: n(2), m(2)
+      logical, intent(in) :: c(2)
+      real, intent(inout) :: d(merge(n, m, c) : [5, 5])
+    end subroutine
+  end interface
+  procedure(si), pointer :: pp
+  real :: x(2:5, 3:5)
+  pp => s
+  call s([2, 3], [9, 9], [.true., .true.], x)
 end program
 
 !--- consumer.f90

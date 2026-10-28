@@ -951,11 +951,12 @@ end module
 !end
 
 !===============================================================================
-! A constant base folds through a raw element
+! A constant base is folded at declaration
 !
-! a(0:[2,3]) leaves a raw element in each extent (lower bound 0), but its base
-! is constant, so folding reduces the element to its scalar value before the
-! raw-element gate is applied: size(a) is the constant 3*4 == 12.
+! The constant bounds array [2,3] is folded into per-dimension constant bounds
+! when a is declared, so no raw element is left in any extent even though the
+! lower bound 0 would make UBOUND inexact: size(a) is the constant 3*4 == 12.
+! The mod file still writes the upper bound as the declared rank-1 array.
 !===============================================================================
 module msizeconst
   real :: a(0 : [2, 3])

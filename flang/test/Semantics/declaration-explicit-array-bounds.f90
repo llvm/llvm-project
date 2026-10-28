@@ -162,8 +162,9 @@ subroutine size_dim_checked(n, m, c)
   !ERROR: DIM=0 dimension must be positive
   print *, size(a, 0)
 end subroutine
-! With a constant base the raw element folds to its scalar value, so size(a)
-! is a constant expression: 3*4 == 12 (a kind of -1 would be rejected).
+! A constant bounds array is folded into per-dimension constant bounds at
+! declaration, so no raw element remains and size(a) is a constant expression:
+! 3*4 == 12 (a kind of -1 would be rejected).
 subroutine size_constant_base()
   real :: a(0:[2, 3])
   integer, parameter :: count = size(a)
@@ -212,6 +213,24 @@ contains
   function res_constant_base() result(r)
     !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
     real :: r([2, 3])
+    r = 0.0
+  end function
+  ! The rank-1 bounds may also come from a DIMENSION attribute or statement.
+  function res_dimension_attr() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real, dimension([2, 3]) :: r
+    r = 0.0
+  end function
+  function res_dimension_attr_dummy(n) result(r)
+    integer, intent(in) :: n(2)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real, dimension(n) :: r
+    r = 0.0
+  end function
+  function res_dimension_stmt() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r
+    dimension r([2, 3])
     r = 0.0
   end function
   function res_alloc(n) result(r)
