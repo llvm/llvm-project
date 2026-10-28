@@ -1599,8 +1599,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       continue;
     if (IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
             llvm::vfs::getVFSFromYAML(
-                std::move(*Buffer),
-                [](const llvm::SMDiagnostic &, void *) {}, File,
+                std::move(*Buffer), [](const llvm::SMDiagnostic &, void *) {},
+                File,
                 /*DiagContext=*/nullptr, VFS))
       VFS = std::move(FS);
   }
