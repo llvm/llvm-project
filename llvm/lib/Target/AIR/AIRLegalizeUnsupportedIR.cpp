@@ -685,8 +685,8 @@ Value *expandIsFPClass(IRBuilder<> &B, Value *X, FPClassTest Mask) {
 //   llvm.rint (air.rint) in the fixed rounding mode.
 // * llvm.powi, llvm.lround, llvm.llround, llvm.lrint, llvm.llrint,
 //   llvm.canonicalize, llvm.smul/umul.with.overflow wider than 32 bits: crash
-//   Metal's compiler. llvm.minimumnum, llvm.maximumnum, llvm.sincos:
-//   undefined symbols.
+//   Metal's compiler. llvm.minimumnum, llvm.maximumnum, llvm.sincos,
+//   llvm.smulh, llvm.umulh: undefined symbols.
 // * llvm.fabs of half or bfloat: air.fabs.f16 canonicalizes a NaN (0x7E00);
 //   the sign bit is cleared in the bits.
 void expandIntrinsicsMetalMishandles(Module &M) {
@@ -699,7 +699,7 @@ void expandIntrinsicsMetalMishandles(Module &M) {
       Intrinsic::lround,      Intrinsic::llround,    Intrinsic::lrint,
       Intrinsic::llrint,      Intrinsic::canonicalize,
       Intrinsic::minimumnum,  Intrinsic::maximumnum, Intrinsic::sincos,
-      Intrinsic::fabs};
+      Intrinsic::fabs,        Intrinsic::smulh,      Intrinsic::umulh};
   SmallVector<Instruction *, 16> Work;
   for (Function &F : M)
     for (Instruction &I : instructions(F)) {
@@ -898,6 +898,24 @@ void expandIntrinsicsMetalMishandles(Module &M) {
       Value *Eq =
           B.CreateBitCast(Min ? B.CreateOr(XB, YB) : B.CreateAnd(XB, YB), FTy);
       Value *R = B.CreateSelect(B.CreateFCmpOEQ(X, Y), Eq, MM);
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh: {
+      // The high half of the double-width product (a wide product of i64
+      // operands is split into limbs by expandWideIntegers).
+      bool Signed = CI->getIntrinsicID() == Intrinsic::smulh;
+      Type *ITy = X->getType();
+      unsigned W = ITy->getScalarSizeInBits();
+      Type *WTy = ITy->getWithNewBitWidth(2 * W);
+      auto Ext = [&](Value *V) {
+        return Signed ? B.CreateSExt(V, WTy) : B.CreateZExt(V, WTy);
+      };
+      Value *P = B.CreateMul(Ext(X), Ext(CI->getArgOperand(1)));
+      Value *R = B.CreateTrunc(B.CreateLShr(P, W), ITy);
       R->takeName(CI);
       CI->replaceAllUsesWith(R);
       CI->eraseFromParent();

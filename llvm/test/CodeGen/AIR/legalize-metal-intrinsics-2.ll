@@ -117,6 +117,27 @@ define float @fneg_f32(float %x) {
   ret float %r
 }
 
+; CHECK-LABEL: define i32 @smulh_i32(
+; CHECK: [[X:%.*]] = sext i32 %x to i64
+; CHECK: [[Y:%.*]] = sext i32 %y to i64
+; CHECK: [[P:%.*]] = mul i64 [[X]], [[Y]]
+; CHECK: [[H:%.*]] = lshr i64 [[P]], 32
+; CHECK: trunc i64 [[H]] to i32
+define i32 @smulh_i32(i32 %x, i32 %y) {
+  %r = call i32 @llvm.smulh.i32(i32 %x, i32 %y)
+  ret i32 %r
+}
+
+; CHECK-LABEL: define i32 @umulh_i32(
+; CHECK: zext i32 %x to i64
+; CHECK-NOT: llvm.umulh
+define i32 @umulh_i32(i32 %x, i32 %y) {
+  %r = call i32 @llvm.umulh.i32(i32 %x, i32 %y)
+  ret i32 %r
+}
+
+declare i32 @llvm.smulh.i32(i32, i32)
+declare i32 @llvm.umulh.i32(i32, i32)
 declare float @llvm.powi.f32.i32(float, i32)
 declare i32 @llvm.lround.i32.f32(float)
 declare i64 @llvm.llrint.i64.f32(float)
