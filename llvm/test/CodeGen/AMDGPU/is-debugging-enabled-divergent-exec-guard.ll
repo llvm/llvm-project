@@ -1,12 +1,12 @@
 ; s_cbranch_cdbgsys_or_user and s_trap are scalar and ignore EXEC, so divergent
 ; control flow around them needs an EXEC guard.
 ;
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=FUSED
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=FUSED
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O1 < %s | FileCheck %s --check-prefix=FUSED
@@ -58,7 +58,7 @@ exit:
 ; GCN: [[INNER_SKIP]]:
 ; GCN: [[OUTER_SKIP]]:
 
-; O0/O1 fuse the single-use loop query; O2 materializes it after CFG restructuring.
+; Uniform loop control permits fusion.
 define amdgpu_kernel void @loop_debugtrap_exec_guard(ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -82,12 +82,20 @@ E:
 }
 
 ; GCN-LABEL: loop_debugtrap_exec_guard:
+; GCN-NOT: s_getreg_b32
 ; GCN: s_cbranch_execz [[LOOP_SKIP:.LBB[0-9_]+]]
-; GCN: [[LOOP_HDR:.LBB[0-9_]+]]:
-; DBGSTATUS: s_getreg_b32 s{{[0-9]+}}, hwreg(HW_REG_{{(WAVE_)?}}STATUS, 20, 2)
-; DBGPRIV: s_getreg_b32 s{{[0-9]+}}, hwreg(HW_REG_WAVE_STATE_PRIV, 16, 2)
-; GCN-NOT: s_cbranch_cdbgsys_or_user
+; GCN-NOT: s_getreg_b32
+; GCN: s_cbranch_cdbgsys_or_user [[LOOP_DEBUG:.LBB[0-9_]+]]
+; GCN-NEXT: s_branch [[LOOP_HDR:.LBB[0-9_]+]]
+; GCN: [[LOOP_DEBUG]]:
+; GCN-NOT: s_getreg_b32
 ; GCN: s_trap 3
+; GCN: [[LOOP_HDR]]:
+; GCN-NOT: s_getreg_b32
+; GCN: global_store_b32
+; GCN: s_cbranch_cdbgsys_or_user [[LOOP_DEBUG]]
+; GCN-NEXT: s_branch [[LOOP_HDR]]
+; GCN-NOT: s_getreg_b32
 ; GCN: [[LOOP_SKIP]]:
 
 ; FUSED-LABEL: loop_debugtrap_exec_guard:
