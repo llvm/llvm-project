@@ -3382,7 +3382,9 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
 bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
 }
-bool isMatrixIntrinsic(unsigned IntrID) { return lookupMatrixIntrinsic(IntrID); }
+bool isMatrixIntrinsic(unsigned IntrID) {
+  return lookupMatrixIntrinsic(IntrID);
+}
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,

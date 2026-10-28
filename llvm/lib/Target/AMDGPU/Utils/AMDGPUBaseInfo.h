@@ -1791,7 +1791,8 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID);
 /// \returns true if the intrinsic executes an LDSDMA operation
 bool isLDSDMAIntrinsic(unsigned IntrID);
 
-/// \returns true if the intrinsic is a matrix operation (WMMA, MFMA, SWMMAC, SMFMAC)
+/// \returns true if the intrinsic is a matrix operation (WMMA, MFMA, SWMMAC,
+/// SMFMAC)
 bool isMatrixIntrinsic(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR

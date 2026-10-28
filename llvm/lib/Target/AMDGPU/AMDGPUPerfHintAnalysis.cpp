@@ -374,7 +374,6 @@ bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
   return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
 }
 
-
 bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
   return ((FI.MemInstCost + FI.IAMInstCost * IAWeight +
            FI.LSMInstCost * LSWeight) * 100 / FI.InstCost) > LimitWaveThresh;
