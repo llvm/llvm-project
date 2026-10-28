@@ -1355,10 +1355,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Reject AIX-specific link option on other targets.
   if (!Triple.isOSAIX()) {
-    for (const Arg *A : Args.filtered(options::OPT_b)) {
+    if (const Arg *A = Args.getLastArg(options::OPT_b))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.str();
-    }
   }
 
   const InputInfo &Input = Inputs[0];

@@ -94,14 +94,18 @@
 ! ------------------------------------------------------------------------------
 !
 ! On AIX, '-b <arg>' is passed to the linker.
-! RUN: %flang --target=powerpc-ibm-aix -bmaxdata:0x80000000 -### %s 2>&1 \
+! RUN: %flang --target=powerpc64-ibm-aix -bmaxdata:0x80000000 -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=B-OPT
-! RUN: %flang --target=powerpc-ibm-aix -b maxdata:0x80000000 -### %s 2>&1 \
+! RUN: %flang --target=powerpc64-ibm-aix -b maxdata:0x80000000 -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=B-OPT
 ! RUN: not %flang --target=x86_64-unknown-linux-gnu -bmaxdata:0x80000000 -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=B-OPT-NON-AIX
+! RUN: not %flang --target=x86_64-unknown-linux-gnu -bmaxdata:0x80000000 \
+! RUN:     -bmaxstack:2000000 -### %s 2>&1 \
+! RUN:     | FileCheck %s --check-prefix=B-OPT-NON-AIX --implicit-check-not="error:"
 !
-! B-OPT: "-b" "maxdata:0x80000000"
+! B-OPT: "{{.*}}ld{{(\.lld)?(\.exe)?}}"
+! B-OPT-SAME: "-b" "maxdata:0x80000000"
 ! B-OPT-NON-AIX: error: unsupported option '-b' for target 'x86_64-unknown-linux-gnu'
 ! ------------------------------------------------------------------------------
 
