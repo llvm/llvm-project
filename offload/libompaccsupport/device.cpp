@@ -841,13 +841,12 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
   // The allocation is fresh, so no work pending on the queue accesses it and
   // the copy can bypass the queue. Without a queue, the plugin may write the
   // memory directly.
-  if (const auto *Res = olMemcpy(
-          /*Queue=*/nullptr, *AllocOrErr, Device.DeviceHandle, &LocalKLE,
-          /*SrcDevice=*/nullptr, sizeof(KernelLaunchEnvironmentTy)))
+  if (Device.submitDataSync(*AllocOrErr, &LocalKLE,
+                            sizeof(KernelLaunchEnvironmentTy)))
     return createError(ErrorCode::BackendFailure,
                        "failed to copy the kernel launch environment to "
-                       "device %d: %s",
-                       Device.DeviceID, Res->Details);
+                       "device %d",
+                       Device.DeviceID);
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
