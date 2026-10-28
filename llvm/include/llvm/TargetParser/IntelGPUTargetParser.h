@@ -58,24 +58,79 @@ enum class IGCAFeatureSet : uint8_t {
 ///          16 bits              13 bits              3 bits
 ///
 /// Note that bit 0 is a flag that represents if the feature set is "exact".
-/// Only targets in INTEL_IGCA_TARGET, which IntelGPUTargetParser.def derives
-/// from the device rows, are valid; any other value is stored as invalid(),
-/// whose packed representation is 0.
+/// Only IGCA targets that some device in IntelGPUTargetParser.def can run are
+/// valid; any other value is stored as invalid(), whose packed representation
+/// is 0.
 class IGCATarget {
   uint32_t V = 0;
 
-  /// \return true if \p Packed contains a target listed in INTEL_IGCA_TARGET.
-  static constexpr bool isKnownIGCATarget(uint32_t Packed) {
-#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  if (Packed == (uint32_t(TARGET) << TargetShift |                             \
-                 llvm::to_underlying(IGCAFeatureSet::FEATURE_SET)))            \
-    return true;
+  // Positions of the fields in V; see the bit layout above the class.
+  static constexpr uint32_t TargetShift = 16;
+  static constexpr uint32_t FeatureSetMask = 0x7;
+  static constexpr uint32_t IsExactMask = 0x1;
+  /// Bits 3-15, which no IGCA target uses.
+  static constexpr uint32_t ReservedMask =
+      ((uint32_t(1) << TargetShift) - 1) & ~FeatureSetMask;
+
+  /// The IGCA target of each row in IntelGPUTargetParser.def, e.g. {20,
+  /// ComputeExact} for xe-pvc. Several rows can have the same IGCA target,
+  /// e.g. the nine igca_10r devices, so entries repeat.
+  struct DeviceIGCATarget {
+    uint16_t Target;
+    IGCAFeatureSet FeatureSet;
+  };
+  static constexpr DeviceIGCATarget DeviceIGCATargets[] = {
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  {IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS},
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  {IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS},
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
+  };
+
+  /// \return true if a device with the IGCA feature set \p DeviceFeatureSet
+  /// can run code built for the IGCA feature set \p RequestedFeatureSet at the
+  /// device's own numeric IGCA target. For example, xe-pvc (igca_20ca,
+  /// ComputeExact) can run code built for igca_20ca, igca_20c and igca_20, but
+  /// not igca_20r.
+  static constexpr bool
+  deviceCanRunIGCAFeatureSet(IGCAFeatureSet DeviceFeatureSet,
+                             IGCAFeatureSet RequestedFeatureSet) {
+    // Every device runs code built for the Core IGCA feature set, e.g.
+    // igca_20.
+    if (RequestedFeatureSet == IGCAFeatureSet::Core)
+      return true;
+    // A device runs code built for its own IGCA feature set, e.g. igca_20ca.
+    if (RequestedFeatureSet == DeviceFeatureSet)
+      return true;
+    // An exact IGCA feature set also runs code built for its non-exact form,
+    // e.g. igca_20c.
+    if (DeviceFeatureSet == IGCAFeatureSet::ComputeExact)
+      return RequestedFeatureSet == IGCAFeatureSet::Compute;
+    if (DeviceFeatureSet == IGCAFeatureSet::RenderExact)
+      return RequestedFeatureSet == IGCAFeatureSet::Render;
+    return false;
+  }
+
+  /// \return true if some device in IntelGPUTargetParser.def with the same
+  /// numeric IGCA target can run code built for the IGCA target in \p Packed.
+  static constexpr bool isKnownIGCATarget(uint32_t Packed) {
+    // A value with any of bits 3-15 set is not an IGCA target, e.g. igca_20c
+    // (0x00140002) with bit 3 set.
+    if (Packed & ReservedMask)
+      return false;
+    // Split the value into its numeric IGCA target and feature set, e.g. 20
+    // and Compute for igca_20c.
+    uint16_t RequestedTarget = uint16_t(Packed >> TargetShift);
+    auto RequestedFeatureSet = IGCAFeatureSet(Packed & FeatureSetMask);
+    for (const DeviceIGCATarget &D : DeviceIGCATargets)
+      if (D.Target == RequestedTarget &&
+          deviceCanRunIGCAFeatureSet(D.FeatureSet, RequestedFeatureSet))
+        return true;
     return false;
   }
 
   constexpr explicit IGCATarget(uint32_t Packed) {
-    // Targets not listed in INTEL_IGCA_TARGET (including Target == 0) are
+    // IGCA targets that no device can run (including Target == 0) are
     // invalid, so V remains 0. This keeps V == 0 as the only canonical invalid
     // representation.
     if (isKnownIGCATarget(Packed))
@@ -83,10 +138,6 @@ class IGCATarget {
   }
 
 public:
-  static constexpr uint32_t TargetShift = 16;
-  static constexpr uint32_t FeatureSetMask = 0x7;
-  static constexpr uint32_t IsExactMask = 0x1;
-
   constexpr IGCATarget(uint16_t Target, IGCAFeatureSet FeatureSet)
       : IGCATarget(uint32_t(Target) << TargetShift |
                    (llvm::to_underlying(FeatureSet) & FeatureSetMask)) {}
@@ -125,13 +176,13 @@ public:
   }
   /// \return true if target has either Compute or ComputeExact feature set.
   constexpr bool isAnyCompute() const {
-    return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
-           llvm::to_underlying(IGCAFeatureSet::Compute);
+    return getFeatureSet() == IGCAFeatureSet::Compute ||
+           getFeatureSet() == IGCAFeatureSet::ComputeExact;
   }
   /// \return true if target has either Render or RenderExact feature set.
   constexpr bool isAnyRender() const {
-    return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
-           llvm::to_underlying(IGCAFeatureSet::Render);
+    return getFeatureSet() == IGCAFeatureSet::Render ||
+           getFeatureSet() == IGCAFeatureSet::RenderExact;
   }
 
   friend constexpr bool operator==(IGCATarget A, IGCATarget B) {
@@ -154,12 +205,12 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
 /// Parse an IGCA target string such as "igca_20ca".
 ///
-/// \return an invalid IGCATarget if \p MaybeTarget is not a known target in
-/// IntelGPUTargetParser.def.
+/// \return an invalid IGCATarget if no device in IntelGPUTargetParser.def can
+/// run \p MaybeTarget, e.g. "igca_10c".
 LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 
 /// \return the \p Target as a string, e.g. "igca_20ca", or an empty string if
-/// \p Target is invalid or not a known target in IntelGPUTargetParser.def.
+/// \p Target is invalid.
 LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
 } // namespace IntelGPU

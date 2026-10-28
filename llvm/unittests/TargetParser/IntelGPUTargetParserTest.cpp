@@ -114,7 +114,7 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   EXPECT_EQ(IGCATarget::unpack(2), IGCATarget::invalid());
   EXPECT_FALSE(IGCATarget::unpack(2).isValid());
   EXPECT_EQ(IGCATarget(0, IGCAFeatureSet::RenderExact), IGCATarget::invalid());
-  // Targets not listed in INTEL_IGCA_TARGET are invalid:
+  // IGCA targets that no device can run are invalid:
   EXPECT_FALSE(IGCATarget(42, IGCAFeatureSet::Core).isValid());
   EXPECT_EQ(IGCATarget(42, IGCAFeatureSet::Core), IGCATarget::invalid());
   EXPECT_EQ(IGCATarget(60, IGCAFeatureSet::ComputeExact),
@@ -128,6 +128,10 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
 TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
   using IntelGPU::IGCAFeatureSet;
   using IntelGPU::IGCATarget;
+  // Valid IGCA targets parse to a valid IGCATarget:
+  EXPECT_TRUE(IntelGPU::parseIGCATarget("igca_20ca"));
+  EXPECT_TRUE(IntelGPU::parseIGCATarget("igca_15r"));
+  EXPECT_TRUE(IntelGPU::parseIGCATarget("igca_10"));
   EXPECT_EQ(IntelGPU::parseIGCATarget("igca_10"),
             IGCATarget(10, IGCAFeatureSet::Core));
   EXPECT_EQ(IntelGPU::parseIGCATarget("igca_20c"),
@@ -140,12 +144,12 @@ TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
             IGCATarget(15, IGCAFeatureSet::RenderExact));
   EXPECT_EQ(IntelGPU::parseIGCATarget("igca_35ra"),
             IGCATarget(35, IGCAFeatureSet::RenderExact));
-  EXPECT_EQ(IntelGPU::parseIGCATarget("igca_60c"),
-            IGCATarget(60, IGCAFeatureSet::Compute));
   EXPECT_EQ(IntelGPU::parseIGCATarget("igca_60r"),
             IGCATarget(60, IGCAFeatureSet::Render));
   // Not all target levels support all feature sets:
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10c"));
+  // xe-cri is igca_60 (Core), so there is no igca_60c:
+  EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_60c"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_20r"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_20ra"));
   // Only some target levels have an exact feature set:
@@ -189,47 +193,5 @@ TEST(IntelGPUTargetParserTest, IGCATargetName) {
   EXPECT_EQ(
       IntelGPU::getIGCATargetName(IGCATarget(10, IGCAFeatureSet::Compute)), "");
 }
-
-// Spell an IGCA target from its fields, independently of the NAME column.
-std::string expectedIGCASpelling(uint16_t Target,
-                                 IntelGPU::IGCAFeatureSet FeatureSet) {
-  std::string Name = "igca_" + std::to_string(Target);
-  switch (FeatureSet) {
-  case IntelGPU::IGCAFeatureSet::Core:
-    return Name;
-  case IntelGPU::IGCAFeatureSet::Compute:
-    return Name + "c";
-  case IntelGPU::IGCAFeatureSet::ComputeExact:
-    return Name + "ca";
-  case IntelGPU::IGCAFeatureSet::Render:
-    return Name + "r";
-  case IntelGPU::IGCAFeatureSet::RenderExact:
-    return Name + "ra";
-  }
-  return "";
-}
-
-TEST(IntelGPUTargetParserTest, IGCASpellingsMatchFields) {
-  // Every INTEL_IGCA_TARGET's NAME must agree with information in the rest of
-  // its row.
-#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  EXPECT_EQ(NAME, expectedIGCASpelling(                                        \
-                      TARGET, IntelGPU::IGCAFeatureSet::FEATURE_SET));
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-}
-
-// Every device's IGCA target and feature sets should have a corresponding
-// entry in INTEL_IGCA_TARGET:
-#define INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)          \
-  static_assert(IntelGPU::IGCATarget(                                          \
-                    IGCA_TARGET, IntelGPU::IGCAFeatureSet::IGCA_FEATURE_SETS)  \
-                    .isValid(),                                                \
-                NAME " uses an IGCA target not listed in INTEL_IGCA_TARGET");
-#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
-  INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
-  INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-#undef INTEL_IGCA_TARGET_CHECK
 
 } // namespace

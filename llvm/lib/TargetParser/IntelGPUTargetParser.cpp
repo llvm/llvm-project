@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
 
@@ -65,18 +64,42 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
       .str();
 }
 
-IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
-  return StringSwitch<IGCATarget>(MaybeTarget)
-#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  .Case(NAME, IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))
+namespace {
+// All five possible names for each device's numeric IGCA target, e.g. igca_20,
+// igca_20c, igca_20ca, igca_20r and igca_20ra for xe-pvc. Which of them are
+// valid is decided by the IGCATarget constructor, so the rule is in one place.
+// The names are string literals, so getIGCATargetName() can return them.
+struct IGCATargetNameEntry {
+  const char *Name;
+  uint16_t Target;
+  IGCAFeatureSet FeatureSet;
+};
+#define IGCA_TARGET_NAMES(TARGET)                                              \
+  {"igca_" #TARGET, TARGET, IGCAFeatureSet::Core},                             \
+      {"igca_" #TARGET "c", TARGET, IGCAFeatureSet::Compute},                  \
+      {"igca_" #TARGET "ca", TARGET, IGCAFeatureSet::ComputeExact},            \
+      {"igca_" #TARGET "r", TARGET, IGCAFeatureSet::Render},                   \
+      {"igca_" #TARGET "ra", TARGET, IGCAFeatureSet::RenderExact},
+constexpr IGCATargetNameEntry IGCATargetNames[] = {
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  IGCA_TARGET_NAMES(IGCA_TARGET)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  IGCA_TARGET_NAMES(IGCA_TARGET)
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-      .Default(IGCATarget::invalid());
+};
+#undef IGCA_TARGET_NAMES
+} // namespace
+
+IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
+  for (const IGCATargetNameEntry &E : IGCATargetNames)
+    if (MaybeTarget == E.Name)
+      return IGCATarget(E.Target, E.FeatureSet);
+  return IGCATarget::invalid();
 }
 
 StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
-#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  if (T == IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))                    \
-    return NAME;
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  for (const IGCATargetNameEntry &E : IGCATargetNames)
+    if (E.Target == T.getTarget() && E.FeatureSet == T.getFeatureSet())
+      return E.Name;
   return "";
 }
