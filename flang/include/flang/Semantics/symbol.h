@@ -971,7 +971,10 @@ public:
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
       OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
-      OmpUniform, OmpAssumesNoOpenmp);
+      OmpUniform, OmpAssumesNoOpenmp,
+      // Main-program storage needed by a host OpenMP outlined region. Set by
+      // lowering after semantic analysis, without changing data-sharing rules.
+      OmpMainGlobal);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

@@ -10,7 +10,10 @@
 #define FORTRAN_LOWER_HOSTASSOCIATIONS_H
 
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <vector>
 
 namespace Fortran {
 namespace semantics {
@@ -21,6 +24,9 @@ class Scope;
 namespace lower {
 class AbstractConverter;
 class SymMap;
+namespace pft {
+struct Variable;
+}
 
 /// Internal procedures in Fortran may access variables declared in the host
 /// procedure directly. We bundle these variables together in a tuple and pass
@@ -35,10 +41,14 @@ public:
   bool hasTupleAssociations() const { return !tupleSymbols.empty(); }
 
   /// Adds a set of Symbols that will be the host associated bindings for this
-  /// host procedure.
+  /// host procedure. getVariables is invoked synchronously only for newly
+  /// promoted globals and must return Program's finalized, stable records.
   void addSymbolsToBind(
       const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
-      const Fortran::semantics::Scope &hostScope);
+      const Fortran::semantics::Scope &hostScope,
+      llvm::function_ref<const std::vector<pft::Variable> &()> getVariables);
+
+  const std::vector<pft::Variable> *getVariables() const { return variables; }
 
   /// Code gen the FIR for the local bindings for the host associated symbols
   /// for the host (parent) procedure using `builder`.
@@ -67,6 +77,14 @@ private:
 
   /// Canonical vector of host associated global symbols.
   llvm::SetVector<const Fortran::semantics::Symbol *> globalSymbols;
+
+  /// Ordered bindings selected once when newly promoted globals occur.
+  /// These records borrow Program's cached variable list; std::map nodes and
+  /// finalized variable lists remain stable through all child bindings.
+  llvm::SmallVector<const pft::Variable *> globalBindings;
+  /// Whole-scope records reused by the host's own lowering as well. A null
+  /// pointer preserves the legacy path when no newly promoted globals occur.
+  const std::vector<pft::Variable> *variables = nullptr;
 
   /// The type of the extra argument to be added to each internal procedure.
   mlir::Type argType;
