@@ -1,4 +1,4 @@
-add_custom_target(libc-cpp-utils-tests)
+add_libc_testsuite(libc-cpp-utils-tests PARENT libc-support-tests)
 
 add_libc_test(
   algorithm_test
@@ -162,6 +162,7 @@ add_libc_test(
   SRCS
     unique_ptr_test.cpp
   DEPENDS
+    libc.hdr.signal_macros
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
 )

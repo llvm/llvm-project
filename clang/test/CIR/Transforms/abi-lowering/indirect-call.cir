@@ -38,7 +38,7 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @call_ext
   // CHECK-NOT: cir.cast bitcast
-  // CHECK:   cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s16i) -> !s16i>>, !s16i {llvm.signext}) -> (!s16i {llvm.signext})
+  // CHECK:   cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s16i) -> !s16i>>, !s16i {llvm.signext}) -> !s16i
 
   // Indirect call whose small-struct argument and return are Direct with a
   // coerce type: the callee pointer is bitcast so its pointee tracks both the

@@ -175,6 +175,8 @@ public:
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
+  VPBasicBlock *getInsertBlock() const { return InsertPt.getBlock(); }
+
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
@@ -991,6 +993,9 @@ public:
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
   ///
+  /// When vectorizing the main loop, \p TrackedBlocks are updated to the
+  /// VPIRBasicBlocks wrapping the blocks generated for them.
+  ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
@@ -1003,7 +1008,8 @@ public:
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               EpilogueVectorizationKind EpilogueVecKind =
-                  EpilogueVectorizationKind::None);
+                  EpilogueVectorizationKind::None,
+              MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

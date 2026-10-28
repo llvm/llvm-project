@@ -30,6 +30,8 @@
 ; O0-NEXT:   scalarize-masked-mem-intrin
 ; O0-NEXT:   expand-reductions
 ; O0-NEXT:   indirectbr-expand
+; O0-NEXT:   x86-fence-nontemporal-stores
+; O0-NEXT:   sjlj-eh-prepare
 ; O0-NEXT:   dwarf-eh-prepare
 ; O0-NEXT:   inline-asm-prepare
 ; O0-NEXT:   safe-stack
@@ -76,6 +78,7 @@
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
+; O0-NEXT:     pseudo-probe-inserter
 ; O0-NEXT:     unpack-mi-bundles
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
@@ -112,7 +115,9 @@
 ; O2-NEXT:   interleaved-access
 ; O2-NEXT:   x86-partial-reduction
 ; O2-NEXT:   indirectbr-expand
+; O2-NEXT:   x86-fence-nontemporal-stores
 ; O2-NEXT:   codegenprepare
+; O2-NEXT:   sjlj-eh-prepare
 ; O2-NEXT:   dwarf-eh-prepare
 ; O2-NEXT:   inline-asm-prepare
 ; O2-NEXT:   safe-stack
@@ -206,6 +211,7 @@
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
+; O2-NEXT:     pseudo-probe-inserter
 ; O2-NEXT:     unpack-mi-bundles
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
@@ -233,6 +239,8 @@
 ; O0-WINDOWS-NEXT:   expand-reductions
 ; O0-WINDOWS-NEXT:   indirectbr-expand
 ; O0-WINDOWS-NEXT:   cfguard
+; O0-WINDOWS-NEXT:   x86-fence-nontemporal-stores
+; O0-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O0-WINDOWS-NEXT:   win-eh-prepare
 ; O0-WINDOWS-NEXT:   dwarf-eh-prepare
 ; O0-WINDOWS-NEXT:   inline-asm-prepare
@@ -279,9 +287,11 @@
 ; O0-WINDOWS-NEXT:     x86-seses
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O0-WINDOWS-NEXT:     cfi-instr-inserter
 ; O0-WINDOWS-NEXT:     cfguard-longjmp
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
+; O0-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O0-WINDOWS-NEXT:     unpack-mi-bundles
 ; O0-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT:     verify
@@ -320,7 +330,9 @@
 ; O3-WINDOWS-NEXT:   x86-partial-reduction
 ; O3-WINDOWS-NEXT:   indirectbr-expand
 ; O3-WINDOWS-NEXT:   cfguard
+; O3-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O3-WINDOWS-NEXT:   codegenprepare
+; O3-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O3-WINDOWS-NEXT:   win-eh-prepare
 ; O3-WINDOWS-NEXT:   dwarf-eh-prepare
 ; O3-WINDOWS-NEXT:   inline-asm-prepare
@@ -413,9 +425,11 @@
 ; O3-WINDOWS-NEXT:     x86-seses
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O3-WINDOWS-NEXT:     cfi-instr-inserter
 ; O3-WINDOWS-NEXT:     cfguard-longjmp
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
+; O3-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O3-WINDOWS-NEXT:     unpack-mi-bundles
 ; O3-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT:     verify

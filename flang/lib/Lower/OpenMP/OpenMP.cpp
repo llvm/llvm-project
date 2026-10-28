@@ -1519,7 +1519,7 @@ genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
 
   std::size_t loopVarTypeSize = 0;
   for (const semantics::Symbol *arg : args)
-    loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
+    loopVarTypeSize = std::max(loopVarTypeSize, getLoopVarSize(*arg));
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
   llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
   llvm::SmallVector<mlir::Location> locs(args.size(), loc);
@@ -2465,14 +2465,9 @@ static void genSimdImplicitLinear(
                   variable) != clauseOps.linearVars.end())
       continue;
 
-    // TODO: Implicit linearization is skipped if iv is a pointer
-    // or an allocatable, due to potential mismatch between the linear
-    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
-    // and the linear step size (example: i64). Handle this type mismatch
-    // gracefully.
+    // TODO: Implicit linearization is skipped if iv is a pointer.
     if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
-        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
-          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
+        !Fortran::semantics::IsPointer(loopVar->GetUltimate())) {
       mlir::Type ty = converter.genType(*loopVar);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
       if (semaCtx.langOptions().getOpenMPVersion() >= 52)
@@ -3076,7 +3071,7 @@ static void genCanonicalLoopNest(
         converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx));
 
     // Get the integer kind for the loop variable and cast the loop bounds.
-    size_t loopVarTypeSize = bounds->Name().thing.symbol->GetUltimate().size();
+    size_t loopVarTypeSize = getLoopVarSize(*bounds->Name().thing.symbol);
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
     loopVarTypes.push_back(loopVarType);
     mlir::Value loopStepVar = [&]() {
@@ -5952,11 +5947,14 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
-  // Assumption clauses are hints with no representation in the OpenMP dialect,
-  // so this declarative directive is a no-op.
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(),
-         "assumption clauses on the assumes directive");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u))
+      TODO(converter.genLocation(clause.source),
+           "assumption clauses on the assumes directive");
+  }
 }
 
 static void
@@ -6738,8 +6736,8 @@ static void genOpenMPDeclareReductionImpl(
                         // name the op identically.
                         const semantics::Symbol *redSymPtr = symOpt;
                         if (!redSymPtr) {
-                          parser::CharBlock mangledOpName = semantics::omp::
-                              MangledIntrinsicOperatorReductionName(
+                          parser::CharBlock mangledOpName =
+                              semantics::MakeNameFromOperator(
                                   ReductionProcessor::toParserIntrinsicOperator(
                                       intrOp),
                                   semaCtx);

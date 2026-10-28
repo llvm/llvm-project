@@ -1427,6 +1427,8 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   if (PredHasWeights || SuccHasWeights)
     setFittedBranchWeights(*NewSI, Weights, /*IsExpected=*/false,
                            /*ElideAllZero=*/true);
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE);
 
   // The new switch is only known to be unpredictable if both of the comparisons
   // it was built from were unpredictable.
@@ -2053,6 +2055,12 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         }
 
         combineMetadataForCSE(I1, I2, true);
+        // If we are combining select instructions, we mark the profile
+        // explicitly unknown given we are hoisting the instruction across
+        // control flow and we have no guarantee that the control flow condition
+        // we are hoisting across is independent of the select condition.
+        if (auto *SI = dyn_cast<SelectInst>(I1))
+          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
         // I1 and I2 are being combined into a single instruction.  Its debug
         // location is the merged locations of the original instructions.
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
@@ -2402,6 +2410,12 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       // instead of using complex API for N-way merge.
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I, true);
+      // We mark branch weights explicitly unknown for select instructions as we
+      // might be sinking through control flow with conditions not independent
+      // of the select condition, or pulling multiple conditions together
+      // through a phi node.
+      if (auto *SI = dyn_cast<SelectInst>(I0))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
       I0->andIRFlags(I);
       if (auto *CB = dyn_cast<CallBase>(I0)) {
         bool Success = CB->tryIntersectAttributes(cast<CallBase>(I));
@@ -9382,7 +9396,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     if (sinkCommonCodeFromPredecessors(BB, DTU) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
-      // so we may now how duplicate PHI's.
+      // so we may now have duplicate PHI's.
       // Let's rerun EliminateDuplicatePHINodes() first,
       // before foldTwoEntryPHINode() potentially converts them into select's,
       // after which we'd need a whole EarlyCSE pass run to cleanup them.

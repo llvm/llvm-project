@@ -3277,7 +3277,9 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
 
     const TargetRegisterClass *RC = getCalleeSavedSpillRC(Reg, STI, *TRI);
     unsigned Size = TRI->getSpillSize(*RC);
-    Align Alignment = TRI->getSpillAlign(*RC);
+    // The slot is fixed relative to the incoming stack pointer, so it cannot be
+    // aligned beyond what that guarantees, even if the stack is realigned.
+    Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     // ensure alignment
     assert(SpillSlotOffset < 0 && "SpillSlotOffset should always < 0 on X86");
     SpillSlotOffset = -alignTo(-SpillSlotOffset, Alignment);
