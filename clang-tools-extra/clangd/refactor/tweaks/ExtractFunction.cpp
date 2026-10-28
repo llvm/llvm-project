@@ -1010,9 +1010,8 @@ bool referencesFunctionLocalType(QualType T) {
     if (referencesFunctionLocalType(FT->getReturnType()))
       return true;
     if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
-      for (QualType ParamTy : FPT->getParamTypes())
-        if (referencesFunctionLocalType(ParamTy))
-          return true;
+      if (llvm::any_of(FPT->getParamTypes(), referencesFunctionLocalType))
+        return true;
   }
   return false;
 }
