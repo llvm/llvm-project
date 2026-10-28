@@ -13,10 +13,13 @@
 
 #include "SPIRV.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -37,40 +40,51 @@ static bool isResourceHandleCreation(Intrinsic::ID ID) {
          ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
 }
 
-// Remove module-local globals whose only users are non-volatile stores of
-// resource handles. Also remove the resource handle instruction if possible
+// Remove unused resource handle intrinsics, private global variables that only provide storage
+// for these handles, and corresponding stores of handle to global variable
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
 
-  bool Changed = false;
-  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
-    if (!GV.hasLocalLinkage() || GV.user_empty())
-      continue;
+  SmallVector<IntrinsicInst *> Handles;
+  SmallSetVector<GlobalVariable *, 4> DeadGlobals;
+  for (Function &F : M) {
+    for (Instruction &I : instructions(F)) {
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (!isResourceHandleCreation(II->getIntrinsicID()))
+          continue;
+        Handles.push_back(II);
 
-    if (!all_of(GV.users(), [&GV](User *U) {
+        for (User *U : II->users()) {
           auto *SI = dyn_cast<StoreInst>(U);
-          if (!SI || SI->getPointerOperand() != &GV || SI->isVolatile())
-            return false;
-
-          auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
-          return II && isResourceHandleCreation(II->getIntrinsicID());
-        }))
-      continue;
-
-    for (User *U : make_early_inc_range(GV.users())) {
-      auto *SI = cast<StoreInst>(U);
-      auto *I = cast<Instruction>(SI->getValueOperand());
-      SI->eraseFromParent();
-      // Remove the resource handle intrinsic too if possible
-      if (I->use_empty())
-        I->eraseFromParent();
+          if (!SI || SI->isVolatile() || SI->getValueOperand() != II)
+            continue;
+          auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand());
+          if (!GV || !GV->hasLocalLinkage() || !GV->hasOneUser())
+            continue;
+          assert(*GV->user_begin() == SI);
+          DeadGlobals.insert(GV);
+        }
+      }
     }
-
-    GV.eraseFromParent();
-    Changed = true;
   }
 
+  bool Changed = !DeadGlobals.empty();
+  for (GlobalVariable *GV : DeadGlobals) {
+    cast<StoreInst>(*GV->user_begin())->eraseFromParent();
+    GV->eraseFromParent();
+  }
+
+  // Use reverse order so, in case of hidden counters that live in a buffer, the
+  // counter handle is removed before the corresponding buffer handle. However,
+  // our traversal doesn't go in RPOT order, so may encounter insts before their users.
+  // Could either do RPOT or repeat below loop until fixed point. Ignore for now
+  for (IntrinsicInst *II : reverse(Handles)) {
+    if (II->use_empty()) {
+      II->eraseFromParent();
+      Changed = true;
+    }
+  }
   return Changed;
 }
 

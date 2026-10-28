@@ -1,5 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library < %s | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library -filetype=obj < %s | spirv-val --target-env vulkan1.3 %}
+; RUN: llc -O0 -disable-spirv-remove-unused-resources -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library < %s | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -disable-spirv-remove-unused-resources -mtriple=spirv1.6-vulkan1.3-library -filetype=obj < %s | spirv-val --target-env vulkan1.3 %}
 
 ; Sub-byte elements must not truncate their ArrayStride to 0.
 
