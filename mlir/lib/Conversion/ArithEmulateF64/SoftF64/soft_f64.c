@@ -12,6 +12,10 @@
 // integers, which AIR does not have). A NaN result is the default quiet NaN
 // 0x7ff8000000000000 unless an operand NaN is propagated (quieted).
 //
+// The functions ending in _r take the rounding direction as an operand rm,
+// numbered like FLT_ROUNDS: 0 toward zero, 1 to nearest even, 2 upward, 3
+// downward (agx-raise-to-air's emulations of directed rounding).
+//
 // The functions are branch free where it is cheap: each computes the result
 // for finite nonzero operands whatever the operands are, then selects the
 // result of the special cases. On a GPU a branch that every lane skips still
@@ -104,11 +108,31 @@ LOCAL int is_nan(u64 x) { return (x & ~SIGN) > INF; }
 // The result of an operation with a NaN operand: the first NaN, quieted.
 LOCAL u64 nan2(u64 a, u64 b) { return (is_nan(a) ? a : b) | QUIET; }
 
+// Rounding directions (FLT_ROUNDS).
+#define RZ 0
+#define RN 1
+#define RU 2
+#define RD 3
+
+// Whether a value of sign sign whose truncated significand frac has the
+// remainder rem (of half the unit half) rounds away from zero.
+LOCAL int round_up(u64 sign, u64 frac, u64 rem, u64 half, int rm) {
+  int nearest = (rem > half) | ((rem == half) & (int)(frac & 1));
+  int directed = (rem != 0) & ((rm == RD) == (sign != 0));
+  return rm == RN ? nearest : rm == RZ ? 0 : directed;
+}
+
+// Whether a result of sign sign that overflows rounds to infinity (or to the
+// largest finite value).
+LOCAL int overflow_inf(u64 sign, int rm) {
+  return (rm == RN) | ((rm == RU) & (sign == 0)) | ((rm == RD) & (sign != 0));
+}
+
 // Rounds sign * sig * 2^(exp - 1075 - 10), where sig has its leading one at
 // bit 62 or below (at bit 62 for exp the biased exponent of a normal
-// result), to nearest even. The low 10 bits are guard bits; sticky
+// result), in direction rm. The low 10 bits are guard bits; sticky
 // information must already be ORed into bit 0.
-LOCAL u64 round_pack(u64 sign, i32 exp, u64 sig) {
+LOCAL u64 round_pack(u64 sign, i32 exp, u64 sig, int rm) {
   // Normalize: leading one at bit 62.
   int lz = clz64(sig) - 1;
   u64 s = sig << lz;
@@ -118,11 +142,11 @@ LOCAL u64 round_pack(u64 sign, i32 exp, u64 sig) {
   s = shr_sticky64(s, den ? 1 - exp : 0);
   exp = den ? 0 : exp;
   u64 rem = s & 0x3ff, frac = s >> 10;
-  frac += (rem > 0x200) | ((rem == 0x200) & frac);
+  frac += round_up(sign, frac, rem, 0x200, rm);
   // frac has the implicit bit at bit 52; a carry out of the significand
   // increments the exponent (and makes a denormal normal).
   u64 bits = den ? frac : ((u64)(exp - 1) << 52) + frac;
-  bits = bits >= INF ? INF : bits;
+  bits = bits >= INF ? (overflow_inf(sign, rm) ? INF : INF - 1) : bits;
   return sig ? sign | bits : sign;
 }
 
@@ -137,7 +161,7 @@ LOCAL u64 unpack(u64 x, i32 *exp) {
   return (den ? frac : frac | IMPLICIT) << sh;
 }
 
-API u64 __air_f64_add(u64 a, u64 b) {
+LOCAL u64 add_r(u64 a, u64 b, int rm) {
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
   // The larger magnitude first.
   int swap = ba > aa;
@@ -149,20 +173,29 @@ API u64 __air_f64_add(u64 a, u64 b) {
   ys = shr_sticky64(ys << 9, xe - ye);
   int sub = ((a ^ b) & SIGN) != 0;
   u64 sum = sub ? xs - ys : xs + ys;
-  u64 r = round_pack(x & SIGN, xe + 1, sum);
-  r = sum == 0 ? 0 : r; // exact cancellation is +0
+  u64 r = round_pack(x & SIGN, xe + 1, sum, rm);
+  // Exact cancellation, and the sum of zeros of opposite signs, is +0 (-0
+  // rounding downward).
+  u64 zero = rm == RD ? SIGN : 0;
+  r = sum == 0 ? zero : r;
   r = aa == 0 ? b : r;
-  r = ba == 0 ? (aa == 0 ? a & b : a) : r;
+  r = ba == 0 ? (aa == 0 ? (rm == RD ? a | b : a & b) : a) : r;
   u64 inf = ((aa == INF) & (ba == INF) & sub) ? DEFAULT_NAN : aa == INF ? a : b;
   inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
   return ((aa >= INF) | (ba >= INF)) ? inf : r;
 }
 
+API u64 __air_f64_add(u64 a, u64 b) { return add_r(a, b, RN); }
+API u64 __air_f64_add_r(u64 a, u64 b, i32 rm) { return add_r(a, b, rm); }
+
 API u64 __air_f64_sub(u64 a, u64 b) {
-  return __air_f64_add(a, is_nan(b) ? b : b ^ SIGN);
+  return add_r(a, is_nan(b) ? b : b ^ SIGN, RN);
+}
+API u64 __air_f64_sub_r(u64 a, u64 b, i32 rm) {
+  return add_r(a, is_nan(b) ? b : b ^ SIGN, rm);
 }
 
-API u64 __air_f64_mul(u64 a, u64 b) {
+LOCAL u64 mul_r(u64 a, u64 b, int rm) {
   u64 sign = (a ^ b) & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
   i32 ae, be;
@@ -174,12 +207,15 @@ API u64 __air_f64_mul(u64 a, u64 b) {
   // The leading one of sig is at bit 62 (product < 2) or 63 (>= 2).
   int carry = sig >> 63;
   sig = carry ? (sig >> 1) | (sig & 1) : sig;
-  u64 r = round_pack(sign, ae + be - 1023 + carry, sig);
+  u64 r = round_pack(sign, ae + be - 1023 + carry, sig, rm);
   r = ((aa == 0) | (ba == 0)) ? sign : r;
   u64 inf = ((aa == 0) | (ba == 0)) ? DEFAULT_NAN : sign | INF;
   inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
   return ((aa >= INF) | (ba >= INF)) ? inf : r;
 }
+
+API u64 __air_f64_mul(u64 a, u64 b) { return mul_r(a, b, RN); }
+API u64 __air_f64_mul_r(u64 a, u64 b, i32 rm) { return mul_r(a, b, rm); }
 
 // The low 64 bits of x >> n, for 0 < n < 128; signed shifts x.hi as an i64.
 LOCAL u64 hi_bits(u128 x, int n, int is_signed) {
@@ -214,7 +250,7 @@ LOCAL u64 scaled_estimate(float e, float scale) {
 // the error and staying below) to two units, which the exact remainder
 // corrects.
 
-API u64 __air_f64_div(u64 a, u64 b) {
+LOCAL u64 div_r(u64 a, u64 b, int rm) {
   u64 sign = (a ^ b) & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
   i32 ae, be;
@@ -240,7 +276,7 @@ API u64 __air_f64_div(u64 a, u64 b) {
     r -= ge ? d : 0;
   }
   // Leading one at bit 62, the remainder sticky below the guard bits.
-  u64 res = round_pack(sign, exp, (q << 8) | ((u64)(r != 0) << 7));
+  u64 res = round_pack(sign, exp, (q << 8) | ((u64)(r != 0) << 7), rm);
   res = ((aa == 0) | (ba == INF)) ? sign : res;
   res = ((aa == INF) | (ba == 0)) ? sign | INF : res;
   int invalid = ((aa == 0) & (ba == 0)) | ((aa == INF) & (ba == INF));
@@ -248,7 +284,10 @@ API u64 __air_f64_div(u64 a, u64 b) {
   return (is_nan(a) | is_nan(b)) ? nan2(a, b) : res;
 }
 
-API u64 __air_f64_sqrt(u64 a) {
+API u64 __air_f64_div(u64 a, u64 b) { return div_r(a, b, RN); }
+API u64 __air_f64_div_r(u64 a, u64 b, i32 rm) { return div_r(a, b, rm); }
+
+LOCAL u64 sqrt_r(u64 a, int rm) {
   i32 e;
   u64 n = unpack(a, &e); // n in [2^52, 2^53)
   n = (a & ~SIGN) == 0 ? IMPLICIT : n;
@@ -281,13 +320,17 @@ API u64 __air_f64_sqrt(u64 a) {
   // sqrt(n * 2^(u-52)) = root * 2^(u/2 - 54): leading one at bit 62 with
   // the biased exponent u/2 + 1023.
   u64 res =
-      round_pack(0, u / 2 + 1023, ((u64)root << 8) | ((u64)(rem != 0) << 7));
+      round_pack(0, u / 2 + 1023, ((u64)root << 8) | ((u64)(rem != 0) << 7),
+                 rm);
   res = (((a & ~SIGN) == 0) | (a == INF)) ? a : res;
   res = (a > SIGN) ? DEFAULT_NAN : res; // negative, not -0
   return is_nan(a) ? a | QUIET : res;
 }
 
-API u64 __air_f64_fma(u64 a, u64 b, u64 c) {
+API u64 __air_f64_sqrt(u64 a) { return sqrt_r(a, RN); }
+API u64 __air_f64_sqrt_r(u64 a, i32 rm) { return sqrt_r(a, rm); }
+
+LOCAL u64 fma_r(u64 a, u64 b, u64 c, int rm) {
   u64 psign = (a ^ b) & SIGN, csign = c & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN, ca = c & ~SIGN;
   i32 ae, be, ce;
@@ -327,10 +370,14 @@ API u64 __air_f64_fma(u64 a, u64 b, u64 c) {
   int lz = clz128(s) - 1;
   i32 exp = hi_e + 1 - lz;
   s = lz < 0 ? shr_sticky(s, 1) : shl128(s, lz & 127);
-  u64 r = round_pack(sign, exp, s.hi | (s.lo != 0));
-  r = (s.hi | s.lo) == 0 ? 0 : r; // exact cancellation is +0
-  // A zero product: the exact result is the addend (+0 + -0 is +0).
-  r = ((aa == 0) | (ba == 0)) ? (ca == 0 ? psign & c : c) : r;
+  u64 r = round_pack(sign, exp, s.hi | (s.lo != 0), rm);
+  // Exact cancellation is +0 (-0 rounding downward).
+  r = (s.hi | s.lo) == 0 ? (rm == RD ? SIGN : 0) : r;
+  // A zero product: the exact result is the addend (+0 + -0 is +0, -0
+  // rounding downward).
+  r = ((aa == 0) | (ba == 0))
+          ? (ca == 0 ? (rm == RD ? psign | c : psign & c) : c)
+          : r;
   u64 inf = c;
   inf = ((aa == INF) | (ba == INF))
             ? (((ca == INF) & (psign != csign)) ? DEFAULT_NAN : psign | INF)
@@ -340,6 +387,11 @@ API u64 __air_f64_fma(u64 a, u64 b, u64 c) {
   inf = invalid ? DEFAULT_NAN : inf;
   inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
   return ((aa >= INF) | (ba >= INF) | (ca >= INF)) ? inf : r;
+}
+
+API u64 __air_f64_fma(u64 a, u64 b, u64 c) { return fma_r(a, b, c, RN); }
+API u64 __air_f64_fma_r(u64 a, u64 b, u64 c, i32 rm) {
+  return fma_r(a, b, c, rm);
 }
 
 // Comparisons of non-NaN values; NaN handling is the caller's.
@@ -355,17 +407,21 @@ API i32 __air_f64_lt(u64 a, u64 b) {
   return !(is_nan(a) | is_nan(b)) & (((a | b) & ~SIGN) != 0) & lt;
 }
 
-API u64 __air_f64_from_u64(u64 m) {
+// sign * m.
+LOCAL u64 from_int(u64 sign, u64 m, int rm) {
   // The leading one at bit 62 for round_pack (bit 63 shifted, sticky).
   int top = m >> 63;
-  return round_pack(0, 1023 + 62 + top, top ? (m >> 1) | (m & 1) : m);
+  return round_pack(sign, 1023 + 62 + top, top ? (m >> 1) | (m & 1) : m, rm);
 }
 
-API u64 __air_f64_from_i64(i64 x) {
+API u64 __air_f64_from_u64(u64 m) { return from_int(0, m, RN); }
+API u64 __air_f64_from_u64_r(u64 m, i32 rm) { return from_int(0, m, rm); }
+
+API u64 __air_f64_from_i64_r(i64 x, i32 rm) {
   u64 sign = x < 0 ? SIGN : 0;
-  u64 m = x < 0 ? (u64)0 - (u64)x : (u64)x;
-  return __air_f64_from_u64(m) | sign;
+  return from_int(sign, x < 0 ? (u64)0 - (u64)x : (u64)x, rm);
 }
+API u64 __air_f64_from_i64(i64 x) { return __air_f64_from_i64_r(x, RN); }
 
 // Truncation toward zero, saturating, NaN to 0.
 API u64 __air_f64_to_u64(u64 a) {
@@ -399,29 +455,43 @@ API u64 __air_f64_from_f32(u32 f) {
   return e == 0xff ? sign | INF | (m << 29) | (m ? QUIET : 0) : r;
 }
 
-// double to float (bits), rounded to nearest even, with denormals.
-API u32 __air_f64_to_f32(u64 a) {
-  u32 sign = (u32)(a >> 32) & 0x80000000u;
+// double to a binary format of precision p (significand bits, with the
+// implicit one: 24 for float, 11 for half, 8 for bfloat) and ebits exponent
+// bits, as its bits, rounded in direction rm, with denormals.
+LOCAL u32 to_format(u64 a, int p, int ebits, int rm) {
+  u32 fsign = 1u << (p - 1 + ebits), finf = ((1u << ebits) - 1) << (p - 1);
+  i32 bias = (1 << (ebits - 1)) - 1;
   u64 aa = a & ~SIGN;
   i32 e;
   u64 m = unpack(a, &e); // leading one at bit 52
-  i32 fe = e - 1023 + 127;
-  // 24 bits kept, the bits below as guard and sticky; below half the
+  i32 fe = e - 1023 + bias;
+  // p bits kept, the bits below as guard and sticky; below half the
   // smallest denormal everything goes.
-  int sh = 29 + (fe <= 0 ? 1 - fe : 0); // 52 - 23
+  int sh = 53 - p + (fe <= 0 ? 1 - fe : 0);
   sh = sh > 63 ? 63 : sh;
   fe = fe <= 0 ? 0 : fe;
   u64 keep = m >> sh;
   u64 rem = m & ((1ULL << sh) - 1), half = 1ULL << (sh - 1);
-  keep += (rem > half) | ((rem == half) & keep);
+  keep += round_up(a & SIGN, keep, rem, half, rm);
   // A denormal may round up to the smallest normal.
-  u32 bits = fe == 0 ? (u32)keep : ((u32)(fe - 1) << 23) + (u32)keep;
-  bits = ((fe >= 255) | (bits >= 0x7f800000u)) ? 0x7f800000u : bits;
+  u32 bits = fe == 0 ? (u32)keep : ((u32)(fe - 1) << (p - 1)) + (u32)keep;
+  u32 over = overflow_inf(a & SIGN, rm) ? finf : finf - 1;
+  bits = ((fe >= (1 << ebits) - 1) | (bits >= finf)) ? over : bits;
   bits = aa == 0 ? 0 : bits;
-  bits = aa == INF ? 0x7f800000u : bits;
-  bits = aa > INF ? 0x7fc00000u | (u32)((aa & FRAC) >> 29) : bits;
-  return sign | bits;
+  bits = aa == INF ? finf : bits;
+  bits = aa > INF ? finf | (1u << (p - 2)) | (u32)((aa & FRAC) >> (53 - p))
+                  : bits;
+  return ((a & SIGN) ? fsign : 0) | bits;
 }
+
+// double to float (bits), rounded to nearest even, with denormals.
+API u32 __air_f64_to_f32(u64 a) { return to_format(a, 24, 8, RN); }
+
+// double to float, half or bfloat (bits, in the low bits of the result),
+// rounded in direction rm.
+API u32 __air_f64_to_f32_r(u64 a, i32 rm) { return to_format(a, 24, 8, rm); }
+API u32 __air_f64_to_f16_r(u64 a, i32 rm) { return to_format(a, 11, 5, rm); }
+API u32 __air_f64_to_bf16_r(u64 a, i32 rm) { return to_format(a, 8, 8, rm); }
 
 // Rounding to integral values.
 API u64 __air_f64_floor(u64 a) {

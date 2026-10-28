@@ -66,11 +66,12 @@ consumer with the operation can run it.
 
 The operation is named by a key:
 
-* ``call:<intrinsic>|<doubles>[|<metadata string>...][|+lane]``: an LLVM
-  intrinsic; constrained floating point intrinsics carry their rounding and
-  exception metadata strings. ``+lane`` is a trailing operand only the
-  emulation reads (the lane of the thread, a system value that only a kernel
-  can read).
+* ``call:<intrinsic>|<doubles>[|<metadata string>...][|+lane][|+mode]``: an
+  LLVM intrinsic; constrained floating point intrinsics carry their rounding
+  and exception metadata strings. ``+lane`` and ``+mode`` are trailing
+  operands only the emulation reads, which ``agx-lower-air`` drops: the lane
+  of the thread (a system value that only a kernel can read), and the
+  floating point mode (below).
 * ``inst:<opcode>[:<predicate>]|<doubles>``: a double precision instruction.
 * ``atomic:<operation>|<doubles>|<ordering>|<sync scope>|<align>``: a double
   precision ``atomicrmw``.
@@ -83,14 +84,18 @@ bits in AIR and ``agx-lower-air`` bitcasts them back.
 Operation                           AGX (``agx-lower-air``)                 AIR emulation
 =================================== ======================================= ==================================
 double precision arithmetic,        the double operation (AGXSoftF64)       arith-emulate-f64's ``soft_f64.c``
-compares, conversions, ``sqrt``,                                            (``AGXAIRSoftF64.inc``), rounded to
-``fma``, min/max, rounding                                                  nearest; canonical NaNs with
-                                                                            ``canonical-nan``
-constrained floating point          the constrained intrinsic               the plain operation (rounded to
-(dynamic rounding, ``.rz`` ...)                                             nearest)
-``llvm.agx.get.fpmode`` / ``set``   the FP mode registers                   0 / nothing
-``llvm.minimum`` / ``maximum`` /    the intrinsic                           the intrinsic (AIR's fmin / fmax
-``minimumnum`` / ``maximumnum``                                             with NaN checks)
+compares, conversions, ``sqrt``,                                            (``AGXAIRSoftF64.inc``), in the
+``fma``, min/max, rounding                                                  operation's rounding direction
+                                                                            (the ``_r`` functions); canonical
+                                                                            NaNs with ``canonical-nan``
+constrained floating point          the constrained intrinsic               to nearest: the AIR operation;
+(dynamic rounding, ``.rz`` ...)                                             directed: in double precision
+                                                                            (``soft_f64.c``) in the direction,
+                                                                            rounded again in it; denormals
+                                                                            flushed as the mode says
+``llvm.agx.get.fpmode`` / ``set``   the FP mode registers                   the ``+mode`` operand / nothing
+``llvm.minimum`` / ``maximum`` /    the intrinsic                           exact, on the bits (AIR's fmin /
+``minimumnum`` / ``maximumnum``                                             fmax may flush denormals)
 ``llvm.agx.rcp``, ``rsqrt``,        the hardware approximation              ``1 / x``, ``1 / sqrt(x)`` (afn)
 ``rsqrt.special``
 ``llvm.agx.exp2``, ``log2``         the hardware approximation              ``llvm.exp2`` / ``log2`` (afn)
@@ -101,6 +106,31 @@ constrained floating point          the constrained intrinsic               the 
                                                                             in the layout of AGXUsage.rst
 double ``atomicrmw``                the atomic                              none (no 64-bit AIR atomics)
 =================================== ======================================= ==================================
+
+The floating point mode
+-----------------------
+
+PTX's rounding and flushing modifiers are AGX's floating point mode
+(``llvm.agx.set.fpmode``: bits 0-1 the rounding of float, 2-3 of the other
+formats, numbered like ``FLT_ROUNDS``; bit 4 flushes float denormals, bit 5
+half's), which the constrained intrinsics with dynamic rounding read. AIR has
+no such state, so ``agx-raise-to-air`` keeps the mode as a value: the mode AGX
+starts a function with (``AGXLowerFPEnv``: rounding to nearest, the
+function's denormal modes) and then what each ``set.fpmode`` writes, promoted
+to SSA values. The hints that read it (``get.fpmode`` and the constrained
+intrinsics) take it as their trailing ``+mode`` operand, a constant wherever
+the mode is known. ``agx-lower-air`` drops the operand and deletes the mode's
+computation, which only the emulations used, so the AGX code is the direct
+path's.
+
+A directed rounding is computed in double precision: the operands of a half,
+bfloat or float operation are doubles exactly, the ``_r`` functions of
+``soft_f64.c`` round the double result in the direction, and rounding that
+again to the format in the same direction rounds once (the values of the
+format are doubles, so the directed rounding to the coarser format cannot
+cross one). That holds for add, sub, mul, div, sqrt, fma and conversions from
+integers. A dynamic rounding selects between the AIR operation (to nearest)
+and the directed result.
 
 Address-space and type hints
 ----------------------------
@@ -143,5 +173,7 @@ Not done
 
 * The Metal side's handling of the address-space and type hints (and of the
   ``byref`` attribute on constant buffers), and running the AIR on Metal.
-* Emulations of rounding modes (the constrained intrinsics and the FP mode)
-  and of double precision atomics.
+* Emulations of double precision atomics, and of the hardware approximations
+  (``rcp``, ``rsqrt``, ``sin`` ...) to AGX's bits.
+* The mode across calls: each function starts from the default mode, as on
+  AGX.

@@ -39,6 +39,7 @@
 #include "llvm/IR/Constants.h"
 #include <functional>
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -50,6 +51,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
@@ -531,11 +533,57 @@ static bool scalarizeDoubles(Instruction &I) {
   return true;
 }
 
+/// The floating point mode register (llvm.agx.set.fpmode) as a value at each
+/// operation that reads it: llvm.agx.get.fpmode and the constrained
+/// intrinsics (the mode has their denormal modes, and the rounding of dynamic
+/// ones), for their emulations. The values are
+/// freezes of the mode, which keep them through the promotion; the mode
+/// starts as AGX's lowering (AGXLowerFPEnv) assumes, rounding to nearest
+/// even with the function's denormal modes.
+static DenseMap<Instruction *, FreezeInst *> trackMode(Function &F) {
+  DenseMap<Instruction *, FreezeInst *> ModeAt;
+  SmallVector<IntrinsicInst *, 8> Sets, Reads;
+  for (Instruction &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+    if (II->getIntrinsicID() == Intrinsic::agx_set_fpmode)
+      Sets.push_back(II);
+    else if (II->getIntrinsicID() == Intrinsic::agx_get_fpmode)
+      Reads.push_back(II);
+    else if (isa<ConstrainedFPIntrinsic>(II))
+      Reads.push_back(II);
+  }
+  if (Reads.empty())
+    return ModeAt;
+  auto Flushes = [&](const fltSemantics &Sem) {
+    DenormalMode DM = F.getDenormalMode(Sem);
+    return DM.Output != DenormalMode::IEEE && DM.Output != DenormalMode::Dynamic;
+  };
+  // Rounding to nearest even (1) for float and half, the flush bits.
+  uint32_t Initial = 1 | (1 << 2) | (Flushes(APFloat::IEEEsingle()) ? 0x10 : 0) |
+                     (Flushes(APFloat::IEEEhalf()) ? 0x20 : 0);
+  IRBuilder<> Entry(&*F.getEntryBlock().getFirstInsertionPt());
+  AllocaInst *Mode = Entry.CreateAlloca(Entry.getInt32Ty());
+  Entry.CreateStore(Entry.getInt32(Initial), Mode);
+  for (IntrinsicInst *II : Sets)
+    IRBuilder<>(II).CreateStore(II->getArgOperand(0), Mode);
+  for (IntrinsicInst *II : Reads) {
+    IRBuilder<> B(II);
+    ModeAt[II] = cast<FreezeInst>(
+        B.CreateFreeze(B.CreateLoad(B.getInt32Ty(), Mode)));
+  }
+  DominatorTree DT(F);
+  PromoteMemToReg({Mode}, DT);
+  return ModeAt;
+}
+
 /// The operations of F that AIR does not have become AIR or hints.
 void RaiseToAIR::raiseFunction(Function &F) {
   SmallVector<Instruction *, 32> Work;
   for (Instruction &I : make_early_inc_range(instructions(F)))
     scalarizeDoubles(I);
+  DenseMap<Instruction *, FreezeInst *> ModeAt = trackMode(F);
   for (Instruction &I : instructions(F))
     Work.push_back(&I);
   for (Instruction *I : Work) {
@@ -582,6 +630,11 @@ void RaiseToAIR::raiseFunction(Function &F) {
                                   B.getInt32Ty())));
         Key += "|+lane";
       }
+      if (FreezeInst *Mode = ModeAt.lookup(II)) {
+        // The mode, which only the emulation reads: "+mode".
+        Args.push_back(Mode);
+        Key += "|+mode";
+      }
       hintCall(*II, Key, Args);
       continue;
     }
@@ -610,6 +663,10 @@ void RaiseToAIR::raiseFunction(Function &F) {
     if (isDoubleOp(*I))
       hintInst(*I);
   }
+  for (auto &[I, Fr] : ModeAt) {
+    Fr->replaceAllUsesWith(Fr->getOperand(0));
+    Fr->eraseFromParent();
+  }
 }
 
 bool RaiseToAIR::linkSoftF64() {
@@ -630,6 +687,101 @@ bool RaiseToAIR::linkSoftF64() {
     if (F.getName().starts_with("__air_f64_"))
       F.setLinkage(GlobalValue::InternalLinkage);
   return true;
+}
+
+using LibFn = function_ref<Value *(StringRef, Type *, ArrayRef<Value *>)>;
+
+/// The constrained operation Base of a format other than double, on A, in
+/// the directed rounding Rounding: the operands as doubles (exact), the
+/// operation in soft-f64 rounded in that direction, then rounded to Ret in
+/// it (rounding twice in the same direction rounds once, as the values of
+/// the format are doubles). Null for an operation that does not round.
+static Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
+                       Type *Ret, Value *Rounding, LibFn Lib,
+                       bool CanonicalNaN) {
+  bool Arith = is_contained({"fadd", "fsub", "fmul", "fdiv", "fma",
+                             "fmuladd", "sqrt"},
+                            Base);
+  bool FromInt = Base == "sitofp" || Base == "uitofp";
+  bool Integral = Base == "rint" || Base == "nearbyint";
+  Type *ST = Ret->getScalarType();
+  if ((!Arith && !FromInt && !Integral && Base != "fptrunc") ||
+      !(ST->isFloatTy() || ST->isHalfTy() || ST->isBFloatTy()) ||
+      (FromInt && A[0]->getType()->getScalarSizeInBits() > 64))
+    return nullptr;
+  if (auto *VT = dyn_cast<FixedVectorType>(Ret)) {
+    // Lane by lane.
+    Value *R = PoisonValue::get(Ret);
+    for (unsigned L = 0, E = VT->getNumElements(); L < E; ++L) {
+      SmallVector<Value *, 4> Lane;
+      for (Value *X : A)
+        Lane.push_back(X->getType()->isVectorTy()
+                           ? B.CreateExtractElement(X, L)
+                           : X);
+      R = B.CreateInsertElement(
+          R, directed(B, Base, Lane, ST, Rounding, Lib, CanonicalNaN), L);
+    }
+    return R;
+  }
+  Type *I16 = B.getInt16Ty(), *I32 = B.getInt32Ty(), *I64 = B.getInt64Ty();
+  auto Is = [&](unsigned C) { return B.CreateICmpEQ(Rounding, B.getInt32(C)); };
+
+  if (Integral) {
+    auto Call = [&](Intrinsic::ID ID) {
+      return B.CreateUnaryIntrinsic(ID, A[0]);
+    };
+    Value *R = Call(Intrinsic::roundeven);
+    R = B.CreateSelect(Is(0), Call(Intrinsic::trunc), R);
+    R = B.CreateSelect(Is(2), Call(Intrinsic::ceil), R);
+    return B.CreateSelect(Is(3), Call(Intrinsic::floor), R);
+  }
+  // A value of the format as the bits of the double.
+  auto Ext = [&](Value *X) {
+    Type *T = X->getType();
+    Value *F;
+    if (T->isFloatTy())
+      F = B.CreateBitCast(X, I32);
+    else if (T->isHalfTy())
+      F = B.CreateBitCast(B.CreateFPExt(X, B.getFloatTy()), I32);
+    else // bfloat: the high half of a float
+      F = B.CreateShl(B.CreateZExt(B.CreateBitCast(X, I16), I32), 16);
+    return Lib("__air_f64_from_f32", I64, {F});
+  };
+  Value *D;
+  if (FromInt) {
+    bool Signed = Base == "sitofp";
+    Value *X = Signed ? B.CreateSExt(A[0], I64) : B.CreateZExt(A[0], I64);
+    D = Lib(Signed ? "__air_f64_from_i64_r" : "__air_f64_from_u64_r", I64,
+            {X, Rounding});
+  } else if (Base == "fptrunc") {
+    D = Ext(A[0]);
+  } else {
+    auto [Name, N] = StringSwitch<std::pair<StringRef, unsigned>>(Base)
+                         .Case("fadd", {"add", 2})
+                         .Case("fsub", {"sub", 2})
+                         .Case("fmul", {"mul", 2})
+                         .Case("fdiv", {"div", 2})
+                         .Case("sqrt", {"sqrt", 1})
+                         .Default({"fma", 3});
+    SmallVector<Value *, 4> Args;
+    for (Value *X : A.take_front(N))
+      Args.push_back(Ext(X));
+    Args.push_back(Rounding);
+    D = Lib(("__air_f64_" + Name + "_r").str(), I64, Args);
+  }
+  StringRef To = ST->isFloatTy()  ? "__air_f64_to_f32_r"
+                 : ST->isHalfTy() ? "__air_f64_to_f16_r"
+                                  : "__air_f64_to_bf16_r";
+  Value *Bits = Lib(To, I32, {D, Rounding});
+  if (!ST->isFloatTy())
+    Bits = B.CreateTrunc(Bits, I16);
+  Value *R = B.CreateBitCast(Bits, ST);
+  if (CanonicalNaN) {
+    APFloat NaN(ST->getFltSemantics(),
+                APInt::getSignedMaxValue(ST->getPrimitiveSizeInBits()));
+    R = B.CreateSelect(B.CreateFCmpUNO(R, R), ConstantFP::get(ST, NaN), R);
+  }
+  return R;
 }
 
 /// The AIR body of hint F, whose operation Key names.
@@ -674,6 +826,30 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     return NoEmulation();
   bool DblIn = Mask.size() > 1 && Mask[1] == 'd';
   bool DblOut = !Mask.empty() && Mask[0] == 'd';
+  // The floating point mode, a trailing operand.
+  Value *Mode = Parts.back() == "+mode" ? A.pop_back_val() : nullptr;
+  // The rounding direction, numbered like FLT_ROUNDS (0 toward zero, 1 to
+  // nearest even, 2 upward, 3 downward): the metadata's, or the mode's field
+  // for the result's format: bits 0-1 for float, 2-3 for the others
+  // (AGXLowerFPEnv).
+  Value *Rounding = B.getInt32(1);
+  for (StringRef P : drop_begin(Parts, 2)) {
+    if (!P.consume_front("round."))
+      continue;
+    if (P == "dynamic") {
+      bool Float = Ret->getScalarType()->isFloatTy() && Mask[0] != 'd';
+      if (Mode)
+        Rounding = B.CreateAnd(Float ? Mode : B.CreateLShr(Mode, 2), 3);
+    } else {
+      Rounding = B.getInt32(StringSwitch<unsigned>(P)
+                                .Case("towardzero", 0)
+                                .Case("upward", 2)
+                                .Case("downward", 3)
+                                .Default(1));
+    }
+  }
+  auto *RoundingC = dyn_cast<ConstantInt>(Rounding);
+  bool Nearest = RoundingC && RoundingC->isOne();
   // The operation of a constrained intrinsic, or of an instruction.
   StringRef Base = Op;
   if (Base.consume_front("call:llvm.experimental.constrained."))
@@ -705,18 +881,27 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     StringRef B2 = Base.starts_with("fcmp") ? "fcmp" : Base;
     Value *R = nullptr;
     auto Bool = [&](Value *V) { return B.CreateICmpNE(V, B.getInt32(0)); };
+    // The function rounded to nearest, or its _r form in the rounding
+    // direction.
+    auto RLib = [&](StringRef Name, Type *R, ArrayRef<Value *> Args) {
+      if (Nearest)
+        return Lib(Name, R, Args);
+      SmallVector<Value *, 4> RArgs(Args);
+      RArgs.push_back(Rounding);
+      return Lib((Name + "_r").str(), R, RArgs);
+    };
     if (B2 == "fadd")
-      R = Lib("__air_f64_add", I64, {A[0], A[1]});
+      R = RLib("__air_f64_add", I64, {A[0], A[1]});
     else if (B2 == "fsub")
-      R = Lib("__air_f64_sub", I64, {A[0], A[1]});
+      R = RLib("__air_f64_sub", I64, {A[0], A[1]});
     else if (B2 == "fmul")
-      R = Lib("__air_f64_mul", I64, {A[0], A[1]});
+      R = RLib("__air_f64_mul", I64, {A[0], A[1]});
     else if (B2 == "fdiv")
-      R = Lib("__air_f64_div", I64, {A[0], A[1]});
+      R = RLib("__air_f64_div", I64, {A[0], A[1]});
     else if (B2 == "fma" || B2 == "fmuladd")
-      R = Lib("__air_f64_fma", I64, {A[0], A[1], A[2]});
+      R = RLib("__air_f64_fma", I64, {A[0], A[1], A[2]});
     else if (B2 == "sqrt")
-      R = Lib("__air_f64_sqrt", I64, {A[0]});
+      R = RLib("__air_f64_sqrt", I64, {A[0]});
     else if (B2 == "fneg")
       R = B.CreateXor(A[0], B.getInt64(0x8000000000000000ull));
     else if (B2 == "fabs")
@@ -734,8 +919,27 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
       Value *Abs = B.CreateAnd(A[0], B.getInt64(0x7fffffffffffffffull));
       R = B.CreateOr(Lib("__air_f64_floor", I64, {Abs}),
                      B.CreateAnd(A[0], B.getInt64(0x8000000000000000ull)));
-    } else if (B2 == "roundeven" || B2 == "rint" || B2 == "nearbyint")
+    } else if (B2 == "roundeven")
       R = Lib("__air_f64_roundeven", I64, {A[0]});
+    else if (B2 == "rint" || B2 == "nearbyint") {
+      // In the rounding direction.
+      Value *X = A[0], *S = B.getInt64(0x8000000000000000ull);
+      R = Lib("__air_f64_roundeven", I64, {X});
+      if (!Nearest) {
+        Value *Floor = Lib("__air_f64_floor", I64, {X});
+        Value *Ceil =
+            B.CreateXor(Lib("__air_f64_floor", I64, {B.CreateXor(X, S)}), S);
+        Value *Abs = B.CreateAnd(X, B.getInt64(0x7fffffffffffffffull));
+        Value *Trunc = B.CreateOr(Lib("__air_f64_floor", I64, {Abs}),
+                                  B.CreateAnd(X, S));
+        auto Is = [&](unsigned C) {
+          return B.CreateICmpEQ(Rounding, B.getInt32(C));
+        };
+        R = B.CreateSelect(Is(0), Trunc, R);
+        R = B.CreateSelect(Is(2), Ceil, R);
+        R = B.CreateSelect(Is(3), Floor, R);
+      }
+    }
     else if (B2 == "minnum" || B2 == "maxnum") {
       // The non-NaN operand when one is NaN.
       bool Min = B2 == "minnum";
@@ -793,23 +997,45 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
       case CmpInst::FCMP_TRUE: R = B.getTrue(); break;
       default: break;
       }
-    } else if (B2 == "fptosi")
-      R = B.CreateTrunc(Lib("__air_f64_to_i64", I64, {A[0]}), Ret);
-    else if (B2 == "fptoui")
-      R = B.CreateTrunc(Lib("__air_f64_to_u64", I64, {A[0]}), Ret);
+    } else if (B2 == "fptosi" || B2 == "fptoui") {
+      // Saturating, NaN to 0 (llvm.fpto[su]i.sat; out of range values are
+      // poison for the instructions).
+      bool Signed = B2 == "fptosi";
+      R = Lib(Signed ? "__air_f64_to_i64" : "__air_f64_to_u64", I64, {A[0]});
+      unsigned W = Ret->getScalarSizeInBits();
+      if (W < 64) {
+        R = Signed ? B.CreateBinaryIntrinsic(
+                         Intrinsic::smax,
+                         B.CreateBinaryIntrinsic(
+                             Intrinsic::smin, R,
+                             B.getInt64(APInt::getSignedMaxValue(W).getSExtValue())),
+                         B.getInt64(APInt::getSignedMinValue(W).getSExtValue()))
+                   : B.CreateBinaryIntrinsic(
+                         Intrinsic::umin, R,
+                         B.getInt64(APInt::getMaxValue(W).getZExtValue()));
+        R = B.CreateTrunc(R, Ret);
+      }
+    }
     else if (B2 == "sitofp")
-      R = Lib("__air_f64_from_i64", I64, {B.CreateSExt(A[0], I64)});
+      R = RLib("__air_f64_from_i64", I64, {B.CreateSExt(A[0], I64)});
     else if (B2 == "uitofp")
-      R = Lib("__air_f64_from_u64", I64, {B.CreateZExt(A[0], I64)});
+      R = RLib("__air_f64_from_u64", I64, {B.CreateZExt(A[0], I64)});
     else if (B2 == "fpext") {
       Value *X = A[0];
       if (!X->getType()->isFloatTy())
         X = B.CreateFPExt(X, F32);
       R = Lib("__air_f64_from_f32", I64, {B.CreateBitCast(X, I32)});
     } else if (B2 == "fptrunc") {
-      R = B.CreateBitCast(Lib("__air_f64_to_f32", I32, {A[0]}), F32);
-      if (!Ret->isFloatTy())
-        R = B.CreateFPTrunc(R, Ret);
+      // Rounded once, to the result's format.
+      if (Ret->isFloatTy())
+        R = B.CreateBitCast(RLib("__air_f64_to_f32", I32, {A[0]}), F32);
+      else if (Ret->isHalfTy() || Ret->isBFloatTy())
+        R = B.CreateBitCast(
+            B.CreateTrunc(Lib(Ret->isHalfTy() ? "__air_f64_to_f16_r"
+                                              : "__air_f64_to_bf16_r",
+                              I32, {A[0], Rounding}),
+                          B.getInt16Ty()),
+            Ret);
     }
     if (!R)
       return NoEmulation();
@@ -837,11 +1063,71 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
       is_contained({Intrinsic::minimum, Intrinsic::maximum,
                     Intrinsic::minimumnum, Intrinsic::maximumnum},
                    ID)) {
-    // AIR lowers the intrinsic itself, as well as it can.
-    return Fin(B.CreateIntrinsic(ID, {Ret}, A));
+    // On the bits: AIR's fmin and fmax, which the intrinsics would become,
+    // may flush denormals and order zeros either way. The operands are
+    // ordered by a key monotonic in their values (-0 below +0); minimum and
+    // maximum return a NaN operand (quieted), the *num forms the other one.
+    const fltSemantics &Sem = Ret->getScalarType()->getFltSemantics();
+    unsigned W = Ret->getScalarSizeInBits();
+    Type *IT = Ret->getWithNewType(B.getIntNTy(W));
+    auto C = [&](const APInt &V) { return ConstantInt::get(IT, V); };
+    APInt Sign = APInt::getSignMask(W);
+    APInt Inf = APFloat::getInf(Sem).bitcastToAPInt();
+    APInt Quiet = APInt::getOneBitSet(W, APFloat::semanticsPrecision(Sem) - 2);
+    Value *X = B.CreateBitCast(A[0], IT), *Y = B.CreateBitCast(A[1], IT);
+    auto Key = [&](Value *V) {
+      return B.CreateSelect(B.CreateICmpSLT(V, C(APInt(W, 0))), B.CreateNot(V),
+                            B.CreateOr(V, C(Sign)));
+    };
+    auto IsNaN = [&](Value *V) {
+      return B.CreateICmpUGT(B.CreateAnd(V, C(~Sign)), C(Inf));
+    };
+    bool Min = ID == Intrinsic::minimum || ID == Intrinsic::minimumnum;
+    Value *PickX = Min ? B.CreateICmpULT(Key(X), Key(Y))
+                       : B.CreateICmpUGT(Key(X), Key(Y));
+    Value *R = B.CreateSelect(PickX, X, Y);
+    if (ID == Intrinsic::minimumnum || ID == Intrinsic::maximumnum) {
+      R = B.CreateSelect(IsNaN(Y), X, R);
+      R = B.CreateSelect(IsNaN(X), Y, R);
+      R = B.CreateSelect(IsNaN(R), B.CreateOr(R, C(Quiet)), R);
+    } else {
+      R = B.CreateSelect(IsNaN(Y), B.CreateOr(Y, C(Quiet)), R);
+      R = B.CreateSelect(IsNaN(X), B.CreateOr(X, C(Quiet)), R);
+    }
+    if (CanonicalNaN)
+      R = B.CreateSelect(IsNaN(R), C(APInt::getSignedMaxValue(W)), R);
+    return Fin(B.CreateBitCast(R, Ret));
   }
   if (Op.starts_with("call:llvm.experimental.constrained.")) {
-    // Rounded to nearest: the rounding direction is the hint's.
+    // Rounded to nearest by the AIR operation, and in a directed rounding
+    // computed in double precision in that direction and rounded again in
+    // it (exact: the values of the format are doubles).
+    // Denormals of the operands' format (the result's without floating
+    // point operands) flush to zero, operands and result, where the mode
+    // says so (its bit 4 for float, 5 for half), as AGX does.
+    Type *FlushTy = A[0]->getType()->getScalarType();
+    if (!FlushTy->isFloatingPointTy())
+      FlushTy = Ret->getScalarType();
+    Value *Flush = nullptr;
+    if (Mode && (FlushTy->isFloatTy() || FlushTy->isHalfTy()))
+      Flush = B.CreateICmpNE(
+          B.CreateAnd(Mode, FlushTy->isFloatTy() ? 0x10 : 0x20), B.getInt32(0));
+    auto Flushed = [&](Value *X) {
+      if (!Flush || X->getType()->getScalarType() != FlushTy)
+        return X;
+      Value *Tiny = B.CreateFCmpOLT(
+          B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+          ConstantFP::get(X->getType(), APFloat::getSmallestNormalized(
+                                            FlushTy->getFltSemantics())));
+      Value *Zero = B.CreateBinaryIntrinsic(
+          Intrinsic::copysign, ConstantFP::get(X->getType(), 0.0), X);
+      return B.CreateSelect(Flush, B.CreateSelect(Tiny, Zero, X), X);
+    };
+    for (Value *&X : A)
+      X = Flushed(X);
+    Value *Directed = nullptr;
+    if (!Nearest)
+      Directed = directed(B, Base, A, Ret, Rounding, Lib, CanonicalNaN);
     Value *R = nullptr;
     if (Base == "fadd") R = B.CreateFAdd(A[0], A[1]);
     else if (Base == "fsub") R = B.CreateFSub(A[0], A[1]);
@@ -874,7 +1160,11 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     else if (Base == "fcmp" || Base == "fcmps") R = B.CreateFCmp(Pred(), A[0], A[1]);
     if (!R)
       return NoEmulation();
-    return Fin(R);
+    if (Directed)
+      R = RoundingC ? Directed
+                    : B.CreateSelect(B.CreateICmpEQ(Rounding, B.getInt32(1)),
+                                     R, Directed);
+    return Fin(Flushed(R));
   }
 
   // AGX operations.
@@ -887,7 +1177,8 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
   };
   Value *R = nullptr;
   if (Intr == "llvm.agx.get.fpmode")
-    R = B.getInt32(0); // round to nearest, no flushing
+    // the tracked mode, or rounding to nearest even without flushing
+    R = Mode ? Mode : B.getInt32(1 | (1 << 2));
   else if (Intr == "llvm.agx.set.fpmode")
     R = nullptr;
   else if (Intr == "llvm.agx.core.id")

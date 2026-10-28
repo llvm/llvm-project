@@ -57,6 +57,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
@@ -1394,11 +1395,15 @@ static Value *nativeHint(IRBuilder<> &B, CallInst &CI, StringRef Key) {
   LLVMContext &Ctx = M.getContext();
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
-  // "+lane": a trailing operand that only the emulation uses.
-  bool Lane = Parts.back() == "+lane";
-  if (Lane)
+  // "+lane", "+mode": trailing operands that only the emulation uses.
+  unsigned Extra = 0;
+  while (Parts.size() > 2 && Parts.back().starts_with("+")) {
     Parts.pop_back();
-  unsigned NumArgs = CI.arg_size() - Lane;
+    ++Extra;
+  }
+  if (CI.arg_size() < Extra)
+    return nullptr;
+  unsigned NumArgs = CI.arg_size() - Extra;
   if (Parts.size() < 2 || Parts[1].size() != NumArgs + 1)
     return nullptr;
   StringRef Op = Parts[0], Mask = Parts[1];
@@ -1510,7 +1515,16 @@ void LowerAIR::lowerHints() {
           R->takeName(CI);
           CI->replaceAllUsesWith(R);
         }
+        SmallVector<WeakTrackingVH, 2> Ops(CI->args());
         CI->eraseFromParent();
+        // The operands only the emulation read (the tracked FP mode, and its
+        // phis), now dead.
+        for (WeakTrackingVH &V : Ops) {
+          if (auto *P = dyn_cast_or_null<PHINode>(V))
+            RecursivelyDeleteDeadPHINode(P);
+          else if (V)
+            RecursivelyDeleteTriviallyDeadInstructions(V);
+        }
         continue;
       }
       // Otherwise the hint's AIR emulation runs, inline (AGX has no calls).

@@ -8,14 +8,20 @@
 //
 // Compares every function of soft_f64.c with the host's IEEE 754 double
 // arithmetic (rounding to nearest even, with denormals) on random operands of
-// every exponent and on special values; NaN results must be NaN.
+// every exponent and on special values; NaN results must be NaN. The _r
+// functions are compared in each rounding direction (fesetround), the
+// conversion to half with the host's _Float16, and the conversion to bfloat
+// with a float rounded in the same direction (exact in the directed
+// directions) and then rounded to bfloat.
 //
-//   cc -O2 -o test_soft_f64 test_soft_f64.c -lm && ./test_soft_f64 [count]
+//   cc -O2 -frounding-math -o test_soft_f64 test_soft_f64.c -lm &&
+//   ./test_soft_f64 [count]
 //
 //===----------------------------------------------------------------------===//
 
 #include "soft_f64.c"
 
+#include <fenv.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -32,6 +38,7 @@ static double dbl(u64 u) {
   memcpy(&d, &u, 8);
   return d;
 }
+typedef unsigned short u16;
 static u32 fbits(float f) {
   u32 u;
   memcpy(&u, &f, 4);
@@ -151,6 +158,53 @@ int main(int argc, char **argv) {
         CHECK("div", __air_f64_div(a, b), x / y);
         CHECK("fma", __air_f64_fma(a, b, c), fma(x, y, z));
       }
+  // Each rounding direction, numbered like FLT_ROUNDS.
+  static const int modes[4] = {FE_TOWARDZERO, FE_TONEAREST, FE_UPWARD,
+                               FE_DOWNWARD};
+  for (long i = 0; i < n; ++i) {
+    int rm = i & 3;
+    u64 a = operand(0), b = operand(a), c = operand(a);
+    volatile double x = dbl(a), y = dbl(b), z = dbl(c);
+    i64 si = (i64)rnd() >> (rnd() % 64);
+    u64 ui = rnd() >> (rnd() % 64);
+    volatile i64 vsi = si;
+    volatile u64 vui = ui;
+    fesetround(modes[rm]);
+    double add = x + y, sub = x - y, mul = x * y, quo = x / y, root = sqrt(x);
+    double fm = fma(x, y, z), fi = (double)vsi, fu = (double)vui;
+    float f = (float)x;
+    _Float16 h = (_Float16)x;
+    fesetround(FE_TONEAREST);
+    u64 g;
+    CHECK("add_r", __air_f64_add_r(a, b, rm), add);
+    CHECK("sub_r", __air_f64_sub_r(a, b, rm), sub);
+    CHECK("mul_r", __air_f64_mul_r(a, b, rm), mul);
+    CHECK("div_r", __air_f64_div_r(a, b, rm), quo);
+    CHECK("sqrt_r", __air_f64_sqrt_r(a, rm), root);
+    CHECK("fma_r", __air_f64_fma_r(a, b, c, rm), fm);
+    if (__air_f64_from_i64_r(si, rm) != bits(fi))
+      fail("from_i64_r", si, rm, 0, __air_f64_from_i64_r(si, rm), bits(fi));
+    if (__air_f64_from_u64_r(ui, rm) != bits(fu))
+      fail("from_u64_r", ui, rm, 0, __air_f64_from_u64_r(ui, rm), bits(fu));
+    u16 hb;
+    memcpy(&hb, &h, 2);
+    // float to bfloat: 16 bits dropped, rounded in direction rm.
+    u32 fb = fbits(f), low = fb & 0xffff, keep = fb >> 16;
+    int up = rm == 1 ? (low > 0x8000) | ((low == 0x8000) & (keep & 1))
+             : rm == 0 ? 0 : (low != 0) & ((rm == 3) == (fb >> 31));
+    u16 bb = (u16)(keep + up);
+    int exact_f = (double)f == x || rm != 1;
+    if (x == x ? __air_f64_to_f32_r(a, rm) != fbits(f)
+               : (__air_f64_to_f32_r(a, rm) & 0x7fffffff) <= 0x7f800000)
+      fail("to_f32_r", a, rm, 0, __air_f64_to_f32_r(a, rm), fbits(f));
+    if (x == x ? __air_f64_to_f16_r(a, rm) != hb
+               : (__air_f64_to_f16_r(a, rm) & 0x7fff) <= 0x7c00)
+      fail("to_f16_r", a, rm, 0, __air_f64_to_f16_r(a, rm), hb);
+    if (x == x ? exact_f && (fb & 0x7fffffff) <= 0x7f800000 &&
+                     __air_f64_to_bf16_r(a, rm) != bb
+               : (__air_f64_to_bf16_r(a, rm) & 0x7fff) <= 0x7f80)
+      fail("to_bf16_r", a, rm, 0, __air_f64_to_bf16_r(a, rm), bb);
+  }
   printf("%ld failures in %ld random cases\n", failures, n);
   return failures != 0;
 }
