@@ -96,8 +96,8 @@ codegen() {
 
 mlir() {
   have "${LLVM_BUILD:-}" && [ -x "$LLVM_BUILD/bin/mlir-opt" ] || skip "no mlir-opt"
-  "$LLVM_BUILD/bin/llvm-lit" -q "$ROOT/mlir/test/Dialect/AGX" \
-    "$ROOT/mlir/test/Conversion/AGXToAGXIR" "$ROOT/mlir/test/Conversion/GPUToAGXIR"
+  "$LLVM_BUILD/bin/llvm-lit" -q "$ROOT/mlir/test/Dialect/AIR" \
+    "$ROOT/mlir/test/Conversion/GPUToAIR" "$ROOT/mlir/test/Dialect/GPU/module-to-binary-air-agx.mlir"
 }
 
 fatbin() {

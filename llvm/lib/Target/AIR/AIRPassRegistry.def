@@ -33,11 +33,13 @@ MODULE_PASS("air-async-event-to-alloca", AIRAsyncEventToAllocaPass())
 MODULE_PASS("air-normalize-allocas", AIRNormalizeAllocasPass())
 MODULE_PASS("air-bfloat16-cast-decompose", AIRBFloat16CastDecomposePass())
 MODULE_PASS("air-scalar-buffer-packing", AIRScalarBufferPackingPass())
+MODULE_PASS("air-scalar-args-to-constant-buffers", AIRScalarArgsToConstantBuffersPass())
 MODULE_PASS("air-air-system-values", AIRSystemValuesPass())
 MODULE_PASS("air-alias-annotate", AIRAliasAnnotatePass())
 MODULE_PASS("air-prepare", AIRPreparePass())
 MODULE_PASS("air-cross-buffer-store-separate", AIRCrossBufferStoreSeparatePass())
 MODULE_PASS("air-embed", AIREmbedderPass())
+MODULE_PASS("air-portable", AIRPortablePass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

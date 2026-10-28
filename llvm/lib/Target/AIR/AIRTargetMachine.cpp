@@ -32,6 +32,7 @@
 #include "AIRNaNMinMax.h"
 #include "AIRNormalizeAllocas.h"
 #include "AIRPrepare.h"
+#include "AIRScalarArgsToConstantBuffers.h"
 #include "AIRScalarBufferPacking.h"
 #include "AIRScalarStoreGuard.h"
 #include "AIRSplitI64Shuffle.h"
@@ -94,6 +95,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRNormalizeAllocasLegacyPass(*PR);
   initializeAIRBFloat16CastDecomposeLegacyPass(*PR);
   initializeAIRScalarBufferPackingLegacyPass(*PR);
+  initializeAIRScalarArgsToConstantBuffersLegacyPass(*PR);
   initializeAIRArgumentBufferLegacyPass(*PR);
   initializeAIRSystemValuesLegacyPass(*PR);
   initializeAIRAliasAnnotateLegacyPass(*PR);
@@ -200,6 +202,40 @@ AIRTargetMachine::AIRTargetMachine(const Target &T, const Triple &TT,
 
 AIRTargetMachine::~AIRTargetMachine() {}
 
+static cl::opt<bool> AIRPortable(
+    "air-portable",
+    cl::desc("Run only the passes shared by every AIR consumer "
+             "(addAIRPortablePasses) and print the module; with "
+             "-filetype=asm only"),
+    cl::init(false));
+
+// The passes of the full pipeline (AIRPassConfig::addCodeGenPrepare) that
+// define AIR rather than work around the Metal driver, in the same order.
+// Scalar arguments become constant buffers, AIR's own form, where the full
+// pipeline packs them into _scalar_buf for the Triton host.
+void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
+  PM.add(createAIRFromGenericGPULegacyPass());
+  PM.add(createAIRNaNMinMaxLegacyPass());
+  PM.add(createLLVMToAIRIntrinsicsLegacyPass());
+  PM.add(createAIRBarrierRenameLegacyPass());
+  PM.add(createAIRLowerAtomicRMWLegacyPass(/*OrderingHints=*/true));
+  PM.add(createAIRScalarArgsToConstantBuffersLegacyPass());
+  PM.add(createAIRSystemValuesLegacyPass());
+}
+
+namespace {
+/// addAIRPortablePasses for the new pass manager ("air-portable"), for
+/// consumers that run AIR's portable passes by name (MLIR's AIR target for
+/// AGX output, opt).
+struct AIRPortablePass : RequiredPassInfoMixin<AIRPortablePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    legacy::PassManager PM;
+    addAIRPortablePasses(PM);
+    return PM.run(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  }
+};
+} // namespace
+
 void AIRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AIRPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -209,6 +245,14 @@ bool AIRTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
+  if (AIRPortable) {
+    if (FileType != CodeGenFileType::AssemblyFile)
+      report_fatal_error("-air-portable prints the module; use -filetype=asm");
+    addAIRPortablePasses(PM);
+    PM.add(createPrintModulePass(Out, "", true));
+    return false;
+  }
+
   TargetPassConfig *PassConfig = createPassConfig(PM);
   // Standard llc IR prologue (verifier, LSR + codegen-prep IR passes) at
   // -O1+, same as every upstream backend; -O0 / -disable-lsr opt out.

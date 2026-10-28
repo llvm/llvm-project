@@ -18,6 +18,9 @@ namespace llvm {
 class ModulePass;
 class FunctionPass;
 class PassRegistry;
+namespace legacy {
+class PassManagerBase;
+} // namespace legacy
 
 /// Initializer for the generic-GPU (OpenCL/SPIR-V builtin) -> AIR lowering.
 void initializeAIRFromGenericGPUPass(PassRegistry &);
@@ -73,8 +76,9 @@ ModulePass *createAIRBarrierRenameLegacyPass();
 /// Initializer for the AIR lower-atomicrmw pass.
 void initializeAIRLowerAtomicRMWLegacyPass(PassRegistry &);
 
-/// Pass to lower `atomicrmw` instructions to `air.atomic.*` intrinsic calls.
-ModulePass *createAIRLowerAtomicRMWLegacyPass();
+/// Pass to lower `atomicrmw` instructions to `air.atomic.*` intrinsic calls;
+/// with \p OrderingHints, ordered ones carry `agx.atomic.ordering`.
+ModulePass *createAIRLowerAtomicRMWLegacyPass(bool OrderingHints = false);
 
 /// Initializer for the AIR i64 simd shuffle split pass.
 void initializeAIRSplitI64ShuffleLegacyPass(PassRegistry &);
@@ -145,6 +149,13 @@ void initializeAIRScalarBufferPackingLegacyPass(PassRegistry &);
 /// `addrspace(1)` device-buffer parameter (matching the Python driver).
 ModulePass *createAIRScalarBufferPackingLegacyPass();
 
+/// Initializer for the AIR scalar-arguments-to-constant-buffers pass.
+void initializeAIRScalarArgsToConstantBuffersLegacyPass(PassRegistry &);
+
+/// Pass to turn each by-value scalar kernel argument into a constant buffer
+/// argument holding it (AIR's form of a scalar argument).
+ModulePass *createAIRScalarArgsToConstantBuffersLegacyPass();
+
 /// Initializer for the AIR alias-metadata annotate pass.
 void initializeAIRAliasAnnotateLegacyPass(PassRegistry &);
 
@@ -166,6 +177,14 @@ void initializeAIRCrossBufferStoreSeparateLegacyPass(PassRegistry &);
 /// cross-buffer device stores, working around the AGX-1 JIT store-coalescing
 /// miscompile. No-op on single-output kernels. See AGX_BUGS.md (AGX-1).
 ModulePass *createAIRCrossBufferStoreSeparateLegacyPass();
+
+/// Add the passes that give a module AIR's meaning: generic GPU builtins,
+/// LLVM intrinsics, barriers and atomics become AIR functions, and system
+/// values become kernel parameters described by `!air.kernel`. Their result is
+/// the AIR that every consumer shares (the AGX target reads it). The other
+/// AIR passes adapt it to Apple's Metal driver or to the bitcode writer and
+/// run only on the way to a .metallib or .air.
+void addAIRPortablePasses(legacy::PassManagerBase &PM);
 
 } // namespace llvm
 

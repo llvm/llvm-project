@@ -95,10 +95,22 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
+  // A spill is a stack store and load (device memory): sinking cheap
+  // preheader values into loops under pressure avoids some (agx-bench: n-body
+  // -4%, nothing slower in cycles).
+  bool sinkInstsIntoCyclesToAvoidSpills() const override { return true; }
   // Alias analysis (AGXAliasAnalysis: disjoint address spaces) orders memory
   // accesses in the DAG combiner and the machine scheduler.
   bool useAA() const override { return true; }
-  bool enablePostRAScheduler() const override { return false; }
+  // After register allocation, top-down with AGXMemCluster (as before it):
+  // agx-bench -4% to -5% (ZLUDA PTX tests, agx_libs, real-world CUDA). The
+  // generic post-RA scheduler alone spread clustered stores apart again.
+  bool enablePostRAScheduler() const override { return true; }
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 const SchedRegion &Region) const override {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+  }
   // In large regions, scheduling from both ends keeps fewer values live
   // across the long shuffle and multiply-add sequences of tiled matrix
   // products than the default bottom-up order (sgemm 64x64 tile: 153 spill

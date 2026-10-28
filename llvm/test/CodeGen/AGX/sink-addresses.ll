@@ -6,8 +6,8 @@
 
 ; CHECK-LABEL: later_block:
 ; CHECK-NOT:     iadd r{{[0-9]+}}_r{{[0-9]+}}
-; CHECK:         device_load 0, i32, x, r{{[0-9]+}}, u0_u1, r{{[0-9]+}}, signed
-; CHECK:         device_store 0, i32, x, r{{[0-9]+}}, u2_u3, r{{[0-9]+}}, signed
+; CHECK:         device_load 0, i32, x, r{{[0-9]+}}, u0_u1, r{{[0-9]+}}, {{(un)?}}signed
+; CHECK:         device_store 0, i32, x, r{{[0-9]+}}, u2_u3, r{{[0-9]+}}, {{(un)?}}signed
 define agx_kernel void @later_block(i64 %a, i64 %b, i32 %n) {
 entry:
   %i = call i32 @llvm.agx.thread.position.in.threadgroup.x()
@@ -36,7 +36,7 @@ declare i32 @llvm.agx.thread.position.in.threadgroup.x()
 
 ; CHECK-LABEL: narrow_threadgroup:
 ; CHECK-NOT:     iadd r{{[0-9]+}}_r{{[0-9]+}}
-; CHECK:         device_load 0, i32, x, r{{[0-9]+}}, u0_u1, r{{[0-9]+}}, signed
+; CHECK:         device_load 0, i32, x, r{{[0-9]+}}, u0_u1, r{{[0-9]+}}, {{(un)?}}signed
 ; CHECK:         threadgroup_store i32, x, r{{[0-9]+}}, r{{[0-9]+}}l, 0
 define agx_kernel void @narrow_threadgroup(i64 %a) {
   %i = call i32 @llvm.agx.thread.position.in.threadgroup.x()

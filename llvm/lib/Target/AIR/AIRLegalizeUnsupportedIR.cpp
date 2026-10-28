@@ -9,9 +9,13 @@
 #include "AIRLegalizeUnsupportedIR.h"
 #include "AIR.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/AIR.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -59,16 +63,21 @@ void lowerCmpIntrinsics(Module &M) {
   }
 }
 
+// Integers of 65 to 128 bits (AIR has none; agx-raise-to-air keeps them as
+// a type hint, llvm/IR/AIR.h) as two i64 limbs. The high limb of an N-bit
+// value holds its bits 64 to N - 1, zero above.
 void expandWideIntegers(Module &M) {
   auto isWide = [](Type *T) {
     return T->isIntegerTy() && T->getIntegerBitWidth() > 64 &&
            T->getIntegerBitWidth() <= 128;
   };
-  Type *I64 = Type::getInt64Ty(M.getContext());
+  LLVMContext &Ctx = M.getContext();
+  Type *I64 = Type::getInt64Ty(Ctx);
+  using Limbs2 = std::pair<Value *, Value *>;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    DenseMap<Value *, std::pair<Value *, Value *>> Limbs;
+    DenseMap<Value *, Limbs2> Limbs;
     SmallVector<Instruction *, 8> Wide;
     for (auto &BB : F)
       for (auto &I : BB)
@@ -78,8 +87,9 @@ void expandWideIntegers(Module &M) {
           Wide.push_back(&I);
     if (Wide.empty())
       continue;
+    auto C64 = [&](uint64_t V) { return ConstantInt::get(I64, V); };
     auto umulh = [&](IRBuilder<> &B, Value *A, Value *Bv) -> Value * {
-      Value *Mask = ConstantInt::get(I64, 0xffffffffull);
+      Value *Mask = C64(0xffffffffull);
       Value *AL = B.CreateAnd(A, Mask), *AH = B.CreateLShr(A, 32);
       Value *BL = B.CreateAnd(Bv, Mask), *BH = B.CreateLShr(Bv, 32);
       Value *LL = B.CreateMul(AL, BL);
@@ -93,84 +103,284 @@ void expandWideIntegers(Module &M) {
                                                      B.CreateLShr(HL, 32))),
                          B.CreateLShr(Mid, 32));
     };
+    auto limbsOf = [&](Value *V) -> Limbs2 {
+      auto It = Limbs.find(V);
+      if (It != Limbs.end())
+        return It->second;
+      if (auto *C = dyn_cast<ConstantInt>(V)) {
+        APInt A = C->getValue().zext(128);
+        return {ConstantInt::get(I64, A.trunc(64)),
+                ConstantInt::get(I64, A.lshr(64).trunc(64))};
+      }
+      if (isa<UndefValue>(V))
+        return {PoisonValue::get(I64), PoisonValue::get(I64)};
+      report_fatal_error("AIRWriter: unmapped wide integer operand");
+    };
+    // The high limb of a value of W bits: zero above bit W - 64
+    // (canonical), or sign-extended from it.
+    auto canon = [&](IRBuilder<> &B, Value *H, unsigned W) -> Value * {
+      return W == 128 ? H : B.CreateAnd(H, C64(~0ull >> (128 - W)));
+    };
+    auto signedHi = [&](IRBuilder<> &B, Value *H, unsigned W) -> Value * {
+      return W == 128 ? H : B.CreateAShr(B.CreateShl(H, 128 - W), 128 - W);
+    };
+    // Shifts of (L, H) by S (an i64 below 128).
+    auto shift = [&](IRBuilder<> &B, Instruction::BinaryOps Op, Value *L,
+                     Value *H, Value *S) -> Limbs2 {
+      Value *Big = B.CreateICmpUGE(S, C64(64));
+      Value *Zero = B.CreateICmpEQ(S, C64(0));
+      Value *S63 = B.CreateAnd(S, C64(63));
+      Value *Inv = B.CreateAnd(B.CreateSub(C64(64), S63), C64(63));
+      if (Op == Instruction::Shl) {
+        Value *Lo = B.CreateShl(L, S63);
+        Value *Carry = B.CreateSelect(Zero, C64(0), B.CreateLShr(L, Inv));
+        Value *Hi = B.CreateOr(B.CreateShl(H, S63), Carry);
+        return {B.CreateSelect(Big, C64(0), Lo),
+                B.CreateSelect(Big, B.CreateShl(L, S63), Hi)};
+      }
+      bool Arith = Op == Instruction::AShr;
+      Value *Fill = Arith ? B.CreateAShr(H, 63) : C64(0);
+      Value *Hi = Arith ? B.CreateAShr(H, S63) : B.CreateLShr(H, S63);
+      Value *Carry = B.CreateSelect(Zero, C64(0), B.CreateShl(H, Inv));
+      Value *Lo = B.CreateOr(B.CreateLShr(L, S63), Carry);
+      return {B.CreateSelect(Big, Arith ? B.CreateAShr(H, S63)
+                                        : B.CreateLShr(H, S63),
+                             Lo),
+              B.CreateSelect(Big, Fill, Hi)};
+    };
+    auto icmp = [&](IRBuilder<> &B, CmpInst::Predicate P, Limbs2 X, Limbs2 Y,
+                    unsigned W) -> Value * {
+      auto [L1, H1] = X;
+      auto [L2, H2] = Y;
+      if (P == CmpInst::ICMP_EQ || P == CmpInst::ICMP_NE) {
+        Value *Eq = B.CreateAnd(B.CreateICmpEQ(L1, L2), B.CreateICmpEQ(H1, H2));
+        return P == CmpInst::ICMP_EQ ? Eq : B.CreateNot(Eq);
+      }
+      if (ICmpInst::isSigned(P)) {
+        H1 = signedHi(B, H1, W);
+        H2 = signedHi(B, H2, W);
+      }
+      // The high limbs decide unless equal; then the low ones, unsigned.
+      Value *HiCmp = B.CreateICmp(ICmpInst::getStrictPredicate(P), H1, H2);
+      Value *LoCmp = B.CreateICmp(
+          ICmpInst::getUnsignedPredicate(P), L1, L2);
+      return B.CreateSelect(B.CreateICmpEQ(H1, H2), LoCmp, HiCmp);
+    };
+    SmallVector<std::pair<PHINode *, std::pair<PHINode *, PHINode *>>, 4> Phis;
     for (Instruction *I : Wide) {
       IRBuilder<> B(I);
-      auto limbsOf = [&](Value *V) -> std::pair<Value *, Value *> {
-        auto It = Limbs.find(V);
-        if (It != Limbs.end())
-          return It->second;
-        if (auto *C = dyn_cast<ConstantInt>(V)) {
-          APInt A = C->getValue();
-          return {ConstantInt::get(I64, A.trunc(64)),
-                  ConstantInt::get(I64, A.lshr(64).trunc(64))};
-        }
-        report_fatal_error("AIRWriter: unmapped wide integer operand");
+      unsigned W = isWide(I->getType()) ? I->getType()->getIntegerBitWidth()
+                                        : 0;
+      auto Set = [&](Value *Lo, Value *Hi) {
+        Limbs[I] = {Lo, canon(B, Hi, W)};
       };
       if (auto *ZE = dyn_cast<ZExtInst>(I)) {
-        Limbs[I] = {B.CreateZExtOrTrunc(ZE->getOperand(0), I64),
-                    ConstantInt::get(I64, 0)};
+        Value *X = ZE->getOperand(0);
+        if (isWide(X->getType()))
+          Limbs[I] = limbsOf(X);
+        else
+          Set(B.CreateZExtOrTrunc(X, I64), C64(0));
       } else if (auto *SE2 = dyn_cast<SExtInst>(I)) {
-        Value *Lo = B.CreateSExtOrTrunc(SE2->getOperand(0), I64);
-        Limbs[I] = {Lo, B.CreateAShr(Lo, 63)};
+        Value *X = SE2->getOperand(0);
+        if (isWide(X->getType())) {
+          auto [L, H] = limbsOf(X);
+          Set(L, signedHi(B, H, X->getType()->getIntegerBitWidth()));
+        } else {
+          Value *Lo = B.CreateSExtOrTrunc(X, I64);
+          Set(Lo, B.CreateAShr(Lo, 63));
+        }
+      } else if (auto *TR = dyn_cast<TruncInst>(I)) {
+        auto [Lo, Hi] = limbsOf(TR->getOperand(0));
+        if (W)
+          Set(Lo, Hi);
+        else
+          TR->replaceAllUsesWith(B.CreateZExtOrTrunc(Lo, TR->getType()));
       } else if (auto *BO = dyn_cast<BinaryOperator>(I)) {
         auto [L1, H1] = limbsOf(BO->getOperand(0));
+        auto [L2, H2] = limbsOf(BO->getOperand(1));
         switch (BO->getOpcode()) {
-        case Instruction::Mul: {
-          auto [L2, H2] = limbsOf(BO->getOperand(1));
-          Value *Lo = B.CreateMul(L1, L2);
-          Value *Hi =
+        case Instruction::Mul:
+          Set(B.CreateMul(L1, L2),
               B.CreateAdd(umulh(B, L1, L2), B.CreateAdd(B.CreateMul(L1, H2),
-                                                        B.CreateMul(H1, L2)));
-          Limbs[I] = {Lo, Hi};
+                                                        B.CreateMul(H1, L2))));
           break;
-        }
         case Instruction::Add: {
-          auto [L2, H2] = limbsOf(BO->getOperand(1));
           Value *Lo = B.CreateAdd(L1, L2);
           Value *Carry = B.CreateZExt(B.CreateICmpULT(Lo, L1), I64);
-          Limbs[I] = {Lo, B.CreateAdd(B.CreateAdd(H1, H2), Carry)};
+          Set(Lo, B.CreateAdd(B.CreateAdd(H1, H2), Carry));
           break;
         }
         case Instruction::Sub: {
-          auto [L2, H2] = limbsOf(BO->getOperand(1));
-          Value *Lo = B.CreateSub(L1, L2);
           Value *Borrow = B.CreateZExt(B.CreateICmpULT(L1, L2), I64);
-          Limbs[I] = {Lo, B.CreateSub(B.CreateSub(H1, H2), Borrow)};
+          Set(B.CreateSub(L1, L2), B.CreateSub(B.CreateSub(H1, H2), Borrow));
           break;
         }
-        case Instruction::LShr: {
-          auto *CI = dyn_cast<ConstantInt>(BO->getOperand(1));
-          if (!CI)
-            report_fatal_error("AIRWriter: wide lshr by non-constant");
-          uint64_t Sh = CI->getZExtValue();
-          if (Sh == 0) {
-            Limbs[I] = {L1, H1};
-          } else if (Sh < 64) {
-            Limbs[I] = {
-                B.CreateOr(B.CreateLShr(L1, Sh), B.CreateShl(H1, 64 - Sh)),
-                B.CreateLShr(H1, Sh)};
-          } else {
-            Limbs[I] = {B.CreateLShr(H1, Sh - 64), ConstantInt::get(I64, 0)};
-          }
+        case Instruction::And:
+          Set(B.CreateAnd(L1, L2), B.CreateAnd(H1, H2));
+          break;
+        case Instruction::Or:
+          Set(B.CreateOr(L1, L2), B.CreateOr(H1, H2));
+          break;
+        case Instruction::Xor:
+          Set(B.CreateXor(L1, L2), B.CreateXor(H1, H2));
+          break;
+        case Instruction::Shl:
+        case Instruction::LShr:
+        case Instruction::AShr: {
+          // Amounts of W or more are poison: any result does.
+          Value *H = BO->getOpcode() == Instruction::AShr
+                         ? signedHi(B, H1, W)
+                         : H1;
+          auto [Lo, Hi] = shift(B, BO->getOpcode(), L1, H,
+                                B.CreateAnd(L2, C64(127)));
+          Set(Lo, Hi);
           break;
         }
         default:
           report_fatal_error(Twine("AIRWriter: unhandled wide integer op '") +
                              BO->getOpcodeName() + "'");
         }
-      } else if (auto *TR = dyn_cast<TruncInst>(I)) {
-        auto [Lo, Hi] = limbsOf(TR->getOperand(0));
-        (void)Hi;
-        Value *R = B.CreateZExtOrTrunc(Lo, TR->getType());
-        TR->replaceAllUsesWith(R);
+      } else if (auto *IC = dyn_cast<ICmpInst>(I)) {
+        unsigned OW = IC->getOperand(0)->getType()->getIntegerBitWidth();
+        IC->replaceAllUsesWith(icmp(B, IC->getPredicate(),
+                                    limbsOf(IC->getOperand(0)),
+                                    limbsOf(IC->getOperand(1)), OW));
+      } else if (auto *Sel = dyn_cast<SelectInst>(I)) {
+        if (Sel->getCondition()->getType()->isVectorTy())
+          report_fatal_error("AIRWriter: wide integer vector select");
+        auto [L1, H1] = limbsOf(Sel->getTrueValue());
+        auto [L2, H2] = limbsOf(Sel->getFalseValue());
+        Value *Cond = Sel->getCondition();
+        Limbs[I] = {B.CreateSelect(Cond, L1, L2), B.CreateSelect(Cond, H1, H2)};
+      } else if (auto *Phi = dyn_cast<PHINode>(I)) {
+        PHINode *Lo = B.CreatePHI(I64, Phi->getNumIncomingValues());
+        PHINode *Hi = B.CreatePHI(I64, Phi->getNumIncomingValues());
+        Limbs[I] = {Lo, Hi};
+        Phis.push_back({Phi, {Lo, Hi}});
+      } else if (auto *Fr = dyn_cast<FreezeInst>(I)) {
+        auto [L, H] = limbsOf(Fr->getOperand(0));
+        Limbs[I] = {B.CreateFreeze(L), B.CreateFreeze(H)};
+      } else if (auto *LI = dyn_cast<LoadInst>(I); LI && LI->isSimple() && W) {
+        // The low eight bytes, then the rest (little endian).
+        Value *P = LI->getPointerOperand();
+        Align A = LI->getAlign();
+        Type *HiTy = Type::getIntNTy(Ctx, W - 64);
+        if (W - 64 != 8 && W - 64 != 16 && W - 64 != 32 && W - 64 != 64)
+          report_fatal_error("AIRWriter: wide integer load of an odd width");
+        Value *Lo = B.CreateAlignedLoad(I64, P, A, LI->isVolatile());
+        Value *HP = B.CreateConstInBoundsGEP1_64(Type::getInt8Ty(Ctx), P, 8);
+        Value *Hi = B.CreateAlignedLoad(HiTy, HP, commonAlignment(A, 8),
+                                        LI->isVolatile());
+        Limbs[I] = {Lo, B.CreateZExt(Hi, I64)};
+      } else if (auto *SI = dyn_cast<StoreInst>(I);
+                 SI && SI->isSimple() && isWide(SI->getValueOperand()->getType())) {
+        unsigned SW = SI->getValueOperand()->getType()->getIntegerBitWidth();
+        if (SW - 64 != 8 && SW - 64 != 16 && SW - 64 != 32 && SW - 64 != 64)
+          report_fatal_error("AIRWriter: wide integer store of an odd width");
+        auto [L, H] = limbsOf(SI->getValueOperand());
+        Value *P = SI->getPointerOperand();
+        Align A = SI->getAlign();
+        B.CreateAlignedStore(L, P, A, SI->isVolatile());
+        Value *HP = B.CreateConstInBoundsGEP1_64(Type::getInt8Ty(Ctx), P, 8);
+        B.CreateAlignedStore(B.CreateTrunc(H, Type::getIntNTy(Ctx, SW - 64)), HP,
+                             commonAlignment(A, 8), SI->isVolatile());
+      } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
+        // To or from a vector of 128 bits, through <2 x i64>.
+        auto *V2 = FixedVectorType::get(I64, 2);
+        if (W == 128) {
+          Value *V = B.CreateBitCast(BC->getOperand(0), V2);
+          Limbs[I] = {B.CreateExtractElement(V, uint64_t(0)),
+                      B.CreateExtractElement(V, uint64_t(1))};
+        } else if (BC->getOperand(0)->getType()->getIntegerBitWidth() == 128) {
+          auto [L, H] = limbsOf(BC->getOperand(0));
+          Value *V = B.CreateInsertElement(PoisonValue::get(V2), L, uint64_t(0));
+          V = B.CreateInsertElement(V, H, uint64_t(1));
+          BC->replaceAllUsesWith(B.CreateBitCast(V, BC->getType()));
+        } else {
+          report_fatal_error("AIRWriter: wide integer bitcast");
+        }
+      } else if (auto *II = dyn_cast<IntrinsicInst>(I); II && W) {
+        auto [L1, H1] = limbsOf(II->getArgOperand(0));
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::abs: {
+          Value *Neg = B.CreateICmpSLT(signedHi(B, H1, W), C64(0));
+          Value *NL = B.CreateNeg(L1);
+          Value *NH = B.CreateSub(B.CreateNeg(H1),
+                                  B.CreateZExt(B.CreateICmpNE(L1, C64(0)), I64));
+          Set(B.CreateSelect(Neg, NL, L1), B.CreateSelect(Neg, NH, H1));
+          break;
+        }
+        case Intrinsic::ctlz: {
+          // Leading zeros of the W bits.
+          Value *ZH = B.CreateBinaryIntrinsic(Intrinsic::ctlz, H1, B.getFalse());
+          Value *ZL = B.CreateBinaryIntrinsic(Intrinsic::ctlz, L1, B.getFalse());
+          Value *R = B.CreateSelect(B.CreateICmpEQ(H1, C64(0)),
+                                    B.CreateAdd(ZL, C64(64)), ZH);
+          Set(B.CreateSub(R, C64(128 - W)), C64(0));
+          break;
+        }
+        case Intrinsic::cttz: {
+          Value *TH = B.CreateBinaryIntrinsic(Intrinsic::cttz, H1, B.getFalse());
+          Value *TL = B.CreateBinaryIntrinsic(Intrinsic::cttz, L1, B.getFalse());
+          Value *R = B.CreateSelect(B.CreateICmpEQ(L1, C64(0)),
+                                    B.CreateAdd(TH, C64(64)), TL);
+          Set(B.CreateBinaryIntrinsic(Intrinsic::umin, R, C64(W)), C64(0));
+          break;
+        }
+        case Intrinsic::ctpop:
+          Set(B.CreateAdd(B.CreateUnaryIntrinsic(Intrinsic::ctpop, L1),
+                          B.CreateUnaryIntrinsic(Intrinsic::ctpop, H1)),
+              C64(0));
+          break;
+        case Intrinsic::umin:
+        case Intrinsic::umax:
+        case Intrinsic::smin:
+        case Intrinsic::smax: {
+          Limbs2 Y = limbsOf(II->getArgOperand(1));
+          CmpInst::Predicate P =
+              StringSwitch<CmpInst::Predicate>(
+                  Intrinsic::getBaseName(II->getIntrinsicID()))
+                  .Case("llvm.umin", CmpInst::ICMP_ULT)
+                  .Case("llvm.umax", CmpInst::ICMP_UGT)
+                  .Case("llvm.smin", CmpInst::ICMP_SLT)
+                  .Default(CmpInst::ICMP_SGT);
+          Value *X = icmp(B, P, {L1, H1}, Y, W);
+          Limbs[I] = {B.CreateSelect(X, L1, Y.first),
+                      B.CreateSelect(X, H1, Y.second)};
+          break;
+        }
+        default:
+          report_fatal_error(Twine("AIRWriter: unhandled wide integer "
+                                   "intrinsic '") +
+                             II->getCalledFunction()->getName() + "'");
+        }
       } else {
         report_fatal_error(Twine("AIRWriter: unhandled wide integer user '") +
-                           I->getOpcodeName() + "'");
+                           I->getOpcodeName() + "'" +
+                           (isa<LoadInst>(I) || isa<StoreInst>(I) ||
+                                    isa<AtomicRMWInst>(I) ||
+                                    isa<AtomicCmpXchgInst>(I)
+                                ? " (AIR has no atomics of this width)"
+                                : ""));
       }
     }
+    for (auto &[Phi, LH] : Phis)
+      for (unsigned K = 0; K < Phi->getNumIncomingValues(); ++K) {
+        auto [L, H] = limbsOf(Phi->getIncomingValue(K));
+        LH.first->addIncoming(L, Phi->getIncomingBlock(K));
+        LH.second->addIncoming(H, Phi->getIncomingBlock(K));
+      }
+    for (Instruction *I : Wide)
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     for (auto It = Wide.rbegin(); It != Wide.rend(); ++It)
       (*It)->eraseFromParent();
   }
+  // Declarations of wide intrinsics left unused.
+  for (Function &D : make_early_inc_range(M))
+    if (D.isIntrinsic() && D.use_empty() &&
+        (isWide(D.getReturnType()) ||
+         any_of(D.getFunctionType()->params(), isWide)))
+      D.eraseFromParent();
 }
 
 void stripLifetimeIntrinsics(Module &M) {
@@ -238,7 +448,86 @@ void stripDisjointFlags(Module &M) {
             BO->setIsDisjoint(false);
 }
 
+// Generic pointers (agx-raise-to-air's address-space hint, llvm/IR/AIR.h)
+// as device pointers: Metal has no generic address space. A generic pointer
+// to threadgroup memory is wrong this way (the hint's documented limit).
+void genericToDevice(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  auto *Generic = PointerType::get(Ctx, air::GenericHintAS);
+  auto *Device = PointerType::get(Ctx, 1);
+  auto Map = [&](Type *T) -> Type * {
+    if (T == Generic)
+      return Device;
+    if (auto *VT = dyn_cast<VectorType>(T); VT && VT->getElementType() == Generic)
+      return VectorType::get(Device, VT->getElementCount());
+    return nullptr;
+  };
+  auto MapConstant = [&](Constant *C) -> Constant * {
+    Type *T = Map(C->getType());
+    if (!T)
+      return nullptr;
+    if (isa<ConstantPointerNull>(C))
+      return ConstantPointerNull::get(cast<PointerType>(T));
+    if (isa<PoisonValue>(C))
+      return PoisonValue::get(T);
+    if (isa<UndefValue>(C))
+      return UndefValue::get(T);
+    if (auto *CE = dyn_cast<ConstantExpr>(C);
+        CE && CE->getOpcode() == Instruction::IntToPtr)
+      return ConstantExpr::getIntToPtr(CE->getOperand(0), T);
+    return ConstantExpr::getAddrSpaceCast(C, T);
+  };
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (Map(F.getReturnType()) ||
+        any_of(F.getFunctionType()->params(), Map)) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "a generic pointer in the signature of a function"));
+      continue;
+    }
+    SmallVector<CallBase *, 4> Intrinsics;
+    for (Instruction &I : instructions(F)) {
+      for (Use &U : I.operands())
+        if (auto *C = dyn_cast<Constant>(U.get()); C && !isa<GlobalValue>(C))
+          if (Constant *NC = MapConstant(C))
+            U.set(NC);
+      if (Type *T = Map(I.getType()))
+        I.mutateType(T);
+      if (auto *CB = dyn_cast<CallBase>(&I);
+          CB && CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic())
+        Intrinsics.push_back(CB);
+    }
+    // Intrinsics overloaded on the pointer type (memcpy ...) take the device
+    // overload.
+    for (CallBase *CB : Intrinsics) {
+      Function *Callee = CB->getCalledFunction();
+      SmallVector<Type *, 4> ArgTys;
+      for (Value *A : CB->args())
+        ArgTys.push_back(A->getType());
+      auto *FT = FunctionType::get(CB->getType(), ArgTys, false);
+      if (FT == Callee->getFunctionType())
+        continue;
+      SmallVector<Type *, 2> Overloads;
+      if (!Intrinsic::isSignatureValid(Callee->getIntrinsicID(), FT, Overloads))
+        continue;
+      Function *Decl = Intrinsic::getOrInsertDeclaration(
+          &M, Callee->getIntrinsicID(), Overloads);
+      CB->mutateFunctionType(Decl->getFunctionType());
+      CB->setCalledFunction(Decl);
+    }
+    // Casts between generic and device pointers are now no-ops.
+    for (Instruction &I : make_early_inc_range(instructions(F)))
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I);
+          ASC && ASC->getSrcTy() == ASC->getDestTy()) {
+        ASC->replaceAllUsesWith(ASC->getOperand(0));
+        ASC->eraseFromParent();
+      }
+  }
+}
+
 bool legalizeUnsupportedIR(Module &M) {
+  genericToDevice(M);
   stripLifetimeIntrinsics(M);
   expandWideIntegers(M);
   lowerFreezeInsts(M);

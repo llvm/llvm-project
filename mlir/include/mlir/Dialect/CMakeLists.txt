@@ -1,5 +1,4 @@
 add_subdirectory(Affine)
-add_subdirectory(AGX)
 add_subdirectory(AIR)
 add_subdirectory(AMDGPU)
 add_subdirectory(Arith)

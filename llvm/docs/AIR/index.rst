@@ -22,3 +22,4 @@ history intact.
    AIRLibFormat
    AIRStatus
    AIRFunctionality
+   AIRHints

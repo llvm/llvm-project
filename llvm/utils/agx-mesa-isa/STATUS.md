@@ -9,7 +9,7 @@ operand values its compiler creates. Code built this way relies only on encoding
 | Layer | Switch | Repository, branch `claude/bold-davinci-46xi9q` |
 | --- | --- | --- |
 | LLVM IR | `"target-features"="+agx-strict"`, `-mattr=+agx-strict`, or module flag `!{i32 1, !"agx-strict", i32 1}` | Jianwen-Ding/llvm-project, `llvm/docs/AGXUsage.rst` "Strict mode" |
-| MLIR | `#agxir.target<chip = "...", features = "+agx-strict">`; `agx-expand-ops features=+agx-strict` | Jianwen-Ding/llvm-project |
+| MLIR | `#air.target<chip = "...", features = "+agx-strict">` (the AGX backend's feature) | Jianwen-Ding/llvm-project |
 | Fat binaries | `CHIP+agx-strict` entries from `agx-build-fatbin.py` (default; `--no-agx-strict` leaves them out) | Jianwen-Ding/llvm-project, `mlir/utils/agx-kernels` |
 | Simulator | `--agx-strict GPU` on `agx_run`, `agx_dispatch`, `agx_cost`, or `AGX_STRICT=GPU` | Jianwen-Ding/AGX-Performance-Simulator (PR #8) |
 | ZLUDA | `zoc --agx-strict`; `ZLUDA_AGX_STRICT=1` for `zluda_agx` (loads the `+agx-strict` entries) | Jianwen-Ding/ZLUDA, `docs/src/agx.md` "Strict instruction mode" |
@@ -26,7 +26,7 @@ output and `llvm-mc`) is checked, and one Mesa would not emit is an error naming
 | fuzz | Mesa's own packer: 32,700 instructions over 109 opcodes accepted; the Python, C++ and Rust engines agree on 21,800 mutated instructions; random bytes accepted 0.33% |
 | lit | 59 AGX CodeGen / MC / disassembler tests |
 | codegen | every CodeGen/AGX test compiles with `+agx-strict` for agx-g13g and agx-g14c |
-| mlir | the MLIR AGX, AGX-to-AGXIR and GPU-to-AGXIR tests and the ChipInfo unit tests |
+| mlir | the MLIR AIR, GPU-to-AIR and module-to-binary-air-agx tests |
 | fatbin | ZLUDA's sgemm builds with `agx-g13g`, `agx-g14c` and both `+agx-strict` entries; all 8 library kernel sources build in strict mode |
 | simulator | `cargo test --release` (the strict check and its corpus tests) |
 | zluda | 388 of 388 PTX test kernels compile with `--agx-strict` |

@@ -21,6 +21,7 @@
 #include "AGXMachineFunctionInfo.h"
 #include "AGXTargetTransformInfo.h"
 #include "TargetInfo/AGXTargetInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -35,6 +36,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -49,6 +51,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
+  initializeAGXLowerAIRLegacyPass(PR);
   initializeAGXAAWrapperPassPass(PR);
   initializeAGXExternalAAWrapperPass(PR);
   initializeAGXPromoteKernelArgsPass(PR);
@@ -62,9 +65,13 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXSinkAddressesPass(PR);
   initializeAGXThreadgroupAddressesPass(PR);
   initializeAGXHoistGuardedLoadsPass(PR);
+  initializeAGXNarrowInductionsPass(PR);
+  initializeAGXSpecialRegisterRangesPassPass(PR);
+  initializeAGXVectorAccessesPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
+  initializeAGXUniformConstantsPassPass(PR);
   initializeAGXHoistFromElseFlowPass(PR);
   initializeAGXLowerControlFlowPass(PR);
   initializeAGXInsertWaitsPass(PR);
@@ -156,6 +163,7 @@ public:
     // through from each construct into the next, as the vendor and Mesa
     // compilers lay it out.
     disablePass(&MachineBlockPlacementID);
+    substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
   }
 
   AGXTargetMachine &getAGXTargetMachine() const {
@@ -172,6 +180,23 @@ public:
 } // namespace
 
 void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  // AIR input becomes AGX before anything optimizes it.
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &MPM, OptimizationLevel) {
+        MPM.addPass(AGXLowerAIRPass(*this));
+      });
+  PB.registerPipelineParsingCallback(
+      [this](StringRef Name, ModulePassManager &MPM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "agx-raise-to-air") {
+          MPM.addPass(AGXRaiseToAIRPass(this));
+          return true;
+        }
+        if (Name != "agx-lower-air")
+          return false;
+        MPM.addPass(AGXLowerAIRPass(*this));
+        return true;
+      });
   PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
     FAM.registerPass([] { return AGXAA(); });
   });
@@ -187,11 +212,31 @@ void AGXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AGXAA>();
 }
 
+ScheduleDAGInstrs *
+AGXTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  DAG->addMutation(createAGXMemClusterMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+AGXTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return createAGXPostRAScheduler(C);
+}
+
 TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AGXPassConfig(*this, PM);
 }
 
+static cl::opt<unsigned> AGXStraightLineSR(
+    "agx-straight-line-sr", cl::init(1), cl::Hidden,
+    cl::desc("Straight-line strength reduction and n-ary reassociation of "
+             "address arithmetic before vectorization (1: then EarlyCSE, "
+             "2: then GVN)"));
+
 void AGXPassConfig::addIRPasses() {
+  // AIR input becomes AGX kernels first (a no-op without !air.kernel).
+  addPass(createAGXLowerAIRPass(&getAGXTargetMachine()));
   // Disjoint address spaces do not alias (for every IR and machine pass that
   // asks alias analysis, the scheduler's memory dependences among them).
   addPass(createAGXAAWrapperPass());
@@ -228,10 +273,24 @@ void AGXPassConfig::addIRPasses() {
   // mode, which checks the accesses as the source wrote them); threadgroup
   // and private addresses computed in integers become base + constant first.
   if (getOptLevel() != CodeGenOptLevel::None) {
+    // Address arithmetic shared between straight-line computations (the
+    // unrolled tiles of agx_libs' GEMMs): each address from a neighbour's
+    // plus a difference, and sums reassociated so common parts are computed
+    // once, as NVPTX does (straight-line strength reduction and n-ary
+    // reassociation).
+    if (AGXStraightLineSR) {
+      addPass(createStraightLineStrengthReducePass());
+      addPass(createEarlyCSEPass());
+      addPass(createNaryReassociatePass());
+      addPass(AGXStraightLineSR > 1 ? createGVNPass()
+                                    : createEarlyCSEPass());
+    }
     // Loads that all-pairs loops skip for one element issue together.
     addPass(createAGXHoistGuardedLoadsPass());
     addPass(createAGXThreadgroupAddressesPass());
+    addPass(createAGXVectorAccessesPass(/*BeforeVectorizer=*/true));
     addPass(createLoadStoreVectorizerPass());
+    addPass(createAGXVectorAccessesPass(/*BeforeVectorizer=*/false));
   }
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.
@@ -248,6 +307,13 @@ void AGXPassConfig::addIRPasses() {
 }
 
 bool AGXPassConfig::addPreISel() {
+  // After loop strength reduction, which makes 64-bit counters of PTX's
+  // 64-bit address arithmetic.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAGXNarrowInductionsPass());
+  // After loop strength reduction, which would form 64-bit offsets from
+  // the bounded indices (EXPERIMENTS.md L14-E1).
+  addPass(createAGXSpecialRegisterRangesPass());
   // Bring the CFG into the structured form AGXAnnotateControlFlow expects.
   addPass(createLowerSwitchPass());
   addPass(createFixIrreduciblePass());
@@ -269,6 +335,7 @@ bool AGXPassConfig::addInstSelector() {
 
 void AGXPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
+  addPass(createAGXUniformConstantsPass());
   addPass(createAGXFoldOperandsPass());
   // MachineCSE and MachineSink may have put code where only the threads of
   // a then side run it.

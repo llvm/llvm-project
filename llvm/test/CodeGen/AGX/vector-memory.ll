@@ -67,10 +67,11 @@ define agx_kernel void @unaligned(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 }
 
 ; Naturally aligned device loads of 4 and 2 bytes (PTX ld.v4.u8 / ld.v2.u8) are
-; one access of the byte format into consecutive 16-bit halves.
+; one access of the byte format into consecutive 16-bit halves; of a vector
+; whose only used lane is one byte, that byte alone is loaded.
 ; CHECK-LABEL: bytes:
 ; CHECK: device_load {{[01]}}, i8, xyzw, [[A:r[0-9]+]]l_[[A]]h_[[B:r[0-9]+]]l_[[B]]h,
-; CHECK: device_load {{[01]}}, i8, xy, [[C:r[0-9]+]]l_[[C]]h,
+; CHECK: device_load {{[01]}}, i8, x, r{{[0-9]+}}, u2_u3, 1,
 ; CHECK-NOT: device_load
 ; CHECK: stop
 define agx_kernel void @bytes(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %o) {

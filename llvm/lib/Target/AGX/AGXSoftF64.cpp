@@ -167,6 +167,11 @@ public:
       return c64(Out.signBit() - 1);
     Value *R = CanonicalNaN ? c64(Out.signBit() - 1) : c64(Out.infBits() | Out.quietBit());
     for (Value *X : reverse(Ops)) {
+      if (In.P == Out.P) {
+        // the same format: a NaN quieted is itself with the quiet bit set
+        R = select(isNaN(X, In), B.CreateOr(X, c64(Out.quietBit())), R);
+        continue;
+      }
       Value *Payload = B.CreateAnd(X, c64(In.fracMask()));
       Payload = In.P > Out.P ? B.CreateLShr(Payload, In.P - Out.P)
                              : B.CreateShl(Payload, Out.P - In.P);
@@ -267,11 +272,27 @@ public:
     return round({select(B.CreateICmpEQ(T.M, cw(T.M, 0)), ZeroSign, T.Sign), T.M, T.E}, F);
   }
 
+  /// The exact sum of the doubles X and Y (bits), with a sticky bit: the
+  /// larger magnitude is the one with the larger bits, so no normalization
+  /// is needed to order them; both significands go 10 places up (the sum of
+  /// two of 63 bits fits) and the smaller one is aligned with a sticky bit.
+  Term addF64(Value *X, Value *Y) {
+    Value *YBigger = B.CreateICmpUGT(magnitude(Y, F64), magnitude(X, F64));
+    Value *Big = select(YBigger, Y, X), *Small = select(YBigger, X, Y);
+    Term TB = unpack(Big, F64), TS = unpack(Small, F64);
+    Value *BM = B.CreateShl(TB.M, 10), *SM = B.CreateShl(TS.M, 10);
+    Value *D = B.CreateSub(TB.E, TS.E);
+    SM = B.CreateOr(lshrTopClear(SM, D), B.CreateZExt(lostBelow(SM, D), I64));
+    Value *Same = B.CreateICmpEQ(TB.Sign, TS.Sign);
+    Value *M = select(Same, B.CreateAdd(BM, SM), B.CreateSub(BM, SM));
+    return {TB.Sign, M, B.CreateSub(TB.E, c32(10))};
+  }
+
   Value *add(Value *X, Value *Y, bool Sub) {
     if (Sub)
       Y = B.CreateXor(Y, c64(F64.signBit()));
     Term TX = unpack(X, F64), TY = unpack(Y, F64);
-    Term S = addTerms(TX, TY);
+    Term S = addF64(X, Y);
     Value *R = withZeroSign(
         S, zeroSumSign(B.CreateAnd(isZero(X, F64), isZero(Y, F64)), TX.Sign, TY.Sign));
     // Infinities: the infinite operand, or NaN for opposite infinities.
@@ -284,11 +305,23 @@ public:
     return select(NaN, nanResult({X, OrigY}, F64, F64), R);
   }
 
+  /// T (a double's significand) with its top bit at bit 52, unless it is 0.
+  Term normalize53(Term T) {
+    Value *S = B.CreateSub(c32(F64.P), bitLength(T.M));
+    return {T.Sign, B.CreateShl(T.M, B.CreateZExt(S, I64)), B.CreateSub(T.E, S)};
+  }
+
   Value *mul(Value *X, Value *Y) {
-    Term TX = unpack(X, F64), TY = unpack(Y, F64);
+    // With both significands normalized the product has 105 or 106 bits (or
+    // is 0): its top 64 bits and a sticky bit for the 42 below are exact
+    // enough to round, without finding its length.
+    Term TX = normalize53(unpack(X, F64)), TY = normalize53(unpack(Y, F64));
     Value *Sign = B.CreateXor(TX.Sign, TY.Sign);
     Value *P = B.CreateMul(B.CreateZExt(TX.M, I128), B.CreateZExt(TY.M, I128));
-    Value *R = round(compress({Sign, P, B.CreateAdd(TX.E, TY.E)}), F64);
+    Value *Low = B.CreateAnd(B.CreateTrunc(P, I64), c64((uint64_t(1) << 42) - 1));
+    Value *M = B.CreateOr(B.CreateTrunc(B.CreateLShr(P, 42), I64),
+                          B.CreateZExt(B.CreateICmpNE(Low, c64(0)), I64));
+    Value *R = round({Sign, M, B.CreateAdd(B.CreateAdd(TX.E, TY.E), c32(42))}, F64);
     Value *XInf = isInf(X, F64), *YInf = isInf(Y, F64);
     Value *Inf = B.CreateOr(c64(F64.infBits()), select(Sign, c64(F64.signBit()), c64(0)));
     Value *NaN = B.CreateOr(
@@ -303,7 +336,8 @@ public:
     Term P{B.CreateXor(TX.Sign, TY.Sign),
            B.CreateMul(B.CreateZExt(TX.M, I128), B.CreateZExt(TY.M, I128)),
            B.CreateAdd(TX.E, TY.E)};
-    Term S = compress(addTerms(P, widen(TZ)));
+    // round() takes the 128-bit sum as it is (no compress to 64 bits first)
+    Term S = addTerms(P, widen(TZ));
     Value *PZero = B.CreateOr(isZero(X, F), isZero(Y, F));
     Value *R = withZeroSign(
         S, zeroSumSign(B.CreateAnd(PZero, isZero(Z, F)), P.Sign, TZ.Sign), F);
@@ -349,8 +383,9 @@ public:
     // is the smaller: the quotient Q = floor(N * 2^54 / Dv) has 55 bits.
     Value *SX = B.CreateSub(c32(53), bitLength(TX.M));
     Value *SY = B.CreateSub(c32(53), bitLength(TY.M));
-    Value *N = shl(TX.M, SX);
-    Value *Dv = shl(TY.M, SY);
+    // At most 53 places (for a zero significand): no clamp needed.
+    Value *N = B.CreateShl(TX.M, B.CreateZExt(SX, I64));
+    Value *Dv = B.CreateShl(TY.M, B.CreateZExt(SY, I64));
     Value *Less = B.CreateICmpULT(N, Dv);
     N = select(Less, B.CreateShl(N, 1), N);
     // A reciprocal from below: Y0 ~ 2^82 / Dv to 2^-18, then two Newton
@@ -394,7 +429,7 @@ public:
     Value *S = B.CreateSub(c32(53), bitLength(TX.M));
     Value *Odd = B.CreateTrunc(B.CreateSub(TX.E, S), I1);
     S = B.CreateAdd(S, B.CreateZExt(Odd, I32));
-    Value *N = shl(TX.M, S);
+    Value *N = B.CreateShl(TX.M, B.CreateZExt(S, I64)); // at most 54 places
     Value *E = B.CreateSub(TX.E, S);
     // A reciprocal root Y0 ~ 2^57 / sqrt(N) to 2^-18, then two Newton steps
     // (Y1 ~ 2^89 / sqrt(N) to 2^-35, Y2 to 2^-58) give S to 2 units, which
@@ -430,11 +465,31 @@ public:
 
   /// A value of format In converted to format Out.
   Value *convert(Value *X, Fmt In, Fmt Out) {
-    Value *R = round(unpack(X, In), Out);
+    Value *R = In.P < Out.P && In.Bias < Out.Bias ? widenExact(X, In, Out)
+                                                  : round(unpack(X, In), Out);
     Value *Inf = B.CreateOr(c64(Out.infBits()),
                             select(signOf(X, In), c64(Out.signBit()), c64(0)));
     R = select(isInf(X, In), Inf, R);
     return select(isNaN(X, In), nanResult({X}, In, Out), R);
+  }
+
+  /// Finite X of format In in the wider format Out, which holds it exactly:
+  /// the exponent rebiased and the fraction shifted, a denormal normalized
+  /// (its leading one moved to the implicit bit).
+  Value *widenExact(Value *X, Fmt In, Fmt Out) {
+    Value *Exp = B.CreateAnd(B.CreateLShr(X, In.P - 1), c64(In.expAll()));
+    Value *Frac = B.CreateAnd(X, c64(In.fracMask()));
+    Value *Denormal = B.CreateICmpEQ(Exp, c64(0));
+    Value *Clz = B.CreateBinaryIntrinsic(Intrinsic::ctlz, Frac, B.getFalse());
+    Value *Sh = select(Denormal, B.CreateSub(Clz, c64(64 - In.P)), c64(0));
+    Value *E = B.CreateAdd(B.CreateSub(Exp, Sh),
+                           c64(Out.Bias - In.Bias));
+    E = B.CreateAdd(E, B.CreateZExt(Denormal, I64));
+    Value *M = B.CreateAnd(B.CreateShl(Frac, Sh), c64(In.fracMask()));
+    Value *R = B.CreateOr(B.CreateShl(E, Out.P - 1),
+                          B.CreateShl(M, Out.P - In.P));
+    R = select(isZero(X, In), c64(0), R);
+    return B.CreateOr(R, select(signOf(X, In), c64(Out.signBit()), c64(0)));
   }
 
   Value *fromInt(Value *V, bool Signed) {

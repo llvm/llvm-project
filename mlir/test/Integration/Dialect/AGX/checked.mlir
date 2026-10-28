@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-agxir='use-bare-ptr-memref-call-conv=1' \
+// RUN: mlir-opt %s -convert-gpu-to-air='use-bare-ptr-memref-call-conv=1' \
 // RUN:   -reconcile-unrealized-casts -ensure-debug-info-scope-on-llvm-func \
 // RUN:   -mlir-print-debuginfo -o %t.mlir
 // RUN: %run_agx --checked --cpu agx-g14c --grid 32 --wg 32 %t.mlir \

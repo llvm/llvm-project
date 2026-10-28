@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRLowerAtomicRMW.h"
+#include "llvm/IR/AIR.h"
+#include "llvm/IR/Instructions.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
 #include "llvm/ADT/SmallVector.h"
@@ -14,6 +16,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 
 using namespace llvm;
 
@@ -107,6 +111,32 @@ static unsigned getScope(LLVMContext &Ctx, unsigned AS, SyncScope::ID SSID) {
   return ScopeDevice;
 }
 
+/// The MSL memory_order of an LLVM ordering.
+static unsigned mslOrder(AtomicOrdering O) {
+  switch (O) {
+  case AtomicOrdering::Acquire:
+    return 2;
+  case AtomicOrdering::Release:
+    return 3;
+  case AtomicOrdering::AcquireRelease:
+    return 4;
+  case AtomicOrdering::SequentiallyConsistent:
+    return OrderSeqCst;
+  default:
+    return OrderRelaxed;
+  }
+}
+
+/// air::AtomicOrderingMD on the AIR atomic \p Call.
+static void addOrderingHint(CallInst *Call, ArrayRef<AtomicOrdering> Orders) {
+  LLVMContext &Ctx = Call->getContext();
+  SmallVector<Metadata *, 2> Ops;
+  for (AtomicOrdering O : Orders)
+    Ops.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt32Ty(Ctx), mslOrder(O))));
+  Call->setMetadata(air::AtomicOrderingMD, MDNode::get(Ctx, Ops));
+}
+
 static bool isOrdered(AtomicOrdering O) {
   return O != AtomicOrdering::NotAtomic && O != AtomicOrdering::Unordered &&
          O != AtomicOrdering::Monotonic;
@@ -124,18 +154,81 @@ static void emitFence(IRBuilder<> &B, Module &M, unsigned Scope) {
                    B.getInt32(Scope)});
 }
 
-static bool lowerAtomicRMW(Module &M) {
+static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
   LLVMContext &Ctx = M.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
   Type *I1 = Type::getInt1Ty(Ctx);
   bool Changed = false;
 
+  // 32-bit read-modify-write operations without an AIR function (nand,
+  // uinc_wrap / udec_wrap: CUDA's atomicInc / atomicDec, float min / max) as
+  // compare-exchange loops, which are lowered below. Only for Metal: the
+  // portable form keeps the operation for consumers that have it (AGX).
+  if (!OrderingHints) {
+    SmallVector<AtomicRMWInst *, 4> Loops;
+    for (Function &F : M)
+      for (BasicBlock &BB : F)
+        for (Instruction &I : BB)
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+            Type *T = RMW->getValOperand()->getType();
+            unsigned AS =
+                RMW->getPointerOperand()->getType()->getPointerAddressSpace();
+            if ((T->isIntegerTy(32) || T->isFloatTy()) &&
+                buildAtomicName(AS != metal::AS::Threadgroup,
+                                RMW->getOperation(), T->isFloatTy())
+                    .empty())
+              Loops.push_back(RMW);
+          }
+    for (AtomicRMWInst *RMW : Loops) {
+      Type *T = RMW->getValOperand()->getType();
+      Value *Ptr = RMW->getPointerOperand();
+      BasicBlock *Entry = RMW->getParent();
+      BasicBlock *Exit = SplitBlock(Entry, RMW);
+      BasicBlock *Loop = BasicBlock::Create(Ctx, "atomicrmw.loop",
+                                            Entry->getParent(), Exit);
+      Entry->getTerminator()->setSuccessor(0, Loop);
+      IRBuilder<> EB(Entry->getTerminator());
+      Value *Init = EB.CreateAlignedLoad(I32, Ptr, RMW->getAlign(), true);
+      IRBuilder<> LB(Loop);
+      PHINode *Old = LB.CreatePHI(I32, 2);
+      Old->addIncoming(Init, Entry);
+      Value *OldV = T->isFloatTy() ? LB.CreateBitCast(Old, T) : Old;
+      Value *New = buildAtomicRMWValue(RMW->getOperation(), LB, OldV,
+                                       RMW->getValOperand());
+      if (T->isFloatTy())
+        New = LB.CreateBitCast(New, I32);
+      AtomicCmpXchgInst *CX = LB.CreateAtomicCmpXchg(
+          Ptr, Old, New, RMW->getAlign(), RMW->getOrdering(),
+          AtomicOrdering::Monotonic, RMW->getSyncScopeID());
+      CX->setVolatile(RMW->isVolatile());
+      Value *Loaded = LB.CreateExtractValue(CX, 0);
+      Old->addIncoming(Loaded, Loop);
+      LB.CreateCondBr(LB.CreateExtractValue(CX, 1), Exit, Loop);
+      IRBuilder<> XB(RMW);
+      RMW->replaceAllUsesWith(T->isFloatTy() ? XB.CreateBitCast(Loaded, T)
+                                             : Loaded);
+      RMW->eraseFromParent();
+      Changed = true;
+    }
+  }
+
   SmallVector<Instruction *, 16> Atomics;
   for (Function &F : M)
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(I))
+        if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(I)) {
+          // An atomic through a generic pointer (the address-space hint,
+          // llvm/IR/AIR.h) has no AIR function; the portable form keeps it.
+          Value *Ptr = nullptr;
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+            Ptr = RMW->getPointerOperand();
+          else if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I))
+            Ptr = CX->getPointerOperand();
+          if (OrderingHints && Ptr &&
+              Ptr->getType()->getPointerAddressSpace() == air::GenericHintAS)
+            continue;
           Atomics.push_back(&I);
+        }
 
   for (Instruction *I : Atomics) {
     IRBuilder<> B(I);
@@ -172,11 +265,16 @@ static bool lowerAtomicRMW(Module &M) {
                                   {Ptr->getType(), Expected->getType(), I32,
                                    I32, I32, I32, I1},
                                   false));
-      Value *Old = B.CreateCall(
+      CallInst *Old = B.CreateCall(
           F, {Ptr, Expected, CX->getNewValOperand(), B.getInt32(OrderRelaxed),
-              B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()});
-      if (Ordered)
+              B.getInt32(OrderRelaxed), B.getInt32(Scope),
+              B.getInt1(!OrderingHints || CX->isVolatile())});
+      if (Ordered) {
         emitFence(B, M, Scope);
+        if (OrderingHints)
+          addOrderingHint(Old, {CX->getSuccessOrdering(),
+                                CX->getFailureOrdering()});
+      }
       Value *Success = B.CreateICmpEQ(Old, CX->getCompareOperand());
       Value *Result = B.CreateInsertValue(PoisonValue::get(CX->getType()), Old, 0);
       Result = B.CreateInsertValue(Result, Success, 1);
@@ -208,12 +306,16 @@ static bool lowerAtomicRMW(Module &M) {
 
     if (Ordered)
       emitFence(B, M, Scope);
-    Value *Result = B.CreateCall(
+    CallInst *Result = B.CreateCall(
         FC, {RMW->getPointerOperand(), RMW->getValOperand(),
-             B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()},
+             B.getInt32(OrderRelaxed), B.getInt32(Scope),
+             B.getInt1(!OrderingHints || RMW->isVolatile())},
         RMW->getName());
-    if (Ordered)
+    if (Ordered) {
       emitFence(B, M, Scope);
+      if (OrderingHints)
+        addOrderingHint(Result, RMW->getOrdering());
+    }
     RMW->replaceAllUsesWith(Result);
     RMW->eraseFromParent();
     Changed = true;
@@ -224,12 +326,12 @@ static bool lowerAtomicRMW(Module &M) {
 
 PreservedAnalyses AIRLowerAtomicRMWPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  return lowerAtomicRMW(M) ? PreservedAnalyses::none()
+  return lowerAtomicRMW(M, /*OrderingHints=*/false) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();
 }
 
 bool AIRLowerAtomicRMWLegacy::runOnModule(Module &M) {
-  return lowerAtomicRMW(M);
+  return lowerAtomicRMW(M, OrderingHints);
 }
 
 char AIRLowerAtomicRMWLegacy::ID = 0;
@@ -237,6 +339,6 @@ char AIRLowerAtomicRMWLegacy::ID = 0;
 INITIALIZE_PASS(AIRLowerAtomicRMWLegacy, DEBUG_TYPE, "AIR Lower AtomicRMW",
                 false, false)
 
-ModulePass *llvm::createAIRLowerAtomicRMWLegacyPass() {
-  return new AIRLowerAtomicRMWLegacy();
+ModulePass *llvm::createAIRLowerAtomicRMWLegacyPass(bool OrderingHints) {
+  return new AIRLowerAtomicRMWLegacy(OrderingHints);
 }

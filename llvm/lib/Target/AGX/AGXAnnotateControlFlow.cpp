@@ -25,21 +25,28 @@
 
 #include "AGX.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
+
+static cl::opt<bool> AGXWidenBooleanPhis(
+    "agx-widen-boolean-phis", cl::init(true), cl::Hidden,
+    cl::desc("Booleans live across blocks as i32 phis (32-bit registers)"));
 
 #define DEBUG_TYPE "agx-annotate-control-flow"
 
@@ -67,6 +74,7 @@ class AGXAnnotateControlFlowImpl {
   bool handleLoop(CondBrInst *Term);
   bool closeControlFlow(BasicBlock *BB);
   bool layoutBlocks();
+  bool widenBooleanPhis();
 
   CallInst *createCall(IRBuilder<> &IRB, Intrinsic::ID ID,
                        ArrayRef<Value *> Args = {}) {
@@ -251,7 +259,71 @@ bool AGXAnnotateControlFlowImpl::run() {
     report_fatal_error("AGX: failed to annotate the control flow graph (it "
                        "is not structured)");
   Changed |= layoutBlocks();
+  if (AGXWidenBooleanPhis)
+    Changed |= widenBooleanPhis();
   return Changed;
+}
+
+/// Booleans live across blocks (the structurizer's flow flags, a loop's exit
+/// conditions) would take i16 registers, and each 32-bit use (the branch,
+/// a select) a widening copy. As i32 phis, the incoming compares produce
+/// them in 32 bits directly and the uses compare with zero, which the
+/// branches and selects fold.
+bool AGXAnnotateControlFlowImpl::widenBooleanPhis() {
+  // Those a loop's back edge takes (its exit condition, widened once per
+  // iteration otherwise), and the boolean phis they are made of: the flags
+  // of if / else flow stay 16-bit, as 32-bit ones there only add register
+  // pressure.
+  SmallVector<PHINode *, 8> Phis;
+  SmallPtrSet<PHINode *, 8> Seen;
+  auto FeedsBranch = [](PHINode &P) {
+    return any_of(P.users(), [](User *U) {
+      auto *II = dyn_cast<IntrinsicInst>(U);
+      return II && II->getIntrinsicID() == Intrinsic::agx_loop;
+    });
+  };
+  for (BasicBlock &BB : F)
+    for (PHINode &P : BB.phis())
+      if (P.getType()->isIntegerTy(1) && FeedsBranch(P) && Seen.insert(&P).second)
+        Phis.push_back(&P);
+  for (unsigned I = 0; I < Phis.size(); ++I)
+    for (Value *V : Phis[I]->incoming_values())
+      if (auto *VP = dyn_cast<PHINode>(V); VP && Seen.insert(VP).second)
+        Phis.push_back(VP);
+  if (Phis.empty())
+    return false;
+  Type *I32 = Type::getInt32Ty(F.getContext());
+  DenseMap<PHINode *, PHINode *> Wide;
+  for (PHINode *P : Phis)
+    Wide[P] = PHINode::Create(I32, P->getNumIncomingValues(),
+                              P->getName() + ".w", P->getIterator());
+  for (PHINode *P : Phis) {
+    PHINode *W = Wide[P];
+    for (unsigned I = 0, E = P->getNumIncomingValues(); I < E; ++I) {
+      Value *V = P->getIncomingValue(I);
+      BasicBlock *From = P->getIncomingBlock(I);
+      Value *WV;
+      if (auto *C = dyn_cast<ConstantInt>(V))
+        WV = ConstantInt::get(I32, C->getZExtValue());
+      else if (isa<UndefValue>(V) || isa<PoisonValue>(V))
+        WV = UndefValue::get(I32);
+      else if (auto *VP = dyn_cast<PHINode>(V); VP && Wide.count(VP))
+        WV = Wide[VP];
+      else
+        WV = new ZExtInst(V, I32, V->getName() + ".w",
+                          From->getTerminator()->getIterator());
+      W->addIncoming(WV, From);
+    }
+  }
+  for (PHINode *P : Phis) {
+    auto *B = new ICmpInst(P->getParent()->getFirstInsertionPt(),
+                           ICmpInst::ICMP_NE, Wide[P],
+                           ConstantInt::get(I32, 0), P->getName());
+    P->replaceAllUsesWith(B);
+  }
+  for (PHINode *P : Phis)
+    P->eraseFromParent();
+  return true;
 }
 
 /// Execution mask code runs each construct in order, falling through from

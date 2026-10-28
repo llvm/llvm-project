@@ -883,7 +883,8 @@ bool MachineSinking::run(MachineFunction &MF) {
     EverMadeChange = true;
   }
 
-  if (SinkInstsIntoCycle) {
+  if (SinkInstsIntoCycle.getNumOccurrences() ? SinkInstsIntoCycle
+                                             : STI->sinkInstsIntoCyclesToAvoidSpills()) {
     SmallVector<CycleRef, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
     bool HasHighPressure;

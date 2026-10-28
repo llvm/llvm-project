@@ -381,7 +381,11 @@ print the limit (``up to N threads per threadgroup``). Two function
 attributes lower the register use, spilling the rest to the stack:
 
 * ``"agx-max-threads-per-threadgroup"="N"`` (PTX ``.maxntid`` and
-  ``.reqntid``): at most as many registers as let N threads fit.
+  ``.reqntid``, MLIR's ``known_block_size``): at most as many registers as let
+  N threads fit. With N at most 128 the threadgroup is one aligned block of 4
+  SIMD-groups, and on chips with ``block_barrier`` (G14, not ``agx-strict``)
+  its threadgroup barriers become block barriers, without the workgroup
+  fences around them (the block barrier orders the block's memory).
 * ``"agx-max-gprs"="N"`` (PTX ``.maxnreg``): at most N 32-bit registers, and
   no fewer than 16.
 
@@ -491,6 +495,29 @@ The extensions are:
   kernel's threadgroup memory bytes plus the dynamic ones of the launch.
 * ``5, half``: the driver sets the 64-bit uniform from ``half`` (always 0)
   to the address of the texture heap (see "Textures").
+* ``6, n``, then ``n`` pairs ``half, value``: with ``-agx-uniform-constants``,
+  the kernel reads its 32-bit constants too wide for an immediate from
+  uniforms instead of materializing them with ``mov_imm``; the driver sets
+  the 32-bit uniform from each ``half`` to its ``value``. They follow the
+  arguments and ``threadgroups_per_grid``, within the uniform halves of the
+  record. A driver that does not set them must not use the option, since a
+  reader that skips the extension leaves the constants zero.
+* ``7, n``, then ``n`` triples ``half, source half, kind``: with
+  ``-agx-launch-divisors``, a 32-bit division or remainder by a kernel
+  argument (or a 32-bit word of one) reads the argument's multiplier and
+  shifts from uniforms, which the driver computes at launch from the 32-bit
+  value ``d`` at ``source half`` (an argument it has just set) and puts in
+  the 32-bit uniform from ``half``. With ``l = ceil(log2(d))``, kind 0 is
+  ``2^32 * (2^l - d) / d + 1`` (truncated to 32 bits), kind 1 is
+  ``min(l, 1)`` and kind 2 is ``max(l, 1) - 1``; kinds 3, 4 and 5 are the
+  same of ``|d|`` (a signed divisor), and kinds 6, 7 and 8 the same of
+  ``max(d, 1)`` (ZLUDA's guard of a PTX division's divisor). All are 0 for
+  ``d = 0``. The kernel
+  divides as ``q = (t + ((x - t) >> s1)) >> s2``, ``t = mulhi(x, m)``,
+  exact for every 32-bit ``x`` (Granlund and Montgomery, "Division by
+  Invariant Integers using Multiplication", PLDI 1994), in place of a
+  reciprocal estimate and two corrections. As with extension 6, a driver
+  that does not set them must not use the option.
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
@@ -956,26 +983,135 @@ the OR of their low two bits for the whole quad. The backend therefore:
 
 Immediate and uniform register indices are used directly.
 
+AIR input
+=========
+
+The backend compiles AIR, Apple's LLVM IR for its GPUs, in the form the AIR
+target's portable passes leave it (``addAIRPortablePasses``,
+``llc -mtriple=air -air-portable``): a module whose kernels are described by
+``!air.kernel``. The ``agx-lower-air`` pass, first in the backend's IR passes
+and at the start of ``opt``'s pipelines, turns such a module into an AGX
+module; it does nothing to a module without ``!air.kernel``. It is not a
+reader of ``.air`` files.
+
+The module may only use what AIR has: integers of 8, 16, 32 and 64 bits (and
+``i1`` outside memory), ``half``, ``bfloat`` and ``float``, and pointers in
+AIR's address spaces, with no casts between them. ``double``, other types,
+``i1`` in memory and address space casts are errors, as are kernel
+parameters that ``!air.kernel`` does not describe, argument buffers and more
+than one threadgroup buffer.
+
+.. table:: AIR address spaces on AGX
+
+   ============= ======================= =================
+   AIR           Memory                  AGX address space
+   ============= ======================= =================
+   0             thread                  5 (private)
+   1             device                  1
+   2             constant                4
+   3             threadgroup             3
+   ============= ======================= =================
+
+Each kernel becomes an ``agx_kernel`` whose arguments are its device and
+constant buffers, in location order (``air.location_index``, which must
+follow the parameter order). A constant buffer that the kernel only loads
+from, at constant offsets within the size ``!air.kernel`` gives it
+(``air.arg_type_size``, typed by ``air.arg_type_name``, or bytes for a
+structure), is passed by reference (``byref``), so that its bytes are
+uniform registers; the AIR target's portable passes give each scalar kernel
+argument such a buffer. Other buffers are pointers. The threadgroup buffer is
+the launch's dynamic threadgroup memory.
+
+System-value parameters become values computed at the kernel's entry:
+
+==================================== ==========================================
+AIR system value                     AGX
+==================================== ==========================================
+``thread_position_in_grid``          ``llvm.agx.thread.position.in.grid.*``
+``threadgroup_position_in_grid``     ``llvm.agx.threadgroup.position.in.grid.*``
+``thread_position_in_threadgroup``   ``llvm.agx.thread.position.in.threadgroup.*``
+``threads_per_threadgroup``          ``llvm.agx.threads.per.threadgroup.*``
+``threadgroups_per_grid``            ``llvm.agx.threadgroups.per.grid.*``
+``threads_per_grid``                 threadgroups per grid times threads per
+                                     threadgroup (grids are whole threadgroups)
+``thread_index_in_threadgroup``      ``llvm.agx.thread.index.in.threadgroup``
+``thread_index_in_simdgroup``        ``llvm.agx.thread.index.in.simdgroup``
+``simdgroup_index_in_threadgroup``   ``llvm.agx.simdgroup.index.in.threadgroup``
+``threads_per_simdgroup``            32
+``simdgroups_per_threadgroup``       threads per threadgroup / 32, rounded up
+==================================== ==========================================
+
+Calls to AIR functions become LLVM intrinsics and instructions:
+
+* the math functions by the inverse of the AIR target's mapping
+  (``llvm/lib/Target/AIR/AIRIntrinsicMappings.td``, generated into this
+  target): ``air.sin.f32`` is ``llvm.sin.f32``, ``air.fast_sin.f32`` the same
+  with ``afn``, ``air.min.u.i32`` is ``llvm.umin.i32``;
+* ``air.atomic.<space>.<op>`` and ``air.atomic.<space>.cmpxchg.weak.i32`` are
+  ``atomicrmw`` and ``cmpxchg`` in their memory order, with workgroup scope
+  for threadgroup memory and ``thread_scope_threadgroup``, volatile when AIR
+  says so; the compare-exchange leaves the value it found in its expected
+  operand;
+* ``air.atomic.fence`` is a ``fence``; an atomic between two ``seq_cst``
+  fences (AIR's ordered atomic, which is relaxed) that carries
+  ``!agx.atomic.ordering`` (the order AIR's portable passes lowered it from)
+  is that ordered atomic, without the fences;
+* ``air.wg.barrier`` is ``llvm.agx.threadgroup_barrier``, between
+  workgroup-scope release and acquire fences when it orders memory, and
+  ``air.simdgroup.barrier`` a workgroup-scope fence (SIMD-groups run in
+  lockstep);
+* the SIMD-group and quad-group functions are AGX's: shuffles (and
+  ``broadcast``), ``shuffle_and_fill_up``/``down``, reductions and scans by
+  ``AGX::SIMDOp`` (an inclusive scan adds the element to the hardware's
+  exclusive one), ballots widened to AIR's mask type, and ``vote_any`` /
+  ``vote_all`` on the mask;
+* the OpenCL-style work-item functions (``air.get_global_id`` ...), ``convert``
+  (float to integer saturating), ``dot``, ``pack`` / ``unpack`` of
+  ``unorm`` / ``snorm`` ``4x8`` and ``2x16``, ``sincos``, ``fract``,
+  ``rsqrt``, ``fmod`` and ``mul_hi`` are expanded; device-coherent loads and
+  stores are volatile, which the backend encodes coherent (with the barriers
+  that makes host-coherent, more than device coherence needs).
+
+* the SIMD-group matrices (``air.simdgroup_matrix_8x8_load``, ``store``,
+  ``multiply_accumulate``, ``multiply``, ``init_filled``, ``init_diagonal``)
+  are fragments in the layout of ``llvm.agx.simdgroup.matrix.fma`` (see
+  `SIMD-group matrices`_): a ``<64 x T>`` becomes the thread's ``<2 x T>``,
+  loads and stores move its two elements at
+  (c + j + origin.x) * stride.x + (r + origin.y) * stride.y, a
+  multiply-accumulate of ``half`` or ``bfloat`` matrices into ``float`` ones
+  extends the operands first, and element-wise operations, AIR's and LLVM's
+  element-wise functions (``air.fma``, ``llvm.maxnum``), ``fpext`` /
+  ``fptrunc``, selects and phis apply to the fragment. Other uses of a
+  ``<64 x T>``, which would depend on how AIR orders its elements, are
+  errors.
+
+Any other AIR function is an error. The math functions are as accurate as the
+backend's lowering of the LLVM intrinsics. Without ``afn`` (and without
+``ieee-fp32``, whose AGXStrictFP has its own exact forms), float ``sin``,
+``cos``, ``exp``, ``exp2``, ``exp10``, ``log``, ``log2``, ``log10`` and
+``pow`` are built in software (``AGXMathExpansion.cpp``: the argument reduced
+exactly, Cephes' single precision polynomials; within 1 unit in the last place
+on the AIR hardware suite's inputs), where the hardware's approximations,
+which the ``afn`` forms keep, are tens of units off; ``sin`` and ``cos`` use
+the hardware's reduction beyond 2^22. ``tan``, the inverse and hyperbolic
+functions and their inverses, and ``sinpi``/``cospi``/``tanpi`` are built the
+same way (half in float). ``sqrt`` is the hardware's (within 1 unit) unless
+``ieee-fp32`` asks for correct rounding. The module then takes AGX's triple
+and data layout, and loses the AIR metadata and module flags.
+
 MLIR
 ====
 
-MLIR targets AGX the way it targets AMDGPU:
-
-* The ``agxir`` dialect wraps the ``llvm.agx.*`` intrinsics one to one, like
-  ``rocdl``. Kernels carry the ``agxir.kernel`` attribute and use the
-  ``agx_kernelcc`` calling convention.
-* The ``agx`` dialect provides higher level operations, like ``amdgpu``:
-  ``agx.shuffle`` (any type, SIMD-group or quad scope), ``agx.reduce``,
-  ``agx.ballot`` and ``agx.threadgroup_barrier``. ``-convert-agx-to-agxir``
-  lowers them.
-* ``-convert-gpu-to-agxir`` lowers the ``gpu`` dialect, and
-  ``-agxir-attach-target`` attaches ``#agxir.target`` attributes.
-  ``-gpu-module-to-binary`` then produces AGX assembly, ELF objects or
-  bitcode.
+MLIR targets AGX through AIR (``mlir/docs/Dialects/AIR.md``):
+``-convert-gpu-to-air`` lowers the ``gpu`` dialect and the ``air`` dialect's
+SIMD-group matrices to AIR, ``-air-attach-target`` attaches ``#air.target``
+attributes, and ``-gpu-module-to-binary`` compiles a module whose target names
+an AGX chip through AIR's portable passes and this backend (``agx-lower-air``,
+above) to an AGX object.
 
 .. code-block:: console
 
-  $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(agxir-attach-target{chip=agx-g14g},gpu.module(convert-gpu-to-agxir),gpu-module-to-binary{format=isa})'
+  $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(air-attach-target{chip=agx-g14g},gpu.module(arith-emulate-f64,convert-gpu-to-air),gpu-module-to-binary)'
 
 Host code from ``gpu-to-llvm`` calls MLIR's GPU runtime wrappers (``mgpu*``).
 With ``-DMLIR_ENABLE_AGX_RUNNER=ON -DMLIR_AGX_LIBCUDA=<ZLUDA's
@@ -984,7 +1120,7 @@ without a CUDA toolkit (``lib/ExecutionEngine/AGXCudaCompat/cuda.h`` declares
 the part of the driver API it uses) against ZLUDA's CUDA driver for Asahi
 Linux, so ``mlir-runner --shared-libs=libmlir_agx_runtime.so`` runs
 ``gpu.launch_func`` on the GPU with ZLUDA's tracing: launch records and fault
-dumps, and with ``#agxir.target<..., features = "+agx-checked">`` checked
+dumps, and with ``#air.target<chip = ..., features = "+agx-checked">`` checked
 mode, whose reports name the ``.mlir`` lines when the kernels have debug
 locations (``-ensure-debug-info-scope-on-llvm-func`` and
 ``-mlir-print-debuginfo`` between pipelines). ``test/Integration/GPU/AGX``

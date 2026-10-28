@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""Compile a library kernel source (a gpu.module in standard dialects and agx operations) for several AGX chips, and
+"""Compile a library kernel source (a gpu.module in standard dialects and air operations) for several AGX chips, and
 pack the objects in one fat AGX object that a runtime loads with cuModuleLoadData (ZLUDA's zluda_agx picks the entry
 for its device).
 
-The kernel source names no chip. For each chip the pipeline is:
+The kernel source names no chip. It is compiled through AIR, the same for every chip up to AGX's code generation:
 
-  mlir-opt --agxir-attach-target=chip=CHIP --convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1
+  mlir-opt --arith-emulate-f64 --convert-gpu-to-air=use-bare-ptr-memref-call-conv=1   (in the gpu.module)
            --reconcile-unrealized-casts
   mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
-  opt -mtriple=agx -mcpu=CHIP -O3
+  opt -mtriple=air -passes=air-portable            (AIR's portable passes)
+  opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first; one run shared by the G13 and G14 chips)
   llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
 
-With --agx-strict (the default), each chip also gets an entry named "CHIP+agx-strict", compiled with the target feature
-+agx-strict in #agxir.target (so the agx operations take their portable forms) and in opt / llc (so only the
-instructions Mesa's asahi compiler emits are used). A runtime in strict mode loads those entries.
+With --agx-strict (the default), each G13 and G14 chip also gets an entry named "CHIP+agx-strict", compiled with the
+target feature +agx-strict in opt and llc, so that only the instructions Mesa's asahi compiler emits are used. A
+runtime in strict mode loads those entries.
 
 Fat AGX object layout (little-endian):
 
@@ -24,14 +25,17 @@ Fat AGX object layout (little-endian):
         32 bytes  chip name (an LLVM AGX -mcpu, NUL padded)
         u64       offset of the object from the start of the file
         u64       size of the object
-      then the objects (AGX ELF files), each 16-byte aligned.
+      then the objects (AGX ELF files), each 16-byte aligned. Entries with the same code share one object.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
-                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
+                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] [--llc-arg OPTION ...] kernels.mlir
+                      -o out.agxfat
 """
 
 import argparse
+import concurrent.futures
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -57,38 +61,80 @@ def gpu_module_body(path):
 STRICT = "+agx-strict"
 
 
-def compile_for(a, src, chip, tmp, features=""):
-    name = chip + features
-    attach = "--agxir-attach-target=chip=" + chip + (" features=" + features if features else "")
-    mattr = ["-mattr=" + features] if features else []
-    lowered = os.path.join(tmp, name + ".mlir")
-    subprocess.run([a.mlir_opt, src, attach,
-                    "--convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1", "--reconcile-unrealized-casts",
+def portable_air(a, src, tmp):
+    """The kernel source as AIR, after the AIR target's portable passes (bitcode)."""
+    lowered = os.path.join(tmp, "air.mlir")
+    # AIR has no double precision: f64 is emulated (arith-emulate-f64).
+    if a.kernel_suffix:
+        # The kernels under other names (a second build of the same source, e.g. with 32-bit indices).
+        renamed = os.path.join(tmp, "renamed.mlir")
+        open(renamed, "w").write(re.sub(r"(gpu\.func @\w+)", r"\1" + a.kernel_suffix, open(src).read()))
+        src = renamed
+    index = " index-bitwidth=%d" % a.index_bitwidth if a.index_bitwidth else ""
+    subprocess.run([a.mlir_opt, src, "--pass-pipeline=builtin.module(gpu.module(arith-emulate-f64,"
+                    "convert-gpu-to-air{use-bare-ptr-memref-call-conv=1%s}),reconcile-unrealized-casts)" % index,
                     "-o", lowered], check=True)
-    body = os.path.join(tmp, name + ".body.mlir")
+    body = os.path.join(tmp, "air.body.mlir")
     open(body, "w").write(gpu_module_body(lowered))
-    ll = os.path.join(tmp, name + ".ll")
+    ll = os.path.join(tmp, "air.ll")
     subprocess.run([a.mlir_translate, "--mlir-to-llvmir", body, "-o", ll], check=True)
-    optimized = os.path.join(tmp, name + ".opt.ll")
-    subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", ll, "-o", optimized], check=True)
-    ll = optimized
-    obj = os.path.join(tmp, name + ".o")
-    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", ll, "-o", obj],
-                   check=True)
+    portable = os.path.join(tmp, "air.portable.bc")
+    subprocess.run([a.opt, "-mtriple=air", "-passes=air-portable", ll, "-o", portable], check=True)
+    return portable
+
+
+# AGX's IR-level target hooks (TargetTransformInfo, agx-lower-air) differ between chips only in the GPR count, which
+# is 128 on G13 and G14 as on the generic CPU: those chips share one opt -O3 run per feature string, made without
+# -mcpu so that no target-cpu attribute overrides llc's. Other chips get their own.
+SHARED_OPT = ("agx-g13", "agx-g14")
+
+
+def optimize(a, chip, tmp, features):
+    mattr = ["-mattr=" + features] if features else []
+    cpu = [] if chip is None else ["-mcpu=" + chip]
+    optimized = os.path.join(tmp, (chip or "shared") + features + ".opt.bc")
+    subprocess.run([a.opt, "-mtriple=agx", *cpu, *mattr, "-O3", a.portable, "-o", optimized], check=True)
+    return optimized
+
+
+def compile_for(a, chip, tmp, features, optimized):
+    mattr = ["-mattr=" + features] if features else []
+    obj = os.path.join(tmp, chip + features + ".o")
+    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", *a.llc_args, "-filetype=obj", optimized,
+                    "-o", obj], check=True)
     return open(obj, "rb").read()
+
+
+PROCESSORS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../llvm/lib/Target/AGX/AGXProcessors.td")
+
+
+def same_code(chips):
+    """chip -> the first of `chips` with the same scheduling model and features (AGXProcessors.td): llc emits the
+    same object for both, so it runs once. Without the definitions, each chip is its own."""
+    try:
+        td = re.sub(r"//[^\n]*", "", open(PROCESSORS).read())
+    except OSError:
+        return {c: c for c in chips}
+    defs = {name: (model, frozenset(f.strip() for f in features.split(",")))
+            for name, model, features in re.findall(r'AGXProc<"([^"]+)",\s*(\w+),\s*\[([^\]]*)\]>', td)}
+    first = {}
+    return {c: first.setdefault(defs[c], c) if c in defs else c for c in chips}
 
 
 def pack(objects):
     header = MAGIC + struct.pack("<II", len(objects), 0)
     offset = len(header) + 48 * len(objects)
     entries, blobs = b"", b""
+    placed = {}
     for chip, data in objects:
-        pad = (-offset) % 16
-        blobs += b"\0" * pad
-        offset += pad
-        entries += chip.encode().ljust(32, b"\0") + struct.pack("<QQ", offset, len(data))
-        blobs += data
-        offset += len(data)
+        if data not in placed:
+            pad = (-offset) % 16
+            blobs += b"\0" * pad
+            offset += pad
+            placed[data] = offset
+            blobs += data
+            offset += len(data)
+        entries += chip.encode().ljust(32, b"\0") + struct.pack("<QQ", placed[data], len(data))
     return header + entries + blobs
 
 
@@ -99,19 +145,40 @@ def main():
     ap.add_argument("--llc", required=True)
     ap.add_argument("--opt", default=None, help="LLVM opt (default: next to llc)")
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
+    ap.add_argument("--llc-arg", dest="llc_args", action="append", default=[],
+                    help="an extra llc option (repeatable), e.g. --llc-arg=-agx-uniform-constants")
     ap.add_argument("--no-agx-strict", dest="agx_strict", action="store_false",
                     help="leave out the CHIP+agx-strict entries")
+    # The only pipeline now; accepted for the builds that still pass it.
+    ap.add_argument("--via-air", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("-j", dest="jobs", type=int, default=os.cpu_count() or 1,
+                    help="chips to compile at once (default: the processor count)")
+    ap.add_argument("--index-bitwidth", type=int, default=0,
+                    help="the width of MLIR's index type in the kernels (default: 64, from the data layout)")
+    ap.add_argument("--kernel-suffix", default="", help="appended to every kernel's name")
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
     a.opt = a.opt or os.path.join(os.path.dirname(a.llc), "opt")
     with tempfile.TemporaryDirectory() as tmp:
         chips = [c for c in a.chips.split(",") if c]
-        objects = [(c, compile_for(a, a.source, c, tmp)) for c in chips]
+        a.portable = portable_air(a, a.source, tmp)
+        builds = [(c, "") for c in chips]
         if a.agx_strict:
             # Mesa compiles for G13 and G14 only.
-            objects += [(c + STRICT, compile_for(a, a.source, c, tmp, STRICT)) for c in chips
-                        if c.startswith(("agx-g13", "agx-g14"))]
+            builds += [(c, STRICT) for c in chips if c.startswith(("agx-g13", "agx-g14"))]
+        # The builds are independent opt and llc processes: run them side by side.
+        with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
+            opts, objs, alias = {}, {}, same_code(chips)
+            for c, f in builds:
+                key = (None if c.startswith(SHARED_OPT) else c, f)
+                if key not in opts:
+                    opts[key] = pool.submit(optimize, a, key[0], tmp, f)
+                if (alias[c], f) not in objs:
+                    # Submitted after the opt run it waits for, so that one has a worker first.
+                    objs[(alias[c], f)] = pool.submit(lambda c, f, o: compile_for(a, c, tmp, f, o.result()),
+                                                      c, f, opts[key])
+            objects = [(c + f, objs[(alias[c], f)].result()) for c, f in builds]
     open(a.out, "wb").write(pack(objects))
     return 0
 

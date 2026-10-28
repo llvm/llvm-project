@@ -65,9 +65,7 @@ define agx_kernel void @shifts(ptr addrspace(1) %out, i64 %a, i64 %s) {
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    bfeil r1, 0, u3, 5
-; CHECK-NEXT:    mov_imm r2, 16777215
-; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    bfeil r1, 0, u3, 5, mask 0xFFFFFF
 ; CHECK-NEXT:    extr r2, r1, 0, u4
 ; CHECK-NEXT:    mov_imm r3, 0
 ; CHECK-NEXT:    device_store 0, i32, xy, r2_r3, u0_u1, 0, signed
@@ -127,22 +125,20 @@ define agx_kernel void @bitcount(ptr addrspace(1) %out, i64 %a) {
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ffs r1, u2
-; CHECK-NEXT:    ffs r2, u3
-; CHECK-NEXT:    isub r1, 31, r1
-; CHECK-NEXT:    isub r2, 31, r2
-; CHECK-NEXT:    iadd r1, r1, 32
+; CHECK-NEXT:    ffs r1, u3
+; CHECK-NEXT:    ffs r2, u2
 ; CHECK-NEXT:    bitrev r3, u3
-; CHECK-NEXT:    icmpsel ueq, r1, u3, 0, r1, r2
+; CHECK-NEXT:    isub r1, 31, r1
+; CHECK-NEXT:    isub r2, 63, r2
+; CHECK-NEXT:    popcount r6, u2
+; CHECK-NEXT:    icmpsel ueq, r1, u3, 0, r2, r1
 ; CHECK-NEXT:    bitrev r2, u2
-; CHECK-NEXT:    ffs r3, r3
 ; CHECK-NEXT:    iadd r4_r5, r1, 0
 ; CHECK-NEXT:    ffs r1, r2
-; CHECK-NEXT:    isub r2, 31, r3
+; CHECK-NEXT:    ffs r2, r3
 ; CHECK-NEXT:    popcount r3, u3
-; CHECK-NEXT:    popcount r6, u2
 ; CHECK-NEXT:    isub r1, 31, r1
-; CHECK-NEXT:    iadd r2, r2, 32
+; CHECK-NEXT:    isub r2, 63, r2
 ; CHECK-NEXT:    iadd r3, r6, r3
 ; CHECK-NEXT:    icmpsel ueq, r1, u2, 0, r2, r1
 ; CHECK-NEXT:    iadd r2_r3, r3, 0
@@ -180,9 +176,7 @@ define agx_kernel void @sext_inreg_i64(ptr addrspace(1) %p, ptr addrspace(1) %o)
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    device_load 0, i8, x, r1l, u0_u1, 0, signed
 ; CHECK-NEXT:    wait 0
-; CHECK-NEXT:    bfi r1l, 0, r1l, 8
-; CHECK-NEXT:    asr r1l, r1l, 8
-; CHECK-NEXT:    convert s16_to_f, r1, r1l, rte
+; CHECK-NEXT:    convert s8_to_f, r1, r1l, rte
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u2_u3, 0, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap

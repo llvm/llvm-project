@@ -122,22 +122,6 @@ def LowerAffinePass : Pass<"lower-affine"> {
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// AGXToAGXIR
-//===----------------------------------------------------------------------===//
-
-def ConvertAGXToAGXIRPass : Pass<"convert-agx-to-agxir"> {
-  let summary = "Convert AGX dialect to AGXIR dialect";
-  let description = [{
-    This pass converts the AGX dialect operations (Apple GPUs) to AGXIR
-    intrinsic wrappers.
-  }];
-  let dependentDialects = [
-    "LLVM::LLVMDialect",
-    "AGXIR::AGXIRDialect",
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // AMDGPUToROCDL
 //===----------------------------------------------------------------------===//
 
@@ -711,16 +695,42 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
 // GPUToROCDL
 //===----------------------------------------------------------------------===//
 
-def ConvertGpuOpsToAGXIROps : Pass<"convert-gpu-to-agxir", "gpu::GPUModuleOp"> {
-  let summary = "Generate AGXIR operations for gpu operations";
+def ArithEmulateF64 : Pass<"arith-emulate-f64"> {
+  let summary = "Emulate f64 with 64-bit integers and a soft-float library";
   let description = [{
-    Lowers GPU modules for Apple GPUs: GPU and AGX dialect operations become
-    AGXIR intrinsic wrappers, kernels become `agx_kernel` functions, and the
-    other dialects are converted to the LLVM dialect.
+    For targets without double precision (AIR, AGX): f64 values become their
+    bit patterns in i64, in every type (memrefs, vectors, function
+    signatures), and f64 operations calls of a library of IEEE 754 binary64
+    arithmetic on 64-bit integers (rounding to nearest even, with denormals;
+    only 32- and 64-bit integer operations), which the pass inserts, as LLVM
+    dialect functions, into the symbol table that uses it. Negation, absolute
+    value and copysign are bit operations; atomic f64 updates are
+    compare-and-swap loops. SIMD-group reductions of f64 become shuffles of
+    32-bit halves and emulated combining operations. An f64 operation without
+    an emulation, such as math.exp, is an error.
   }];
   let dependentDialects = [
-    "AGXIR::AGXIRDialect",
-    "agx::AGXDialect",
+    "arith::ArithDialect",
+    "gpu::GPUDialect",
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "vector::VectorDialect",
+  ];
+}
+
+def ConvertGpuOpsToAIROps : Pass<"convert-gpu-to-air", "gpu::GPUModuleOp"> {
+  let summary = "Generate AIR for gpu operations";
+  let description = [{
+    Lowers GPU modules to the LLVM IR the AIR target compiles (to a
+    `.metallib`, or through the AGX backend to an AGX object): GPU and AIR
+    dialect operations become calls to AIR's functions (system values,
+    `air.wg.barrier`, SIMD-group functions and matrices), kernels are marked
+    `air-kernel`, and the other dialects are converted to the LLVM dialect in
+    AIR's address spaces.
+  }];
+  let dependentDialects = [
+    "air::AIRDialect",
     "cf::ControlFlowDialect",
     "math::MathDialect",
     "memref::MemRefDialect",

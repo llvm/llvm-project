@@ -26,6 +26,11 @@
 //    the operands and results of their half operations.
 //  * There is no double precision hardware: the double precision arithmetic
 //    that AGXSoftF64 does not implement is diagnosed as unsupported.
+//  * Tangent, the inverse and the hyperbolic functions are built from the
+//    functions the hardware has (AGXMathExpansion.cpp).
+//  * A threadgroup of at most 4 SIMD-groups is one aligned block, whose
+//    barrier is cheaper: on subtargets with block-barrier its threadgroup
+//    barriers become block barriers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,8 +60,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
@@ -307,6 +314,9 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
   bool fenceHostCoherentAccesses(Function &F);
+  bool useBlockBarriers(Function &F, const AGXSubtarget &ST);
+  bool expandMath(Function &F, const AGXSubtarget &ST);
+  bool combineUniformAtomics(Function &F, const TargetTransformInfo &TTI);
 
 public:
   static char ID;
@@ -346,36 +356,178 @@ static bool isCheapDivision(const BinaryOperator &BO) {
   return BO.getType()->isIntegerTy(32);
 }
 
+static cl::opt<bool> ShareDivisors(
+    "agx-share-divisors", cl::init(true), cl::Hidden,
+    cl::desc("Compute the reciprocal of a 32-bit divisor once where the "
+             "divisor is defined, shared by every division by it"));
+
+namespace {
+/// The divisor-only part of a 32-bit division: |y|, whether y < 0, and the
+/// estimate z of 2^32 / |y|.
+struct Divisor {
+  Value *Y, *Neg, *Z;
+};
+
+/// Divisors computed once each. A divisor that is a cheap pure expression
+/// (ZLUDA's umax(y, 1), a trunc of a 64-bit value) is rebuilt right after
+/// the latest of its leaves, so that copies of it in different blocks (the
+/// unrolled iterations of a loop, the fast paths of 64-bit divisions) share
+/// one reciprocal.
+class DivisorCache {
+  Function &F;
+  DominatorTree DT;
+  DenseMap<Value *, Value *> Hoisted;
+  std::map<SmallVector<uintptr_t, 6>, Value *> Exprs;
+  DenseMap<std::pair<Value *, unsigned>, Divisor> Divisors;
+
+  static bool isCheapPure(const Instruction &I) {
+    if (isa<CastInst, BinaryOperator, ICmpInst, SelectInst>(I))
+      return !isa<BinaryOperator>(I) || !I.isIntDivRem();
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::abs:
+        return true;
+      default:
+        break;
+      }
+    return false;
+  }
+
+  /// Where a value defined by V can first be used.
+  BasicBlock::iterator after(Value *V) {
+    if (auto *I = dyn_cast_or_null<Instruction>(V)) {
+      if (isa<PHINode>(I))
+        return I->getParent()->getFirstInsertionPt();
+      return std::next(I->getIterator());
+    }
+    return F.getEntryBlock().getFirstInsertionPt();
+  }
+
+  /// The later of two definition points on one dominator chain.
+  Value *later(Value *A, Value *B) {
+    auto *IA = dyn_cast<Instruction>(A), *IB = dyn_cast<Instruction>(B);
+    if (!IA)
+      return B;
+    if (!IB)
+      return A;
+    return DT.dominates(IA, IB) ? B : A;
+  }
+
+  /// V rebuilt after its leaves; Last is set to the latest leaf (or null).
+  Value *hoist(Value *V, Value *&Last, unsigned Depth = 0) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I) {
+      Last = nullptr;
+      return V;
+    }
+    if (Depth > 4 || !isCheapPure(*I)) {
+      Last = I;
+      return I;
+    }
+    if (Value *H = Hoisted.lookup(I)) {
+      Last = H;
+      return H;
+    }
+    SmallVector<Value *, 3> Ops;
+    Value *Latest = nullptr;
+    SmallVector<uintptr_t, 6> Key{I->getOpcode(),
+                                  reinterpret_cast<uintptr_t>(I->getType())};
+    if (auto *Cmp = dyn_cast<CmpInst>(I))
+      Key.push_back(Cmp->getPredicate());
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      Key.push_back(II->getIntrinsicID());
+    unsigned NOps = isa<CallInst>(I) ? cast<CallInst>(I)->arg_size()
+                                     : I->getNumOperands();
+    for (unsigned N = 0; N < NOps; ++N) {
+      Value *L;
+      Value *Op = hoist(I->getOperand(N), L, Depth + 1);
+      Latest = L ? (Latest ? later(Latest, L) : L) : Latest;
+      Ops.push_back(Op);
+      Key.push_back(reinterpret_cast<uintptr_t>(Op));
+    }
+    if (I->getType()->isVectorTy()) {
+      Last = I;
+      return I;
+    }
+    Value *&E = Exprs[Key];
+    if (!E) {
+      Instruction *C = I->clone();
+      C->setName(I->getName() + ".div");
+      for (unsigned N = 0; N < NOps; ++N)
+        C->setOperand(N, Ops[N]);
+      C->dropPoisonGeneratingAnnotations();
+      C->insertBefore(after(Latest));
+      E = C;
+    }
+    Hoisted[I] = E;
+    Last = E;
+    return E;
+  }
+
+public:
+  DivisorCache(Function &F) : F(F), DT(F) {}
+
+  Divisor get(Value *Y, bool IsSigned, BinaryOperator &At) {
+    Value *Last = nullptr;
+    Value *H = ShareDivisors ? hoist(Y, Last) : Y;
+    auto [It, New] = Divisors.try_emplace({H, unsigned(IsSigned)});
+    if (!New)
+      return It->second;
+    IRBuilder<> B(ShareDivisors ? &*after(Last) : &At);
+    Value *YAbs = H, *Neg = nullptr;
+    if (IsSigned) {
+      Neg = B.CreateICmpSLT(H, B.getInt32(0));
+      YAbs = B.CreateSelect(Neg, B.CreateNeg(H), H);
+    }
+    Value *FY = B.CreateUIToFP(YAbs, B.getFloatTy());
+    Value *Rcp = B.CreateUnaryIntrinsic(Intrinsic::agx_rcp, FY);
+    Value *Scaled =
+        B.CreateFMul(Rcp, ConstantFP::get(B.getFloatTy(), 4294966784.0));
+    Value *Z = B.CreateFPToUI(Scaled, B.getInt32Ty());
+    Value *P = B.CreateMul(
+        B.CreateZExt(Z, B.getInt64Ty()),
+        B.CreateZExt(B.CreateMul(B.CreateNeg(YAbs), Z), B.getInt64Ty()));
+    Z = B.CreateAdd(Z, B.CreateTrunc(B.CreateLShr(P, 32), B.getInt32Ty()));
+    Divisor D{YAbs, Neg, Z};
+    if (ShareDivisors)
+      It->second = D;
+    else
+      Divisors.erase(It);
+    return D;
+  }
+};
+} // namespace
+
 /// A 32-bit division or remainder without a loop, as AMDGPU expands them
 /// (AMDGPUCodeGenPrepare::expandDivRem32): an estimate of 2^32 / y from the
 /// f32 reciprocal, one Newton-Raphson step in integers, then two corrections,
 /// which is exact when the reciprocal is within 1 ulp. The hardware's rcp is
 /// within 0.75 ulp for every mantissa (Apple-M2-Playground 2026-10-20-fdiv32).
-/// Division by zero gives all ones (remainder: x), as on NVIDIA GPUs.
-static Value *expandDivRem32(BinaryOperator &BO) {
+/// Division by zero gives all ones (remainder: x), as on NVIDIA GPUs. The
+/// divisor's part comes from Divisors, shared by divisions by the same value.
+static Value *expandDivRem32(BinaryOperator &BO, DivisorCache &Divisors) {
   IRBuilder<> B(&BO);
   Instruction::BinaryOps Op = BO.getOpcode();
   bool IsSigned = Op == Instruction::SDiv || Op == Instruction::SRem;
   bool IsRem = Op == Instruction::URem || Op == Instruction::SRem;
   Type *I32 = B.getInt32Ty();
-  Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
+  Value *X = BO.getOperand(0);
+  Divisor D = Divisors.get(BO.getOperand(1), IsSigned, BO);
+  Value *Y = D.Y, *Z = D.Z;
   Value *XNeg = nullptr, *Neg = nullptr;
   if (IsSigned) {
     XNeg = B.CreateICmpSLT(X, B.getInt32(0));
-    Value *YNeg = B.CreateICmpSLT(Y, B.getInt32(0));
-    Neg = IsRem ? XNeg : B.CreateXor(XNeg, YNeg);
+    Neg = IsRem ? XNeg : B.CreateXor(XNeg, D.Neg);
     X = B.CreateSelect(XNeg, B.CreateNeg(X), X);
-    Y = B.CreateSelect(YNeg, B.CreateNeg(Y), Y);
   }
-  Value *FY = B.CreateUIToFP(Y, B.getFloatTy());
-  Value *Rcp = B.CreateUnaryIntrinsic(Intrinsic::agx_rcp, FY);
-  Value *Scaled = B.CreateFMul(Rcp, ConstantFP::get(B.getFloatTy(), 4294966784.0));
-  Value *Z = B.CreateFPToUI(Scaled, I32);
   auto MulHi = [&](Value *A, Value *C) {
     Value *P = B.CreateMul(B.CreateZExt(A, B.getInt64Ty()), B.CreateZExt(C, B.getInt64Ty()));
     return B.CreateTrunc(B.CreateLShr(P, 32), I32);
   };
-  Z = B.CreateAdd(Z, MulHi(Z, B.CreateMul(B.CreateNeg(Y), Z)));
   Value *Q = MulHi(X, Z);
   Value *R = B.CreateSub(X, B.CreateMul(Q, Y));
   for (int I = 0; I < 2; ++I) {
@@ -388,6 +540,110 @@ static Value *expandDivRem32(BinaryOperator &BO) {
     Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
   Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
   return B.CreateSelect(Zero, IsRem ? BO.getOperand(0) : B.getInt32(-1), Res);
+}
+
+static cl::opt<bool> AGXLaunchDivisors(
+    "agx-launch-divisors", cl::init(false), cl::Hidden,
+    cl::desc("Divide by a 32-bit kernel argument with a multiplier and "
+             "shifts the launch computes (.agx.kernels extension 7)"));
+
+/// At most this many divisors per kernel take their multipliers from the
+/// launch (three uniforms each).
+static constexpr unsigned MaxLaunchDivisors = 8;
+
+/// The kernel argument and 32-bit word of it that divisor Y is, if any: an
+/// i32 argument, or the low or high word of an i64 one or the low word of an
+/// extended i32 one (as the 32-bit fast path of a 64-bit division takes
+/// them).
+static std::optional<std::pair<unsigned, unsigned>>
+launchDivisorSource(Value *Y) {
+  using namespace PatternMatch;
+  auto Unfrozen = [](Value *V) {
+    auto *Fr = dyn_cast<FreezeInst>(V);
+    return Fr ? Fr->getOperand(0) : V;
+  };
+  Y = Unfrozen(Y);
+  // umax(d, 1), ZLUDA's guard of a PTX division's divisor: the launch
+  // computes the values of max(d, 1) (word 2 and 3 stand for words 0 and 1
+  // so guarded)
+  Value *Guarded;
+  if (match(Y, m_UMax(m_Value(Guarded), m_One()))) {
+    auto Src = launchDivisorSource(Guarded);
+    if (!Src || Src->second >= 2)
+      return std::nullopt;
+    return std::pair(Src->first, Src->second + 2);
+  }
+  if (auto *A = dyn_cast<Argument>(Y))
+    return A->getType()->isIntegerTy(32)
+               ? std::optional(std::pair(A->getArgNo(), 0u))
+               : std::nullopt;
+  auto *T = dyn_cast<TruncInst>(Y);
+  if (!T || !T->getType()->isIntegerTy(32))
+    return std::nullopt;
+  Value *V = Unfrozen(T->getOperand(0));
+  unsigned Word = 0;
+  const APInt *Sh;
+  if (match(V, m_LShr(m_Value(V), m_APInt(Sh)))) {
+    if (*Sh != 32)
+      return std::nullopt;
+    V = Unfrozen(V);
+    Word = 1;
+  }
+  if (auto *A = dyn_cast<Argument>(V); A && A->getType()->isIntegerTy(64))
+    return std::pair(A->getArgNo(), Word);
+  // the low word of an extended i32 argument (an index built from 32-bit
+  // arguments) is the argument
+  Value *Narrow;
+  if (Word == 0 && match(V, m_ZExtOrSExt(m_Value(Narrow))))
+    if (auto *A = dyn_cast<Argument>(Narrow); A && A->getType()->isIntegerTy(32))
+      return std::pair(A->getArgNo(), 0u);
+  return std::nullopt;
+}
+
+/// A 32-bit division or remainder by a kernel argument, with the multiplier
+/// m and shifts s1, s2 of its divisor that the launch computes
+/// (llvm.agx.launch.value): t = mulhi(x, m), q = (t + ((x - t) >> s1)) >> s2,
+/// exact for every 32-bit x (Granlund and Montgomery, "Division by Invariant
+/// Integers using Multiplication", PLDI 1994, section 4). A zero divisor has
+/// m = s1 = s2 = 0: q = x, so the remainder is x; the quotient is all ones,
+/// as in expandDivRem32.
+static Value *expandLaunchDivRem32(BinaryOperator &BO, unsigned Arg,
+                                   unsigned Word) {
+  IRBuilder<> B(&BO);
+  Instruction::BinaryOps Op = BO.getOpcode();
+  bool IsSigned = Op == Instruction::SDiv || Op == Instruction::SRem;
+  bool IsRem = Op == Instruction::URem || Op == Instruction::SRem;
+  Type *I32 = B.getInt32Ty();
+  Function *LV = Intrinsic::getOrInsertDeclaration(
+      BO.getModule(), Intrinsic::agx_launch_value);
+  // words 2 and 3: max(d, 1) of word 0 or 1 (kinds 6 to 8)
+  bool Guarded = Word >= 2;
+  auto Launch = [&](unsigned Kind) {
+    return B.CreateCall(
+        LV, {B.getInt32(Arg), B.getInt32(Word & 1),
+             B.getInt32(Kind + (Guarded ? 6 : IsSigned ? 3 : 0))});
+  };
+  Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
+  Value *Neg = nullptr;
+  if (IsSigned) {
+    Value *XNeg = B.CreateICmpSLT(X, B.getInt32(0));
+    Value *YNeg = B.CreateICmpSLT(Y, B.getInt32(0));
+    Neg = IsRem ? XNeg : B.CreateXor(XNeg, YNeg);
+    X = B.CreateSelect(XNeg, B.CreateNeg(X), X);
+    Y = B.CreateSelect(YNeg, B.CreateNeg(Y), Y);
+  }
+  Value *P = B.CreateMul(B.CreateZExt(X, B.getInt64Ty()),
+                         B.CreateZExt(Launch(0), B.getInt64Ty()));
+  Value *T = B.CreateTrunc(B.CreateLShr(P, 32), I32);
+  Value *Q = B.CreateLShr(
+      B.CreateAdd(T, B.CreateLShr(B.CreateSub(X, T), Launch(1))), Launch(2));
+  Value *Res = IsRem ? B.CreateSub(X, B.CreateMul(Q, Y)) : Q;
+  if (IsSigned)
+    Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
+  if (IsRem || Guarded)
+    return Res;
+  Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
+  return B.CreateSelect(Zero, B.getInt32(-1), Res);
 }
 
 bool AGXCodeGenPrepare::expandDivisions(Function &F) {
@@ -421,17 +677,54 @@ bool AGXCodeGenPrepare::expandDivisions(Function &F) {
     }
   }
 
+  // The 32-bit expansions first: they keep the CFG (and the dominator tree
+  // of the divisor cache) as it is; the loops of the wider ones do not.
+  std::optional<DivisorCache> Divisors;
+  SmallVector<BinaryOperator *, 8> Wide;
+  // Divisors whose multipliers the launch computes, while the uniforms have
+  // room for them (AGXPromoteKernelArgs fills at most 1024 bytes less 20).
+  SmallVector<std::pair<unsigned, unsigned>, 4> LaunchDivisors;
+  bool Kernel = AGXLaunchDivisors &&
+                F.getCallingConv() == CallingConv::AGX_KERNEL;
+  if (Kernel) {
+    uint64_t Bytes = 20 + 8;
+    for (const Argument &A : F.args())
+      Bytes += alignTo(F.getDataLayout().getTypeStoreSize(A.getType()), 4);
+    Kernel = Bytes + MaxLaunchDivisors * 2 * 12 <= 1024;
+  }
   for (BinaryOperator *BO : Worklist) {
+    if (!BO->getType()->isIntegerTy(32)) {
+      Wide.push_back(BO);
+      continue;
+    }
+    auto Src = Kernel ? launchDivisorSource(BO->getOperand(1)) : std::nullopt;
+    // max(d, 1) has unsigned values only
+    if (Src && Src->second >= 2 && (BO->getOpcode() == Instruction::SDiv ||
+                                     BO->getOpcode() == Instruction::SRem))
+      Src = std::nullopt;
+    if (Src) {
+      bool Known = is_contained(LaunchDivisors, *Src);
+      if (Known || LaunchDivisors.size() < MaxLaunchDivisors) {
+        if (!Known)
+          LaunchDivisors.push_back(*Src);
+        Value *R = expandLaunchDivRem32(*BO, Src->first, Src->second);
+        R->takeName(BO);
+        BO->replaceAllUsesWith(R);
+        BO->eraseFromParent();
+        continue;
+      }
+    }
+    if (!Divisors)
+      Divisors.emplace(F);
+    Value *R = expandDivRem32(*BO, *Divisors);
+    R->takeName(BO);
+    BO->replaceAllUsesWith(R);
+    BO->eraseFromParent();
+  }
+  for (BinaryOperator *BO : Wide) {
     bool IsRem = BO->getOpcode() == Instruction::URem ||
                  BO->getOpcode() == Instruction::SRem;
     bool Is64 = BO->getType()->getIntegerBitWidth() > 32;
-    if (BO->getType()->isIntegerTy(32)) {
-      Value *R = expandDivRem32(*BO);
-      R->takeName(BO);
-      BO->replaceAllUsesWith(R);
-      BO->eraseFromParent();
-      continue;
-    }
     if (IsRem)
       Is64 ? expandRemainderUpTo64Bits(BO) : expandRemainderUpTo32Bits(BO);
     else
@@ -975,14 +1268,207 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   Changed |= lowerMatrixFMA(F, ST);
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(F, TTI);
+  Changed |= combineUniformAtomics(F, TTI);
   Changed |= lowerConstrainedFP(F);
+  Changed |= expandMath(F, ST);
   Changed |= flushHalfDenormals(F);
   Changed |= flushFloatMinMax(F);
   Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
   Changed |= fenceHostCoherentAccesses(F);
+  Changed |= useBlockBarriers(F, ST);
   Changed |= unifyExits(F);
   return Changed;
+}
+
+static cl::opt<bool> AGXAtomicOptimizer(
+    "agx-atomic-optimizer", cl::init(false), cl::Hidden,
+    cl::desc("Combine the atomics of a SIMD-group to one uniform address into "
+             "one atomic of the group's reduction (as AMDGPUAtomicOptimizer)"));
+
+/// The AGX SIMD-group reduction operation (AGX::SIMDOp numbering of
+/// llvm.agx.simd.reduce) for an atomicrmw, or -1.
+static int simdOpFor(const AtomicRMWInst &RMW) {
+  bool Int32 = RMW.getType()->isIntegerTy(32);
+  switch (RMW.getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+    return Int32 ? 16 : -1;
+  case AtomicRMWInst::And:
+    return Int32 ? 0 : -1;
+  case AtomicRMWInst::Or:
+    return Int32 ? 2 : -1;
+  case AtomicRMWInst::Xor:
+    return Int32 ? 4 : -1;
+  case AtomicRMWInst::Min:
+    return Int32 ? 20 : -1;
+  case AtomicRMWInst::Max:
+    return Int32 ? 22 : -1;
+  case AtomicRMWInst::UMin:
+    return Int32 ? 28 : -1;
+  case AtomicRMWInst::UMax:
+    return Int32 ? 30 : -1;
+  default:
+    // Not fadd: a reduction rounds and flushes denormals unlike the atomic
+    // (PTX-formalization atom-f32-ftz).
+    return -1;
+  }
+}
+
+/// Atomics of every active thread of a SIMD-group to one (uniform) address
+/// become one atomic, done by the first active thread, of the reduction of
+/// their operands; the others' results are rebuilt from the old value and an
+/// exclusive scan (only for add and sub, which have one). 32-bit integers. Same-address
+/// atomics serialize in the memory system, which agx_cost does not model:
+/// off by default until hardware measurements decide it (EXPERIMENTS.md).
+bool AGXCodeGenPrepare::combineUniformAtomics(Function &F,
+                                              const TargetTransformInfo &TTI) {
+  if (!AGXAtomicOptimizer)
+    return false;
+  SmallVector<AtomicRMWInst *, 8> Candidates;
+  for (Instruction &I : instructions(F))
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+      if (!RMW->isVolatile() && simdOpFor(*RMW) >= 0)
+        Candidates.push_back(RMW);
+  if (Candidates.empty())
+    return false;
+  DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
+  UniformityInfo UI(DT, CI, &TTI);
+  UI.compute();
+
+  bool Changed = false;
+  for (AtomicRMWInst *RMW : Candidates) {
+    Value *Ptr = RMW->getPointerOperand();
+    if (UI.isDivergentAtUse(RMW->getOperandUse(AtomicRMWInst::getPointerOperandIndex())))
+      continue;
+    AtomicRMWInst::BinOp Op = RMW->getOperation();
+    bool Scan = Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub;
+    if (!RMW->use_empty() && !Scan)
+      continue;
+    Type *Ty = RMW->getType();
+    Value *V = RMW->getValOperand();
+    int HWOp = simdOpFor(*RMW);
+    IRBuilder<> B(RMW);
+    Value *Total, *Before = nullptr;
+    // From the ballot of the active threads (the active-thread special
+    // registers disagree with it in agx_run).
+    Value *Ballot = B.CreateIntrinsic(Intrinsic::agx_simd_ballot,
+                                      ArrayRef<Type *>(), {B.getTrue()});
+    Value *Lane = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup,
+                                    ArrayRef<Type *>(), ArrayRef<Value *>());
+    Value *Active =
+        B.CreateIntrinsic(Intrinsic::ctpop, {B.getInt32Ty()}, {Ballot});
+    Value *Below = B.CreateAnd(
+        Ballot, B.CreateSub(B.CreateShl(B.getInt32(1), Lane), B.getInt32(1)));
+    Value *Index =
+        B.CreateIntrinsic(Intrinsic::ctpop, {B.getInt32Ty()}, {Below});
+    if (!UI.isDivergentAtUse(RMW->getOperandUse(1)) && Ty->isIntegerTy()) {
+      // A uniform operand: n times it for add and sub, itself otherwise.
+      bool Sum = Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub;
+      Total = Sum ? B.CreateMul(V, Active) : V;
+      if (Sum && !RMW->use_empty())
+        Before = B.CreateMul(V, Index);
+    } else {
+      Total = B.CreateIntrinsic(Intrinsic::agx_simd_reduce, {Ty},
+                                {V, B.getInt32(HWOp)});
+      if (!RMW->use_empty())
+        Before = B.CreateIntrinsic(Intrinsic::agx_simd_prefix, {Ty},
+                                   {V, B.getInt32(HWOp)});
+    }
+    Value *First = B.CreateICmpEQ(Index, B.getInt32(0));
+    Instruction *Then = SplitBlockAndInsertIfThen(First, RMW, false);
+    BasicBlock *ThenBB = Then->getParent(), *Tail = RMW->getParent();
+    B.SetInsertPoint(Then);
+    AtomicRMWInst *One = B.CreateAtomicRMW(Op, Ptr, Total, RMW->getAlign(),
+                                           RMW->getOrdering(),
+                                           RMW->getSyncScopeID());
+    One->setVolatile(false);
+    if (!RMW->use_empty()) {
+      B.SetInsertPoint(RMW);
+      PHINode *Old = B.CreatePHI(Ty, 2);
+      Old->addIncoming(One, ThenBB);
+      Old->addIncoming(PoisonValue::get(Ty), ThenBB->getSinglePredecessor());
+      // The first active thread's lane: the lowest set bit of the ballot.
+      Value *FirstLane = B.CreateIntrinsic(Intrinsic::cttz, {B.getInt32Ty()},
+                                           {Ballot, B.getTrue()});
+      Value *Base = B.CreateIntrinsic(Intrinsic::agx_simd_shuffle, {Ty},
+                                      {Old, FirstLane});
+      Value *Result = Op == AtomicRMWInst::Sub ? B.CreateSub(Base, Before)
+                                               : B.CreateAdd(Base, Before);
+      RMW->replaceAllUsesWith(Result);
+    }
+    (void)Tail;
+    RMW->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
+bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
+  bool Changed = false;
+  // An expansion may use functions that are expanded in turn (tan's sin).
+  for (;;) {
+    SmallVector<IntrinsicInst *, 8> Calls;
+    for (Instruction &I : instructions(F)) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      // With ieee-fp32, AGXStrictFP computes the precise functions exactly.
+      bool Approx = (isa<FPMathOperator>(II) && II->hasApproxFunc()) ||
+                    ST.hasIEEEFP32();
+      // The type of the operand: sincos returns a pair.
+      if (II->arg_size() &&
+          AGX::canExpandMath(II->getIntrinsicID(),
+                             II->getArgOperand(0)->getType(), Approx))
+        Calls.push_back(II);
+    }
+    if (Calls.empty())
+      return Changed;
+    for (IntrinsicInst *II : Calls) {
+      IRBuilder<> B(II);
+      B.setFastMathFlags(II->getFastMathFlags());
+      SmallVector<Value *, 2> Args(II->args());
+      Value *R = AGX::expandMath(B, II->getIntrinsicID(), Args);
+      R->takeName(II);
+      II->replaceAllUsesWith(R);
+      II->eraseFromParent();
+    }
+    Changed = true;
+  }
+}
+
+/// With "agx-max-threads-per-threadgroup" at most 128, the threadgroup is one
+/// aligned block of 4 SIMD-groups (or less: a block cut short by the end of
+/// the threadgroup does not wait for the missing groups). Its block_barrier
+/// waits for the same threads as threadgroup_barrier, about 3x faster on G14,
+/// and orders their threadgroup and device memory, so the workgroup-scope
+/// fences right around the barrier go too.
+bool AGXCodeGenPrepare::useBlockBarriers(Function &F, const AGXSubtarget &ST) {
+  unsigned Threads =
+      F.getFnAttributeAsParsedInteger("agx-max-threads-per-threadgroup", 0);
+  if (!ST.hasBlockBarrier() || Threads == 0 || Threads > 128)
+    return false;
+  SmallVector<IntrinsicInst *, 4> Barriers;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::agx_threadgroup_barrier)
+      Barriers.push_back(II);
+  SyncScope::ID Workgroup = F.getContext().getOrInsertSyncScopeID("workgroup");
+  auto IsWorkgroupFence = [&](Instruction *I) {
+    auto *Fence = dyn_cast_or_null<FenceInst>(I);
+    return Fence && Fence->getSyncScopeID() == Workgroup;
+  };
+  for (IntrinsicInst *II : Barriers) {
+    for (Instruction *Fence : {II->getPrevNode(), II->getNextNode()})
+      if (IsWorkgroupFence(Fence))
+        Fence->eraseFromParent();
+    IRBuilder<> B(II);
+    B.CreateIntrinsic(Intrinsic::agx_block_barrier, {});
+    II->eraseFromParent();
+  }
+  return !Barriers.empty();
 }
 
 static bool isSystemScope(SyncScope::ID Scope, LLVMContext &Ctx) {

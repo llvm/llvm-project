@@ -10,7 +10,8 @@ declare i32 @llvm.agx.thread.position.in.threadgroup.x()
 
 ; CHECK-LABEL: repeated:
 ; CHECK:         threadgroup_barrier
-; CHECK-NEXT:    threadgroup_load
+; CHECK-NOT:     threadgroup_barrier
+; CHECK:         threadgroup_load
 ; CHECK:         threadgroup_barrier
 ; CHECK-NOT:     threadgroup_barrier
 ; CHECK:         stop

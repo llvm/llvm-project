@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -convert-agx-to-agxir \
-// RUN:   -convert-gpu-to-agxir='use-bare-ptr-memref-call-conv=1' \
+// RUN: mlir-opt %s -convert-gpu-to-air='use-bare-ptr-memref-call-conv=1' \
 // RUN:   -reconcile-unrealized-casts -o %t.mlir
 // RUN: %run_agx --grid 32 --wg 32 %t.mlir i32*32 i32*32 | FileCheck %s
 
@@ -13,12 +12,13 @@ gpu.module @kernels {
     %t = gpu.lane_id
     %ti = arith.index_cast %t : index to i32
     %c1 = arith.constant 1 : i32
-    %s = agx.shuffle xor %ti, %c1 : i32
+    %c32 = arith.constant 32 : i32
+    %s, %ok = gpu.shuffle xor %ti, %c1, %c32 : i32
     memref.store %s, %out[%t] : memref<32xi32, 1>
     %odd = arith.andi %ti, %c1 : i32
     %c0 = arith.constant 0 : i32
     %even = arith.cmpi eq, %odd, %c0 : i32
-    %m = agx.ballot %even : i32
+    %m = gpu.ballot %even : i32
     memref.store %m, %mask[%t] : memref<32xi32, 1>
     gpu.return
   }

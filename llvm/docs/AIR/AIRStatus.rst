@@ -142,13 +142,14 @@ repository, including the simulator's remote.
 AIR features with no AGX lowering
 ---------------------------------
 
-*What:* the AIR to AGX path translates kernels, buffer arguments, system
-values, address spaces, math intrinsics, barriers, atomics, SIMD shuffles,
-device-coherent accesses and threadgroup globals. It rejects with a
-diagnostic, rather than miscompiling, AIR it has no AGX equivalent for:
-SIMD-group matrices (``air.simdgroup_matrix_8x8_*``), SIMD-group async
-copies, tensors (``air.*_private_tensor``), indirect argument buffers,
-function groups and the 8-operand ``air.atomic.global.cmpxchg.weak.i32``.
+*What:* ``agx-lower-air`` (see "AIR to AGX" below) reports an error, rather
+than miscompiling, for the AIR it has no AGX equivalent for yet: SIMD-group
+matrices (``air.simdgroup_matrix_8x8_*``), SIMD-group async copies, tensors
+(``air.*_private_tensor``), argument buffers (``air.indirect_buffer``),
+function groups and more than one threadgroup buffer. The AGX backend has no
+lowering of ``llvm.tan``, ``asin``, ``acos``, ``atan``, ``atan2``, ``sinh``,
+``cosh`` and ``tanh``, nor of AIR's ``sinpi``, ``cospi``, ``tanpi``,
+``asinh``, ``acosh`` and ``atanh``.
 
 Device and service limits
 =========================
@@ -244,6 +245,41 @@ not been built here (the build was interrupted, with no errors up to then) and
 ``module-to-binary-air.mlir`` has not been run.
 
 AIR to AGX
+----------
+
+``agx-lower-air`` (``llvm/lib/Target/AGX/AGXLowerAIR.cpp``, documented in
+``AGXUsage.rst``, "AIR input") compiles the AIR that ``addAIRPortablePasses``
+produces, in process: the module after ``air-system-values``, before the
+passes that adapt it to the Metal driver and before the bitcode writer. It
+does not read ``.air`` files. It accepts only AIR's types, rebuilds each
+kernel as an ``agx_kernel`` with its buffers in location order (constant
+buffers by reference, so in uniform registers), turns system values into
+special register reads, remaps the address spaces, lowers the math functions
+by the inverse of ``AIRIntrinsicMappings.td`` (generated in the AGX target
+from the same file), atomics and fences to ``atomicrmw``, ``cmpxchg`` and
+``fence``, and barriers to ``llvm.agx.threadgroup_barrier`` between
+threadgroup-scope fences.
+
+``llvm/utils/air-gpu/air_gpu_suite.py --agx-run`` runs the suite's kernels
+through the portable passes and ``agx-lower-air`` on the AGX Performance
+Simulator (``agx_run``, G14G), against the same references as on the M2 Max.
+On 2026-10-27: 172 pass (the matrix group exactly), 42 do not compile (the
+transcendental functions above), the probe for ``air.copysign``
+is rejected as expected, and one case is skipped: it has no barrier and
+relies on ``air-tg-barrier-insert``, which only the Metal pipeline runs. 16
+compute the right function less accurately than MSL requires of its precise
+functions: ``sqrt`` (1 ulp), ``sin`` (24, 132 for ``<4 x float>``), ``cos``
+(207), ``log2`` (10), ``log10`` (39), ``exp10`` (7), ``pow`` (20) and
+``sincos`` (23), the accuracy of the AGX backend's lowering of these
+intrinsics. The results are the simulator's model of G14, not hardware.
+
+Not done: the functions listed in "AIR features with no AGX lowering", and
+running the same cases on both targets in one run (the AIR service is not
+reachable from every environment). An ordered atomic reaches AGX as a relaxed one between two
+sequentially consistent fences, as AIR expresses it, which costs more than
+the AGX backend's own lowering of the ordered atomic.
+
+IR to AGX
 ----------
 
 Lowering AIR to AGX is designed but not implemented. The design:

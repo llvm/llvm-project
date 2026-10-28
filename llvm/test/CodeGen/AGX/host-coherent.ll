@@ -10,7 +10,8 @@
 ; CHECK-LABEL: poll:
 ; ld.volatile
 ; CHECK:      memory_barrier 3, 1, 9
-; CHECK-NEXT: device_load 0, i32, x, r1, u0_u1, 0, signed, 3 // encoding: [0x05,0x09,0x00,0x0d,0x00,0xf0,0x12,0x00]
+; CHECK-NOT:  device_load
+; CHECK:      device_load 0, i32, x, r1, u0_u1, 0, signed, 3 // encoding: [0x05,0x09,0x00,0x0d,0x00,0xf0,0x12,0x00]
 ; ld.acquire.sys: the load, then the acquire fence
 ; CHECK:      memory_barrier 3, 1, 9
 ; CHECK:      device_load 0, i32, x, r4, u0_u1, 1, signed, 3
@@ -20,7 +21,8 @@
 ; CHECK:      atomic cmpxchg, 0, r2, r2_r3, 0, signed, r6_r7, 0
 ; st.release.sys: the release fence, the coherent store and its f533
 ; CHECK:      memory_barrier 0, 3, 3
-; CHECK-NEXT: device_store 0, i32, x, r1, u2_u3, 0, signed, 3 // encoding: [0x45,0x09,0x04,0x0d,0x00,0xf0,0x12,0x00]
+; CHECK-NOT:  device_store
+; CHECK:      device_store 0, i32, x, r1, u2_u3, 0, signed, 3 // encoding: [0x45,0x09,0x04,0x0d,0x00,0xf0,0x12,0x00]
 ; CHECK-NEXT: memory_barrier 0, 3, 3
 ; st.volatile
 ; CHECK-NEXT: device_store 0, i32, x, r1, u2_u3, 1, signed, 3

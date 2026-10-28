@@ -8,9 +8,12 @@
 
 #include "AIRSystemValues.h"
 #include "AIRWriter/AIRVersion.h"
+#include "AIRWriter/PointeeTypeMap.h"
 #include "AIR.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -84,24 +87,101 @@ namespace {
 struct SysValParam {
   StringRef IntrinsicName;
   StringRef ParamName;
-  bool IsVector; // true = <3 x i32>, false = i32
+  StringRef MDTag; // the parameter's role in !air.kernel
+  bool IsVector;   // true = <3 x i32>, false = i32
   const char *Dims[3];
+};
+
+/// A system-value parameter this pass added to a kernel.
+struct AddedSysVal {
+  unsigned ArgNo;
+  const SysValParam *Info;
 };
 } // namespace
 
 static const SysValParam kSysVals[] = {
-    {kCallPid, "pid", true, {"pid_x", "pid_y", "pid_z"}},
-    {kCallTid, "tid", true, {"tid_x", "tid_y", "tid_z"}},
-    {kCallTidTG, "tidtg", true, {"tidtg_x", "tidtg_y", "tidtg_z"}},
-    {kCallSimdlane, "simdlane", false, {"simdlane", "", ""}},
-    {kCallNumProg, "numprog", true, {"numprog_x", "numprog_y", "numprog_z"}},
-    {kCallTGSize, "tgsize", true, {"tgsize_x", "tgsize_y", "tgsize_z"}},
-    {kCallSimdSize, "simdsize", false, {"simdsize", "", ""}},
-    {kCallNumSimd, "numsimd", false, {"numsimd", "", ""}},
-    {kCallSimdId, "simdid", false, {"simdid", "", ""}},
-    {kCallGridSize, "gridsize", true, {"gridsize_x", "gridsize_y", "gridsize_z"}},
-    {kCallTGIndex, "tgindex", false, {"tgindex", "", ""}},
+    {kCallPid, "pid", kMDThreadgroupPositionInGrid, true,
+     {"pid_x", "pid_y", "pid_z"}},
+    {kCallTid, "tid", kMDThreadPositionInGrid, true,
+     {"tid_x", "tid_y", "tid_z"}},
+    {kCallTidTG, "tidtg", kMDThreadPositionInTG, true,
+     {"tidtg_x", "tidtg_y", "tidtg_z"}},
+    {kCallSimdlane, "simdlane", kMDThreadIndexInSimdgroup, false,
+     {"simdlane", "", ""}},
+    {kCallNumProg, "numprog", kMDThreadgroupsPerGrid, true,
+     {"numprog_x", "numprog_y", "numprog_z"}},
+    {kCallTGSize, "tgsize", kMDThreadsPerThreadgroup, true,
+     {"tgsize_x", "tgsize_y", "tgsize_z"}},
+    {kCallSimdSize, "simdsize", kMDThreadsPerSimdgroup, false,
+     {"simdsize", "", ""}},
+    {kCallNumSimd, "numsimd", kMDSimdgroupsPerThreadgroup, false,
+     {"numsimd", "", ""}},
+    {kCallSimdId, "simdid", kMDSimdgroupIndexInThreadgroup, false,
+     {"simdid", "", ""}},
+    {kCallGridSize, "gridsize", kMDThreadsPerGrid, true,
+     {"gridsize_x", "gridsize_y", "gridsize_z"}},
+    {kCallTGIndex, "tgindex", kMDThreadIndexInThreadgroup, false,
+     {"tgindex", "", ""}},
 };
+
+namespace {
+/// How !air.kernel describes the type a buffer argument points to.
+struct BufferType {
+  StringRef Name = "float";
+  unsigned Size = 4;
+  unsigned Align = 4;
+};
+} // namespace
+
+// The MSL name of a scalar or of a 2-, 3- or 4-element vector type, or an
+// empty string for any other type.
+static std::string mslTypeName(Type *T) {
+  unsigned N = 1;
+  if (auto *VT = dyn_cast<FixedVectorType>(T)) {
+    N = VT->getNumElements();
+    if (N < 2 || N > 4)
+      return "";
+    T = VT->getElementType();
+  }
+  StringRef Name;
+  if (T->isHalfTy())
+    Name = "half";
+  else if (T->isBFloatTy())
+    Name = "bfloat";
+  else if (T->isFloatTy())
+    Name = "float";
+  else if (T->isDoubleTy())
+    Name = "double";
+  else if (T->isIntegerTy(8))
+    Name = "char";
+  else if (T->isIntegerTy(16))
+    Name = "short";
+  else if (T->isIntegerTy(32))
+    Name = "int";
+  else if (T->isIntegerTy(64))
+    Name = "long";
+  else
+    return "";
+  return N == 1 ? Name.str() : (Name + Twine(N)).str();
+}
+
+// The type a buffer argument points to, from the loads and stores through it
+// (as the AIR writer infers it). A pointee that is not a scalar or a short
+// vector, or none at all, keeps the default description (float, 4 bytes).
+static BufferType describeBuffer(Argument &Arg, const DataLayout &DL,
+                                 StringSaver &Names) {
+  BufferType BT;
+  Type *Pointee = metal::PointeeTypeMap::inferFromUsage(&Arg);
+  if (!Pointee)
+    return BT;
+  std::string Name = mslTypeName(Pointee);
+  if (Name.empty())
+    return BT;
+  BT.Name = Names.save(Name);
+  BT.Size = DL.getTypeAllocSize(Pointee);
+  BT.Align = DL.getABITypeAlign(Pointee).value();
+  return BT;
+}
 
 static Function *findDeclByPrefix(Module &M, StringRef Prefix) {
   for (Function &F : M)
@@ -114,8 +194,15 @@ static bool airSystemValues(Module &M) {
   auto &Ctx = M.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
   Type *Vec3 = FixedVectorType::get(I32, 3);
+  const DataLayout &DL = M.getDataLayout();
+  BumpPtrAllocator Alloc;
+  StringSaver Names(Alloc);
 
   bool Changed = false;
+  // The system-value parameters added to each kernel. They, not argument
+  // names, say which parameters are system values: a kernel's own argument
+  // may be named tid.
+  DenseMap<Function *, SmallVector<AddedSysVal, 4>> SysValArgs;
 
   SmallVector<Function *, 4> Funcs;
   for (Function &F : M)
@@ -183,14 +270,21 @@ static bool airSystemValues(Module &M) {
     for (UsedSysVal &USV : UsedSysVals) {
       Argument *SysArg = &*NewArgIt++;
       SysArg->setName(USV.Info->ParamName);
+      SysValArgs[NewF].push_back({SysArg->getArgNo(), USV.Info});
 
       if (USV.Info->IsVector) {
-        Value *Components[3];
-        for (int K = 0; K < 3; ++K) {
-          IRBuilder<> B(&*EntryBB.begin());
-          Components[K] = B.CreateExtractElement(
-              SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
-        }
+        // The components, extracted at the entry only for the calls that
+        // return an array (a vector result is the parameter itself, and its
+        // users' extractions stay where the calls were).
+        Value *Components[3] = {};
+        auto Component = [&](unsigned K) {
+          if (!Components[K]) {
+            IRBuilder<> B(&*EntryBB.begin());
+            Components[K] = B.CreateExtractElement(
+                SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
+          }
+          return Components[K];
+        };
         for (CallInst *CI : USV.Calls) {
           // The sysval call may return a <3 x i32> vector (extractelement
           // users) instead of the [3 x i32] array aggregate (extractvalue
@@ -207,7 +301,7 @@ static bool airSystemValues(Module &M) {
               Extracts.push_back(EV);
           for (ExtractValueInst *EV : Extracts) {
             unsigned Idx = EV->getIndices()[0];
-            EV->replaceAllUsesWith(Components[std::min(Idx, 2u)]);
+            EV->replaceAllUsesWith(Component(std::min(Idx, 2u)));
             EV->eraseFromParent();
           }
           // Any remaining users (e.g. a `freeze [3 x i32]` inserted by the
@@ -223,7 +317,7 @@ static bool airSystemValues(Module &M) {
             IRBuilder<> B(CI);
             Value *Agg = UndefValue::get(CI->getType());
             for (unsigned K = 0; K < 3; ++K)
-              Agg = B.CreateInsertValue(Agg, Components[K], {K});
+              Agg = B.CreateInsertValue(Agg, Component(K), {K});
             CI->replaceAllUsesWith(Agg);
           }
           CI->eraseFromParent();
@@ -249,9 +343,16 @@ static bool airSystemValues(Module &M) {
   // Emit !air.kernel metadata (always; skip if pre-baked).
   if (!M.getNamedMetadata(kNMDKernel)) {
     auto *KernelMD = M.getOrInsertNamedMetadata(kNMDKernel);
+    // Kernels are the functions marked "air-kernel" when the module marks
+    // any (as in AIRInlineNonKernel and AIRScalarArgsToConstantBuffers).
+    bool HaveKernelAttr = any_of(M, [](const Function &F) {
+      return !F.isDeclaration() && F.hasFnAttribute("air-kernel");
+    });
 
     for (Function &F : M) {
       if (F.isDeclaration())
+        continue;
+      if (HaveKernelAttr && !F.hasFnAttribute("air-kernel"))
         continue;
 
       bool IsCalled = false;
@@ -348,6 +449,7 @@ static bool airSystemValues(Module &M) {
         if (AS != 1 && AS != 2 && AS != 3)
           continue;
 
+        BufferType BT = describeBuffer(*F.getArg(I), DL, Names);
         StringRef ArgName = F.getArg(I)->getName();
         char NameBuf[16];
         if (ArgName.empty()) {
@@ -367,56 +469,26 @@ static bool airSystemValues(Module &M) {
              MDString::get(Ctx, kMDAddressSpace),
              ConstantAsMetadata::get(ConstantInt::get(I32, AS)),
              MDString::get(Ctx, kMDArgTypeSize),
-             ConstantAsMetadata::get(ConstantInt::get(I32, 4)),
+             ConstantAsMetadata::get(ConstantInt::get(I32, BT.Size)),
              MDString::get(Ctx, kMDArgTypeAlignSize),
-             ConstantAsMetadata::get(ConstantInt::get(I32, 4)),
-             MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, "float"),
+             ConstantAsMetadata::get(ConstantInt::get(I32, BT.Align)),
+             MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, BT.Name),
              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, ArgName)}));
         LocIdx++;
       }
 
-      // System value params (non-pointer, prefix-matched).
-      for (Argument &Arg : F.args()) {
-        Type *ArgTy = Arg.getType();
-        if (ArgTy->isPointerTy())
-          continue;
-        StringRef Name = Arg.getName();
-        StringRef AirAttr;
-        if (Name.starts_with("pid"))
-          AirAttr = kMDThreadgroupPositionInGrid;
-        else if (Name.starts_with("tidtg"))
-          AirAttr = kMDThreadPositionInTG;
-        else if (Name.starts_with("tid"))
-          AirAttr = kMDThreadPositionInGrid;
-        else if (Name.starts_with("simdlane"))
-          AirAttr = kMDThreadIndexInSimdgroup;
-        else if (Name.starts_with("numprog"))
-          AirAttr = kMDThreadgroupsPerGrid;
-        else if (Name.starts_with("tgsize"))
-          AirAttr = kMDThreadsPerThreadgroup;
-        else if (Name.starts_with("simdsize"))
-          AirAttr = kMDThreadsPerSimdgroup;
-        else if (Name.starts_with("numsimd"))
-          AirAttr = kMDSimdgroupsPerThreadgroup;
-        else if (Name.starts_with("simdid"))
-          AirAttr = kMDSimdgroupIndexInThreadgroup;
-        else if (Name.starts_with("gridsize"))
-          AirAttr = kMDThreadsPerGrid;
-        else if (Name.starts_with("tgindex"))
-          AirAttr = kMDThreadIndexInThreadgroup;
-        else
-          continue;
-
-        bool IsScalar = (Name == "simdlane" || Name == "simdsize" ||
-                         Name == "numsimd" || Name == "simdid" ||
-                         Name == "tgindex");
-        StringRef TypeName = IsScalar ? "uint" : "uint3";
-        ParamNodes.push_back(MDNode::get(
-            Ctx,
-            {ConstantAsMetadata::get(ConstantInt::get(I32, Arg.getArgNo())),
-             MDString::get(Ctx, AirAttr), MDString::get(Ctx, kMDArgTypeName),
-             MDString::get(Ctx, TypeName), MDString::get(Ctx, kMDArgName),
-             MDString::get(Ctx, Name)}));
+      // System-value params, in parameter order.
+      auto It = SysValArgs.find(&F);
+      if (It != SysValArgs.end()) {
+        for (const AddedSysVal &SV : It->second) {
+          StringRef TypeName = SV.Info->IsVector ? "uint3" : "uint";
+          ParamNodes.push_back(MDNode::get(
+              Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, SV.ArgNo)),
+                    MDString::get(Ctx, SV.Info->MDTag),
+                    MDString::get(Ctx, kMDArgTypeName),
+                    MDString::get(Ctx, TypeName), MDString::get(Ctx, kMDArgName),
+                    MDString::get(Ctx, F.getArg(SV.ArgNo)->getName())}));
+        }
       }
 
       auto *EmptyNode = MDNode::get(Ctx, {});

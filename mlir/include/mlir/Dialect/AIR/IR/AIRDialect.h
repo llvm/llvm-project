@@ -18,4 +18,9 @@
 
 #include "mlir/Dialect/AIR/IR/AIROpsDialect.h.inc"
 
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/AIR/IR/AIROps.h.inc"
+
 #endif // MLIR_DIALECT_AIR_IR_AIRDIALECT_H_

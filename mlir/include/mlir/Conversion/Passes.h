@@ -9,7 +9,6 @@
 #ifndef MLIR_CONVERSION_PASSES_H
 #define MLIR_CONVERSION_PASSES_H
 
-#include "mlir/Conversion/AGXToAGXIR/AGXToAGXIR.h"
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithAndMathToAPFloat/ArithToAPFloat.h"
@@ -19,6 +18,7 @@
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitCPass.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/ArithEmulateF64/ArithEmulateF64.h"
 #include "mlir/Conversion/ArmNeon2dToIntr/ArmNeon2dToIntr.h"
 #include "mlir/Conversion/ArmSMEToLLVM/ArmSMEToLLVM.h"
 #include "mlir/Conversion/ArmSMEToSCF/ArmSMEToSCF.h"
@@ -41,7 +41,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Conversion/GPUToAGXIR/GPUToAGXIRPass.h"
+#include "mlir/Conversion/GPUToAIR/GPUToAIRPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"

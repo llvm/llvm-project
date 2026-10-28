@@ -20,6 +20,8 @@ class AGXTTIImpl final : public BasicTTIImplBase<AGXTTIImpl> {
 
   const AGXSubtarget *ST;
   const AGXTargetLowering *TLI;
+  const Function *Fn;
+  mutable std::optional<unsigned> Pressure;
 
   const AGXSubtarget *getST() const { return ST; }
   const AGXTargetLowering *getTLI() const { return TLI; }
@@ -27,7 +29,7 @@ class AGXTTIImpl final : public BasicTTIImplBase<AGXTTIImpl> {
 public:
   explicit AGXTTIImpl(const AGXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()) {}
+        TLI(ST->getTargetLowering()), Fn(&F) {}
 
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     return true;
@@ -42,8 +44,11 @@ public:
     return AGX::GENERIC_ADDRESS;
   }
 
+  // No vector registers (class 1): vectors are scalarized, and the SLP and
+  // loop vectorizers, which only cost compile time here, give up at once.
+  // Neighbouring loads and stores still merge (getLoadStoreVecRegBitWidth).
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
-    return ST->getMaxGPRs();
+    return ClassID == 1 ? 0 : ST->getMaxGPRs();
   }
 
   TypeSize
@@ -69,12 +74,23 @@ public:
   }
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AS) const override {
-    return vectorizableChain(ChainSizeInBytes, Alignment, AS);
+    return vectorizableChain(ChainSizeInBytes, Alignment, AS) &&
+           ChainSizeInBytes <= maxStoreVectorBytes();
   }
+  /// The widest store chain worth merging in this function: a vector store
+  /// takes its values in consecutive registers, which costs copies and
+  /// spills where the registers are nearly all live.
+  unsigned maxStoreVectorBytes() const;
   static bool vectorizableChain(unsigned Bytes, Align Alignment, unsigned AS) {
-    return Alignment >= Align(4) && Bytes % 4 == 0 && Bytes <= 16 &&
+    // With -agx-element-aligned-vectors, chains of 8- and 16-bit elements
+    // below 4-byte alignment too (allowsMisalignedMemoryAccesses checks the
+    // element's alignment).
+    Align Need = elementAlignedVectors() ? Align(1) : Align(4);
+    return Alignment >= Need && Bytes % (Need.value() == 4 ? 4 : 2) == 0 &&
+           Bytes <= 16 &&
            (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
   }
+  static bool elementAlignedVectors();
 };
 
 } // namespace llvm

@@ -11,4 +11,5 @@ add_mlir_dialect_library(MLIRAIRDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRGPUDialect
+  MLIRSideEffectInterfaces
   )

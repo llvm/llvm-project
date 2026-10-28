@@ -14,7 +14,6 @@
 #include "mlir/InitAllPasses.h"
 
 #include "mlir/Conversion/Passes.h"
-#include "mlir/Dialect/AGX/Transforms/Passes.h"
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -68,7 +67,6 @@ void mlir::registerAllPasses() {
   // Dialect passes
   acc::registerOpenACCPasses();
   affine::registerAffinePasses();
-  agx::registerAGXPasses();
   amdgpu::registerAMDGPUPasses();
   registerAsyncPasses();
   arith::registerArithPasses();

@@ -38,6 +38,7 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFMinMaxNum(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerExpLog(SDValue Op, SelectionDAG &DAG) const;
@@ -57,6 +58,9 @@ public:
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue lowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
@@ -103,6 +107,8 @@ public:
     return VT == MVT::f32 || VT == MVT::f16;
   }
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override { return true; }
   bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override {

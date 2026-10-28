@@ -19,8 +19,19 @@ For each case the suite reports one of:
   COMPILE   llc failed
   ABSENT    the device rejected a probe for a function AIR does not have, as
             expected (these record what the catalogue must not emit)
+  SKIPPED   (AGX only) the case relies on a pass only the Metal pipeline runs
 
   air_gpu_suite.py --llc build/bin/llc [--group math-f32 ...] [--json out.json]
+
+With --agx-run, the suite runs the same kernels on AGX instead: each case is
+compiled by the AIR target's portable passes (llc -air-portable) and the AGX
+backend (llc -mtriple=agx, whose agx-lower-air pass reads that AIR), and run
+on the AGX Performance Simulator's agx_run, through
+llvm/utils/agx-checked/run_checked.py, against the same references. COMPILE
+then also covers what agx-lower-air does not lower.
+
+  air_gpu_suite.py --llc build/bin/llc --agx-run agx_run \
+      --objcopy build/bin/llvm-objcopy --readelf build/bin/llvm-readelf
 """
 
 import argparse
@@ -34,8 +45,12 @@ import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, os.environ.get('AIR_CLIENT', '/air/client'))
-from client import submit  # noqa: E402
+
+
+def submit(job, queue, timeout):
+    sys.path.insert(0, os.environ.get('AIR_CLIENT', '/air/client'))
+    from client import submit as service_submit
+    return service_submit(job, queue, timeout=timeout)
 
 N = 64  # threads per case: two SIMD-groups
 
@@ -91,7 +106,7 @@ class Case:
 
     def __init__(self, name, ins, out, body, decls, ref, gen=None, ulps=None,
                  source='', tgsize=N, full=None, abstol=None, absent=False, out_init=None,
-                 scalars=None, host_limit=None):
+                 scalars=None, host_limit=None, metal_only=None):
         self.name = name
         self.ins = ins
         self.out = out
@@ -112,6 +127,9 @@ class Case:
         # Needs something this device's OS lacks (a reason): a rejection is
         # then HOST-LIMIT, not a failure.
         self.host_limit = host_limit
+        # Depends on a pass that only the Metal pipeline runs (a reason):
+        # skipped on AGX.
+        self.metal_only = metal_only
 
 
 def kernel_ir(c):
@@ -240,7 +258,47 @@ def check(c, values, got):
     return bad, worst
 
 
-def run_group(cases, llc, queue, tmp, log):
+def compile_agx(llc, ir, tmp, tag, mcpu):
+    """The case through the AIR target's portable passes and the AGX backend."""
+    ll = os.path.join(tmp, tag + '.ll')
+    portable = os.path.join(tmp, tag + '.portable.ll')
+    obj = os.path.join(tmp, tag + '.o')
+    open(ll, 'w').write(ir)
+    for cmd in ([llc, '-mtriple=air', '-air-portable', ll, '-o', portable],
+                [llc, '-mtriple=agx', '-mcpu=' + mcpu, '-filetype=obj', portable, '-o', obj]):
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode:
+            return None, r.stderr.strip()[-400:]
+    return obj, None
+
+
+def scalar_field(ty, v):
+    """A scalar argument as a field of run_checked's 'param' argument."""
+    if TYPES[ty][2] == 8:
+        return ('ptr', struct.unpack('<Q', struct.pack('<' + TYPES[ty][1], v))[0])
+    return ('i32', struct.unpack('<I', struct.pack('<' + TYPES[ty][1], v).ljust(4, b'\0'))[0])
+
+
+def run_case_agx(c, obj, inputs, agx):
+    """Returns (output bytes, None) or (None, error)."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'agx-checked'))
+    from run_checked import launch
+    out = pack(c.out, c.out_init) if c.out_init is not None else bytes(N * TYPES[c.out][2])
+    if c.scalars is not None:
+        args = [('buf', out)] + [('param', [scalar_field(t, v)]) for t, v in c.scalars]
+        index = 0
+    else:
+        args = [('buf', d) for d in inputs] + [('buf', out)]
+        index = len(inputs)
+    try:
+        r = launch(obj, c.name, args, (N, 1, 1), (c.tgsize, 1, 1), agx['run'], agx['objcopy'],
+                   agx['readelf'])
+    except (RuntimeError, KeyError, subprocess.TimeoutExpired) as e:
+        return None, str(e)[-400:]
+    return r.buffers[index], None
+
+
+def run_group(cases, llc, queue, tmp, log, agx=None):
     rng = random.Random(1234)
     data = {}
     for c in cases:
@@ -256,6 +314,22 @@ def run_group(cases, llc, queue, tmp, log):
         data[c.name] = values
 
     results = {}
+    if agx:
+        for c in cases:
+            if c.metal_only:
+                results[c.name] = {'status': 'SKIPPED', 'detail': c.metal_only}
+                continue
+            obj, err = compile_agx(llc, module_ir([c]), tmp, c.name, agx['mcpu'])
+            if obj is None:
+                results[c.name] = {'status': 'ABSENT' if c.absent else 'COMPILE', 'detail': err}
+                continue
+            values = data[c.name]
+            raw, err = run_case_agx(c, obj, [pack(t, v) for t, v in zip(c.ins, values)], agx)
+            if raw is None:
+                results[c.name] = {'status': 'REJECTED', 'detail': err}
+                continue
+            results[c.name] = verdict(c, values, unpack(c.out, raw, N))
+        return results
     air, err = compile_air(llc, module_ir(cases), tmp, 'group')
     rejected_together = False
     if air is None:
@@ -283,17 +357,20 @@ def run_group(cases, llc, queue, tmp, log):
             results[c.name] = {'status': 'MISMATCH', 'detail': 'expected the device to reject it'}
             continue
         raw = base64.b64decode(reply['result']['buffers'][0]['data'])
-        got = unpack(c.out, raw, N)
-        bad, worst = check(c, values, got)
-        r = {'status': 'MISMATCH' if bad else 'PASS'}
-        if c.ulps is not None:
-            r['max_ulps'] = worst
-        if bad:
-            i, g, w = bad[0]
-            r['detail'] = '%d/%d wrong; thread %d: got %r want %r (inputs %r)' % (
-                len(bad), N, i, g, w, [v[i] for v in values])
-        results[c.name] = r
+        results[c.name] = verdict(c, values, unpack(c.out, raw, N))
     return results
+
+
+def verdict(c, values, got):
+    bad, worst = check(c, values, got)
+    r = {'status': 'MISMATCH' if bad else 'PASS'}
+    if c.ulps is not None:
+        r['max_ulps'] = worst
+    if bad:
+        i, g, w = bad[0]
+        r['detail'] = '%d/%d wrong; thread %d: got %r want %r (inputs %r)' % (
+            len(bad), N, i, g, w, [v[i] for v in values])
+    return r
 
 
 # ---------------------------------------------------------------------------
@@ -687,6 +764,7 @@ def group_threadgroup():
              {'declare { i32, i32, i32 } @air.thread_position_in_threadgroup.v3i32()'},
              reverse, tgsize=64, source='AIRTGBarrierInsert')
     c.full = tg_kernel(c.name, rev.replace('BARRIER\n', ''))
+    c.metal_only = 'relies on air-tg-barrier-insert, which only the Metal pipeline runs'
     cases.append(c)
     # Threadgroup atomic: every thread adds its input; after a barrier each
     # thread reads the threadgroup total.
@@ -1282,7 +1360,13 @@ def main():
     ap.add_argument('--module-suffix', default='',
                     help='IR text appended to every module, e.g. named metadata')
     ap.add_argument('--keep', help='keep the generated .ll/.air files in this directory')
+    ap.add_argument('--agx-run', help="run on AGX: the AGX Performance Simulator's agx_run")
+    ap.add_argument('--mcpu', default='agx-g14g', help='AGX processor (with --agx-run)')
+    ap.add_argument('--objcopy', default='llvm-objcopy')
+    ap.add_argument('--readelf', default='llvm-readelf')
     args = ap.parse_args()
+    agx = args.agx_run and {'run': args.agx_run, 'mcpu': args.mcpu, 'objcopy': args.objcopy,
+                            'readelf': args.readelf}
 
     global MODULE_SUFFIX
     MODULE_SUFFIX = args.module_suffix.replace('\\n', '\n')
@@ -1292,7 +1376,7 @@ def main():
         os.makedirs(tmp, exist_ok=True)
         for g in args.group or sorted(GROUPS):
             print('== %s' % g)
-            res = run_group(GROUPS[g](), args.llc, args.queue, tmp, print)
+            res = run_group(GROUPS[g](), args.llc, args.queue, tmp, print, agx)
             for name, r in res.items():
                 extra = (' max_ulps=%d' % r['max_ulps']) if 'max_ulps' in r else ''
                 print('%-9s %-28s%s %s' % (r['status'], name, extra, r.get('detail', '')))
@@ -1304,7 +1388,7 @@ def main():
     print('summary: ' + ', '.join('%s %d' % kv for kv in sorted(counts.items())))
     if args.json:
         json.dump(all_results, open(args.json, 'w'), indent=1)
-    return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT'} else 0
+    return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT', 'SKIPPED'} else 0
 
 
 if __name__ == '__main__':

@@ -13,7 +13,6 @@
 
 #include "mlir/InitAllDialects.h"
 
-#include "mlir/Dialect/AGX/IR/AGXDialect.h"
 #include "mlir/Dialect/AIR/IR/AIRDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialectDecl.h"
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
@@ -48,7 +47,6 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
-#include "mlir/Dialect/LLVMIR/AGXIRDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -110,7 +108,6 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Target/LLVM/AGXIR/Target.h"
 #include "mlir/Target/LLVM/AIR/Target.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
@@ -121,8 +118,6 @@
 void mlir::registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
-                  agx::AGXDialect,
-                  AGXIR::AGXIRDialect,
                   affine::AffineDialect,
                   air::AIRDialect,
                   amdgpu::AMDGPUDialect,
@@ -220,7 +215,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   air::registerAIRTargetInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
-  AGXIR::registerAGXIRTargetInterfaceExternalModels(registry);
   ROCDL::registerROCDLTargetInterfaceExternalModels(registry);
   spirv::registerSPIRVTargetInterfaceExternalModels(registry);
   xevm::registerXeVMTargetInterfaceExternalModels(registry);
