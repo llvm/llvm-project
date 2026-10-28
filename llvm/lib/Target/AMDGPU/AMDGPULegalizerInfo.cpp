@@ -1404,7 +1404,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, F32, F32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
+  getActionDefinitionsBuilder(G_FPOWI)
+      .clampScalar(0, F32, F32)
+      .scalarize(0)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -2338,7 +2341,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
     .unsupported();
 
-  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
+  getActionDefinitionsBuilder(G_PREFETCH)
+      .customFor({Constant32Ptr})
+      .alwaysLegal();
 
   getActionDefinitionsBuilder(
       {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
@@ -2403,6 +2408,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_PREFETCH:
     return legalizeLoad(Helper, MI);
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI);
@@ -3516,7 +3522,8 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   MachineRegisterInfo &MRI = *B.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
 
-  Register PtrReg = MI.getOperand(1).getReg();
+  unsigned PtrIdx = MI.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
+  Register PtrReg = MI.getOperand(PtrIdx).getReg();
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AddrSpace = PtrTy.getAddressSpace();
 
@@ -3524,7 +3531,7 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
     auto Cast = B.buildAddrSpaceCast(ConstPtr, PtrReg);
     Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(Cast.getReg(0));
+    MI.getOperand(PtrIdx).setReg(Cast.getReg(0));
     Observer.changedInstr(MI);
     return true;
   }
@@ -8609,9 +8616,25 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_queue_ptr:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::QUEUE_PTR);
-  case Intrinsic::amdgcn_implicit_buffer_ptr:
+  case Intrinsic::amdgcn_implicit_buffer_ptr: {
+    const Function &Fn = B.getMF().getFunction();
+    const SIMachineFunctionInfo *MFI =
+        B.getMF().getInfo<SIMachineFunctionInfo>();
+    if (!MFI->getUserSGPRInfo().hasImplicitBufferPtr()) {
+      const char *Error =
+          ST.hasArchitectedFlatScratch()
+              ? "intrinsic not supported on subtarget"
+          : !ST.isMesa3DOS() ? "intrinsic not supported for OS"
+                             : "intrinsic not supported for calling convention";
+      Fn.getContext().diagnose(
+          DiagnosticInfoUnsupported(Fn, Error, MI.getDebugLoc()));
+      B.buildUndef(MI.getOperand(0).getReg());
+      MI.eraseFromParent();
+      return true;
+    }
     return legalizePreloadedArgIntrin(
       MI, MRI, B, AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR);
+  }
   case Intrinsic::amdgcn_dispatch_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::DISPATCH_ID);

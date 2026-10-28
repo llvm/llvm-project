@@ -2748,9 +2748,14 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   // Determine whether we are converting to unsigned or signed.
   bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
-
+  // This handles converstion to bool.
+  if (DestType->isBooleanType()) {
+    Result = APSInt(APInt(1, !Value.isZero()), /*isUnsigned=*/true);
+    return true;
+  }
   Result = APSInt(DestWidth, !DestSigned);
   bool ignored;
+
   if (Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &ignored)
       & APFloat::opInvalidOp)
     return HandleOverflow(Info, E, Value, DestType);
@@ -6481,7 +6486,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    const Stmt *LoopOrSwitch = nullptr;
+    if (B->isNamed()) {
+      LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
+      if (!LoopOrSwitch) {
+        Info.FFDiag(S->getBeginLoc(),
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
+        return ESR_Failed;
+      }
+    }
+
+    Info.BreakContinueStack.push_back(LoopOrSwitch);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 
@@ -20378,7 +20396,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
-  case CK_BitCast:
   case CK_Dependent:
   case CK_LValueBitCast:
   case CK_ARCProduceObject:
@@ -20395,6 +20412,16 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
+
+  case CK_BitCast: {
+    APValue Src;
+    if (!Evaluate(Src, Info, SubExpr))
+      return false;
+    APValue Dst;
+    if (!handleRValueToRValueBitCast(Info, Dst, Src, E))
+      return false;
+    return Success(Dst, E);
+  }
 
   case CK_MemberPointerToBoolean:
   case CK_PointerToBoolean:
@@ -22797,6 +22824,13 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
 
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
+
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
                                   /*SProxy=*/nullptr);
@@ -22829,6 +22863,13 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,

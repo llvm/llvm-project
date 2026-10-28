@@ -8,9 +8,9 @@
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[S_NAME:%[0-9]+]] = OpString "S"
 ; CHECK-DAG: [[LOCAL_NAME:%[0-9]+]] = OpString "local"
-; CHECK-DAG: [[S:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[S_NAME]]
-; CHECK-DAG: [[PTR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypePointer [[S]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[LOCAL_NAME]] [[PTR]]
+; CHECK:     [[S:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[S_NAME]]
+; CHECK:     [[PTR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypePointer [[S]]
+; CHECK:     OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[LOCAL_NAME]] [[PTR]]
 
 target triple = "spirv64-unknown-unknown"
 

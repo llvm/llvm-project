@@ -992,7 +992,8 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to calls of compiler generated
     functions implementing these operations in software.
-    The LLVM dialect is used for LinkonceODR linkage of the generated functions.
+    The LLVM dialect is used for LinkonceODR linkage of the generated functions,
+    unless `set-llvm-linkage` is disabled.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -1012,6 +1013,9 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
     Option<"convertCtlz", "convert-ctlz", "bool", /*default=*/"false",
            "Convert math.ctlz to a software implementation. Enable "
            "for targets that do not natively support ctlz.">,
+    Option<"setLLVMLinkage", "set-llvm-linkage", "bool", /*default=*/"true",
+           "Give the generated functions LinkonceODR LLVM linkage. Disable "
+           "for targets that do not lower through LLVM.">,
   ];
 }
 
@@ -1568,6 +1572,7 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
 def TosaToTensorPass : Pass<"tosa-to-tensor"> {
   let summary = "Lower TOSA to the Tensor dialect";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "tensor::TensorDialect",
   ];
   let description = [{
@@ -1615,7 +1620,7 @@ def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
   let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
-    "vector::VectorDialect", "nvgpu::NVGPUDialect"
+    "vector::VectorDialect"
   ];
 
   let options = [

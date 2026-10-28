@@ -2048,7 +2048,7 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
@@ -2203,7 +2203,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2579,7 +2579,12 @@ void ChainedFixupsSection::finalizeContents() {
     const Location &firstLoc = locations[i];
     fixupSegments.emplace_back(firstLoc.isec->parent->parent);
     while (i < count && sameSegment(locations[i], firstLoc)) {
-      uint32_t pageIdx = locations[i].offset / pageSize;
+      uint64_t pageIdx = locations[i].offset / pageSize;
+      if (pageIdx >= UINT16_MAX) {
+        fatal("page index in " + locations[i].isec->getSegName() + "," +
+              locations[i].isec->getName() + " too large for chained fixups; " +
+              "use -no_fixup_chains");
+      }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;

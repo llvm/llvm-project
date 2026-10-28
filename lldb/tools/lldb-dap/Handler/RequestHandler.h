@@ -174,7 +174,7 @@ protected:
 };
 
 /// A specialized base class for attach and launch requests that delays sending
-/// the response until 'configurationDone' is received.
+/// a successful response until 'configurationDone' is received.
 template <typename Args, typename Resp>
 class DelayedResponseRequestHandler : public BaseRequestHandler {
   using BaseRequestHandler::BaseRequestHandler;
@@ -191,8 +191,10 @@ class DelayedResponseRequestHandler : public BaseRequestHandler {
     if (llvm::Error err = arguments.takeError())
       return SendError(std::move(err), response);
 
-    BuildErrorResponse(Run(*arguments), response);
+    if (llvm::Error err = Run(*arguments))
+      return SendError(std::move(err), response);
 
+    response.success = true;
     dap.on_configuration_done = [this, response]() mutable { Send(response); };
 
     // The 'configurationDone' request is not sent until after 'initialized'
