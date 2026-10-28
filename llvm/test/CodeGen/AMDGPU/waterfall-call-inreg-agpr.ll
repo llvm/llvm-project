@@ -2,13 +2,13 @@
 ; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck %s
 
 ; On gfx90a, a 32-bit FLAT load may land in AV_32 (VGPR/AGPR). When passed
-; inreg to an amdgpu_cs_chain_preserve call, SIInstrInfo must copy the
-; ScalarOp into a VGPR-only class before v_readfirstlane_b32; otherwise
-; -verify-machineinstrs rejects it.
+; inreg to a call from an amdgpu_cs_chain_preserve function, SIInstrInfo must
+; copy the ScalarOp into a VGPR-only class before v_readfirstlane_b32;
+; otherwise -verify-machineinstrs rejects it.
 
 @G = global ptr addrspace(3) poison
 
-declare amdgpu_cs_chain_preserve void @callee(ptr addrspace(3) inreg, ptr addrspace(3))
+declare void @callee(ptr addrspace(3) inreg, ptr addrspace(3))
 
 define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-LABEL: caller:

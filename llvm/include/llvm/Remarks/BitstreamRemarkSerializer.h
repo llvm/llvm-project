@@ -22,8 +22,6 @@
 namespace llvm {
 namespace remarks {
 
-struct Remarks;
-
 /// Serialize the remarks to LLVM bitstream.
 /// This class provides ways to emit remarks in the LLVM bitstream format and
 /// its associated metadata.

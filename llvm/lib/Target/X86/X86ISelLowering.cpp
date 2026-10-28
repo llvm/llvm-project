@@ -2322,13 +2322,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
     auto setGroup = [&] (MVT VT) {
-      setOperationAction(ISD::FADD,               VT, Legal);
       setOperationAction(ISD::STRICT_FADD,        VT, Legal);
-      setOperationAction(ISD::FSUB,               VT, Legal);
       setOperationAction(ISD::STRICT_FSUB,        VT, Legal);
-      setOperationAction(ISD::FMUL,               VT, Legal);
       setOperationAction(ISD::STRICT_FMUL,        VT, Legal);
-      setOperationAction(ISD::FDIV,               VT, Legal);
       setOperationAction(ISD::STRICT_FDIV,        VT, Legal);
       setOperationAction(ISD::FSQRT,              VT, Legal);
       setOperationAction(ISD::STRICT_FSQRT,       VT, Legal);
@@ -2351,7 +2347,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
 
-      setOperationAction(ISD::FMA,                VT, Legal);
       setOperationAction(ISD::STRICT_FMA,         VT, Legal);
       setOperationAction(ISD::VSELECT,            VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
@@ -2440,6 +2435,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // Without VLX, these are widened to 512-bit compares during isel.
     setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
+
+    // Without VLX, v8f16/v16f16 are widened to 512-bit ops during isel.
+    for (auto VT : {MVT::f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
+        setOperationAction(Opc, VT, Legal);
 
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
@@ -25990,7 +25991,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       isNullConstant(Cond.getOperand(1).getOperand(1))) {
     SDValue Cmp = Cond.getOperand(1);
     SDValue CmpOp0 = Cmp.getOperand(0);
-    unsigned CondCode = Cond.getConstantOperandVal(0);
+    X86::CondCode CondCode = X86::CondCode(Cond.getConstantOperandVal(0));
 
     // Special handling for __builtin_ffs(X) - 1 pattern which looks like
     // (select (seteq X, 0), -1, (cttz_zero_poison X)). Disable the special
@@ -26096,7 +26097,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == X86ISD::SUB) {
-    unsigned CondCode = CC->getAsZExtVal();
+    X86::CondCode CondCode = X86::CondCode(CC->getAsZExtVal());
 
     if ((CondCode == X86::COND_AE || CondCode == X86::COND_B) &&
         (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
@@ -58639,6 +58640,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
        !Subtarget.hasAnyFMA()) &&
       !(ScalarVT == MVT::f16 && Subtarget.hasFP16()) &&
       !(ScalarVT == MVT::bf16 && Subtarget.hasAVX10_2()))
+    return SDValue();
+
+  // Without VLX, strict v8f16/v16f16 FMAs are scalarized, not widened.
+  if (IsStrict && ScalarVT == MVT::f16 && VT.isVector() &&
+      !TLI.isOperationLegal(ISD::STRICT_FMA, VT))
     return SDValue();
 
   auto invertIfNegative = [&DAG, &TLI, &DCI](SDValue &V) {

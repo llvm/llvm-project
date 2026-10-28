@@ -1449,6 +1449,10 @@ def err_omp_unknown_adjust_args_op
     : Error<
           "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
           "'need_device_addr',}0 or 'nothing'">;
+def err_omp_num_args_invalid_form
+    : Error<"'omp_num_args' %select{is only allowed as a bound of a parameter "
+            "range|may only be followed by '+' or '-' and a constant logical "
+            "offset}0">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1565,6 +1569,9 @@ def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def warn_omp_default_deprecated : Warning<"'default' clause for"
   " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
+def err_omp_metadirective_standalone_variant : Error<
+  "standalone directive variants are not supported in a 'metadirective' "
+  "with non-constant user conditions">;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;
