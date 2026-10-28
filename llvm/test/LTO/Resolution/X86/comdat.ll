@@ -48,15 +48,15 @@ bb11:
 ; CHECK: $c1 = comdat any
 ; CHECK: $c2 = comdat any
 
-; CHECK-DAG: @v1 = weak_odr global i32 42, comdat($c1)
+; CHECK-DAG: @v1 = weak_odr global i32 42, comdat($c1), !guid !{{[0-9]+}}
 
-; CHECK-DAG: @r11 = global ptr @v1{{$}}
-; CHECK-DAG: @r12 = global ptr @f1{{$}}
+; CHECK-DAG: @r11 = global ptr @v1, !guid !{{[0-9]+}}{{$}}
+; CHECK-DAG: @r12 = global ptr @f1, !guid !{{[0-9]+}}{{$}}
 
-; CHECK-DAG: @r21 = global ptr @v1{{$}}
-; CHECK-DAG: @r22 = global ptr @f1{{$}}
+; CHECK-DAG: @r21 = global ptr @v1, !guid !{{[0-9]+}}{{$}}
+; CHECK-DAG: @r22 = global ptr @f1, !guid !{{[0-9]+}}{{$}}
 
-; CHECK-DAG: @v1.1 = internal global i32 41, comdat($c2)
+; CHECK-DAG: @v1.1 = internal global i32 41, comdat($c2), !guid !{{[0-9]+}}
 
 ; CHECK-DAG: @a11 = alias i32, ptr @v1{{$}}
 ; CHECK-DAG: @a12 = alias i16, ptr @v1{{$}}
@@ -70,14 +70,14 @@ bb11:
 ; CHECK-DAG: @a23 = alias i32 (ptr), ptr @f1.2{{$}}
 ; CHECK-DAG: @a24 = alias i16, ptr @f1.2{{$}}
 
-; CHECK:      define weak_odr dso_local i32 @f1(ptr %0) comdat($c1) {
+; CHECK:      define weak_odr dso_local i32 @f1(ptr %0) comdat($c1) !guid !{{[0-9]+}} {
 ; CHECK-NEXT: bb10:
 ; CHECK-NEXT:   br label %bb11{{$}}
 ; CHECK:      bb11:
 ; CHECK-NEXT:   ret i32 42
 ; CHECK-NEXT: }
 
-; CHECK:      define internal i32 @f1.2(ptr %this) comdat($c2) {
+; CHECK:      define internal i32 @f1.2(ptr %this) comdat($c2) !guid !{{[0-9]+}} {
 ; CHECK-NEXT: bb20:
 ; CHECK-NEXT:   store ptr %this, ptr null
 ; CHECK-NEXT:   br label %bb21

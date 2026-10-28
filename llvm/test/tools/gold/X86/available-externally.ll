@@ -25,5 +25,5 @@ define available_externally void @zed() {
   ret void
 }
 
-; CHECK-DAG: define available_externally void @bar() {
-; CHECK-DAG: define void @zed() {
+; CHECK-DAG: define available_externally void @bar() !guid !{{[0-9]+}} {
+; CHECK-DAG: define void @zed() !guid !{{[0-9]+}} {

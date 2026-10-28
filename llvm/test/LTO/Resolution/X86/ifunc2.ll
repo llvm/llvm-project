@@ -9,11 +9,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @foo = ifunc i32 (), ptr @foo_resolver.2
 @foo = ifunc i32 (), i32 ()* ()* @foo_resolver
 
-; CHECK: define internal ptr @foo_resolver.2() {
+; CHECK: define internal ptr @foo_resolver.2() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: ret ptr inttoptr (i32 1 to ptr)
 define weak i32 ()* @foo_resolver() {
   ret i32 ()* inttoptr (i32 1 to i32 ()*)
 }
 
-; CHECK: define ptr @foo_resolver() {
+; CHECK: define ptr @foo_resolver() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: ret ptr inttoptr (i32 2 to ptr)

@@ -25,11 +25,11 @@ declare void @bar()
 
 ; PASS1: @bar = alias void (), ptr @zed
 
-; PASS1:      define void @foo() {
+; PASS1:      define void @foo() !guid !{{[0-9]+}} {
 ; PASS1-NEXT:   call void @bar()
 ; PASS1-NEXT:   ret void
 ; PASS1-NEXT: }
 
-; PASS2:      define void @zed() {
+; PASS2:      define void @zed() !guid !{{[0-9]+}} {
 ; PASS2-NEXT:   ret void
 ; PASS2-NEXT: }

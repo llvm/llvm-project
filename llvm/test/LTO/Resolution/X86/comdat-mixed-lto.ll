@@ -18,7 +18,7 @@
 ; RUN: llvm-dis %t3.0.0.preopt.bc -o - | FileCheck %s
 
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @C }]
-; CHECK: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4
+; CHECK: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4, !guid !{{[0-9]+}}
 ; CHECK-NOT: declare
 ; CHECK: declare dso_local void @__cxx_global_var_init() section ".text.startup"
 ; CHECK-NOT: declare
@@ -28,9 +28,9 @@
 ; RUN: llvm-dis %t4.0.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK2
 
 ; CHECK2: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @C }]
-; CHECK2: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4
+; CHECK2: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4, !guid !{{[0-9]+}}
 ; CHECK2: declare dso_local void @__cxx_global_var_init() section ".text.startup"
-; CHECK2: define available_externally dso_local void @testglobfunc() section ".text.startup" {
+; CHECK2: define available_externally dso_local void @testglobfunc() section ".text.startup" !guid !{{[0-9]+}} {
 
 ; ModuleID = 'comdat-mixed-lto.o'
 source_filename = "comdat-mixed-lto.cpp"

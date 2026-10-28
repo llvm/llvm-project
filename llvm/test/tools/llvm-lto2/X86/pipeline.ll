@@ -23,7 +23,7 @@ define void @patatino() {
   ret void
 }
 
-; CUSTOM: define void @patatino() {
+; CUSTOM: define void @patatino() !guid !{{[0-9]+}} {
 ; CUSTOM-NEXT:   ret void
 ; CUSTOM-NEXT: }
 
