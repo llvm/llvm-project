@@ -542,9 +542,8 @@ define amdgpu_ps <2 x i16> @s_mul_v2i16(<2 x i16> inreg %num, <2 x i16> inreg %d
 ; GFX7-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX7-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX7-NEXT:    s_mul_i32 s1, s2, s3
-; GFX7-NEXT:    s_add_i32 s1, s1, s1
 ; GFX7-NEXT:    s_add_i32 s0, s0, s0
-; GFX7-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX7-NEXT:    s_add_i32 s1, s1, s1
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
@@ -639,7 +638,6 @@ define <2 x i16> @v_mul_v2i16(<2 x i16> %num, <2 x i16> %den) {
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v1, v2, v3
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1

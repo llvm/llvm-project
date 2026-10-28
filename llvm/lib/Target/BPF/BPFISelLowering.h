@@ -47,6 +47,10 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
+  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+
   bool getHasAlu32() const { return HasAlu32; }
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasJmpExt() const { return HasJmpExt; }
@@ -77,6 +81,7 @@ private:
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+  bool HasLoadAcqStoreRel;
 
   // Allows Misalignment
   bool AllowsMisalignedMemAccess;

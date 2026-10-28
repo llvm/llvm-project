@@ -5215,10 +5215,8 @@ struct BinaryOp {
 } // end anonymous namespace
 
 /// Try to map \p V into a BinaryOp, and return \c std::nullopt on failure.
-static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
-                                             AssumptionCache &AC,
-                                             const DominatorTree &DT,
-                                             const Instruction *CtxI) {
+static std::optional<BinaryOp> MatchBinaryOp(Value *V,
+                                             const DominatorTree &DT) {
   auto *Op = dyn_cast<Operator>(V);
   if (!Op)
     return std::nullopt;
@@ -5726,7 +5724,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
 
   const SCEV *Accum = nullptr;
   SCEVFlags Flags = SCEV::FlagNone;
-  if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
+  if (auto BO = MatchBinaryOp(BEValueV, DT)) {
     if (BO->Opcode != Instruction::Add)
       return nullptr;
 
@@ -5854,7 +5852,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
            cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
         SCEVFlags Flags = SCEV::FlagNone;
 
-        if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
+        if (auto BO = MatchBinaryOp(BEValueV, DT)) {
           if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
             if (BO->IsNUW)
               Flags = setFlags(Flags, SCEV::FlagNUW);
@@ -7618,8 +7616,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     return getUnknown(V);
 
   Operator *U = cast<Operator>(V);
-  if (auto BO =
-          MatchBinaryOp(U, getDataLayout(), AC, DT, dyn_cast<Instruction>(V))) {
+  if (auto BO = MatchBinaryOp(U, DT)) {
     bool IsConstArg = isa<ConstantInt>(BO->RHS);
     switch (BO->Opcode) {
     case Instruction::Add:
@@ -7635,8 +7632,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
           }
         }
         Ops.push_back(BO->RHS);
-        auto NewBO = MatchBinaryOp(BO->LHS, getDataLayout(), AC, DT,
-                                   dyn_cast<Instruction>(V));
+        auto NewBO = MatchBinaryOp(BO->LHS, DT);
         if (!NewBO ||
             (BO->Opcode == Instruction::Add &&
              (NewBO->Opcode != Instruction::Add &&
@@ -7854,8 +7850,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   const SCEV *RHS;
 
   Operator *U = cast<Operator>(V);
-  if (auto BO =
-          MatchBinaryOp(U, getDataLayout(), AC, DT, dyn_cast<Instruction>(V))) {
+  if (auto BO = MatchBinaryOp(U, DT)) {
     switch (BO->Opcode) {
     case Instruction::Add: {
       // The simple thing to do would be to just call getSCEV on both operands
@@ -7896,8 +7891,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         else
           AddOps.push_back(getSCEV(BO->RHS));
 
-        auto NewBO = MatchBinaryOp(BO->LHS, getDataLayout(), AC, DT,
-                                   dyn_cast<Instruction>(V));
+        auto NewBO = MatchBinaryOp(BO->LHS, DT);
         if (!NewBO || (NewBO->Opcode != Instruction::Add &&
                        NewBO->Opcode != Instruction::Sub)) {
           AddOps.push_back(getSCEV(BO->LHS));
@@ -7928,8 +7922,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         }
 
         MulOps.push_back(getSCEV(BO->RHS));
-        auto NewBO = MatchBinaryOp(BO->LHS, getDataLayout(), AC, DT,
-                                   dyn_cast<Instruction>(V));
+        auto NewBO = MatchBinaryOp(BO->LHS, DT);
         if (!NewBO || NewBO->Opcode != Instruction::Mul) {
           MulOps.push_back(getSCEV(BO->LHS));
           break;
@@ -8219,8 +8212,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return getZeroExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::SExt:
-    if (auto BO = MatchBinaryOp(U->getOperand(0), getDataLayout(), AC, DT,
-                                dyn_cast<Instruction>(V))) {
+    if (auto BO = MatchBinaryOp(U->getOperand(0), DT)) {
       // The NSW flag of a subtract does not always survive the conversion to
       // A + (-1)*B.  By pushing sign extension onto its operands we are much
       // more likely to preserve NSW and allow later AddRec optimisations.
@@ -11579,6 +11571,10 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
   if (!ArLHS || ArLHS->getLoop() != L)
     return std::nullopt;
 
+  // Even if both are valid, we need to consistently choose the unsigned or the
+  // signed predicate for the monotonicity and backedge checks below, not
+  // mixtures of both. For now, prefer the unsigned predicate.
+  Pred = Pred.dropSameSign();
   auto MonotonicType = getMonotonicPredicateType(ArLHS, Pred);
   if (!MonotonicType)
     return std::nullopt;
@@ -13241,45 +13237,19 @@ bool ScalarEvolution::isImpliedCondOperandsHelper(CmpPredicate Pred,
                                                   const SCEV *RHS,
                                                   const SCEV *FoundLHS,
                                                   const SCEV *FoundRHS) {
-  switch (Pred) {
-  default:
-    llvm_unreachable("Unexpected CmpPredicate value!");
-  case ICmpInst::ICMP_EQ:
-  case ICmpInst::ICMP_NE:
+  if (ICmpInst::isEquality(Pred)) {
     if (HasSameValue(LHS, FoundLHS) && HasSameValue(RHS, FoundRHS))
       return true;
-    break;
-  case ICmpInst::ICMP_SLT:
-  case ICmpInst::ICMP_SLE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SLE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SGE, RHS, FoundRHS))
+  } else {
+    ICmpInst::Predicate NonStrictPred = ICmpInst::getNonStrictPredicate(Pred);
+    if (isKnownViaNonRecursiveReasoning(NonStrictPred, LHS, FoundLHS) &&
+        isKnownViaNonRecursiveReasoning(
+            ICmpInst::getSwappedPredicate(NonStrictPred), RHS, FoundRHS))
       return true;
-    break;
-  case ICmpInst::ICMP_SGT:
-  case ICmpInst::ICMP_SGE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SGE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SLE, RHS, FoundRHS))
-      return true;
-    break;
-  case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_ULE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_UGE, RHS, FoundRHS))
-      return true;
-    break;
-  case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_UGE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_UGE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, RHS, FoundRHS))
-      return true;
-    break;
   }
 
   // Maybe it can be proved via operations?
-  if (isImpliedViaOperations(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  return false;
+  return isImpliedViaOperations(Pred, LHS, RHS, FoundLHS, FoundRHS);
 }
 
 bool ScalarEvolution::isImpliedCondOperandsViaRanges(
@@ -13846,6 +13816,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         auto [GELHS, GERHS] = SwapIfInverted(OrigRHS, OrigStart);
         if (isLoopEntryGuardedByCond(L, CondGE, GELHS, GERHS) ||
             isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+          return true;
+
+        if ((GuardedRHS != GELHS || GuardedStart != GERHS) &&
+            isKnownPredicate(CondGE, GELHS, GERHS))
           return true;
 
         // (RHS > Start - 1) implies RHS >= Start.
