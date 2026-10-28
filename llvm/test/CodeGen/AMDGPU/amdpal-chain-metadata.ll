@@ -27,7 +27,6 @@
 ; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 12{{$}}
 
 ; Indirect chain calls don't contribute to the stack size.
-; Indirect chain calls don't contribute to the stack size.
 ; CHECK-LABEL: {{^}}chain_indirect_chain_and_wwf:
 ; CHECK:         .set .Lchain_indirect_chain_and_wwf.private_seg_size, 64+max(.Lwwf_callee_alloca.private_seg_size){{$}}
 ; CHECK:         .set .Lchain_indirect_chain_and_wwf.has_indirect_call, 1{{$}}
@@ -53,6 +52,10 @@
 ; CHECK-LABEL: {{^}}chain_own_and_callee_stack:
 ; EXTSTACK0:     .set .Lchain_own_and_callee_stack.private_seg_size, 32+max(.Lwwf_no_local_stack_to_gfx_with_stack.private_seg_size){{$}}
 ; EXTSTACK48:    .set .Lchain_own_and_callee_stack.private_seg_size, 32+max(48, .Lwwf_no_local_stack_to_gfx_with_stack.private_seg_size){{$}}
+
+; CHECK-LABEL: {{^}}chain_realign_stack:
+; EXTSTACK0:     .set .Lchain_realign_stack.private_seg_size, 256+max(.Lgfx_stack_only.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lchain_realign_stack.private_seg_size, 256+max(48, .Lgfx_stack_only.private_seg_size){{$}}
 
 ; CHECK-LABEL: .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
@@ -94,6 +97,11 @@
 ; EXTSTACK0:         .backend_stack_size: 0x44{{$}}
 ; EXTSTACK48:        .backend_stack_size: 0x60{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
+; CHECK-LABEL:      chain_realign_stack:
+; EXTSTACK0:         .backend_stack_size: 0x114{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x130{{$}}
+; FIXME: stack_frame_size_in_bytes would do well to include the realignment padding too...
+; CHECK:             .stack_frame_size_in_bytes: 0x80{{$}}
 ; CHECK-LABEL:      gfx_alloca:
 ; CHECK:             .backend_stack_size: 0x1c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x1c{{$}}
@@ -218,6 +226,14 @@ define amdgpu_cs_chain void @chain_own_and_callee_stack() {
   %a = alloca [4 x i32], addrspace(5)
   store volatile i32 13, ptr addrspace(5) %a
   call void (ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_no_local_stack_to_gfx_with_stack)
+  ret void
+}
+
+define amdgpu_cs_chain void @chain_realign_stack() {
+.entry:
+  %a = alloca i32, align 128, addrspace(5)
+  store volatile i32 13, ptr addrspace(5) %a
+  call amdgpu_gfx void @gfx_stack_only()
   ret void
 }
 
