@@ -1,11 +1,11 @@
 # REQUIRES: asserts
 
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mattr=+fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mattr=+fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
 
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -mattr=-fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -mattr=-fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
 
 # CHECK-LABEL: fuse_fmla
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 0, $z0_z1, $z2

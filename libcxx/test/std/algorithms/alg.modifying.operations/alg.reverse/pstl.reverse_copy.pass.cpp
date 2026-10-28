@@ -113,4 +113,6 @@ int main(int, char**) {
         types::for_each(types::forward_iterator_list<int*>{},
                         TestIteratorWithPolicies<types::partial_instantiation<Test, Iter>::template apply>{});
       }});
+
+  return 0;
 }

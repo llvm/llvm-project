@@ -53,7 +53,7 @@ lit_header_restrictions = {
 
 # To re-generate the list of expected headers, temporarily set this to True, and run this test.
 # Note that this needs to be done for all supported language versions of libc++:
-# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std libcxx/test/libcxx/transitive_includes.gen.py; done
+# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26 c++29; do <build>/bin/llvm-lit --param std=$std libcxx/test/libcxx/transitive_includes.gen.py; done
 regenerate_expected_results = False
 
 if regenerate_expected_results:
@@ -72,7 +72,7 @@ if regenerate_expected_results:
         normalized_header = re.sub("/", "_", str(header))
         print(
             f"""\
-// RUN: echo "#include <{header}>" | %{{cxx}} -xc++ - %{{flags}} %{{compile_flags}} -D_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23 --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.{normalized_header}.txt
+// RUN: echo "#include <{header}>" | %{{cxx}} -xc++ - %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.{normalized_header}.txt
 """
         )
         all_traces.append(f"%t/trace-includes.{normalized_header}.txt")
@@ -115,7 +115,7 @@ else:
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
 // RUN: mkdir %t
-// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -D_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23 -Wno-deprecated --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -Wno-deprecated --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt
 // RUN: %{{python}} %{{libcxx-dir}}/test/libcxx/transitive_includes/to_csv.py %t/trace-includes.txt > %t/actual_transitive_includes.csv
 // RUN: cat %{{libcxx-dir}}/test/libcxx/transitive_includes/%{{cxx_std}}.csv | awk '/^{escaped_header} / {{ print }}' > %t/expected_transitive_includes.csv
 // RUN: diff -w %t/expected_transitive_includes.csv %t/actual_transitive_includes.csv

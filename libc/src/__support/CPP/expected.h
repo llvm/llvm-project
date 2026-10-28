@@ -16,6 +16,7 @@
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -40,23 +41,103 @@ template <class T, class E> class expected {
   bool is_expected;
 
 public:
+  LIBC_INLINE constexpr expected() : exp(), is_expected(true) {}
   LIBC_INLINE constexpr expected(T exp) : exp(exp), is_expected(true) {}
   LIBC_INLINE constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
 
   LIBC_INLINE constexpr bool has_value() const { return is_expected; }
 
-  LIBC_INLINE constexpr T &value() { return exp; }
-  LIBC_INLINE constexpr E &error() { return unexp; }
-  LIBC_INLINE constexpr const T &value() const { return exp; }
-  LIBC_INLINE constexpr const E &error() const { return unexp; }
+  LIBC_INLINE constexpr T &value() {
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+    return exp;
+  }
+  LIBC_INLINE constexpr E &error() {
+    if (LIBC_UNLIKELY(is_expected))
+      __builtin_trap();
+    return unexp;
+  }
+  LIBC_INLINE constexpr const T &value() const {
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+    return exp;
+  }
+  LIBC_INLINE constexpr const E &error() const {
+    if (LIBC_UNLIKELY(is_expected))
+      __builtin_trap();
+    return unexp;
+  }
 
   LIBC_INLINE constexpr explicit operator bool() const { return is_expected; }
 
-  LIBC_INLINE constexpr T &operator*() { return exp; }
-  LIBC_INLINE constexpr const T &operator*() const { return exp; }
-  LIBC_INLINE constexpr T *operator->() { return &exp; }
-  LIBC_INLINE constexpr const T *operator->() const { return &exp; }
+  LIBC_INLINE constexpr T &operator*() {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return exp;
+  }
+  LIBC_INLINE constexpr const T &operator*() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return exp;
+  }
+  LIBC_INLINE constexpr T *operator->() {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return &exp;
+  }
+  LIBC_INLINE constexpr const T *operator->() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return &exp;
+  }
+};
+
+template <class E> class expected<void, E> {
+  union {
+    char dummy;
+    E unexp;
+  };
+  bool is_expected;
+
+public:
+  LIBC_INLINE constexpr expected() : dummy(), is_expected(true) {}
+  LIBC_INLINE constexpr expected(unexpected<E> unexp)
+      : unexp(unexp.error()), is_expected(false) {}
+
+  LIBC_INLINE constexpr bool has_value() const { return is_expected; }
+
+  LIBC_INLINE constexpr void value() const {
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+  }
+  LIBC_INLINE constexpr E &error() {
+    if (LIBC_UNLIKELY(is_expected))
+      __builtin_trap();
+    return unexp;
+  }
+  LIBC_INLINE constexpr const E &error() const {
+    if (LIBC_UNLIKELY(is_expected))
+      __builtin_trap();
+    return unexp;
+  }
+
+  LIBC_INLINE constexpr explicit operator bool() const { return is_expected; }
+
+  LIBC_INLINE constexpr void operator*() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+  }
 };
 
 } // namespace cpp

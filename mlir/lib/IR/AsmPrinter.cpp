@@ -91,6 +91,15 @@ DialectAsmPrinter::~DialectAsmPrinter() = default;
 
 OpAsmPrinter::~OpAsmPrinter() = default;
 
+void OpAsmPrinter::printOperands(OperandRange operands) {
+  llvm::interleaveComma(operands, getStream(),
+                        [this](Value value) { printOperand(value); });
+}
+
+void OpAsmPrinter::printOperandTypes(ValueTypeRange<OperandRange> types) {
+  llvm::interleaveComma(types, *this);
+}
+
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
   os << '(';
@@ -201,6 +210,10 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> alwaysUseAliasesOpt{
+      "mlir-print-always-use-aliases", llvm::cl::init(false),
+      llvm::cl::desc("Always use aliases even for non top-level ops")};
 };
 } // namespace
 
@@ -217,9 +230,9 @@ void mlir::registerAsmPrinterCLOptions() {
 OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
-      assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      assumeVerifiedFlag(false), alwaysUseAliasesFlag(false),
+      printLocalScope(false), printValueUsersFlag(false),
+      printUniqueSSAIDsFlag(false), useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -239,6 +252,7 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  alwaysUseAliasesFlag = clOptions->alwaysUseAliasesOpt;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -287,6 +301,11 @@ OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
 /// Do not verify the operation when using custom operation printers.
 OpPrintingFlags &OpPrintingFlags::assumeVerified(bool enable) {
   assumeVerifiedFlag = enable;
+  return *this;
+}
+
+OpPrintingFlags &OpPrintingFlags::alwaysUseAliases(bool enable) {
+  alwaysUseAliasesFlag = enable;
   return *this;
 }
 
@@ -367,6 +386,10 @@ bool OpPrintingFlags::shouldSkipRegions() const { return skipRegionsFlag; }
 /// Return if operation verification should be skipped.
 bool OpPrintingFlags::shouldAssumeVerified() const {
   return assumeVerifiedFlag;
+}
+
+bool OpPrintingFlags::shouldAlwaysUseAliases() const {
+  return alwaysUseAliasesFlag;
 }
 
 /// Return if the printer should use local scope when dumping the IR.
@@ -762,8 +785,10 @@ private:
       printType(type);
 
     // Consider the attributes of the operation for aliases.
-    for (const NamedAttribute &attr : op->getAttrs())
+    for (const NamedAttribute &attr : op->getRawDictionaryAttrs())
       printAttribute(attr.getValue());
+    op->getName().walkInherentAttrs(
+        op, [&](StringRef, Attribute &attr) { printAttribute(attr); });
   }
 
   /// Print the given block. If 'printBlockArgs' is false, the arguments of the
@@ -1330,6 +1355,9 @@ private:
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
     DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+  // Each initialization starts fresh: a state reused across prints must not
+  // carry the previous op's aliases.
+  attrTypeToAlias.clear();
   AliasInitializer initializer(interfaces, aliasAllocator);
   initializer.initialize(op, printerFlags, attrTypeToAlias);
 }
@@ -1994,6 +2022,9 @@ public:
 
   /// Initialize the alias state to enable the printing of aliases.
   void initializeAliases(Operation *op) {
+    // A state reused across prints must not re-print the previous op's
+    // dialect resources.
+    dialectResources.clear();
     aliasState.initialize(op, printerFlags, interfaces);
   }
 
@@ -3243,7 +3274,9 @@ void AsmPrinter::Impl::printAffineExprInternal(
           os << " - ";
           printAffineExprInternal(rhs.getLHS(), BindingStrength::Strong,
                                   printValueName);
-          os << " * " << -rrhs.getValue();
+          // Use unsigned negation to avoid signed integer overflow for
+          // INT64_MIN.
+          os << " * " << -static_cast<uint64_t>(rrhs.getValue());
           if (enclosingTightness == BindingStrength::Strong)
             os << ')';
           return;
@@ -3256,7 +3289,8 @@ void AsmPrinter::Impl::printAffineExprInternal(
   if (auto rhsConst = dyn_cast<AffineConstantExpr>(rhsExpr)) {
     if (rhsConst.getValue() < 0) {
       printAffineExprInternal(lhsExpr, BindingStrength::Weak, printValueName);
-      os << " - " << -rhsConst.getValue();
+      // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+      os << " - " << -static_cast<uint64_t>(rhsConst.getValue());
       if (enclosingTightness == BindingStrength::Strong)
         os << ')';
       return;
@@ -3467,33 +3501,49 @@ private:
   class ResourceBuilder : public AsmResourceBuilder {
   public:
     using ValueFn = function_ref<void(raw_ostream &)>;
-    using PrintFn = function_ref<void(StringRef, ValueFn)>;
+    // `sizeHint` is the exact number of characters `valueFn` will write, or -1
+    // if unknown, so the char limit can be applied before paying the cost of
+    // invoking `valueFn` (e.g. hex-encoding a large blob).
+    using PrintFn = function_ref<void(StringRef, ValueFn, int64_t sizeHint)>;
 
     ResourceBuilder(PrintFn printFn) : printFn(printFn) {}
     ~ResourceBuilder() override = default;
 
     void buildBool(StringRef key, bool data) final {
-      printFn(key, [&](raw_ostream &os) { os << (data ? "true" : "false"); });
+      printFn(
+          key, [&](raw_ostream &os) { os << (data ? "true" : "false"); },
+          /*sizeHint=*/-1);
     }
 
     void buildString(StringRef key, StringRef data) final {
-      printFn(key, [&](raw_ostream &os) {
-        os << "\"";
-        llvm::printEscapedString(data, os);
-        os << "\"";
-      });
+      printFn(
+          key,
+          [&](raw_ostream &os) {
+            os << "\"";
+            llvm::printEscapedString(data, os);
+            os << "\"";
+          },
+          /*sizeHint=*/-1);
     }
 
     void buildBlob(StringRef key, ArrayRef<char> data,
                    uint32_t dataAlignment) final {
-      printFn(key, [&](raw_ostream &os) {
-        // Store the blob in a hex string containing the alignment and the data.
-        llvm::support::ulittle32_t dataAlignmentLE(dataAlignment);
-        os << "\"0x"
-           << llvm::toHex(StringRef(reinterpret_cast<char *>(&dataAlignmentLE),
-                                    sizeof(dataAlignment)))
-           << llvm::toHex(StringRef(data.data(), data.size())) << "\"";
-      });
+      // Two hex chars per byte of the alignment word and the data, plus the
+      // `"0x`/`"` wrapping; exact, so the limit can be checked pre-encoding.
+      int64_t sizeHint = 2 * int64_t(sizeof(dataAlignment) + data.size()) + 4;
+      printFn(
+          key,
+          [&](raw_ostream &os) {
+            // Store the blob in a hex string containing the alignment and the
+            // data.
+            llvm::support::ulittle32_t dataAlignmentLE(dataAlignment);
+            os << "\"0x"
+               << llvm::toHex(
+                      StringRef(reinterpret_cast<char *>(&dataAlignmentLE),
+                                sizeof(dataAlignment)))
+               << llvm::toHex(StringRef(data.data(), data.size())) << "\"";
+          },
+          sizeHint);
     }
 
   private:
@@ -3558,7 +3608,8 @@ void OperationPrinter::printResourceFileMetadata(
   auto processProvider = [&](StringRef dictName, StringRef name, auto &provider,
                              auto &&...providerArgs) {
     bool hadEntry = false;
-    auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn) {
+    auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn,
+                       int64_t sizeHint) {
       checkAddMetadataDict();
 
       std::string resourceStr;
@@ -3568,6 +3619,11 @@ void OperationPrinter::printResourceFileMetadata(
       if (charLimit.has_value()) {
         // Don't compute resourceStr when charLimit is 0.
         if (charLimit.value() == 0)
+          return;
+
+        // Skip serializing entirely if the exact size already exceeds the
+        // limit, e.g. hex-encoding a large blob.
+        if (sizeHint >= 0 && uint64_t(sizeHint) > charLimit.value())
           return;
 
         llvm::raw_string_ostream ss(resourceStr);
@@ -3831,9 +3887,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ')';
   }
 
-  printOptionalAttrDict(op->getPropertiesStorage()
-                            ? llvm::to_vector(op->getDiscardableAttrs())
-                            : op->getAttrs());
+  printOptionalAttrDict(op->getRawDictionaryAttrs().getValue());
 
   // Print the type signature of the operation.
   os << " : ";
@@ -4211,7 +4265,12 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
 }
 void Operation::print(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
-  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope()) {
+  // alwaysUseAliases takes precedence over local scope, not just as a
+  // tiebreak: pass instrumentation prints nested ops with local scope, so
+  // without precedence the per-function dumps this flag targets would never
+  // use aliases. The two compose: aliases stay consistent within each dump.
+  if (state.getPrinterFlags().shouldAlwaysUseAliases() ||
+      (!getParent() && !state.getPrinterFlags().shouldUseLocalScope())) {
     state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
   } else {

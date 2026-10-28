@@ -22,19 +22,19 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-SSE-NEXT:    movl (%edx), %eax
 ; X86-SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movntps %xmm0, (%esi)
-; X86-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2 # [1,0,2,0]
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movntdq %xmm2, (%esi)
 ; X86-SSE-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movntpd %xmm1, (%esi)
-; X86-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm6
+; X86-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm6 # [1,2,3,4]
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movntdq %xmm6, (%esi)
-; X86-SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm5
+; X86-SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm5 # [1,2,3,4,5,6,7,8]
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movntdq %xmm5, (%esi)
-; X86-SSE-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4
+; X86-SSE-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movntdq %xmm4, (%esi)
 ; X86-SSE-NEXT:    addl (%edx), %eax
@@ -42,6 +42,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-SSE-NEXT:    addl (%edx), %eax
 ; X86-SSE-NEXT:    movsd %xmm3, (%esi)
 ; X86-SSE-NEXT:    addl (%edx), %eax
+; X86-SSE-NEXT:    sfence
 ; X86-SSE-NEXT:    leal -4(%ebp), %esp
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %ebp
@@ -64,19 +65,19 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-AVX-NEXT:    movl (%edx), %eax
 ; X86-AVX-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovntps %xmm0, (%esi)
-; X86-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm0
+; X86-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm0 # [1,0,2,0]
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovntdq %xmm0, (%esi)
 ; X86-AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovntpd %xmm0, (%esi)
-; X86-AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm6, %xmm0
+; X86-AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm6, %xmm0 # [1,2,3,4]
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovntdq %xmm0, (%esi)
-; X86-AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm5, %xmm0
+; X86-AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm5, %xmm0 # [1,2,3,4,5,6,7,8]
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovntdq %xmm0, (%esi)
-; X86-AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm0
+; X86-AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovntdq %xmm0, (%esi)
 ; X86-AVX-NEXT:    addl (%edx), %eax
@@ -84,6 +85,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X86-AVX-NEXT:    addl (%edx), %eax
 ; X86-AVX-NEXT:    vmovsd %xmm3, (%esi)
 ; X86-AVX-NEXT:    addl (%edx), %eax
+; X86-AVX-NEXT:    sfence
 ; X86-AVX-NEXT:    leal -4(%ebp), %esp
 ; X86-AVX-NEXT:    popl %esi
 ; X86-AVX-NEXT:    popl %ebp
@@ -94,19 +96,19 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X64-SSE-NEXT:    movl (%rcx), %eax
 ; X64-SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    movntps %xmm0, (%rdi)
-; X64-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,2]
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntdq %xmm2, (%rdi)
 ; X64-SSE-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntpd %xmm1, (%rdi)
-; X64-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; X64-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [1,2,3,4]
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntdq %xmm3, (%rdi)
-; X64-SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; X64-SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [1,2,3,4,5,6,7,8]
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntdq %xmm4, (%rdi)
-; X64-SSE-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
+; X64-SSE-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntdq %xmm5, (%rdi)
 ; X64-SSE-NEXT:    addl (%rcx), %eax
@@ -114,6 +116,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X64-SSE-NEXT:    addl (%rcx), %eax
 ; X64-SSE-NEXT:    movntiq %rdx, (%rdi)
 ; X64-SSE-NEXT:    addl (%rcx), %eax
+; X64-SSE-NEXT:    sfence
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: f:
@@ -121,19 +124,19 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X64-AVX-NEXT:    movl (%rcx), %eax
 ; X64-AVX-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rdi)
-; X64-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
+; X64-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0 # [1,2]
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; X64-AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    vmovntpd %xmm0, (%rdi)
-; X64-AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0
+; X64-AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0 # [1,2,3,4]
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    vmovntdq %xmm0, (%rdi)
-; X64-AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm0
+; X64-AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm0 # [1,2,3,4,5,6,7,8]
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    vmovntdq %xmm0, (%rdi)
-; X64-AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm0
+; X64-AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5, %xmm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; X64-AVX-NEXT:    addl (%rcx), %eax
@@ -141,6 +144,7 @@ define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    movntiq %rdx, (%rdi)
 ; X64-AVX-NEXT:    addl (%rcx), %eax
+; X64-AVX-NEXT:    sfence
 ; X64-AVX-NEXT:    retq
   %v0 = load i32, ptr %loadptr, align 1
   %A2 = fadd <4 x float> %A, <float 1.0, float 2.0, float 3.0, float 4.0>
@@ -184,6 +188,7 @@ define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
 ; X86-NEXT:    movq (%ecx), %mm0
 ; X86-NEXT:    psrlq $3, %mm0
 ; X86-NEXT:    movntq %mm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mmx:
@@ -191,6 +196,7 @@ define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    psrlq $3, %mm0
 ; X64-NEXT:    movntq %mm0, (%rsi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    retq
 entry:
   %0 = load <1 x i64>, ptr %a0

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple amdgpu10.1-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgpu10.3-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgpu12.50-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu13.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // REQUIRES: amdgpu-registered-target
 
 // CHECK-LABEL: define dso_local float @test_atomic_fmax_f32(

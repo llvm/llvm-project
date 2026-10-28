@@ -17,6 +17,7 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -59,7 +60,9 @@ bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
   if (windows_prefix.empty())
     return false;
 
-  std::string normalized = path.str();
+  // A module loaded through an extended-length path has the "\\?\" prefix,
+  // which would not match the Windows directory.
+  std::string normalized = StripExtendedLengthPrefix(path);
   NormalizeWindowsPathSeparators(normalized);
   return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
 }
@@ -309,6 +312,18 @@ Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
   return error;
 }
 
+void ProcessDebugger::EndDebugSession() {
+  DebuggerThreadSP debugger_thread;
+  {
+    llvm::sys::ScopedLock lock(m_mutex);
+    if (!m_session_data)
+      return;
+    debugger_thread = m_session_data->m_debugger;
+  }
+  debugger_thread->StopDebugging(/*terminate=*/true);
+  m_session_data.reset();
+}
+
 Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
@@ -437,7 +452,7 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
 
   Log *log = GetLog(WindowsLog::Memory);
   llvm::sys::ScopedLock lock(m_mutex);
-  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", vm_addr);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0:x}", vm_addr);
 
   if (!m_session_data) {
     result = Status::FromErrorString(
@@ -541,7 +556,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   }
 
   LLDB_LOG_VERBOSE(log,
-                   "Memory region info for address {0}: readable={1}, "
+                   "Memory region info for address {0:x}: readable={1}, "
                    "executable={2}, writable={3}",
                    vm_addr, info.GetReadable(), info.GetExecutable(),
                    info.GetWritable());

@@ -28,16 +28,10 @@ int main() {
 
 #pragma omp target enter data map(alloc : s1)
   printf("After mapping\n");
-  print_status(&s1.x, "x"); // CHECK: x is present
-  // FIXME: mapper should not map s.dummy or s.p; will be fixed when mapper
-  // emits attach-style maps for pointer members.
-  print_status(&s1.dummy, "dummy"); // CHECK: dummy is present
-  //                                   EXPECTED: dummy is not present
-  // FIXME: mapper should not map s.dummy or s.p; will be fixed when mapper
-  // emits attach-style maps for pointer members.
-  print_status(&s1.p, "p"); // CHECK: p is present
-  //                           EXPECTED: p is not present
-  print_status(&s1.p[0], "p[0]"); // CHECK: p[0] is present
+  print_status(&s1.x, "x");         // CHECK: x is present
+  print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present
+  print_status(&s1.p, "p");         // CHECK: p is not present
+  print_status(&s1.p[0], "p[0]");   // CHECK: p[0] is present
   printf("\n");
 
 #pragma omp target exit data map(delete : s1)

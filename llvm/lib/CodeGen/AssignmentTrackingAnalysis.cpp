@@ -1320,7 +1320,7 @@ private:
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
-  /// Update \p LiveSet after encountering an instruciton without a DIAssignID
+  /// Update \p LiveSet after encountering an instruction without a DIAssignID
   /// attachment, \p I.
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
@@ -2288,7 +2288,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
             CB->paramHasAttr(ArgIdx, Attribute::ReadNone))
           continue;
         // Skip byval args.  The callee gets a copy, not the original.
-        if (CB->paramHasAttr(ArgIdx, Attribute::ByVal))
+        if (CB->isByValArgument(ArgIdx))
           continue;
 
         auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Arg));

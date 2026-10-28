@@ -17,6 +17,7 @@
 
 #include "benchmark/benchmark.h"
 #include "common.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_next_permutation = [](auto first, auto last) { return std::next_permutation(first, last); };
@@ -32,7 +33,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto permutation, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [permutation, generate_data](auto& st) {
+          [permutation, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size      = st.range(0);
             using ValueType             = typename Container::value_type;
             std::vector<ValueType> data = generate_data(size);

@@ -12,36 +12,27 @@
 
 #include "MSP430Subtarget.h"
 #include "MSP430SelectionDAGInfo.h"
+#include "MSP430TargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "msp430-subtarget"
 
-static cl::opt<MSP430Subtarget::HWMultEnum>
-HWMultModeOption("mhwmult", cl::Hidden,
-           cl::desc("Hardware multiplier use mode for MSP430"),
-           cl::init(MSP430Subtarget::NoHWMult),
-           cl::values(
-             clEnumValN(MSP430Subtarget::NoHWMult, "none",
-                "Do not use hardware multiplier"),
-             clEnumValN(MSP430Subtarget::HWMult16, "16bit",
-                "Use 16-bit hardware multiplier"),
-             clEnumValN(MSP430Subtarget::HWMult32, "32bit",
-                "Use 32-bit hardware multiplier"),
-             clEnumValN(MSP430Subtarget::HWMultF5, "f5series",
-                "Use F5 series hardware multiplier")));
-
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "MSP430GenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "MSP430Options.inc"
 
 void MSP430Subtarget::anchor() { }
 
 MSP430Subtarget &
 MSP430Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   ExtendedInsts = false;
-  HWMultMode = NoHWMult;
+  HWMultMode = MSP430::HWMult::None;
 
   StringRef CPUName = CPU;
   if (CPUName.empty())
@@ -49,15 +40,17 @@ MSP430Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
 
-  if (HWMultModeOption != NoHWMult)
-    HWMultMode = HWMultModeOption;
+  if (CLOpts.hwmult != MSP430::HWMult::None)
+    HWMultMode = CLOpts.hwmult;
 
   return *this;
 }
 
 MSP430Subtarget::MSP430Subtarget(const Triple &TT, const std::string &CPU,
-                                 const std::string &FS, const TargetMachine &TM)
+                                 const std::string &FS,
+                                 const MSP430TargetMachine &TM)
     : MSP430GenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      CLOpts(TM.getCLOpts()),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       FrameLowering(*this) {
   TSInfo = std::make_unique<MSP430SelectionDAGInfo>();
@@ -158,18 +151,20 @@ void MSP430Subtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
       {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___mspabi_fltllif},
       {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mspabi_fltulf},
       {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___mspabi_fltullf},
-      // Floating point comparisons - EABI Table 7.
-      {RTLIB::OEQ_F64, RTLIB::impl___mspabi_cmpd__oeq},
-      {RTLIB::OGE_F64, RTLIB::impl___mspabi_cmpd__oge},
-      {RTLIB::OLT_F64, RTLIB::impl___mspabi_cmpd__olt},
-      {RTLIB::OLE_F64, RTLIB::impl___mspabi_cmpd__ole},
-      {RTLIB::OGT_F64, RTLIB::impl___mspabi_cmpd__ogt},
-      {RTLIB::OEQ_F32, RTLIB::impl___mspabi_cmpf__oeq},
-      {RTLIB::UNE_F32, RTLIB::impl___mspabi_cmpf__une},
-      {RTLIB::OGE_F32, RTLIB::impl___mspabi_cmpf__oge},
-      {RTLIB::OLT_F32, RTLIB::impl___mspabi_cmpf__olt},
-      {RTLIB::OLE_F32, RTLIB::impl___mspabi_cmpf__ole},
-      {RTLIB::OGT_F32, RTLIB::impl___mspabi_cmpf__ogt},
+      // Floating point comparisons - EABI Table 7. A single three-way compare
+      // symbol serves every predicate.
+      {RTLIB::FCMP3_PRED_OEQ_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_UNE_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_OGE_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_OLT_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_OLE_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_OGT_F64, RTLIB::impl___mspabi_cmpd},
+      {RTLIB::FCMP3_PRED_OEQ_F32, RTLIB::impl___mspabi_cmpf},
+      {RTLIB::FCMP3_PRED_UNE_F32, RTLIB::impl___mspabi_cmpf},
+      {RTLIB::FCMP3_PRED_OGE_F32, RTLIB::impl___mspabi_cmpf},
+      {RTLIB::FCMP3_PRED_OLT_F32, RTLIB::impl___mspabi_cmpf},
+      {RTLIB::FCMP3_PRED_OLE_F32, RTLIB::impl___mspabi_cmpf},
+      {RTLIB::FCMP3_PRED_OGT_F32, RTLIB::impl___mspabi_cmpf},
       // Floating point arithmetic - EABI Table 8.
       {RTLIB::ADD_F64, RTLIB::impl___mspabi_addd},
       {RTLIB::SUB_F64, RTLIB::impl___mspabi_subd},

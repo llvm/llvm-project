@@ -38,8 +38,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/func_like_macro.cpp -D'm(x)=x' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/lparen.cpp -D'm(x)=x' -D'LPAREN=(' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/control_line.cpp -fsyntax-only -verify
-
-
+// RUN: %clang_cc1 -std=c++20 %t/header_name1.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name2.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name3.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name4.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name5.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/header_name6.cpp -fsyntax-only -verify
 //--- hash.cpp
 // expected-no-diagnostics
 #                       // preprocessing directive
@@ -153,7 +157,7 @@ export module m:n;
 
 //--- unexpected_character_in_pp_module_suffix.cpp
 export module m();
-// expected-error@-1 {{unexpected preprocessing token '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+// expected-error@-1 {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- semi_in_same_line.cpp
 export module m // OK
@@ -189,13 +193,13 @@ module x;
 //--- func_like_macro.cpp
 // #define m(x) x
 export module m
-     (foo); // expected-error {{unexpected preprocessing token '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+     (foo); // expected-error {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- lparen.cpp
 // #define m(x) x
 // #define LPAREN (
 export module m
-    LPAREN foo); // expected-error {{unexpected preprocessing token 'LPAREN' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+    LPAREN foo); // expected-error {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- control_line.cpp
 #if 0 // #1
@@ -205,3 +209,48 @@ export module m; // expected-error {{module directive lines are not allowed on l
                  // expected-error {{module declaration must occur at the start of the translation unit}} \
                  // expected-note@#1 {{add 'module;'}}
 #endif
+
+//--- header_name1.cpp
+// expected-no-diagnostics
+int
+import <:10
+:>;
+
+void foo() {
+    for (int i = 0; i < 10; ++i)
+        import[i] = i;
+}
+
+//--- header_name2.cpp
+// expected-no-diagnostics
+using import = int;
+
+void bar(int);
+
+void foo(int val =
+import <%
+%>
+) {
+   bar(val);
+}
+
+//--- header_name3.cpp
+export module M;
+import <%%>; // expected-error {{'%%' file not found}}
+
+//--- header_name4.cpp
+export module M;
+import <::>; // expected-error {{'::' file not found}}
+
+//--- header_name5.cpp
+export module M;
+#define FOO foo>;
+import <:FOO
+// expected-error@-1 {{use of undeclared identifier 'foo'}}
+// expected-error@-2 {{a type specifier is required for all declarations}}
+// expected-error@-3 {{expected expression}}
+
+//--- header_name6.cpp
+export module M;
+#define HEADER vector>
+import <HEADER; // expected-error {{file not found}}

@@ -16,7 +16,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -839,7 +838,7 @@ static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp,
   if (!LhsBinOp || !RhsBinOp)
     return false;
 
-  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+  const auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
     return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
   };
 
@@ -862,7 +861,7 @@ static bool areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
   if (!Lhs || !Rhs)
     return false;
 
-  auto IsDefineExpr = [AstCtx](const Expr *E) {
+  const auto IsDefineExpr = [AstCtx](const Expr *E) {
     const SourceRange Lsr = E->getSourceRange();
     if (!Lsr.getBegin().isMacroID() || E->isValueDependent() ||
         !E->isIntegerConstantExpr(*AstCtx))
@@ -890,7 +889,7 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
   const auto *BinOpLhs = cast<BinaryOperator>(BinOp->getLHS());
   const auto *BinOpRhs = cast<BinaryOperator>(BinOp->getRHS());
 
-  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+  const auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
     return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
   };
 
@@ -1453,7 +1452,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<UnaryOperator>("logical-bitwise-confusion")) {
     const SourceLocation OperatorLoc = NegateOperator->getOperatorLoc();
 
-    auto Diag =
+    const auto Diag =
         diag(OperatorLoc,
              "ineffective logical negation operator used; did you mean '~'?");
     const SourceLocation LogicalNotLocation = OperatorLoc.getLocWithOffset(1);
@@ -1486,8 +1485,8 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     if (AndValue->getActiveBits() > *ShiftingValue)
       return;
 
-    auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
-                     "ineffective bitwise and operation");
+    const auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
+                           "ineffective bitwise and operation");
   }
 
   // Check for the following bound expressions:

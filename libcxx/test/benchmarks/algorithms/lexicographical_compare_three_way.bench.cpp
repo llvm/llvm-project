@@ -12,9 +12,10 @@
 
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 template <class IteratorT>
-static void BM_lexicographical_compare_three_way(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_lexicographical_compare_three_way(benchmark::State& state) {
   auto size = state.range(0);
   std::vector<int> v1;
   v1.resize(size);

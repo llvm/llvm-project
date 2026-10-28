@@ -99,8 +99,7 @@ def TuneMovALUXqciFusion
                  "Enable MOV + long accumulate macrofusion",
                  CheckAll<[
                    CheckOpcode<[ADDI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 0>
+                   CheckImmOperand<2, 0>,
                  ]>,
                  CheckOpcode<LongAccumXqciOp>,
                  epilog=[TieReg<0, 0>]>;

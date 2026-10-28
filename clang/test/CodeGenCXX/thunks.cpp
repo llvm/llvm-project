@@ -441,6 +441,29 @@ namespace Test14 {
   // CHECK: ret void
 }
 
+namespace Test18 {
+struct VBase {
+  virtual void f();
+  virtual void g(int x, ...);
+};
+struct alignas(64) Derived : virtual VBase {
+  void f() override;
+  void g(int x, ...) override;
+};
+void Derived::f() {}
+void Derived::g(int x, ...) {}
+// CHECK-LABEL: define{{.*}} void @_ZTv0_n24_N6Test187Derived1fEv(
+// CHECK: %[[THIS:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-NEXT: load ptr, ptr %[[THIS]], align 8
+// CHECK: ret void
+// CHECK-CLONE-LABEL: define{{.*}} void @_ZTv0_n32_N6Test187Derived1gEiz(
+// CHECK-CLONE: load ptr, ptr %{{.*}}, align 8
+// CHECK-CLONE-NEXT: getelementptr inbounds i8, ptr %{{.*}}, i64 -32
+// CHECK-TAIL-LABEL: define{{.*}} void @_ZTv0_n32_N6Test187Derived1gEiz(
+// CHECK-TAIL: %[[THIS:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-TAIL-NEXT: load ptr, ptr %[[THIS]], align 8
+}
+
 // Varargs non-covariant thunk test.
 // PR18098
 namespace Test15 {

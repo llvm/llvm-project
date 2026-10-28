@@ -264,8 +264,7 @@ LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const
     // Ideally we would not fold in offset with an index <= 11.
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
     Constant *Idx = ConstantInt::get(Ty, Offset);
-    Constant *GAI = ConstantExpr::getGetElementPtr(
-        Type::getInt8Ty(*DAG.getContext()), const_cast<GlobalValue *>(GV), Idx);
+    Constant *GAI = ConstantExpr::getPtrAdd(const_cast<GlobalValue *>(GV), Idx);
     SDValue CP = DAG.getConstantPool(GAI, MVT::i32);
     return DAG.getLoad(getPointerTy(DAG.getDataLayout()), DL,
                        DAG.getEntryNode(), CP, MachinePointerInfo());

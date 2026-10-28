@@ -9,6 +9,8 @@
 // FIXME: Hwasan misclassify TRAP as tag missmatch.
 // XFAIL: hwasan && !hwasan-aliasing
 
+// UNSUPPORTED: rtsan
+
 #include <signal.h>
 #include <stdlib.h>
 

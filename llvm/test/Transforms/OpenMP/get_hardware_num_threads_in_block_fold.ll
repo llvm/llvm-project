@@ -13,8 +13,8 @@ target triple = "nvptx64"
 
 ;.
 ; CHECK: @G = external global i32
-; CHECK: @kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
-; CHECK: @kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 1, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 1, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
 ; CHECK: @kernel2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 666, i32 0, i32 777, i32 0, i32 0 }, ptr null, ptr null }
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
@@ -78,7 +78,7 @@ define weak ptx_kernel void @kernel2(ptr %dyn) "kernel" #0 {
 ; CHECK-NEXT:    call void @helper0() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;

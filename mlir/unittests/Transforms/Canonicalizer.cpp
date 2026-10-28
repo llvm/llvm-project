@@ -79,8 +79,9 @@ TEST(CanonicalizerTest, TestDisablePatterns) {
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(code, &context);
   ASSERT_TRUE(succeeded(mgr.run(*module)));
 
-  EXPECT_TRUE(module->lookupSymbol("B"));
-  EXPECT_FALSE(module->lookupSymbol("A"));
+  Block &body = module->getBodyRegion().front();
+  ASSERT_EQ(body.getOperations().size(), 1u);
+  EXPECT_EQ(body.front().getResult(0).getType(), Float32Type::get(&context));
 }
 
 } // end anonymous namespace

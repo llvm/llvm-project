@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "L0CmdListManager.h"
-#include "L0Context.h"
+#include "L0Driver.h"
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
@@ -95,8 +95,8 @@ struct DeviceQueueConfigInfoTy {
 };
 
 class L0DeviceTy final : public GenericDeviceTy {
-  // Level Zero Context for this Device.
-  L0ContextTy &L0Context;
+  // Level Zero driver for this Device.
+  L0DriverTy &L0Driver;
 
   // Level Zero handle  for this Device.
   ze_device_handle_t zeDevice;
@@ -143,9 +143,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
-  /// Cache of queues for this device.
-  L0QueueCacheTy QueueCache;
-
   DeviceArchTy computeArch() const;
 
   /// Scan the device's command queue groups, selecting the default compute
@@ -159,11 +156,11 @@ class L0DeviceTy final : public GenericDeviceTy {
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
-             ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
+             ze_device_handle_t zeDevice, L0DriverTy &Driver,
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
-        L0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex), QueueCache(*this) {
+        L0Driver(Driver), zeDevice(zeDevice), zeId(zeId),
+        ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -184,16 +181,19 @@ public:
   }
 
   Error setContext() override { return Plugin::success(); }
-  Error initImpl(GenericPluginTy &Plugin) override;
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  uint32_t getDriverId() const override { return L0Driver.getDriverId(); }
 
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
   }
 
-  const L0ContextTy &getL0Context() const { return L0Context; }
-  L0ContextTy &getL0Context() { return L0Context; }
+  const L0DriverTy &getL0Driver() const { return L0Driver; }
+  L0DriverTy &getL0Driver() { return L0Driver; }
 
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
@@ -216,9 +216,10 @@ public:
   }
   ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
 
-  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image,
+                                   ze_context_handle_t ZeContext) {
     for (auto &PGM : Programs)
-      if (PGM.getMemoryBuffer() == Image)
+      if (PGM.getMemoryBuffer() == Image && PGM.getZeContext() == ZeContext)
         return &PGM;
     return nullptr;
   }
@@ -237,9 +238,9 @@ public:
     auto ImageOrErr = Builder.getELF();
     if (!ImageOrErr)
       return ImageOrErr.takeError();
-    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
-                          Builder.getGlobalModule(),
-                          std::move(Builder.getModules()));
+    Programs.emplace_back(
+        ImageId, *this, std::move(*ImageOrErr), Builder.getGlobalModule(),
+        std::move(Builder.getModules()), Builder.getZeContext());
     return Programs.back();
   }
 
@@ -369,11 +370,14 @@ public:
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
+  createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                   ze_context_handle_t UserZeCtx, bool InOrder = false);
 
   /// Create an immediate command list for computing.
-  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
-    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), UserZeCtx,
+                            InOrder);
   }
 
   /// Release an immediate command list.
@@ -382,11 +386,12 @@ public:
     return Plugin::success();
   }
 
-  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
-    auto CmdListOrErr = createImmCmdList(InOrder);
+  Expected<L0CmdListManagerTy *>
+  getCmdListManager(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(UserZeCtx, InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
+    return new L0CmdListManagerTy(*CmdListOrErr, L0Driver);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -434,52 +439,53 @@ public:
   /// Driver related functions.
 
   /// Reurn the driver handle for this device.
-  ze_driver_handle_t getZeDriver() const { return L0Context.getZeDriver(); }
+  ze_driver_handle_t getZeDriver() const { return L0Driver.getZeDriver(); }
 
   /// Return context for this device.
-  ze_context_handle_t getZeContext() const { return L0Context.getZeContext(); }
+  ze_context_handle_t getZeContext() const { return L0Driver.getZeContext(); }
 
   /// Return driver API version for this device.
   ze_api_version_t getDriverAPIVersion() const {
-    return L0Context.getDriverAPIVersion();
+    return L0Driver.getDriverAPIVersion();
   }
 
   /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
-    return L0Context.getEventPool().getEvent();
+    return L0Driver.getEventPool().getEvent();
   }
   /// Get a high-level L0EventTy object from the driver associated to this
   /// device.
   Expected<L0EventTy *> getEventObject() {
-    return L0Context.getEventPool().getEventObject();
+    return L0Driver.getEventPool().getEventObject();
   }
 
   /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return L0Context.getEventPool().releaseEvent(Event);
+    return L0Driver.getEventPool().releaseEvent(Event);
   }
   /// Release an L0EventTy object to the pool associated to this device.
   Error releaseEventObject(L0EventTy *EventObj) {
-    return L0Context.getEventPool().releaseEventObject(EventObj);
+    return L0Driver.getEventPool().releaseEventObject(EventObj);
   }
 
-  StagingBufferTy &getStagingBuffer() { return L0Context.getStagingBuffer(); }
-
-  bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
+  bool supportsLargeMem() const { return L0Driver.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
-  /// the async info does not have a queue yet.
-  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  /// the async info does not have a queue yet. When \p UserCtx is null the
+  /// driver's default plugin-side context is used.
+  Expected<L0QueueTy *>
+  getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                   LevelZeroPluginContextTy *UserCtx = nullptr);
+  void releaseQueue(L0QueueTy *Queue);
 
   // Allocation related routines.
 
   /// Data alloc.
-  Expected<void *> dataAlloc(
-      size_t Size, size_t Align, int32_t Kind, intptr_t Offset, bool UserAlloc,
-      bool DevMalloc = false,
-      uint32_t MemAdvice = std::numeric_limits<decltype(MemAdvice)>::max(),
-      AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
+  Expected<void *>
+  dataAlloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
+            bool UserAlloc, bool DevMalloc = false,
+            uint32_t MemAdvice = std::numeric_limits<uint32_t>::max(),
+            AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
 
   /// Data delete.
   Error dataDelete(void *Ptr);
@@ -492,13 +498,13 @@ public:
 
   MemAllocatorTy &getMemAllocator(int32_t Kind) {
     if (Kind == TARGET_ALLOC_HOST)
-      return L0Context.getHostMemAllocator();
+      return L0Driver.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
   MemAllocatorTy &getMemAllocator(const void *Ptr) {
     if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
-      return L0Context.getHostMemAllocator();
+      return L0Driver.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
@@ -506,8 +512,8 @@ public:
 
   // Generic device interface implementation.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *UserCtx) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
   Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
                             size_t Alignment) override;
@@ -527,7 +533,6 @@ public:
   }
 
   Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override;
-  Error dataFence(__tgt_async_info *Async) override;
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
@@ -542,10 +547,11 @@ public:
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
@@ -565,7 +571,11 @@ public:
                                           void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
-  uint64_t getClockFrequency() const override { return getClockRate(); }
+  /// This is the frequency of the counter read by `__builtin_readsteadycounter`
+  /// in device code, which has no SPIR-V lowering yet. Report zero for now.
+  /// TODO: Return the counter frequency once `readsteadycounter` is
+  /// implemented for SPIR-V.
+  uint64_t getClockFrequency() const override { return 0; }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
   Error getDeviceMemorySize(uint64_t &DSize) override {
     DSize = getGlobalMemorySize();
@@ -576,7 +586,7 @@ public:
     V = 0;
     return Plugin::success();
   }
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override;
 
   Error callGlobalConstructors(GenericPluginTy &Plugin,
                                DeviceImageTy &Image) override;
@@ -585,6 +595,10 @@ public:
                               DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
+
+  Expected<void *> getNativeHandle() override { return getZeDevice(); }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 
   Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;

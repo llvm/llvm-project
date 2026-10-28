@@ -475,7 +475,8 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const {
+  virtual bool isReversibleBranch(const MCInst &Inst,
+                                  bool MustPreserveFlags = true) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -896,7 +897,7 @@ public:
     return false;
   }
 
-  virtual bool isCleanRegXOR(const MCInst &Inst) const {
+  virtual bool isCleanReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1603,6 +1604,12 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Populate \p Regs with scratch candidates for long unconditional branches.
+  /// The caller must also check liveness and unwind requirements.
+  virtual void getLongJumpScratchRegs(BitVector &Regs) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Change \p Regs with a bitmask with all general purpose regs that can be
   /// encoded without extra prefix bytes. For x86 only.
   virtual void getClassicGPRegs(BitVector &Regs) const {
@@ -1957,6 +1964,15 @@ public:
     return {};
   }
 
+  /// Materializing \p ConstantData value in the target register of \p Inst
+  virtual InstructionListType materializeConstant(BinaryContext &BC,
+                                                  const MCInst &Inst,
+                                                  StringRef ConstantData,
+                                                  uint64_t Offset) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   /// Creates a new unconditional branch instruction in Inst and set its operand
   /// to TBB.
   virtual void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
@@ -1967,6 +1983,15 @@ public:
   /// Create a version of unconditional jump that has the largest span for a
   /// single instruction with direct target.
   virtual void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                                      MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Create a long unconditional branch using a scratch register proven safe
+  /// to clobber by the caller. The instruction may expand to multiple machine
+  /// instructions.
+  virtual void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                                      MCPhysReg ScratchReg,
                                       MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
@@ -2150,9 +2175,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Return the instruction sequence for the reversed branch condition of
+  /// \p Inst and update its taken target to \p TBB. Assumes that the branch is
+  /// reversible. It may replace Inst with a longer instruction sequence on some
+  /// targets.
+  virtual InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const {
     llvm_unreachable("not implemented");
   }
 

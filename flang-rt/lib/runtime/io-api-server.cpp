@@ -9,8 +9,8 @@
 // Implements the RPC server-side handlling of the I/O statement API needed for
 // basic list-directed output (PRINT *) of intrinsic types for the GPU.
 
-#include "array.h"
 #include "io-api-gpu.h"
+#include "flang-rt/runtime/array.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/io-api.h"

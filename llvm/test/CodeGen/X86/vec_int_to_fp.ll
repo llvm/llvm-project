@@ -960,30 +960,30 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 ;
 ; AVX2-LABEL: uitofp_4i64_to_4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm1
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
-; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
-; AVX2-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: uitofp_4i64_to_4f64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; AVX512F-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
-; AVX512F-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
-; AVX512F-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512F-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_4i64_to_4f64:

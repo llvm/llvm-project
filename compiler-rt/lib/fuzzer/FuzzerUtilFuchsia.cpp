@@ -668,6 +668,8 @@ void SetThreadName(std::thread &thread, const std::string &name) {
            zx_status_get_string(s));
 }
 
+void PlatformInit() {}
+
 } // namespace fuzzer
 
 #endif // LIBFUZZER_FUCHSIA

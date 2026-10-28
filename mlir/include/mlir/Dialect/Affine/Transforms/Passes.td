@@ -441,7 +441,7 @@ def SimplifyAffineWithBounds : Pass<"affine-simplify-with-bounds"> {
     comparisons, this pass can prove equality of dynamic basis products through
     `ValueBoundsConstraintSet`.
   }];
-  let dependentDialects = ["affine::AffineDialect", "arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {

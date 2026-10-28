@@ -23,6 +23,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-calc-occupancy
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   llvm-calc-occupancy.cpp
 
   DEPENDS

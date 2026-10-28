@@ -3,9 +3,9 @@
 ; by a qf instruction.
 
 ; REQUIRES: asserts
-; RUN: llc -O2 -march=hexagon -mcpu=hexagonv79 -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 \
+; RUN: llc -O2 -mtriple=hexagon -mcpu=hexagonv79 -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 \
 ; RUN: -debug-only=handle-qfp < %s 2>&1 -o /dev/null | FileCheck %s --check-prefix=V79
-; RUN: llc -O2 -march=hexagon -mcpu=hexagonv81 -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv81 \
+; RUN: llc -O2 -mtriple=hexagon -mcpu=hexagonv81 -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv81 \
 ; RUN: -debug-only=handle-qfp < %s 2>&1 -o /dev/null | FileCheck %s --check-prefix=V81
 
 ; V79: Analyzing convert instruction:   renamable [[VREG1:\$v[0-9]+]] = V6_vconv_hf_qf16 renamable [[VREG2:\$v[0-9]+]]

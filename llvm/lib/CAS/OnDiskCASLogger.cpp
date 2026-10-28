@@ -225,21 +225,27 @@ void OnDiskCASLogger::logUnifiedOnDiskCacheCollectGarbage(StringRef Path) {
 
 void OnDiskCASLogger::logUnifiedOnDiskCacheValidateIfNeeded(
     StringRef Path, uint64_t BootTime, uint64_t ValidationTime, bool CheckHash,
-    bool AllowRecovery, bool Force, std::optional<StringRef> LLVMCas,
-    StringRef ValidationError, bool Skipped, bool Recovered) {
+    bool Force, StringRef ValidationError, bool Skipped) {
   TextLogLine Log(OS);
   Log << "validate-if-needed '" << Path << "'";
   Log << " boot=" << BootTime << " last-valid=" << ValidationTime;
-  Log << " check-hash=" << CheckHash << " allow-recovery=" << AllowRecovery;
-  Log << " force=" << Force;
-  if (LLVMCas)
-    Log << " llvm-cas=" << *LLVMCas;
+  Log << " check-hash=" << CheckHash << " force=" << Force;
   if (Skipped)
     Log << " skipped";
-  if (Recovered)
-    Log << " recovered";
   if (!ValidationError.empty())
     Log << " data was invalid " << ValidationError;
+}
+
+void OnDiskCASLogger::logUnifiedOnDiskCacheRecover(StringRef Path,
+                                                   uint64_t BootTime,
+                                                   StringRef RecoveryError,
+                                                   bool Skipped) {
+  TextLogLine Log(OS);
+  Log << "recover '" << Path << "' boot=" << BootTime;
+  if (Skipped)
+    Log << " skipped";
+  if (!RecoveryError.empty())
+    Log << " failed " << RecoveryError;
 }
 
 void OnDiskCASLogger::logTempFileCreate(StringRef Name) {

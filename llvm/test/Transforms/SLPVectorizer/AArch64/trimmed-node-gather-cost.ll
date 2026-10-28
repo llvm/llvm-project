@@ -34,24 +34,23 @@ define void @test(ptr %start1, ptr %start2, ptr %start3, ptr %r, i32 %n) {
 ; CHECK-NEXT:    [[M2_0:%.*]] = phi i32 [ [[ADD8]], %[[IF_THEN]] ], [ [[TMP1]], %[[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[M3_0:%.*]] = phi i32 [ [[ADD9]], %[[IF_THEN]] ], [ [[TMP2]], %[[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[M1_0]], [[M2_0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[M1_0]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[M2_0]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[IF_THEN11:.*]], label %[[IF_END18]]
 ; CHECK:       [[IF_THEN11]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[TMP4]], <2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[TMP5]], <2 x i32> splat (i32 128))
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M3_0]], i32 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M1_0]], i32 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i32 @llvm.umin.i32(i32 [[TMP7]], i32 128)
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M2_0]], i32 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.umin.i32(i32 [[TMP5]], i32 128)
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M3_0]], i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call i32 @llvm.umin.i32(i32 [[TMP9]], i32 128)
 ; CHECK-NEXT:    br label %[[IF_END18]]
 ; CHECK:       [[IF_END18]]:
-; CHECK-NEXT:    [[M3_1:%.*]] = phi i32 [ [[TMP8]], %[[IF_THEN11]] ], [ [[M3_0]], %[[IF_END]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP6]], %[[IF_THEN11]] ], [ [[TMP4]], %[[IF_END]] ]
-; CHECK-NEXT:    [[M1_1:%.*]] = extractelement <2 x i32> [[TMP9]], i64 0
+; CHECK-NEXT:    [[M1_1:%.*]] = phi i32 [ [[TMP8]], %[[IF_THEN11]] ], [ [[M1_0]], %[[IF_END]] ]
+; CHECK-NEXT:    [[M2_1:%.*]] = phi i32 [ [[TMP6]], %[[IF_THEN11]] ], [ [[M2_0]], %[[IF_END]] ]
+; CHECK-NEXT:    [[M3_1:%.*]] = phi i32 [ [[TMP10]], %[[IF_THEN11]] ], [ [[M3_0]], %[[IF_END]] ]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[M1_1]], 4
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[SHR]] to i8
 ; CHECK-NEXT:    [[INCDEC_PTR19:%.*]] = getelementptr inbounds nuw i8, ptr [[R_ADDR_156]], i64 1
 ; CHECK-NEXT:    store i8 [[CONV]], ptr [[R_ADDR_156]], align 1
-; CHECK-NEXT:    [[M2_1:%.*]] = extractelement <2 x i32> [[TMP9]], i64 1
 ; CHECK-NEXT:    [[SHR20:%.*]] = lshr i32 [[M2_1]], 4
 ; CHECK-NEXT:    [[CONV21:%.*]] = trunc i32 [[SHR20]] to i8
 ; CHECK-NEXT:    [[INCDEC_PTR22:%.*]] = getelementptr inbounds nuw i8, ptr [[R_ADDR_156]], i64 2

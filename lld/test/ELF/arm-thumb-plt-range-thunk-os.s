@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld -z nosort-thunks a.o --shared --icf=all -o a.so --script=a.lds --print-map --print-icf-sections
+// RUN: ld.lld a.o --shared --icf=all -o a.so --script=a.lds --print-map --print-icf-sections
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex -d a.so | FileCheck %s
 // RUN: rm a.so
 
@@ -44,18 +44,18 @@ preemptible:
 bx lr
 
 // CHECK-LABEL: <sym1>:
-// CHECK-NEXT: 2000000: bl 0x2000018 <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT: 2000000: bl 0x2000030 <__ThumbV7PILongThunk_elsewhere>
 // CHECK-NEXT:          bl 0x2000024 <__ThumbV7PILongThunk_preemptible>
 // CHECK-NEXT:          bx lr
 
 // CHECK-LABEL: <preemptible>:
-// CHECK-NEXT: 200000a: bl 0x2000030 <__ThumbV7PILongThunk_far_preemptible>
+// CHECK-NEXT: 200000a: bl 0x2000018 <__ThumbV7PILongThunk_far_preemptible>
 // CHECK-NEXT:          bl 0x200003c <__ThumbV7PILongThunk_far_nonpreemptible>
 // CHECK-NEXT:          bl 0x200003c <__ThumbV7PILongThunk_far_nonpreemptible>
 // CHECK-NEXT:          bx lr
 
-// CHECK-LABEL: <__ThumbV7PILongThunk_elsewhere>:
-// CHECK-NEXT: 2000018: movw    r12, #12
+// CHECK-LABEL: <__ThumbV7PILongThunk_far_preemptible>:
+// CHECK-NEXT: 2000018: movw    r12, #44
 // CHECK-NEXT:          movt    r12, #512
 // CHECK-NEXT:          add     r12, pc
 // CHECK-NEXT:          bx      r12
@@ -66,9 +66,9 @@ bx lr
 // CHECK-NEXT:          add     r12, pc
 // CHECK-NEXT:          bx      r12
 
-// CHECK-LABEL: <__ThumbV7PILongThunk_far_preemptible>:
-// CHECK-NEXT: 2000030: movw    r12, #20
-// CHECK-NEXT:          movt    r12, #512
+// CHECK-LABEL: <__ThumbV7PILongThunk_elsewhere>:
+// CHECK-NEXT: 2000030: movw    r12, #65524
+// CHECK-NEXT:          movt    r12, #511
 // CHECK-NEXT:          add     r12, pc
 // CHECK-NEXT:          bx      r12
 

@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_time_unittests)
+add_libc_testsuite(libc-sys-time-tests)
 
-add_libc_unittest(
+add_libc_test(
   utimes_test
   SUITE
-    libc_sys_time_unittests
+    libc-sys-time-tests
   SRCS
     utimes_test.cpp
   DEPENDS
@@ -20,10 +20,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   setitimer_test
   SUITE
-    libc_sys_time_unittests
+    libc-sys-time-tests
   SRCS
     setitimer_test.cpp
   DEPENDS
@@ -38,10 +38,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   getitimer_test
   SUITE
-    libc_sys_time_unittests
+    libc-sys-time-tests
   SRCS
     getitimer_test.cpp
   DEPENDS
@@ -53,10 +53,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   gettimeofday_test
   SUITE
-    libc_sys_time_unittests
+    libc-sys-time-tests
   SRCS
     gettimeofday_test.cpp
   DEPENDS

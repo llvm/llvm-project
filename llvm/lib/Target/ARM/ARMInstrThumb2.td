@@ -4083,7 +4083,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
                    (ins thumb_br_target:$dst, pred:$p),
                    4, IIC_Br, [],
                    (t2B thumb_br_target:$dst, pred:$p)>,
-                 Requires<[IsThumb2]>, Sched<[WriteBr]>;
+                 Requires<[IsThumb, HasV8MBaseline]>, Sched<[WriteBr]>;
 }
 
 // IT block

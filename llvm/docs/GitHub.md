@@ -26,12 +26,12 @@ describes the typical workflow of creating a Pull Request and getting it reviewe
 and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to [GitHub's documentation](https://docs.github.com/pull-requests).
 
-```{note}
+:::{note}
 If you are using a Pull Request for purposes other than review
 (eg: precommit CI results, convenient web-based reverts, etc)
 add the [skip-precommit-approval](https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval)
 label to the PR.
-```
+:::
 
 ### GitHub Tools
 
@@ -68,11 +68,11 @@ gh pr create
 When prompted select to create and use your own fork and follow
 the instructions to add more information needed.
 
-```{note}
+:::{note}
 When you let the GitHub CLI create a fork of llvm-project to
 your user, it will change the git "remotes" so that "origin" points
 to your fork and "upstream" points to the main llvm-project repository.
-```
+:::
 
 ### Updating Pull Requests
 
@@ -116,11 +116,11 @@ or in some dependent code.
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
 
-```{note}
+:::{note}
 This guide assumes that the PR branch only has 1 author. If you are
 collaborating with others on a single branch, be careful how and when you push
 changes. `--force-with-lease` may be useful in this situation.
-```
+:::
 
 ### Approvals
 
@@ -137,7 +137,7 @@ After your PR is approved, ensure that:
     messages of commits in the PR will **not** be used.
   * You have set a valid email address in your GitHub account, see {ref}`github-email-address`.
 
-```{note}
+:::{note}
 The LLVM Project monorepo on GitHub is configured to always use "Squash
 and Merge" as the pull request merge option when using the web interface.
 With this option, GitHub uses the PR summary as the default commit
@@ -146,19 +146,14 @@ message.
 Users with write access who can merge PRs have a final opportunity to edit
 the commit title and message before merging. However, this option is not
 available to contributors without write access.
-```
+:::
 
 At this point, you can merge your changes. If you do not have write permissions
 for the repository, the merge button in GitHub's web interface will be
 disabled. If this is the case, continue following the steps here but ask one of
 your reviewers to click the merge button on your behalf.
 
-If the PR is a single commit, all you need to do is click the merge button in
-GitHub's web interface.
-
-If your PR contains multiple commits, you need to consolidate those commits into
-one commit. There are three different ways to do this, shown here with the most
-commonly used first:
+To merge your PR into the LLVM main branch do one of the following:
 
 * Use the button `Squash and merge` in GitHub's web interface, if you do this
   remember to review the commit message when prompted.
@@ -166,52 +161,52 @@ commonly used first:
   Afterwards you can select the option `Delete branch` to delete the branch
   from your fork.
 
-* [Interactive rebase](https://git-scm.com/docs/git-rebase#_interactive_mode)
-  with fixups. This is the recommended method since you can control the final
-  commit message and check that the final commit looks as you expect. When
-  your local state is correct, remember to force-push to your branch and press
-  the merge button in GitHub's web interface afterwards.
-
-* Merge using the GitHub command line interface. Switch to your branch locally
+* Use the GitHub command line interface. Switch to your branch locally
   and run:
 
   ```console
   gh pr merge --squash --delete-branch
   ```
 
+  Specifying `--squash` automatically selects the desired "Squash and Merge" merge strategy.
+  If you don't specify `--squash`, you'll get a selection option where you can only select "Squash and Merge".
+  Do not specify `--rebase` or `--merge` as these merge modes are not permitted in the LLVM repository.
+
   If you observe an error message from the above informing you that your pull
   request is not mergeable, then that is likely because upstream has been
   modified since your pull request was authored in a way that now results in a
-  merge conflict. You must first resolve this merge conflict in order to merge
-  your pull request. In order to do that:
+  merge conflict.
 
-  ```console
-  git fetch upstream
-  git rebase upstream/main
-  ```
+If you need to resolve a merge conflict before merging, you can do it as follows:
 
-  Then fix the source files causing merge conflicts and make sure to rebuild and
-  retest the result. Then:
+```console
+git fetch upstream
+git rebase upstream/main
+```
 
-  ```console
-  git add <files with resolved merge conflicts>
-  git rebase --continue
-  ```
+Then fix the source files causing merge conflicts and make sure to rebuild and
+retest the result. Then:
 
-  Finally, you'll need to force push to your branch one more time before you can
-  merge:
+```console
+git add <files with resolved merge conflicts>
+git rebase --continue
+```
 
-  ```console
-  git push --force
-  gh pr merge --squash --delete-branch
-  ```
+Finally, you'll need to force push to your branch one more time before you can
+merge:
 
-  This force push may ask if you intend to push hundreds, or potentially
-  thousands of patches (depending on how long it's been since your pull request
-  was initially authored vs. when you intended to merge it). Since you're pushing
-  to a branch in your fork, this is ok and expected. Github's UI for the pull
-  request will understand that you're rebasing just your patches, and display
-  this result correctly with a note that a force push did occur.
+```console
+git push --force
+```
+
+This force push may ask if you intend to push hundreds, or potentially
+thousands of patches (depending on how long it's been since your pull request
+was initially authored vs. when you intended to merge it). Since you're pushing
+to a branch in your fork, this is ok and expected. Github's UI for the pull
+request will understand that you're rebasing just your patches, and display
+this result correctly with a note that a force push did occur.
+
+After your force push, try merging your PR again following one of the above methods.
 
 (github_branches)=
 
@@ -231,7 +226,7 @@ To separate related changes or to break down a larger PR into smaller, reviewabl
 pieces, use "stacked pull requests" — this helps make the review process
 smoother.
 
-```{note}
+:::{note}
 The LLVM Project monorepo on GitHub is configured to always use "Squash and
 Merge" as the pull request merge option. As a result, each PR results in
 exactly one commit being merged into the project.
@@ -240,7 +235,7 @@ This means that stacked pull requests are the only available option for
 landing a series of related changes. In contrast, submitting a PR with
 multiple commits and merging them as-is (without squashing) is not supported
 in LLVM.
-```
+:::
 
 While GitHub does not natively support stacked pull requests, there are several
 common alternatives.
@@ -270,7 +265,7 @@ Your options are as follows:
    perform this step using the web interface.
 
    This approach requires commit access. See how to obtain it
-   [here](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
+   [here](DeveloperPolicy.md#obtaining-commit-access).
 
 2. Two PRs with a dependency note
 
@@ -288,7 +283,7 @@ Your options are as follows:
    stacked PRs. These tools are also based on using user branches
    in `llvm/llvm-project`.
 
-```{note}
+:::{note}
 When not using user branches, GitHub will not display proper diffs for
 subsequent PRs in a stack. Instead, it will show a combined diff that
 includes all commits from earlier PRs.
@@ -299,7 +294,7 @@ For example: “The first N commits are from the base PR.”
 
 You can avoid this issue by using user branches directly in the
 `llvm/llvm-project` repository.
-```
+:::
 
 
 ### Using Graphite for stacked Pull Requests

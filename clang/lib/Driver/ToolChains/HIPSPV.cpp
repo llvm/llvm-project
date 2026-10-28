@@ -49,6 +49,12 @@ static std::string findPassPlugin(const Driver &D,
   return std::string();
 }
 
+// Is the in-tree SPIR-V backend built into this clang?
+static bool isSPIRVBackendAvailable(const llvm::Triple &T) {
+  std::string IgnoredError;
+  return llvm::TargetRegistry::lookupTarget(T, IgnoredError);
+}
+
 // Runs the HipSpvPasses plugin via `opt` on TempFile when the plugin is found.
 // Returns the lowered bitcode path, or TempFile unchanged if no plugin exists.
 static const char *runHipSpvPasses(Compilation &C, const JobAction &JA,
@@ -86,13 +92,6 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     if (Input.isFilename())
       LinkArgs.push_back(Input.getFilename());
 
-  // Add static device libraries using the common helper function.
-  // This handles unbundling archives (.a) containing bitcode bundles.
-  StringRef Arch = getToolChain().getTriple().getArchName();
-  StringRef Target =
-      "generic"; // SPIR-V is generic, no specific target ID like -mcpu
-  tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
-                                    Target, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 
@@ -108,7 +107,9 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
                                Args, Name, TempFile);
 
-    if (!getToolChain().useIntegratedBackend()) {
+    // Note that useIntegratedBackend() is consulted first so that an explicit
+    // -f(no-)integrated-objemitter still gets diagnosed against this toolchain.
+    if (!getToolChain().useIntegratedBackend() || !isSPIRVBackendAvailable(T)) {
       // External translator path: BC -> SPIR-V via llvm-spirv.
       llvm::opt::ArgStringList TrArgs;
       if (T.getSubArch() == llvm::Triple::NoSubArch)
@@ -224,11 +225,6 @@ void HIPSPV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  if (Inputs.size() > 0 && Inputs[0].getType() == types::TY_Image &&
-      JA.getType() == types::TY_Object)
-    return HIP::constructGenerateObjFileFromHIPFatBinary(C, Output, Inputs,
-                                                         Args, JA, *this);
-
   if (JA.getType() == types::TY_HIP_FATBIN)
     return HIP::constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs,
                                           Args, *this);
@@ -254,15 +250,8 @@ HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool HIPSPVToolChain::IsIntegratedBackendSupported() const {
-  // The in-tree SPIR-V backend can only be used when it is built.
-  std::string IgnoredError;
-  return llvm::TargetRegistry::lookupTarget(getTriple(), IgnoredError);
-}
-
-bool HIPSPVToolChain::IsIntegratedBackendDefault() const {
-  // Prefer the in-tree SPIR-V backend; fall back to the external llvm-spirv
-  // translator when the backend is not built.
-  return IsIntegratedBackendSupported();
+  // The in-tree SPIR-V backend can only be requested when it is built.
+  return isSPIRVBackendAvailable(getTriple());
 }
 
 void HIPSPVToolChain::addClangTargetOptions(
@@ -458,14 +447,4 @@ void HIPSPVToolChain::adjustDebugInfoKind(
   // since the driver defaults it to NoDebugInfo.
   (void)DebugInfoKind;
   (void)Args;
-}
-
-LTOKind HIPSPVToolChain::getLTOMode(const llvm::opt::ArgList &Args,
-                                    Action::OffloadKind Kind) const {
-  // The old offload driver pipeline does not support LTO output types. Only
-  // default to LTO with the new driver.
-  if (!Args.hasFlag(options::OPT_offload_new_driver,
-                    options::OPT_no_offload_new_driver, true))
-    return LTOK_None;
-  return ToolChain::getLTOMode(Args, Kind);
 }
