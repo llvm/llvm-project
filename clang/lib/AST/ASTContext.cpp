@@ -7761,10 +7761,14 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return false;
 
   // If either X or Y are local to the owning module, they are only possible to
-  // be the same entity if they are in the same module.
+  // be the same entity if they are in the same module...
   if (X->isModuleLocal() || Y->isModuleLocal())
     if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
-      return false;
+      // ... or if they are members of merged class definitions. For example,
+      // the operator() of a lambda closure type instantiated from a variable
+      // template in a shared header).
+      if (!isa<RecordDecl>(X->getDeclContext()))
+        return false;
 
   // Two typedefs refer to the same entity if they have the same underlying
   // type.
