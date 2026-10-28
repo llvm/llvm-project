@@ -465,11 +465,31 @@ public:
 
   /// A value of format In converted to format Out.
   Value *convert(Value *X, Fmt In, Fmt Out) {
-    Value *R = round(unpack(X, In), Out);
+    Value *R = In.P < Out.P && In.Bias < Out.Bias ? widenExact(X, In, Out)
+                                                  : round(unpack(X, In), Out);
     Value *Inf = B.CreateOr(c64(Out.infBits()),
                             select(signOf(X, In), c64(Out.signBit()), c64(0)));
     R = select(isInf(X, In), Inf, R);
     return select(isNaN(X, In), nanResult({X}, In, Out), R);
+  }
+
+  /// Finite X of format In in the wider format Out, which holds it exactly:
+  /// the exponent rebiased and the fraction shifted, a denormal normalized
+  /// (its leading one moved to the implicit bit).
+  Value *widenExact(Value *X, Fmt In, Fmt Out) {
+    Value *Exp = B.CreateAnd(B.CreateLShr(X, In.P - 1), c64(In.expAll()));
+    Value *Frac = B.CreateAnd(X, c64(In.fracMask()));
+    Value *Denormal = B.CreateICmpEQ(Exp, c64(0));
+    Value *Clz = B.CreateBinaryIntrinsic(Intrinsic::ctlz, Frac, B.getFalse());
+    Value *Sh = select(Denormal, B.CreateSub(Clz, c64(64 - In.P)), c64(0));
+    Value *E = B.CreateAdd(B.CreateSub(Exp, Sh),
+                           c64(Out.Bias - In.Bias));
+    E = B.CreateAdd(E, B.CreateZExt(Denormal, I64));
+    Value *M = B.CreateAnd(B.CreateShl(Frac, Sh), c64(In.fracMask()));
+    Value *R = B.CreateOr(B.CreateShl(E, Out.P - 1),
+                          B.CreateShl(M, Out.P - In.P));
+    R = select(isZero(X, In), c64(0), R);
+    return B.CreateOr(R, select(signOf(X, In), c64(Out.signBit()), c64(0)));
   }
 
   Value *fromInt(Value *V, bool Signed) {
