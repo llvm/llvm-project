@@ -48,6 +48,7 @@ struct VL {
 static bool isInvariantArg(BlockArgument arg, Block *block) {
   return arg.getOwner() != block;
 }
+
 /// Helper test for invariant value (defined outside given block).
 /// Handles both block arguments and operation results.
 static bool isInvariantValue(Value val, Block *block) {
