@@ -1183,10 +1183,11 @@ static llvm::Value *createSPIRVInputLoad(
     IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty, const Twine &Name,
     llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
     llvm::hlsl::InterpolationMode InterpMode) {
-  llvm::Type *LoadTy = Ty;
-  if (Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
-      Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32)
-    LoadTy = B.getInt32Ty();
+  // SPIR-V integer built-ins are 32-bit, so a narrower integer declaration
+  // loads the 32-bit built-in and truncates it. Other types are loaded as is.
+  bool Truncate = Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
+                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32;
+  llvm::Type *LoadTy = Truncate ? B.getInt32Ty() : Ty;
   auto *GV = new llvm::GlobalVariable(
       M, LoadTy, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
@@ -1195,7 +1196,7 @@ static llvm::Value *createSPIRVInputLoad(
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   llvm::Value *Value = B.CreateLoad(LoadTy, GV);
-  return LoadTy == Ty ? Value : B.CreateTrunc(Value, Ty);
+  return Truncate ? B.CreateTrunc(Value, Ty) : Value;
 }
 
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
@@ -1713,6 +1714,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                   llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                                   /* SampleId */ 18, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL()) {
+      assert(Type->isIntegerTy() && Type->getIntegerBitWidth() <= 32 &&
+             "SV_SampleIndex must be a 16 or 32 bit scalar integer, as "
+             "diagnosed by Sema");
       // The sample index is read with a dedicated operation, but an unpacked
       // element is still added to the input signature for compatibility.
       SemanticShape Shape =
