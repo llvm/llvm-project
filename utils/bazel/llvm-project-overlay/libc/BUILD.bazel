@@ -8890,8 +8890,8 @@ libc_support_library(
     hdrs = ["src/__support/math/daddf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
-        ":__support_macros_config",
         ":__support_fputil_float128",
+        ":__support_macros_config",
     ],
 )
 
