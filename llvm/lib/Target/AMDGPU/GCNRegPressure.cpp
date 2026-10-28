@@ -1117,42 +1117,42 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   auto &OS = dbgs();
   const char *RegName = GCNRegPressure::getName(Kind);
 
+  // Count only the registers of Kind, from the live sets. The maximum of a
+  // pressure tracker pairs the VGPR and AVGPR components, so its VGPR component
+  // alone can miss the VGPR peak. Max pressure can occur at either the
+  // early-clobber or register slot. This is slow but this is diagnostic code.
   unsigned MaxNumRegs = 0;
   const MachineInstr *MaxPressureMI = nullptr;
-  GCNUpwardRPTracker RPT(LIS);
+  SlotIndex MaxPressureSlot;
+  GCNRPTracker::LiveRegSet LiveSet;
   for (const MachineBasicBlock &MBB : MF) {
-    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
     for (const MachineInstr &MI : reverse(MBB)) {
-      RPT.resetMaxPressure();
-      RPT.recede(MI);
-      unsigned NumRegs = RPT.getMaxPressure().getNumRegs(Kind);
-      if (NumRegs > MaxNumRegs) {
-        MaxNumRegs = NumRegs;
-        MaxPressureMI = &MI;
+      if (MI.isDebugInstr())
+        continue;
+      SlotIndex MISlot = LIS.getInstructionIndex(MI);
+      for (SlotIndex SI : {MISlot.getRegSlot(false), MISlot.getRegSlot(true)}) {
+        GCNRPTracker::LiveRegSet SILiveSet = getLiveRegs(SI, LIS, MRI, Kind);
+        unsigned NumRegs = getRegPressure(MRI, SILiveSet).getNumRegs(Kind);
+        if (NumRegs > MaxNumRegs) {
+          MaxNumRegs = NumRegs;
+          MaxPressureMI = &MI;
+          MaxPressureSlot = SI;
+          LiveSet = std::move(SILiveSet);
+        }
       }
     }
   }
 
-  SlotIndex MISlot = LIS.getInstructionIndex(*MaxPressureMI);
-
-  // Max pressure can occur at either the early-clobber or register slot.
-  // Choose the maximum liveset between both slots. This is ugly but this is
-  // diagnostic code.
-  SlotIndex ECSlot = MISlot.getRegSlot(true);
-  SlotIndex RSlot = MISlot.getRegSlot(false);
-  GCNRPTracker::LiveRegSet ECLiveSet = getLiveRegs(ECSlot, LIS, MRI, Kind);
-  GCNRPTracker::LiveRegSet RLiveSet = getLiveRegs(RSlot, LIS, MRI, Kind);
-  unsigned ECNumRegs = getRegPressure(MRI, ECLiveSet).getNumRegs(Kind);
-  unsigned RNumRegs = getRegPressure(MRI, RLiveSet).getNumRegs(Kind);
-  GCNRPTracker::LiveRegSet *LiveSet =
-      ECNumRegs > RNumRegs ? &ECLiveSet : &RLiveSet;
-  SlotIndex MaxPressureSlot = ECNumRegs > RNumRegs ? ECSlot : RSlot;
-  assert(getRegPressure(MRI, *LiveSet).getNumRegs(Kind) == MaxNumRegs);
+  if (!MaxPressureMI) {
+    OS << "\n*** Register pressure info (" << RegName << "s) for "
+       << MF.getName() << " ***\nNo live " << RegName << "s\n";
+    return;
+  }
 
   // Split live registers into single-def and multi-def sets.
   GCNRegPressure SDefPressure, MDefPressure;
   SmallVector<Register, 16> SDefRegs, MDefRegs;
-  for (auto [Reg, LaneMask] : *LiveSet) {
+  for (auto [Reg, LaneMask] : LiveSet) {
     assert(GCNRegPressure::getRegKind(Reg, MRI) == Kind);
     LiveInterval &LI = LIS.getInterval(Reg);
     if (LI.getNumValNums() == 1 ||
@@ -1221,13 +1221,13 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   });
 
   for (const Register Reg : SDefRegs) {
-    PrintRegInfo(Reg, LiveSet->lookup(Reg));
+    PrintRegInfo(Reg, LiveSet.lookup(Reg));
   }
 
   OS << "\nLive registers with multiple definitions (" << MDefNumRegs << ' '
      << RegName << "s):\n";
   for (const Register Reg : MDefRegs) {
-    PrintRegInfo(Reg, LiveSet->lookup(Reg));
+    PrintRegInfo(Reg, LiveSet.lookup(Reg));
   }
 }
 #endif
