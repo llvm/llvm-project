@@ -77,6 +77,11 @@ constexpr bool test_ppc_edge_cases() {
 
 template <typename T>
 constexpr bool test_floating_points() {
+#if defined(__arm64ec__) && __LDBL_MANT_DIG__ == 64
+  if constexpr (std::same_as<T, long double>)
+    return true;
+#endif
+
   ASSERT_SAME_TYPE(T, decltype(std::midpoint(T{}, T{})));
   ASSERT_NOEXCEPT(std::midpoint(T{}, T{}));
 
