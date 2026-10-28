@@ -51,10 +51,12 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include <optional>
@@ -7220,12 +7222,38 @@ int X86TTIImpl::getScatterOverhead() const {
   return 1024;
 }
 
+// Count the lanes a compile-time constant mask leaves live, and the groups of
+// GroupSize consecutive lanes that hold at least one of them. Returns nullopt
+// when the mask is not known at compile time, which is the common case.
+static std::optional<std::pair<unsigned, unsigned>>
+getActiveGSLanesAndGroups(const Value *Mask, unsigned VF, unsigned GroupSize) {
+  const auto *CMask = dyn_cast_or_null<Constant>(Mask);
+  if (!CMask || !GroupSize)
+    return std::nullopt;
+  unsigned Lanes = 0, Groups = 0;
+  for (unsigned Base = 0; Base < VF; Base += GroupSize) {
+    bool GroupLive = false;
+    for (unsigned I = Base, E = std::min(Base + GroupSize, VF); I != E; ++I) {
+      // An element that cannot be read, or that is not a known-zero bit, has
+      // to be counted as active.
+      const Constant *Elt = CMask->getAggregateElement(I);
+      if (!Elt || !Elt->isNullValue()) {
+        ++Lanes;
+        GroupLive = true;
+      }
+    }
+    if (GroupLive)
+      ++Groups;
+  }
+  return std::make_pair(Lanes, Groups);
+}
+
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
-InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
-                                            TTI::TargetCostKind CostKind,
-                                            Type *SrcVTy, const Value *Ptr,
-                                            Align Alignment,
-                                            unsigned AddressSpace) const {
+InstructionCost
+X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                            Type *SrcVTy, const Value *Ptr, Align Alignment,
+                            unsigned AddressSpace, const Value *Mask,
+                            std::optional<bool> UniformBase) const {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
@@ -7235,60 +7263,204 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   // operation will use 16 x 64 indices which do not fit in a zmm and needs
   // to split. Also check that the base pointer is the same for all lanes,
   // and that there's at most one variable index.
-  auto getIndexSizeInBits = [](const Value *Ptr, const DataLayout &DL) {
-    unsigned IndexSize = DL.getPointerSizeInBits();
+  unsigned PtrSizeInBits = DL.getPointerSizeInBits(
+      Ptr && Ptr->getType()->isPtrOrPtrVectorTy()
+          ? Ptr->getType()->getScalarType()->getPointerAddressSpace()
+          : AddressSpace);
+
+  auto getIndexSizeInBits = [&](const Value *Ptr) {
+    unsigned IndexSize = PtrSizeInBits;
     const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
-    if (IndexSize < 64 || !GEP)
+    if (IndexSize != 64 || !GEP)
       return IndexSize;
 
     unsigned NumOfVarIndices = 0;
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
-    for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
-      if (isa<Constant>(GEP->getOperand(I)))
+
+    // A scalar GEP does not say which operand varies across lanes: a chase like
+    // p[i]->y and a uniform base reached through a narrow index present the
+    // same GEP, and only the first gathers from a vector of pointers. The
+    // caller answers that. Without an answer, only a base no instruction
+    // defines counts as uniform.
+    if (!GEP->getType()->isVectorTy() &&
+        !UniformBase.value_or(!isa<Instruction>(Ptrs)))
+      return IndexSize;
+
+    // combineGatherScatter narrows through three routes: folding a constant,
+    // shortening an extension that still fits a signed dword, and truncating
+    // where that removes an illegal type. Only the last depends on the
+    // subtarget -- sixteen qword indices are illegal everywhere, but the dword
+    // form they narrow to is legal only once a 512-bit register is available --
+    // so the same gather keeps qword indices on AVX2 and narrows on AVX-512.
+    LLVMContext &Ctx = SrcVTy->getContext();
+
+    // An extension needs as many bits as its source, and one more for a zero
+    // extension, which spends a bit on the sign.
+    auto ExtendedBits = [](const Value *V) -> std::optional<unsigned> {
+      const auto *Ext = dyn_cast<CastInst>(V);
+      if (!Ext || (Ext->getOpcode() != Instruction::SExt &&
+                   Ext->getOpcode() != Instruction::ZExt))
+        return std::nullopt;
+      return Ext->getSrcTy()->getScalarSizeInBits() +
+             (Ext->getOpcode() == Instruction::ZExt);
+    };
+    auto NarrowsOnItsOwn = [&](const Value *V) {
+      if (V->getType()->getScalarSizeInBits() <= 32 || isa<Constant>(V))
+        return true;
+      std::optional<unsigned> Bits = ExtendedBits(V);
+      return Bits && *Bits <= 32;
+    };
+    auto TruncationRemovesIllegalType = [&]() {
+      return !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) &&
+             TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF));
+    };
+
+    // A constant splat added to the index is scaled and folded into the base,
+    // so the index the instruction sees is the other addend. The fold needs a
+    // pointer-width index element, where the scaling cannot wrap.
+    auto PeelSplatAddend = [&](const Value *V) -> const Value * {
+      const auto *Add = dyn_cast<BinaryOperator>(V);
+      if (!Add || Add->getOpcode() != Instruction::Add ||
+          !Add->getType()->isVectorTy() ||
+          Add->getType()->getScalarSizeInBits() != PtrSizeInBits)
+        return V;
+      for (unsigned I = 0; I != 2; ++I)
+        if (isa<Constant>(Add->getOperand(I)) &&
+            getSplatValue(Add->getOperand(I)))
+          return Add->getOperand(1 - I);
+      return V;
+    };
+    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
+         GTI != GTE; ++GTI) {
+      const Value *Operand = GTI.getOperand();
+
+      // An index that holds the same value in every lane contributes a fixed
+      // byte offset, which folds into the base pointer instead of reaching the
+      // index operand. That covers every struct member, named by a scalar
+      // constant, as well as a splat. A constant that is not a splat does
+      // reach the index, so it is examined like any other.
+      if (isa<Constant>(Operand) && (!Operand->getType()->isVectorTy() ||
+                                     getSplatValue(Operand) != nullptr))
         continue;
-      Type *IndxTy = GEP->getOperand(I)->getType();
-      if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
-        IndxTy = IndexVTy->getElementType();
-      if ((IndxTy->getPrimitiveSizeInBits() == 64 &&
-           !isa<SExtInst>(GEP->getOperand(I))) ||
-          ++NumOfVarIndices > 1)
-        return IndexSize; // 64
+
+      if (++NumOfVarIndices > 1)
+        return IndexSize;
+
+      Operand = PeelSplatAddend(Operand);
+
+      unsigned IndexBits;
+      if (Operand->getType()->isVectorTy()) {
+        // Match the backend: combineGatherScatter narrows an index vector
+        // that is representable in a signed dword, and tests that with
+        // ComputeNumSignBits rather than by declared width and opcode.
+        IndexBits = ComputeMaxSignificantBits(Operand, DL);
+      } else if (std::optional<unsigned> Bits = ExtendedBits(Operand)) {
+        // A scalar index reaches here from a caller that has not widened the
+        // address yet. Widening preserves the extension, so its source width
+        // is what the index operand will hold.
+        IndexBits = *Bits;
+      } else {
+        // Nothing says how the remaining lanes differ, so keep the declared
+        // width.
+        IndexBits = Operand->getType()->getPrimitiveSizeInBits();
+      }
+      if (IndexBits > 32)
+        return IndexSize;
+
+      TypeSize EltSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      if (EltSize.isScalable())
+        return IndexSize;
+      uint64_t Stride = EltSize.getFixedValue();
+
+      // A stride the scale field encodes -- 1, 2, 4 or 8 -- is applied by the
+      // addressing mode, so the index reaches the combine as it was written.
+      if (isPowerOf2_64(Stride) && Stride <= 8) {
+        if (NarrowsOnItsOwn(Operand) || TruncationRemovesIllegalType())
+          continue;
+        return IndexSize;
+      }
+
+      // Any other stride is multiplied into the index first, and the product
+      // is what the combine sees. It has to fit a signed dword with the stride
+      // included, and it is no longer an extension node. ComputeNumSignBits
+      // adds the two significant widths, and a positive constant spends one
+      // bit on the sign, so a stride of 12 contributes five bits and not four.
+      if (IndexBits + APInt(64, Stride).getSignificantBits() > 32)
+        return IndexSize;
+      if (!isa<Constant>(Operand) && !TruncationRemovesIllegalType())
+        return IndexSize;
     }
+
     return (unsigned)32;
   };
 
-  // Trying to reduce IndexSize to 32 bits for vector 16.
-  // By default the IndexSize is equal to pointer size.
-  unsigned IndexSize = (ST->hasAVX512() && VF >= 16)
-                           ? getIndexSizeInBits(Ptr, DL)
-                           : DL.getPointerSizeInBits();
+  // The index width belongs to the operation as a whole, not to any one part,
+  // so derive it whenever a hardware gather/scatter is being priced. Asking
+  // only for AVX-512 at VF >= 16 left a dword-indexed gather costed as though
+  // its indices were pointer-width everywhere else, so it tied with the
+  // qword-indexed form that CodeGen splits into twice as many instructions.
+  unsigned IndexSize = getIndexSizeInBits(Ptr);
 
   auto *IndexVTy = FixedVectorType::get(
       IntegerType::get(SrcVTy->getContext(), IndexSize), VF);
   std::pair<InstructionCost, MVT> IdxsLT = getTypeLegalizationCost(IndexVTy);
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
-  InstructionCost::CostType SplitFactor =
-      std::max(IdxsLT.first, SrcLT.first).getValue();
-  if (SplitFactor > 1) {
-    // Handle splitting of vector of pointers
-    auto *SplitSrcTy =
-        FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
-    return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
-                                         Alignment, AddressSpace);
+
+  // One instruction covers as many lanes as fit in a legal register once both
+  // the data and the indices are held, so the wider of the two bounds the lane
+  // count: a dword gather indexed by qwords fills a register with indices
+  // before it fills one with data. Counting legalized registers instead
+  // overcounts, because legalization first widens to a power of two -- a
+  // 24-lane qword-indexed gather occupies four index registers, but only three
+  // of them hold live lanes and CodeGen emits three instructions.
+  auto LanesOf = [](MVT VT) {
+    return VT.isVector() ? VT.getVectorNumElements() : 1U;
+  };
+  unsigned LanesPerPart =
+      std::max(std::min(LanesOf(IdxsLT.second), LanesOf(SrcLT.second)), 1U);
+
+  // Lanes the operation is declared over, and the parts they occupy.
+  InstructionCost::CostType ChargedLanes = VF;
+  InstructionCost::CostType EmittedParts = divideCeil(VF, LanesPerPart);
+
+  if (auto Active = getActiveGSLanesAndGroups(Mask, VF, LanesPerPart)) {
+    // A compile-time mask says which parts survive: one with no live lane
+    // gathers nothing, and CodeGen folds it away rather than emitting it.
+    ChargedLanes = Active->first;
+    EmittedParts = Active->second;
+  } else if (Opcode != Instruction::Load) {
+    // Without a compile-time mask the tail that legalization's widening added
+    // cannot be proved dead. A gather's tail produces an unused result and is
+    // dropped, but a scatter's survives as a store under a zeroed mask, which
+    // is still an instruction. How far the widening reaches is set by the
+    // predicate: AVX512BW holds it in a k-register as wide as the legalized
+    // vector, so the length rounds up to a power of two, while without it the
+    // mask is broken into 16-lane pieces and only rounds up to one of those.
+    unsigned WidenedLanes = PowerOf2Ceil(VF);
+    if (!ST->hasBWI())
+      WidenedLanes = std::min(WidenedLanes, alignTo(VF, 16u));
+    EmittedParts = divideCeil(WidenedLanes, LanesPerPart);
   }
 
-  // If we didn't split, this will be a single gather/scatter instruction.
+  // Nothing survives, so no instruction is emitted.
+  if (EmittedParts == 0)
+    return 0;
+
+  // Each emitted instruction pays the overhead once.
   if (CostKind == TTI::TCK_CodeSize)
-    return 1;
+    return EmittedParts;
 
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
   const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
                                                        : getScatterOverhead();
-  return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           Alignment, AddressSpace, CostKind);
+  // Charge every lane that is actually accessed. Dividing the length by the
+  // part count dropped the remainder, so a v9 gather was costed as eight lanes.
+  return EmittedParts * GSOverhead +
+         ChargedLanes * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
+                                        Alignment, AddressSpace, CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
@@ -7313,11 +7485,26 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned AddressSpace = MICA.getAddressSpace();
-  InstructionCost Cost =
-      getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace);
 
-  // Predicate fanout (see getPredicateFanoutCost); variable mask only.
-  if (MICA.getVariableMask()) {
+  // A mask known at compile time tells us which parts CodeGen keeps. Read it
+  // only from a real gather/scatter call: the context instruction can also be a
+  // plain load or store being considered for the transform, whose operands mean
+  // something else entirely.
+  const Value *Mask = nullptr;
+  if (const auto *II = dyn_cast_or_null<IntrinsicInst>(MICA.getInst()))
+    if (II->getIntrinsicID() == MICA.getID())
+      Mask = II->getArgOperand(IsLoad ? 1 : 2);
+
+  InstructionCost Cost =
+      getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace,
+                      Mask, MICA.getUniformBase());
+
+  // Predicate fanout (see getPredicateFanoutCost); variable mask only, and not
+  // at code size. There the cost is the instruction count getGSVectorCost
+  // derives, while FanoutCostPerPart is a tie-break against the vectorizer's
+  // widest-VF bias. Charging it anyway prices shapes above every instruction
+  // CodeGen emits for them, including ones that build no sub-mask at all.
+  if (MICA.getVariableMask() && CostKind != TTI::TCK_CodeSize) {
     auto *MaskVecTy =
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()),
                              cast<FixedVectorType>(SrcVTy)->getNumElements());
