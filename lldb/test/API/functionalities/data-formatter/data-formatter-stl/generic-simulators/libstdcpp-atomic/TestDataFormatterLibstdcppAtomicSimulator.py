@@ -26,10 +26,10 @@ class LibstdcppAtomicSimulatorTestCase(TestBase):
 
     def do_test(self, float_layout: int, refcount_layout: int):
         """
-        float_layout: 
+        float_layout:
             - 0 uses the generic `_M_i` for std::atomic<float>.
             - 1 uses the specialization with `_M_fp`.
-        refcount_layout: 
+        refcount_layout:
             - 0 uses a scalar `_M_val` for the reference count of std::atomic<std::shared_ptr<T>>.
             - 1 wraps it in a struct with `_M_i`.
         """
@@ -66,9 +66,7 @@ class LibstdcppAtomicSimulatorTestCase(TestBase):
         # The summary of atomic smart pointers reads the reference count.
         atomic_shared = self.get_inner("atomic_shared")
         self.assertEqual(atomic_shared.Dereference().GetValueAsSigned(), 300)
-        self.expect(
-            "frame variable atomic_shared", substrs=["strong=1", "weak=0"]
-        )
+        self.expect("frame variable atomic_shared", substrs=["strong=1", "weak=0"])
 
         atomic_weak = self.get_inner("atomic_weak")
         self.assertEqual(atomic_weak.Dereference().GetValueAsSigned(), 300)

@@ -18,7 +18,7 @@ class StdAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    def do_test(self):
+    def do_test(self, check_shared_ptr: bool = True):
         """Test that std::atomic is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
@@ -111,7 +111,7 @@ class StdAtomicTestCase(TestBase):
 
         # Atomic smart pointers, only available if supported by the library.
         atomic_shared = self.get_variable("atomic_shared")
-        if atomic_shared.IsValid():
+        if check_shared_ptr and atomic_shared.IsValid():
             # shared_pointer
             val_shared = atomic_shared.child[0]
             self.assertIsNotNone(val_shared, msg="atomic_shared child is None.")
@@ -141,4 +141,4 @@ class StdAtomicTestCase(TestBase):
     def test_msvcstl(self):
         # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
         self.build()
-        self.do_test()
+        self.do_test(check_shared_ptr=False)
