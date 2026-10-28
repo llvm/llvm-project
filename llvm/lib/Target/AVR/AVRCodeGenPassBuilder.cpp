@@ -22,11 +22,14 @@ class AVRCodeGenPassBuilder : public CodeGenPassBuilder {
   using Base = CodeGenPassBuilder;
 
   AVRTargetMachine &getTM() const {
-    return static_cast<AVRTargetMachine&>(TM);
+    return static_cast<AVRTargetMachine &>(TM);
   }
 
 public:
-  explicit AVRCodeGenPassBuilder(AVRTargetMachine &TM, const CGPassBuilderOption &Opts, PassInstrumentationCallbacks *PIC): CodeGenPassBuilder(TM, Opts, PIC) {}
+  explicit AVRCodeGenPassBuilder(AVRTargetMachine &TM,
+                                 const CGPassBuilderOption &Opts,
+                                 PassInstrumentationCallbacks *PIC)
+      : CodeGenPassBuilder(TM, Opts, PIC) {}
 
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -61,7 +64,7 @@ void AVRCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
 
 void AVRCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Must run branch selection immediately preceding the asm printer.
-  addMachineFunctionPass(BranchRelaxationPass(), PMW); 
+  addMachineFunctionPass(BranchRelaxationPass(), PMW);
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
