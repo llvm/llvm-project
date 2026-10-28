@@ -136,7 +136,7 @@ Let's break down that last command a little:
     projects can be listed, separated by semicolons, such as `clang;lldb`.
     In this example, we'll be making a change to Clang, so we only add clang.
 
-Finally, create a symlink (or copy) of `llvm-project/build/compile-commands.json`
+Finally, create a symlink (or copy) of `llvm-project/build/compile_commands.json`
 into `llvm-project/`:
 
 ```console

@@ -179,3 +179,12 @@ int test_reference_that_might_be_after_the_end(int idx) {
     return -1;
   return ref;
 }
+
+// The size of an incomplete type (e.g., a forward declaration)
+// is unknown, so you cannot calculate the offset.
+struct Incomplete;
+void useIncomplete(Incomplete &);
+
+void test_incomplete(void *p) {
+  useIncomplete(*static_cast<Incomplete *>(p)); // no-crash
+}

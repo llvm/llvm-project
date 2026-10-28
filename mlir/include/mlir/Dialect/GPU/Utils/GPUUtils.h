@@ -29,6 +29,19 @@ class LaunchOp;
 
 /// Returns the matching vector combining kind.
 vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode);
+
+/// Lane layout of the clusters reduced by a `gpu.subgroup_reduce` op.
+struct SubgroupReduceClusterInfo {
+  unsigned clusterStride;
+  unsigned clusterSize;
+  unsigned subgroupSize;
+};
+
+/// Returns the cluster layout of `op` in a subgroup of `subgroupSize` lanes,
+/// which must be a power of two. Emits an op error and fails if the cluster
+/// size exceeds the subgroup size or the cluster stride is not less than it.
+FailureOr<SubgroupReduceClusterInfo>
+getSubgroupReduceClusterInfo(SubgroupReduceOp op, unsigned subgroupSize);
 } // namespace gpu
 
 /// Get a gpu.func created from outlining the region of a gpu.launch op with the

@@ -22,6 +22,8 @@ using namespace llvm::dwarf;
 
 namespace {
 
+std::once_flag g_type_system_initialize_flag;
+
 class TypeSystemFortranHolder {
   std::shared_ptr<TypeSystemFortran> m_ast;
 
@@ -32,10 +34,10 @@ public:
 
 class DWARFASTParserFortranTests : public testing::Test {
   void SetUp() override {
-    std::call_once(TestUtilities::g_debugger_initialize_flag, []() {
-      Debugger::Initialize(nullptr);
-      TypeSystemFortran::Initialize();
-    });
+    std::call_once(TestUtilities::g_debugger_initialize_flag,
+                   []() { Debugger::Initialize(nullptr); });
+    std::call_once(g_type_system_initialize_flag,
+                   []() { TypeSystemFortran::Initialize(); });
   }
 };
 

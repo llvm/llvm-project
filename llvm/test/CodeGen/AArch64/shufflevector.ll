@@ -210,15 +210,8 @@ define <2 x i1> @shufflevector_v2i1(<2 x i1> %a, <2 x i1> %b){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v1.b[1], w9
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[1]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    mov v0.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %c = shufflevector <2 x i1> %a, <2 x i1> %b, <2 x i32> <i32 0, i32 3>
@@ -423,24 +416,11 @@ define <4 x ptr> @shufflevector_v4p0(<4 x ptr> %a, <4 x ptr> %b) {
 ; ===== Smaller/Larger Width Vectors with Zero Masks =====
 
 define <2 x i1> @shufflevector_v2i1_zeroes(<2 x i1> %a, <2 x i1> %b){
-; CHECK-SD-LABEL: shufflevector_v2i1_zeroes:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.2s, v0.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v2i1_zeroes:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    umov w8, v0.b[0]
-; CHECK-GI-NEXT:    umov w9, v0.b[1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w9
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v2i1_zeroes:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    ret
     %c = shufflevector <2 x i1> %a, <2 x i1> %b, <2 x i32> <i32 0, i32 0>
     ret <2 x i1> %c
 }
@@ -552,29 +532,12 @@ define <4 x ptr> @shufflevector_v4p0_zeroes(<4 x ptr> %a, <4 x ptr> %b) {
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @shufflevector_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-SD-LABEL: shufflevector_v3i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w0, w1
-; CHECK-SD-NEXT:    mov w1, w2
-; CHECK-SD-NEXT:    mov w2, w4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v3i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w3
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    mov v0.b[1], w1
-; CHECK-GI-NEXT:    mov v1.b[1], w4
-; CHECK-GI-NEXT:    mov v0.b[2], w2
-; CHECK-GI-NEXT:    mov v1.b[2], w5
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI35_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    umov w0, v0.b[0]
-; CHECK-GI-NEXT:    umov w1, v0.b[1]
-; CHECK-GI-NEXT:    umov w2, v0.b[2]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    mov w1, w2
+; CHECK-NEXT:    mov w2, w4
+; CHECK-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 1, i32 2, i32 4>
     ret <3 x i8> %c
 }
@@ -649,22 +612,11 @@ define <3 x i32> @shufflevector_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; ===== Vectors with Non-Pow 2 Widths with Zero Masks =====
 
 define <3 x i8> @shufflevector_v3i8_zeroes(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-SD-LABEL: shufflevector_v3i8_zeroes:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w1, w0
-; CHECK-SD-NEXT:    mov w2, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shufflevector_v3i8_zeroes:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov v0.b[1], w1
-; CHECK-GI-NEXT:    mov v0.b[2], w2
-; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    umov w0, v0.b[0]
-; CHECK-GI-NEXT:    umov w1, v0.b[1]
-; CHECK-GI-NEXT:    umov w2, v0.b[2]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shufflevector_v3i8_zeroes:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w1, w0
+; CHECK-NEXT:    mov w2, w0
+; CHECK-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 0, i32 0, i32 0>
     ret <3 x i8> %c
 }
