@@ -1884,7 +1884,7 @@ public:
               Walk(" ", assumeAligned, ", ");
             },
             [&](const CompilerDirective::Align &align) {
-              // Canonical spelling, also used in module files.
+              // Canonical spelling.
               Word("!DIR$ ALIGN(");
               Walk(std::get<std::uint64_t>(align.t));
               Walk(") :: ", std::get<std::list<Name>>(align.t), ", ");

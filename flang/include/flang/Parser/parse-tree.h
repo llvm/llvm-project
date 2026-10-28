@@ -3440,6 +3440,8 @@ struct StmtFunctionStmt {
 // !DIR$ INLINEALWAYS
 // !DIR$ IVDEP
 // !DIR$ SIMD
+// !DIR$ ALIGN(n) [::] name-list
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3454,8 +3456,8 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(AssumeAligned);
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
-  // !DIR$ ALIGN(n) :: name-list, also spelled
-  // !DIR$ ATTRIBUTES ALIGN : n :: name-list
+  // !DIR$ ALIGN(n) [::] name-list, also spelled
+  // !DIR$ ATTRIBUTES ALIGN : n [::] name-list
   struct Align {
     TUPLE_CLASS_BOILERPLATE(Align);
     std::tuple<std::uint64_t, std::list<Name>> t;
