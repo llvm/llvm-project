@@ -1915,6 +1915,70 @@ void LowerAIR::lowerCalls() {
   }
 }
 
+/// Whether values of T are laid out differently under the data layouts A and
+/// B: AIR's aligns 3-element vectors of 32-bit values to 16 bytes (a
+/// <3 x float> takes 16), AGX's to 4 (12).
+static bool layoutDiffers(Type *T, const DataLayout &A, const DataLayout &B) {
+  if (auto *AT = dyn_cast<ArrayType>(T))
+    return layoutDiffers(AT->getElementType(), A, B);
+  if (auto *ST = dyn_cast<StructType>(T))
+    return any_of(ST->elements(),
+                  [&](Type *E) { return layoutDiffers(E, A, B); });
+  if (!T->isSized() || isa<ScalableVectorType>(T))
+    return false;
+  return A.getTypeAllocSize(T) != B.getTypeAllocSize(T) ||
+         A.getABITypeAlign(T) != B.getABITypeAlign(T);
+}
+
+/// Before the module takes AGX's data layout: the address computations and
+/// stack slots whose types AGX lays out differently keep AIR's layout, as
+/// byte offsets and byte arrays (a <3 x float> array has a 16-byte stride).
+static void keepAIRLayout(Module &M, const DataLayout &AIR,
+                          const DataLayout &AGX) {
+  for (Function &F : M)
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        Type *T = AI->getAllocatedType();
+        if (!layoutDiffers(T, AIR, AGX))
+          continue;
+        IRBuilder<> B(AI);
+        auto *New = B.CreateAlloca(
+            ArrayType::get(B.getInt8Ty(), AIR.getTypeAllocSize(T)),
+            AI->getAddressSpace(), AI->getArraySize());
+        New->setAlignment(std::max(AI->getAlign(), AIR.getABITypeAlign(T)));
+        New->takeName(AI);
+        AI->replaceAllUsesWith(New);
+        AI->eraseFromParent();
+        continue;
+      }
+      auto *GEP = dyn_cast<GetElementPtrInst>(&I);
+      if (!GEP || GEP->getType()->isVectorTy() ||
+          !layoutDiffers(GEP->getSourceElementType(), AIR, AGX))
+        continue;
+      unsigned Width = AIR.getIndexTypeSizeInBits(GEP->getType());
+      SmallMapVector<Value *, APInt, 4> Variable;
+      APInt Constant(Width, 0);
+      if (!GEP->collectOffset(AIR, Width, Variable, Constant))
+        continue;
+      IRBuilder<> B(GEP);
+      Type *IntTy = B.getIntNTy(Width);
+      Value *Offset = nullptr;
+      for (auto &[V, Scale] : Variable) {
+        Value *Term = B.CreateMul(B.CreateSExtOrTrunc(V, IntTy),
+                                  ConstantInt::get(IntTy, Scale));
+        Offset = Offset ? B.CreateAdd(Offset, Term) : Term;
+      }
+      if (!Offset || !Constant.isZero())
+        Offset = Offset ? B.CreateAdd(Offset, ConstantInt::get(IntTy, Constant))
+                        : ConstantInt::get(IntTy, Constant);
+      Value *New = B.CreateGEP(B.getInt8Ty(), GEP->getPointerOperand(), Offset,
+                               "", GEP->getNoWrapFlags());
+      New->takeName(GEP);
+      GEP->replaceAllUsesWith(New);
+      GEP->eraseFromParent();
+    }
+}
+
 void LowerAIR::dropAIRMetadata() {
   for (StringRef Name : {"air.kernel", "air.version", "air.language_version",
                          "air.compile_options"})
@@ -2079,6 +2143,9 @@ bool LowerAIR::run() {
   recoverDoubles();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
+  // (AIR's layout: llc -mtriple=agx has already given the module AGX's)
+  keepAIRLayout(M, DataLayout(Triple("air").computeDataLayout()),
+                TM.createDataLayout());
   M.setDataLayout(TM.createDataLayout());
   for (AIRKernel &K : Kernels)
     passConstantBuffersByReference(K, K.NewF);

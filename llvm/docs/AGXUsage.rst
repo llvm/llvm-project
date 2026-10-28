@@ -1097,7 +1097,10 @@ the hardware's reduction beyond 2^22. ``tan``, the inverse and hyperbolic
 functions and their inverses, and ``sinpi``/``cospi``/``tanpi`` are built the
 same way (half in float). ``sqrt`` is the hardware's (within 1 unit) unless
 ``ieee-fp32`` asks for correct rounding. The module then takes AGX's triple
-and data layout, and loses the AIR metadata and module flags.
+and data layout, and loses the AIR metadata and module flags; address
+computations over types that AIR lays out differently (a ``<3 x float>``
+takes 16 bytes in AIR, 12 in AGX) become byte offsets with AIR's layout
+first, and their stack slots byte arrays of AIR's size.
 
 MLIR
 ====
