@@ -163,6 +163,7 @@ seconds on a single large kernel) is not enabled by default: it gets its own `ll
 | A3 post-RA MachineScheduler | +2% (4.45 -> 4.55 s over 209 files) | on |
 | A1 / A2 memory clustering | not measurable | on |
 | A15 uniform constants | within noise (3.28-3.41 s vs 3.41-3.45 s over the agx_libs kernels) | off in llc, on in ZLUDA |
+| A18-A21 (store-vector pressure, vector access shapes, shared divisors, 32-bit counters) | within noise (4.35 / 4.61 s on vs 4.42 / 4.58 s off over the agx_libs kernels, two runs) | on |
 
 ## Model gaps that decide the entries above
 
