@@ -45,6 +45,17 @@ void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
   printInstruction(MI, Address, STI, OS);
+  // printVOPDst prints the encoding suffix along with the destination
+  // operand. Instructions without operands, such as v_nop, never reach it,
+  // so print the suffix for their VOP3 and SDWA forms here. Otherwise
+  // v_nop_e64 and v_nop_sdwa are printed as v_nop, which reassembles to the
+  // shorter VOP1 encoding.
+  if (MI->getNumOperands() == 0) {
+    if (SIInstrFlags::isVOP3(MII, *MI) && !getVOP3IsSingle(MI->getOpcode()))
+      OS << "_e64";
+    else if (SIInstrFlags::isSDWA(MII, *MI))
+      OS << "_sdwa";
+  }
   printAnnotation(OS, Annot);
 }
 
