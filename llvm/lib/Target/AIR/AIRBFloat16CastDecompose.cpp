@@ -140,12 +140,13 @@ static bool bfloat16CastDecompose(Module &M) {
   // fpext bfloat -> f32, both as integer bit manipulation — the native casts
   // are miscompiled by the GPU JIT. Scalar and vector.
   //
-  // NB: no NaN-quieting branch. A `fcmp uno` + `select` to force the QNaN bit
-  // is undefined under the module's `air.compile.fast_math_enable` (which
-  // implies `nnan`); the AGX JIT miscompiles the resulting select and its
-  // surrounding bitcast chain — most visibly inside the bf16 atomic-add CAS
-  // loop, which corrupts adjacent lanes into NaN. Plain RTNE truncation is
-  // the correct lowering for a no-NaN target.
+  // NaNs: the rounding add carries out of a NaN whose high mantissa bits are
+  // set (0x7fffffff + 0x7fff + 1 is 0x8000ffff: -0), so a NaN keeps its high
+  // bits with the quiet bit set instead. NaN is detected with integer
+  // operations only: a `fcmp uno` + `select` is undefined under the module's
+  // `air.compile.fast_math_enable` (which implies `nnan`), and the GPU JIT
+  // miscompiled that select and its bitcast chain (most visibly inside the
+  // bf16 atomic-add CAS loop, which corrupted adjacent lanes into NaN).
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       for (auto It = BB.begin(); It != BB.end();) {
@@ -161,7 +162,11 @@ static bool bfloat16CastDecompose(Module &M) {
           Value *Rounded = B.CreateAdd(
               Bits, B.CreateAdd(Lsb, ConstantInt::get(I32T, 0x7fff)),
               "bf16_rnd");
-          Value *Res = B.CreateTrunc(B.CreateLShr(Rounded, 16), I16T);
+          Value *Abs = B.CreateAnd(Bits, ConstantInt::get(I32T, 0x7fffffff));
+          Value *IsNaN = B.CreateICmpUGT(Abs, ConstantInt::get(I32T, 0x7f800000));
+          Value *Quiet = B.CreateOr(B.CreateLShr(Bits, 16), ConstantInt::get(I32T, 0x40));
+          Rounded = B.CreateSelect(IsNaN, Quiet, B.CreateLShr(Rounded, 16));
+          Value *Res = B.CreateTrunc(Rounded, I16T);
           Value *BF = B.CreateBitCast(Res, I->getType(), I->getName());
           I->replaceAllUsesWith(BF);
           I->eraseFromParent();
