@@ -11048,6 +11048,27 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       }
     }
 
+    // Disallow saving LR to the stack if async unwind information is needed,
+    // because it's difficult to determine what CFI instructions are required
+    // for correct unwind information.
+    // TODO: We could probably allow this in some special cases, e.g. if the
+    // function doesn't use FP, we can emit CFI similar to the following:
+    //
+    //   str x30, [sp, #-16]!
+    //   .cfi_adjust_cfa_offset 16
+    //   .cfi_rel_offset w30, 0
+    //   bl OUTLINED_FUNCTION_N
+    //   ldr x30, [sp], #16
+    //   .cfi_adjust_cfa_offset -16
+    //   .cfi_restore w30
+    //
+    llvm::erase_if(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+      return C.CallConstructionID == MachineOutlinerDefault &&
+             C.getMF()
+                 ->getInfo<AArch64FunctionInfo>()
+                 ->needsAsyncDwarfUnwindInfo(*C.getMF());
+    });
+
     // If we dropped all of the candidates, bail out here.
     if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
@@ -11660,6 +11681,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
     MachineFunction &MF, outliner::Candidate &C) const {
+  MachineFunction &CallerMF = *MBB.getParent();
 
   // Are we tail calling?
   if (C.CallConstructionID == MachineOutlinerTailCall) {
@@ -11684,8 +11706,8 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 
   // Instructions for saving and restoring LR around the call instruction we're
   // going to insert.
-  MachineInstr *Save;
-  MachineInstr *Restore;
+  SmallVector<MachineInstr *, 2> SaveInstrs;
+  SmallVector<MachineInstr *, 2> RestoreInstrs;
   // Can we save to a register?
   if (C.CallConstructionID == MachineOutlinerRegSave) {
     // FIXME: This logic should be sunk into a target-specific interface so that
@@ -11697,39 +11719,65 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     if (!MBB.isLiveIn(AArch64::LR))
       MBB.addLiveIn(AArch64::LR);
 
+    AArch64FunctionInfo *MFI = CallerMF.getInfo<AArch64FunctionInfo>();
+    bool NeedsAsyncDwarfUnwindInfo = MFI->needsAsyncDwarfUnwindInfo(CallerMF);
+    unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
+    unsigned DwarfLR = TRI.getDwarfRegNum(AArch64::LR, true);
+
     // Save and restore LR from Reg.
-    Save = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), Reg)
-               .addReg(AArch64::XZR)
-               .addReg(AArch64::LR)
-               .addImm(0);
-    Restore = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), AArch64::LR)
-                .addReg(AArch64::XZR)
-                .addReg(Reg)
-                .addImm(0);
+    SaveInstrs.push_back(
+        BuildMI(CallerMF, DebugLoc(), get(AArch64::ORRXrs), Reg)
+            .addReg(AArch64::XZR)
+            .addReg(AArch64::LR)
+            .addImm(0));
+    if (NeedsAsyncDwarfUnwindInfo) {
+      unsigned Index = CallerMF.addFrameInst(
+          MCCFIInstruction::createRegister(nullptr, DwarfLR, DwarfReg));
+      SaveInstrs.push_back(
+          BuildMI(CallerMF, DebugLoc(), get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(Index));
+    }
+
+    RestoreInstrs.push_back(
+        BuildMI(CallerMF, DebugLoc(), get(AArch64::ORRXrs), AArch64::LR)
+            .addReg(AArch64::XZR)
+            .addReg(Reg)
+            .addImm(0));
+    if (NeedsAsyncDwarfUnwindInfo) {
+      unsigned Index = CallerMF.addFrameInst(
+          MCCFIInstruction::createRestore(nullptr, DwarfLR));
+      RestoreInstrs.push_back(
+          BuildMI(CallerMF, DebugLoc(), get(TargetOpcode::CFI_INSTRUCTION))
+              .addCFIIndex(Index));
+    }
   } else {
     // We have the default case. Save and restore from SP.
-    Save = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-               .addReg(AArch64::SP, RegState::Define)
-               .addReg(AArch64::LR)
-               .addReg(AArch64::SP)
-               .addImm(-16);
-    Restore = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                  .addReg(AArch64::SP, RegState::Define)
-                  .addReg(AArch64::LR, RegState::Define)
-                  .addReg(AArch64::SP)
-                  .addImm(16);
+    SaveInstrs.push_back(BuildMI(CallerMF, DebugLoc(), get(AArch64::STRXpre))
+                             .addReg(AArch64::SP, RegState::Define)
+                             .addReg(AArch64::LR)
+                             .addReg(AArch64::SP)
+                             .addImm(-16));
+    RestoreInstrs.push_back(
+        BuildMI(CallerMF, DebugLoc(), get(AArch64::LDRXpost))
+            .addReg(AArch64::SP, RegState::Define)
+            .addReg(AArch64::LR, RegState::Define)
+            .addReg(AArch64::SP)
+            .addImm(16));
   }
 
-  It = MBB.insert(It, Save);
-  It++;
+  for (MachineInstr *Save : SaveInstrs) {
+    It = MBB.insert(It, Save);
+    ++It;
+  }
 
   // Insert the call.
   It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                           .addGlobalAddress(M.getNamedValue(MF.getName())));
   CallPt = It;
-  It++;
 
-  It = MBB.insert(It, Restore);
+  for (MachineInstr *Restore : RestoreInstrs)
+    It = MBB.insert(std::next(It), Restore);
+
   return CallPt;
 }
 
