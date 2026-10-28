@@ -86,6 +86,8 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+extern cl::opt<bool> FiberSafeTLS;
+
 // Controls the number of uses of the value searched for possible
 // dominating comparisons.
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
@@ -7430,7 +7432,8 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
   case Intrinsic::threadlocal_address:
     // The underlying variable changes with thread ID. The Thread ID may change
     // at coroutine suspend points.
-    return !Call->getParent()->getParent()->isPresplitCoroutine();
+    return !FiberSafeTLS &&
+           !Call->getParent()->getParent()->isPresplitCoroutine();
   default:
     return false;
   }

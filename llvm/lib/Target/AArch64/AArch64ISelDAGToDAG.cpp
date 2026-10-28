@@ -33,6 +33,8 @@
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
+extern cl::opt<bool> FiberSafeTLS;
+
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
 
@@ -5160,6 +5162,14 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::ATOMIC_CMP_SWAP:
     if (SelectCMP_SWAP(Node))
       return;
+    break;
+
+  case AArch64ISD::THREAD_POINTER:
+    if (FiberSafeTLS) {
+      ReplaceNode(Node, CurDAG->getMachineNode(AArch64::MOVbaseTLSFiberSafe,
+                                               SDLoc(Node), VT));
+      return;
+    }
     break;
 
   case ISD::READ_REGISTER:

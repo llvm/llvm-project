@@ -734,6 +734,10 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
   int Depth = 0;
   do {
     const Value *Input = Inputs.pop_back_val();
+    // With -fiber-safe-tls, getUnderlyingObject stops at threadlocal.address.
+    if (auto *II = dyn_cast<IntrinsicInst>(Input))
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        Input = II->getArgOperand(0);
 
     if (auto *InputGV = dyn_cast<GlobalValue>(Input)) {
       // If one input is the very global we're querying against, then we can't

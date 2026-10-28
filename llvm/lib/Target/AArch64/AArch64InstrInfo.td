@@ -2576,6 +2576,11 @@ def : Pat<(AArch64mrs imm:$id),
 // TPIDR_EL0.
 def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
                        [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
+// The same, selected with -fiber-safe-tls. It has side effects so that machine
+// passes do not reuse it across calls, which may switch threads.
+let hasSideEffects = 1 in
+def MOVbaseTLSFiberSafe : Pseudo<(outs GPR64:$dst), (ins), []>,
+                          Sched<[WriteSys]>;
 
 // This gets lowered into a 24-byte instruction sequence
 let Defs = [ X9, X16, X17, NZCV ], Size = 24 in {

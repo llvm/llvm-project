@@ -54,6 +54,8 @@
 
 using namespace llvm;
 
+bool isFiberThreadDependent(const Function &F);
+
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
@@ -653,6 +655,9 @@ MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
     MemoryEffects FnME = Fn->getMemoryEffects();
+    // Ignore memory(none) that clang copies to the call from a `const` decl.
+    if (isFiberThreadDependent(*Fn))
+      ME = MemoryEffects::unknown();
     if (hasOperandBundles()) {
       // TODO: Add a method to get memory effects for operand bundles instead.
       if (hasReadingOperandBundles())
