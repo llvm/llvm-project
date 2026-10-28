@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include <cassert>
+#include <optional>
 namespace llvm {
 
 class BasicBlock;
@@ -113,6 +114,11 @@ enum FPClassTest : unsigned;
 ///        conclude by code-gening the failure basic block if we have not
 ///        code-gened it already (all stack protector checks we generate in
 ///        the same function, use the same failure basic block).
+///
+///        A block ending in a call to a noreturn function that may unwind
+///        (see SSPLayoutInfo::getSDCheckCall) is checked right before the code
+///        of that call rather than before its terminator: instruction
+///        selection records where that code starts (setSplitPoint).
 class StackProtectorDescriptor {
 public:
   StackProtectorDescriptor() = default;
@@ -154,6 +160,7 @@ public:
   void resetPerBBState() {
     ParentMBB = nullptr;
     SuccessMBB = nullptr;
+    SplitPoint.reset();
   }
 
   /// Reset state that only changes when we switch functions.
@@ -165,11 +172,28 @@ public:
   ///
   /// 2.The guard variable since the guard variable we are checking against is
   /// always the same.
-  void resetPerFunctionState() { FailureMBB = nullptr; }
+  void resetPerFunctionState() {
+    FailureMBB = nullptr;
+    SplitPoint.reset();
+  }
 
   MachineBasicBlock *getParentMBB() { return ParentMBB; }
   MachineBasicBlock *getSuccessMBB() { return SuccessMBB; }
   MachineBasicBlock *getFailureMBB() { return FailureMBB; }
+
+  /// Check the guard right before \p I, the start of the code of the call
+  /// that ends ParentMBB's basic block (see SSPLayoutInfo::getSDCheckCall),
+  /// rather than before its return.
+  void setSplitPoint(MachineBasicBlock::iterator I) { SplitPoint = I; }
+
+  /// Return the point at which to check the guard in ParentMBB: the one set
+  /// with setSplitPoint, or else the start of its terminator sequence.
+  LLVM_ABI MachineBasicBlock::iterator
+  getSplitPoint(const TargetInstrInfo &TII) const;
+
+  /// Splice the end of ParentMBB, from \p I on, into SuccessMBB, along with
+  /// the successors it branches to.
+  LLVM_ABI void splitParentMBB(MachineBasicBlock::iterator I);
 
 private:
   /// The basic block for which we are generating the stack protector.
@@ -188,6 +212,9 @@ private:
   /// This basic block visited on stack protector check failure that will
   /// contain a call to __stack_chk_fail().
   MachineBasicBlock *FailureMBB = nullptr;
+
+  /// Where to check the guard in ParentMBB, when it is not before its return.
+  std::optional<MachineBasicBlock::iterator> SplitPoint;
 
   /// Add a successor machine basic block to ParentMBB. If the successor mbb
   /// has not been created yet (i.e. if SuccMBB = 0), then the machine basic

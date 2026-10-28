@@ -1384,8 +1384,6 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
 }
 
 void SelectionDAGBuilder::visit(const Instruction &I) {
-  visitDbgInfo(I);
-
   // Set up outgoing PHI node register values before emitting the terminator.
   if (I.isTerminator()) {
     HandlePHINodesInSuccessorBlocks(I.getParent());

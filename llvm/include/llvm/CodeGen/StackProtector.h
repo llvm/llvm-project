@@ -26,6 +26,7 @@
 namespace llvm {
 
 class BasicBlock;
+class CallBase;
 class Function;
 class Module;
 class TargetLoweringBase;
@@ -61,6 +62,11 @@ class SSPLayoutInfo {
 public:
   // Return true if StackProtector is supposed to be handled by SelectionDAG.
   LLVM_ABI bool shouldEmitSDCheck(const BasicBlock &BB) const;
+
+  // Return the call before which SelectionDAG checks the stack protector in
+  // \p BB, rather than before its return: a call to a noreturn function that
+  // may unwind, ending the block. Null if there is none.
+  LLVM_ABI const CallBase *getSDCheckCall(const BasicBlock &BB) const;
 
   LLVM_ABI void copyToMachineFrameInfo(MachineFrameInfo &MFI) const;
 };
