@@ -67,9 +67,9 @@ public:
   }
 
   property_list(const property_list &rhs) = default;
-  property_list(property_list &&rhs) = default;
+  property_list(property_list &&rhs) noexcept = default;
   property_list &operator=(const property_list &rhs) = default;
-  property_list &operator=(property_list &&rhs) = default;
+  property_list &operator=(property_list &&rhs) noexcept = default;
   ~property_list() = default;
 
   /// \return true if and only if the list contains a property of type PropT.
