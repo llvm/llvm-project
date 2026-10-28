@@ -77,6 +77,12 @@ static cl::list<std::string> EmulateHints(
     cl::desc("Run the AIR emulation of the hints whose keys start with one "
              "of these prefixes (measuring what each kind of hint is worth)"));
 
+static cl::opt<bool> NativeF64(
+    "agx-air-native-f64", cl::init(false), cl::Hidden,
+    cl::desc("Compile calls to AIR's software f64 library (rounded to "
+             "nearest) as double operations, lowered as AGX lowers them "
+             "(off: the library is as fast; see EXPERIMENTS.md L4-E2)"));
+
 namespace {
 // Layout must match the struct emitted by -gen-searchable-tables for the
 // AIRFunction class in AIRIntrinsicMappings.td.
@@ -199,6 +205,7 @@ private:
   void foldOrderedAtomics(Function &F);
   void lowerHints();
   void recoverAGXOperations(Function &F);
+  void recoverDoubles();
   void lowerCalls();
   void inlineCalls();
   Function *hiddenByValue(Function &K);
@@ -1725,6 +1732,81 @@ void LowerAIR::recoverAGXOperations(Function &F) {
 // AIR may call its own functions (with return values); AGX inlines every
 // function into the kernels (AGXUsage.rst, "Kernel ABI"), so the calls become
 // their bodies here, before code generation, unless leaf calls are enabled.
+// agx-raise-to-air's software f64 (`__air_f64_*`, double as i64 bits) is the
+// portable form of double arithmetic; AGX has its own software f64
+// (AGXSoftF64), tuned for its ALU. Calls rounded to nearest (the plain names,
+// or the `_r` ones with a constant rounding of 1, FLT_ROUNDS' nearest) become
+// the double operations again.
+void LowerAIR::recoverDoubles() {
+  if (!NativeF64)
+    return;
+  LLVMContext &Ctx = M.getContext();
+  Type *F64 = Type::getDoubleTy(Ctx), *F32 = Type::getFloatTy(Ctx);
+  Type *I64 = Type::getInt64Ty(Ctx), *I32 = Type::getInt32Ty(Ctx);
+  for (Function &Lib : make_early_inc_range(M)) {
+    StringRef Name = Lib.getName();
+    if (!Name.consume_front("__air_f64_"))
+      continue;
+    bool Directed = Name.consume_back("_r");
+    for (User *U : make_early_inc_range(Lib.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &Lib)
+        continue;
+      unsigned NArgs = CI->arg_size() - Directed;
+      if (Directed) {
+        auto *RM = dyn_cast<ConstantInt>(CI->getArgOperand(NArgs));
+        if (!RM || !RM->isOne())
+          continue;
+      }
+      IRBuilder<> B(CI);
+      auto D = [&](unsigned I) {
+        return B.CreateBitCast(CI->getArgOperand(I), F64);
+      };
+      auto Bits = [&](Value *V) { return B.CreateBitCast(V, I64); };
+      Value *R = nullptr;
+      if (Name == "add" && NArgs == 2)
+        R = Bits(B.CreateFAdd(D(0), D(1)));
+      else if (Name == "sub" && NArgs == 2)
+        R = Bits(B.CreateFSub(D(0), D(1)));
+      else if (Name == "mul" && NArgs == 2)
+        R = Bits(B.CreateFMul(D(0), D(1)));
+      else if (Name == "div" && NArgs == 2)
+        R = Bits(B.CreateFDiv(D(0), D(1)));
+      else if (Name == "fma" && NArgs == 3)
+        R = Bits(B.CreateIntrinsic(Intrinsic::fma, F64, {D(0), D(1), D(2)}));
+      else if (Name == "sqrt" && NArgs == 1)
+        R = Bits(B.CreateUnaryIntrinsic(Intrinsic::sqrt, D(0)));
+      else if (Name == "floor" && NArgs == 1)
+        R = Bits(B.CreateUnaryIntrinsic(Intrinsic::floor, D(0)));
+      else if (Name == "roundeven" && NArgs == 1)
+        R = Bits(B.CreateUnaryIntrinsic(Intrinsic::roundeven, D(0)));
+      else if (Name == "from_i64" && NArgs == 1)
+        R = Bits(B.CreateSIToFP(CI->getArgOperand(0), F64));
+      else if (Name == "from_u64" && NArgs == 1)
+        R = Bits(B.CreateUIToFP(CI->getArgOperand(0), F64));
+      else if (Name == "from_f32" && NArgs == 1)
+        R = Bits(B.CreateFPExt(B.CreateBitCast(CI->getArgOperand(0), F32),
+                               F64));
+      else if (Name == "to_f32" && NArgs == 1)
+        R = B.CreateBitCast(B.CreateFPTrunc(D(0), F32), I32);
+      else if (Name == "to_i64" && NArgs == 1)
+        R = B.CreateIntrinsic(Intrinsic::fptosi_sat, {I64, F64}, {D(0)});
+      else if (Name == "to_u64" && NArgs == 1)
+        R = B.CreateIntrinsic(Intrinsic::fptoui_sat, {I64, F64}, {D(0)});
+      else if (Name == "unord" && NArgs == 2)
+        R = B.CreateZExt(B.CreateFCmpUNO(D(0), D(1)), I32);
+      else if (Name == "eq" && NArgs == 2)
+        R = B.CreateZExt(B.CreateFCmpOEQ(D(0), D(1)), I32);
+      else if (Name == "lt" && NArgs == 2)
+        R = B.CreateZExt(B.CreateFCmpOLT(D(0), D(1)), I32);
+      if (!R || R->getType() != CI->getType())
+        continue;
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+    }
+  }
+}
+
 void LowerAIR::inlineCalls() {
   if (agxExperimentalLeafCallsEnabled())
     return;
@@ -1991,6 +2073,7 @@ bool LowerAIR::run() {
   lowerCalls();
   for (Function &F : M)
     recoverAGXOperations(F);
+  recoverDoubles();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
   M.setDataLayout(TM.createDataLayout());
