@@ -40,7 +40,7 @@ define void @cp_async_bulk_tensor_g2s_tile_override_addr(ptr addrspace(7) %dst, 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr %tmap, ptr addrspace(1) %override_addr, i32 %d0, i32 %mc32, i64 %ch, i1 0, i1 1, i32 0, i32 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr %tmap, ptr addrspace(1) %override_addr, i32 %d0, i32 %mc32, i64 %ch, i1 1, i1 1, i32 0, i32 0)
 
-  ; Check the nonzero cta_group and a nonzero validate_pattern with its report qualifier
+  ; Check the nonzero cta_group and a nonzero flag_valid_pattern with its report qualifier
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr %tmap, ptr addrspace(1) %override_addr, i32 %d0, i16 %mc, i64 %ch, i1 1, i1 1, i32 2, i32 5)
   ret void
 }

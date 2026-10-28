@@ -312,9 +312,6 @@ public:
 
   LLVM_ABI void printTypeIndex(StringRef FieldName, TypeIndex TI,
                                uint32_t StreamIdx);
-  LLVM_ABI void printMemberAttributes(MemberAttributes Attrs);
-  LLVM_ABI void printMemberAttributes(MemberAccess Access, MethodKind Kind,
-                                      MethodOptions Options);
 
   LLVM_ABI LVElement *createElement(TypeLeafKind Kind);
   LLVM_ABI LVElement *createElement(SymbolKind Kind);

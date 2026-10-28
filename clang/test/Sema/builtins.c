@@ -222,8 +222,9 @@ void Test19(void)
         static char b[40];
         static char buf[20];
 
-        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \\
-                                    // expected-note {{change size argument to be the size of the destination}}
+        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 20, but size argument is 40}}
         __builtin___strlcpy_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcpy_chk' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}} \
 				    // expected-warning {{'strlcpy' will always overflow; destination buffer has size 20, but size argument is 40}}

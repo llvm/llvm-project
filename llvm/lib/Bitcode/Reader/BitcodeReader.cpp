@@ -483,7 +483,11 @@ BitcodeReaderBase::readNameFromStrtab(ArrayRef<uint64_t> Record) {
   if (!UseStrtab)
     return {"", Record};
   // Invalid reference. Let the caller complain about the record being empty.
-  if (Record[0] + Record[1] > Strtab.size())
+  // Both values are read from the file. Compare without adding them: the sum
+  // wraps for a large strtab_offset, which would pass this check and yield a
+  // StringRef pointing outside the string table.
+  if (Record.size() < 2 || Record[0] > Strtab.size() ||
+      Record[1] > Strtab.size() - Record[0])
     return {"", {}};
   return {StringRef(Strtab.data() + Record[0], Record[1]), Record.slice(2)};
 }
@@ -1242,12 +1246,12 @@ static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
       (GlobalObject::VCallVisibility)(RawFlags >> 3));
 }
 
-static std::pair<CalleeInfo::HotnessType, bool>
-getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
+static CalleeInfo getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
   CalleeInfo::HotnessType Hotness =
       static_cast<CalleeInfo::HotnessType>(RawFlags & 0x7); // 3 bits
   bool HasTailCall = (RawFlags & 0x8);                      // 1 bit
-  return {Hotness, HasTailCall};
+  bool HasIndirectCall = (RawFlags & 0x10);                 // 1 bit
+  return CalleeInfo(Hotness, HasTailCall, HasIndirectCall);
 }
 
 // Deprecated, but still needed to read old bitcode files.
@@ -1765,9 +1769,11 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           break;
         }
         case Instruction::GetElementPtr:
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
               toGEPNoWrapFlags(BC->Flags), BC->getInRange());
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
@@ -5245,8 +5251,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
       bool isImplicitCode = Record.size() >= 5 && Record[4];
-      uint64_t AtomGroup = Record.size() == 7 ? Record[5] : 0;
-      uint8_t AtomRank = Record.size() == 7 ? Record[6] : 0;
+      uint64_t AtomGroup = Record.size() >= 7 ? Record[5] : 0;
+      uint8_t AtomRank = Record.size() >= 7 ? Record[6] : 0;
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -5261,9 +5267,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid debug loc record");
       }
+      Metadata *IRLayers = nullptr;
+      if (Record.size() >= 8 && Record[7])
+        IRLayers = MDLoader->getMetadataFwdRefOrLoad(Record[7] - 1);
 
       LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
-                                isImplicitCode, AtomGroup, AtomRank);
+                                isImplicitCode, AtomGroup, AtomRank, IRLayers);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;
@@ -5639,6 +5648,48 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid insert element record");
       I = InsertElementInst::Create(Vec, Elt, Idx);
       ResTypeID = VecTypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
+    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [opval, opval, opval]
+      unsigned OpNum = 0;
+      Value *Base, *Val, *Offset;
+      unsigned BaseTypeID, ValTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Base, BaseTypeID,
+                           CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Val, ValTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitinsert record");
+      if (const char *Reason =
+              BitInsertInst::areInvalidOperands(Base, Val, Offset))
+        return error(Reason);
+      I = BitInsertInst::Create(Base, Val, Offset);
+      ResTypeID = BaseTypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
+    case bitc::FUNC_CODE_INST_BITEXTRACT: { // BITEXTRACT: [ty, opval, opval]
+      unsigned OpNum = 0;
+      if (Record.empty())
+        return error("Record is empty for bitextract");
+      unsigned TypeID = Record[OpNum++];
+      Type *ResTy = getTypeByID(TypeID);
+      if (!ResTy)
+        return error("Invalid bitextract result type");
+      Value *Src, *Offset;
+      unsigned SrcTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Src, SrcTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitextract record");
+      if (const char *Reason =
+              BitExtractInst::areInvalidOperands(ResTy, Src, Offset))
+        return error(Reason);
+      I = BitExtractInst::Create(ResTy, Src, Offset);
+      ResTypeID = TypeID;
       InstructionList.push_back(I);
       break;
     }
@@ -6405,8 +6456,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const DataLayout &DL = TheModule->getDataLayout();
       unsigned AS = Record.size() == 5 ? Record[4] : DL.getAllocaAddrSpace();
 
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Ty->isSized(&Visited))
+      if (!Align && !Ty->isSized())
         return error("alloca of unsized type");
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
@@ -6451,8 +6501,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Ty->isSized(&Visited))
+      if (!Align && !Ty->isSized())
         return error("load of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Ty);
@@ -6537,8 +6586,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Val->getType()->isSized(&Visited))
+      if (!Align && !Val->getType()->isSized())
         return error("store of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Val->getType());
@@ -6998,6 +7046,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<CallInst>(I)->setAttributes(PAL);
       if (isa<DbgInfoIntrinsic>(I))
         SeenDebugIntrinsic = true;
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
+        unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
+        if (auto *ListAsValue =
+                dyn_cast<MetadataAsValue>(Decl->getOperand(ArgNo)))
+          if (auto *List = dyn_cast<MDNode>(ListAsValue->getMetadata()))
+            Decl->setOperand(
+                ArgNo, MetadataAsValue::get(
+                           Context, MDLoader->upgradeAliasScopeList(List)));
+      }
       if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
         I->deleteValue();
         return Err;
@@ -7666,22 +7723,22 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
     Ret.reserve(Record.size());
 
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
-    CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
-    bool HasTailCall = false;
-    uint64_t RelBF = 0;
+    CalleeInfo Info;
     ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[I]));
     if (IsOldProfileFormat) {
       I += 1; // Skip old callsitecount field
       if (HasProfile)
         I += 1; // Skip old profilecount field
     } else if (HasProfile)
-      std::tie(Hotness, HasTailCall) =
-          getDecodedHotnessCallEdgeInfo(Record[++I]);
+      Info = getDecodedHotnessCallEdgeInfo(Record[++I]);
     // Deprecated, but still needed to read old bitcode files.
-    else if (HasRelBF)
+    else if (HasRelBF) {
+      uint64_t RelBF = 0;
+      bool HasTailCall = false;
       getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
-    Ret.push_back(
-        FunctionSummary::EdgeTy{Callee, CalleeInfo(Hotness, HasTailCall)});
+      Info.setHasTailCall(HasTailCall);
+    }
+    Ret.push_back(FunctionSummary::EdgeTy{Callee, Info});
   }
   return Ret;
 }

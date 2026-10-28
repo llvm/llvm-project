@@ -37,11 +37,6 @@ protected:
 } // namespace llvm
 
 TEST_F(CGPluginTests, LoadPlugin) {
-#if !defined(LLVM_ENABLE_PLUGINS)
-  // Skip the test if plugins are disabled.
-  GTEST_SKIP();
-#endif
-
   auto PluginPath{std::string{"CGTestPlugin"} + LLVM_PLUGIN_EXT};
 
   std::string Error;
@@ -51,11 +46,6 @@ TEST_F(CGPluginTests, LoadPlugin) {
 }
 
 TEST_F(CGPluginTests, ExecuteCallback) {
-#if !defined(LLVM_ENABLE_PLUGINS)
-  // Skip the test if plugins are disabled.
-  GTEST_SKIP();
-#endif
-
   volatile bool CallbackExecuted = false;
   volatile bool MPassExecuted = false;
 

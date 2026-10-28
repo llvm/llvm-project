@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 TEST(SPSMemoryFlagsTest, TestAllocGroupSerialization) {
   for (bool Read : {false, true}) {

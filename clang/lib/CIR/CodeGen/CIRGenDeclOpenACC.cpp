@@ -167,7 +167,8 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
     CIRGenFunction cgf{*this, builder, true};
     llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
     cgf.curFn = ctorOp;
-    CIRGenFunction::SourceLocRAIIObject fnLoc{cgf, exprLoc};
+    CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
+                                              varOperand->getSourceRange()};
 
     // This gets the information we need, PLUS emits the bounds correctly, so we
     // have to do this in both enter and exit.
@@ -204,7 +205,8 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
     CIRGenFunction cgf{*this, builder, true};
     llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
     cgf.curFn = ctorOp;
-    CIRGenFunction::SourceLocRAIIObject fnLoc{cgf, exprLoc};
+    CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
+                                              varOperand->getSourceRange()};
 
     CIRGenFunction::OpenACCDataOperandInfo inf =
         cgf.getOpenACCDataOperandInfo(varOperand);

@@ -31,7 +31,7 @@ subroutine zero
   complex, parameter :: a(0) = [(((k,k=1,10),j=-2,2,-1),i=2,-2,-2)]
   complex, parameter :: b(0) = [(7,i=3,-3)]
   ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0xcomplex<f32>>>
-  ! CHECK: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.0xz4.null.0"}
+  ! CHECK: hlfir.declare {{.*}} uniq_name("_QQro.0xz4.null.0") fortran_attrs<parameter>
   print*, '>', a, '<'
   print*, '>', b, '<'
 end
@@ -42,6 +42,6 @@ program prog
   call zero
 end
 
-! CHECK: fir.global internal @_QFzeroECa {alignment = 64 : i64} constant : !fir.array<0xcomplex<f32>>
+! CHECK: fir.global internal @_QFzeroECa <{alignment = 64 : i64}> constant : !fir.array<0xcomplex<f32>>
 ! CHECK:   %0 = fir.undefined !fir.array<0xcomplex<f32>>
 ! CHECK:   fir.has_value %0 : !fir.array<0xcomplex<f32>>

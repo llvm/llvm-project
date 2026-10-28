@@ -13,8 +13,10 @@ define i32 @main() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[TMP3]], <2 x i64> splat (i64 17179869184))
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP5]], <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP6]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 entry:

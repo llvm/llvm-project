@@ -366,6 +366,9 @@ TraitParserError             "trait parser while parsing %1$s: error: %2$s"
 TraitParserInvalidTraitValue "trait parser while parsing %1$s: invalid value for trait '%2$s' (%3$s)"
 TraitParserMaxRecursion      "trait parser while parsing %1$s: max recursion depth (%2$d) exceeded"
 TraitParserFailed            "trait parser while parsing %1$s: failed to parse trait specification (%2$s)"
+TraitParserValueTooSmall     "trait parser while parsing %1$s: value %2$d below limit (%3$d)"
+TraitParserValueTooLarge     "trait parser while parsing %1$s: value %2$d above limit (%3$d)"
+TraitParserLegacyFailed      "legacy device number parser while parsing %1$s: failed to parse device number (%2$s)"
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -488,6 +491,8 @@ AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid archite
 AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
 SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
+MalformedDeviceEnvVar        "%1$s: malformed device-scope environment variable name; expected `_ALL`, `_DEV`, or `_DEV_<n>` with a non-negative integer device id; ignored."
+DeviceEnvVarOnGlobalScope    "%1$s: device-scope environment variable suffix (`_ALL`/`_DEV`/`_DEV_<n>`) is not allowed on this base name (global-scope ICV); ignored."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

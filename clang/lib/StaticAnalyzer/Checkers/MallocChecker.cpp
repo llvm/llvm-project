@@ -941,13 +941,18 @@ protected:
     // branch. That said, would a synthesized body ever intend to handle
     // ownership? As of today they don't. And if they did, how would we
     // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
+    if (!FD)
       return false;
+
+    Stmt *Body = FD->getBody();
+    if (!Body)
+      return false;
+
     using namespace clang::ast_matchers;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
-                         *FD->getBody(), ACtx);
+                         *Body, ACtx);
     for (BoundNodes Match : Matches) {
       if (Match.getNodeAs<CXXDeleteExpr>("delete"))
         return true;
@@ -2637,7 +2642,7 @@ void MallocChecker::HandleNonHeapDealloc(CheckerContext &C, SVal ArgVal,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<100> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -2680,7 +2685,7 @@ void MallocChecker::HandleFreeAlloca(CheckerContext &C, SVal ArgVal,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->FreeAllocaBug,
         "Memory allocated by 'alloca()' should not be deallocated", N);
@@ -2700,7 +2705,7 @@ void MallocChecker::HandleMismatchedDealloc(CheckerContext &C,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<100> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -2755,7 +2760,7 @@ void MallocChecker::HandleOffsetFree(CheckerContext &C, SVal ArgVal,
     return;
   }
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 
@@ -2805,7 +2810,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     AllocationFamily AF =
         C.getState()->get<RegionState>(Sym)->getAllocationFamily();
 
@@ -2838,7 +2843,7 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->DoubleFreeBug,
         (Released ? "Attempt to release already released memory"
@@ -2865,7 +2870,7 @@ void MallocChecker::HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         Frontend->UseZeroAllocatedBug, "Use of memory allocated with size zero",
         N);
@@ -2891,7 +2896,7 @@ void MallocChecker::HandleFunctionPtrFree(CheckerContext &C, SVal ArgVal,
     return;
   }
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 

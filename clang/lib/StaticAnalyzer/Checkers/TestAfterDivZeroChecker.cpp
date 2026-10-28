@@ -161,7 +161,7 @@ bool TestAfterDivZeroChecker::hasDivZeroMap(SVal Var,
 }
 
 void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
-  if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
+  if (ExplodedNode *N = C.addSink(C.getState())) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         DivZeroBug,
         "Value being compared against zero has already been used "

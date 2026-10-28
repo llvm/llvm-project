@@ -55,7 +55,7 @@ def tuimm5nonzero : TImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]>;
 def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return (Imm > 3) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GT3">;
-  let DecoderMethod = "decodeUImmOperandGE<5, 4>";
+  let DecoderMethod = "decodeUImmOperand<5, 4>";
   let OperandType = "OPERAND_UIMM5_GT3";
 }
 
@@ -65,7 +65,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return Imm >= 6 && Imm <= 32;}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
-  let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
+  let DecoderMethod = "decodeUImmPlus1Operand<5, 6>";
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -1132,7 +1132,7 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
     let imm12 = imm14{13-2};
   }
 
-  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPR:$rd),
                        (ins GPR:$rs1, uimm14lsb00_optional:$imm14),
                        "qc.inw", "$rd, ${imm14}(${rs1})"> {
     bits<14> imm14;
