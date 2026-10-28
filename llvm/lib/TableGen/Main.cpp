@@ -32,8 +32,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cerrno>
-#include <cstring>
 #include <memory>
 #include <string>
 #include <system_error>
