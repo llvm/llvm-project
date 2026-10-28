@@ -42,6 +42,7 @@ then also covers what agx-lower-air does not lower.
 
 import argparse
 import base64
+import functools
 from fractions import Fraction
 import json
 import math
@@ -2449,6 +2450,414 @@ def group_llvm_int_narrow():
     return cases
 
 
+def lanes_u8(x, n=4):
+    return [x >> 8 * k & 0xff for k in range(n)]
+
+
+def from_u8(bs):
+    return sum((b & 0xff) << 8 * k for k, b in enumerate(bs))
+
+
+def vec_case(name, n, ty, body, ref, decls=(), gen=None, ulps=None, bitexact=False, out_init=None,
+             in_ty=None, out_ty=None, align=None):
+    """Thread i < N/n loads a <n x ty> from each input at i, the body maps
+    the vectors %x0, %x1, ... to %y, a <n x ty>, and the thread stores %y at
+    out[i]; ref(i, v) is the value of element i of out."""
+    in_ty = in_ty or ty
+    out_ty = out_ty or ty
+    nin = len(gen) if gen else 1
+    ir_in, ir_out = TYPES[in_ty][0], TYPES[out_ty][0]
+    a = ', align %d' % align if align else ''
+    loads = ''.join('%%px%d = getelementptr <%d x %s>, ptr addrspace(1) %%in%d, i32 %%tid\n'
+                    '%%x%d = load <%d x %s>, ptr addrspace(1) %%px%d%s\n' % (k, n, ir_in, k, k, n, ir_in, k, a)
+                    for k in range(nin))
+    c = full_case(name, [in_ty] * nin, out_ty, ref,
+                  '%%go = icmp ult i32 %%tid, %d\nbr i1 %%go, label %%body, label %%done\nbody:\n' % (N // n) +
+                  loads + body.strip() + '\n'
+                  '%%po = getelementptr <%d x %s>, ptr addrspace(1) %%out, i32 %%tid\n'
+                  'store <%d x %s> %%y, ptr addrspace(1) %%po%s\nbr label %%done\ndone:\nret void'
+                  % (n, ir_out, n, ir_out, a), decls, gen or [None], ulps)
+    c.bitexact = bitexact
+    c.out_init = out_init
+    return c
+
+
+def group_llvm_vector_ext():
+    """Odd and small vector types in memory, per-lane shifts, vector compares
+    and conversions, splats, masks from memory, more reductions, phis of
+    vectors, narrow-element vectors."""
+    cases = []
+    spread = lambda i, r: r.uniform(-1, 1) * 10.0 ** r.randrange(-3, 6)
+    # <2 x float> (no contraction of the fmul and fadd).
+    cases.append(vec_case('v2f32_mul_add', 2, 'f32',
+                          '%m = fmul <2 x float> %x0, %x1\n%y = fadd <2 x float> %m, <float 1.0, float -2.0>',
+                          lambda i, v: f32(f32(v[0][i] * v[1][i]) + (1.0 if i % 2 == 0 else -2.0)),
+                          gen=[spread, spread], ulps=0))
+    # <3 x float> at its allocation stride (16 bytes): the fourth float of each
+    # slot is padding, which the store must not write.
+    def v3_ref(i, v):
+        return 7.0 if i % 4 == 3 else f32(v[0][i] * (2.0, 3.0, 0.5)[i % 4])
+    c = vec_case('v3f32_stride16', 4, 'f32', '%y = fmul <4 x float> %x0, <float 2.0, float 3.0, float 0.5>',
+                 v3_ref, gen=[spread], ulps=0, out_init=[7.0] * N)
+    c.full = c.full.replace('<4 x float>', '<3 x float>')
+    cases.append(c)
+    # <3 x i32> packed (12-byte stride, align 4), as a packed_int3 array.
+    c = full_case('v3i32_packed', ['u32'], 'u32',
+                  lambda i, v: 0xdeadbeef if i >= 63 else u32(v[0][i] + i % 3 + 1),
+                  '%go = icmp ult i32 %tid, 21\nbr i1 %go, label %body, label %done\nbody:\n'
+                  '%off = mul i32 %tid, 12\n'
+                  '%pa = getelementptr i8, ptr addrspace(1) %in0, i32 %off\n'
+                  '%x = load <3 x i32>, ptr addrspace(1) %pa, align 4\n'
+                  '%y = add <3 x i32> %x, <i32 1, i32 2, i32 3>\n'
+                  '%po = getelementptr i8, ptr addrspace(1) %out, i32 %off\n'
+                  'store <3 x i32> %y, ptr addrspace(1) %po, align 4\nbr label %done\ndone:\nret void')
+    c.out_init = [0xdeadbeef] * N
+    cases.append(c)
+    c = full_case('v3f32_extract_dynamic', ['f32'], 'f32',
+                  lambda i, v: v[0][i // 3 * 3 + i % 3] if i < 63 else 0.0,
+                  '%go = icmp ult i32 %tid, 63\nbr i1 %go, label %body, label %done\nbody:\n'
+                  '%q = udiv i32 %tid, 3\n%k = urem i32 %tid, 3\n%off = mul i32 %q, 12\n'
+                  '%pa = getelementptr i8, ptr addrspace(1) %in0, i32 %off\n'
+                  '%x = load <3 x float>, ptr addrspace(1) %pa, align 4\n'
+                  '%r = extractelement <3 x float> %x, i32 %k\n'
+                  '%po = getelementptr float, ptr addrspace(1) %out, i32 %tid\n'
+                  'store float %r, ptr addrspace(1) %po\nbr label %done\ndone:\nret void', ulps=0)
+    c.out_init = [0.0] * N
+    cases.append(c)
+    # <8 x i8> lanes of two words.
+    cases.append(vec_case('v8i8_mul_add', 8, 'u8',
+                          '%m = mul <8 x i8> %x0, %x1\n%y = add <8 x i8> %m, splat (i8 7)',
+                          lambda i, v: (v[0][i] * v[1][i] + 7) & 0xff, gen=[None, None]))
+    cases.append(vec_case('v4i8_shl_per_lane', 4, 'u8',
+                          '%y = shl <4 x i8> %x0, <i8 0, i8 3, i8 5, i8 7>',
+                          lambda i, v: v[0][i] << (0, 3, 5, 7)[i % 4] & 0xff))
+    cases.append(vec_case('v4i8_lshr_var', 4, 'u8',
+                          '%s = and <4 x i8> %x1, splat (i8 7)\n%y = lshr <4 x i8> %x0, %s',
+                          lambda i, v: v[0][i] >> (v[1][i] & 7), gen=[None, None]))
+    cases.append(vec_case('v4i8_ashr_var', 4, 'i8',
+                          '%s = and <4 x i8> %x1, splat (i8 7)\n%y = ashr <4 x i8> %x0, %s',
+                          lambda i, v: v[0][i] >> (v[1][i] & 7), gen=[None, None]))
+    cases.append(vec_case('v4i32_shifts_per_lane', 4, 'u32',
+                          '%s = lshr <4 x i32> %x1, splat (i32 27)\n%a = shl <4 x i32> %x0, %s\n'
+                          '%b = lshr <4 x i32> %x0, %s\n%c = ashr <4 x i32> %x0, %s\n'
+                          '%ab = xor <4 x i32> %a, %b\n%y = add <4 x i32> %ab, %c',
+                          lambda i, v: u32((v[0][i] << (v[1][i] >> 27)) ^ (v[0][i] >> (v[1][i] >> 27)))
+                          + u32(s32(v[0][i]) >> (v[1][i] >> 27)) & 0xffffffff, gen=[None, None]))
+    cases.append(vec_case('v2i16_uadd_sat', 2, 'u16',
+                          '%y = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> %x0, <2 x i16> %x1)',
+                          lambda i, v: min(v[0][i] + v[1][i], 0xffff),
+                          {'declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)'}, [None, None]))
+    cases.append(vec_case('v4i8_usub_sat', 4, 'u8',
+                          '%y = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> %x0, <4 x i8> %x1)',
+                          lambda i, v: max(v[0][i] - v[1][i], 0),
+                          {'declare <4 x i8> @llvm.usub.sat.v4i8(<4 x i8>, <4 x i8>)'}, [None, None]))
+    cases.append(vec_case('v4i8_smin', 4, 'i8',
+                          '%y = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %x0, <4 x i8> %x1)',
+                          lambda i, v: min(v[0][i], v[1][i]),
+                          {'declare <4 x i8> @llvm.smin.v4i8(<4 x i8>, <4 x i8>)'}, [None, None]))
+    cases.append(vec_case('v4i32_ctpop', 4, 'u32',
+                          '%y = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %x0)',
+                          lambda i, v: bin(v[0][i]).count('1'), {'declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)'}))
+    cases.append(vec_case('v2i32_bswap', 2, 'u32',
+                          '%y = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %x0)',
+                          lambda i, v: int.from_bytes(v[0][i].to_bytes(4, 'little'), 'big'),
+                          {'declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)'}))
+    cases.append(vec_case('v2i64_mul_lshr', 2, 'u64',
+                          '%m = mul <2 x i64> %x0, %x1\n%s = and <2 x i64> %x1, splat (i64 63)\n'
+                          '%y = lshr <2 x i64> %m, %s',
+                          lambda i, v: u64(v[0][i] * v[1][i]) >> (v[1][i] & 63), gen=[None, None]))
+    cases.append(vec_case('v2i64_icmp_slt', 2, 'i64',
+                          '%c = icmp slt <2 x i64> %x0, %x1\n%y = sext <2 x i1> %c to <2 x i64>',
+                          lambda i, v: -int(v[0][i] < v[1][i]), gen=[None, None]))
+    # Vector float compares, selects and conversions.
+    cases.append(vec_case('v4f32_fcmp_select', 4, 'f32',
+                          '%c = fcmp olt <4 x float> %x0, %x1\n%n = fneg <4 x float> %x0\n'
+                          '%y = select <4 x i1> %c, <4 x float> %x0, <4 x float> %n',
+                          lambda i, v: v[0][i] if v[0][i] < v[1][i] else -v[0][i],
+                          gen=[edge_a, edge_b], ulps=0, bitexact=True))
+    cases.append(vec_case('v4f32_fcmp_uno', 4, 'f32', '%c = fcmp uno <4 x float> %x0, %x1\n'
+                          '%y = uitofp <4 x i1> %c to <4 x float>',
+                          lambda i, v: float(v[0][i] != v[0][i] or v[1][i] != v[1][i]),
+                          gen=[edge_a, edge_b], ulps=0))
+    cases.append(vec_case('v4f32_fptosi', 4, 'f32', '%y = fptosi <4 x float> %x0 to <4 x i32>',
+                          lambda i, v: int(v[0][i]), gen=[lambda i, r: r.uniform(-1e6, 1e6)], out_ty='i32'))
+    cases.append(vec_case('v4i32_sitofp', 4, 'i32', '%y = sitofp <4 x i32> %x0 to <4 x float>',
+                          lambda i, v: int_to_f32(v[0][i]), gen=[mag], out_ty='f32', ulps=0))
+    cases.append(vec_case('v4i32_uitofp', 4, 'u32', '%y = uitofp <4 x i32> %x0 to <4 x float>',
+                          lambda i, v: int_to_f32(v[0][i]), out_ty='f32', ulps=0))
+    cases.append(vec_case('v4f16_fpext', 4, 'f16', '%y = fpext <4 x half> %x0 to <4 x float>',
+                          lambda i, v: v[0][i], gen=[cyc(F16_EDGE1)], out_ty='f32', ulps=0, bitexact=True))
+    cases.append(vec_case('v2f32_fptrunc', 2, 'f32', '%y = fptrunc <2 x float> %x0 to <2 x half>',
+                          lambda i, v: f16(v[0][i]), gen=[wide16], out_ty='f16', ulps=0, bitexact=True))
+    for name, ins, ref in (('fabs', 'call <4 x float> @llvm.fabs.v4f32(<4 x float> %x0)',
+                            lambda x: x if x != x else abs(x)),
+                           ('fneg', 'fneg <4 x float> %x0', lambda x: -x)):
+        cases.append(vec_case('v4f32_' + name, 4, 'f32', '%y = ' + ins, lambda i, v, ref=ref: ref(v[0][i]),
+                              {'declare <4 x float> @llvm.fabs.v4f32(<4 x float>)'} if name == 'fabs' else (),
+                              [edge1], 0, True))
+    cases.append(vec_case('v4f32_copysign', 4, 'f32',
+                          '%y = call <4 x float> @llvm.copysign.v4f32(<4 x float> %x0, <4 x float> %x1)',
+                          lambda i, v: math.copysign(v[0][i], v[1][i]),
+                          {'declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>)'},
+                          [edge_a, edge_b], 0, True))
+    cases.append(vec_case('v4f32_minnum', 4, 'f32',
+                          '%y = call <4 x float> @llvm.minnum.v4f32(<4 x float> %x0, <4 x float> %x1)',
+                          lambda i, v: minnum(v[0][i], v[1][i]),
+                          {'declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)'},
+                          [edge_a, edge_b], 0))
+    cases.append(vec_case('v2f16_maxnum', 2, 'f16',
+                          '%y = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %x0, <2 x half> %x1)',
+                          lambda i, v: maxnum(v[0][i], v[1][i]),
+                          {'declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)'},
+                          [cyc(F16_EDGE), cyc(F16_EDGE, 8)], 0))
+    # Splat through shufflevector zeroinitializer.
+    cases.append(ir_case('vec_splat_shuffle', ['u32'], 'u32',
+                         '%s0 = insertelement <4 x i32> poison, i32 %a0, i64 0\n'
+                         '%s = shufflevector <4 x i32> %s0, <4 x i32> poison, <4 x i32> zeroinitializer\n'
+                         '%m = mul <4 x i32> %s, <i32 1, i32 2, i32 3, i32 4>\n%k = and i32 %tid, 3\n'
+                         '%r = extractelement <4 x i32> %m, i32 %k', lambda i, v: u32(v[0][i] * (i % 4 + 1))))
+    # A vector loaded from device memory, element chosen per thread.
+    cases.append(full_case('vec_load_extract_dynamic', ['u32'], 'u32', lambda i, v: u32(v[0][i] + 1),
+                           '%q = lshr i32 %tid, 2\n%k = and i32 %tid, 3\n'
+                           '%pv = getelementptr <4 x i32>, ptr addrspace(1) %in0, i32 %q\n'
+                           '%x = load <4 x i32>, ptr addrspace(1) %pv\n'
+                           '%e = extractelement <4 x i32> %x, i32 %k\n%r = add i32 %e, 1\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void'))
+    # Byte reversal of a <16 x i8>.
+    cases.append(ir_case('v16i8_shuffle_reverse', ['u32'] * 4, 'u32', VEC4_I32 +
+                         '%b = bitcast <4 x i32> %v to <16 x i8>\n'
+                         '%s = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> <' +
+                         ', '.join('i32 %d' % (15 - k) for k in range(16)) + '>\n' +
+                         '%w = bitcast <16 x i8> %s to <4 x i32>\n%r = extractelement <4 x i32> %w, i32 %k',
+                         lambda i, v: int.from_bytes(v[3 - i % 4][i].to_bytes(4, 'little'), 'big')))
+    # Masks: an i8 as <8 x i1>, a <8 x i1> compare as an i8 (movemask).
+    cases.append(ir_case('vec_mask_from_i8', ['u8', 'u32', 'u32'], 'u32',
+                         '%m = bitcast i8 %a0 to <8 x i1>\n%x0 = insertelement <2 x i32> poison, i32 %a1, i32 0\n'
+                         '%x1 = insertelement <2 x i32> %x0, i32 %a2, i32 1\n%x = bitcast <2 x i32> %x1 to <8 x i8>\n'
+                         '%s = select <8 x i1> %m, <8 x i8> %x, <8 x i8> splat (i8 -1)\n'
+                         '%w = bitcast <8 x i8> %s to <2 x i32>\n%k = and i32 %tid, 1\n'
+                         '%r = extractelement <2 x i32> %w, i32 %k',
+                         lambda i, v: from_u8([b if v[0][i] >> (4 * (i & 1) + j) & 1 else 0xff
+                                               for j, b in enumerate(lanes_u8(v[1 + (i & 1)][i]))])))
+    cases.append(ir_case('vec_movemask_i8', ['u32', 'u32'], 'u8',
+                         '%x0 = insertelement <2 x i32> poison, i32 %a0, i32 0\n'
+                         '%x = insertelement <2 x i32> %x0, i32 %a1, i32 1\n%b = bitcast <2 x i32> %x to <8 x i8>\n'
+                         '%c = icmp slt <8 x i8> %b, zeroinitializer\n%r = bitcast <8 x i1> %c to i8',
+                         lambda i, v: sum(1 << k for k, b in enumerate(lanes_u8(v[0][i]) + lanes_u8(v[1][i]))
+                                          if b >= 128)))
+    cases.append(ir_case('vec_bool_bytes_select', ['u32', 'u32'], 'u32',
+                         '%b = bitcast i32 %a0 to <4 x i8>\n%m = icmp ne <4 x i8> %b, zeroinitializer\n'
+                         '%x = bitcast i32 %a1 to <4 x i8>\n%n = sub <4 x i8> zeroinitializer, %x\n'
+                         '%s = select <4 x i1> %m, <4 x i8> %x, <4 x i8> %n\n%r = bitcast <4 x i8> %s to i32',
+                         lambda i, v: from_u8([x if m else -x for m, x in zip(lanes_u8(v[0][i]), lanes_u8(v[1][i]))]),
+                         gen=[lambda i, r: r.choice([0, 1, 0x100, 0x10001, 0x01000100, r.randrange(1 << 32)]), None]))
+    # Integer vector casts.
+    cases.append(ir_case('vec_trunc_v4i32_v4i8', ['u32'] * 4, 'u32', VEC4_I32 +
+                         '%tr = trunc <4 x i32> %v to <4 x i8>\n%r = bitcast <4 x i8> %tr to i32',
+                         lambda i, v: from_u8([v[k][i] for k in range(4)])))
+    cases.append(ir_case('vec_sext_v4i8_v4i32', ['u32'], 'i32',
+                         '%b = bitcast i32 %a0 to <4 x i8>\n%x = sext <4 x i8> %b to <4 x i32>\n'
+                         '%k = and i32 %tid, 3\n%r = extractelement <4 x i32> %x, i32 %k',
+                         lambda i, v: s8(lanes_u8(v[0][i])[i % 4])))
+    cases.append(ir_case('vec_zext_v2i16_v2i64', ['u32'], 'u64',
+                         '%b = bitcast i32 %a0 to <2 x i16>\n%x = zext <2 x i16> %b to <2 x i64>\n'
+                         '%k = and i32 %tid, 1\n%r = extractelement <2 x i64> %x, i32 %k',
+                         lambda i, v: v[0][i] >> 16 * (i % 2) & 0xffff))
+    # A loop-carried vector phi.
+    def phi_ref(i, v):
+        acc = [0] * 4
+        for _ in range(v[0][i] & 7):
+            acc = [u32(a * 3 + v[k][i]) for k, a in enumerate(acc)]
+        return acc[i % 4]
+    cases.append(ir_case('vec_phi_loop', ['u32'] * 4, 'u32', VEC4_I32 +
+                         '%n = and i32 %a0, 7\nbr label %h\n'
+                         'h:\n%j = phi i32 [ 0, %entry ], [ %j1, %b ]\n'
+                         '%acc = phi <4 x i32> [ zeroinitializer, %entry ], [ %acc1, %b ]\n'
+                         '%more = icmp ult i32 %j, %n\nbr i1 %more, label %b, label %x\n'
+                         'b:\n%m3 = mul <4 x i32> %acc, splat (i32 3)\n%acc1 = add <4 x i32> %m3, %v\n'
+                         '%j1 = add i32 %j, 1\nbr label %h\n'
+                         'x:\n%r = extractelement <4 x i32> %acc, i32 %k', phi_ref))
+    # More reductions.
+    U4 = ['u32'] * 4
+    for op, ty, ref in (('or', 'u32', lambda xs: xs[0] | xs[1] | xs[2] | xs[3]),
+                        ('smin', 'i32', min), ('umin', 'u32', min), ('smax', 'i32', max)):
+        cases.append(ir_case('vec_reduce_%s_v4' % op, [ty] * 4, ty,
+                             VEC4_I32 + '%%r = call i32 @llvm.vector.reduce.%s.v4i32(<4 x i32> %%v)' % op,
+                             lambda i, v, ref=ref: ref([v[k][i] for k in range(4)]),
+                             {'declare i32 @llvm.vector.reduce.%s.v4i32(<4 x i32>)' % op}))
+    for op, ref in (('or', any), ('and', all)):
+        cases.append(ir_case('vec_reduce_%s_v4i1' % op, U4, 'u32',
+                             VEC4_I32 + '%%c = icmp ugt <4 x i32> %%v, splat (i32 1073741824)\n'
+                             '%%b = call i1 @llvm.vector.reduce.%s.v4i1(<4 x i1> %%c)\n%%r = zext i1 %%b to i32' % op,
+                             lambda i, v, ref=ref: int(ref(v[k][i] > 1 << 30 for k in range(4))),
+                             {'declare i1 @llvm.vector.reduce.%s.v4i1(<4 x i1>)' % op}))
+    F4 = ['f32'] * 4
+    nanny = lambda i, r: math.nan if r.randrange(6) == 0 else r.uniform(-100, 100)
+
+    def ordered_mul(i, v):
+        acc = 1.0
+        for k in range(4):
+            acc = f32(acc * v[k][i])
+        return acc
+    cases.append(ir_case('vec_reduce_fmul_ordered', F4, 'f32',
+                         VEC4_F32 + '%r = call float @llvm.vector.reduce.fmul.v4f32(float 1.0, <4 x float> %v)',
+                         ordered_mul, {'declare float @llvm.vector.reduce.fmul.v4f32(float, <4 x float>)'},
+                         [spread] * 4, 0))
+    cases.append(ir_case('vec_reduce_fmin_nan', F4, 'f32',
+                         VEC4_F32 + '%r = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %v)',
+                         lambda i, v: functools.reduce(minnum, [v[k][i] for k in range(4)]),
+                         {'declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)'}, [nanny] * 4, 0))
+    cases.append(ir_case('vec_reduce_fmaximum_nan', F4, 'f32',
+                         VEC4_F32 + '%r = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %v)',
+                         lambda i, v: functools.reduce(maximum, [v[k][i] for k in range(4)]),
+                         {'declare float @llvm.vector.reduce.fmaximum.v4f32(<4 x float>)'}, [nanny] * 4, 0))
+    return cases
+
+
+def c_pow(x, y):
+    """C's pow (LLVM's llvm.pow)."""
+    def odd_int(t):
+        return math.isfinite(t) and t == int(t) and int(t) % 2 == 1
+    try:
+        return math.pow(x, y)
+    except ValueError:
+        if x == 0 and y < 0:
+            return math.copysign(math.inf, x) if odd_int(y) else math.inf
+        return math.nan
+    except OverflowError:
+        return -math.inf if x < 0 and odd_int(y) else math.inf
+
+
+def c_log(fn):
+    def r(x):
+        if x != x or x == math.inf:
+            return x
+        if x == 0:
+            return -math.inf
+        if x < 0:
+            return math.nan
+        return fn(x)
+    return r
+
+
+def c_exp(fn, big):
+    def r(x):
+        if x != x:
+            return x
+        if x == math.inf or x > big:
+            return math.inf
+        if x == -math.inf:
+            return 0.0
+        return fn(x)
+    return r
+
+
+MATH_EDGE = [0.0, -0.0, math.inf, -math.inf, math.nan, 1.0, -1.0, 0.5, 128.0, -150.0, -126.0, 2.0,
+             1e-30, 100.0, -100.0, 89.0, -104.0, 3.0, 0.25, 10.0, -0.5, 1e30]
+
+
+def group_llvm_math_ext():
+    """fma on special values and its single rounding, the 1/sqrt idioms,
+    powi, lround/lrint, canonicalize, minimumnum/maximumnum, sincos, the
+    special values of pow, exp and log, half math."""
+    cases = []
+    fma_decl = {'declare float @llvm.fma.f32(float, float, float)'}
+    fma_body = '%r = call float @llvm.fma.f32(float %a0, float %a1, float %a2)'
+    cases.append(ir_case('fma_f32_edges', ['f32'] * 3, 'f32', fma_body,
+                         lambda i, v: fma_ref('f32', v[0][i], v[1][i], v[2][i]), fma_decl,
+                         [edge_a, edge_b, lambda i, r: F32_EDGE1[i * 7 % len(F32_EDGE1)]], 0, True))
+
+    def fused(k):
+        def g(i, r):
+            rr = random.Random(i)
+            a = f32(rr.uniform(1, 2) * 2.0 ** rr.randrange(-20, 20))
+            b = f32(rr.uniform(-2, 2) * 2.0 ** rr.randrange(-20, 20))
+            return (a, b, -f32(a * b))[k]
+        return g
+    cases.append(ir_case('fma_f32_single_rounding', ['f32'] * 3, 'f32', fma_body,
+                         lambda i, v: fma_ref('f32', v[0][i], v[1][i], v[2][i]), fma_decl,
+                         [fused(0), fused(1), fused(2)], 0, True, source='fma(a, b, -(a*b)) is the error of a*b'))
+    wide = lambda i, r: r.choice([-1, 1]) * r.uniform(1, 2) * 2.0 ** r.randrange(-60, 60)
+    cases.append(ir_case('fma_f32_rand_exact', ['f32'] * 3, 'f32', fma_body,
+                         lambda i, v: fma_ref('f32', v[0][i], v[1][i], v[2][i]), fma_decl,
+                         [wide] * 3, 0, True))
+    pos_ = lambda i, r: r.uniform(1, 2) * 2.0 ** r.randrange(-30, 30)
+    cases.append(ir_case('rsqrt_idiom', ['f32'], 'f32',
+                         '%s = call float @llvm.sqrt.f32(float %a0)\n%r = fdiv float 1.0, %s',
+                         lambda i, v: f32(1 / f32(math.sqrt(v[0][i]))), {'declare float @llvm.sqrt.f32(float)'},
+                         [pos_], 0))
+    c = ir_case('rsqrt_idiom_afn', ['f32'], 'f32',
+                '%s = call afn float @llvm.sqrt.f32(float %a0)\n%r = fdiv afn float 1.0, %s',
+                lambda i, v: 1 / math.sqrt(v[0][i]), {'declare float @llvm.sqrt.f32(float)'}, [pos_], 16)
+    cases.append(c)
+    cases.append(ir_case('fdiv_arcp', ['f32', 'f32'], 'f32', '%r = fdiv arcp float %a0, %a1',
+                         lambda i, v: v[0][i] / v[1][i], gen=[pos_, pos_], ulps=2))
+    cases.append(ir_case('fdiv_afn', ['f32', 'f32'], 'f32', '%r = fdiv afn float %a0, %a1',
+                         lambda i, v: v[0][i] / v[1][i], gen=[pos_, pos_], ulps=4))
+    cases.append(ir_case('powi_f32', ['f32', 'i32'], 'f32',
+                         '%r = call float @llvm.powi.f32.i32(float %a0, i32 %a1)',
+                         lambda i, v: v[0][i] ** v[1][i], {'declare float @llvm.powi.f32.i32(float, i32)'},
+                         [lambda i, r: r.uniform(0.5, 2) * r.choice([-1, 1]), lambda i, r: r.randrange(-8, 9)],
+                         16))
+    ties = lambda i, r: r.choice([r.randrange(-1000, 1000) + 0.5, r.uniform(-1e6, 1e6), r.randrange(-50, 50) * 0.25])
+    rne = lambda x: int(round(x))
+    away = lambda x: int(math.copysign(math.floor(abs(x) + 0.5), x))
+    for name, ty, ref in (('lround.i32', 'i32', away), ('llround.i64', 'i64', away),
+                          ('lrint.i32', 'i32', rne), ('llrint.i64', 'i64', rne)):
+        irty = TYPES[ty][0]
+        cases.append(ir_case(name.replace('.', '_'), ['f32'], ty,
+                             '%%r = call %s @llvm.%s.f32(float %%a0)' % (irty, name),
+                             lambda i, v, ref=ref: ref(v[0][i]),
+                             {'declare %s @llvm.%s.f32(float)' % (irty, name)}, [ties]))
+    cases.append(ir_case('canonicalize_f32', ['f32'], 'f32',
+                         '%r = call float @llvm.canonicalize.f32(float %a0)', lambda i, v: v[0][i],
+                         {'declare float @llvm.canonicalize.f32(float)'}, [edge1], 0, True))
+    for name, ref in (('minimumnum', lambda a, b: minimum(a, b) if a == a and b == b else minnum(a, b)),
+                      ('maximumnum', lambda a, b: maximum(a, b) if a == a and b == b else maxnum(a, b))):
+        cases.append(ir_case(name, ['f32', 'f32'], 'f32',
+                             '%%r = call float @llvm.%s.f32(float %%a0, float %%a1)' % name,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]),
+                             {'declare float @llvm.%s.f32(float, float)' % name}, [edge_a, edge_b], 0, True))
+    cases.append(ir_case('llvm_sincos', ['f32'], 'f32',
+                         '%sc = call { float, float } @llvm.sincos.f32(float %a0)\n'
+                         '%sn = extractvalue { float, float } %sc, 0\n%cs = extractvalue { float, float } %sc, 1\n'
+                         '%c2 = fmul float %cs, 2.0\n%r = fadd float %sn, %c2',
+                         lambda i, v: math.sin(v[0][i]) + 2 * math.cos(v[0][i]),
+                         {'declare { float, float } @llvm.sincos.f32(float)'}, ulps=8))
+    cases[-1].abstol = 1e-6
+    # Special values of the precise functions (C99 Annex F).
+    for fn, ref in (('exp', c_exp(math.exp, 89)), ('exp2', c_exp(lambda x: 2.0 ** x, 128)),
+                    ('log', c_log(math.log)), ('log2', c_log(math.log2))):
+        cases.append(ir_case('edge_' + fn, ['f32'], 'f32', '%%r = call float @llvm.%s.f32(float %%a0)' % fn,
+                             lambda i, v, ref=ref: ref(v[0][i]), {'declare float @llvm.%s.f32(float)' % fn},
+                             [cyc(MATH_EDGE)], 4))
+    pow_x = [0.0, -0.0, math.inf, -math.inf, math.nan, 1.0, -2.0, 0.5]
+    pow_y = [0.0, math.inf, -math.inf, math.nan, 3.0, -1.0, 0.5, -2.0]
+    cases.append(ir_case('edge_pow', ['f32', 'f32'], 'f32', '%r = call float @llvm.pow.f32(float %a0, float %a1)',
+                         lambda i, v: c_pow(v[0][i], v[1][i]), {'declare float @llvm.pow.f32(float, float)'},
+                         [cyc(pow_x), cyc(pow_y, 8)], 16))
+    cases.append(ir_case('pow_negative_base', ['f32', 'f32'], 'f32',
+                         '%r = call float @llvm.pow.f32(float %a0, float %a1)',
+                         lambda i, v: c_pow(v[0][i], v[1][i]), {'declare float @llvm.pow.f32(float, float)'},
+                         [lambda i, r: -r.uniform(0.5, 4), lambda i, r: float(r.randrange(-6, 7))], 16))
+    # half math (bounded results; Metal's half functions are accurate to a few half ULPs).
+    for fn, gen, ref in (('exp', lambda i, r: r.uniform(-4, 1), math.exp),
+                         ('log', lambda i, r: r.uniform(0.5, 4), math.log),
+                         ('cos', lambda i, r: r.uniform(-4, 4), math.cos),
+                         ('tanh', lambda i, r: r.uniform(-3, 3), math.tanh)):
+        c = ir_case('f16_llvm_' + fn, ['f16'], 'f16', '%%r = call half @llvm.%s.f16(half %%a0)' % fn,
+                    lambda i, v, ref=ref: f16(ref(v[0][i])), {'declare half @llvm.%s.f16(half)' % fn}, [gen])
+        c.abstol = 2.0 ** -7
+        cases.append(c)
+    c = ir_case('f16_llvm_pow', ['f16', 'f16'], 'f16', '%r = call half @llvm.pow.f16(half %a0, half %a1)',
+                lambda i, v: f16(v[0][i] ** v[1][i]), {'declare half @llvm.pow.f16(half, half)'},
+                [lambda i, r: r.uniform(0.5, 2), lambda i, r: r.uniform(-2, 2)])
+    c.abstol = 2.0 ** -6
+    cases.append(c)
+    return cases
+
+
 GROUPS = {
     'llvm-float-ieee': group_llvm_float_ieee,
     'llvm-int-ops': group_llvm_int_ops,
@@ -2471,6 +2880,8 @@ GROUPS = {
     'extra': group_extra,
     'llvm-half': group_llvm_half,
     'llvm-int-narrow': group_llvm_int_narrow,
+    'llvm-vector-ext': group_llvm_vector_ext,
+    'llvm-math-ext': group_llvm_math_ext,
 }
 
 
