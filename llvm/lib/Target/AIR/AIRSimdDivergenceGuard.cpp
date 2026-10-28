@@ -27,6 +27,11 @@
 // runs exactly once (straight-line kernel code) are left alone. llvm.sideeffect
 // generates no code; it only keeps the block from being speculated.
 //
+// First, air.simd_vote_all / air.quad_vote_all of a mask become a comparison
+// with the ballot of true: in AIR (and on AGX) the vote is over the active
+// threads, but Metal compares the mask with every thread of the SIMD-group
+// (M2 Max: air.simd_vote_all.i64(0xffff) is false with lanes 0-15 active).
+//
 // Metal pipeline only: the portable AIR (addAIRPortablePasses) is unchanged.
 //
 //===----------------------------------------------------------------------===//
@@ -38,6 +43,8 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -95,8 +102,41 @@ static bool guardFunction(Function &F) {
   return Changed;
 }
 
+static bool voteAllOverActiveThreads(Module &M) {
+  SmallVector<CallInst *, 4> Votes;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F))
+      if (auto *CI = dyn_cast<CallInst>(&I))
+        if (Function *Callee = CI->getCalledFunction())
+          if ((Callee->getName().starts_with("air.simd_vote_all") ||
+               Callee->getName().starts_with("air.quad_vote_all")) &&
+              CI->arg_size() == 1 && CI->getType()->isIntegerTy(1) &&
+              CI->getArgOperand(0)->getType()->isIntegerTy())
+            Votes.push_back(CI);
+  for (CallInst *CI : Votes) {
+    IRBuilder<> B(CI);
+    bool Quad = CI->getCalledFunction()->getName().starts_with("air.quad_");
+    FunctionCallee Ballot =
+        Quad ? M.getOrInsertFunction("air.quad_ballot", B.getInt16Ty(),
+                                     B.getInt1Ty())
+             : M.getOrInsertFunction("air.simd_ballot.i64", B.getInt64Ty(),
+                                     B.getInt1Ty());
+    Value *Mask = CI->getArgOperand(0);
+    Value *Active = B.CreateZExtOrTrunc(
+        B.CreateCall(Ballot, {B.getTrue()}, "active"), Mask->getType());
+    Value *All = B.CreateICmpEQ(Mask, Active);
+    All->takeName(CI);
+    CI->replaceAllUsesWith(All);
+    Function *Old = CI->getCalledFunction();
+    CI->eraseFromParent();
+    if (Old->use_empty())
+      Old->eraseFromParent();
+  }
+  return !Votes.empty();
+}
+
 static bool guardModule(Module &M) {
-  bool Changed = false;
+  bool Changed = voteAllOverActiveThreads(M);
   for (Function &F : M)
     if (!F.isDeclaration())
       Changed |= guardFunction(F);
