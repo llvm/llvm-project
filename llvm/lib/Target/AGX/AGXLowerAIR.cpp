@@ -1693,13 +1693,20 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     } else if (auto *Sel = dyn_cast<SelectInst>(&I); Float && Sel && HardwareFlush) {
       // select(|x| < FLT_MIN, copysign(0, x), x): x, where the operation that
       // makes x or every one that reads the flushed value flushes.
-      Value *A, *Z;
-      const APFloat *Min;
-      if (match(Sel->getCondition(),
-                m_SpecificFCmp(FCmpInst::FCMP_OLT,
-                               m_Intrinsic<Intrinsic::fabs>(m_Value(A)),
-                               m_APFloat(Min))) &&
-          Min->isSmallestNormalized() && !Min->isNegative() &&
+      Value *A = nullptr, *Z;
+      const APFloat *Min = nullptr;
+      // (or x == 0, which instcombine makes of it where the function's
+      // denormal mode compares denormals as zero)
+      bool Tiny =
+          (match(Sel->getCondition(),
+                 m_SpecificFCmp(FCmpInst::FCMP_OLT,
+                                m_Intrinsic<Intrinsic::fabs>(m_Value(A)),
+                                m_APFloat(Min))) &&
+           Min->isSmallestNormalized() && !Min->isNegative()) ||
+          (match(Sel->getCondition(),
+                 m_SpecificFCmp(FCmpInst::FCMP_OEQ, m_Value(A), m_PosZeroFP())) &&
+           F.getDenormalMode(APFloat::IEEEsingle()).Input != DenormalMode::IEEE);
+      if (Tiny &&
           match(Sel->getTrueValue(),
                 m_Intrinsic<Intrinsic::copysign>(m_Value(Z), m_Specific(A))) &&
           match(Z, m_PosZeroFP()) && Sel->getFalseValue() == A &&
