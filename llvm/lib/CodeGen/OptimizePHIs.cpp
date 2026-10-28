@@ -12,18 +12,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/OptimizePHIs.h"
+#include "CodeGenOptions.h"
+#include "llvm/ADT/BoolOrDefault.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 
@@ -35,10 +45,14 @@ STATISTIC(NumDeadPHICycles, "Number of dead PHI cycles");
 namespace {
 
 class OptimizePHIs {
+  MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
+  MachineDominatorTree *DT = nullptr;
+  std::optional<MachineDominatorTree> OwnedDT;
 
 public:
+  explicit OptimizePHIs(MachineDominatorTree *DT = nullptr) : DT(DT) {}
   bool run(MachineFunction &Fn);
 
 private:
@@ -48,6 +62,23 @@ private:
                              InstrSet &PHIsInCycle);
   bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
   bool OptimizeBB(MachineBasicBlock &MBB);
+
+  struct ConstantInputs {
+    MachineInstr *Def;
+    SmallVector<MachineBasicBlock *, 4> DefBlocks;
+    SmallVector<unsigned, 4> OperandIdxs;
+  };
+
+  MachineDominatorTree &getDomTree();
+  MachineInstr *getDefThroughCopies(Register Reg);
+  MachineInstr *getMoveImmDef(Register Reg, const MachineInstr &PHI);
+  Register cloneMoveImm(const MachineInstr &Def, MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator InsertPt,
+                        const DebugLoc &DL);
+  bool shouldHoist(const MachineInstr &Def);
+  MachineBasicBlock *findHoistBlock(ArrayRef<MachineBasicBlock *> DefBlocks);
+  bool hoistDuplicateConstantsInPHI(MachineInstr &PHI);
+  bool foldConstantPHI(MachineInstr &PHI);
 };
 
 class OptimizePHIsLegacy : public MachineFunctionPass {
@@ -58,13 +89,16 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    OptimizePHIs OP;
+    auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    OptimizePHIs OP(MDTWrapper ? &MDTWrapper->getDomTree() : nullptr);
     return OP.run(MF);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -79,7 +113,7 @@ INITIALIZE_PASS(OptimizePHIsLegacy, DEBUG_TYPE,
 
 PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
-  OptimizePHIs OP;
+  OptimizePHIs OP(MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF));
   if (!OP.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -89,8 +123,10 @@ PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
 }
 
 bool OptimizePHIs::run(MachineFunction &Fn) {
+  MF = &Fn;
   MRI = &Fn.getRegInfo();
   TII = Fn.getSubtarget().getInstrInfo();
+  OwnedDT.reset();
 
   // Find dead PHI cycles and PHI cycles that can be replaced by a single
   // value.  InstCombine does these optimizations, but DAG legalization may
@@ -175,6 +211,149 @@ bool OptimizePHIs::IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle) {
   return true;
 }
 
+MachineDominatorTree &OptimizePHIs::getDomTree() {
+  if (!DT)
+    DT = &OwnedDT.emplace(*MF);
+  return *DT;
+}
+
+MachineInstr *OptimizePHIs::getDefThroughCopies(Register Reg) {
+  MachineInstr *Def = MRI->getVRegDef(Reg);
+  while (Def && Def->isCopy()) {
+    const MachineOperand &Src = Def->getOperand(1);
+    if (Def->getOperand(0).getSubReg() || Src.getSubReg() ||
+        !Src.getReg().isVirtual())
+      return nullptr;
+    Def = MRI->getVRegDef(Src.getReg());
+  }
+  return Def;
+}
+
+MachineInstr *OptimizePHIs::getMoveImmDef(Register Reg,
+                                          const MachineInstr &PHI) {
+  MachineInstr *Def = getDefThroughCopies(Reg);
+  if (!Def || !Def->isMoveImmediate() || Def->getNumImplicitOperands())
+    return nullptr;
+  const MachineOperand &Dst = Def->getOperand(0);
+  if (!Dst.getReg().isVirtual() ||
+      MRI->getRegClass(Dst.getReg()) !=
+          MRI->getRegClass(PHI.getOperand(0).getReg()))
+    return nullptr;
+  const MachineOperand &Imm = Def->getOperand(1);
+  if (!Imm.isImm() && !Imm.isCImm() && !Imm.isFPImm())
+    return nullptr;
+  return Def;
+}
+
+Register OptimizePHIs::cloneMoveImm(const MachineInstr &Def,
+                                    MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    const DebugLoc &DL) {
+  Register NewReg =
+      MRI->createVirtualRegister(MRI->getRegClass(Def.getOperand(0).getReg()));
+  MachineInstr *NewMI = MF->CloneMachineInstr(&Def);
+  NewMI->getOperand(0).setReg(NewReg);
+  NewMI->setDebugLoc(DL);
+  MBB.insert(InsertPt, NewMI);
+  return NewReg;
+}
+
+MachineBasicBlock *
+OptimizePHIs::findHoistBlock(ArrayRef<MachineBasicBlock *> DefBlocks) {
+  MachineDominatorTree &MDT = getDomTree();
+  for (MachineBasicBlock *MBB : DefBlocks) {
+    if (MBB->pred_size() != 1)
+      continue;
+    MachineBasicBlock *Pred = *MBB->pred_begin();
+    if (all_of(DefBlocks, [&](MachineBasicBlock *DefMBB) {
+          return MDT.dominates(Pred, DefMBB);
+        }))
+      return Pred;
+  }
+  return nullptr;
+}
+
+bool OptimizePHIs::shouldHoist(const MachineInstr &Def) {
+  const auto &Opts =
+      MF->getFunction().getContext().getLibraryOptions().get<CodeGenOptions>();
+  return valueOr(Opts.hoist_phi_consts, TII->shouldHoistPHIConstant(Def));
+}
+
+// If we have a phi of the form
+//
+//    phi (v1:b1, v2:b2, ..., vk:bk)
+//
+// where def v1, v2, ..., vk are the same constant c.
+//
+// If v1 is defined in b1, v2 in b2, ..., vk in bk then we define a new
+// def v=c in leastCommonDom(b1, b2, ..., bk) and replace uses of
+// v1, v2, ..., vk in phi by v.
+bool OptimizePHIs::hoistDuplicateConstantsInPHI(MachineInstr &PHI) {
+  SmallVector<ConstantInputs, 4> Constants;
+  for (unsigned I = 1, E = PHI.getNumOperands(); I != E; I += 2) {
+    MachineInstr *Def = getMoveImmDef(PHI.getOperand(I).getReg(), PHI);
+    if (!Def || !shouldHoist(*Def))
+      continue;
+
+    auto *It = find_if(Constants, [&](const ConstantInputs &C) {
+      return C.Def->isIdenticalTo(*Def, MachineInstr::IgnoreDefs);
+    });
+    if (It == Constants.end())
+      It = &Constants.emplace_back(ConstantInputs{Def, {}, {}});
+    It->DefBlocks.push_back(Def->getParent());
+    It->OperandIdxs.push_back(I);
+  }
+
+  bool Changed = false;
+  for (ConstantInputs &C : Constants) {
+    if (C.OperandIdxs.size() < 2)
+      continue;
+    llvm::sort(C.DefBlocks, [](const MachineBasicBlock *A,
+                               const MachineBasicBlock *B) {
+      return A->getNumber() < B->getNumber();
+    });
+    C.DefBlocks.erase(llvm::unique(C.DefBlocks), C.DefBlocks.end());
+    if (C.DefBlocks.size() == 1)
+      continue;
+
+    MachineBasicBlock *Target = findHoistBlock(C.DefBlocks);
+    if (!Target)
+      continue;
+
+    Register NewReg = cloneMoveImm(*C.Def, *Target,
+                                   Target->getFirstTerminator(),
+                                   PHI.getDebugLoc());
+    for (unsigned I : C.OperandIdxs)
+      PHI.getOperand(I).setReg(NewReg);
+    Changed = true;
+  }
+  return Changed;
+}
+
+// Given a PHI whose inputs are all identical integer constants, replace it
+// with a single definition of the constant in the PHI's block.
+bool OptimizePHIs::foldConstantPHI(MachineInstr &PHI) {
+  if (PHI.getNumOperands() < 3)
+    return false;
+
+  MachineInstr *Def = getMoveImmDef(PHI.getOperand(1).getReg(), PHI);
+  if (!Def || !Def->getOperand(1).isImm() || !TII->shouldFoldConstantPHI(*Def))
+    return false;
+
+  for (unsigned I = 3, E = PHI.getNumOperands(); I < E; I += 2) {
+    MachineInstr *OpDef = getMoveImmDef(PHI.getOperand(I).getReg(), PHI);
+    if (!OpDef || !OpDef->isIdenticalTo(*Def, MachineInstr::IgnoreDefs))
+      return false;
+  }
+
+  MachineBasicBlock &MBB = *PHI.getParent();
+  Register NewReg =
+      cloneMoveImm(*Def, MBB, MBB.getFirstNonPHI(), PHI.getDebugLoc());
+  MRI->replaceRegWith(PHI.getOperand(0).getReg(), NewReg);
+  PHI.eraseFromParent();
+  return true;
+}
+
 /// OptimizeBB - Remove dead PHI cycles and PHI cycles that can be replaced by
 /// a single value.
 bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
@@ -184,6 +363,12 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
     MachineInstr *MI = &*MII++;
     if (!MI->isPHI())
       break;
+
+    Changed |= hoistDuplicateConstantsInPHI(*MI);
+    if (foldConstantPHI(*MI)) {
+      Changed = true;
+      continue;
+    }
 
     // Check for single-value PHI cycles.
     Register SingleValReg;

@@ -69,6 +69,14 @@ public:
                         int *BytesAdded = nullptr) const override;
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  bool shouldHoistPHIConstant(const MachineInstr &MovImm) const override {
+    return MovImm.getOperand(1).isFPImm();
+  }
+
+  bool shouldFoldConstantPHI(const MachineInstr &MovImm) const override {
+    return true;
+  }
 };
 
 } // namespace llvm

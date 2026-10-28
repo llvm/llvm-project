@@ -467,6 +467,22 @@ public:
     return MI.isAsCheapAsAMove();
   }
 
+  /// Return true if OptimizePHIs should hoist duplicate copies of the constant
+  /// materialized by MovImm, when they feed the same PHI from different blocks,
+  /// into one definition in a dominating block. This lengthens the live range
+  /// of the constant and executes the move on paths that do not use it, so it
+  /// is only profitable where constants are not rematerialized.
+  virtual bool shouldHoistPHIConstant(const MachineInstr &MovImm) const {
+    return false;
+  }
+
+  /// Return true if OptimizePHIs should replace a PHI whose inputs are all
+  /// identical copies of the integer constant materialized by MovImm with one
+  /// definition of that constant in the PHI's block.
+  virtual bool shouldFoldConstantPHI(const MachineInstr &MovImm) const {
+    return false;
+  }
+
   /// Return true if the instruction should be sunk by MachineSink.
   ///
   /// MachineSink determines on its own whether the instruction is safe to sink;
