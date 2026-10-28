@@ -28,7 +28,7 @@ import("//llvm/version.gni")
 # to keep the gn build close to the cmake build.
 
 # Other than in the cmake build, header generation doesn't do any feature
-# checking. See also "Philosophy" in llvm/utils/gn/README.rst.
+# checking. See also "Philosophy" in llvm/utils/gn/README.md.
 
 ##############################################################################
 # config.h, llvm-config.h, abi-breaking.h
