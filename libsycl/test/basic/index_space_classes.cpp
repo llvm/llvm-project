@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: any-device
-// RUN: %clangxx -fsycl %s -o %t.out
+// RUN: %clangxx -fsycl -Wno-error=deprecated-declarations %s -o %t.out
 // RUN: %t.out
 //
 // Unified test for sycl::range and sycl::id covering all operators defined in

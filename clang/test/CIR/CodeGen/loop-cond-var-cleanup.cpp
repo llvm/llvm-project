@@ -41,8 +41,8 @@ void while_cond_var(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z14while_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // The loop header branches into the condition region or to the loop exit.
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
@@ -161,8 +161,8 @@ void while_cond_var_break() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -262,8 +262,8 @@ void while_cond_var_continue() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -369,8 +369,8 @@ void for_cond_var_break() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -471,8 +471,8 @@ void for_cond_var_continue() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -585,8 +585,8 @@ void for_cond_var(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z12for_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -710,9 +710,9 @@ void while_cond_var_temp(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -866,9 +866,9 @@ void while_cond_var_nested(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG_OUTER:.*]] = alloca i8
 // LLVM:         %[[FLAG_INNER:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[OUTER_COND:.*]]
 // LLVM:       [[OUTER_COND]]:
@@ -1032,3 +1032,498 @@ void while_cond_var_nested(int n) {
 // OGCG:         ret void
 // OGCG:       [[EHRESUME]]:
 // OGCG:         resume { ptr, i32 }
+
+void use(S &);
+
+struct Holder {
+  S &&a;
+  S &&b;
+  ~Holder();
+  explicit operator bool();
+};
+
+// Destroy the variable first, then its extended temporaries in reverse order.
+// All three cleanups share the active flag.
+void for_cond_var_extended_member() {
+  for (; Holder h{makeS(), makeS()};)
+    use(h.a);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z28for_cond_var_extended_memberv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[A:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[B:.*]] = cir.alloca {{.*}}"ref.tmp1"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[H:.*]] = cir.alloca {{.*}}"h"{{.*}} : !cir.ptr<!rec_Holder>
+// CIR:         cir.for : cond {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR:           cir.call @_Z5makeSv(%[[A]])
+// The first temporary is protected while the second is initialized.
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.call @_Z5makeSv(%[[B]])
+// CIR:           } cleanup eh {
+// CIR:             cir.call @_ZN1SD1Ev(%[[B]]) nothrow
+// CIR:           } cleanup eh {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[A]]) nothrow
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR:           cir.condition
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN6HolderD1Ev(%[[H]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      %[[ACTIVE_B:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE_B]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[B]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      %[[ACTIVE_A:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE_A]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[A]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// LLVM-LABEL: define dso_local void @_Z28for_cond_var_extended_memberv() {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[A:.*]] = alloca %struct.S
+// LLVM:         %[[B:.*]] = alloca %struct.S
+// LLVM:         %[[H:.*]] = alloca %struct.Holder
+// LLVM:         store i8 0, ptr %[[FLAG]]
+// LLVM:         invoke void @_Z5makeSv(ptr {{.*}} %[[A]])
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD:.*]]
+// LLVM:         invoke void @_Z5makeSv(ptr {{.*}} %[[B]])
+// LLVM:         store i8 1, ptr %[[FLAG]]
+// LLVM:         call void @_ZN6HolderD1Ev(ptr {{.*}} %[[H]])
+// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[B]])
+// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[A]])
+// LLVM:       [[LPAD]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM-NEXT:            cleanup
+// LLVM:         load i8, ptr %[[FLAG]]
+// LLVM:         call void @_ZN6HolderD1Ev(ptr {{.*}} %[[H]])
+// LLVM:         load i8, ptr %[[FLAG]]
+// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[B]])
+// LLVM:         load i8, ptr %[[FLAG]]
+// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[A]])
+// LLVM:         resume { ptr, i32 }
+
+// OGCG-LABEL: define dso_local void @_Z28for_cond_var_extended_memberv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:         call void @_Z5makeSv(ptr {{.*}} %[[A:[^)]*]])
+// OGCG:         invoke void @_Z5makeSv(ptr {{.*}} %[[B:[^)]*]])
+// OGCG:       {{^}}cleanup:
+// OGCG:         call void @_ZN6HolderD1Ev(
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[B]])
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[A]])
+
+S pick(S &);
+
+// A temporary that a variable in a statement expression in the initializer
+// extends is destroyed at the end of the statement expression.
+void while_cond_var_extended_in_stmt_expr() {
+  while (S &&s = ({
+           S &&t = makeS();
+           pick(t);
+         }))
+    use(s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z36while_cond_var_extended_in_stmt_exprv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[OUTER_TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR-NEXT:      cir.scope {
+// CIR:             %[[INNER_TMP:.*]] = cir.alloca {{.*}}"ref.tmp1"{{.*}} : !cir.ptr<!rec_S>
+// CIR:             cir.call @_Z5makeSv(%[[INNER_TMP]])
+// CIR:             cir.cleanup.scope {
+// CIR:               cir.call @_Z4pickR1S(%[[OUTER_TMP]],
+// CIR:             } cleanup all {
+// CIR-NEXT:          cir.call @_ZN1SD1Ev(%[[INNER_TMP]]) nothrow{{.*}}
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        }
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.store {{.*}}%[[OUTER_TMP]], %[[S]]
+// CIR-NEXT:      %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR:           cir.condition
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[OUTER_TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// OGCG-LABEL: define dso_local void @_Z36while_cond_var_extended_in_stmt_exprv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:         call void @_Z5makeSv(ptr {{.*}} %[[INNER_TMP:.*]])
+// OGCG:         invoke void @_Z4pickR1S(ptr {{.*}} %[[OUTER_TMP:[^,]*]],
+// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[INNER_TMP]])
+// OGCG:         invoke {{.*}} @_ZN1ScvbEv(
+// OGCG:       {{^}}cleanup:
+// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[OUTER_TMP]])
+
+struct DefaultInit {
+  S &&s = makeS();
+  explicit operator bool();
+};
+
+// A temporary in a default member initializer is extended as well.
+void while_cond_var_extended_default_init() {
+  while (DefaultInit d{})
+    use(d.s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z36while_cond_var_extended_default_initv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR:           cir.call @_Z5makeSv(%[[TMP]])
+// CIR:           cir.cleanup.scope {
+// CIR:           } cleanup eh {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// OGCG-LABEL: define dso_local void @_Z36while_cond_var_extended_default_initv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:         call void @_Z5makeSv(ptr {{.*}} %[[TMP:.*]])
+// OGCG:       {{^}}cleanup:
+// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+
+namespace std {
+template <class E> class initializer_list {
+  const E *b;
+  decltype(sizeof 0) n;
+
+public:
+  constexpr initializer_list() : b(nullptr), n(0) {}
+};
+} // namespace std
+
+struct List {
+  std::initializer_list<S> l;
+  explicit operator bool();
+};
+
+void use(List &);
+
+// So does a std::initializer_list member for its backing array.
+void while_cond_var_extended_init_list() {
+  while (List l{{S{}, S{}}})
+    use(l);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z33while_cond_var_extended_init_listv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[ARRAY:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// The elements constructed so far are destroyed if a constructor throws.
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.call @_ZN1SC1Ev(
+// CIR:             cir.call @_ZN1SC1Ev(
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        } cleanup eh {
+// The whole array is destroyed if the rest of the initialization throws.
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.get_member {{.*}} {name = "n"}
+// CIR:           } cleanup eh {
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        %[[SIZE:.*]] = cir.const #cir.int<2> : !u64i
+// CIR-NEXT:        %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]]
+// CIR-NEXT:        cir.ptr_stride %[[BEGIN]], %[[SIZE]]
+// CIR:             cir.do {
+// CIR:               cir.call @_ZN1SD1Ev({{.*}}) nothrow{{.*}}
+// CIR:             } while {
+
+// LLVM-LABEL: define dso_local void @_Z33while_cond_var_extended_init_listv() {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         store i8 0, ptr %[[FLAG]]
+// LLVM:         invoke void @_ZN1SC1Ev(
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[PARTIAL_LPAD:.*]]
+// LLVM:         invoke void @_ZN1SC1Ev(
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[PARTIAL_LPAD]]
+// LLVM:       [[PARTIAL_LPAD]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM:         call void @_ZN1SD1Ev(
+// LLVM:         store i8 1, ptr %[[FLAG]]
+// LLVM:         landingpad { ptr, i32 }
+// The partial-array cleanup and the loop's EH cleanup share this block, so the
+// whole array is destroyed only once the flag is set.
+// LLVM:         %[[EH_ACTIVE:.*]] = load i8, ptr %[[FLAG]]
+// LLVM:         %[[EH_ACTIVE_BOOL:.*]] = trunc i8 %[[EH_ACTIVE]] to i1
+// LLVM:         br i1 %[[EH_ACTIVE_BOOL]], label %{{.*}}, label %{{.*}}
+// LLVM:         call void @_ZN1SD1Ev(
+// LLVM:         resume { ptr, i32 }
+
+// OGCG-LABEL: define dso_local void @_Z33while_cond_var_extended_init_listv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:       {{^}}cleanup:
+// OGCG:       {{^}}arraydestroy.body{{[0-9]*}}:
+// OGCG:         call void @_ZN1SD1Ev(
+
+// The extended temporary is destroyed on iteration exits, early returns, and
+// unwinding. Its cleanup is inactive until initialization completes.
+int while_cond_var_extended_return(int n) {
+  while (S &&s = makeS()) {
+    if (n)
+      return n;
+    use(s);
+  }
+  return 0;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z30while_cond_var_extended_returni
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR-NEXT:      cir.call @_Z5makeSv(%[[TMP]])
+// CIR-NEXT:      cir.store {{.*}}%[[TMP]], %[[S]]
+// CIR-NEXT:      %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:           cir.condition
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:         } do {
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:             cir.return
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:           cir.call @_Z3useR1S
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// LLVM-LABEL: define dso_local {{.*}}i32 @_Z30while_cond_var_extended_returni(
+// LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[TMP:.*]] = alloca %struct.S
+// LLVM:         store i8 0, ptr %[[FLAG]]
+// LLVM-NEXT:    invoke void @_Z5makeSv(ptr {{.*}} %[[TMP]])
+// LLVM-NEXT:            to label %[[MAKE_CONT:.*]] unwind label %[[LPAD:.*]]
+// LLVM:       [[MAKE_CONT]]:
+// LLVM:         store i8 1, ptr %[[FLAG]]
+// LLVM:         store i32 %{{.*}}, ptr %[[RETVAL:.*]], align 4
+// LLVM-NEXT:    store i32 [[RET_DEST:[0-9]+]], ptr %[[DEST:.*]], align 4
+// LLVM-NEXT:    br label %[[CLEANUP:.*]]
+// LLVM:         invoke void @_Z3useR1S(
+// LLVM:       [[CLEANUP]]:
+// LLVM:         %[[ACTIVE:.*]] = load i8, ptr %[[FLAG]]
+// LLVM:         %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE]] to i1
+// LLVM:         br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %{{.*}}
+// LLVM:       [[DTOR]]:
+// LLVM-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]]
+// LLVM:         switch i32 %[[SEL]], label %{{.*}} [
+// LLVM:           i32 [[RET_DEST]], label %[[RETURN:.*]]
+// LLVM:       [[RETURN]]:
+// LLVM-NEXT:    %[[RV:.*]] = load i32, ptr %[[RETVAL]]
+// LLVM-NEXT:    ret i32 %[[RV]]
+// LLVM:       [[LPAD]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM-NEXT:            cleanup
+// LLVM:         %[[EH_ACTIVE:.*]] = load i8, ptr %[[FLAG]]
+// LLVM:         %[[EH_ACTIVE_BOOL:.*]] = trunc i8 %[[EH_ACTIVE]] to i1
+// LLVM:         br i1 %[[EH_ACTIVE_BOOL]], label %[[EH_DTOR:.*]], label %{{.*}}
+// LLVM:       [[EH_DTOR]]:
+// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         resume { ptr, i32 }
+
+// OGCG-LABEL: define dso_local {{.*}}i32 @_Z30while_cond_var_extended_returni(
+// OGCG:         call void @_Z5makeSv(ptr {{.*}} %[[TMP:.*]])
+// OGCG:       {{^}}lpad:
+// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         store i32 %{{.*}}, ptr %[[RETVAL:.*]], align 4
+// OGCG-NEXT:    store i32 [[RET_DEST:[0-9]+]], ptr %[[DEST:.*]], align 4
+// OGCG-NEXT:    br label %[[CLEANUP:.*]]
+// OGCG:       [[CLEANUP]]:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         switch i32 %{{.*}}, label %{{.*}} [
+// OGCG:           i32 [[RET_DEST]], label %[[RETURN:.*]]
+// OGCG:       [[RETURN]]:
+// OGCG:         ret i32
+
+// A for loop gets a cleanup region for the extended temporary even though the
+// reference itself needs no cleanup.
+void for_cond_var_extended() {
+  for (; S &&s = makeS();)
+    use(s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z21for_cond_var_extendedv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         cir.for : cond {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR-NEXT:      cir.call @_Z5makeSv(%[[TMP]])
+// CIR-NEXT:      cir.store {{.*}}%[[TMP]], %{{.*}}
+// CIR-NEXT:      %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR:           cir.condition
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// The temporary in one arm of the conditional operator is destroyed at the end
+// of the full-expression, in that full-expression's own cleanup scope. Only the
+// result, which the variable extends, is destroyed with the variable.
+void while_cond_var_extended_conditional(int n) {
+  while (S &&s = n ? chainS(makeS()) : makeS())
+    use(s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z35while_cond_var_extended_conditionali
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[ARG_TMP:.*]] = cir.alloca {{.*}}"ref.tmp1"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.if {{.*}} {
+// CIR:               cir.call @_Z6chainSRK1S(%[[TMP]], %[[ARG_TMP]])
+// CIR:             } else {
+// CIR:               cir.call @_Z5makeSv(%[[TMP]])
+// CIR:             }
+// CIR:           } cleanup all {
+// CIR:             cir.call @_ZN1SD1Ev(%[[ARG_TMP]]) nothrow
+// CIR:           }
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR-NOT:       @_ZN1SD1Ev
+// CIR:           cir.condition
+// CIR:         } do {
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+struct P {
+  int x;
+  S s;
+};
+P makeP();
+void use(const int &);
+
+// A reference to a member of a temporary extends the whole temporary, so its
+// destructor runs at the end of each iteration even though the variable's type
+// is trivially destructible.
+void while_cond_var_extended_subobject() {
+  while (const int &i = makeP().x)
+    use(i);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z33while_cond_var_extended_subobjectv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_P>
+// CIR:         cir.while {
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[FLAG]]
+// CIR-NEXT:      cir.call @_Z5makePv(%[[TMP]])
+// CIR-NEXT:      cir.cleanup.scope {
+// CIR-NEXT:        cir.get_member %[[TMP]][0] {name = "x"}
+// CIR:           } cleanup eh {
+// CIR-NEXT:        cir.call @_ZN1PD1Ev(%[[TMP]]) nothrow
+// CIR:           %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[FLAG]]
+// CIR:           cir.condition
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1PD1Ev(%[[TMP]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+struct ThrowingDtor {
+  ~ThrowingDtor() noexcept(false);
+  explicit operator bool() const;
+};
+ThrowingDtor makeThrowingDtor();
+
+struct ThrowingDtorHolder {
+  const ThrowingDtor &t;
+  ~ThrowingDtorHolder();
+  explicit operator bool() const;
+};
+void use(const ThrowingDtorHolder &);
+
+// The destructor of the temporary may throw, but it runs last, so an exception
+// from it skips no other destructor. On the EH path, it terminates.
+void while_cond_var_extended_throwing_last() {
+  while (ThrowingDtorHolder h{makeThrowingDtor()})
+    use(h);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z37while_cond_var_extended_throwing_lastv
+// CIR:         %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_ThrowingDtor>
+// CIR:         %[[H:.*]] = cir.alloca {{.*}}"h"{{.*}} : !cir.ptr<!rec_ThrowingDtorHolder>
+// CIR:         cir.while {
+// CIR:         } cleanup all {
+// CIR-NEXT:      %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN18ThrowingDtorHolderD1Ev(%[[H]]) nothrow{{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      %[[ACTIVE2:.*]] = cir.load {{.*}}%[[FLAG]]
+// CIR-NEXT:      cir.if %[[ACTIVE2]] {
+// CIR-NEXT:        cir.call @_ZN12ThrowingDtorD1Ev(%[[TMP]]) : {{.*}}
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    }
+
+// LLVM-LABEL: define dso_local void @_Z37while_cond_var_extended_throwing_lastv() {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[TMP:.*]] = alloca %struct.ThrowingDtor
+// LLVM:         %[[H:.*]] = alloca %struct.ThrowingDtorHolder
+// LLVM:         call void @_ZN18ThrowingDtorHolderD1Ev(ptr {{.*}} %[[H]])
+// LLVM:         call void @_ZN12ThrowingDtorD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         landingpad { ptr, i32 }
+// LLVM-NEXT:            cleanup
+// LLVM:         call void @_ZN18ThrowingDtorHolderD1Ev(ptr {{.*}} %[[H]])
+// LLVM:         invoke void @_ZN12ThrowingDtorD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM-NEXT:            to label %{{.*}} unwind label %[[TERMINATE:.*]]
+// LLVM:         resume { ptr, i32 }
+// LLVM:       [[TERMINATE]]:
+// LLVM-NEXT:    landingpad { ptr, i32 }
+// LLVM-NEXT:            catch ptr null
+// LLVM:         call void @__clang_call_terminate(
+
+// OGCG-LABEL: define dso_local void @_Z37while_cond_var_extended_throwing_lastv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:       lpad:
+// OGCG:         call void @_ZN18ThrowingDtorHolderD1Ev(ptr {{.*}} %[[H:[^)]*]])
+// OGCG-NEXT:    invoke void @_ZN12ThrowingDtorD1Ev(ptr {{.*}} %[[TMP:[^)]*]])
+// OGCG-NEXT:            to label %{{.*}} unwind label %terminate.lpad
+// OGCG:       {{^}}cleanup:
+// OGCG-NEXT:    call void @_ZN18ThrowingDtorHolderD1Ev(ptr {{.*}} %[[H]])
+// OGCG-NEXT:    call void @_ZN12ThrowingDtorD1Ev(ptr {{.*}} %[[TMP]])

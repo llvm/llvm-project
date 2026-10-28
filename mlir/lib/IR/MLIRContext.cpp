@@ -286,7 +286,15 @@ public:
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
+    } else {
+      disableUniquerMultithreading(true);
     }
+  }
+  /// Update the threading mode for each of the uniquers.
+  void disableUniquerMultithreading(bool disable) {
+    affineUniquer.disableMultithreading(disable);
+    attributeUniquer.disableMultithreading(disable);
+    typeUniquer.disableMultithreading(disable);
   }
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
@@ -608,9 +616,9 @@ void MLIRContext::allowUnregisteredDialects(bool allowing) {
 }
 
 /// Return true if multi-threading is enabled by the context.
-bool MLIRContext::isMultithreadingEnabled() {
-  return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
-}
+#if LLVM_ENABLE_THREADS
+bool MLIRContext::isMultithreadingEnabled() { return impl->threadingIsEnabled; }
+#endif
 
 /// Set the flag specifying if multi-threading is disabled by the context.
 void MLIRContext::disableMultithreading(bool disable) {
@@ -624,10 +632,7 @@ void MLIRContext::disableMultithreading(bool disable) {
 
   impl->threadingIsEnabled = !disable;
 
-  // Update the threading mode for each of the uniquers.
-  impl->affineUniquer.disableMultithreading(disable);
-  impl->attributeUniquer.disableMultithreading(disable);
-  impl->typeUniquer.disableMultithreading(disable);
+  impl->disableUniquerMultithreading(disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
   // a new one if multithreading was re-enabled.

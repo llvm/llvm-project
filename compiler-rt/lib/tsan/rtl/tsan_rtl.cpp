@@ -841,10 +841,10 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
   SlotDetach(thr);
+  ScopedErrorReportLock::Lock();
   for (auto& slot : ctx->slots) slot.mtx.Lock();
   ctx->thread_registry.Lock();
   ctx->slot_mtx.Lock();
-  ScopedErrorReportLock::Lock();
   AllocatorLockBeforeFork();
   // Suppress all reports in the pthread_atfork callbacks.
   // Reports may deadlock.
@@ -871,10 +871,10 @@ static void ForkAfter(ThreadState* thr,
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;
   AllocatorUnlockAfterFork(child);
-  ScopedErrorReportLock::Unlock();
   ctx->slot_mtx.Unlock();
   ctx->thread_registry.Unlock();
   for (auto& slot : ctx->slots) slot.mtx.Unlock();
+  ScopedErrorReportLock::Unlock();
   SlotAttachAndLock(thr);
   SlotUnlock(thr);
   GlobalProcessorUnlock();

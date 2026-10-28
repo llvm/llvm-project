@@ -55,14 +55,17 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     lldbPluginScriptInterpreterPython
     ${python_plugin_sources}
     LINK_LIBS
-      liblldb
       ${LLDB_LIBEDIT_LIBS}
+      liblldb
   )
   add_python_wrapper(lldbPluginScriptInterpreterPython)
 
   if (APPLE)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:-undefined,dynamic_lookup")
+    set_target_properties(lldbPluginScriptInterpreterPython PROPERTIES
+      INSTALL_NAME_DIR "@rpath/SharedFrameworks/LLDB.framework/Versions/A"
+    )
   elseif (UNIX)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:--unresolved-symbols=ignore-all")

@@ -118,7 +118,7 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},
-      {"__nvvm_mul_rn_d", "nvvm", nvvm_mul_rn_d},
+      {"__nvvm_div_rn_d", "nvvm", nvvm_div_rn_d},
       {"__builtin_altivec_dss", "ppc", ppc_altivec_dss},
       {"__builtin_riscv_sha512sum1r", "riscv", riscv_sha512sum1r},
       {"__builtin_tend", "s390", s390_tend},
@@ -214,7 +214,7 @@ TEST(IntrinsicAttributes,
 TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
   using namespace Intrinsic;
   LLVMContext Context;
-  AttributeSet AS = getFnAttributes(Context, experimental_guard);
+  AttributeSet AS = getFnAttributes(Context, coro_resume);
   EXPECT_FALSE(AS.hasAttributes());
 }
 

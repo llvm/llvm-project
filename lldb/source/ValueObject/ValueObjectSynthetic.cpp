@@ -42,7 +42,8 @@ public:
     return m_backend.GetChildAtIndex(idx);
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return m_backend.GetIndexOfChildWithName(name);
   }
 
@@ -83,8 +84,9 @@ ConstString ValueObjectSynthetic::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectSynthetic::GetDisplayTypeName() {
-  if (ConstString synth_name = m_synth_filter_up->GetSyntheticTypeName())
-    return synth_name;
+  const std::string synth_name = m_synth_filter_up->GetSyntheticTypeName();
+  if (!synth_name.empty())
+    return ConstString(synth_name);
 
   return m_parent->GetDisplayTypeName();
 }

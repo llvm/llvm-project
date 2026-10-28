@@ -537,6 +537,56 @@ bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
   return false;
 }
 
+// The object lives until the program exits but a pointer stored in it doesn't
+// keep its pointee alive. A smart pointer keeps its pointee alive only if it
+// can't be reassigned or swapped.
+static bool isImmortalStorageType(QualType T) {
+  if (T.isNull() || T->isPointerType() || T->isReferenceType() ||
+      T->isObjCObjectPointerType())
+    return false;
+  auto Name = safeGetName(T->getAsCXXRecordDecl());
+  if (isSmartPtrClass(Name) || isOwnerPtr(Name))
+    return T.isConstQualified();
+  return true;
+}
+
+/// \returns true if \p R is NeverDestroyed or LazyNeverDestroyed which stores
+/// a non-pointer type.
+static bool isNeverDestroyedOfObject(const CXXRecordDecl *R) {
+  auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(R);
+  if (!Spec)
+    return false;
+  auto Name = safeGetName(Spec);
+  if (Name != "NeverDestroyed" && Name != "LazyNeverDestroyed")
+    return false;
+  const auto &Args = Spec->getTemplateArgs();
+  return Args.size() && Args[0].getKind() == TemplateArgument::Type &&
+         isImmortalStorageType(Args[0].getAsType());
+}
+
+bool isAccessorOfNeverDestroyed(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isNeverDestroyedOfObject(M->getParent()))
+    return false;
+  if (safeGetName(M) == "get" || M->getOverloadedOperator() == OO_Arrow)
+    return true;
+  if (auto *Conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = Conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
+  }
+  return false;
+}
+
+bool isImmortalVar(const VarDecl *V) {
+  assert(V);
+  if (!V->hasGlobalStorage())
+    return false;
+  QualType T = V->getType();
+  if (V->hasAttr<NoDestroyAttr>() && isImmortalStorageType(T))
+    return true;
+  return isNeverDestroyedOfObject(T->getAsCXXRecordDecl());
+}
+
 bool isRefCounted(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern()) {
@@ -680,24 +730,26 @@ bool isSingleton(const NamedDecl *F) {
 // (non-recursive) visitor.
 class TrivialFunctionAnalysisVisitor
     : public ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool> {
+  using Base = ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool>;
 
   // Returns false if at least one child is non-trivial.
   bool VisitChildren(const Stmt *S) {
     for (const Stmt *Child : S->children()) {
-      if (Child && !Visit(Child)) {
-        if (OffendingStmt && !*OffendingStmt)
-          *OffendingStmt = Child;
+      if (Child && !Visit(Child))
         return false;
-      }
     }
 
     return true;
   }
 
+  bool canUseCachedResult(bool CachedResult) const {
+    return CachedResult || !CallStack;
+  }
+
   template <typename StmtOrDecl, typename CheckFunction>
   bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && !OffendingStmt)
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
 
     // Treat a recursive statement to be trivial until proven otherwise.
@@ -846,12 +898,60 @@ public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
-                                 const Stmt **OffendingStmt = nullptr)
-      : Cache(Cache), OffendingStmt(OffendingStmt) {}
+                                 NonTrivialityReason *Reason = nullptr)
+      : Cache(Cache), OffendingStmt(Reason ? &Reason->OffendingStmt : nullptr),
+        CallStack(Reason ? &Reason->CallStack : nullptr) {}
+
+  // Hides ConstStmtVisitor::Visit so that every recursive step in this class
+  // funnels through here. Recursion unwinds innermost-first, so the first
+  // statement recorded is the deepest one that failed -- the code actually
+  // responsible, rather than the enclosing statement that contains it.
+  // Implicit nodes have no location to point at, so they are passed over in
+  // favour of the nearest enclosing node that was actually written.
+  bool Visit(const Stmt *S) {
+    bool Result = Base::Visit(S);
+    if (!Result && OffendingStmt && !*OffendingStmt &&
+        S->getBeginLoc().isValid())
+      *OffendingStmt = S;
+    return Result;
+  }
 
   bool IsFunctionTrivial(const Decl *D) {
-    const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
-    auto Result = WithCachedResult(D, [&]() {
+    if (!CallStack)
+      return IsFunctionTrivialImpl(D);
+
+    const auto *FnDecl = dyn_cast<FunctionDecl>(D);
+    if (!FnDecl)
+      return IsFunctionTrivialImpl(D);
+
+    // CallStack[0, ActiveDepth) mirrors the functions currently being
+    // analyzed. Anything past that was left by a callee whose failure was
+    // tolerated, e.g. one of several candidate default constructors, and is
+    // not part of the chain that explains this call.
+    CallStack->truncate(ActiveDepth);
+    size_t Index = ActiveDepth++;
+    CallStack->push_back({FnDecl, nullptr});
+
+    // Blame is recorded separately for each function, so that every frame
+    // can point at the code within it that leads further down the chain.
+    const Stmt *CalleeOffendingStmt = nullptr;
+    const Stmt **SavedOffendingStmt =
+        std::exchange(OffendingStmt, &CalleeOffendingStmt);
+    bool Result = IsFunctionTrivialImpl(D);
+    OffendingStmt = SavedOffendingStmt;
+
+    --ActiveDepth;
+    // On failure, keep this frame along with the frames its body left behind:
+    // together they are the chain from here down to the root cause.
+    if (Result)
+      CallStack->truncate(Index);
+    else
+      (*CallStack)[Index].OffendingStmt = CalleeOffendingStmt;
+    return Result;
+  }
+
+  bool IsFunctionTrivialImpl(const Decl *D) {
+    return WithCachedResult(D, [&]() {
       auto *FnDecl = dyn_cast<FunctionDecl>(D);
       auto *MethodDecl = dyn_cast<CXXMethodDecl>(D);
       auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D);
@@ -897,8 +997,6 @@ public:
         return false;
       return Visit(Body);
     });
-    OffendingStmt = SavedOffendingStmt;
-    return Result;
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
@@ -924,7 +1022,7 @@ public:
 
   bool IsStatementTrivial(const Stmt *S) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end())
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
     bool Result = Visit(S);
     Cache[S] = Result;
@@ -1224,7 +1322,67 @@ public:
   }
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(VMT->getSubExpr());
+        ICE && ICE->getCastKind() == CK_NoOp &&
+        ICE->getType().isConstQualified()) {
+      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(ICE->getSubExpr());
+          BTE && isNullSmartPtr(BTE->getSubExpr()))
+        return Visit(BTE->getSubExpr());
+    }
     return Visit(VMT->getSubExpr());
+  }
+
+  // Returns true if E is known to evaluate to a smart pointer which holds
+  // nullptr, e.g. RefPtr<T>(), RefPtr<T>(nullptr), Ref<T>(HashTableEmptyValue),
+  // or a call to a function which simply returns one such as
+  // HashTraits<Ref<T>>::emptyValue(). Destructing such a smart pointer can't
+  // delete anything.
+  bool isNullSmartPtr(const Expr *E, unsigned Depth = 0) {
+    if (!E || Depth > 4)
+      return false;
+    while (true) {
+      E = E->IgnoreParenCasts();
+      if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
+        E = EWC->getSubExpr();
+      else if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+        E = MTE->getSubExpr();
+      else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+        E = BTE->getSubExpr();
+      else
+        break;
+    }
+    if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+      auto *Ctor = CE->getConstructor();
+      if (!Ctor || !isOwnerPtr(safeGetName(Ctor->getParent())))
+        return false;
+      if (Ctor->isDefaultConstructor())
+        return true;
+      if (CE->getNumArgs() != 1)
+        return false;
+      auto *Arg = CE->getArg(0)->IgnoreParenImpCasts();
+      auto ArgType = Arg->getType();
+      if (ArgType->isNullPtrType())
+        return true;
+      if (auto *TD = ArgType->getAsTagDecl();
+          TD && safeGetName(TD) == "HashTableEmptyValueType")
+        return true;
+      if (Ctor->isCopyOrMoveConstructor())
+        return isNullSmartPtr(Arg, Depth + 1);
+      return false;
+    }
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      auto *Callee = CE->getDirectCallee();
+      if (!Callee)
+        return false;
+      if (auto *MD = dyn_cast<CXXMethodDecl>(Callee); MD && MD->isVirtual())
+        return false;
+      auto *Body = dyn_cast_or_null<CompoundStmt>(Callee->getBody());
+      if (!Body || Body->size() != 1)
+        return false;
+      auto *RS = dyn_cast<ReturnStmt>(Body->body_front());
+      return RS && isNullSmartPtr(RS->getRetValue(), Depth + 1);
+    }
+    return false;
   }
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
@@ -1260,6 +1418,17 @@ public:
         return false;
     }
     return true;
+  }
+
+  bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *ILE) {
+    auto *SubExpr = ILE->getSubExpr();
+    if (!SubExpr)
+      return false;
+    // The backing array of a std::initializer_list is a temporary whose
+    // lifetime ends in this function, so its elements are destructed here.
+    if (!CanTriviallyDestruct(SubExpr->getType()))
+      return false;
+    return Visit(SubExpr);
   }
 
   bool VisitMemberExpr(const MemberExpr *ME) {
@@ -1300,26 +1469,40 @@ public:
     return true;
   }
 
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    // A value initialization of a scalar type such as int() is trivial.
+    return true;
+  }
+
 private:
   CacheTy &Cache;
   CacheTy FieldCtorCache;
   CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
+  SmallVectorImpl<NonTrivialityReason::Frame> *CallStack;
+  unsigned ActiveDepth = 0;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsStatementTrivial(S);
+}
+
+NonTrivialityReason TrivialFunctionAnalysis::computeReason(const Stmt *S) {
+  NonTrivialityReason Reason;
+  CacheTy Cache;
+  TrivialFunctionAnalysisVisitor V(Cache, &Reason);
+  [[maybe_unused]] bool Trivial = V.IsStatementTrivial(S);
+  assert(!Trivial && "computeReason called on a trivial statement");
+  return Reason;
 }
 
 bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,

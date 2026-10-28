@@ -933,6 +933,8 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v9_6a;
   case ARM::ArchKind::ARMV9_7A:
     return Triple::ARMSubArch_v9_7a;
+  case ARM::ArchKind::ARMV9_8A:
+    return Triple::ARMSubArch_v9_8a;
   case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
   case ARM::ArchKind::ARMV8MBaseline:
@@ -2506,6 +2508,8 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::xcore:
   case Triple::xtensa:
     return ExceptionHandling::DwarfCFI;
+  case Triple::ve:
+    return ExceptionHandling::SjLj;
   default:
     break;
   }
@@ -2562,8 +2566,8 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
     return LongDoubleFormat::IEEEquad;
   case sparc:
   case sparcel:
-    // GCC uses IEEE double for bare-metal and RTEMS SPARC V8 targets.
-    if (getOS() == UnknownOS || getOS() == RTEMS)
+    // GCC uses IEEE double for bare-metal, NetBSD, and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == NetBSD || getOS() == RTEMS)
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
