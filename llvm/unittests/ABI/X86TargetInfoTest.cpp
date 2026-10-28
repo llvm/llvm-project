@@ -28,12 +28,12 @@ using llvm::abi::FieldInfo;
 using llvm::abi::FunctionInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RequiredArgs;
+using llvm::abi::SmallIntABICompatKind;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
 using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
-using llvm::abi::X86ExtendIntegerArgsKind;
 
 class X86TargetInfoTest : public ::testing::Test {
 protected:
@@ -43,6 +43,7 @@ protected:
   const ABIType *I16;
   const ABIType *I32;
   const ABIType *I64;
+  const ABIType *U8;
   const ABIType *F32;
   const ABIType *F64;
   /// An x87 long double: 80 bits of value in 16 bytes of storage.
@@ -61,6 +62,7 @@ protected:
         I16(TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true)),
         I32(TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true)),
         I64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/true)),
+        U8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false)),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         F80(TB.getFloatType(llvm::APFloat::x87DoubleExtended(),
@@ -143,6 +145,12 @@ static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
   EXPECT_EQ(Info.getCoerceToType(), Ty);
 }
 
+static void expectConservativeExtendInteger(const ArgInfo &Info,
+                                            const ABIType *Ty, bool IsSigned) {
+  EXPECT_TRUE(Info.isConservativeExtend());
+  EXPECT_EQ(Info.isSignExt(), IsSigned);
+  EXPECT_EQ(Info.getCoerceToType(), Ty);
+}
 static void expectInteger(const ABIType *Ty, unsigned Bits) {
   const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(Ty);
   ASSERT_NE(IT, nullptr);
@@ -978,11 +986,11 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
 }
 
 TEST_F(X86TargetInfoTest, IntArgExtension) {
-  auto ClassifyArg = [&](const ABIType *ArgTy, X86ExtendIntegerArgsKind Kind,
+  auto ClassifyArg = [&](const ABIType *ArgTy, SmallIntABICompatKind Kind,
                          std::unique_ptr<FunctionInfo> &FI,
                          std::unique_ptr<TargetInfo> &TI) -> const ArgInfo & {
     X86ABICompatInfo Compat;
-    Compat.ExtendIntegerArgs = Kind;
+    Compat.SmallIntABICompat = Kind;
     TI = target(X86AVXABILevel::None, Compat);
     FI = FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
     TI->computeInfo(*FI);
@@ -991,35 +999,39 @@ TEST_F(X86TargetInfoTest, IntArgExtension) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
 
-  // Assumed: extend in the caller and assume the extension in the callee.
-  expectExtendInteger(
-      ClassifyArg(I8, X86ExtendIntegerArgsKind::Assumed, FI, TI), I8,
+  // Clang: extend in the caller and assume the extension in the callee.
+  expectExtendInteger(ClassifyArg(I8, SmallIntABICompatKind::Clang, FI, TI), I8,
+                      /*IsSigned=*/true);
+  expectExtendInteger(ClassifyArg(U8, SmallIntABICompatKind::Clang, FI, TI), U8,
+                      /*IsSigned=*/false);
+  expectExtendInteger(ClassifyArg(Bool, SmallIntABICompatKind::Clang, FI, TI),
+                      Bool, /*IsSigned=*/false);
+
+  // Both: extend in the caller, but do not assume it in the callee.
+  expectConservativeExtendInteger(
+      ClassifyArg(I8, SmallIntABICompatKind::Both, FI, TI), I8,
       /*IsSigned=*/true);
-  expectExtendInteger(
-      ClassifyArg(Bool, X86ExtendIntegerArgsKind::Assumed, FI, TI), Bool,
+  expectConservativeExtendInteger(
+      ClassifyArg(U8, SmallIntABICompatKind::Both, FI, TI), U8,
+      /*IsSigned=*/false);
+  expectConservativeExtendInteger(
+      ClassifyArg(Bool, SmallIntABICompatKind::Both, FI, TI), Bool,
       /*IsSigned=*/false);
 
-  // Conservative: extend in the caller, but do not assume it in the callee.
-  for (auto [Ty, IsSigned] :
-       {std::pair(I8, true), std::pair(I16, true), std::pair(Bool, false)}) {
-    const ArgInfo &Info =
-        ClassifyArg(Ty, X86ExtendIntegerArgsKind::Conservative, FI, TI);
-    EXPECT_TRUE(Info.isConservativeExtend());
-    EXPECT_EQ(Info.isSignExt(), IsSigned);
-    EXPECT_EQ(Info.isZeroExt(), !IsSigned);
-    EXPECT_EQ(Info.getCoerceToType(), Ty);
-  }
-
-  // Direct: no extension at all.
-  expectDirectInteger(ClassifyArg(I8, X86ExtendIntegerArgsKind::Direct, FI, TI),
+  // Platform: no extension at all.
+  expectDirectInteger(ClassifyArg(I8, SmallIntABICompatKind::Platform, FI, TI),
                       8);
-  expectDirectInteger(
-      ClassifyArg(I16, X86ExtendIntegerArgsKind::Direct, FI, TI), 16);
+  expectDirectInteger(ClassifyArg(U8, SmallIntABICompatKind::Platform, FI, TI),
+                      8);
+  // Except for booleans, which need to be zero-extended to 8 bits. As we
+  // can't express this right now, us conservative extension instead.
+  expectConservativeExtendInteger(
+      ClassifyArg(Bool, SmallIntABICompatKind::Both, FI, TI), Bool,
+      /*IsSigned=*/false);
 
   // int is never extended.
-  for (auto Kind : {X86ExtendIntegerArgsKind::Assumed,
-                    X86ExtendIntegerArgsKind::Conservative,
-                    X86ExtendIntegerArgsKind::Direct})
+  for (auto Kind : {SmallIntABICompatKind::Platform,
+                    SmallIntABICompatKind::Clang, SmallIntABICompatKind::Both})
     expectDirectInteger(ClassifyArg(I32, Kind, FI, TI), 32);
 }
 
