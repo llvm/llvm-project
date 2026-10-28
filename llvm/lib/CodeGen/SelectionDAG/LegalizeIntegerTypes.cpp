@@ -2339,6 +2339,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
         unsigned PartsPerElt = OutEltBits / InEltBits;
         unsigned NumElts = OutVT.isVector() ? OutVT.getVectorNumElements() : 1;
         SmallVector<SDValue, 8> Elts;
+        Elts.reserve(NumElts);
         for (unsigned I = 0; I != NumElts; ++I) {
           SDValue Packed = DAG.getConstant(0, dl, IntVT);
           for (unsigned J = 0; J != PartsPerElt; ++J) {
