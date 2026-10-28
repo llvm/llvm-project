@@ -1,6 +1,7 @@
 add_clang_library(MLIRCIRAnalysis
   CIRAliasAnalysis.cpp
   CIRBasicAliasAnalysis.cpp
+  CIRFallOffAnalysis.cpp
 
   DEPENDS
   mlir-headers
