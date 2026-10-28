@@ -283,11 +283,10 @@ public:
     ForceDisable, // Always disable regardless of the target default.
   };
 
-  enum class ExtendIntegerArgsKind {
-    Direct,       // Force the use of Direct.
-    Conservative, // Force the use of ConservativeExtend.
-    Assumed,      // Force the use of Extend.
-    Default, // Use the default rule for the target, which is Extend for now.
+  enum class SmallIntABICompatKind {
+    SysV,  // Compat with SysV ABI (high bits unspecified).
+    Clang, // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,  // Compat with both. Extend in caller, don't assume in callee.
   };
 
   /// The code model to use (-mcmodel).

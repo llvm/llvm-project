@@ -49,13 +49,13 @@ struct ABICompatInfo {
 
 /// How promotable integer arguments are passed on X86
 /// (-mextend-small-integers).
-enum class X86ExtendIntegerArgsKind {
-  /// Pass the argument directly, without extension in the caller.
-  Direct,
-  /// Extend in the caller, but do not assume the extension in the callee.
-  Conservative,
-  /// Extend in the caller and assume the extension in the callee.
-  Assumed,
+enum class SmallIntABICompatKind {
+  /// Compat with SysV ABI (high bits unspecified).
+  SysV,
+  /// Compat with old Clang ABI (high bits zero/sign-extended).
+  Clang,
+  /// Compat with both. Extend in caller, don't assume in callee.
+  Both,
 };
 
 /// Flags controlling X86-specific ABI compatibility behaviour.
@@ -66,13 +66,13 @@ struct X86ABICompatInfo : ABICompatInfo {
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
   bool ClassifyUnnamedBitFields : 1;
-  X86ExtendIntegerArgsKind ExtendIntegerArgs;
+  SmallIntABICompatKind SmallIntABICompat;
 
   X86ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
         Clang11Compat(true), ClassifyUnnamedBitFields(true),
-        ExtendIntegerArgs(X86ExtendIntegerArgsKind::Assumed) {}
+        SmallIntABICompat(SmallIntABICompatKind::Both) {}
 };
 
 class TargetInfo {

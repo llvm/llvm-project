@@ -47,21 +47,21 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i)
 
   // Unsigned sub-register integer is zero-extended.
   cir.func @take_u16(%arg0: !u16i) {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_u16(%arg0: !u16i {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @take_u16(%arg0: !u16i)
 
   // bool is zero-extended.
   cir.func @take_bool(%arg0: !cir.bool) {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_bool(%arg0: !cir.bool {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @take_bool(%arg0: !cir.bool)
 
   // Call site picks up the same extension attribute on the operand.
   cir.func @call_s8(%arg0: !s8i) {
@@ -110,9 +110,9 @@ module attributes {
   // CHECK: cir.call @ret_i128(%arg0) : (!s128i) -> !s128i
 }
 
-// LLVM: define void @take_s8(i8 signext %{{.+}})
-// LLVM: define void @take_u16(i16 zeroext %{{.+}})
-// LLVM: define void @take_bool(i1 zeroext %{{.+}})
+// LLVM: define void @take_s8(i8 %{{.+}})
+// LLVM: define void @take_u16(i16 %{{.+}})
+// LLVM: define void @take_bool(i1 %{{.+}})
 // LLVM: define i8 @ret_s8()
 // LLVM: define i16 @ret_u16()
 // LLVM: define i128 @ret_i128(i128 %{{.+}})

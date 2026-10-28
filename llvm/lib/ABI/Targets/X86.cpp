@@ -651,13 +651,13 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
       if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty))) {
-        switch (getX86ABICompatInfo().ExtendIntegerArgs) {
-        case X86ExtendIntegerArgsKind::Assumed:
-          return ArgInfo::getExtend(Ty);
-        case X86ExtendIntegerArgsKind::Conservative:
-          return ArgInfo::getConservativeExtend(Ty);
-        case X86ExtendIntegerArgsKind::Direct:
+        switch (getX86ABICompatInfo().SmallIntABICompat) {
+        case SmallIntABICompatKind::SysV:
           break;
+        case SmallIntABICompatKind::Clang:
+          return ArgInfo::getExtend(Ty);
+        case SmallIntABICompatKind::Both:
+          return ArgInfo::getConservativeExtend(Ty);
         }
       }
     }

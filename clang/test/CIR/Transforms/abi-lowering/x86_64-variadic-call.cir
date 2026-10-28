@@ -55,7 +55,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @pass_narrow(%arg0: !cir.ptr<!s8i>, %arg1: !s8i {llvm.signext})
+  // CHECK: cir.func{{.*}} @pass_narrow(%arg0: !cir.ptr<!s8i>, %arg1: !s8i)
   // CHECK:   cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s8i {llvm.signext}) -> !s32i
 
   cir.func @pass_double(%arg0: !cir.ptr<!s8i>, %arg1: !cir.double) {
@@ -199,7 +199,7 @@ module attributes {
 // LLVM: define void @pass_scalar(ptr %{{[^,)]+}}, i32 %{{[^,)]+}})
 // LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i32 %{{[^,)]+}})
 
-// LLVM: define void @pass_narrow(ptr %{{[^,)]+}}, i8 signext %{{[^,)]+}})
+// LLVM: define void @pass_narrow(ptr %{{[^,)]+}}, i8 %{{[^,)]+}})
 // LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i8 signext %{{[^,)]+}})
 
 // LLVM: define void @pass_double(ptr %{{[^,)]+}}, double %{{[^,)]+}})

@@ -407,18 +407,20 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
-  switch (CGOpts.getExtendIntegerArgs()) {
-  case CodeGenOptions::ExtendIntegerArgsKind::Assumed:
-    CompatInfo.ExtendIntegerArgs = llvm::abi::X86ExtendIntegerArgsKind::Assumed;
-    break;
-  case CodeGenOptions::ExtendIntegerArgsKind::Conservative:
-    CompatInfo.ExtendIntegerArgs =
-        llvm::abi::X86ExtendIntegerArgsKind::Conservative;
-    break;
-  case CodeGenOptions::ExtendIntegerArgsKind::Direct:
-  case CodeGenOptions::ExtendIntegerArgsKind::Default:
-    CompatInfo.ExtendIntegerArgs = llvm::abi::X86ExtendIntegerArgsKind::Direct;
-    break;
+  if (T.isOSDarwin() || T.isPS()) {
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+  } else {
+    switch (CGOpts.getSmallIntABICompat()) {
+    case CodeGenOptions::SmallIntABICompatKind::SysV:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::SysV;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
+      break;
+    }
   }
 }
 

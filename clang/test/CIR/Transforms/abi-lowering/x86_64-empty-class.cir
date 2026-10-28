@@ -123,8 +123,8 @@ module attributes {
     cir.return %arg0 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @take_middle(%arg0: !s32i, %arg1: !u8i {llvm.zeroext}) -> !s32i
-  // LLVM: define i32 @take_middle(i32 %{{.*}}, i8 zeroext %{{.*}})
+  // CHECK: cir.func{{.*}} @take_middle(%arg0: !s32i, %arg1: !u8i) -> !s32i
+  // LLVM: define i32 @take_middle(i32 %{{.*}}, i8 %{{.*}})
 
   // A byte-sized record needing no padding is data: the padded flag is the
   // boundary, not the size.

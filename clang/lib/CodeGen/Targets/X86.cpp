@@ -471,6 +471,14 @@ static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
   return Info.isPromotableIntegerTypeForABI(RetTy);
 }
 
+static CodeGenOptions::SmallIntABICompatKind
+getEffectiveSmallIntABICompat(const CodeGenOptions &Opts,
+                              const llvm::Triple &T) {
+  if (T.isOSDarwin() || T.isPS())
+    return CodeGenOptions::SmallIntABICompatKind::Clang;
+  return Opts.getSmallIntABICompat();
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -993,18 +1001,17 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
   if (isPromotableIntegerTypeForABI(Ty)) {
-    switch (getCodeGenOpts().getExtendIntegerArgs()) {
-    case CodeGenOptions::ExtendIntegerArgsKind::Assumed:
+    switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                          getTarget().getTriple())) {
+    case CodeGenOptions::SmallIntABICompatKind::SysV:
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
       return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
                    : ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
-    case CodeGenOptions::ExtendIntegerArgsKind::Conservative:
-      return InReg
-                 ? ABIArgInfo::getConservativeExtendInReg(Ty, CGT.ConvertType(Ty))
-                 : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
-    case CodeGenOptions::ExtendIntegerArgsKind::Direct:
-    case CodeGenOptions::ExtendIntegerArgsKind::Default:
-      // ExtendIntegerArgsKind::Direct will be handled at the last.
-      break;
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      return InReg ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
     }
   }
 
@@ -3007,13 +3014,13 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
       // Treat an enum type as its underlying type.
       if (const auto *ED = Ty->getAsEnumDecl())
         Ty = ED->getIntegerType();
-      auto Kind = getCodeGenOpts().getExtendIntegerArgs();
+      auto Kind = getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                                getTarget().getTriple());
       if (Ty->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty)) {
-      // ExtendIntegerArgsKind::Direct will be handled at the last.
-      if (Kind == CodeGenOptions::ExtendIntegerArgsKind::Conservative)
+      if (Kind == CodeGenOptions::SmallIntABICompatKind::Both)
         return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
-      else if (Kind == CodeGenOptions::ExtendIntegerArgsKind::Assumed)
+      else if (Kind == CodeGenOptions::SmallIntABICompatKind::Clang)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
       }
     }

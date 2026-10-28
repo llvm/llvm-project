@@ -68,10 +68,11 @@ getX86ABICompatInfo(const llvm::Triple &triple,
       compat > clang::LangOptions::ClangABI::Ver20 && !triple.isPS();
   abiCompat.Clang11Compat =
       compat <= clang::LangOptions::ClangABI::Ver11 || triple.isPS();
-  // Match the classic CodeGen default of -mextend-small-integers.
-  assert(!cir::MissingFeatures::extendIntegerArgsOption());
-  abiCompat.ExtendIntegerArgs =
-      llvm::abi::X86ExtendIntegerArgsKind::Conservative;
+  // Match the classic CodeGen default of -msmall-int-abi-compat.
+  assert(!cir::MissingFeatures::smallIntABICompatOption());
+  abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
+                                    ? llvm::abi::SmallIntABICompatKind::Clang
+                                    : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }
 

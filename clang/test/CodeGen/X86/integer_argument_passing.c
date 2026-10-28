@@ -1,33 +1,45 @@
-// RUN: %clang_cc1 -O2 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=none -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=none -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=none -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=conservative -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=conservative -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=conservative -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=assumed -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=assumed -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// RUN: %clang_cc1 -O2 -mextend-small-integers=assumed -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// RUN: %clang_cc1 -O2 -fexperimental-abi-lowering -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -fexperimental-abi-lowering -mextend-small-integers=none -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -fexperimental-abi-lowering -mextend-small-integers=conservative -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-EXTEND
-// RUN: %clang_cc1 -O2 -fexperimental-abi-lowering -mextend-small-integers=assumed -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// TODO: enable the belowing tests when 'default' is supported.
-// %clang_cc1 -O2 -mextend-small-integers=default -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// %clang_cc1 -O2 -mextend-small-integers=default -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
-// %clang_cc1 -O2 -mextend-small-integers=default -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-EXTEND
+// Test platform defaults.
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple i386-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-sie-ps5 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-pc-windows-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+//
+// Same with ABI lowering library.
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple i386-linux-gnu -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple i386-pc-win32 -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-sie-ps5 -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-pc-windows-gnu -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
 
+// Test -msmall-int-abi-compat flag
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=sysv %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=sysv -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+//
+// Check that the flag has no effect on targets with different platform ABI.
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=both %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=sysv %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=clang %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=both -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=sysv -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=clang -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 
-// CALLEE-EXTEND: define{{.*}} i32 @ZeroExtend(i8 noundef %a, i16 noundef %b)
-// CALLEE-NO-EXTEND: define{{.*}} i32 @ZeroExtend(i8 noundef zeroext %a, i16 noundef zeroext %b)
+// CALLEE-ASSUME-EXTENDED: define{{.*}} i32 @ZeroExtend(i8 noundef zeroext %a, i16 noundef zeroext %b)
+// CALLEE-NO-ASSUME-EXTENDED: define{{.*}} i32 @ZeroExtend(i8 noundef %a, i16 noundef %b)
 unsigned ZeroExtend(unsigned char a, unsigned short b) {
   return a*b;
 }
 
-// CALLEE-EXTEND: define{{.*}} i32 @SignExtend(i8 noundef %a, i16 noundef %b)
-// CALLEE-NO-EXTEND: define{{.*}} i32 @SignExtend(i8 noundef signext %a, i16 noundef signext %b)
+// CALLEE-ASSUME-EXTENDED: define{{.*}} i32 @SignExtend(i8 noundef signext %a, i16 noundef signext %b)
+// CALLEE-NO-ASSUME-EXTENDED: define{{.*}} i32 @SignExtend(i8 noundef %a, i16 noundef %b)
 int SignExtend(char a, short b) {
   return a*b;
 }
