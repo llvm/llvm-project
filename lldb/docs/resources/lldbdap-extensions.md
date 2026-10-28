@@ -12,7 +12,7 @@ lldb-dap implements the
 - An extension field on an official
   [DAP type](https://microsoft.github.io/debug-adapter-protocol/specification#Types)
   must have the `$__lldb_` prefix (e.g. `$__lldb_version` on `Capabilities`).
-- A field of an extension type has no prefix. Extension types are the
+- A field of an extension type **must not have** a prefix. Extension types are the
   arguments, response body and event body of an extension request or event,
   and the types they use (e.g. `startIndex` on `ModuleSymbolsArguments`).
 
@@ -21,10 +21,10 @@ lldb-dap implements the
 :::{table}
 :width: 100%
 
-| Request | Added in |
-| -------------------------- | --- |
-| [compileUnits](#compileunits-request) | LLDB 11 |
-| [moduleSymbols](#modulesymbols-request) | LLDB 22 |
+| Request                                 | Added in |
+| --------------------------------------- | -------- |
+| [compileUnits](#compileunits-request)   | LLDB 11  |
+| [moduleSymbols](#modulesymbols-request) | LLDB 22  |
 
 :::
 
@@ -41,7 +41,7 @@ and the `id` of a [`Module`](#module).
 
 ```typescript
 interface CompileUnitsRequest extends Request {
-  command: 'compileUnits';
+  command: "compileUnits";
 
   arguments: CompileUnitsArguments;
 }
@@ -93,7 +93,7 @@ is true.
 
 ```typescript
 interface ModuleSymbolsRequest extends Request {
-  command: '__lldb_moduleSymbols';
+  command: "__lldb_moduleSymbols";
 
   arguments: ModuleSymbolsArguments;
 }
@@ -126,8 +126,8 @@ interface ModuleSymbolsArguments {
 interface ModuleSymbolsResponse extends Response {
   body: {
     /**
-    * All symbols or range of symbols.
-    */
+     * All symbols or range of symbols.
+     */
     symbols: Symbol[];
   };
 }

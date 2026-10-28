@@ -72,7 +72,7 @@ inspiration from it. If not, consider opening an upstream issue.
 
 To avoid naming collisions with future versions of the Debug Adapter
 Protocol, follow the naming rules in
-[LLDB-DAP Extensions](./lldbdap-extensions.md).
+[LLDB-DAP Extensions](./lldbdap-extensions.md#naming-rules).
 
 ### Debugging the Debug Adapter Protocol
 
