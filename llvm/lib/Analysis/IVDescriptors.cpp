@@ -1418,7 +1418,7 @@ InductionDescriptor::InductionDescriptor(
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+  assert((!getConstStepValue() || !getConstStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1443,10 +1443,10 @@ InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
                              SE.getOne(Ty));
 }
 
-ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+std::optional<APInt> InductionDescriptor::getConstStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
-    return ConstStep->getValue();
-  return nullptr;
+    return ConstStep->getValue()->getValue();
+  return {};
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,

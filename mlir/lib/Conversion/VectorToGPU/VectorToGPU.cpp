@@ -1381,6 +1381,12 @@ struct ConvertVectorToGPUPass
     useNvGpu.setValue(useNvGpu_);
   }
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ConvertVectorToGPUBase::getDependentDialects(registry);
+    if (useNvGpu)
+      registry.insert<nvgpu::NVGPUDialect>();
+  }
+
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populatePrepareVectorToMMAPatterns(patterns, useNvGpu.getValue());

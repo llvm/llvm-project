@@ -4058,6 +4058,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-pdb-in-private");
   }
+  CmdArgs.push_back("-load-bool-from-mem=nonzero");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,

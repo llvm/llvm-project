@@ -91,13 +91,16 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
                 env=["FOO=bar"],
             )
         )
-        session.ensure_initialized()
         session.verify_configuration_done(expected_success=False)
 
         response = launch_handle.error()
         response_body = self.expect_not_none(response.body)
         error_msg = self.expect_not_none(response_body.error)
         self.assertIn(f"'{program}' does not exist", error_msg.format)
+
+        # Verify we never received an initialized event.
+        with self.assertRaises(TimeoutError):
+            session.wait_for_earliest_event(InitializedEvent, timeout=0)
 
     def test_client_missing_run_in_terminal_feature(self):
         program = self.getBuildArtifact("a.out")

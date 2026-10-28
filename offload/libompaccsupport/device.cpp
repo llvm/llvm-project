@@ -573,10 +573,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
-  return RTL->data_fence(RTLDeviceID, AsyncInfo);
-}
-
 llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
                                                 bool LockMemory) {
   void *LockedPtr = nullptr;

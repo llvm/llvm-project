@@ -2294,6 +2294,13 @@ public:
           }
           assert(I < Callee->arg_size() &&
                  "Byval pointers cannot be passed via variadic arguments.");
+          if (Ctx.exceedsMaxObjectSize(Size, ArgTy->getPointerAddressSpace())) {
+            reportImmediateUB()
+                << "Byval argument with size that exceeds the maximum object "
+                   "size. Size: "
+                << Size;
+            return;
+          }
           auto Obj = Ctx.allocate(
               Size, AllocAlign->value(), Callee->getArg(I)->getName(),
               ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
@@ -2824,6 +2831,13 @@ public:
             << Size.asInteger();
         return;
       }
+    }
+    if (Ctx.exceedsMaxObjectSize(AllocSize, AI.getAddressSpace())) {
+      reportImmediateUB()
+          << "Alloca with allocation size that exceeds the maximum object "
+             "size. Size: "
+          << AllocSize;
+      return;
     }
     // If it is used by llvm.lifetime.start, it should be initially dead.
     bool IsInitiallyDead = any_of(AI.users(), [](User *U) {

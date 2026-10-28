@@ -1334,6 +1334,20 @@ add_header_library(
 )
 
 add_header_library(
+  epoll_wait
+  HDRS
+    epoll_wait.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_epoll_event
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   access
   HDRS
     access.h
