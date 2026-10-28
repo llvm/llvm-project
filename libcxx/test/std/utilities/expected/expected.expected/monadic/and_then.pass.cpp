@@ -150,6 +150,11 @@ struct NonConst {
   std::expected<int, int> non_const() { return 1; }
 };
 
+struct ADLDeref {
+  friend void operator*(std::expected<ADLDeref, int>&)       = delete;
+  friend void operator*(const std::expected<ADLDeref, int>&) = delete;
+};
+
 template <class E, class F>
 concept has_and_then = requires(E&& e, F&& f) {
   {std::forward<E>(e).and_then(std::forward<F>(f))};
@@ -168,6 +173,12 @@ static_assert(!has_and_then<const std::expected<int, NonMovable>&&, std::expecte
 // [LWG 3877] https://cplusplus.github.io/LWG/issue3877, check constraint failing but not compile error inside the function body.
 static_assert(!has_and_then<const std::expected<int, std::unique_ptr<int>>&, int()>);
 static_assert(!has_and_then<const std::expected<int, std::unique_ptr<int>>&&, int()>);
+
+// [LWG 3973] https://cplusplus.github.io/LWG/issue3973, check that std::expected monadic ops are ADL-proof.
+static_assert(has_and_then<std::expected<ADLDeref, int>&, std::expected<int, int>(ADLDeref&)>);
+static_assert(has_and_then<const std::expected<ADLDeref, int>&, std::expected<int, int>(const ADLDeref&)>);
+static_assert(has_and_then<std::expected<ADLDeref, int>&&, std::expected<int, int>(ADLDeref)>);
+static_assert(has_and_then<const std::expected<ADLDeref, int>&&, std::expected<int, int>(const ADLDeref)>);
 
 // [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
 // There are no effects for `&` and `const &` overload, because the constraints requires is_constructible_v<E, decltype(error())> is true.
