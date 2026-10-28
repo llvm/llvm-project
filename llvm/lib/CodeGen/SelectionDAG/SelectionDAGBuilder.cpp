@@ -2577,18 +2577,22 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
   SL->SwitchCases.push_back(CB);
 }
 
-// Collect dependencies on V recursively. This is used for the cost analysis in
-// `shouldKeepJumpConditionsTogether`.
+// Collect dependencies on V in block BB recursively. This is used for the cost
+// analysis in `shouldKeepJumpConditionsTogether`.
 static bool collectInstructionDeps(
     SmallMapVector<const Instruction *, bool, 8> *Deps, const Value *V,
+    const BasicBlock *BB,
     SmallMapVector<const Instruction *, bool, 8> *Necessary = nullptr,
     unsigned Depth = 0) {
   // Return false if we have an incomplete count.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
 
+  // Phis and instructions from other blocks are already computed when the
+  // branch is reached, so splitting the condition doesn't save them. Following
+  // a phi could also reach work done in the previous loop iteration.
   auto *I = dyn_cast<Instruction>(V);
-  if (I == nullptr)
+  if (I == nullptr || isa<PHINode>(I) || I->getParent() != BB)
     return true;
 
   if (Necessary != nullptr) {
@@ -2603,7 +2607,7 @@ static bool collectInstructionDeps(
     return true;
 
   for (unsigned OpIdx = 0, E = I->getNumOperands(); OpIdx < E; ++OpIdx)
-    if (!collectInstructionDeps(Deps, I->getOperand(OpIdx), Necessary,
+    if (!collectInstructionDeps(Deps, I->getOperand(OpIdx), BB, Necessary,
                                 Depth + 1))
       return false;
   return true;
@@ -2654,11 +2658,11 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // Use map for stable iteration (to avoid non-determanism of iteration of
   // SmallPtrSet). The `bool` value is just a dummy.
   SmallMapVector<const Instruction *, bool, 8> LhsDeps, RhsDeps;
-  collectInstructionDeps(&LhsDeps, Lhs);
+  collectInstructionDeps(&LhsDeps, Lhs, I.getParent());
   // Collect "all" instructions that rhs condition is dependent on AND are
   // dependencies of lhs. This gives us an estimate on which instructions we
   // stand to save by splitting the condition.
-  if (!collectInstructionDeps(&RhsDeps, Rhs, &LhsDeps))
+  if (!collectInstructionDeps(&RhsDeps, Rhs, I.getParent(), &LhsDeps))
     return false;
   // Add the compare instruction itself unless its a dependency on the LHS.
   if (const auto *RhsI = dyn_cast<Instruction>(Rhs))
