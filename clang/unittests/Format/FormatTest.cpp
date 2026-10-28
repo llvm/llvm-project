@@ -22991,6 +22991,17 @@ TEST_F(FormatTest, FileAndCode) {
                                    "#endif"));
 }
 
+TEST_F(FormatTest, GuessJavaScriptLanguageByFileName) {
+  for (StringRef FileName :
+       {"foo.js", "foo.mjs", "foo.cjs", "foo.ts", "foo.mts", "foo.cts",
+        "foo.JS", "foo.MJS", "foo.CJS", "foo.TS", "foo.MTS", "foo.CTS",
+        "foo.d.ts", "foo.d.mts", "foo.d.cts", "foo.mts.in",
+        "foo.cts.template"}) {
+    SCOPED_TRACE(FileName);
+    EXPECT_EQ(FormatStyle::LK_JavaScript, guessLanguage(FileName, ""));
+  }
+}
+
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h", "[[noreturn]];"));
   EXPECT_EQ(FormatStyle::LK_ObjC,
