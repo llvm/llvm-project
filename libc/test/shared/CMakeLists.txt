@@ -95,6 +95,7 @@ else()
       libc.src.__support.math.cos
       libc.src.__support.math.cosf
       libc.src.__support.math.cosf16
+      libc.src.__support.math.cosh
       libc.src.__support.math.coshf
       libc.src.__support.math.coshf16
       libc.src.__support.math.cospif
@@ -476,6 +477,7 @@ else()
       libc.src.__support.math.sincosf
       libc.src.__support.math.sinf
       libc.src.__support.math.sinf16
+      libc.src.__support.math.sinh
       libc.src.__support.math.sinhf
       libc.src.__support.math.sinhf16
       libc.src.__support.math.sqrtf128

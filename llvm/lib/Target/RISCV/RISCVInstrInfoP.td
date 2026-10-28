@@ -2682,6 +2682,9 @@ let append Predicates = [IsRV32] in {
   def : Pat<(i32 (mul (srl GPR:$rs1, (XLenVT 16)), (srl GPR:$rs2, (XLenVT 16)))),
             (MULU_H11 GPR:$rs1, GPR:$rs2)>;
 
+  def : Pat<(i32 (mul (sra GPR:$rs1, (XLenVT 16)), (srl GPR:$rs2, (XLenVT 16)))),
+            (MULSU_H11 GPR:$rs1, GPR:$rs2)>;
+
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1,
                                            (sra GPR:$rs2, (XLenVT 16))))),
             (MACC_H01 GPR:$rd, sexti16:$rs1, GPR:$rs2)>;
@@ -2694,6 +2697,9 @@ let append Predicates = [IsRV32] in {
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse (srl GPR:$rs1, (XLenVT 16)),
                                            (srl GPR:$rs2, (XLenVT 16))))),
             (MACCU_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 16)),
+                                           (srl GPR:$rs2, (XLenVT 16))))),
+            (MACCSU_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
             (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;

@@ -2859,17 +2859,18 @@ void VPlanTransforms::replaceSymbolicStrides(
     RewriteMap[StrideV] = StrideExpr;
   }
 
+  ScalarEvolution &SE = *PSE.getSE();
   for (VPExpandSCEVRecipe &ExpSCEV :
        make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry())) {
     const SCEV *ScevExpr = ExpSCEV.getSCEV();
-    auto *NewSCEV =
-        SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
-    if (NewSCEV != ScevExpr) {
-      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
-      ExpSCEV.replaceAllUsesWith(NewExp);
-      if (Plan.getTripCount() == &ExpSCEV)
-        Plan.resetTripCount(NewExp);
-    }
+    const SCEV *NewSCEV =
+        SCEVParameterRewriter::rewrite(ScevExpr, SE, RewriteMap);
+    if (NewSCEV == ScevExpr || !SE.isGuaranteedNotToCauseUB(NewSCEV))
+      continue;
+    VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+    ExpSCEV.replaceAllUsesWith(NewExp);
+    if (Plan.getTripCount() == &ExpSCEV)
+      Plan.resetTripCount(NewExp);
   }
 }
 
