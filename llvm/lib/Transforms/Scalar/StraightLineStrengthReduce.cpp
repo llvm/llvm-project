@@ -531,7 +531,7 @@ private:
                        : !DT->dominates(Best->getParent(), I->getParent())))
         continue;
       SmallVector<Instruction *> CandidateDropList;
-      if (!EnablePoisonReuseGuard ||
+      if (!Opts.enable_poison_reuse_guard ||
           SE->canReuseInstruction(S, I, CandidateDropList)) {
         Best = I;
         DropList = std::move(CandidateDropList);
