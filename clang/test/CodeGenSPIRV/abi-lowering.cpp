@@ -1,16 +1,14 @@
-// Check that the LLVM ABI library classifies SPIR and SPIR-V arguments and
-// return values the same way as Clang's own ABI lowering.
+// Check that the LLVM ABI library classifies SPIR-V arguments and return
+// values the same way as Clang's own ABI lowering.
 
-// The default address space is the private one (PRIV) for plain SPIR and
-// SPIR-V, and the generic one (GEN) for CUDA and the Intel SPIR-V triple.
-// RUN: %clang_cc1 -triple spir64 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIR,NODEV,PRIV
-// RUN: %clang_cc1 -triple spir64 -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIR,NODEV,PRIV
-// RUN: %clang_cc1 -triple spirv64 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,NODEV,PRIV,SPIRV-PRIV
-// RUN: %clang_cc1 -triple spirv64 -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,NODEV,PRIV,SPIRV-PRIV
-// RUN: %clang_cc1 -triple spirv64-intel -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,NODEV,GEN
-// RUN: %clang_cc1 -triple spirv64-intel -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,NODEV,GEN
-// RUN: %clang_cc1 -triple spirv64 -x cuda -fcuda-is-device -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,DEVICE,GEN
-// RUN: %clang_cc1 -triple spirv64 -x cuda -fcuda-is-device -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV,DEVICE,GEN
+// The default address space is the private one (PRIV) for plain SPIR-V, and
+// the generic one (GEN) for CUDA and the Intel SPIR-V triple.
+// RUN: %clang_cc1 -triple spirv64 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NODEV,PRIV
+// RUN: %clang_cc1 -triple spirv64 -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NODEV,PRIV
+// RUN: %clang_cc1 -triple spirv64-intel -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NODEV,GEN
+// RUN: %clang_cc1 -triple spirv64-intel -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NODEV,GEN
+// RUN: %clang_cc1 -triple spirv64 -x cuda -fcuda-is-device -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DEVICE,GEN
+// RUN: %clang_cc1 -triple spirv64 -x cuda -fcuda-is-device -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DEVICE,GEN
 
 // AMDGCN-flavored SPIR-V keeps using Clang's AMDGPU-based lowering.
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x cuda -fcuda-is-device -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s --check-prefix=AMDGCN
@@ -64,18 +62,15 @@ KERNEL void k_small(Small s) {}
 // DEVICE: define {{.*}}spir_kernel void @_Z12k_nontrivial10NonTrivial(ptr noundef byval(%struct.NonTrivial) align 4 %n)
 KERNEL void k_nontrivial(NonTrivial n) {}
 
-// SPIR-V passes default address space kernel pointers as CrossWorkgroup ones.
-// SPIR:  define {{.*}}spir_kernel void @_Z5k_ptrPi(ptr noundef %p)
-// SPIRV: define {{.*}}spir_kernel void @_Z5k_ptrPi(ptr addrspace(1) noundef %p.coerce)
+// Default address space kernel pointers are passed as CrossWorkgroup ones.
+// CHECK: define {{.*}}spir_kernel void @_Z5k_ptrPi(ptr addrspace(1) noundef %p.coerce)
 KERNEL void k_ptr(int *p) {}
 
-// SPIR:  define {{.*}}spir_kernel void @_Z8k_atomicU7_AtomicPi(ptr %p)
-// SPIRV: define {{.*}}spir_kernel void @_Z8k_atomicU7_AtomicPi(ptr addrspace(1) %p.coerce)
+// CHECK: define {{.*}}spir_kernel void @_Z8k_atomicU7_AtomicPi(ptr addrspace(1) %p.coerce)
 KERNEL void k_atomic(_Atomic(int *) p) {}
 
 // std::nullptr_t is an address space 0 pointer, so it is only coerced where
 // that is the default address space.
-// SPIR:       define {{.*}}spir_kernel void @_Z9k_nullptrDn(ptr %n)
-// SPIRV-PRIV: define {{.*}}spir_kernel void @_Z9k_nullptrDn(ptr addrspace(1) %n.coerce)
-// GEN:        define {{.*}}spir_kernel void @_Z9k_nullptrDn(ptr %n)
+// PRIV: define {{.*}}spir_kernel void @_Z9k_nullptrDn(ptr addrspace(1) %n.coerce)
+// GEN:  define {{.*}}spir_kernel void @_Z9k_nullptrDn(ptr %n)
 KERNEL void k_nullptr(decltype(nullptr) n) {}

@@ -22,27 +22,29 @@ namespace llvm::abi {
 class SPIRVTargetInfo final : public DefaultTargetInfo {
 private:
   ABICompatInfo CompatInfo;
+
+  /// Target address space of the language's default address space.
   unsigned DefaultAddrSpace;
-  bool CoerceDefaultPtrKernelArgs;
+
+  /// Pass kernel aggregates byval. Set by the front end for device
+  /// compilations.
   bool KernelPassAggregatesIndirect;
 
   ArgInfo classifyKernelArgumentType(const Type *ArgTy) const {
     // Kernel arguments may not be default address space pointers, so pass them
     // as CrossWorkgroup pointers. An atomic pointer of the same size is passed
     // as the pointer itself.
-    if (CoerceDefaultPtrKernelArgs) {
-      const Type *Ty = ArgTy;
-      if (const auto *AT = dyn_cast<AtomicType>(Ty);
-          AT && AT->getSizeInBits() == AT->getValueType()->getSizeInBits())
-        Ty = AT->getValueType();
-      if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
-          PtrTy && PtrTy->getAddrSpace() == DefaultAddrSpace) {
-        const Type *Coerced = TB.getPointerType(
-            PtrTy->getSizeInBits().getFixedValue(), PtrTy->getAlignment(),
-            SPIRVAS::CrossWorkgroup, /*HasAddressSpaceQualifier=*/true);
-        return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
-                                  /*CanBeFlattened=*/false);
-      }
+    const Type *Ty = ArgTy;
+    if (const auto *AT = dyn_cast<AtomicType>(Ty);
+        AT && AT->getSizeInBits() == AT->getValueType()->getSizeInBits())
+      Ty = AT->getValueType();
+    if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
+        PtrTy && PtrTy->getAddrSpace() == DefaultAddrSpace) {
+      const Type *Coerced = TB.getPointerType(
+          PtrTy->getSizeInBits().getFixedValue(), PtrTy->getAlignment(),
+          SPIRVAS::CrossWorkgroup, /*HasAddressSpaceQualifier=*/true);
+      return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
+                                /*CanBeFlattened=*/false);
     }
 
     // Force copying aggregate type in kernel arguments by value. This is
@@ -57,10 +59,8 @@ private:
 
 public:
   SPIRVTargetInfo(TypeBuilder &Builder, unsigned DefaultAddrSpace,
-                  bool CoerceDefaultPtrKernelArgs,
                   bool KernelPassAggregatesIndirect)
       : DefaultTargetInfo(Builder), DefaultAddrSpace(DefaultAddrSpace),
-        CoerceDefaultPtrKernelArgs(CoerceDefaultPtrKernelArgs),
         KernelPassAggregatesIndirect(KernelPassAggregatesIndirect) {}
 
   const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
@@ -86,10 +86,8 @@ public:
 
 std::unique_ptr<TargetInfo>
 createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,
-                      bool CoerceDefaultPtrKernelArgs,
                       bool KernelPassAggregatesIndirect) {
   return std::make_unique<SPIRVTargetInfo>(TB, DefaultAddrSpace,
-                                           CoerceDefaultPtrKernelArgs,
                                            KernelPassAggregatesIndirect);
 }
 

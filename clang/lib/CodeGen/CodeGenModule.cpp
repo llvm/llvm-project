@@ -358,7 +358,7 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
 
   // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
   // promotion rules and resource types are not modeled yet.
-  if (T.isSPIROrSPIRV())
+  if (T.isSPIRV())
     return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
@@ -453,18 +453,12 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
   }
 
-  case llvm::Triple::spir:
-  case llvm::Triple::spir64:
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
-    // SPIR keeps the default classification for kernel arguments; only SPIR-V
-    // applies the kernel argument rules.
     TheLLVMABITargetInfo = llvm::abi::createSPIRVTargetInfo(
         TB, getContext().getTargetAddressSpace(LangAS::Default),
-        /*CoerceDefaultPtrKernelArgs=*/T.isSPIRV(),
-        /*KernelPassAggregatesIndirect=*/T.isSPIRV() &&
-            getLangOpts().isTargetDevice());
+        /*KernelPassAggregatesIndirect=*/getLangOpts().isTargetDevice());
     return *TheLLVMABITargetInfo;
 
   case llvm::Triple::bpfeb:

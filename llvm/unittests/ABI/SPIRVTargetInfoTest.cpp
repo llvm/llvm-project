@@ -53,17 +53,16 @@ protected:
             llvm::Align(4), StructPacking::Default, {}, {},
             RecordFlags::IsCXXRecord)) {}
 
-  /// A target configured like a SPIR-V device compilation whose default
-  /// address space is \p DefaultAS.
+  /// A target configured like a device compilation whose default address
+  /// space is \p DefaultAS.
   std::unique_ptr<TargetInfo> deviceTarget(unsigned DefaultAS) {
     return createSPIRVTargetInfo(TB, DefaultAS,
-                                 /*CoerceDefaultPtrKernelArgs=*/true,
                                  /*KernelPassAggregatesIndirect=*/true);
   }
 
-  /// A target with neither kernel rule, like SPIR, whose default address
-  /// space is \p DefaultAS.
-  std::unique_ptr<TargetInfo> defaultTarget(unsigned DefaultAS) {
+  /// A target configured like a non-device compilation (e.g. OpenCL) whose
+  /// default address space is \p DefaultAS.
+  std::unique_ptr<TargetInfo> nonDeviceTarget(unsigned DefaultAS) {
     return createSPIRVTargetInfo(TB, DefaultAS);
   }
 
@@ -147,13 +146,14 @@ TEST_F(SPIRVTargetInfoTest, KernelAggregateIsByValOnDevice) {
   expectIndirect(classifyArg(NonTrivial, deviceTarget(SPIRVAS::Generic),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/true);
-  expectIndirect(classifyArg(NonTrivial, defaultTarget(SPIRVAS::Function),
+  expectIndirect(classifyArg(NonTrivial, nonDeviceTarget(SPIRVAS::Function),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/false);
 }
 
 // A default address space kernel pointer is passed as a CrossWorkgroup
-// pointer, whichever address space the language's default maps to.
+// pointer, whichever address space the language's default maps to, for device
+// and non-device compilations alike.
 TEST_F(SPIRVTargetInfoTest, KernelDefaultPointerCoercesToCrossWorkgroup) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
@@ -165,6 +165,10 @@ TEST_F(SPIRVTargetInfoTest, KernelDefaultPointerCoercesToCrossWorkgroup) {
       expectCrossWorkgroupPointer(Info, Size);
     }
   }
+  expectCrossWorkgroupPointer(classifyArg(pointerIn(SPIRVAS::Function),
+                                          nonDeviceTarget(SPIRVAS::Function),
+                                          CallingConv::SPIR_KERNEL, FI, TI),
+                              64);
 }
 
 // Only default address space pointers in kernels are coerced.
@@ -177,9 +181,6 @@ TEST_F(SPIRVTargetInfoTest, OtherPointersAreNotCoerced) {
   expectUncoercedDirect(classifyArg(pointerIn(SPIRVAS::Generic),
                                     deviceTarget(SPIRVAS::Generic),
                                     CallingConv::SPIR_FUNC, FI, TI));
-  expectUncoercedDirect(classifyArg(pointerIn(SPIRVAS::Generic),
-                                    defaultTarget(SPIRVAS::Generic),
-                                    CallingConv::SPIR_KERNEL, FI, TI));
 }
 
 // An atomic pointer kernel argument is coerced like the pointer itself.
@@ -222,10 +223,12 @@ TEST_F(SPIRVTargetInfoTest, BitIntWiderThan64IsIndirect) {
     return TB.getIntegerType(Bits, llvm::Align(8), /*Signed=*/true,
                              /*IsBitInt=*/true);
   };
-  EXPECT_TRUE(classifyArg(BitInt(64), defaultTarget(SPIRVAS::Function),
+  EXPECT_TRUE(classifyArg(BitInt(64),
+                          createSPIRVTargetInfo(TB, SPIRVAS::Function),
                           CallingConv::SPIR_FUNC, FI, TI)
                   .isDirect());
-  EXPECT_TRUE(classifyArg(BitInt(65), defaultTarget(SPIRVAS::Function),
+  EXPECT_TRUE(classifyArg(BitInt(65),
+                          createSPIRVTargetInfo(TB, SPIRVAS::Function),
                           CallingConv::SPIR_FUNC, FI, TI)
                   .isIndirect());
 }
