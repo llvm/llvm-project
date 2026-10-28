@@ -784,7 +784,7 @@ define <2 x i8> @ashrv2i8(<2 x i16> %a, <2 x i8> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = ashr <2 x i16> [[A:%.*]], <i16 8, i16 12>
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext <2 x i8> [[B:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[CONV]], [[CONV1]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i16> [[CONV]], [[CONV1]]
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <2 x i16> @llvm.smax.v2i16(<2 x i16> [[ADD]], <2 x i16> splat (i16 -128))
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[SPEC_STORE_SELECT]], <2 x i16> splat (i16 127))
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc nsw <2 x i16> [[SPEC_STORE_SELECT8]] to <2 x i8>
@@ -824,11 +824,11 @@ entry:
 
 define i16 @or(i8 %X, i16 %Y) {
 ; CHECK-LABEL: @or(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], -16
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[TMP2]])
-; CHECK-NEXT:    [[L12:%.*]] = sext i8 [[TMP3]] to i16
-; CHECK-NEXT:    ret i16 [[L12]]
+; CHECK-NEXT:    [[L12:%.*]] = sext i8 [[TMP3:%.*]] to i16
+; CHECK-NEXT:    [[CONV14:%.*]] = or i16 [[Y:%.*]], -16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[L12]], [[CONV14]]
+; CHECK-NEXT:    [[L13:%.*]] = call i16 @llvm.smin.i16(i16 [[SUB]], i16 127)
+; CHECK-NEXT:    ret i16 [[L13]]
 ;
   %conv10 = sext i8 %X to i16
   %conv14 = or i16 %Y, 65520

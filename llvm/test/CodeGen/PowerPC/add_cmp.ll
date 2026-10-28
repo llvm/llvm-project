@@ -28,29 +28,32 @@ entry:
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<30>, setgt:ch
 }
 
+; No nuw/nsw on the overflow cases: with the flag the comparison is constant
+; (add nuw x, 110 is always > 100), so it is folded away before isel and the
+; DAG shape this checks for never materializes.
 define zeroext i1 @addiCmpiUnsignedOverflow(i32 zeroext %x) {
 entry:
-  %add = add nuw i32 110, %x 
+  %add = add i32 110, %x
   %cmp = icmp ugt i32 %add, 100
   ret i1 %cmp
 
 ; CHECK: === addiCmpiUnsignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiUnsignedOverflow:entry'
 ; CHECK:   [[REG1:t[0-9]+]]: i32 = truncate {{t[0-9]+}}
-; CHECK:   [[REG2:t[0-9]+]]: i32 = add nuw [[REG1]], Constant:i32<110>
+; CHECK:   [[REG2:t[0-9]+]]: i32 = add [[REG1]], Constant:i32<110>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i32<100>, setugt:ch
 }
 
 define zeroext i1 @addiCmpiSignedOverflow(i16 signext %x) {
 entry:
-  %add = add nsw i16 16, %x 
+  %add = add i16 16, %x
   %cmp = icmp sgt i16 %add, -32767
   ret i1 %cmp
 
 ; CHECK: === addiCmpiSignedOverflow
 ; CHECK: Optimized lowered selection DAG: %bb.0 'addiCmpiSignedOverflow:entry'
 ; CHECK:   [[REG1:t[0-9]+]]: i16 = truncate {{t[0-9]+}}
-; CHECK:   [[REG2:t[0-9]+]]: i16 = add nsw [[REG1]], Constant:i16<16>
+; CHECK:   [[REG2:t[0-9]+]]: i16 = add [[REG1]], Constant:i16<16>
 ; CHECK:   {{t[0-9]+}}: i1 = setcc [[REG2]], Constant:i16<-32767>, setgt:ch
 }
 

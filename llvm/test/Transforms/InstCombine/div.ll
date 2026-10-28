@@ -933,7 +933,7 @@ define <2 x i8> @negate_sdiv_vec_one_element(<2 x i8> %x) {
 define <2 x i8> @negate_sdiv_vec_signed_min_elt(<2 x i8> %x) {
 ; CHECK-LABEL: @negate_sdiv_vec_signed_min_elt(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -1, i8 -128>
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[DIV]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <2 x i8> zeroinitializer, [[DIV]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEG]]
 ;
   %div = sdiv <2 x i8> %x, <i8 -1, i8 -128>

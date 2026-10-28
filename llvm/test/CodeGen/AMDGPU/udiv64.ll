@@ -1008,11 +1008,9 @@ define amdgpu_kernel void @s_test_udiv_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_addc_u32 s9, 0, -1
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[2:3], 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[12:13], s[8:9], 63
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[8:9], 63
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[12:13]
-; GCN-IR-NEXT:    s_and_b64 s[12:13], s[10:11], exec
+; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[10:11]
 ; GCN-IR-NEXT:    s_cselect_b32 s6, 0, 24
-; GCN-IR-NEXT:    s_or_b64 vcc, s[10:11], s[16:17]
 ; GCN-IR-NEXT:    s_cbranch_vccnz .LBB8_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s10, s8, 1
@@ -1178,13 +1176,11 @@ define i64 @v_test_udiv_pow2_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_addc_u32_e64 v5, s[6:7], 0, -1, vcc
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e32 vcc, 63, v[4:5]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e64 s[6:7], 63, v[4:5]
 ; GCN-IR-NEXT:    v_mov_b32_e32 v3, 0x8000
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
+; GCN-IR-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[4:5]
 ; GCN-IR-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
-; GCN-IR-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-IR-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
 ; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GCN-IR-NEXT:    s_cbranch_execz .LBB9_6
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
@@ -1268,12 +1264,10 @@ define i64 @v_test_udiv_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e64 s[4:5], 63, v[4:5]
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e32 vcc, 63, v[4:5]
-; GCN-IR-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v2, v1, 0, s[4:5]
+; GCN-IR-NEXT:    s_xor_b64 s[8:9], s[4:5], -1
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v3, v0, 0, s[4:5]
-; GCN-IR-NEXT:    s_and_b64 s[4:5], s[6:7], vcc
-; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
+; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; GCN-IR-NEXT:    s_cbranch_execz .LBB10_6
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    v_add_i32_e32 v7, vcc, 1, v4
@@ -1373,12 +1367,10 @@ define amdgpu_kernel void @s_test_udiv_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_subb_u32 s9, 0, 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[2:3], 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[12:13], s[8:9], 63
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[14:15], s[8:9], 63
-; GCN-IR-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
-; GCN-IR-NEXT:    s_and_b64 s[6:7], s[12:13], exec
+; GCN-IR-NEXT:    s_or_b64 s[6:7], s[6:7], s[12:13]
+; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GCN-IR-NEXT:    s_cselect_b32 s7, 0, s3
 ; GCN-IR-NEXT:    s_cselect_b32 s6, 0, s2
-; GCN-IR-NEXT:    s_or_b64 vcc, s[12:13], s[14:15]
 ; GCN-IR-NEXT:    s_cbranch_vccnz .LBB11_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s11, s8, 1
@@ -1466,12 +1458,10 @@ define i64 @v_test_udiv_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e64 s[4:5], 63, v[4:5]
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e32 vcc, 63, v[4:5]
-; GCN-IR-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v2, v1, 0, s[4:5]
+; GCN-IR-NEXT:    s_xor_b64 s[8:9], s[4:5], -1
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v3, v0, 0, s[4:5]
-; GCN-IR-NEXT:    s_and_b64 s[4:5], s[6:7], vcc
-; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
+; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; GCN-IR-NEXT:    s_cbranch_execz .LBB12_6
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    v_add_i32_e32 v7, vcc, 1, v4
@@ -1810,13 +1800,11 @@ define i64 @v_test_udiv24_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_subb_u32_e64 v3, s[4:5], 0, 0, vcc
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e32 vcc, 63, v[2:3]
 ; GCN-IR-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v4
-; GCN-IR-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GCN-IR-NEXT:    v_cmp_ne_u64_e32 vcc, 63, v[2:3]
 ; GCN-IR-NEXT:    s_mov_b32 s8, 0
+; GCN-IR-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-IR-NEXT:    v_cndmask_b32_e64 v0, v4, 0, s[4:5]
 ; GCN-IR-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v1, s8
-; GCN-IR-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; GCN-IR-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GCN-IR-NEXT:    s_cbranch_execz .LBB17_6
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1

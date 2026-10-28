@@ -45,7 +45,7 @@ define <2 x i32> @add_mask_sign_v2i32_nonuniform(<2 x i32> %x) {
 ; CHECK-LABEL: @add_mask_sign_v2i32_nonuniform(
 ; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 30, i32 31>
 ; CHECK-NEXT:    [[M:%.*]] = and <2 x i32> [[A]], <i32 8, i32 16>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[M]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[M]], [[A]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = ashr <2 x i32> %x, <i32 30, i32 31>

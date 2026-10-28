@@ -231,7 +231,7 @@ define i32 @mul_ladder4_use_add13(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[ADD13]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
@@ -281,7 +281,7 @@ define i32 @mul_ladder4_use_conv12(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL1]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[CONV13]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
@@ -331,7 +331,7 @@ define i32 @mul_ladder4_use_u0(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[ADD]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
@@ -381,7 +381,7 @@ define i32 @mul_ladder4_use_hl(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[MULHL]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
@@ -431,7 +431,7 @@ define i32 @mul_ladder4_use_lh(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[MULLH]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
@@ -481,7 +481,7 @@ define i32 @mul_ladder4_use_conv10(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL1]], 16
 ; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
 ; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[CONV12]])
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;

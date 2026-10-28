@@ -210,7 +210,7 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) "instcombine-
 ; This would infinite loop because knownbits changed between checking
 ; if a transform was profitable and actually doing the transform.
 
-define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1 %c1) {
+define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1 %c1) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @PR51762(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]

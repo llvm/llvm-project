@@ -1098,11 +1098,7 @@ define i32 @mul_of_pow2s(i32 %x, i32 %y) {
 
 define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
 ; CHECK-LABEL: @not_mul_of_pow2(
-; CHECK-NEXT:    [[Q:%.*]] = and i32 [[X:%.*]], 6
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Q]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 1530
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %q = and i32 %x, 6
   %z = zext i8 %y to i32
@@ -1115,11 +1111,7 @@ define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
 
 define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_mul_of_pow2_commute(
-; CHECK-NEXT:    [[X30:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X30]]
-; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 3060
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x30 = and i32 %x, 12
   %y8 = and i32 %y, 255
@@ -1133,11 +1125,7 @@ define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
 
 define i1 @mul_of_pow2_no_lz_other_op(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_pow2_no_lz_other_op(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[B]], [[S]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[M]], 254
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %b = and i32 %x, 2
   %s = sext i8 %y to i32

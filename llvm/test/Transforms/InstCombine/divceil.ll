@@ -15,7 +15,7 @@ declare void @use16(i16)
 define i8 @divceil_i8_var_divisor(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor(
 ; CHECK-NEXT:    [[ROUND:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[RESULT:%.*]], [[ROUND]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw nsw i8 [[X:%.*]], [[ROUND]]
 ; CHECK-NEXT:    [[RESULT2:%.*]] = udiv i8 [[RESULT1]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RESULT2]]
 ;
@@ -31,7 +31,7 @@ define i8 @divceil_i8_var_divisor(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y)
 define i8 @divceil_i8_var_divisor_commuted(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_commuted(
 ; CHECK-NEXT:    [[ROUND:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw i8 [[RESULT:%.*]], [[ROUND]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw nsw i8 [[X:%.*]], [[ROUND]]
 ; CHECK-NEXT:    [[RESULT2:%.*]] = udiv i8 [[RESULT1]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RESULT2]]
 ;
@@ -66,7 +66,7 @@ define i8 @divceil_i8_var_divisor_y_unbounded(i8 range(i8 0, 101) %x, i8 %y) {
 ; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
 ; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i8
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw i8 [[Q]], [[ROUND]]
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i8 [[Q]], [[ROUND]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %q = udiv i8 %x, %y
@@ -100,7 +100,7 @@ define i8 @divceil_i8_var_divisor_x_unbounded(i8 %x, i8 range(i8 1, 11) %y) {
 define i16 @divceil_i8_var_divisor_zext(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i8 [[TMP3]] to i16
 ; CHECK-NEXT:    ret i16 [[RESULT]]
@@ -118,7 +118,7 @@ define i16 @divceil_i8_var_divisor_zext(i8 range(i8 0, 101) %x, i8 range(i8 1, 1
 define i16 @divceil_i8_var_divisor_commuted_zext(i8 range(i8 0, 101) %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_commuted_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i8 [[TMP3]] to i16
 ; CHECK-NEXT:    ret i16 [[RESULT]]
@@ -237,7 +237,7 @@ define i16 @divceil_i8_var_divisor_assume_after_add_zext(i8 %x, i8 range(i8 1, 1
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_after_add_zext(
 ; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], 101
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i8 [[TMP3]] to i16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
