@@ -88,7 +88,7 @@ public:
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineFunction &MF, uint64_t Offset,
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
-                     uint64_t ProbeSize, bool DynAllocation,
+                     uint64_t ProbeSize, bool FollowupAllocs,
                      MachineInstr::MIFlag Flag) const;
 
   uint64_t getStackThreshold() const override;
@@ -117,8 +117,8 @@ private:
   void allocateAndProbeStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL, int64_t Amount,
-                                   MachineInstr::MIFlag Flag, bool EmitCFI,
-                                   bool DynAllocation) const;
+                                   MachineInstr::MIFlag Flag,
+                                   bool EmitCFI) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,

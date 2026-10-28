@@ -85,6 +85,7 @@ body:             |
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   $x2 = frame-setup ADDI $x2, -16
   ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; RV64I-NEXT:   frame-setup SD $x0, $x2, 0
   ; RV64I-NEXT:   frame-setup SD killed $x1, $x2, 8 :: (store (s64) into %stack.1)
   ; RV64I-NEXT:   frame-setup SD killed $x8, $x2, 0 :: (store (s64) into %stack.2)
   ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -8
@@ -111,6 +112,7 @@ body:             |
   ; RV64I-NEXT:   $x2 = ADDI renamable $x10, 0
   ; RV64I-NEXT:   $x11 = LUI 1
   ; RV64I-NEXT:   $x2 = SUB $x2, killed $x11
+  ; RV64I-NEXT:   SD $x0, $x2, 0
   ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_stack_args, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit undef $x11, implicit undef $x12, implicit undef $x13, implicit undef $x14, implicit undef $x15, implicit undef $x16, implicit undef $x17, implicit-def $x2
   ; RV64I-NEXT:   $x10 = LUI 1
   ; RV64I-NEXT:   $x2 = ADD $x2, killed $x10
@@ -131,6 +133,7 @@ body:             |
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   $x2 = frame-setup ADDI $x2, -16
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; RV32I-NEXT:   frame-setup SW $x0, $x2, 0
   ; RV32I-NEXT:   frame-setup SW killed $x1, $x2, 12 :: (store (s32) into %stack.1)
   ; RV32I-NEXT:   frame-setup SW killed $x8, $x2, 8 :: (store (s32) into %stack.2)
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -4
@@ -157,6 +160,7 @@ body:             |
   ; RV32I-NEXT:   $x2 = ADDI renamable $x10, 0
   ; RV32I-NEXT:   $x11 = LUI 1
   ; RV32I-NEXT:   $x2 = SUB $x2, killed $x11
+  ; RV32I-NEXT:   SW $x0, $x2, 0
   ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_stack_args, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit undef $x11, implicit undef $x12, implicit undef $x13, implicit undef $x14, implicit undef $x15, implicit undef $x16, implicit undef $x17, implicit-def $x2
   ; RV32I-NEXT:   $x10 = LUI 1
   ; RV32I-NEXT:   $x2 = ADD $x2, killed $x10

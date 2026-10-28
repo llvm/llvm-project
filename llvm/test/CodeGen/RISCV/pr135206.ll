@@ -9,6 +9,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -2032
+; CHECK-NEXT:    sd zero, 0(sp)
 ; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 2008(sp) # 8-byte Folded Spill
@@ -24,6 +25,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    addi sp, sp, -2048
 ; CHECK-NEXT:    addi sp, sp, -96
+; CHECK-NEXT:    sd zero, 0(sp)
 ; CHECK-NEXT:    csrr t1, vlenb
 ; CHECK-NEXT:    lui t2, 1
 ; CHECK-NEXT:  .LBB0_3: # =>This Inner Loop Header: Depth=1
@@ -33,6 +35,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    bge t1, t2, .LBB0_3
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    sub sp, sp, t1
+; CHECK-NEXT:    sd zero, 0(sp)
 ; CHECK-NEXT:    li a0, 86
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0

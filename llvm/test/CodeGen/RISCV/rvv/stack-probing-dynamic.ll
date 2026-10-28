@@ -179,6 +179,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    addi s0, sp, 64
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    andi sp, sp, -64
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    mv s1, sp
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    andi a0, a0, -16
@@ -218,6 +219,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    addi s0, sp, 64
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    andi sp, sp, -64
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    mv s1, sp
 ; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
@@ -275,8 +277,17 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    srli a2, sp, 13
-; RV64I-NEXT:    slli sp, a2, 13
+; RV64I-NEXT:    slli t1, sp, 51
+; RV64I-NEXT:    srli t1, t1, 51
+; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    sub t1, t1, t2
+; RV64I-NEXT:    bge t1, t2, .LBB3_1
+; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:    sub sp, sp, t1
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    mv s1, sp
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    andi a0, a0, -16
@@ -284,11 +295,11 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    lui a2, 1048574
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    lui a2, 1
-; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a2
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    bltu a0, sp, .LBB3_1
-; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:    bltu a0, sp, .LBB3_3
+; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a1)
 ; RV64I-NEXT:    addi sp, s0, -2032
@@ -326,8 +337,17 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    srli a1, sp, 13
-; RV32I-NEXT:    slli sp, a1, 13
+; RV32I-NEXT:    slli t1, sp, 19
+; RV32I-NEXT:    srli t1, t1, 19
+; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    sub t1, t1, t2
+; RV32I-NEXT:    bge t1, t2, .LBB3_1
+; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:    sub sp, sp, t1
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    mv s1, sp
 ; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
@@ -335,11 +355,11 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    lui a1, 1048574
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    bltu a0, sp, .LBB3_1
-; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:    bltu a0, sp, .LBB3_3
+; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a2)
 ; RV32I-NEXT:    addi sp, s0, -2032
@@ -428,7 +448,6 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    call callee_stack_args
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 32
@@ -455,6 +474,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -2032
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
@@ -462,8 +482,10 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    addi s0, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    addi sp, sp, -64
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    sub sp, sp, a0
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi a0, s0, -2048
 ; RV64I-NEXT:    addi a0, a0, -48
 ; RV64I-NEXT:    call callee_stack_args
@@ -483,6 +505,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -2032
 ; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
@@ -490,6 +513,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    addi s0, sp, 2032
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    addi sp, sp, -64
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    sw zero, 0(sp)
