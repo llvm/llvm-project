@@ -195,7 +195,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  BranchInst *BI = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  CondBrInst *BI = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
   if (Leaf.Weight > 0) {
     MDBuilder MDB(NewLeaf->getContext());
     BI->setMetadata(LLVMContext::MD_prof,
