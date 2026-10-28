@@ -15,9 +15,11 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "sized_allocator.h"
 #include "asan_testing.h"
 
 template <class S>
@@ -33,7 +35,7 @@ test(S s,
     s.replace(pos, n1, n2, c);
     LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
-    typename S::size_type xlen = std::min(n1, old_size - pos);
+    typename S::size_type xlen = std::min<typename S::size_type>(n1, old_size - pos);
     typename S::size_type rlen = n2;
     assert(s.size() == old_size - xlen + rlen);
     LIBCPP_ASSERT(is_string_asan_correct(s));
@@ -384,6 +386,8 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, sized_allocator<char, std::uint8_t, std::int8_t>>>();
+  test<std::basic_string<char, std::char_traits<char>, sized_allocator<char, std::uint16_t, std::int16_t>>>();
 #endif
 
   return 0;
