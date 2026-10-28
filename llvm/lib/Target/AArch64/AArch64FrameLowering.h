@@ -96,6 +96,15 @@ public:
   int64_t getArgumentStackToRestore(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const;
 
+  /// Whether the return address is authenticated before the epilogue starts,
+  /// in the return block MBB, with the authenticated value then kept in LR
+  /// instead of being restored from the stack by the epilogue.
+  ///
+  /// We need to do this on Windows when doing tail calls where the caller
+  /// and callee use different amounts of stack space for arguments.
+  bool authenticatesReturnAddressEarly(MachineFunction &MF,
+                                       MachineBasicBlock &MBB) const;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
   bool

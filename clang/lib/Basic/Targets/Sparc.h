@@ -127,7 +127,14 @@ public:
     CG_V9,
   };
 
+  enum CPUFamily {
+    CF_NONE,
+    CF_LEON,
+  };
+
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
+
+  CPUFamily getCPUFamily(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef Name) const;
 
