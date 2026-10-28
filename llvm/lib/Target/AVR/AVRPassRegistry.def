@@ -13,6 +13,12 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("avr-shift-expand", AVRShiftExpandPass())
+#undef FUNCTION_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -24,5 +30,4 @@ MACHINE_FUNCTION_PASS("avr-isel", AVRISelDAGToDAGPass(*this, getOptLevel()))
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("avr-expand-pseudos", AVRExpandPseudosPass())
 DUMMY_MACHINE_FUNCTION_PASS("avr-frame-analyzer", AVRFrameAnalyzerPass())
-DUMMY_MACHINE_FUNCTION_PASS("avr-shift-expand", AVRShiftExpandPass())
 #undef DUMMY_MACHINE_FUNCTION_PASS

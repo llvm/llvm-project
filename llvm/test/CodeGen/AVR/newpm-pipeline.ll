@@ -11,6 +11,7 @@
 ; CHECK-NEXT: pre-isel-intrinsic-lowering
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   expand-ir-insts<O3>
+; CHECK-NEXT:   avr-shift-expand
 ; CHECK-NEXT:   atomic-expand
 ; CHECK-NEXT:   verify
 ; CHECK-NEXT:   loop

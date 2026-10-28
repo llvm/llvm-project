@@ -44,7 +44,7 @@ void AVRCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Expand instructions like
   //   %result = shl i32 %n, %amount
   // to a loop so that library calls are avoided.
-  // TODO(boomanaiden154): Add AVRShiftExpandPass
+  addFunctionPass(AVRShiftExpandPass(), PMW);
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
 
   Base::addIRPasses(PMW);
