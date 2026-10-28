@@ -32,7 +32,7 @@ B makeB();
 A *noex_new() { return new A(makeB()); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8noex_newv()
-// CIR:   cir.call @_Znwm({{.*}}) {{{.*}}builtin}
+// CIR:   cir.call @_Znwm({{.*}}) {{{.*}}builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR:   cir.call @_Z5makeBv
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.call @_ZN1BcviEv

@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-pthread-integration-tests)
+add_libc_testsuite(libc-pthread-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   pthread_mutex_test
