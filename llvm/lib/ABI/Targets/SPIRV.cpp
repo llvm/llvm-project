@@ -12,11 +12,9 @@
 #include "llvm/ABI/Types.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 
 namespace llvm::abi {
-
-// The LLVM address space of the SPIR-V CrossWorkgroup storage class.
-static constexpr unsigned CrossWorkgroupAddrSpace = 1;
 
 // The default classification applies, except for SPIR_KERNEL arguments, which
 // SPIR-V restricts in which address spaces they may point to and requires to be
@@ -41,7 +39,7 @@ private:
           PtrTy && PtrTy->getAddrSpace() == DefaultAddrSpace) {
         const Type *Coerced = TB.getPointerType(
             PtrTy->getSizeInBits().getFixedValue(), PtrTy->getAlignment(),
-            CrossWorkgroupAddrSpace, /*HasAddressSpaceQualifier=*/true);
+            SPIRVAS::CrossWorkgroup, /*HasAddressSpaceQualifier=*/true);
         return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
                                   /*CanBeFlattened=*/false);
       }

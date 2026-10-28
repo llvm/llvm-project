@@ -12,6 +12,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -27,12 +28,6 @@ using llvm::abi::RecordFlags;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
-
-// LLVM address spaces of the SPIR-V storage classes used below.
-constexpr unsigned FunctionAS = 0;
-constexpr unsigned CrossWorkgroupAS = 1;
-constexpr unsigned WorkgroupAS = 3;
-constexpr unsigned GenericAS = 4;
 
 class SPIRVTargetInfoTest : public ::testing::Test {
 protected:
@@ -105,7 +100,7 @@ static void expectIndirect(const ArgInfo &Info, bool ByVal) {
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(4));
   EXPECT_EQ(Info.getIndirectByVal(), ByVal);
-  EXPECT_EQ(Info.getIndirectAddrSpace(), FunctionAS);
+  EXPECT_EQ(Info.getIndirectAddrSpace(), SPIRVAS::Function);
 }
 
 // A direct arg coerced to a CrossWorkgroup pointer of \p Size bits.
@@ -115,7 +110,7 @@ static void expectCrossWorkgroupPointer(const ArgInfo &Info, uint64_t Size) {
   const auto *PT =
       llvm::dyn_cast_or_null<llvm::abi::PointerType>(Info.getCoerceToType());
   ASSERT_NE(PT, nullptr);
-  EXPECT_EQ(PT->getAddrSpace(), CrossWorkgroupAS);
+  EXPECT_EQ(PT->getAddrSpace(), SPIRVAS::CrossWorkgroup);
   EXPECT_EQ(PT->getSizeInBits().getFixedValue(), Size);
   EXPECT_EQ(PT->getAlignment(), llvm::Align(Size / 8));
 }
@@ -130,18 +125,18 @@ static void expectUncoercedDirect(const ArgInfo &Info) {
 TEST_F(SPIRVTargetInfoTest, NonKernelUsesDefaultClassification) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  expectIndirect(classifyArg(Trivial, deviceTarget(GenericAS),
+  expectIndirect(classifyArg(Trivial, deviceTarget(SPIRVAS::Generic),
                              CallingConv::SPIR_FUNC, FI, TI),
                  /*ByVal=*/true);
-  expectIndirect(classifyArg(NonTrivial, deviceTarget(GenericAS),
+  expectIndirect(classifyArg(NonTrivial, deviceTarget(SPIRVAS::Generic),
                              CallingConv::SPIR_FUNC, FI, TI),
                  /*ByVal=*/false);
 
-  TI = deviceTarget(GenericAS);
+  TI = deviceTarget(SPIRVAS::Generic);
   FI = FunctionInfo::create(CallingConv::SPIR_FUNC, Trivial, {});
   TI->computeInfo(*FI);
   ASSERT_TRUE(FI->getReturnInfo().isIndirect());
-  EXPECT_EQ(FI->getReturnInfo().getIndirectAddrSpace(), FunctionAS);
+  EXPECT_EQ(FI->getReturnInfo().getIndirectAddrSpace(), SPIRVAS::Function);
 }
 
 // A kernel aggregate is copied byval for device compilations, even when the
@@ -149,10 +144,10 @@ TEST_F(SPIRVTargetInfoTest, NonKernelUsesDefaultClassification) {
 TEST_F(SPIRVTargetInfoTest, KernelAggregateIsByValOnDevice) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  expectIndirect(classifyArg(NonTrivial, deviceTarget(GenericAS),
+  expectIndirect(classifyArg(NonTrivial, deviceTarget(SPIRVAS::Generic),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/true);
-  expectIndirect(classifyArg(NonTrivial, defaultTarget(FunctionAS),
+  expectIndirect(classifyArg(NonTrivial, defaultTarget(SPIRVAS::Function),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/false);
 }
@@ -162,7 +157,7 @@ TEST_F(SPIRVTargetInfoTest, KernelAggregateIsByValOnDevice) {
 TEST_F(SPIRVTargetInfoTest, KernelDefaultPointerCoercesToCrossWorkgroup) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  for (unsigned DefaultAS : {GenericAS, FunctionAS}) {
+  for (unsigned DefaultAS : {SPIRVAS::Generic, SPIRVAS::Function}) {
     for (uint64_t Size : {64, 32}) {
       const ArgInfo &Info =
           classifyArg(pointerIn(DefaultAS, Size), deviceTarget(DefaultAS),
@@ -176,14 +171,14 @@ TEST_F(SPIRVTargetInfoTest, KernelDefaultPointerCoercesToCrossWorkgroup) {
 TEST_F(SPIRVTargetInfoTest, OtherPointersAreNotCoerced) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  expectUncoercedDirect(classifyArg(pointerIn(WorkgroupAS),
-                                    deviceTarget(GenericAS),
+  expectUncoercedDirect(classifyArg(pointerIn(SPIRVAS::Workgroup),
+                                    deviceTarget(SPIRVAS::Generic),
                                     CallingConv::SPIR_KERNEL, FI, TI));
-  expectUncoercedDirect(classifyArg(pointerIn(GenericAS),
-                                    deviceTarget(GenericAS),
+  expectUncoercedDirect(classifyArg(pointerIn(SPIRVAS::Generic),
+                                    deviceTarget(SPIRVAS::Generic),
                                     CallingConv::SPIR_FUNC, FI, TI));
-  expectUncoercedDirect(classifyArg(pointerIn(GenericAS),
-                                    defaultTarget(GenericAS),
+  expectUncoercedDirect(classifyArg(pointerIn(SPIRVAS::Generic),
+                                    defaultTarget(SPIRVAS::Generic),
                                     CallingConv::SPIR_KERNEL, FI, TI));
 }
 
@@ -192,8 +187,9 @@ TEST_F(SPIRVTargetInfoTest, KernelAtomicPointerCoercesToCrossWorkgroup) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
   const ABIType *AtomicPtr =
-      TB.getAtomicType(pointerIn(GenericAS), 64, llvm::Align(8));
-  expectCrossWorkgroupPointer(classifyArg(AtomicPtr, deviceTarget(GenericAS),
+      TB.getAtomicType(pointerIn(SPIRVAS::Generic), 64, llvm::Align(8));
+  expectCrossWorkgroupPointer(classifyArg(AtomicPtr,
+                                          deviceTarget(SPIRVAS::Generic),
                                           CallingConv::SPIR_KERNEL, FI, TI),
                               64);
 }
@@ -203,7 +199,7 @@ TEST_F(SPIRVTargetInfoTest, KernelAtomicPointerCoercesToCrossWorkgroup) {
 TEST_F(SPIRVTargetInfoTest, NonTrivialReturnUsesDefaultAddrSpace) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  for (unsigned DefaultAS : {GenericAS, FunctionAS}) {
+  for (unsigned DefaultAS : {SPIRVAS::Generic, SPIRVAS::Function}) {
     const ArgInfo &Info =
         classifyRet(NonTrivial, createSPIRVTargetInfo(TB, DefaultAS), FI, TI);
     ASSERT_TRUE(Info.isIndirect());
@@ -211,9 +207,10 @@ TEST_F(SPIRVTargetInfoTest, NonTrivialReturnUsesDefaultAddrSpace) {
     EXPECT_EQ(Info.getIndirectAddrSpace(), DefaultAS);
   }
   // Other aggregates are still returned in the alloca address space.
-  const ArgInfo &Info = classifyRet(Trivial, deviceTarget(GenericAS), FI, TI);
+  const ArgInfo &Info =
+      classifyRet(Trivial, deviceTarget(SPIRVAS::Generic), FI, TI);
   ASSERT_TRUE(Info.isIndirect());
-  EXPECT_EQ(Info.getIndirectAddrSpace(), FunctionAS);
+  EXPECT_EQ(Info.getIndirectAddrSpace(), SPIRVAS::Function);
 }
 
 // Without a 128-bit integer type, a _BitInt wider than 64 bits is passed
@@ -225,10 +222,10 @@ TEST_F(SPIRVTargetInfoTest, BitIntWiderThan64IsIndirect) {
     return TB.getIntegerType(Bits, llvm::Align(8), /*Signed=*/true,
                              /*IsBitInt=*/true);
   };
-  EXPECT_TRUE(classifyArg(BitInt(64), defaultTarget(FunctionAS),
+  EXPECT_TRUE(classifyArg(BitInt(64), defaultTarget(SPIRVAS::Function),
                           CallingConv::SPIR_FUNC, FI, TI)
                   .isDirect());
-  EXPECT_TRUE(classifyArg(BitInt(65), defaultTarget(FunctionAS),
+  EXPECT_TRUE(classifyArg(BitInt(65), defaultTarget(SPIRVAS::Function),
                           CallingConv::SPIR_FUNC, FI, TI)
                   .isIndirect());
 }
