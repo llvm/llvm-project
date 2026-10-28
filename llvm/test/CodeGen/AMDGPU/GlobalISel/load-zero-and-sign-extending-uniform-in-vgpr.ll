@@ -479,12 +479,11 @@ define amdgpu_ps void @sextload_and_zextload_P4_i8_not_uniform_mmo_gfx12(ptr add
 ; GFX11-LABEL: sextload_and_zextload_P4_i8_not_uniform_mmo_gfx12:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_i8 v3, v2, s[0:1] glc dlc
-; GFX11-NEXT:    global_load_u8 v2, v2, s[2:3] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_load_u8 v2, v2, s[2:3] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -588,9 +587,8 @@ define amdgpu_ps void @sextload_P4_i16_not_natural_align_or_not_uniform_mmo_gfx1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_i16 v3, v2, s[0:1]
 ; GFX11-NEXT:    global_load_i16 v2, v2, s[2:3] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -662,9 +660,8 @@ define amdgpu_ps void @zextload_P4_i16_not_natural_align_or_not_uniform_mmo_gfx1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_u16 v3, v2, s[0:1]
 ; GFX11-NEXT:    global_load_u16 v2, v2, s[2:3] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
