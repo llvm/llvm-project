@@ -12,6 +12,7 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION20 %s
 // RUN: %clang_cc1 -cl-std=clc++1.0 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCLCPP-VERSION10 %s
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_device_enqueue -DSYNTAX
+// RUN: not %clang_cc1 -cl-std=CL1.1 -fint64-is-long-long %s 2>&1 | FileCheck --check-prefix=CHECK-INT64-IS-LONG-LONG %s
 
 #ifdef SYNTAX
 class test{
@@ -36,3 +37,4 @@ typedef int (^bl_t)(void);
 // CHECK-INVALID-OPENCL-VERSION12: warning: OpenCL C version 1.2 does not support the option '-cl-strict-aliasing'
 // CHECK-INVALID-OPENCL-VERSION20: warning: OpenCL C version 2.0 does not support the option '-cl-strict-aliasing'
 // CHECK-INVALID-OPENCLCPP-VERSION10: warning: C++ for OpenCL version 1.0 does not support the option '-cl-strict-aliasing'
+// CHECK-INT64-IS-LONG-LONG: error: option '-fint64-is-long-long' cannot be specified on this target
