@@ -660,7 +660,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        bool CodeGenOnly, ArrayRef<StringRef> BitcodeLibFuncs,
                        AddStreamFn IRAddStream,
-                       const std::vector<uint8_t> &CmdArgs) {
+                       const std::vector<uint8_t> &CmdArgs,
+                       vfs::FileSystem *FS) {
   llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -750,7 +751,10 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     }
 
     ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(Identifier);
+        FS ? FS->getBufferForFile(Identifier, /*FileSize=*/-1,
+                                  /*RequiresNullTerminator=*/true,
+                                  /*IsVolatile=*/false, /*IsText=*/false)
+           : llvm::MemoryBuffer::getFile(Identifier);
     if (!MBOrErr)
       return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
           Twine("Error loading imported file ") + Identifier + " : ",

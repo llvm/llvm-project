@@ -39,6 +39,10 @@ class Type;
 class Value;
 struct ValueInfo;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 // Callback to override the data layout string of an imported bitcode module.
 // The first argument is the target triple, the second argument the data layout
 // string from the input, or a default string. It will be used if the callback
@@ -249,10 +253,12 @@ struct ParserCallbacks {
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers
   /// to an empty file and IgnoreEmptyThinLTOIndexFile is true, then
-  /// this function will return nullptr.
+  /// this function will return nullptr. If FS is not nullptr, the file is read
+  /// through it instead of the real file system.
   LLVM_ABI Expected<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndexForFile(StringRef Path,
-                               bool IgnoreEmptyThinLTOIndexFile = false);
+                               bool IgnoreEmptyThinLTOIndexFile = false,
+                               vfs::FileSystem *FS = nullptr);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.
