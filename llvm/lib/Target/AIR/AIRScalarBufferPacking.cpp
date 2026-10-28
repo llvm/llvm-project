@@ -92,9 +92,14 @@ static bool scalarBufferPacking(Module &M) {
           if (auto *Callee = CI->getCalledFunction())
             CalledFns.insert(Callee);
 
+  // The kernels: the uncalled functions, or those marked "air-kernel" where
+  // any is; not a function whose address is taken (its signature is its
+  // callers').
+  bool Marked = any_of(M, [](Function &F) { return F.hasFnAttribute("air-kernel"); });
   SmallVector<Function *, 4> Funcs;
   for (Function &F : M)
-    if (!F.isDeclaration() && !CalledFns.count(&F))
+    if (!F.isDeclaration() && !CalledFns.count(&F) && !F.hasAddressTaken() &&
+        (!Marked || F.hasFnAttribute("air-kernel")))
       Funcs.push_back(&F);
 
   auto hasPrebakedArgMD = [&](Function &F) -> bool {

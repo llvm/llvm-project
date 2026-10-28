@@ -16,6 +16,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 
 using namespace llvm;
 
@@ -157,6 +159,58 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
   Type *I32 = Type::getInt32Ty(Ctx);
   Type *I1 = Type::getInt1Ty(Ctx);
   bool Changed = false;
+
+  // 32-bit read-modify-write operations without an AIR function (nand,
+  // uinc_wrap / udec_wrap: CUDA's atomicInc / atomicDec, float min / max) as
+  // compare-exchange loops, which are lowered below. Only for Metal: the
+  // portable form keeps the operation for consumers that have it (AGX).
+  if (!OrderingHints) {
+    SmallVector<AtomicRMWInst *, 4> Loops;
+    for (Function &F : M)
+      for (BasicBlock &BB : F)
+        for (Instruction &I : BB)
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+            Type *T = RMW->getValOperand()->getType();
+            unsigned AS =
+                RMW->getPointerOperand()->getType()->getPointerAddressSpace();
+            if ((T->isIntegerTy(32) || T->isFloatTy()) &&
+                buildAtomicName(AS != metal::AS::Threadgroup,
+                                RMW->getOperation(), T->isFloatTy())
+                    .empty())
+              Loops.push_back(RMW);
+          }
+    for (AtomicRMWInst *RMW : Loops) {
+      Type *T = RMW->getValOperand()->getType();
+      Value *Ptr = RMW->getPointerOperand();
+      BasicBlock *Entry = RMW->getParent();
+      BasicBlock *Exit = SplitBlock(Entry, RMW);
+      BasicBlock *Loop = BasicBlock::Create(Ctx, "atomicrmw.loop",
+                                            Entry->getParent(), Exit);
+      Entry->getTerminator()->setSuccessor(0, Loop);
+      IRBuilder<> EB(Entry->getTerminator());
+      Value *Init = EB.CreateAlignedLoad(I32, Ptr, RMW->getAlign(), true);
+      IRBuilder<> LB(Loop);
+      PHINode *Old = LB.CreatePHI(I32, 2);
+      Old->addIncoming(Init, Entry);
+      Value *OldV = T->isFloatTy() ? LB.CreateBitCast(Old, T) : Old;
+      Value *New = buildAtomicRMWValue(RMW->getOperation(), LB, OldV,
+                                       RMW->getValOperand());
+      if (T->isFloatTy())
+        New = LB.CreateBitCast(New, I32);
+      AtomicCmpXchgInst *CX = LB.CreateAtomicCmpXchg(
+          Ptr, Old, New, RMW->getAlign(), RMW->getOrdering(),
+          AtomicOrdering::Monotonic, RMW->getSyncScopeID());
+      CX->setVolatile(RMW->isVolatile());
+      Value *Loaded = LB.CreateExtractValue(CX, 0);
+      Old->addIncoming(Loaded, Loop);
+      LB.CreateCondBr(LB.CreateExtractValue(CX, 1), Exit, Loop);
+      IRBuilder<> XB(RMW);
+      RMW->replaceAllUsesWith(T->isFloatTy() ? XB.CreateBitCast(Loaded, T)
+                                             : Loaded);
+      RMW->eraseFromParent();
+      Changed = true;
+    }
+  }
 
   SmallVector<Instruction *, 16> Atomics;
   for (Function &F : M)

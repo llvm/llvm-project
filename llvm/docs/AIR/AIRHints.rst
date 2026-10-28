@@ -138,11 +138,20 @@ Address-space and type hints
 * Address space 4 (``air::GenericHintAS``): AGX's generic pointers.
   ``agx-lower-air`` maps it to AGX's generic address space and accepts casts
   to and from it; the portable passes leave atomics through such pointers as
-  LLVM atomics. A consumer without generic pointers must treat them as
-  device pointers (wrong for a generic pointer to threadgroup memory).
+  LLVM atomics. The Metal pipeline (``air-legalize-unsupported-ir``) makes
+  them device pointers (wrong for a generic pointer to threadgroup memory).
 * Integers of widths AIR does not have, up to 128 bits (128-bit atomics and
-  accesses, the odd widths optimizations make). A consumer without them must
-  legalize them.
+  accesses, the odd widths optimizations make). The Metal pipeline splits
+  those of 65 to 128 bits into two i64 limbs: arithmetic, shifts, bitwise
+  operations, comparisons, select, phi, loads and stores, bitcasts to
+  128-bit vectors, ``abs``, ``ctlz``, ``cttz``, ``ctpop`` and min / max
+  (checked against LLVM's own semantics with ``lli`` on 20000 random
+  operands, i128 and i96). Atomics of those widths have no AIR form.
+
+The Metal pipeline also turns 32-bit read-modify-writes that AIR has no
+function for (``uinc_wrap`` / ``udec_wrap``: CUDA's ``atomicInc`` /
+``atomicDec``, ``nand``, float min / max) into compare-exchange loops; the
+portable form keeps them for AGX.
 
 Testing the emulations
 ----------------------
@@ -171,8 +180,9 @@ Results (AGX Performance Simulator, 2026-10-27)
 Not done
 ========
 
-* The Metal side's handling of the address-space and type hints (and of the
-  ``byref`` attribute on constant buffers), and running the AIR on Metal.
+* Running the AIR on Metal (the Metal pipeline writes a ``.metallib`` for
+  246 of the 248 raised benchmark modules; the others need a 128-bit atomic
+  and a 64-bit compare-exchange, which AIR does not have).
 * Emulations of double precision atomics, and of the hardware approximations
   (``rcp``, ``rsqrt``, ``sin`` ...) to AGX's bits.
 * The mode across calls: each function starts from the default mode, as on
