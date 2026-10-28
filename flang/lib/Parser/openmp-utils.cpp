@@ -64,8 +64,7 @@ llvm::directive::VersionRange GetVersionRangeForDirective(
     maxVer = std::max(maxVer, v);
   }
   return llvm::directive::VersionRange{
-      static_cast<int>(static_cast<unsigned>(minVer)),
-      static_cast<int>(static_cast<unsigned>(maxVer))};
+      static_cast<int>(minVer.value()), static_cast<int>(maxVer.value())};
 }
 } // namespace descriptor
 

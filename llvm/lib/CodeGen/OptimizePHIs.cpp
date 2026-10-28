@@ -43,7 +43,6 @@ public:
 
 private:
   using InstrSet = SmallPtrSet<MachineInstr *, 16>;
-  using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
   bool IsSingleValuePHICycle(MachineInstr *MI, Register &SingleValReg,
                              InstrSet &PHIsInCycle);

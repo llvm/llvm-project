@@ -175,6 +175,8 @@ public:
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
+  VPBasicBlock *getInsertBlock() const { return InsertPt.getBlock(); }
+
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
