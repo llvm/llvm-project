@@ -10,6 +10,7 @@
 #define LLVM_SANDBOXIR_MODULE_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
@@ -27,14 +28,20 @@ class Type;
 class Constant;
 class GlobalAlias;
 class GlobalIFunc;
+class Instruction;
 
 /// In SandboxIR the Module is mainly used to access the list of global objects.
 class Module {
   llvm::Module &LLVMM;
   Context &Ctx;
+  IRBuilder<ConstantFolder> LLVMIRBuilder;
 
-  Module(llvm::Module &LLVMM, Context &Ctx) : LLVMM(LLVMM), Ctx(Ctx) {}
+  Module(llvm::Module &LLVMM, Context &Ctx)
+      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {}
   friend class Context; // For constructor.
+
+  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
+  friend class Instruction; // For getLLVMIRBuilder().
 
 public:
   Context &getContext() const { return Ctx; }

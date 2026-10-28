@@ -198,14 +198,10 @@
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif __has_attribute(visibility)
 #if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
-    defined(__MVS__) || defined(__CYGWIN__)
+    defined(__MVS__) || defined(__CYGWIN__) || defined(__MACH__) ||            \
+    defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI LLVM_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI __attribute__((visibility("default")))
-#define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
 #endif
@@ -272,10 +268,10 @@
   _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
-  _Pragma("warning(push)")                                                     \
-  _Pragma("warning(disable : 4996)")
+  __pragma(warning(push))                                                     \
+  __pragma(warning(disable : 4996))
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
-  _Pragma("warning(pop)")
+  __pragma(warning(pop))
 #else
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
@@ -350,6 +346,14 @@
 #else
 #define LLVM_LIKELY(EXPR) (EXPR)
 #define LLVM_UNLIKELY(EXPR) (EXPR)
+#endif
+
+// Indicate that a branch condition is hard to predict, so that the compiler
+// prefers a conditional move or select over a branch.
+#if __has_builtin(__builtin_unpredictable)
+#define LLVM_UNPREDICTABLE(EXPR) __builtin_unpredictable(EXPR)
+#else
+#define LLVM_UNPREDICTABLE(EXPR) (EXPR)
 #endif
 
 /// LLVM_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
@@ -475,8 +479,8 @@
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
 #else // MSVC < 19.43
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
-  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
-#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+  __pragma(warning(push)) __pragma(warning(disable : 4848))
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP __pragma(warning(pop))
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)

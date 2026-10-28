@@ -151,6 +151,10 @@ def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
+// A RangeList is a RangeSet with singleton closed ranges for each listed value.
+class RangeList<ArgIndex idx, list<int> values>
+    : RangeSet<idx, !foreach(value, values, [value, value])>;
+
 //
 // MISC
 //
@@ -1205,7 +1209,8 @@ class NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<ArgIndex ColIdx, string Buffer> {
                        ImmArgPrinter<"printTcgen05CollectorUsageOp">]>;
 }
 
-class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
+class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = "",
+                            bit IsAShift = 0> {
   LLVMType a_operand_type = !if(!eq(Space, "tensor"),
                                   llvm_tmem_ptr_ty, llvm_i64_ty);
   list<LLVMType> common_args = !listconcat(
@@ -1215,10 +1220,12 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
                                    llvm_i32_ty,      // idesc
                                    llvm_i1_ty],      // enable_input_d
                                   !if(!eq(IsSparse, 1), [llvm_tmem_ptr_ty], [])); // spmetadata
+  // Descriptors read shared memory; writes affect tensor memory and internal
+  // state. D may be read, and .ashift also writes A.
   list<IntrinsicProperty> common_intr_props = !listconcat(
-                            [IntrArgMemOnly, WriteOnly<ArgIndex<0>>],
-                            !if(!eq(Space, "tensor"), [ReadOnly<ArgIndex<1>>], [])
-                          );
+      [IntrWrite<[ArgMem, InaccessibleMem]>],
+      !if(!and(!eq(Space, "tensor"), !not(IsAShift)), [ReadOnly<ArgIndex<1>>], []),
+      !if(IsSparse, [ReadOnly<ArgIndex<5>>], []));
 
   string Prefix = "llvm.nvvm.tcgen05.mma";
   string SpSpaceKindStr = !if(IsSparse, ".sp", "")
@@ -1228,7 +1235,7 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
 
 class NVVM_TCGEN05_MMA<bit IsSparse, string Space,
                        bit IsAShift, bit IsScaleInputD>:
-        NVVM_TCGEN05_MMA_BASE<Space, IsSparse> {
+        NVVM_TCGEN05_MMA_BASE<Space, IsSparse, "", IsAShift> {
   string name = Prefix
                 # SpSpaceKindStr
                 # !if(IsScaleInputD, ".scale_d", "")
@@ -1259,7 +1266,7 @@ class NVVM_TCGEN05_MMA_WS<bit IsSparse, string Space, bit IsZeroColMask>:
 class NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE<bit IsSparse, string Space,
                                            int CtaGroup, bit IsAShift,
                                            bit IsScaleInputD>:
-        NVVM_TCGEN05_MMA_BASE<Space, IsSparse> {
+        NVVM_TCGEN05_MMA_BASE<Space, IsSparse, "", IsAShift> {
   string name = Prefix
                 # SpSpaceKindStr
                 # !if(IsScaleInputD, ".scale_d", "")
@@ -1341,6 +1348,13 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
                     string name = ""> :
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
+
+class NVVM_SP_IDX_ARGPROPS<ArgIndex IdxSizeIdx> {
+  list<IntrinsicProperty> Prop = [
+    RangeList<IdxSizeIdx, [2, 4]>,
+    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">]>
+  ];
+}
 
 // For im2col mode the number of offsets is (dim - 2).
 // For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
@@ -1680,24 +1694,19 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
-
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_mul_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-
-      def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
   }
+
+  foreach ftz = ["", "_ftz"] in
+    foreach sat = ["", "_sat"] in
+      def int_nvvm_fmul # ftz # sat :
+        DefaultAttrsIntrinsicFlags<[llvm_anyfloat_ty],
+                                   [LLVMMatchType<0>, LLVMMatchType<0>],
+                                   [llvm_i32_ty], // rnd
+                      [IntrNoMem, IntrSpeculatable, Commutative,
+                       IntrNoCreateUndefOrPoison, Range<ArgIndex<2>, 0, 4>,
+                       ArgInfo<ArgIndex<2>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
   //
   // Div
@@ -1933,7 +1942,7 @@ let TargetPrefix = "nvvm" in {
   //
   foreach a_type = ["s", "u"] in {
     foreach b_type = ["s", "u"] in {
-      def int_nvvm_idp4a_ # a_type # _ # b_type :
+      def int_nvvm_idp4a_ # a_type # _ # b_type : NVVMBuiltin,
           PureIntrinsic<[llvm_i32_ty],
               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
       def int_nvvm_idp2a_ # a_type # _ # b_type :
@@ -3566,6 +3575,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
 
+  def int_nvvm_prefetch_L1_32B_valid_addr
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.prefetch.L1.32B.valid_addr">;
+
   def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
 
@@ -4071,7 +4083,9 @@ foreach sparse = [0, 1] in {
         if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
             !listconcat(mma.common_intr_props,
-                        [Range<cta_group, 1, 3>,
+                        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_a
+                         ReadOnly<ArgIndex<!sub(nargs, 1)>>, // scale_b
+                         Range<cta_group, 1, 3>,
                          Range<collector_usage_a, 0, 4>,
                          Range<collector_usage_b, 0, 4>,
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
@@ -4140,7 +4154,8 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [Range<cta_group, 1, 3>,
+      [ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
+       Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
        ArgInfo<cta_group, [ArgName<"cta_group">]>,
@@ -4173,7 +4188,8 @@ foreach space = ["tensor", "shared"] in {
 
     defvar intrinsic_properties = !listconcat(
         mma.common_intr_props,
-        [Range<collector_usage_a, 0, 4>,
+        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // decompress_b
+         Range<collector_usage_a, 0, 4>,
          Range<collector_usage_b, 0, 4>,
          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
@@ -4205,7 +4221,10 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [Range<cta_group, 1, 3>,
+      [ReadOnly<ArgIndex<!sub(nargs, 3)>>, // scale_a
+       ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_b
+       ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
+       Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
        ArgInfo<cta_group, [ArgName<"cta_group">]>,
@@ -4267,5 +4286,42 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+
+//
+// spcompress intrinsics
+//
+
+class SPCompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_any_vector_int_ty,  // data
+     llvm_i32_ty],            // spdesc
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [4]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spcompress : SPCompress;
+
+//
+// spdecompress intrinsics
+//
+
+class SPDecompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_any_vector_int_ty], // data
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [2, 4, 8, 16]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spdecompress : SPDecompress;
 
 } // let TargetPrefix = "nvvm"

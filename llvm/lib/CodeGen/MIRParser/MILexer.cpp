@@ -280,6 +280,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_inlineasm_br_indirect_target)
       .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
+      .Case("cleanup-funclet-entry", MIToken::kw_cleanup_funclet_entry)
+      .Case("ehcont-target", MIToken::kw_ehcont_target)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
       .Case("floatpred", MIToken::kw_floatpred)
@@ -641,6 +643,17 @@ static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexInfinityLiteral(Cursor C, MIToken &Token) {
+  if ((C.peek() != '+' && C.peek() != '-') || C.peek(1) != 'i' ||
+      C.peek(2) != 'n' || C.peek(3) != 'f' || isIdentifierChar(C.peek(4)))
+    return std::nullopt;
+
+  Cursor Range = C;
+  C.advance(4);
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -780,6 +793,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();
   if (Cursor R = maybeLexFloatHexBits(C, Token))
+    return R.remaining();
+  if (Cursor R = maybeLexInfinityLiteral(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();

@@ -30,7 +30,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -38,23 +37,6 @@ using namespace llvm;
 
 #define GET_REGINFO_TARGET_DESC
 #include "X86GenRegisterInfo.inc"
-
-static cl::opt<bool>
-EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
-          cl::desc("Enable use of a base pointer for complex stack frames"));
-
-static cl::opt<bool>
-    DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
-                            cl::init(false),
-                            cl::desc("Disable two address hints for register "
-                                     "allocation"));
-
-static cl::opt<unsigned> SetjmpCSRWarningThreshold(
-    "x86-setjmp-csr-warning-threshold", cl::Hidden, cl::init(50),
-    cl::desc("Basic block count threshold for emitting a warning about "
-             "callee-saved registers reserved due to setjmp"));
-
-extern cl::opt<bool> X86EnableAPXForRelocation;
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
@@ -130,10 +112,9 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 
   // Keep using non-rex2 register class when APX feature (EGPR/NDD/NF) is not
   // enabled for relocation.
-  if (!X86EnableAPXForRelocation && isNonRex2RegClass(RC))
-    return RC;
-
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  if (!Subtarget.getCLOpts().enable_apx_for_relocation && isNonRex2RegClass(RC))
+    return RC;
 
   const TargetRegisterClass *Super = RC;
   auto I = RC->superclasses().begin();
@@ -649,7 +630,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
         for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
           Reserved.set(SubReg);
       }
-    if (NumReservedCSRs && MF.size() > SetjmpCSRWarningThreshold &&
+    if (NumReservedCSRs &&
+        MF.size() > ST.getCLOpts().setjmp_csr_warning_threshold &&
         !MF.getRegInfo().reservedRegsFrozen()) {
       MF.getContext().reportWarning(
           SMLoc(), Twine(NumReservedCSRs) +
@@ -808,7 +790,7 @@ bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (!EnableBasePointer)
+  if (!MF.getSubtarget<X86Subtarget>().getCLOpts().use_base_pointer)
     return false;
 
   // When we need stack realignment, we can't address the stack from the frame
@@ -1180,7 +1162,7 @@ bool X86RegisterInfo::getRegAllocationHints(
     return BaseImplRetVal;
 
   if (ID != X86::TILERegClassID) {
-    if (DisableRegAllocNDDHints || !ST.hasNDD() ||
+    if (ST.getCLOpts().disable_regalloc_hints_for_ndd || !ST.hasNDD() ||
         !TRI.isGeneralPurposeRegisterClass(&RC))
       return BaseImplRetVal;
 
