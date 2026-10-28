@@ -47,9 +47,21 @@ FloatFormatSpec floatFormatSpecFromSemantics(const llvm::fltSemantics &sem);
 /// Returns floatFormatSpecFromSemantics of `floatTy`'s semantics.
 FloatFormatSpec floatFormatSpecFromFloatType(FloatType floatTy);
 
-// The emitter takes a carrier `srcBits` of i32 or i64 (or a static or scalable
+// Both emitters take a carrier `srcBits` of i32 or i64 (or a static or scalable
 // shaped type of it) with the source encoding in its low bits, higher bits
-// ignored, and returns the destination encoding zero-extended in the same type.
+// ignored, and return the destination encoding zero-extended in the same type.
+// The truncation needs src.mantBits + dst.mantBits + 4 carrier bits.
+
+/// Emits the truncation of `src` (f16, bf16, f32 or f64) to the narrower `dst`,
+/// rounded once in `rnd`, as APFloat::convert does (NaN sign and payload
+/// included); a `dst` without Inf and NaN saturates (NaN gives +max-finite).
+/// An unsigned `dst` gets x rounded with its sign, the sign then dropped, as
+/// APFloat does (it asserts where that is a negative NaN; here that is the
+/// NaN, or max-finite downward). `dst`'s exponent range must lie inside
+/// `src`'s (asserted).
+Value emitNarrowFloatTrunc(ImplicitLocOpBuilder &b, Value srcBits,
+                           const FloatFormatSpec &src,
+                           const FloatFormatSpec &dst, RoundingMode rnd);
 
 /// Emits the exact extension of the narrow `src` to `dst` (f16, bf16, f32 or
 /// f64), which must have `src`'s precision and smallest subnormal (asserted);

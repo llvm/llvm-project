@@ -4,6 +4,9 @@ add_mlir_unittest(MLIRArithTests
 )
 mlir_target_link_libraries(MLIRArithTests
   PRIVATE
+  MLIRArithTransforms
   MLIRArithUtils
   MLIRAsmParser
+  MLIRFuncDialect
+  MLIRTransformUtils
 )
