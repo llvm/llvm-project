@@ -24,6 +24,7 @@ namespace meta {
 
 using info = decltype(^^int);
 
+/// \return \c true if \p __r represents an entity whose underlying entity is a type; \c false otherwise.
 consteval bool is_type(info __r) {
     return __builtin_meta_is_type(__r);
 }
