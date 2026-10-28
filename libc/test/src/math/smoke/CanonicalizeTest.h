@@ -51,8 +51,9 @@ public:
     TEST_SPECIAL(cx, neg_inf, 0, 0);
     EXPECT_FP_EQ(cx, neg_inf);
 
-    TEST_SPECIAL(cx, sNaN, 1, FE_INVALID);
+    TEST_SPECIAL(cx, sNaN, 0, FE_INVALID);
     EXPECT_FP_EQ(cx, aNaN);
+    EXPECT_FALSE(FPBits(cx).is_signaling_nan());
   }
 
   void testX64_80SpecialNumbers(CanonicalizeFunc f) {
