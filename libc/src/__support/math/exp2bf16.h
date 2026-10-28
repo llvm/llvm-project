@@ -140,6 +140,14 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
     }
   }
 
+  // This interval rounds like 1 + x * log(2) in every bfloat16 mode.
+  // Double intermediates avoid underflow in the float polynomial for tiny x.
+  if (LIBC_UNLIKELY(x_bits.abs().uintval() <= 0x3980U)) {
+    double xd = static_cast<float>(x);
+    return fputil::cast<bfloat16>(
+        fputil::multiply_add(xd, 0x1.62e42fefa39efp-1, 1.0));
+  }
+
   // For inputs not handled above in -134.0 < x < 128.0,
   // we perform the following range reduction:
   // x = hi + mid + lo
