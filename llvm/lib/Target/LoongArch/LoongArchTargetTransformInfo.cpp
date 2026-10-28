@@ -167,13 +167,12 @@ InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (CostKind == TTI::TCK_RecipThroughput && ST->is64Bit() &&
       ST->hasExtLSX() && VTy && isPowerOf2_32(VTy->getNumElements())) {
     unsigned Size = VTy->getPrimitiveSizeInBits().getFixedValue();
+    EVT VT = getTLI()->getValueType(DL, Src);
     if (Size >= 16 && Size < 128 &&
-        getTLI()->getTypeAction(Src->getContext(),
-                                getTLI()->getValueType(DL, Src)) ==
+        getTLI()->getTypeAction(Src->getContext(), VT) ==
             TargetLowering::TypeWidenVector &&
-        getTLI()->allowsMemoryAccessForAlignment(
-            Src->getContext(), DL, getTLI()->getValueType(DL, Src),
-            AddressSpace, Alignment))
+        getTLI()->allowsMemoryAccessForAlignment(Src->getContext(), DL, VT,
+                                                 AddressSpace, Alignment))
       return 1;
   }
 
