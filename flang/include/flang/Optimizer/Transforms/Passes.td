@@ -470,7 +470,10 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     Loop Versioning pass adds a check and two variants of a loop when the input
     array is an assumed shape array, to optimize for the (often common) case where
     an array has element sized stride. The element sizes stride allows some
-    loops to be vectorized as well as other loop optimizations.
+    loops to be vectorized as well as other loop optimizations. Accesses through
+    a local POINTER associated with such an array are handled the same way. A
+    loop that is versioned anyway also checks the local POINTER arrays that it
+    accesses if their pointer assignment is not visible.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
   let options = [
