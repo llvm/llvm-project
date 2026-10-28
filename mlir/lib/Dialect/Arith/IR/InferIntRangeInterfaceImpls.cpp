@@ -59,6 +59,9 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(getResult(), *result);
     return;
   }
+
+  auto range = IntegerValueRange::getMaxRange(getResult());
+  setResultRange(getResult(), range.getValue());
 }
 
 //===----------------------------------------------------------------------===//

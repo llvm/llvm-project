@@ -229,8 +229,14 @@ func.func @no_miscompile_block_arg_address_reuse(%cond: i1) {
 
 // CHECK-LABEL:   func.func @dense_resource_branch(
 // CHECK-SAME:      %[[ARG0:.*]]: i1) -> vector<4xi32> {
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense<5> : vector<4xi32>
-// CHECK:           return %[[CONSTANT_0]] : vector<4xi32>
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense_resource<blob1> : vector<4xi32>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant dense<5> : vector<4xi32>
+// CHECK:           %[[IF_0:.*]] = scf.if %[[ARG0]] -> (vector<4xi32>) {
+// CHECK:             scf.yield %[[CONSTANT_0]] : vector<4xi32>
+// CHECK:           } else {
+// CHECK:             scf.yield %[[CONSTANT_1]] : vector<4xi32>
+// CHECK:           }
+// CHECK:           return %[[IF_0]] : vector<4xi32>
 // CHECK:         }
 func.func @dense_resource_branch(%condition: i1) -> vector<4xi32> {
   %resource = arith.constant dense_resource<blob1> : vector<4xi32>
