@@ -14,10 +14,6 @@ define i32 @exit_value_guarded_positive_stride(i32 %s, i32 %n) {
 ; CHECK:       bail:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       ph:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
-; CHECK:       exit:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 [[S]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[SMAX]], [[S]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 1)
@@ -26,6 +22,10 @@ define i32 @exit_value_guarded_positive_stride(i32 %s, i32 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[UMIN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:

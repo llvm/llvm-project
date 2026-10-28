@@ -18,18 +18,13 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[WHILE_BODY_PREHEADER15:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
-; CHECK-NEXT:    [[IND_END:%.*]] = and i32 [[BLOCKSIZE]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_END7:%.*]] = getelementptr i8, ptr [[PSRCA:%.*]], i32 [[TMP0]]
-; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i32 [[TMP0]]
-; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRCB:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRCA]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[NEXT_GEP16:%.*]] = getelementptr i8, ptr [[PSRCB]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRCA:%.*]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP16:%.*]] = getelementptr i8, ptr [[PSRCB:%.*]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
 ; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i16>, ptr [[NEXT_GEP16]], align 2
@@ -43,6 +38,11 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[IND_END:%.*]] = and i32 [[BLOCKSIZE]], 7
+; CHECK-NEXT:    [[TMP13:%.*]] = shl i32 [[N_VEC]], 1
+; CHECK-NEXT:    [[IND_END7:%.*]] = getelementptr i8, ptr [[PSRCA]], i32 [[TMP13]]
+; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP13]]
+; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRCB]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[BLOCKSIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[WHILE_BODY_PREHEADER15]]
 ; CHECK:       while.body.preheader13:
