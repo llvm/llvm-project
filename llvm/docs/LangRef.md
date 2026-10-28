@@ -3334,13 +3334,9 @@ The following attributes are currently accepted:
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
 
-`"range"(iN %val, iN %lower_bound, iN %upper_bound, i1 %inclusive)`
+`"range"(iN %val, iN %lower_bound, iN %upper_bound)`
 :   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
-    `%val`, except that `%inclusive` determines whether the upper bound is
-    inclusive or exclusive and `%upper_bound` is always allowed to be equal to
-    `%lower_bound`. `%lower_bound == %upper_bound` and `%inclusive` being
-    false implies an empty range, while `%lower_bound == %upper_bound - 1` and
-    `%inclusive` being true implies a full range.
+    `%val`.
 
 For example:
 
@@ -14133,7 +14129,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-
+   
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -14142,7 +14138,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-
+   
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -14151,7 +14147,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-
+   
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -14167,14 +14163,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-
+   
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-
+   
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -14182,7 +14178,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %x)
      ret void
    }
-
+   
    ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
    ; @frameaddress names is torn down before @take_ptr runs.
    define void @invalid_frameaddress() {
