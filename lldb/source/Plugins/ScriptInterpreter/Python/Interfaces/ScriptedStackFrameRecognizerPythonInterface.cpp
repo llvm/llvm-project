@@ -39,18 +39,16 @@ ScriptedStackFrameRecognizerPythonInterface::CreatePluginObject(
 lldb::ValueObjectListSP
 ScriptedStackFrameRecognizerPythonInterface::GetRecognizedArguments(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::ValueObjectListSP>("get_recognized_arguments", error,
-                                           frame_sp);
+  return LogAndDefault(
+      Dispatch<lldb::ValueObjectListSP>("get_recognized_arguments", frame_sp),
+      LLVM_PRETTY_FUNCTION);
 }
 
 bool ScriptedStackFrameRecognizerPythonInterface::ShouldHide(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("should_hide", error, frame_sp);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("should_hide", frame_sp), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
 
   return obj->GetBooleanValue();
@@ -59,41 +57,38 @@ bool ScriptedStackFrameRecognizerPythonInterface::ShouldHide(
 lldb::StackFrameSP
 ScriptedStackFrameRecognizerPythonInterface::SelectMostRelevantFrame(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::StackFrameSP>("select_most_relevant_frame", error,
-                                      frame_sp);
+  return LogAndDefault(
+      Dispatch<lldb::StackFrameSP>("select_most_relevant_frame", frame_sp),
+      LLVM_PRETTY_FUNCTION);
 }
 
 lldb::ValueObjectSP ScriptedStackFrameRecognizerPythonInterface::GetException(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::ValueObjectSP>("get_exception", error, frame_sp);
+  return LogAndDefault(Dispatch<lldb::ValueObjectSP>("get_exception", frame_sp),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 std::string ScriptedStackFrameRecognizerPythonInterface::GetStopDescription(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("get_stop_description", error, frame_sp);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_stop_description", frame_sp), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return "";
+
   return obj->GetStringValue().str();
 }
 
 lldb::ThreadPlanSP
 ScriptedStackFrameRecognizerPythonInterface::GetStepThroughPlan(
     lldb::ThreadSP thread_sp) {
-  Status error;
-  StructuredData::DictionarySP dict_sp = Dispatch<StructuredData::DictionarySP>(
-      "get_step_through_plan", error, thread_sp);
-  if (error.Fail())
-    return {};
+  StructuredData::DictionarySP dict_sp =
+      LogAndDefault(Dispatch<StructuredData::DictionarySP>(
+                        "get_step_through_plan", thread_sp),
+                    LLVM_PRETTY_FUNCTION);
 
   // The return value is an StructuredData::Dictionary with the class name and
   // the extra args for the call:
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION,
-                                                    dict_sp, error))
+  if (!dict_sp || !dict_sp->IsValid())
     return {};
 
   StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");

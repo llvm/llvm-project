@@ -41,7 +41,7 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP14]], i32 [[VEC_PHI3]])
 ; CHECK-NEXT:    [[TMP17]] = select i1 [[ACTIVE_LANE_MASK]], i32 [[TMP15]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP18]] = select i1 [[ACTIVE_LANE_MASK2]], i32 [[TMP16]], i32 [[VEC_PHI3]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX_NEXT]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT7]] = icmp ult i64 [[TMP19]], [[UMAX]]

@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 
 namespace llvm {
@@ -19,9 +20,6 @@ template <typename T> class Expected;
 template <typename T> class IntrusiveRefCntPtr;
 class Module;
 class MemoryBufferRef;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {

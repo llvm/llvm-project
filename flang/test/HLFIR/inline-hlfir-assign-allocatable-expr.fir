@@ -14,8 +14,8 @@ func.func @test_allocatable_elemental_assign(%arg0: !fir.ref<!fir.box<!fir.heap<
   %c1 = arith.constant 1 : index
 
   // Declare the allocatables
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %c:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %c:2 = hlfir.declare %arg1 uniq_name("_QFEc") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
 
   // Load a to get its shape
   %a_box = fir.load %a#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
@@ -64,7 +64,7 @@ func.func @test_allocatable_nontrivial_type(%arg0: !fir.ref<!fir.box<!fir.heap<!
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>)
 
   // Character elemental - should NOT be inlined even with the option
   %elemental = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.char<1,10>> {
@@ -88,8 +88,8 @@ func.func @test_allocatable_variable_rhs(%arg0: !fir.ref<!fir.box<!fir.heap<!fir
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  %a:2 = hlfir.declare %arg0 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) uniq_name("_QFEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
 
   // Variable RHS - NOT an hlfir.expr, so the allocatable pattern should NOT match
   hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>

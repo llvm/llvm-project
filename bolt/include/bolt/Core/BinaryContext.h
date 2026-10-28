@@ -320,6 +320,13 @@ public:
     MIB = std::move(TargetBuilder);
   }
 
+  /// Set up target-specific relocation handling.
+  void initializeRelocationHandler(std::unique_ptr<RelocationHandler> Handler) {
+    assert(Handler && "expected a relocation handler");
+    assert(!RelocHandler && "relocation handler is already initialized");
+    RelocHandler = std::move(Handler);
+  }
+
   /// Return function fragments to skip.
   const std::unordered_set<BinaryFunction *> &getFragmentsToSkip() {
     return FragmentsToSkip;
@@ -729,7 +736,6 @@ public:
   std::unique_ptr<DWARFContext> DwCtx;
 
   std::unique_ptr<Triple> TheTriple;
-
   std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
@@ -751,6 +757,8 @@ public:
   std::unique_ptr<const MCInstrAnalysis> MIA;
 
   std::unique_ptr<MCPlusBuilder> MIB;
+
+  std::unique_ptr<RelocationHandler> RelocHandler;
 
   std::unique_ptr<const MCRegisterInfo> MRI;
 
@@ -987,6 +995,11 @@ public:
 
   bool isMachO() const { return TheTriple->isOSBinFormatMachO(); }
 
+  const RelocationHandler &getRelocationHandler() const {
+    assert(RelocHandler && "relocation handler is not initialized");
+    return *RelocHandler;
+  }
+
   bool isAArch64() const {
     return TheTriple->getArch() == llvm::Triple::aarch64;
   }
@@ -1211,6 +1224,9 @@ public:
   const char *getInjectedColdCodeSectionName() const {
     return ".text.injected.cold";
   }
+
+  /// Return true if \p A should be emitted before \p B in code section order.
+  bool compareSectionNames(StringRef A, StringRef B) const;
 
   ErrorOr<BinarySection &> getGdbIndexSection() const {
     return getUniqueSectionByName(".gdb_index");

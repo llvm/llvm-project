@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 class StdExpectedDataFormatterTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
-    TEST_WITH_PDB_DEBUG_INFO = True
 
     @add_test_categories(["msvcstl"])
     def test_msvcstl(self):

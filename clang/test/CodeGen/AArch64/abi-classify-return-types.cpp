@@ -76,3 +76,23 @@ HFANoUniqueEmpty ret_hfa_nua_empty() { return {}; }
 
 _Complex float ret_complex_float() { return 1.0f; }
 // CHECK: define{{.*}} { float, float } @_Z17ret_complex_floatv()
+
+// Empty records and zero-size types are ignored as returns (void).
+Empty ret_empty() { return {}; }
+// CHECK: define{{.*}} void @_Z9ret_emptyv()
+
+union EmptyUnion {};
+EmptyUnion ret_empty_union() { return {}; }
+// CHECK: define{{.*}} void @_Z15ret_empty_unionv()
+
+struct ZeroSize {
+  int arr[0];
+};
+ZeroSize ret_zerosize() { return {}; }
+// CHECK: define{{.*}} void @_Z12ret_zerosizev()
+
+struct NestedZeroSize {
+  ZeroSize inner;
+};
+NestedZeroSize ret_nested_zerosize() { return {}; }
+// CHECK: define{{.*}} void @_Z19ret_nested_zerosizev()
