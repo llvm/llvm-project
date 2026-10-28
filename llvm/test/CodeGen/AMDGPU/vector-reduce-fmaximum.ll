@@ -260,11 +260,9 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v1
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v2
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    v_max_f32_e32 v2, v0, v1
