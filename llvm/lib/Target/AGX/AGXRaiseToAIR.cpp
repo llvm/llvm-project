@@ -534,9 +534,9 @@ static bool scalarizeDoubles(Instruction &I) {
 }
 
 /// The floating point mode register (llvm.agx.set.fpmode) as a value at each
-/// operation that reads it: llvm.agx.get.fpmode and the constrained
-/// intrinsics (the mode has their denormal modes, and the rounding of dynamic
-/// ones), for their emulations. The values are
+/// operation that reads it: llvm.agx.get.fpmode, the constrained intrinsics
+/// and the exact minimum / maximum hints (the mode has their denormal modes,
+/// and the rounding of dynamic ones), for their emulations. The values are
 /// freezes of the mode, which keep them through the promotion; the mode
 /// starts as AGX's lowering (AGXLowerFPEnv) assumes, rounding to nearest
 /// even with the function's denormal modes.
@@ -551,7 +551,10 @@ static DenseMap<Instruction *, FreezeInst *> trackMode(Function &F) {
       Sets.push_back(II);
     else if (II->getIntrinsicID() == Intrinsic::agx_get_fpmode)
       Reads.push_back(II);
-    else if (isa<ConstrainedFPIntrinsic>(II))
+    else if (isa<ConstrainedFPIntrinsic>(II) ||
+             is_contained({Intrinsic::minimum, Intrinsic::maximum,
+                           Intrinsic::minimumnum, Intrinsic::maximumnum},
+                          II->getIntrinsicID()))
       Reads.push_back(II);
   }
   if (Reads.empty())
@@ -850,6 +853,31 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
   }
   auto *RoundingC = dyn_cast<ConstantInt>(Rounding);
   bool Nearest = RoundingC && RoundingC->isOne();
+  // Denormals of the operands' format (the result's without floating point
+  // operands) flush to zero, operands and result, where the mode says so
+  // (its bit 4 for float, 5 for half), as AGX does.
+  Type *FlushTy = A.empty() ? Ret->getScalarType()
+                            : A[0]->getType()->getScalarType();
+  if (!FlushTy->isFloatingPointTy())
+    FlushTy = Ret->getScalarType();
+  Value *Flush = nullptr;
+  if (Mode && (FlushTy->isFloatTy() || FlushTy->isHalfTy()) && !DblIn &&
+      !DblOut)
+    Flush = B.CreateICmpNE(
+        B.CreateAnd(Mode, FlushTy->isFloatTy() ? 0x10 : 0x20), B.getInt32(0));
+  auto Flushed = [&](Value *X) {
+    if (!Flush || X->getType()->getScalarType() != FlushTy)
+      return X;
+    Value *Tiny = B.CreateFCmpOLT(
+        B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+        ConstantFP::get(X->getType(), APFloat::getSmallestNormalized(
+                                          FlushTy->getFltSemantics())));
+    Value *Zero = B.CreateBinaryIntrinsic(
+        Intrinsic::copysign, ConstantFP::get(X->getType(), 0.0), X);
+    return B.CreateSelect(Flush, B.CreateSelect(Tiny, Zero, X), X);
+  };
+  for (Value *&X : A)
+    X = Flushed(X);
   // The operation of a constrained intrinsic, or of an instruction.
   StringRef Base = Op;
   if (Base.consume_front("call:llvm.experimental.constrained."))
@@ -1096,35 +1124,12 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     }
     if (CanonicalNaN)
       R = B.CreateSelect(IsNaN(R), C(APInt::getSignedMaxValue(W)), R);
-    return Fin(B.CreateBitCast(R, Ret));
+    return Fin(Flushed(B.CreateBitCast(R, Ret)));
   }
   if (Op.starts_with("call:llvm.experimental.constrained.")) {
     // Rounded to nearest by the AIR operation, and in a directed rounding
     // computed in double precision in that direction and rounded again in
     // it (exact: the values of the format are doubles).
-    // Denormals of the operands' format (the result's without floating
-    // point operands) flush to zero, operands and result, where the mode
-    // says so (its bit 4 for float, 5 for half), as AGX does.
-    Type *FlushTy = A[0]->getType()->getScalarType();
-    if (!FlushTy->isFloatingPointTy())
-      FlushTy = Ret->getScalarType();
-    Value *Flush = nullptr;
-    if (Mode && (FlushTy->isFloatTy() || FlushTy->isHalfTy()))
-      Flush = B.CreateICmpNE(
-          B.CreateAnd(Mode, FlushTy->isFloatTy() ? 0x10 : 0x20), B.getInt32(0));
-    auto Flushed = [&](Value *X) {
-      if (!Flush || X->getType()->getScalarType() != FlushTy)
-        return X;
-      Value *Tiny = B.CreateFCmpOLT(
-          B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
-          ConstantFP::get(X->getType(), APFloat::getSmallestNormalized(
-                                            FlushTy->getFltSemantics())));
-      Value *Zero = B.CreateBinaryIntrinsic(
-          Intrinsic::copysign, ConstantFP::get(X->getType(), 0.0), X);
-      return B.CreateSelect(Flush, B.CreateSelect(Tiny, Zero, X), X);
-    };
-    for (Value *&X : A)
-      X = Flushed(X);
     Value *Directed = nullptr;
     if (!Nearest)
       Directed = directed(B, Base, A, Ret, Rounding, Lib, CanonicalNaN);
