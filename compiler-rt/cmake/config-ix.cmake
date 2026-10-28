@@ -45,7 +45,7 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
   endif ()
   if (COMPILER_RT_USE_BUILTINS_LIBRARY)
     # TODO: remote this check once we address PR51389.
-    if (${COMPILER_RT_BUILTINS_LIBRARY})
+    if (COMPILER_RT_BUILTINS_LIBRARY)
       list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
     endif()
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
@@ -384,7 +384,7 @@ function(is_valid_apple_platform platform is_valid_out)
   if ("${platform}" STREQUAL "")
     message(FATAL_ERROR "platform cannot be empty")
   endif()
-  if ("${platform}" MATCHES "^(osx|((ios|watchos|tvos)(sim)?))$")
+  if ("${platform}" MATCHES "^(osx|((ios|watchos|tvos|xros)(sim)?))$")
     set(is_valid TRUE)
   endif()
   set(${is_valid_out} ${is_valid} PARENT_SCOPE)
@@ -408,6 +408,10 @@ function(get_xcrun_platform_from_apple_platform platform out_var)
     set(xcrun_platform "appletvsimulator")
   elseif ("${platform}" STREQUAL "tvos")
     set(xcrun_platform "appletvos")
+  elseif ("${platform}" STREQUAL "xrossim")
+    set(xcrun_platform "xrsimulator")
+  elseif ("${platform}" STREQUAL "xros")
+    set(xcrun_platform "xros")
   else()
     # TODO(dliew): Make this an error.
     message(WARNING "\"${platform}\" is not a handled apple platform")
@@ -432,6 +436,10 @@ if(APPLE)
   if(COMPILER_RT_ENABLE_TVOS)
     find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
     find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  endif()
+  if(COMPILER_RT_ENABLE_XROS)
+    find_darwin_sdk_dir(DARWIN_xrossim_SYSROOT xrsimulator)
+    find_darwin_sdk_dir(DARWIN_xros_SYSROOT xros)
   endif()
 
   if(NOT DARWIN_osx_SYSROOT)
@@ -473,6 +481,26 @@ if(APPLE)
     set(DARWIN_tvossim_SANITIZER_MIN_VER_FLAG
       ${DARWIN_tvossim_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
   endif()
+  if(COMPILER_RT_ENABLE_XROS)
+    list(APPEND DARWIN_EMBEDDED_PLATFORMS xros)
+    # xrOS does not support -mxros-version-min, the flag -mtargetos is used
+    # instead.
+    set(DARWIN_xros_MIN_VER 1)
+    set(DARWIN_xros_MIN_VER_FLAG -mtargetos)
+    set(DARWIN_xros_MTARGETOS_PREFIX visionos)
+    set(DARWIN_xros_SANITIZER_MIN_VER_FLAG
+      ${DARWIN_xros_MIN_VER_FLAG}=${DARWIN_xros_MTARGETOS_PREFIX}${DARWIN_xros_MIN_VER})
+    set(DARWIN_xrossim_MIN_VER_FLAG -mtargetos)
+    set(DARWIN_xrossim_MTARGETOS_PREFIX xros)
+    set(DARWIN_xrossim_MTARGETOS_SUFFIX -simulator)
+    set(DARWIN_xrossim_SANITIZER_MIN_VER_FLAG
+      ${DARWIN_xrossim_MIN_VER_FLAG}=${DARWIN_xrossim_MTARGETOS_PREFIX}${DARWIN_xros_MIN_VER}${DARWIN_xrossim_MTARGETOS_SUFFIX})
+  endif()
+
+  # DriverKit can't support C++ exceptions.
+  foreach(os ios osx xros)
+    set(DARWIN_driverkit_${os}_CXX_EXCEPTIONS OFF)
+  endforeach()
 
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
@@ -740,6 +768,8 @@ else()
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
   filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
+  filter_available_targets(COPYPROF_SUPPORTED_ARCH ${ALL_COPYPROF_SUPPORTED_ARCH})
+
 endif()
 
 if (MSVC)
@@ -826,8 +856,9 @@ else()
   set(COMPILER_RT_HAS_DFSAN FALSE)
 endif()
 
+# FIXME: LSan is broken on Android and there is no evidence it is used.
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|Fuchsia")
+    OS_NAME MATCHES "Darwin|Linux|NetBSD|Fuchsia")
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
@@ -887,8 +918,9 @@ else()
   set(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS|Haiku")
+if ((COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
+     OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS|Haiku")
+    OR (COMPILER_RT_GPU_BUILD AND UBSAN_SUPPORTED_ARCH))
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
@@ -915,8 +947,15 @@ else()
   set(COMPILER_RT_HAS_CFI FALSE)
 endif()
 
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND COPYPROF_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_COPYPROF TRUE)
+else()
+  set(COMPILER_RT_HAS_COPYPROF FALSE)
+endif()
+
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.
-if (SCUDO_STANDALONE_SUPPORTED_ARCH AND
+if (SCUDO_STANDALONE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     COMPILER_RT_BUILD_SANITIZERS AND
     "scudo_standalone" IN_LIST COMPILER_RT_SANITIZERS_TO_BUILD AND
     OS_NAME MATCHES "Linux" AND

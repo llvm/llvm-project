@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -135,7 +134,6 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
                                   const TargetLibraryInfo *TLI,
                                   DomTreeUpdater *DTU) {
   Instruction *T = BB->getTerminator();
-  IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
   if (auto *BI = dyn_cast<CondBrInst>(T)) {
@@ -152,6 +150,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Dest1);
 
       // Transfer the metadata to the new branch instruction.
@@ -172,10 +171,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
+      // it will adjust its PHI nodes.
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Destination);
 
       // Transfer the metadata to the new branch instruction.
@@ -255,8 +255,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       // Otherwise, check to see if the switch only branches to one destination.
-      // We do this by reseting "TheOnlyDest" to null when we find two non-equal
-      // destinations.
+      // We do this by resetting "TheOnlyDest" to null when we find two
+      // non-equal destinations.
       if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
@@ -274,6 +274,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
+      IRBuilder<> Builder(SI);
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
 
@@ -311,6 +312,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Otherwise, we can fold this switch into a conditional branch
       // instruction if it has only one non-default destination.
       auto FirstCase = *SI->case_begin();
+      IRBuilder<> Builder(SI);
       Value *Cond = Builder.CreateICmpEQ(SI->getCondition(),
           FirstCase.getCaseValue(), "cond");
 
@@ -325,6 +327,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         NewBr->setMetadata(LLVMContext::MD_prof,
                            MDBuilder(BB->getContext())
                                .createBranchWeights(CaseWeight, DefWeight));
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewBr, DEBUG_TYPE);
       }
 
       // Update make.implicit metadata to the newly-created conditional branch.
@@ -347,6 +351,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
+      IRBuilder<> Builder(IBI);
       Builder.CreateBr(TheOnlyDest);
 
       BasicBlock *SuccToKeep = TheOnlyDest;
@@ -416,12 +421,6 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   // general.
   if (I->isEHPad())
     return false;
-
-  if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
-    if (DLI->getLabel())
-      return false;
-    return true;
-  }
 
   if (auto *CB = dyn_cast<CallBase>(I))
     if (isRemovableAlloc(CB, TLI))
@@ -602,8 +601,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 /// true when there are no uses or multiple uses that all refer to the same
 /// value.
 static bool areAllUsesEqual(Instruction *I) {
-  Value::user_iterator UI = I->user_begin();
-  Value::user_iterator UE = I->user_end();
+  Instruction::user_iterator UI = I->user_begin();
+  Instruction::user_iterator UE = I->user_end();
   if (UI == UE)
     return true;
 
@@ -1205,7 +1204,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                       << " and " << Succ->getName() << " : "
                       << CommonPred->getName() << "\n");
 
-  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // 'BB' and 'BB->Pred' are loop latches, bail out to preserve inner loop
   // metadata.
   //
   // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
@@ -1232,7 +1231,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   //
   // CFG Before
   //
-  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB is while.cond.exit, attached with loop metadata md2.
   // BB->Pred is for.body, attached with loop metadata md1.
   //
   //      entry
@@ -1257,7 +1256,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // for.body is attached with md2, and md1 is dropped.
   // If LoopSimplify runs later (as a part of loop pass), it could create
   // dedicated exits for inner-loop (essentially adding `while.cond.exit`
-  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  // back), but it won't see 'md1' nor restore it for the inner-loop.
   //
   //       entry
   //         |
@@ -1405,6 +1404,7 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
+      PN->andIRFlags(DuplicatePN);
       DuplicatePN->replaceAllUsesWith(PN);
       ToRemove.insert(DuplicatePN);
       Changed = true;
@@ -1449,7 +1449,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      return LHS->isIdenticalTo(RHS);
+      return LHS->isIdenticalToWhenDefined(RHS);
     }
 
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
@@ -1474,6 +1474,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
       ++NumPHICSEs;
+      (*Inserted.first)->andIRFlags(PN);
       PN->replaceAllUsesWith(*Inserted.first);
       ToRemove.insert(PN);
       Changed = true;
@@ -1558,13 +1559,13 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                        const DataLayout &DL,
-                                       const Instruction *CxtI,
+                                       const Instruction *CtxI,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CtxI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
@@ -1572,7 +1573,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
   TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+  Align Alignment = Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
 
   if (PrefAlign && *PrefAlign > Alignment)
     Alignment = std::max(Alignment, tryEnforceAlignment(V, *PrefAlign, DL));
@@ -1814,12 +1815,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
 bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
-  SmallVector<DbgDeclareInst *, 4> Dbgs;
   SmallVector<DbgVariableRecord *> DVRs;
   for (auto &FI : F) {
     for (Instruction &BI : FI) {
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
-        Dbgs.push_back(DDI);
       for (DbgVariableRecord &DVR : filterDbgVars(BI.getDbgRecordRange())) {
         if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
           DVRs.push_back(&DVR);
@@ -1827,7 +1825,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
   }
 
-  if (Dbgs.empty() && DVRs.empty())
+  if (DVRs.empty())
     return Changed;
 
   auto LowerOne = [&](DbgVariableRecord *DDI) {
@@ -2853,7 +2851,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
         }
         if (DTU) {
           std::vector<DominatorTree::UpdateType> Updates;
-          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          for (const auto &I : NumPerSuccessorCases)
             if (I.second == 0)
               Updates.push_back({DominatorTree::Delete, BB, I.first});
           DTU->applyUpdates(Updates);
@@ -3021,6 +3019,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                          MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
         }
         break;
+      case LLVMContext::MD_callees:
+        // If K moves, it replaces J on J's path and must allow J's callees as
+        // well. If K does not move, its callees remain valid.
+        if (!AAOnly && DoesKMove)
+          K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
+        break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
@@ -3109,8 +3113,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   auto *JProf = J->getMetadata(LLVMContext::MD_prof);
   auto *KProf = K->getMetadata(LLVMContext::MD_prof);
   if (!AAOnly && (JProf || KProf)) {
-    K->setMetadata(LLVMContext::MD_prof,
-                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+    // We do not need to merge metadata if we have select instructions and the
+    // one we're keeping (K) does not move (explicitly merging would drop the
+    // information in this case). Otherwise, explicitly handle the merging.
+    if (DoesKMove || (!isa<SelectInst>(J) || !isa<SelectInst>(K)) ||
+        ProfcheckDisableMetadataFixes)
+      K->setMetadata(LLVMContext::MD_prof,
+                     MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3427,8 +3436,8 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
     I->dropDbgRecords();
-    if (I->isDebugOrPseudoInst()) {
-      // Remove DbgInfo and pseudo probe Intrinsics.
+    if (isa<PseudoProbeInst>(I)) {
+      // Remove pseudo probe Intrinsics.
       II = I->eraseFromParent();
       continue;
     }
@@ -3530,7 +3539,7 @@ struct BitPart {
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
 /// the bitnumber to bitnumber mapping is correct for a bswap or bitreverse.
 ///
-/// For example, if the current subexpression if "(shl i32 %X, 24)" then we know
+/// For example, if the current subexpression is "(shl i32 %X, 24)" then we know
 /// that the expression deposits the low byte of %X into the high byte of the
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
@@ -3544,8 +3553,8 @@ struct BitPart {
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
 /// constructed in-place in the \c BPS map. Because of this \c BPS needs to
 /// store BitParts objects, not pointers. As we need the concept of a nullptr
-/// BitParts (Value has been analyzed and the analysis failed), we an Optional
-/// type instead to provide the same functionality.
+/// BitParts (Value has been analyzed and the analysis failed), we use an
+/// Optional type instead to provide the same functionality.
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
@@ -3688,7 +3697,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BITREVERSE - most likely due to us previous matching a partial
+    // BITREVERSE - most likely due to us previously matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
@@ -3702,7 +3711,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BSWAP - most likely due to us previous matching a partial bswap.
+    // BSWAP - most likely due to us previously matching a partial bswap.
     if (match(V, m_BSwap(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
                                         Depth + 1, FoundRoot);

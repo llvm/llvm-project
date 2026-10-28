@@ -55,6 +55,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
@@ -237,7 +238,7 @@ void MachineFunction::init() {
     Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)
-    Alignment = Align(1ULL << AlignAllFunctions);
+    Alignment = Align::fromLog2(AlignAllFunctions);
 
   JumpTableInfo = nullptr;
 
@@ -308,6 +309,8 @@ void MachineFunction::clear() {
   BasicBlockRecycler.clear(Allocator);
   CodeViewAnnotations.clear();
   VariableDbgInfos.clear();
+  CallSitesInfo.clear();
+  CalledGlobalsInfo.clear();
   if (RegInfo) {
     RegInfo->~MachineRegisterInfo();
     Allocator.Deallocate(RegInfo);
@@ -745,6 +748,45 @@ bool MachineFunction::needsFrameMoves() const {
   return getTarget().Options.ForceDwarfFrameSection ||
          F.needsUnwindTableEntry() ||
          !F.getParent()->debug_compile_units().empty();
+}
+
+bool MachineFunction::usesWindowsUnwindInfo() const {
+  return getTarget().getMCAsmInfo().usesWindowsCFI() &&
+         F.getParent()->getExceptionModel() == ExceptionHandling::WinEH;
+}
+
+bool MachineFunction::needsWinCFI() const {
+  return getFunction().needsUnwindTableEntry() && usesWindowsUnwindInfo();
+}
+
+bool MachineFunction::disableFramePointerElim() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+    return true;
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
+bool MachineFunction::framePointerIsReserved() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
 }
 
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
@@ -1658,21 +1700,27 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     if (Constants[i].isMachineConstantPoolEntry())
       Constants[i].Val.MachineCPVal->print(OS);
     else
-      Constants[i].Val.ConstVal->printAsOperand(OS, /*PrintType=*/false);
+      Constants[i].Val.ConstVal->printAsOperand(OS);
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }
 }
 
 //===----------------------------------------------------------------------===//
-// Template specialization for MachineFunction implementation of
-// ProfileSummaryInfo::getEntryCount().
+// Template specializations for MachineFunction implementations of
+// ProfileSummaryInfo::getEntryCount() and ProfileSummaryInfo::hasHotAttr().
 //===----------------------------------------------------------------------===//
 template <>
 std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();
+}
+
+template <>
+bool ProfileSummaryInfo::hasHotAttr<llvm::MachineFunction>(
+    const llvm::MachineFunction *F) const {
+  return F->getFunction().hasFnAttribute(Attribute::Hot);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

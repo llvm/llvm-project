@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,6 +20,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -34,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -66,12 +65,12 @@ void AssumptionCache::findValuesAffectedByOperandBundle(
       InsertAffected(V);
   };
 
-  if (Bundle.getTagName() == "separate_storage") {
+  auto Attr = getBundleAttrFromOBU(Bundle);
+  if (Attr == BundleAttr::SeparateStorage) {
     assert(Bundle.Inputs.size() == 2 && "separate_storage must have two args");
     AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]));
     AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]));
-  } else if (Bundle.Inputs.size() > ABA_WasOn &&
-             Bundle.getTagName() != IgnoreBundleTag)
+  } else if (Bundle.Inputs.size() > ABA_WasOn && Attr != BundleAttr::Ignore)
     AddAffectedVal(Bundle.Inputs[ABA_WasOn]);
 }
 
@@ -344,13 +343,6 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
       FunctionCallbackVH(&F, this), std::make_unique<AssumptionCache>(F, TTI)));
   assert(IP.second && "Scanning function already in the map?");
   return *IP.first->second;
-}
-
-AssumptionCache *AssumptionCacheTracker::lookupAssumptionCache(Function &F) {
-  auto I = AssumptionCaches.find_as(&F);
-  if (I != AssumptionCaches.end())
-    return I->second.get();
-  return nullptr;
 }
 
 void AssumptionCacheTracker::verifyAnalysis() const {

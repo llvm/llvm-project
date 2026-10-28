@@ -36,7 +36,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -207,8 +206,8 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
 
 static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
                              BasicBlock *From, BasicBlock *To,
-                             Instruction *CxtI) {
-  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CxtI))
+                             Instruction *CtxI) {
+  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CtxI))
     return C;
 
   // Look if the incoming value is a select with a scalar condition for which
@@ -223,7 +222,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // for vector type constants that are not all zeroes or all ones.
   Value *Condition = SI->getCondition();
   if (!Condition->getType()->isVectorTy()) {
-    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
+    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CtxI)) {
       if (C->isOneValue())
         return SI->getTrueValue();
       if (C->isNullValue())
@@ -239,7 +238,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getTrueValue();
 
@@ -247,7 +246,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // similar to the select "false" case, but try the select "true" value
   if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getFalseValue();
 
@@ -997,6 +996,7 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
@@ -1018,6 +1018,7 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   // Check whether the division folds to a constant.
   ConstantRange DivCR = LCR.sdiv(RCR);
   if (const APInt *Elem = DivCR.getSingleElement()) {
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
     SDI->eraseFromParent();
     return true;
@@ -1059,6 +1060,7 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
@@ -1097,6 +1099,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (NegOneOrZero.contains(LRange)) {
     // ashr of -1 or 0 never changes the value, so drop the whole instruction
     ++NumAShrsRemoved;
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(SDI->getOperand(0));
     SDI->eraseFromParent();
     return true;
@@ -1111,6 +1114,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
 
@@ -1129,6 +1133,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
   ZExt->setNonNeg();
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(ZExt);
   SDI->eraseFromParent();
 
@@ -1291,6 +1296,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (!LRange.getUnsignedMax().ule(*RHS))
     return false;
 
+  salvageDebugInfo(*BinOp);
   BinOp->replaceAllUsesWith(LHS);
   BinOp->eraseFromParent();
   NumAnd++;

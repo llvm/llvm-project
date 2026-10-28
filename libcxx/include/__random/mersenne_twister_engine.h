@@ -181,9 +181,7 @@ public:
     for (size_t __i = 1; __i < __n; ++__i)
       __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;
     __i_ = 0;
-#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
     __update_all_states();
-#endif
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, mersenne_twister_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
@@ -208,9 +206,7 @@ public:
       if (__i == __n)
         __x_[0] = result_type(1) << (__w - 1);
     }
-#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
     __update_all_states();
-#endif
   }
 
   void __update_state(size_t __i, size_t __k) {
@@ -233,17 +229,11 @@ public:
 
   // generating functions
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
-#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
     result_type __val = __x_[__i_];
     if (++__i_ == __n) [[__unlikely__]] {
       __update_all_states();
       __i_ = 0;
     }
-#else
-    __update_state(__i_);
-    result_type __val = __x_[__i_];
-    __i_              = (__i_ + 1) % __n;
-#endif
     result_type __z = __val ^ (__rshift<__u>(__val) & __d);
     __z ^= __lshift<__s>(__z) & __b;
     __z ^= __lshift<__t>(__z) & __c;

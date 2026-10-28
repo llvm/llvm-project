@@ -19,7 +19,6 @@
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -47,7 +46,9 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
       std::max(1u, (NWaves * getNumWorkGroupSIMDs()) / WavesPerWorkgroup);
 
   const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
-  return alignDown(getLocalMemorySize() / WorkGroupsPerCU, Granularity);
+  return alignDown(std::min(getLocalMemorySize() / WorkGroupsPerCU,
+                            getAddressableLocalMemorySize()),
+                   Granularity);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
@@ -176,6 +177,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
     return Default;
 
   return Requested;
+}
+
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(

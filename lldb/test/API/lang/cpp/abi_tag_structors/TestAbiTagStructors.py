@@ -17,8 +17,8 @@ class AbiTagStructorsTestCase(TestBase):
         compiler_version=["<", "22"],
         bugnumber="Required Clang flag not supported",
     )
-    @skipIf(compiler=no_match("clang"))
-    @expectedFailureAll(oslist=["windows"])
+    @requireClang
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
     @requireExpressionEvaluation
     def test_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
@@ -77,7 +77,7 @@ class AbiTagStructorsTestCase(TestBase):
         )
 
     @expectedFailureAll(oslist=["windows"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     def test_no_structor_linkage_names(self):
         """
         Test that without linkage names on structor declarations we can't call
@@ -132,7 +132,7 @@ class AbiTagStructorsTestCase(TestBase):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
         self.do_nested_structor_test()
 
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @expectedFailureAll(oslist=["windows"])
     @requireExpressionEvaluation
     def test_nested_no_structor_linkage_names(self):

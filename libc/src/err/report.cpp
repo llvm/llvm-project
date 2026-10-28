@@ -35,20 +35,20 @@ extern "C" char *program_invocation_short_name;
 namespace LIBC_NAMESPACE_DECL {
 namespace err_reporting {
 
+LIBC_INLINE int stderr_write_hook(cpp::string_view str, void *) {
+  write_to_stderr(str);
+  return printf_core::WRITE_OK;
+}
+
 void report(bool show_err, int err_num, const char *fmt,
             internal::ArgList &args) {
   const char *progname = PROGRAM_INVOCATION_SHORT_NAME;
   if (!progname)
     progname = "";
   char buffer[1024];
-  printf_core::FlushingBuffer wb(
+  printf_core::Writer writer = printf_core::make_writer(
       buffer, sizeof(buffer),
-      [](cpp::string_view str, [[maybe_unused]] void *raw_stream) -> int {
-        write_to_stderr(str);
-        return static_cast<int>(str.size());
-      },
-      nullptr);
-  printf_core::Writer writer(wb);
+      &printf_core::overflow_write_flush_to_sink<char, stderr_write_hook>);
 
   writer.write(progname);
   if (fmt != nullptr || show_err)
@@ -56,7 +56,7 @@ void report(bool show_err, int err_num, const char *fmt,
 
   if (fmt != nullptr) {
     if (!printf_core::printf_main(&writer, fmt, args)) {
-      wb.flush_to_stream();
+      writer.get_write_buffer().flush_to_sink<stderr_write_hook>();
       return;
     }
     if (show_err)
@@ -67,7 +67,7 @@ void report(bool show_err, int err_num, const char *fmt,
     writer.write(get_error_string(err_num));
 
   writer.write("\n");
-  wb.flush_to_stream();
+  writer.get_write_buffer().flush_to_sink<stderr_write_hook>();
 }
 
 } // namespace err_reporting

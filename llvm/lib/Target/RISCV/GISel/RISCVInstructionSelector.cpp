@@ -67,6 +67,7 @@ private:
 
   bool isRegInGprb(Register Reg) const;
   bool isRegInFprb(Register Reg) const;
+  bool isWorthFoldingAdd(Register AddResult) const;
 
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
@@ -76,7 +77,7 @@ private:
   // Returns true if the instruction was modified.
   void preISelLower(MachineInstr &MI);
 
-  bool replacePtrWithInt(MachineOperand &Op);
+  bool replacePtrWithInt(MachineInstr &MI, unsigned OpIdx);
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI) const;
@@ -92,6 +93,7 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineInstr &MI) const;
   bool selectUnmergeValues(MachineInstr &MI) const;
+  bool selectMergeValues(MachineInstr &MI) const;
   void addVectorLoadStoreOperands(MachineInstr &I,
                                   SmallVectorImpl<Register> &SrcOps,
                                   unsigned &CurOp, bool IsMasked,
@@ -110,6 +112,7 @@ private:
     return selectShiftMask(Root, 32);
   }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
+  ComplexRendererFns selectBrindRegImm(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImmLsb00000(MachineOperand &Root) const;
 
   // Plan for materializing a constant address as (Hi materialization, Lo12
@@ -155,7 +158,8 @@ private:
   }
 
   ComplexRendererFns renderVLOp(MachineOperand &Root) const;
-
+  ComplexRendererFns renderAddiPair(Register BaseReg, int64_t AddiImm,
+                                    int64_t OffsetImm) const;
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
@@ -426,7 +430,8 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
   Register RootReg = Root.getReg();
 
   const unsigned XLen = STI.getXLen();
-  APInt Mask, C2;
+  APInt Mask;
+  int64_t C2;
   Register RegY;
   std::optional<bool> LeftShift;
   // (and (shl y, c2), mask)
@@ -439,22 +444,24 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     LeftShift = false;
 
   if (LeftShift.has_value()) {
+    assert(Mask.getBitWidth() == XLen && "Unexpected mask size!");
+    assert(C2 > 0 && C2 < XLen && "Unexpected shift amount!");
     if (*LeftShift)
-      Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
+      Mask &= maskTrailingZeros<uint64_t>(C2);
     else
-      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getZExtValue());
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2);
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
       unsigned Trailing = Mask.countr_zero();
       // Given (and (shl y, c2), mask) in which mask has no leading zeros and
       // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
-      if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
+      if (*LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
         Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
-              .addImm(Trailing - C2.getZExtValue());
+              .addImm(Trailing - C2);
           MIB.addReg(DstReg);
         }}};
       }
@@ -492,13 +499,13 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
     // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
     // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
-    bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                (Trailing + C2.getZExtValue()) == ShAmt;
+    bool Cond =
+        *LeftShift && Leading == 32 && Trailing > 0 && (Trailing + C2) == ShAmt;
     if (!Cond)
       // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
       // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
-      Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-             (Trailing - C2.getZExtValue()) == ShAmt;
+      Cond = !*LeftShift && Leading == 32 && C2 < Trailing &&
+             (Trailing - C2) == ShAmt;
 
     if (Cond) {
       Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -526,13 +533,15 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
   // Given (and (shl x, c2), mask) in which mask is a shifted mask with
   // 32 - ShAmt leading zeros and c2 trailing zeros. We can use SLLI by
   // c2 - ShAmt followed by SHXADD_UW with ShAmt for x amount.
-  APInt Mask, C2;
+  APInt Mask;
+  int64_t C2;
   Register RegX;
   if (mi_match(
           RootReg, *MRI,
           m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
                                 m_ICst(Mask))))) {
-    Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
+    assert(C2 > 0 && C2 < Mask.getBitWidth() && "Unexpected shift amount!");
+    Mask &= maskTrailingZeros<uint64_t>(C2);
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = Mask.countl_zero();
@@ -542,7 +551,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
-              .addImm(C2.getZExtValue() - ShAmt);
+              .addImm(C2 - ShAmt);
           MIB.addReg(DstReg);
         }}};
       }
@@ -574,40 +583,97 @@ RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::renderAddiPair(Register BaseReg, int64_t AddiImm,
+                                         int64_t OffsetImm) const {
+  return {{[=](MachineInstrBuilder &MIB) {
+             Register Tmp = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+             MachineInstr *Addi =
+                 BuildMI(*MIB->getParent(), *MIB.getInstr(), MIB->getDebugLoc(),
+                         TII.get(RISCV::ADDI), Tmp)
+                     .addReg(BaseReg)
+                     .addImm(AddiImm);
+             constrainSelectedInstRegOperands(*Addi, TII, TRI, RBI);
+             MIB.addReg(Tmp);
+           },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(OffsetImm); }}};
+}
+
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   if (!Root.isReg())
     return std::nullopt;
 
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+  Register RootReg = Root.getReg();
+
+  // Frame index.
+  int FI;
+  if (mi_match(RootReg, *MRI, m_GFrameIndex(FI))) {
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); },
         [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
     }};
   }
 
-  if (isBaseWithConstantOffset(Root, *MRI)) {
-    MachineOperand &LHS = RootDef->getOperand(1);
-    MachineOperand &RHS = RootDef->getOperand(2);
-    MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
-    MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
-
-    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
+  // base + constant offset (G_PTR_ADD).
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC)))) {
     if (isInt<12>(RHSC)) {
-      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+      int BaseFI;
+      if (mi_match(BaseReg, *MRI, m_GFrameIndex(BaseFI)))
         return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(BaseFI); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
         }};
 
-      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
                [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
     }
+
+    // Large constant offset. Fold a -2048/2047 adjustment so the whole
+    // constant can be split across an ADDI and the load/store offset.
+    if (RHSC >= -4096 && RHSC <= 4094) {
+      int64_t Adj = RHSC < 0 ? -2048 : 2047;
+      return renderAddiPair(BaseReg, Adj, RHSC - Adj);
+    }
+
+    if (isWorthFoldingAdd(RootReg))
+      if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/false, BaseReg))
+        return Fns;
   }
 
-  // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
-  // the combiner?
-  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+  // Bare constant address. IRTranslator lowers inttoptr(C) to
+  // G_INTTOPTR(G_CONSTANT); look through it to reach the constant.
+  int64_t CVal;
+  if (mi_match(RootReg, *MRI, m_GIntToPtr(m_ICst(CVal))) ||
+      mi_match(RootReg, *MRI, m_ICst(CVal))) {
+    if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/false, Register()))
+      return Fns;
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectBrindRegImm(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  Register RootReg = Root.getReg();
+
+  // base + constant offset (G_PTR_ADD). Doesn't match a FrameIndex, unlike
+  // selectAddrRegImm, since the callers of this (e.g. indirect branches)
+  // can't take a FrameIndex or global address operand.
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC))) &&
+      isInt<12>(RHSC)) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
+             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
@@ -616,75 +682,60 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
   if (!Root.isReg())
     return std::nullopt;
 
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+  Register RootReg = Root.getReg();
+
+  // Frame index.
+  int FI;
+  if (mi_match(RootReg, *MRI, m_GFrameIndex(FI))) {
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); },
         [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
     }};
   }
 
-  if (isBaseWithConstantOffset(Root, *MRI)) {
-    MachineOperand &LHS = RootDef->getOperand(1);
-    MachineOperand &RHS = RootDef->getOperand(2);
-    MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
-    MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
-    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
-
+  // base + constant offset (G_PTR_ADD).
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC)))) {
     if (isInt<12>(RHSC)) {
       // Not a multiple of 32: can't encode, use the address as-is.
       if ((RHSC & 0b11111) != 0) {
-        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
                  [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
       }
       // Fold the offset.
-      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+      int BaseFI;
+      if (mi_match(BaseReg, *MRI, m_GFrameIndex(BaseFI)))
         return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(BaseFI); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
         }};
-      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
                [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
     }
 
     // Large constant: fold a -2048/2016 adjustment to save an instruction.
     if ((-2049 >= RHSC && RHSC >= -4096) || (4063 >= RHSC && RHSC >= 2017)) {
       int64_t Adj = RHSC < 0 ? -2048 : 2016;
-      int64_t AdjustedOffset = RHSC - Adj;
-      Register BaseReg = LHS.getReg();
-      return {{[=](MachineInstrBuilder &MIB) {
-                 Register Tmp = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-                 MachineInstr *Addi =
-                     BuildMI(*MIB->getParent(), *MIB.getInstr(),
-                             MIB->getDebugLoc(), TII.get(RISCV::ADDI), Tmp)
-                         .addReg(BaseReg)
-                         .addImm(AdjustedOffset);
-                 constrainSelectedInstRegOperands(*Addi, TII, TRI, RBI);
-                 MIB.addReg(Tmp);
-               },
-               [=](MachineInstrBuilder &MIB) { MIB.addImm(Adj); }}};
+      return renderAddiPair(BaseReg, RHSC - Adj, Adj);
     }
 
     // Otherwise split the constant into Hi (materialized + added to the base)
     // and Lo12 (folded offset).
-    if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/true, LHS.getReg()))
+    if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/true, BaseReg))
       return Fns;
   }
 
   // Bare constant address. IRTranslator emits inttoptr(C) as
   // G_INTTOPTR(G_CONSTANT); look through the G_INTTOPTR to reach the constant.
-  if (RootDef->getOpcode() == TargetOpcode::G_INTTOPTR) {
-    MachineInstr *SrcDef = MRI->getVRegDef(RootDef->getOperand(1).getReg());
-    if (SrcDef->getOpcode() == TargetOpcode::G_CONSTANT)
-      RootDef = SrcDef;
-  }
-  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
+  int64_t CVal;
+  if (mi_match(RootReg, *MRI, m_GIntToPtr(m_ICst(CVal))) ||
+      mi_match(RootReg, *MRI, m_ICst(CVal))) {
     if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/true, Register()))
       return Fns;
   }
 
-  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
@@ -793,9 +844,11 @@ static unsigned selectZalasrLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
 }
 
 /// Select the RISC-V regimm opcode for the G_LOAD or G_STORE operation
-/// \p GenericOpc, appropriate for the GPR register bank and of memory access
-/// size \p OpSize. \returns \p GenericOpc if the combination is unsupported.
-static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
+/// \p GenericOpc on \p STI, appropriate for the GPR register bank and of
+/// memory access size \p OpSize. \returns \p GenericOpc if the combination
+/// is unsupported.
+static unsigned selectRegImmLoadStoreOp(const RISCVSubtarget &STI,
+                                        unsigned GenericOpc, unsigned OpSize) {
   const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
   switch (OpSize) {
   case 8:
@@ -806,6 +859,10 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
   case 32:
     return IsStore ? RISCV::SW : RISCV::LW;
   case 64:
+    // LD/SD are RV64-only. On RV32 a 64-bit access goes through an even/odd
+    // GPR pair, which Zilsd provides via the LD_RV32/SD_RV32 pseudos.
+    if (!STI.is64Bit() && STI.hasStdExtZilsd())
+      return IsStore ? RISCV::SD_RV32 : RISCV::LD_RV32;
     return IsStore ? RISCV::SD : RISCV::LD;
   }
 
@@ -1339,9 +1396,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // Use sext.h/zext.h for i16 with Zbb.
     if (SrcSize == 16 &&
         (STI.hasStdExtZbb() || (!IsSigned && STI.hasStdExtZbkb()))) {
-      MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
-                         : STI.isRV64() ? RISCV::ZEXT_H_RV64
-                                        : RISCV::ZEXT_H_RV32));
+      MI.setDesc(TII.get(IsSigned        ? RISCV::SEXT_H
+                         : STI.is64Bit() ? RISCV::ZEXT_H_RV64
+                                         : RISCV::ZEXT_H_RV32));
       constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
       return true;
     }
@@ -1448,11 +1505,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
     return true;
   }
-  case TargetOpcode::G_BRINDIRECT:
-    MI.setDesc(TII.get(RISCV::PseudoBRIND));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-    return true;
   case TargetOpcode::G_SELECT:
     return selectSelect(MI);
   case TargetOpcode::G_FCMP:
@@ -1470,6 +1522,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
     GLoadStore &LdSt = cast<GLoadStore>(MI);
@@ -1502,7 +1556,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       return true;
     }
 
-    const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
+    const unsigned NewOpc =
+        selectRegImmLoadStoreOp(STI, MI.getOpcode(), MemSize);
     if (NewOpc == MI.getOpcode())
       return false;
 
@@ -1543,15 +1598,44 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
-  if (!Subtarget->hasStdExtZfa())
-    return false;
-
-  // Split F64 Src into two s32 parts
+  // Split Src into two s32 parts.
   if (MI.getNumOperands() != 3)
     return false;
   Register Src = MI.getOperand(2).getReg();
   Register Lo = MI.getOperand(0).getReg();
   Register Hi = MI.getOperand(1).getReg();
+
+  // RV32+Zilsd: split a GPRPair (i64) into its two s32 GPR halves.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Src) == LLT::scalar(64) && isRegInGprb(Src) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    // GPRPairNoX0 rather than GPRPair: a sub-register index is only valid for
+    // a class when every register in it supports the index, and X0_Pair has no
+    // sub_gpr_odd. SelectionDAG gets the same effect through
+    // InstrEmitter::ConstrainForSubReg.
+    if (!RBI.constrainGenericRegister(Src, RISCV::GPRPairNoX0RegClass, *MRI))
+      return false;
+    // COPY with a sub-register index rather than EXTRACT_SUBREG, which is what
+    // SelectionDAG emits too: InstrEmitter lowers an EXTRACT_SUBREG SDNode to
+    // %dst = COPY %src:sub and never builds the pseudo itself. A literal
+    // EXTRACT_SUBREG would also survive to ExpandPostRAPseudos, which treats
+    // one as unreachable.
+    auto ExtractHalf = [&](Register Dst, unsigned SubIdx) {
+      RBI.constrainGenericRegister(Dst, RISCV::GPRRegClass, *MRI);
+      MachineInstr &C = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::COPY), Dst)
+                             .addReg(Src, {}, SubIdx);
+      constrainSelectedInstRegOperands(C, TII, TRI, RBI);
+    };
+    ExtractHalf(Lo, RISCV::sub_gpr_even);
+    ExtractHalf(Hi, RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
+
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
 
@@ -1569,18 +1653,49 @@ bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op) {
+bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
+
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Lo = MI.getOperand(1).getReg();
+  Register Hi = MI.getOperand(2).getReg();
+
+  // RV32+Zilsd: build a GPRPair (i64) from two s32 GPR halves.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Dst) == LLT::scalar(64) && isRegInGprb(Dst) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    // GPRPairNoX0 rather than GPRPair, because sub_gpr_odd is not valid for
+    // X0_Pair. Constrain Dst up front: constrainSelectedInstRegOperands below
+    // would otherwise infer GPRPair from the s64 type.
+    if (!RBI.constrainGenericRegister(Dst, RISCV::GPRPairNoX0RegClass, *MRI))
+      return false;
+    MachineInstr &Seq = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::REG_SEQUENCE), Dst)
+                             .addReg(Lo)
+                             .addImm(RISCV::sub_gpr_even)
+                             .addReg(Hi)
+                             .addImm(RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    constrainSelectedInstRegOperands(Seq, TII, TRI, RBI);
+    return true;
+  }
+  return false;
+}
+
+bool RISCVInstructionSelector::replacePtrWithInt(MachineInstr &MI,
+                                                 unsigned OpIdx) {
+  MachineOperand &Op = MI.getOperand(OpIdx);
   Register PtrReg = Op.getReg();
   assert(MRI->getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
   const LLT sXLen = LLT::scalar(STI.getXLen());
-  MachineInstr &ParentMI = *Op.getParent();
   Register IntReg = MRI->createGenericVirtualRegister(sXLen);
   MRI->setRegBank(IntReg, RBI.getRegBank(RISCV::GPRBRegBankID));
-  MachineInstr *PtrToInt =
-      BuildMI(*ParentMI.getParent(), ParentMI, ParentMI.getDebugLoc(),
-              TII.get(TargetOpcode::G_PTRTOINT), IntReg)
-          .addReg(PtrReg);
+  MachineInstr *PtrToInt = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                   TII.get(TargetOpcode::G_PTRTOINT), IntReg)
+                               .addReg(PtrReg);
   Op.setReg(IntReg);
   return select(*PtrToInt);
 }
@@ -1591,7 +1706,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI) {
     Register DstReg = MI.getOperand(0).getReg();
     const LLT sXLen = LLT::scalar(STI.getXLen());
 
-    replacePtrWithInt(MI.getOperand(1));
+    replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
     MRI->setType(DstReg, sXLen);
     break;
@@ -1599,7 +1714,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI) {
   case TargetOpcode::G_PTRMASK: {
     Register DstReg = MI.getOperand(0).getReg();
     const LLT sXLen = LLT::scalar(STI.getXLen());
-    replacePtrWithInt(MI.getOperand(1));
+    replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI->setType(DstReg, sXLen);
     break;
@@ -1685,6 +1800,28 @@ bool RISCVInstructionSelector::isRegInGprb(Register Reg) const {
 
 bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
   return RBI.getRegBank(Reg, *MRI, TRI)->getID() == RISCV::FPRBRegBankID;
+}
+
+// A G_PTR_ADD result is worth splitting into Hi (materialized) +
+// Lo12 (folded offset) only if every user is a plain scalar load/store
+// using it as the address. Otherwise the ADD is selected on its own with
+// the full materialized constant, making the Hi materialization here redundant.
+bool RISCVInstructionSelector::isWorthFoldingAdd(Register AddResult) const {
+  for (const MachineInstr &User : MRI->use_nodbg_instructions(AddResult)) {
+    auto *LdSt = dyn_cast<GLoadStore>(&User);
+    if (!LdSt)
+      return false;
+    // Must be used as the pointer, not the stored value.
+    if (LdSt->getPointerReg() != AddResult)
+      return false;
+    if (isStrongerThanMonotonic(LdSt->getMMO().getSuccessOrdering()))
+      return false;
+    // Only scalar integer/f16/f32/f64 memory (exclude vectors, f128, ...).
+    LLT Ty = MRI->getType(User.getOperand(0).getReg());
+    if (!Ty.isScalar() || Ty.getSizeInBits() > 64)
+      return false;
+  }
+  return true;
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
@@ -2088,6 +2225,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     MachineInstr *Cmp = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                 TII.get(getFCmpOpcode(Pred, Size)), TmpReg)
+                            .setMIFlag(MachineInstr::NoFPExcept)
                             .addReg(LHS)
                             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2098,6 +2236,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp1 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp1Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(LHS)
             .addReg(RHS);
     constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2105,6 +2244,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
     MachineInstr *Cmp2 =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                 TII.get(getFCmpOpcode(CmpInst::FCMP_OLT, Size)), Cmp2Reg)
+            .setMIFlag(MachineInstr::NoFPExcept)
             .addReg(RHS)
             .addReg(LHS);
     constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);
@@ -2125,6 +2265,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), TmpReg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
@@ -2133,6 +2274,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp1 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp1Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(LHS)
               .addReg(LHS);
       constrainSelectedInstRegOperands(*Cmp1, TII, TRI, RBI);
@@ -2140,6 +2282,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI) const {
       MachineInstr *Cmp2 =
           BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                   TII.get(getFCmpOpcode(CmpInst::FCMP_OEQ, Size)), Cmp2Reg)
+              .setMIFlag(MachineInstr::NoFPExcept)
               .addReg(RHS)
               .addReg(RHS);
       constrainSelectedInstRegOperands(*Cmp2, TII, TRI, RBI);

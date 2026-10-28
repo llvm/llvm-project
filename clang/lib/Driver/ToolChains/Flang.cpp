@@ -138,7 +138,9 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                    options::OPT_finput_charset_EQ,
                    options::OPT_fimplicit_none,
                    options::OPT_fimplicit_none_ext,
+                   options::OPT_fimplicit_module_prefix,
                    options::OPT_fno_implicit_none,
+                   options::OPT_fno_implicit_module_prefix,
                    options::OPT_fbackslash,
                    options::OPT_fno_backslash,
                    options::OPT_flogical_abbreviations,
@@ -173,13 +175,13 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 
 /// @C shouldLoopVersion
 ///
-/// Check if Loop Versioning should be enabled.
+/// Check if a loop versioning pass should be enabled.
 /// We look for the last of one of the following:
-///   -Ofast, -O4, -O<number> and -f[no-]version-loops-for-stride.
-/// Loop versioning is disabled if the last option is
-///  -fno-version-loops-for-stride.
+///   -Ofast, -O4, -O<number>, -O0 and the pass's -f[no-]version-loops-for-*
+///   flag.
+/// Loop versioning is disabled if the last option is the -fno- flag or -O0.
 /// Loop versioning is enabled if the last option is one of:
-///  -floop-versioning
+///  the -f flag
 ///  -Ofast
 ///  -O4
 ///  -O3
@@ -188,17 +190,19 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
 /// @return true if loop-versioning should be enabled, otherwise false.
-static bool shouldLoopVersion(const ArgList &Args) {
-  const Arg *LoopVersioningArg = Args.getLastArg(
-      options::OPT_Ofast, options::OPT_O, options::OPT_O4,
-      options::OPT_floop_versioning, options::OPT_fno_loop_versioning);
+static bool shouldLoopVersion(const ArgList &Args, options::ID PosFlag,
+                              options::ID NegFlag) {
+  const Arg *LoopVersioningArg =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+                      options::OPT_O0, PosFlag, NegFlag);
   if (!LoopVersioningArg)
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_fno_loop_versioning))
+  if (LoopVersioningArg->getOption().matches(NegFlag) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O0))
     return false;
 
-  if (LoopVersioningArg->getOption().matches(options::OPT_floop_versioning))
+  if (LoopVersioningArg->getOption().matches(PosFlag))
     return true;
 
   if (LoopVersioningArg->getOption().matches(options::OPT_Ofast) ||
@@ -226,14 +230,20 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
   const auto &TC = getToolChain();
   const Driver &D = TC.getDriver();
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_module_dir, options::OPT_fdebug_module_writer,
-                   options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
-                   options::OPT_std_EQ, options::OPT_W_Joined,
-                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned,
-                   options::OPT_fenumeration_type,
-                   options::OPT_fno_enumeration_type,
+                  {options::OPT_module_dir,
+                   options::OPT_fdebug_module_writer,
+                   options::OPT_fintrinsic_modules_path,
+                   options::OPT_pedantic,
+                   options::OPT_std_EQ,
+                   options::OPT_W_Joined,
+                   options::OPT_fconvert_EQ,
+                   options::OPT_fpass_plugin_EQ,
+                   options::OPT_funderscoring,
+                   options::OPT_fno_underscoring,
+                   options::OPT_funsigned,
+                   options::OPT_fno_unsigned,
+                   options::OPT_fout_of_bounds_subscripts,
+                   options::OPT_fno_out_of_bounds_subscripts,
                    options::OPT_fopenacc_default_none_scalars_strict,
                    options::OPT_fno_openacc_default_none_scalars_strict,
                    options::OPT_fopenacc_multiple_names_in_routine,
@@ -350,12 +360,19 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+                    options::OPT_fno_unique_internal_linkage_names);
+
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
 
-  if (shouldLoopVersion(Args))
+  if (shouldLoopVersion(Args, options::OPT_floop_versioning,
+                        options::OPT_fno_loop_versioning))
     CmdArgs.push_back("-fversion-loops-for-stride");
+  if (shouldLoopVersion(Args, options::OPT_floop_tripcount_versioning,
+                        options::OPT_fno_loop_tripcount_versioning))
+    CmdArgs.push_back("-fversion-loops-for-trip-count");
 
   for (const auto &arg :
        Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
@@ -369,13 +386,16 @@ void Flang::addCodegenOptions(const ArgList &Args,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
-       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
-       options::OPT_fno_repack_arrays,
+       options::OPT_fno_init_global_zero, options::OPT_finit_local_EQ,
+       options::OPT_frepack_arrays, options::OPT_fno_repack_arrays,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
@@ -1323,6 +1343,16 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  // -fkeep-inline-functions/-fno-keep-inline-functions are real Clang options
+  // but are not supported by Flang; warn and ignore them.
+  for (options::ID Opt : {options::OPT_fkeep_inline_functions,
+                          options::OPT_fno_keep_inline_functions}) {
+    if (const Arg *A = Args.getLastArg(Opt)) {
+      D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+      A->claim();
+    }
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -1358,6 +1388,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Initial floating-point exception halting mode. Handled separately so it is
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
+
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

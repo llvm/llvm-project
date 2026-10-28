@@ -501,3 +501,30 @@ namespace SubPtr {
                                                      // both-note {{subtracted pointers are not elements of the same array}}
   constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
 }
+
+namespace ConstexprForRangeVar {
+  void f() {
+    int arr[] = {1, 2, 3};
+    for (constexpr int a : arr) {} // both-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                                   // both-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+}
+
+namespace OpaqueArrayIndex {
+
+  int n;
+  int a[1];
+  constexpr int *r = &(&n + 1)[(unsigned __int128)-1]; // both-error {{constant expression}} \
+                                                       // both-note {{456 of non-array object}}
+  constexpr int *r2 = &a[(unsigned __int128)-1]; // both-error {{constant expression}} \
+                                                 // both-note {{455 of array of 1 element}}
+  constexpr int *r3 = &a[2];  // both-error {{constant expression}} \
+                              // both-note {{2 of array of 1 element}}
+  constexpr int *r4 = &a[-1];  // both-error {{constant expression}} \
+                               // both-note {{-1 of array of 1 element}}
+  constexpr int *q = (&n + 1) - (unsigned __int128)-1; // both-error {{constant expression}} \
+                                                       // both-note {{cannot refer to element -3402}}
+  constexpr int *f = &a[0] + 1 + (unsigned long)-1; // both-error {{constant expression}} \
+                                                    // both-note {{cannot refer to element 1844}}
+
+}

@@ -81,7 +81,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -923,17 +922,23 @@ bool PeepholeOptimizer::optimizeExtInstr(
       // %6:gprc_and_gprc_nor0 = COPY %1.sub_32:g8rc_and_g8rc_nox0
       // %3:gprc_and_gprc_nor0 = COPY %6:gprc_and_gprc_nor0
       //
-      if (UseSrcSubIdx)
-        RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
+      if (UseSrcSubIdx) {
+        RC = MRI->getRegClass(UseMO->getReg());
+        if (UseMO->getSubReg())
+          RC = TRI->getSubRegisterClass(RC, UseMO->getSubReg());
+      }
 
       Register NewVR = MRI->createVirtualRegister(RC);
-      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, {}, SubIdx);
+      [[maybe_unused]] auto Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+                                           TII->get(TargetOpcode::COPY), NewVR)
+                                       .addReg(DstReg, {}, SubIdx);
+      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy
+                        << "  Changing: " << *UseMI);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
       UseMO->setReg(NewVR);
+      LLVM_DEBUG(dbgs() << "        to: " << *UseMI);
       ++NumReuse;
       Changed = true;
     }
@@ -968,8 +973,8 @@ bool PeepholeOptimizer::optimizeCmpInstr(
 
   // The eliminated compare may have been the extra use preventing a
   // load from being folded into the flag-setting instruction.
-  if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
-    MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
+  if (MachineInstr *FlagProducer =
+          SrcReg.isVirtual() ? MRI->getOneNonDBGUser(SrcReg) : nullptr) {
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
     // No store between LoadMI and FlagProducer that could change the value.
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&

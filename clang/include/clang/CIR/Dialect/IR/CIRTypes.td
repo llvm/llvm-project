@@ -263,7 +263,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     space attribute that specifies the address space of the pointer. If not
     specified, the pointer is assumed to be in the default address space.
 
-    The `!cir.ptr` type can point to any type, including fundamental types,
+    The `!cir.ptr` type can point to any CIR type, including fundamental types,
     records, arrays, vectors, functions, and other pointers. It can also point
     to incomplete types, such as incomplete records.
 
@@ -279,7 +279,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   }];
 
   let parameters = (ins
-    "mlir::Type":$pointee,
+    CIR_DialectType:$pointee,
     OptionalParameter<
         "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
@@ -305,7 +305,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
+      ( `,` ` ` custom<MemorySpace>($addrSpace)^ )?
     `>`
   }];
 
@@ -355,7 +355,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
     containing record.
   }];
 
-  let parameters = (ins "mlir::Type":$member_ty,
+  let parameters = (ins CIR_DialectType:$member_ty,
                         "cir::RecordType":$class_ty);
 
   let builders = [
@@ -402,6 +402,34 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceSurfaceType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceSurfaceType :
+    CIR_Type<"CUDADeviceSurface", "cuda_surface"> {
+  let summary = "CUDA device surface reference type";
+  let description = [{
+    `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CUDADeviceTextureType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceTextureType :
+    CIR_Type<"CUDADeviceTexture", "cuda_texture"> {
+  let summary = "CUDA device texture reference type";
+  let description = [{
+    `!cir.cuda_texture` represents a CUDA built-in texture reference in CIR.
+    The type preserves texture semantics at the CIR level and is lowered to
+    the target device representation during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 
@@ -428,7 +456,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins CIR_ArrayElementType:$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -450,7 +478,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 }
 
 //===----------------------------------------------------------------------===//
-// VectorType (fixed size)
+// VectorType
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -460,15 +488,16 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes three parameters: the element type, the number of elements and the
-    scalability flag (optional, defaults to `false`).
+    It takes two parameters: the element type and an element count, which
+    records both the known minimum number of elements and whether the vector is
+    scalable.
 
     Syntax:
 
     ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -481,6 +510,11 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<2 x !cir.float>
     ```
 
+    A fixed-length vector of `!cir.bool` is packed one bit per element, and its
+    size is rounded up to a power of two of at least one byte, so
+    `!cir.vector<4 x !cir.bool>` occupies one byte and
+    `!cir.vector<17 x !cir.bool>` occupies four.
+
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
@@ -491,18 +525,38 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "uint64_t":$size,
-    OptionalParameter<"bool">:$is_scalable
+    "llvm::ElementCount":$size
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$is_scalable
+      "mlir::Type":$element_type, "llvm::ElementCount":$size
     ), [{
-        return $_get(element_type.getContext(), element_type, size, is_scalable);
+        return $_get(element_type.getContext(), element_type, size);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    /// Return the size of a fixed-width vector.
+    uint64_t getFixedSize() const { return getSize().getFixedValue(); }
+
+    /// Return whether this vector is scalable.
+    bool isScalable() const { return getSize().isScalable(); }
+
+    /// Return a fixed-width vector with the given element type and size.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getFixed(size));
+    }
+
+    /// Return a scalable vector with the given element type and minimum size.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getScalable(size));
+    }
+
+    /// The width of the integer a vector of `!cir.bool` is stored as: one bit
+    /// per element, at least a byte.
+    uint64_t getBoolStorageWidth() const;
+  }];
 
   let extraClassDefinition = [{
     bool $cppClass::isSized() const {
@@ -513,6 +567,60 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixType
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+]> {
+  let summary = "CIR matrix type";
+  let description = [{
+    The `!cir.matrix` type represents a fixed-size 2-dimensional matrix.
+    It takes three parameters: the element type, the number of rows,
+    and columns.
+
+    Syntax:
+
+    ```
+    matrix-type ::= !cir.matrix<row x colum x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
+    element-type ::= float-type | integer-type | bool-type
+    ```
+
+    The `element-type` must be a scalar CIR type. Zero-sized matrices are not
+    allowed. The `row` and `column` count must be a positive integer.
+
+    Examples:
+
+    ```
+    !cir.matrix<3 x 3 x !cir.int<u, 8>>
+    !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    CIR_MatrixElementType:$element_type,
+    "uint64_t":$num_rows,
+    "uint64_t":$num_columns
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$element_type, "uint64_t":$num_rows, "uint64_t":$num_columns
+    ), [{
+        return $_get(element_type.getContext(), element_type, num_rows, num_columns);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $num_rows `x` $num_columns `x` $element_type `>`
+  }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,17 +741,111 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitFieldType
+//
+// The member type of a bit-field access unit.
+//===----------------------------------------------------------------------===//
+
+def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "CIR bit-field access unit member type";
+  let description = [{
+    A run of bit-fields shares one access unit. A record has one member per
+    access unit, and that member has this type. The `storage_type` is the unit
+    the record stores, and `fields` says which bit-fields the source packed into
+    it, in declaration order.
+
+    The unit answers where the bits live, and `fields` answers how the fields
+    were declared in the user's source code. The storage type can be narrower
+    than the declared type of a bit-field within it, and the fields in it need
+    not agree on a declared type.
+
+    A zero-width bit-field belongs to no unit.  It is spelled as a member with
+    no `storage_type` and a single zero-width field, which occupies no bytes of
+    the record and becomes no field of the lowered LLVM struct.  Every other
+    member of this type owns the bytes of its unit.
+
+    Examples:
+
+    ```
+        // struct S { int a : 4; int b : 27; };
+        !rec_S = !cir.struct<"S"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>,
+                                            #cir.bitfield_decl<!s32i, 27>]>}>
+
+        // struct M { int a : 2; long long b : 30; };
+        !rec_M = !cir.struct<"M"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 2>,
+                                            #cir.bitfield_decl<!s64i, 30>]>,
+             pad !cir.array<!u8i x 4>}>
+
+        // struct Tail { int x; unsigned : 0; };
+        !rec_Tail = !cir.struct<"Tail"
+            {data !s32i,
+             empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"mlir::Type">:$storage_type,
+    OptionalArrayRefParameter<"cir::BitFieldDeclAttr">:$fields
+  );
+
+  // Storage comes first when there is any.  A zero-width bit-field has none,
+  // and is spelled as the list on its own.  An empty list parses so that the
+  // verifier is the one to reject it.
+  let assemblyFormat = [{
+    `<` (`[`) : ($storage_type^ `,` `[`)?
+        (`]`) : (qualified($fields)^ `]`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Whether this member owns the bytes of an access unit.  Only a
+    /// zero-width bit-field does not, and it is the only member of this type
+    /// that contributes neither size nor alignment to its record and becomes
+    /// no field of the lowered LLVM struct.
+    bool ownsBytes() const { return static_cast<bool>(getStorageType()); }
+
+    /// Whether this member is a zero-width bit-field, which holds no bits and
+    /// exists only to end the run of bit-fields before it.
+    bool isZeroWidth() const { return !ownsBytes(); }
+
+    /// Whether the source can read any of the bit-fields in this unit.
+    bool holdsNamedField() const {
+      return llvm::any_of(getFields(), [](cir::BitFieldDeclAttr decl) {
+        return !decl.getIsUnnamed();
+      });
+    }
+
+    /// Where the bit-field at \p idx starts within the unit, counted from the
+    /// unit's first bit.  The fields of a unit are contiguous and in
+    /// declaration order, so this is the widths of the fields ahead of it.
+    uint64_t getFieldBitOffset(unsigned idx) const {
+      uint64_t offset = 0;
+      for (cir::BitFieldDeclAttr decl : getFields().take_front(idx))
+        offset += decl.getWidth();
+      return offset;
+    }
+
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // RecordMemberKind
 //
 // What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
-def CIR_RecordMemberKind : CIR_I32EnumAttr<
+def CIR_RecordMemberKind : CIR_I32Enum<
     "RecordMemberKind", "what a record member holds", [
-  I32EnumAttrCase<"Data", 0, "data">,
-  I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">,
-  I32EnumAttrCase<"BitField", 3, "bitfield">
+  I32EnumCase<"Data", 0, "data">,
+  I32EnumCase<"Pad", 1, "pad">,
+  I32EnumCase<"Empty", 2, "empty">,
+  I32EnumCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
     `pad` is storage the compiler inserted to place a later member at its
@@ -653,30 +855,29 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     field, a vtable pointer, or a base subobject.  They differ only on whether
     it holds data for argument passing.
 
-    `bitfield` is a bit-field access unit holding at least one named
-    bit-field.  A unit can be narrower than the declared type of the bit-fields
-    it holds, so its extent does not answer what the source declared.  Without
-    it, a unit holding a 32-bit bit-field of `long long` would be
+    `bitfield` is a bit-field access unit the source can read at least one
+    bit-field of, and its member type is `!cir.bitfield`.  The mark is needed
+    because a unit can be narrower than the declared type of a bit-field in it:
+    without it, a 32-bit unit holding a bit-field of `long long` would be
     indistinguishable from an `unsigned` field, and clang's x86-64 lowering
     coerces two records that differ only in that to `i64` and `i32`.
 
-    An access unit holding only unnamed bit-fields is `empty`, since it carries
-    no data for argument passing.  A consumer that has to recognize one can:
-    among `empty` members only an access unit occupies bytes, everything else
-    the source declared as empty for the ABI occupies none.
+    A unit of nothing but unnamed bit-fields is `empty`, since no field of the
+    source reads it, even though it still holds data for argument passing.  A
+    zero-width bit-field is unnamed by definition, so it is always `empty`, and
+    it is the only bit-field member that holds no such data.
 
     A union's base subobject is the one exception to all of this: a single
-    member stands in for every variant, and it takes a unit mark as soon as any
-    variant is one, whatever its own storage type came from.
+    member stands in for every variant, and it takes a bit-field mark as soon
+    as any variant is one, whatever its own storage type came from.
 
     A record is empty for the ABI when no member is `data` or `bitfield`, which
-    is vacuously true for a record with no members.  The distinction between
-    `pad` and the rest is load-bearing beyond that: only `pad` is reusable, so a
-    record whose trailing member is an unnamed bit-field unit keeps that unit in
+    is trivially true for a record with no members, and when no `empty` member
+    is an access unit of unnamed bit-fields.  The distinction between `pad` and
+    the rest is load-bearing beyond that: only `pad` is reusable, so a record
+    whose trailing member is a unit of unnamed bit-fields keeps that unit in
     its data size.
   }];
-
-  let genSpecializedAttr = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -727,7 +928,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
         !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
-        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty !u8i}>
+        !rec_bits     = !cir.struct<"b"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
         !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
@@ -785,7 +988,15 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.member_kinds, key.is_class);
+    }
 
     bool isClass() const { return getIsClass(); }
     bool isStruct() const { return !getIsClass(); }
@@ -811,6 +1022,11 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
+
+    /// The field of the lowered LLVM struct that member \p idx is stored in.
+    /// A zero-width bit-field owns no bytes and is left out of the LLVM body,
+    /// so the two numberings differ from there on.
+    unsigned getLLVMFieldIndex(unsigned idx) const;
 
     /// Marks are provenance rather than layout, so two records that differ
     /// only in how their members were produced are layout-identical.
@@ -871,9 +1087,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 
@@ -883,7 +1100,9 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
         !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
-        !u_bits       = !cir.union<"U" {bitfield !u8i, empty !u8i}>
+        !u_bits       = !cir.union<"U"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3, unnamed>]>}>
     ```
   }];
 
@@ -937,7 +1156,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.padding, key.member_kinds);
+    }
 
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }
@@ -1045,10 +1272,12 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
-  CIR_UnionType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
+  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
+  CIR_UnionType, CIR_BitFieldType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_CUDADeviceTextureType,
+  CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
