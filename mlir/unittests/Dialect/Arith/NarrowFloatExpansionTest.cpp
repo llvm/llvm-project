@@ -6,16 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Checks the FloatFormatSpecs against APFloat.
+// Checks the FloatFormatSpecs against APFloat, and the folded expansion (greedy
+// driver, public populate functions) against APFloat::convert, from bf16 and
+// f32.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/NarrowFloatExpansion.h"
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringExtras.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -155,6 +163,166 @@ TEST(FloatFormatSpecTest, EncodingsMatchAPFloat) {
     EXPECT_EQ(spec.quietNaNBits,
               APFloat::getNaN(sem).bitcastToAPInt().getZExtValue());
   }
+}
+
+/// Expands `arith.truncf` of the `srcTy` constant `srcBits` to `dstTy` in `rnd`
+/// (if set) with `populate`'s patterns (greedy driver, no folding), then folds.
+/// Returns the folded bits, or std::nullopt if the truncf survived or did not
+/// fold.
+std::optional<uint64_t>
+expandThenFold(MLIRContext &ctx, FloatType srcTy, const APInt &srcBits,
+               FloatType dstTy, std::optional<arith::RoundingMode> rnd,
+               function_ref<void(RewritePatternSet &)> populate) {
+  Location loc = UnknownLoc::get(&ctx);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder b(module->getBodyRegion());
+  auto func = func::FuncOp::create(b, loc, "f", b.getFunctionType({}, dstTy));
+  b.setInsertionPointToStart(func.addEntryBlock());
+  APFloat src(srcTy.getFloatSemantics(), srcBits);
+  Value cst = arith::ConstantOp::create(b, loc, FloatAttr::get(srcTy, src));
+  auto rndAttr = rnd ? arith::RoundingModeAttr::get(&ctx, *rnd)
+                     : arith::RoundingModeAttr();
+  Value trunc = arith::TruncFOp::create(b, loc, dstTy, cst, rndAttr,
+                                        arith::FastMathFlagsAttr{});
+  func::ReturnOp::create(b, loc, trunc);
+
+  RewritePatternSet patterns(&ctx);
+  populate(patterns);
+  if (failed(applyPatternsGreedily(func, std::move(patterns),
+                                   GreedyRewriteConfig().enableFolding(false))))
+    return std::nullopt;
+  // TruncFOp::fold alone folds an exact conversion: the patterns must have
+  // replaced the truncf (a truncf to f64 left is part of the expansion).
+  if (llvm::any_of(func.getBody().getOps<arith::TruncFOp>(),
+                   [&](arith::TruncFOp op) { return op.getType() == dstTy; }))
+    return std::nullopt;
+  if (failed(applyPatternsGreedily(func, RewritePatternSet(&ctx))))
+    return std::nullopt;
+  Value result = func.getBody().front().getTerminator()->getOperand(0);
+  auto folded = result.getDefiningOp<arith::ConstantOp>();
+  if (!folded)
+    return std::nullopt;
+  return cast<FloatAttr>(folded.getValue())
+      .getValue()
+      .bitcastToAPInt()
+      .getZExtValue();
+}
+
+const std::pair<arith::RoundingMode, llvm::RoundingMode> kModes[] = {
+    {arith::RoundingMode::to_nearest_even,
+     llvm::RoundingMode::NearestTiesToEven},
+    {arith::RoundingMode::to_nearest_away,
+     llvm::RoundingMode::NearestTiesToAway},
+    {arith::RoundingMode::toward_zero, llvm::RoundingMode::TowardZero},
+    {arith::RoundingMode::upward, llvm::RoundingMode::TowardPositive},
+    {arith::RoundingMode::downward, llvm::RoundingMode::TowardNegative},
+};
+
+/// Whether APFloat::convert of `x` into `sem` in `rnd` would make a NaN of x's
+/// sign in a format without a sign (it asserts): whether |x| gets a NaN in the
+/// mirrored mode.
+bool needsNegativeNaN(const APFloat &x, const llvm::fltSemantics &sem,
+                      llvm::RoundingMode rnd) {
+  if (!x.isNegative() || APFloat::semanticsHasSignedRepr(sem))
+    return false;
+  if (rnd == llvm::RoundingMode::TowardPositive)
+    rnd = llvm::RoundingMode::TowardNegative;
+  else if (rnd == llvm::RoundingMode::TowardNegative)
+    rnd = llvm::RoundingMode::TowardPositive;
+  APFloat magnitude = abs(x);
+  bool losesInfo = false;
+  (void)magnitude.convert(sem, rnd, &losesInfo);
+  return magnitude.isNaN();
+}
+
+/// Checks the folded expansion of every input in every rounding mode against
+/// APFloat::convert. APFloat has no result for a NaN or an Inf into a format
+/// without them; the expansion gives +max-finite and +-max-finite there. Nor
+/// has it one where needsNegativeNaN holds; those inputs are skipped.
+void expectFoldedMatchesAPFloat(
+    MLIRContext &ctx, FloatType srcTy, ArrayRef<APInt> inputs, FloatType dstTy,
+    function_ref<void(RewritePatternSet &)> populate) {
+  const llvm::fltSemantics &dstSem = dstTy.getFloatSemantics();
+  std::string types;
+  llvm::raw_string_ostream(types) << srcTy << " to " << dstTy;
+  for (const APInt &bits : inputs) {
+    for (auto [rnd, llvmRnd] : kModes) {
+      SCOPED_TRACE(testing::Message()
+                   << types << " 0x"
+                   << llvm::toString(bits, 16, /*Signed=*/false) << " "
+                   << arith::stringifyRoundingMode(rnd));
+      APFloat expected(srcTy.getFloatSemantics(), bits);
+      if (!APFloat::semanticsHasNaN(dstSem) && !expected.isFinite()) {
+        bool negativeInf = expected.isInfinity() && expected.isNegative();
+        expected = APFloat::getLargest(dstSem, negativeInf);
+      } else {
+        if (needsNegativeNaN(expected, dstSem, llvmRnd))
+          continue;
+        bool losesInfo = false;
+        (void)expected.convert(dstSem, llvmRnd, &losesInfo);
+      }
+      std::optional<uint64_t> got =
+          expandThenFold(ctx, srcTy, bits, dstTy, rnd, populate);
+      ASSERT_TRUE(got.has_value());
+      EXPECT_EQ(*got, expected.bitcastToAPInt().getZExtValue());
+    }
+  }
+}
+
+void expectFoldedMatchesAPFloat(
+    MLIRContext &ctx, FloatType dstTy, ArrayRef<uint32_t> inputs,
+    function_ref<void(RewritePatternSet &)> populate) {
+  SmallVector<APInt> bits;
+  for (uint32_t input : inputs)
+    bits.push_back(APInt(32, input));
+  expectFoldedMatchesAPFloat(ctx, Float32Type::get(&ctx), bits, dstTy,
+                             populate);
+}
+
+// f8E5M3FNU (no sign, no pass option) via the generic populate: zero, subnormal
+// steps and ties, ties at 1.0, max-finite 114688 and the tie above it, an
+// overflow, +Inf, a quiet and a signaling NaN; and negative values, which
+// round with their sign (upward toward zero): ties at -1.0625 and -2^-18,
+// -1.5*2^-17, -2^-19, -114688, -118784 (the tie above it), -1e6 and -0. Also
+// bf16, rounded in a carrier wider than itself: -1.0625, -2^-18, 1.0625, -0.
+TEST(NarrowFloatExpansionTest, UnsignedFoldedValuesMatchAPFloat) {
+  MLIRContext ctx;
+  ctx.loadDialect<arith::ArithDialect, func::FuncDialect>();
+  const uint32_t inputs[] = {
+      0x00000000, 0x00000001, 0x36000000, 0x36800000, 0x37000000,
+      0x37400000, 0x3F800000, 0x3F880000, 0x3F880008, 0x3F980000,
+      0x47E00000, 0x47E80000, 0x49742400, 0x7F800000, 0x7FC00000,
+      0x7F800001, 0xBF880000, 0xBF880008, 0xB6800000, 0xB7400000,
+      0xB6000000, 0xC7E00000, 0xC7E80000, 0xC9742400, 0x80000000};
+  const uint16_t bf16Inputs[] = {0xBF88, 0xB680, 0x3F88, 0x8000};
+  FloatType dstTy = Float8E5M3FNUType::get(&ctx);
+  auto populate = [](RewritePatternSet &p) {
+    arith::populateExpandNarrowFloatPatterns(p,
+                                             TypeID::get<Float8E5M3FNUType>());
+  };
+  expectFoldedMatchesAPFloat(ctx, dstTy, inputs, populate);
+  SmallVector<APInt> bf16Bits;
+  for (uint16_t input : bf16Inputs)
+    bf16Bits.push_back(APInt(16, input));
+  expectFoldedMatchesAPFloat(ctx, BFloat16Type::get(&ctx), bf16Bits, dstTy,
+                             populate);
+}
+
+// A signed format, negative inputs included: ties at 1.0625 and at -2^-10
+// (half the smallest subnormal), -448 (max-finite) and -464 (the tie above
+// it), a negative overflow, -Inf and -0.
+TEST(NarrowFloatExpansionTest, SignedFoldedValuesMatchAPFloat) {
+  MLIRContext ctx;
+  ctx.loadDialect<arith::ArithDialect, func::FuncDialect>();
+  const uint32_t inputs[] = {0x3F880000, 0xBF880008, 0x3B000000, 0xBA800000,
+                             0xC3E00000, 0xC3E80000, 0xC9742400, 0xFF800000,
+                             0x80000000, 0xFFC00000};
+  auto populate = [](RewritePatternSet &p) {
+    arith::populateExpandNarrowFloatPatterns(p,
+                                             TypeID::get<Float8E4M3FNType>());
+  };
+  expectFoldedMatchesAPFloat(ctx, Float8E4M3FNType::get(&ctx), inputs,
+                             populate);
 }
 
 #if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
