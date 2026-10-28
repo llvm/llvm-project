@@ -111,15 +111,16 @@ static void specializeForLoopForUnrolling(ForOp op) {
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
-/// by an scf.if for the last (partial) iteration (if any).
+/// by another scf.for for the last (partial) iteration (if any).
 ///
 /// This function rewrites the given scf.for loop in-place and creates a new
-/// scf.if operation for the last iteration. It replaces all uses of the
-/// unpeeled loop with the results of the newly generated scf.if.
+/// scf.for operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.for.
 ///
-/// The newly generated scf.if operation is returned via `ifOp`. The boundary
-/// at which the loop is split (new upper bound) is returned via `splitBound`.
-/// The return value indicates whether the loop was rewritten or not.
+/// The newly generated scf.for operation is returned via `partialIteration`.
+/// The boundary at which the loop is split (new upper bound) is returned via
+/// `splitBound`. The return value indicates whether the loop was rewritten or
+/// not.
 ///
 /// Note: Loops with a step size of 0 cannot be peeled. Applying this function
 /// to such a loop may result in IR with undefined behavior.
@@ -315,14 +316,48 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   return success();
 }
 
+scf::IfOp mlir::scf::convertPartialIterationToIf(RewriterBase &rewriter,
+                                                 ForOp partialIteration) {
+  RewriterBase::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(partialIteration);
+  Location loc = partialIteration.getLoc();
+
+  // The partial iteration runs at most once: once if lb < ub, else not at all.
+  auto pred = partialIteration.getUnsignedCmp() ? arith::CmpIPredicate::ult
+                                                : arith::CmpIPredicate::slt;
+  Value cond = arith::CmpIOp::create(rewriter, loc, pred,
+                                     partialIteration.getLowerBound(),
+                                     partialIteration.getUpperBound());
+  bool hasResults = partialIteration.getNumResults() > 0;
+  auto ifOp = IfOp::create(rewriter, loc, partialIteration.getResultTypes(),
+                           cond, /*addThenBlock=*/true,
+                           /*addElseBlock=*/hasResults);
+
+  // Move the body into the "then" block. Its scf.yield becomes the terminator.
+  SmallVector<Value> replacements = {partialIteration.getLowerBound()};
+  llvm::append_range(replacements, partialIteration.getInitArgs());
+  rewriter.inlineBlockBefore(partialIteration.getBody(), ifOp.thenBlock(),
+                             ifOp.thenBlock()->end(), replacements);
+
+  // If the loop does not run, it returns its init args.
+  if (hasResults) {
+    rewriter.setInsertionPointToStart(ifOp.elseBlock());
+    YieldOp::create(rewriter, loc, partialIteration.getInitArgs());
+  }
+
+  rewriter.replaceOp(partialIteration, ifOp.getResults());
+  return ifOp;
+}
+
 static constexpr char kPeeledLoopLabel[] = "__peeled_loop__";
 static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
 namespace {
 struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
-  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool skipPartial)
+  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool skipPartial,
+                        bool partialAsIf)
       : OpRewritePattern<ForOp>(ctx), peelFront(peelFront),
-        skipPartial(skipPartial) {}
+        skipPartial(skipPartial), partialAsIf(partialAsIf) {}
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
@@ -341,9 +376,10 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     } else {
       if (skipPartial) {
         // No peeling of loops inside the partial iteration of another peeled
-        // loop.
+        // loop. The partial iteration is an scf.for, or an scf.if if
+        // `partialAsIf` is set.
         Operation *op = forOp.getOperation();
-        while ((op = op->getParentOfType<scf::ForOp>())) {
+        while ((op = op->getParentOp())) {
           if (op->hasDiscardableAttr(kPartialIterationLabel))
             return failure();
         }
@@ -354,12 +390,15 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
         return failure();
     }
 
+    Operation *partialOp = partialIteration;
+    if (partialAsIf)
+      partialOp = convertPartialIterationToIf(rewriter, partialIteration);
+
     // Apply label, so that the same loop is not rewritten a second time.
-    rewriter.modifyOpInPlace(partialIteration, [&]() {
-      partialIteration->setDiscardableAttr(kPeeledLoopLabel,
-                                           rewriter.getUnitAttr());
-      partialIteration->setDiscardableAttr(kPartialIterationLabel,
-                                           rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(partialOp, [&]() {
+      partialOp->setDiscardableAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      partialOp->setDiscardableAttr(kPartialIterationLabel,
+                                    rewriter.getUnitAttr());
     });
     rewriter.modifyOpInPlace(forOp, [&]() {
       forOp->setDiscardableAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
@@ -377,6 +416,10 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
   /// Note: Takes into account the entire chain of parent operations, not just
   /// the direct parent.
   bool skipPartial;
+
+  /// If set to true, the partial iteration is emitted as an scf.if instead of
+  /// an scf.for.
+  bool partialAsIf;
 };
 } // namespace
 
@@ -404,7 +447,8 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial);
+    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial,
+                                        partialAsIf);
     (void)applyPatternsGreedily(parentOp, std::move(patterns));
 
     // Drop the markers.
