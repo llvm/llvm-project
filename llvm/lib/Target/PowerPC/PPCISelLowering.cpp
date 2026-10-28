@@ -12074,10 +12074,10 @@ SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
   if (Left.getValueType() != MVT::v16i8 || Right.getValueType() != MVT::v16i8)
     return SDValue();
 
-  SDValue Odds = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulosb,
-                                  Left, Right, DAG, dl, MVT::v8i16);
-  SDValue Evens = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulesb,
-                                   Left, Right, DAG, dl, MVT::v8i16);
+  SDValue Odds = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulosb, Left, Right,
+                                  DAG, dl, MVT::v8i16);
+  SDValue Evens = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulesb, Left, Right,
+                                   DAG, dl, MVT::v8i16);
   SDValue Ones = DAG.getConstant(1, dl, MVT::v8i16);
   SDValue SumOdd =
       DAG.getNode(ISD::PARTIAL_REDUCE_SMLA, dl, MVT::v4i32, Acc, Odds, Ones);
