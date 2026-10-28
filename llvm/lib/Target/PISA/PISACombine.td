@@ -385,20 +385,23 @@ def extract_subvector_to_extract_elt : GICombineRule<
       if (SubvectorMI->getOpcode() != TargetOpcode::G_EXTRACT_SUBVECTOR) {
         return false;
       }
-      if (SubvectorMI->getOperand(2).isReg()){
-       // Skip to avoid needing to generate add instruction for index adjustment.
-       return false;
+      if (SubvectorMI->getOperand(2).isReg()) {
+        // Skip to avoid needing to generate an add instruction for index
+        // adjustment.
+        return false;
       }
       std::optional<ValueAndVReg> C =
           getIConstantVRegValWithLookThrough(
               ${root}->getOperand(2).getReg(), MRI);
-      if (!C.has_value()){
-        if (SubvectorMI->getOperand(2).getImm() != 0){
-        // Skip to avoid needing to generate add instruction for index adjustment.
+      if (!C.has_value()) {
+        if (SubvectorMI->getOperand(2).getImm() != 0) {
+          // Skip to avoid needing to generate an add instruction for index
+          // adjustment.
           return false;
-         }
+        }
       }
-      LLVM_DEBUG(dbgs() << "  Success: extract_subvector_to_extract_elt rule matches!\n");
+      LLVM_DEBUG(dbgs() << "  Success: extract_subvector_to_extract_elt rule "
+                           "matches!\n");
       return true;
     }]),
   (apply
@@ -411,12 +414,12 @@ def extract_subvector_to_extract_elt : GICombineRule<
       std::optional<ValueAndVReg> C =
           getIConstantVRegValWithLookThrough(
               ${root}->getOperand(2).getReg(), MRI);
-      if (C.has_value() && SubvectorMI->getOperand(2).isImm()){
-        uint64_t NewIdx = C->Value.getZExtValue() + SubvectorMI->getOperand(2).getImm();
+      if (C.has_value() && SubvectorMI->getOperand(2).isImm()) {
+        uint64_t NewIdx = C->Value.getZExtValue() +
+                          SubvectorMI->getOperand(2).getImm();
         B.buildExtractVectorElementConstant(DstReg, SrcReg, NewIdx);
-      }
-      else {
-         B.buildExtractVectorElement(DstReg, SrcReg, IdxReg);
+      } else {
+        B.buildExtractVectorElement(DstReg, SrcReg, IdxReg);
       }
       ${root}->eraseFromParent();
     }])
