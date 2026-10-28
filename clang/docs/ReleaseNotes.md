@@ -766,6 +766,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when a token followed an `#embed` parameter whose
+  expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
+  (#GH212075)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -810,6 +813,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+- Fixed acceptance of redefinition of a struct with different bit-field width in C23 mode. (#GH232748)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
@@ -1142,6 +1146,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
+
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
 
 #### Miscellaneous Bug Fixes
 

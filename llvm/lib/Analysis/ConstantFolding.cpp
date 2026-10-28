@@ -1037,11 +1037,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
       return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
-  APInt Offset = APInt(
-      BitWidth,
-      DL.getIndexedOffsetInType(
-          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)),
-      /*isSigned=*/true, /*implicitTrunc=*/true);
+  APInt Offset(BitWidth, 0);
+  ArrayRef<const Value *> Indices(
+      reinterpret_cast<const Value *const *>(Ops.data()) + 1, Ops.size() - 1);
+  if (!GEPOperator::accumulateConstantOffset(SrcElemTy, Indices, DL, Offset))
+    return nullptr;
 
   std::optional<ConstantRange> InRange = GEP->getInRange();
   if (InRange)
@@ -1053,16 +1053,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
     NW &= GEP->getNoWrapFlags();
 
-    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
-
-    // Do not try the incorporate the sub-GEP if some index is not a number.
-    bool AllConstantInt = true;
-    for (Value *NestedOp : NestedOps)
-      if (!isa<ConstantInt>(NestedOp)) {
-        AllConstantInt = false;
-        break;
-      }
-    if (!AllConstantInt)
+    // Do not try to incorporate the sub-GEP if some index is not a number.
+    APInt NestedOffset(BitWidth, 0);
+    if (!GEP->accumulateConstantOffset(DL, NestedOffset))
       break;
 
     // Adjust inrange offset and intersect inrange attributes
@@ -1074,10 +1067,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
-    Offset = Offset.sadd_ov(
-        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps),
-              /*isSigned=*/true, /*implicitTrunc=*/true),
-        Overflow);
+    Offset = Offset.sadd_ov(NestedOffset, Overflow);
   }
 
   // Preserving nusw (without inbounds) also requires that the offset
@@ -1685,24 +1675,6 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
     }
     break;
   case Instruction::IntToPtr:
-    // If the input is a ptrtoint, turn the pair into a ptr to ptr bitcast if
-    // the int size is >= the ptr size and the address spaces are the same.
-    // This requires knowing the width of a pointer, so it can't be done in
-    // ConstantExpr::getCast.
-    if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-      if (CE->getOpcode() == Instruction::PtrToInt) {
-        Constant *SrcPtr = CE->getOperand(0);
-        unsigned SrcPtrSize = DL.getPointerTypeSizeInBits(SrcPtr->getType());
-        unsigned MidIntSize = CE->getType()->getScalarSizeInBits();
-
-        if (MidIntSize >= SrcPtrSize) {
-          unsigned SrcAS = SrcPtr->getType()->getPointerAddressSpace();
-          if (SrcAS == DestTy->getPointerAddressSpace())
-            return FoldBitCast(CE->getOperand(0), DestTy, DL);
-        }
-      }
-    }
-    break;
   case Instruction::Trunc:
   case Instruction::ZExt:
   case Instruction::SExt:
