@@ -1,8 +1,12 @@
-//===-- Implementation header for log10p1bf16 -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+/// \file
+/// Implementation of the log10p1bf16 function.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,6 +29,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 namespace log10p1bf16_internal {
+// TODO: Reuse the lookup tables from expxf16_utils.h when they can be
+// shared with the bfloat16 implementation. See
+// https://github.com/llvm/llvm-project/pull/184283.
 
 // The top five mantissa bits select F = 1 + f * 2^-5, where f is in [0, 31].
 // BFloat16 has seven explicit mantissa bits, so the table uses five of those
@@ -94,7 +101,7 @@ LIBC_INLINE bfloat16 log10p1bf16(bfloat16 x) {
       return x;
 
     // log10p1(-inf) = NaN
-    if (x_abs >= 0x7f80U) {
+    if (x_abs == 0xff80U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
