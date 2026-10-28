@@ -1185,24 +1185,6 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   }
 }
 
-void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
-  DenseMap<const SCEV *, VPValue *> SCEV2VPV;
-
-  for (VPExpandSCEVRecipe &ExpR :
-       make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(
-           *Plan.getEntry()->getEntryBasicBlock()))) {
-    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR.getSCEV(), &ExpR);
-    if (Inserted)
-      continue;
-
-    ExpR.replaceAllUsesWith(V->second);
-    if (&ExpR == Plan.getTripCount())
-      Plan.resetTripCount(V->second);
-
-    ExpR.eraseFromParent();
-  }
-}
-
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   VPValue *X;
@@ -2378,6 +2360,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // handled by cse.
     if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
       return hash_combine(Result, Load->isConsecutive());
+    if (auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(Def))
+      return hash_combine(Result, ExpSCEV->getSCEV());
     return Result;
   }
 
@@ -2406,6 +2390,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // handled by cse.
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
+        return false;
+    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
+      if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
@@ -2469,6 +2456,9 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       if (auto *Call = dyn_cast<VPWidenCallRecipe>(V))
         Call->intersectAttrs(*cast<VPWidenCallRecipe>(Def), Plan.getContext());
       Def->replaceAllUsesWith(V);
+      // Reset Plan's TC when TC expressions are CSE'd.
+      if (Def == Plan.getTripCount())
+        Plan.resetTripCount(V);
     }
     LoadCSEMap.clear();
   }
@@ -2859,17 +2849,18 @@ void VPlanTransforms::replaceSymbolicStrides(
     RewriteMap[StrideV] = StrideExpr;
   }
 
+  ScalarEvolution &SE = *PSE.getSE();
   for (VPExpandSCEVRecipe &ExpSCEV :
        make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry())) {
     const SCEV *ScevExpr = ExpSCEV.getSCEV();
-    auto *NewSCEV =
-        SCEVParameterRewriter::rewrite(ScevExpr, *PSE.getSE(), RewriteMap);
-    if (NewSCEV != ScevExpr) {
-      VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
-      ExpSCEV.replaceAllUsesWith(NewExp);
-      if (Plan.getTripCount() == &ExpSCEV)
-        Plan.resetTripCount(NewExp);
-    }
+    const SCEV *NewSCEV =
+        SCEVParameterRewriter::rewrite(ScevExpr, SE, RewriteMap);
+    if (NewSCEV == ScevExpr || !SE.isGuaranteedNotToCauseUB(NewSCEV))
+      continue;
+    VPValue *NewExp = vputils::getOrCreateVPValueForSCEVExpr(Plan, NewSCEV);
+    ExpSCEV.replaceAllUsesWith(NewExp);
+    if (Plan.getTripCount() == &ExpSCEV)
+      Plan.resetTripCount(NewExp);
   }
 }
 

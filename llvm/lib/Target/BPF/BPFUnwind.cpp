@@ -154,6 +154,17 @@ struct BPFUnwindLower : public MachineFunctionPass {
       MBB.addSuccessor(Succ);
   }
 
+  /// The argument of a call that goes away is poison, which is 'r1 = 0'.
+  /// Nothing reads r1 after a call.
+  static void eraseArg(MachineInstr &Call) {
+    MachineBasicBlock::iterator I = Call, Begin = Call.getParent()->begin();
+    if (I == Begin)
+      return;
+    I = prev_nodbg(I, Begin);
+    if (I->getOpcode() == BPF::MOV_ri && I->getOperand(0).getReg() == BPF::R1)
+      I->eraseFromParent();
+  }
+
   static const char *unsupported(const MachineFunction &MF) {
     if (MF.getLandingPads().empty())
       return nullptr;
@@ -251,6 +262,7 @@ struct BPFUnwindLower : public MachineFunctionPass {
       if (leavesFrame(*Call)) {
         endBlockAfter(*Call, Pad);
         BuildMI(MBB, DL, TII.get(BPF::JMP)).addMBB(Pad);
+        eraseArg(*Call);
         Call->eraseFromParent();
       } else if (II && II->doesNotReturn()) {
         // Nothing sensible follows the call, but something has to.
@@ -290,6 +302,7 @@ struct BPFUnwindLower : public MachineFunctionPass {
       MachineBasicBlock *MBB = Call->getParent();
       DebugLoc DL = Call->getDebugLoc();
 
+      eraseArg(*Call);
       BuildMI(*MBB, Call, DL, TII.get(BPF::MOV_ri), BPF::R0).addImm(0);
       MachineInstrBuilder Exit =
           BuildMI(*MBB, Call, DL, TII.get(BPF::UNWIND_EXIT))

@@ -19,6 +19,10 @@
 #include <iterator>
 #include <string>
 
+// Some environments, including older glibc, allow the macro HUGE to leak out of
+// <math.h>.
+#undef HUGE
+
 using namespace Fortran::common;
 using namespace Fortran::evaluate;
 using namespace Fortran::evaluate::value;

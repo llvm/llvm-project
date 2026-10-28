@@ -5623,7 +5623,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
-  RUN_VPLAN_PASS(VPlanTransforms::removeRedundantExpandSCEVRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan, VPDominatorTree(BestVPlan));
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
@@ -6742,25 +6741,9 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    auto DiffChecks = RtPtrChecking.getDiffChecks();
-    auto HasUnsupportedBounds = [&]() {
-      // VPSCEVExpander expands AddRecs in the plan's entry, not the check
-      // block.
-      auto IsUnsupported = [](const SCEV *S) {
-        return SCEVExprContains(S, IsaPred<SCEVAddRecExpr>);
-      };
-      if (DiffChecks)
-        return any_of(*DiffChecks, [&](const PointerDiffInfo &C) {
-          return IsUnsupported(C.SrcStart) || IsUnsupported(C.SinkStart);
-        });
-      return any_of(RtPtrChecking.CheckingGroups,
-                    [&](const RuntimeCheckingPtrGroup &CG) {
-                      return IsUnsupported(CG.Low) || IsUnsupported(CG.High);
-                    });
-    };
     // The VPlan expander cannot hoist bounds out of an enclosing loop.
-    if (OrigLoop->getParentLoop() || HasUnsupportedBounds())
+    const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
+    if (OrigLoop->getParentLoop())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
                             MemCheckCond, MemCheckBlock, HasBranchWeights);
 
@@ -7065,10 +7048,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
 
-  // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis and their bypass values in the scalar header of the main plan and
-  // return them so they can be used as resume values when vectorizing the
-  // epilogue.
+  // Replace the resume phis of the VPIRPhis in the scalar header of the main
+  // plan by ResumeForEpilogue instructions for their incoming values and return
+  // them so they can be used as resume values when vectorizing the epilogue.
+  // The epilogue plan creates the resume phis after the main plan executed.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
   MiddleBuilder.setInsertPoint(
       MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
@@ -7081,21 +7064,13 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  return {VectorTCMarker, std::move(ResumeValues)};
-}
-
-/// Replace the resume phis in \p MainPlan's scalar preheader by their bypass
-/// values. The epilogue plan creates them after \p MainPlan executed.
-static void removeScalarResumePhis(VPlan &MainPlan) {
   for (VPRecipeBase &R :
        make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
     auto *ResumePhi = cast<VPPhi>(&R);
-    assert(ResumePhi->getIncomingBlock(0) == MainPlan.getMiddleBlock() &&
-           all_equal(drop_begin(ResumePhi->operands())) &&
-           "expected resume phi merging middle block and bypass values");
     ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
     ResumePhi->eraseFromParent();
   }
+  return {VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -7798,7 +7773,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
-    removeScalarResumePhis(BestMainPlan);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"

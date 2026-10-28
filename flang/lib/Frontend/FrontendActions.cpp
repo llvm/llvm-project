@@ -281,8 +281,7 @@ bool CodeGenAction::beginSourceFileAction() {
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
     llvm::omp::Version version =
         ci.getInvocation().getLangOpts().getOpenMPVersion();
-    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
-                                         static_cast<unsigned>(version));
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(), version.value());
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
       mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
