@@ -32,7 +32,7 @@ class raw_ostream;
 /// Scans SourceMgr source buffers for 'expected-<kind>' comments (e.g.
 /// 'expected-error {{message}}') and verifies that the diagnostics reported
 /// to it via \c process match them, and that every expected diagnostic is
-/// matched at least once.
+/// matched the expected number of times.
 class LLVM_ABI SourceMgrDiagnosticVerifier {
 public:
   /// The result of matching a single actual diagnostic against the expected
@@ -76,8 +76,10 @@ public:
     unsigned lineNo;
     /// The location of the expected diagnostic within the input file.
     SMLoc fileLoc;
-    /// A flag indicating if the expected diagnostic has been matched yet.
-    bool matched = false;
+    /// The number of times this diagnostic is expected.
+    unsigned numExpected = 1;
+    /// The number of matching diagnostics seen so far.
+    unsigned numSeen = 0;
     /// The substring that is expected to be within the diagnostic.
     StringRef substring;
     /// An optional regex matcher, if the expected diagnostic substring was a

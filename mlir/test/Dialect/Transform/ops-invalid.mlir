@@ -591,7 +591,7 @@ module attributes { transform.with_named_sequence } {
   // Note that printing a warning doesn't result in verification failures, so this
   // also checks for the IR being printed back.
   // CHECK-LABEL: transform.named_sequence @emit_warning_only
-  // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
+  // expected-warning @below 2 {{argument #0 is not consumed in the body but is marked as consume}}
   transform.named_sequence @emit_warning_only(%op: !transform.any_op {transform.consumed}) {
     transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield

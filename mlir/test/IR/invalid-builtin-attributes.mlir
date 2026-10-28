@@ -615,7 +615,7 @@ func.func @duplicate_dictionary_attr_key() {
 
 // -----
 
-// expected-error@below {{expected attribute}}
+// expected-error@below 2 {{expected attribute}}
 #attr = distinct[8]<attribute
 
 // -----
