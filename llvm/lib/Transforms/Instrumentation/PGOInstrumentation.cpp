@@ -76,6 +76,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -467,7 +468,7 @@ public:
 
   // Give an edge, find the BB that will be instrumented.
   // Return nullptr if there is no BB to be instrumented.
-  BasicBlock *getInstrBB(Edge *E);
+  BasicBlock *getInstrBB(Edge *E, std::optional<DominatorTree> &DT);
 
   // Return the auxiliary BB information.
   BBInfo &getBBInfo(const BasicBlock *BB) const { return MST.getBBInfo(BB); }
@@ -671,8 +672,10 @@ void FuncPGOInstrumentation<Edge, BBInfo>::getInstrumentBBs(
   for (const auto &E : MST.allEdges())
     EdgeList.push_back(E.get());
 
+  // Lazily build a tree for loop metadata and maintain it across all splits.
+  std::optional<DominatorTree> DT;
   for (auto &E : EdgeList) {
-    BasicBlock *InstrBB = getInstrBB(E);
+    BasicBlock *InstrBB = getInstrBB(E, DT);
     if (InstrBB)
       InstrumentBBs.push_back(InstrBB);
   }
@@ -681,7 +684,8 @@ void FuncPGOInstrumentation<Edge, BBInfo>::getInstrumentBBs(
 // Given a CFG E to be instrumented, find which BB to place the instrumented
 // code. The function will split the critical edge if necessary.
 template <class Edge, class BBInfo>
-BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
+BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(
+    Edge *E, std::optional<DominatorTree> &DT) {
   if (E->InMST || E->Removed)
     return nullptr;
 
@@ -712,8 +716,13 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   // Some IndirectBr critical edges cannot be split by the previous
   // SplitIndirectBrCriticalEdges call. Bail out.
   unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
+  if (!DT && TI->getMetadata(LLVMContext::MD_loop))
+    DT.emplace(F);
   BasicBlock *InstrBB =
-      isa<IndirectBrInst>(TI) ? nullptr : SplitCriticalEdge(TI, SuccNum);
+      isa<IndirectBrInst>(TI)
+          ? nullptr
+          : SplitCriticalEdge(
+                TI, SuccNum, CriticalEdgeSplittingOptions(DT ? &*DT : nullptr));
   if (!InstrBB) {
     LLVM_DEBUG(
         dbgs() << "Fail to split critical edge: not instrument this edge.\n");

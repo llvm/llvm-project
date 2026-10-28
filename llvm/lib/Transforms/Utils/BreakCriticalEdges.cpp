@@ -261,6 +261,27 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
       PDT->applyUpdates(Updates);
   }
 
+  if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop)) {
+    Loop *L = LI ? LI->getLoopFor(TIBB) : nullptr;
+    // Without usable loop information, preserve both annotations.
+    if (L || (DT && DT->isReachableFromEntry(TIBB))) {
+      // A terminator may latch several nested loops.
+      auto IsBackedge = [&](BasicBlock *Succ) {
+        if (L) {
+          for (Loop *Parent = L; Parent; Parent = Parent->getParentLoop())
+            if (Parent->getHeader() == Succ)
+              return true;
+          return false;
+        }
+        return DT->dominates(Succ, TIBB);
+      };
+      NewBI->setMetadata(LLVMContext::MD_loop,
+                         IsBackedge(DestBB) ? LoopMD : nullptr);
+      if (none_of(successors(TIBB), IsBackedge))
+        TI->setMetadata(LLVMContext::MD_loop, nullptr);
+    }
+  }
+
   // Update LoopInfo if it is around.
   if (LI) {
     if (Loop *TIL = LI->getLoopFor(TIBB)) {
