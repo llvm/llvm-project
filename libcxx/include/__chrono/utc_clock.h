@@ -47,15 +47,13 @@ public:
   using time_point                = chrono::time_point<utc_clock>;
   static constexpr bool is_steady = false; // The system_clock is not steady.
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static time_point now() { return from_sys(system_clock::now()); }
+  [[nodiscard]] static time_point now() { return from_sys(system_clock::now()); }
 
   template <class _Duration>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static sys_time<common_type_t<_Duration, seconds>>
-  to_sys(const utc_time<_Duration>& __time);
+  [[nodiscard]] static sys_time<common_type_t<_Duration, seconds>> to_sys(const utc_time<_Duration>& __time);
 
   template <class _Duration>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static utc_time<common_type_t<_Duration, seconds>>
-  from_sys(const sys_time<_Duration>& __time) {
+  [[nodiscard]] static utc_time<common_type_t<_Duration, seconds>> from_sys(const sys_time<_Duration>& __time) {
     using _Rp = utc_time<common_type_t<_Duration, seconds>>;
     // TODO TZDB investigate optimizations.
     //
@@ -109,7 +107,7 @@ struct leap_second_info {
 };
 
 template <class _Duration>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI leap_second_info get_leap_second_info(const utc_time<_Duration>& __time) {
+[[nodiscard]] leap_second_info get_leap_second_info(const utc_time<_Duration>& __time) {
   const tzdb& __tzdb = chrono::get_tzdb();
   if (__tzdb.leap_seconds.empty()) [[unlikely]]
     return {false, chrono::seconds{0}};
@@ -133,8 +131,7 @@ template <class _Duration>
 }
 
 template <class _Duration>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_time<common_type_t<_Duration, seconds>>
-utc_clock::to_sys(const utc_time<_Duration>& __time) {
+[[nodiscard]] sys_time<common_type_t<_Duration, seconds>> utc_clock::to_sys(const utc_time<_Duration>& __time) {
   using _Dp               = common_type_t<_Duration, seconds>;
   leap_second_info __info = chrono::get_leap_second_info(__time);
 

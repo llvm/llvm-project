@@ -247,8 +247,8 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
+// CHECK-NEXT:     y                    0.910     'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
-// CHECK-NEXT:     y                    0.98      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
@@ -257,7 +257,7 @@
 // CHECK-NEXT:     zvdot4a8i            0.1       'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)
 // CHECK-NEXT:     zvfbdota32f          0.2       'Zvfbdota32f' (FP32 batched dot-product extension)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
-// CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)
+// CHECK-NEXT:     zvfofp8min           0.9       'Zvfofp8min' (Vector OFP8 Converts)
 // CHECK-NEXT:     zvfqwbdota8f         0.2       'Zvfqwbdota8f' (OCP FP8 batched dot-product extension)
 // CHECK-NEXT:     zvfqwdota8f          0.2       'Zvfqwdota8f' (OCP FP8 Dot-Product)
 // CHECK-NEXT:     zvfwbdota16bf        0.2       'Zvfwbdota16bf' (BF16 batched dot-product extension)
@@ -296,16 +296,16 @@
 // CHECK-NEXT:     rva20u64
 // CHECK-NEXT:     rva22s64
 // CHECK-NEXT:     rva22u64
+// CHECK-NEXT:     rva23p1s64
 // CHECK-NEXT:     rva23s64
 // CHECK-NEXT:     rva23u64
+// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvb23s64
 // CHECK-NEXT:     rvb23u64
 // CHECK-NEXT:     rvi20u32
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
-// CHECK-NEXT:     rva23p1s64
-// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

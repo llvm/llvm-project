@@ -65,6 +65,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -590,7 +591,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.offset = relInfo.r_address;
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = isSubtrahend ? 0 : totalAddend;
+      r.setAddend(isSubtrahend ? 0 : totalAddend);
     } else {
       assert(!isSubtrahend);
       const SectionHeader &referentSecHead =
@@ -612,7 +613,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      r.setAddend(referentOffset);
     }
 
     // Find the subsection that this relocation belongs to.
@@ -648,13 +649,13 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
-        p.addend = totalAddend;
+        p.setAddend(totalAddend);
       } else {
         uint64_t referentOffset =
             totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
         p.referent = findContainingSubsection(
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
-        p.addend = referentOffset;
+        p.setAddend(referentOffset);
       }
       subsec->relocs.push_back(p);
     }
@@ -1035,6 +1036,11 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
+static bool isUnwindSection(const Section &sec) {
+  return sec.name == section_names::compactUnwind ||
+         sec.name == section_names::ehFrame;
+}
+
 template <class LP> void ObjFile::parse() {
   using Header = typename LP::mach_header;
   using SegmentCommand = typename LP::segment_command;
@@ -1079,8 +1085,12 @@ template <class LP> void ObjFile::parse() {
 
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
+  //
+  // Parse sections that are consumed by registerCompactUnwind() and
+  // registerEhFrames() immediately. The rest can be deferred to be done in
+  // parallel.
   for (size_t i = 0, n = sections.size(); i < n; ++i)
-    if (!sections[i]->subsections.empty())
+    if (!sections[i]->subsections.empty() && isUnwindSection(*sections[i]))
       parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
 
   parseDebugInfo();
@@ -1157,6 +1167,41 @@ void ObjFile::parseDebugInfo() {
   compileUnit = it != units.end() ? it->get() : nullptr;
 }
 
+template <class LP> void ObjFile::parseDeferredRelocationsImpl() {
+  using Header = typename LP::mach_header;
+  using SegmentCommand = typename LP::segment_command;
+  using SectionHeader = typename LP::section;
+
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(hdr, LP::segmentLCType);
+  if (!cmd)
+    return;
+  auto *c = reinterpret_cast<const SegmentCommand *>(cmd);
+  ArrayRef<SectionHeader> sectionHeaders{
+      reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
+
+  // Mirroring section filter in parse() since we already parsed unwind
+  // sections.
+  for (size_t i = 0, n = sections.size(); i < n; ++i)
+    if (!sections[i]->subsections.empty() && !isUnwindSection(*sections[i]))
+      parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
+}
+
+void ObjFile::parseDeferredRelocations() {
+  if (target->wordSize == 8)
+    parseDeferredRelocationsImpl<LP64>();
+  else
+    parseDeferredRelocationsImpl<ILP32>();
+}
+
+void macho::parseDeferredRelocations() {
+  TimeTraceScope timeScope("Parse relocations");
+  parallelForEach(inputFiles, [](InputFile *file) {
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      objFile->parseDeferredRelocations();
+  });
+}
+
 ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
@@ -1216,8 +1261,8 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      uint64_t add = r.addend;
-      if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
+      uint64_t add = r.getAddend();
+      if (auto *sym = cast_or_null<Defined>(dyn_cast<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
         if (sym->getFile() != this) {
@@ -1228,7 +1273,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
         referentIsec =
-            cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
+            cast<ConcatInputSection>(dyn_cast<InputSection *>(r.referent));
       }
       // Unwind info lives in __DATA, and finalization of __TEXT will occur
       // before finalization of __DATA. Moreover, the finalization of unwind
@@ -1419,12 +1464,13 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
-    target = findSymbolAtOffset(targetIsec, minuend.addend);
+    target = findSymbolAtOffset(targetIsec, minuend.getAddend());
   }
   if (Invert)
     std::swap(pcSym, target);
   if (pcSym->isec() == isec) {
-    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.getAddend() !=
+        subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
     // Ensure the pcReloc points to a symbol within the current EH frame.
@@ -1436,7 +1482,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
-    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+    minuend.setAddend(pcReloc.offset * (Invert ? 1LL : -1LL));
   }
   return target;
 }

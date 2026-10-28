@@ -1,18 +1,25 @@
-//===-- Unittests for shared math functions in constexpr context ----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains unittests for shared math functions in constexpr context.
+///
+//===----------------------------------------------------------------------===//
 
 #define LIBC_ENABLE_CONSTEXPR 1
 
 #include "shared/math.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
+using LIBC_NAMESPACE::fputil::Float80;
 
 #ifdef LIBC_USE_CONSTEXPR
 
@@ -29,6 +36,7 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ceil(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::copysign(0.0, 0.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fabs(-1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fdim(1.0, 0.0));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::bf16sub(0.0, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdiv(0.0, 1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::floor(1.2));
 static_assert(2.0 == LIBC_NAMESPACE::shared::fmaximum_mag_num(1.0, 2.0));
@@ -121,6 +129,7 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::copysignf(0.0f, 0.0f));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fabsf(-1.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fadd(0.0, 0.0));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fdimf(1.0f, 0.0f));
+static_assert(bfloat16(0.0f) == LIBC_NAMESPACE::shared::bf16subf(0.0f, 0.0f));
 static_assert(2.0f == LIBC_NAMESPACE::shared::fmaximum_mag_numf(1.0f, 2.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximumf(0.0f, 0.0f));
@@ -402,6 +411,9 @@ static_assert(Float128(0.0) ==
                                                    Float128(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fabsf128(Float128(-1.0)));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::copysignf80(Float80(0.0), Float80(0.0)));
+static_assert(Float80(1.0) == LIBC_NAMESPACE::shared::fabsf80(Float80(-1.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==
@@ -435,11 +447,18 @@ static_assert(Float128(0.0) ==
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(Float128(0.0),
                                                        Float128(0.0)));
+static_assert(Float128(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpf128(Float128(0.0), &exp);
+}());
+static_assert(0 == LIBC_NAMESPACE::shared::ilogbf128(Float128(1.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbf128(Float128(1.0)));
 static_assert(0LL == LIBC_NAMESPACE::shared::llrintf128(Float128(0.0)));
 static_assert(0LL == LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
+static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
@@ -449,8 +468,36 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
+constexpr Float128 TOTALORDERF128_X = Float128(0.0);
+constexpr Float128 TOTALORDERF128_Y = Float128(0.0);
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&TOTALORDERF128_X,
+                                                          &TOTALORDERF128_Y));
+constexpr Float128 TOTALORDERMAGF128_X = Float128(0.0);
+constexpr Float128 TOTALORDERMAGF128_Y = Float128(0.0);
+static_assert(1 ==
+              LIBC_NAMESPACE::shared::totalordermagf128(&TOTALORDERMAGF128_X,
+                                                        &TOTALORDERMAGF128_Y));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
+static_assert(Float128(-1.0) == [] {
+  Float128 getpayload_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
+}());
+static_assert(1 == [] {
+  const char arg{};
+  return LIBC_NAMESPACE::fputil::FPBits<Float128>(
+             LIBC_NAMESPACE::shared::nanf128(&arg))
+      .is_nan();
+}());
+static_assert(0 == [] {
+  Float128 setpayload_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, Float128(0.0));
+}());
+static_assert(1 == [] {
+  Float128 setpayloadsigf128_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_x,
+                                                   Float128(0.0));
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
@@ -471,29 +518,19 @@ static_assert(0.0f ==
               LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fdivf128(float128(0.0), float128(1.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::bf16subf128(float128(0.0),
+                                                  float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
 
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
-static_assert(float128(-1.0) == [] {
-  float128 getpayload_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
-}());
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
-constexpr float128 TOTALORDERF128_X = float128(0.0);
-constexpr float128 TOTALORDERF128_Y = float128(0.0);
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&TOTALORDERF128_X,
-                                                          &TOTALORDERF128_Y));
-constexpr float128 TOTALORDERMAGF128_X = float128(0.0);
-constexpr float128 TOTALORDERMAGF128_Y = float128(0.0);
-static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalordermagf128(&TOTALORDERMAGF128_X,
-                                                        &TOTALORDERMAGF128_Y));
 static_assert(0 ==
               LIBC_NAMESPACE::shared::fmodf128(float128(4.0), float128(2.0)));
 static_assert(float128(0.0) == [] {
@@ -511,15 +548,6 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
-static_assert(0 == [] {
-  float128 setpayload_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, float128(0.0));
-}());
-static_assert(1 == [] {
-  float128 setpayloadsig_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsig_x,
-                                                   float128(0.0));
-}());
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
@@ -527,12 +555,6 @@ static_assert(0.0f ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::nextafterf128(float128(0.0),
                                                     float128(0.0)));
-static_assert(1 == [] {
-  const char arg{};
-  return LIBC_NAMESPACE::fputil::FPBits<float128>(
-             LIBC_NAMESPACE::shared::nanf128(&arg))
-      .is_nan();
-}());
 
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 

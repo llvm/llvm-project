@@ -197,7 +197,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
   if (executable.get() != target.GetExecutableModulePointer()) {
     // Don't load dependent images since we are in dyld where we will know and
     // find out about all images that are loaded
-    target.SetExecutableModule(executable, eLoadDependentsNo);
+    target.RebuildModuleListWithExecutable(executable, eLoadDependentsNo);
   }
 
   return executable;
@@ -585,11 +585,11 @@ DynamicLoaderHexagonDYLD::GetThreadLocalData(const lldb::ModuleSP module,
 
   Module *mod = module.get();
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  LLDB_LOGF(log,
-            "DynamicLoaderHexagonDYLD::Performed TLS lookup: "
-            "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64
-            ", modid=%i, tls_block=0x%" PRIx64,
-            mod->GetObjectName().AsCString(""), link_map, tp, modid, tls_block);
+  LLDB_LOG(
+      log,
+      "DynamicLoaderHexagonDYLD::Performed TLS lookup: "
+      "module={0}, link_map=0x{1:x}, tp=0x{2:x}, modid={3}, tls_block=0x{4:x}",
+      mod->GetObjectName(), link_map, tp, modid, tls_block);
 
   if (tls_block == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;

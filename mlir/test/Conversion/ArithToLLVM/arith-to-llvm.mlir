@@ -838,7 +838,42 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
   %2 = arith.minnumf %arg0, %arg1 : f32
   // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
   %3 = arith.maxnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %4 = arith.minimumnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %5 = arith.maximumnumf %arg0, %arg1 : f32
   return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @minmaxnumf_float_widths
+func.func @minmaxnumf_float_widths(%arg0 : f16, %arg1 : f16, %arg2 : bf16,
+                                   %arg3 : bf16, %arg4 : f64, %arg5 : f64) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %0 = arith.minimumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %1 = arith.maximumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.minimumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %2 = arith.minimumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.maximumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %3 = arith.maximumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.minimumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %4 = arith.minimumnumf %arg4, %arg5 : f64
+  // CHECK: = llvm.intr.maximumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %5 = arith.maximumnumf %arg4, %arg5 : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minmaxnumf_vector
+func.func @minmaxnumf_vector(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = arith.minimumnumf %arg0, %arg1 : vector<4xf32>
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %1 = arith.maximumnumf %arg0, %arg1 : vector<4xf32>
+  return
 }
 
 // -----
@@ -870,14 +905,18 @@ func.func @ops_supporting_fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %2 = arith.maximumf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.intr.minimum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
   %3 = arith.minimumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.maximumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %4 = arith.maximumnumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.minimumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %5 = arith.minimumnumf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fmul %arg0, %arg1 fastmath<fast> : f32
-  %4 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
+  %6 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fneg %arg0 fastmath<fast> : f32
-  %5 = arith.negf %arg0 fastmath<fast> : f32
+  %7 = arith.negf %arg0 fastmath<fast> : f32
 // CHECK: llvm.frem %arg0, %arg1 fastmath<fast> : f32
-  %6 = arith.remf %arg0, %arg1 fastmath<fast> : f32
+  %8 = arith.remf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fsub %arg0, %arg1 fastmath<fast> : f32
-  %7 = arith.subf %arg0, %arg1 fastmath<fast> : f32
+  %9 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   return
 }
 
@@ -965,6 +1004,25 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2
   %3 = arith.cmpf oeq, %arg0, %arg3 : f4E2M1FN
   %4 = arith.select %arg4, %arg0, %arg3 : f4E2M1FN
   return
+}
+
+// -----
+
+// Integer to float conversions with a result type that has no LLVM equivalent
+// are not converted. sitofp used to be lowered to an invalid `llvm.sitofp` with
+// an integer result.
+
+// CHECK-LABEL: func @unsupported_fp_type_int_to_fp
+//       CHECK:   arith.sitofp {{.*}} : i32 to f8E4M3FN
+//       CHECK:   arith.sitofp {{.*}} : vector<4xi32> to vector<4xf8E5M2>
+//       CHECK:   arith.sitofp {{.*}} : vector<2x4xi32> to vector<2x4xf8E8M0FNU>
+//       CHECK:   arith.uitofp {{.*}} : i32 to f8E4M3FN
+func.func @unsupported_fp_type_int_to_fp(%arg0: i32, %arg1: vector<4xi32>, %arg2: vector<2x4xi32>) -> (f8E4M3FN, vector<4xf8E5M2>, vector<2x4xf8E8M0FNU>, f8E4M3FN) {
+  %0 = arith.sitofp %arg0 : i32 to f8E4M3FN
+  %1 = arith.sitofp %arg1 : vector<4xi32> to vector<4xf8E5M2>
+  %2 = arith.sitofp %arg2 : vector<2x4xi32> to vector<2x4xf8E8M0FNU>
+  %3 = arith.uitofp %arg0 : i32 to f8E4M3FN
+  return %0, %1, %2, %3 : f8E4M3FN, vector<4xf8E5M2>, vector<2x4xf8E8M0FNU>, f8E4M3FN
 }
 
 // -----

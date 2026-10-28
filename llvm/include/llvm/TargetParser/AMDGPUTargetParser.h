@@ -245,6 +245,12 @@ LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getLDSAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getLDSAllocGranule(Triple::SubArchType SubArch);
 
+/// \returns LDS size encoding granularity in bytes, used for program resource
+/// registers and metadata. This can differ from the allocation granularity.
+/// Returns zero if the target has no LDS encoding granularity feature.
+LLVM_ABI unsigned getLDSEncodingGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSEncodingGranule(Triple::SubArchType SubArch);
+
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.
 constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {

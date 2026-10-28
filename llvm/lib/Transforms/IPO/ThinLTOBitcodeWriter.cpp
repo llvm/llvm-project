@@ -59,6 +59,10 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       if (C->getName() == Name)
         RenamedComdats.try_emplace(C, ExportM.getOrInsertComdat(NewName));
 
+    Constant *Aliasee = &ExportGV;
+    while (auto *GA = dyn_cast<GlobalAlias>(Aliasee))
+      Aliasee = GA->getAliasee();
+
     // We must use the function's value type (FunctionType), not ptr - hence
     // ExportGV.getValueType() rather than getType(). Otherwise, when an
     // internal coroutine is imported into another module, IRMover sees a
@@ -70,12 +74,12 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     // cleaner.
     auto *ExternalAlias = GlobalAlias::create(
         ExportGV.getValueType(), ExportGV.getAddressSpace(),
-        GlobalValue::ExternalLinkage, NewName, &ExportGV, &ExportM);
+        GlobalValue::ExternalLinkage, NewName, Aliasee, &ExportM);
     ExternalAlias->setVisibility(GlobalValue::HiddenVisibility);
-    ExportGV.replaceUsesWithIf(
-        ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
 
     if (MustPromote) {
+      ExportGV.replaceUsesWithIf(
+          ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
       PromoteExtra->remove(&ExportGV);
       PromoteExtra->insert(ExternalAlias);
     }
