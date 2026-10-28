@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_CUDA_CUDACOMPAT_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_CUDA_CUDACOMPAT_H
+#ifndef OFFLOAD_PLUGINS_NEXTGEN_CUDA_CUDACOMPAT_H
+#define OFFLOAD_PLUGINS_NEXTGEN_CUDA_CUDACOMPAT_H
 
 #include "APIHelpers.h"
 
@@ -22,4 +22,4 @@ API_HELPER_OPTIONAL(CUresult, cuMemPrefetchBatchAsync, CUdeviceptr *dptrs,
                     size_t *prefetchLocIdxs, size_t numPrefetchLocs,
                     unsigned long long flags, CUstream hStream)
 
-#endif
+#endif // OFFLOAD_PLUGINS_NEXTGEN_CUDA_CUDACOMPAT_H
