@@ -385,7 +385,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added `-fint64-is-long-long`, which forces `int64_t` to be `long long`. This
   can be helpful for projects with freestanding environments that define this
-  type differently from the default of the target triple.
+  type differently from the default of the target triple. This option is only
+  supported for targets where `long long` is exactly 64-bits wide.
 
 ### Deprecated Compiler Flags
 

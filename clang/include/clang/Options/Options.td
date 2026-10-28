@@ -4590,7 +4590,7 @@ defm short_enums : BoolFOption<"short-enums",
 defm int64_is_long_long : BoolFOption<"int64-is-long-long",
   LangOpts<"Int64LongLong">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Force type of int64_t to be long long">,
+          "Force type of int64_t to be long long; only allowed when long long is 64-bits for the target">,
   NegFlag<SetFalse>>;
 defm char8__t : BoolFOption<"char8_t",
   LangOpts<"Char8">, Default<cpp20.KeyPath>,
