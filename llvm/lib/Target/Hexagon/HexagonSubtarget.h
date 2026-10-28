@@ -57,6 +57,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHMXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
   bool UseHVXFloatingPoint = false;
@@ -254,6 +255,7 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHMXOps() const { return UseHMXOps; }
   bool useCabac() const { return UseCabac; }
 
   bool isTinyCore() const { return HexagonProcFamily == TinyCore; }

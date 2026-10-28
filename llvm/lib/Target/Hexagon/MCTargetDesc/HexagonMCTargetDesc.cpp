@@ -123,6 +123,9 @@ static cl::opt<bool>
   DisableHVX("mno-hvx", cl::Hidden,
              cl::desc("Disable Hexagon Vector eXtensions"));
 
+static cl::opt<bool> EnableHMX("mhmx",
+                               cl::desc("Enable Hexagon Matrix eXtensions"));
+
 static cl::opt<bool>
     EnableHvxIeeeFp("mhvx-ieee-fp", cl::Hidden,
                     cl::desc("Enable HVX IEEE floating point extensions"));
@@ -441,6 +444,9 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   SmallVector<StringRef, 3> Result;
   if (!FS.empty())
     Result.push_back(FS);
+
+  if (EnableHMX)
+    Result.push_back("+hmx");
 
   switch (EnableHVX) {
   case Hexagon::ArchEnum::V5:
