@@ -432,6 +432,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     //   otherwise              - N should be replaced by the returned Operand.
     //
     SDValue visitTokenFactor(SDNode *N);
+    SDValue visitGET_ROUNDING(SDNode *N);
     SDValue visitMERGE_VALUES(SDNode *N);
     SDValue visitADD(SDNode *N);
     SDValue visitADDLike(SDNode *N);
@@ -1984,6 +1985,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
   case ISD::TokenFactor:        return visitTokenFactor(N);
+  case ISD::GET_ROUNDING:       return visitGET_ROUNDING(N);
   case ISD::MERGE_VALUES:       return visitMERGE_VALUES(N);
   case ISD::ADD:                return visitADD(N);
   case ISD::PTRADD:             return visitPTRADD(N);
@@ -2273,6 +2275,20 @@ SDValue DAGCombiner::visitFCANONICALIZE(SDNode *N) {
     return DAG.getConstantFP(CanonicalQNaN, dl, VT);
   }
   return SDValue();
+}
+
+SDValue DAGCombiner::visitGET_ROUNDING(SDNode *N) {
+  SDValue Chain = N->getOperand(0);
+  if (Chain.getOpcode() != ISD::SET_ROUNDING)
+    return SDValue();
+
+  auto *Mode = dyn_cast<ConstantSDNode>(Chain.getOperand(1));
+  if (!Mode || Mode->getZExtValue() > 3)
+    return SDValue();
+
+  // The standard rounding modes 0 through 3 round-trip through SET_ROUNDING.
+  // Keep the setter, but avoid reading back the state it just established.
+  return CombineTo(N, Chain.getOperand(1), Chain);
 }
 
 SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
