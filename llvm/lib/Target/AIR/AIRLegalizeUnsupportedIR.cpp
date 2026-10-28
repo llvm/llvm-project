@@ -10,6 +10,7 @@
 #include "AIR.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/AIR.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -20,6 +21,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -791,8 +793,115 @@ void expandIntrinsicsMetalMishandles(Module &M) {
       F.eraseFromParent();
 }
 
+// Threadgroup globals declared, not defined (agx-raise-to-air keeps PTX's
+// .shared variables so; AGX lays them out itself). Metal resolves no
+// threadgroup symbol: a sized one is defined here (undefined contents, as
+// threadgroup memory is), and a zero-sized one, CUDA's dynamic shared memory
+// (extern __shared__ T s[]), whose size is known only at dispatch, becomes
+// Metal's threadgroup argument: a new last parameter of each kernel using it,
+// with threadgroup location index 0 (after any threadgroup parameters the
+// kernel already has), whose length the host sets per dispatch
+// (setThreadgroupMemoryLength:atIndex:, a multiple of 16). As in CUDA, every
+// zero-sized declaration a kernel uses is the same memory, the one argument.
+void defineThreadgroupGlobals(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  SmallVector<GlobalVariable *, 4> Dynamic;
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.isDeclaration() || GV.getAddressSpace() != 3)
+      continue;
+    if (M.getDataLayout().getTypeAllocSize(GV.getValueType()).isZero()) {
+      Dynamic.push_back(&GV);
+      continue;
+    }
+    GV.setInitializer(UndefValue::get(GV.getValueType()));
+    GV.setLinkage(GlobalValue::InternalLinkage);
+  }
+  if (Dynamic.empty())
+    return;
+
+  SmallVector<Constant *, 4> Consts(Dynamic.begin(), Dynamic.end());
+  convertUsersOfConstantsToInstructions(Consts);
+  // The functions using the dynamic memory, each a kernel (non-kernel
+  // functions have been inlined).
+  SetVector<Function *> Users;
+  for (GlobalVariable *GV : Dynamic)
+    for (User *U : GV->users())
+      if (auto *I = dyn_cast<Instruction>(U))
+        Users.insert(I->getFunction());
+  NamedMDNode *Kernels = M.getNamedMetadata("air.kernel");
+  Type *I32 = Type::getInt32Ty(Ctx);
+  auto C32 = [&](unsigned V) {
+    return ConstantAsMetadata::get(ConstantInt::get(I32, V));
+  };
+  for (Function *F : Users) {
+    if (!F->hasFnAttribute("air-kernel")) {
+      Ctx.diagnose(DiagnosticInfoUnsupported(
+          *F, "dynamic threadgroup memory used outside a kernel"));
+      continue;
+    }
+    SmallVector<Type *, 8> Params(F->getFunctionType()->params());
+    unsigned TGIndex = count_if(Params, [](Type *T) {
+      return T->isPointerTy() && T->getPointerAddressSpace() == 3;
+    });
+    Params.push_back(PointerType::get(Ctx, 3));
+    auto *NewF = Function::Create(
+        FunctionType::get(F->getReturnType(), Params, false), F->getLinkage(),
+        F->getAddressSpace(), "", &M);
+    NewF->copyAttributesFrom(F);
+    NewF->copyMetadata(F, 0);
+    NewF->splice(NewF->begin(), F);
+    for (auto [Old, New] : zip(F->args(), NewF->args())) {
+      New.setName(Old.getName());
+      Old.replaceAllUsesWith(&New);
+    }
+    Argument *TG = NewF->getArg(Params.size() - 1);
+    TG->setName(Dynamic.size() == 1 ? Dynamic.front()->getName()
+                                    : StringRef("dynamic_threadgroup"));
+    for (GlobalVariable *GV : Dynamic)
+      GV->replaceUsesWithIf(TG, [&](Use &U) {
+        auto *I = dyn_cast<Instruction>(U.getUser());
+        return I && I->getFunction() == NewF;
+      });
+    // Keep a pre-baked !air.kernel pointing at the kernel, and describe the
+    // argument there as AIRSystemValues does without one: an "air.buffer" in
+    // address space 3 (on the M2 Max an "air.threadgroup" entry crashes
+    // Metal's compiler).
+    ValueAsMetadata::handleRAUW(F, NewF);
+    NewF->takeName(F);
+    F->eraseFromParent();
+    if (!Kernels)
+      continue;
+    Align A = Dynamic.front()->getAlign().valueOrOne();
+    MDNode *Arg = MDNode::get(
+        Ctx, {C32(TG->getArgNo()), MDString::get(Ctx, "air.buffer"),
+              MDString::get(Ctx, "air.location_index"), C32(TGIndex), C32(1),
+              MDString::get(Ctx, "air.read_write"),
+              MDString::get(Ctx, "air.address_space"), C32(3),
+              MDString::get(Ctx, "air.arg_type_size"), C32(1),
+              MDString::get(Ctx, "air.arg_type_align_size"), C32(A.value()),
+              MDString::get(Ctx, "air.arg_type_name"),
+              MDString::get(Ctx, "uchar"), MDString::get(Ctx, "air.arg_name"),
+              MDString::get(Ctx, TG->getName())});
+    for (MDNode *K : Kernels->operands()) {
+      auto *KF = K->getNumOperands() == 3
+                     ? mdconst::dyn_extract_or_null<Function>(K->getOperand(0))
+                     : nullptr;
+      auto *Args = KF == NewF ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+      if (!Args)
+        continue;
+      SmallVector<Metadata *, 8> Ops(Args->operands());
+      Ops.push_back(Arg);
+      K->replaceOperandWith(2, MDNode::get(Ctx, Ops));
+    }
+  }
+  for (GlobalVariable *GV : Dynamic)
+    if (GV->use_empty())
+      GV->eraseFromParent();
+}
+
 bool legalizeUnsupportedIR(Module &M) {
   genericToDevice(M);
+  defineThreadgroupGlobals(M);
   stripLifetimeIntrinsics(M);
   expandIntrinsicsMetalMishandles(M);
   expandWideIntegers(M);
