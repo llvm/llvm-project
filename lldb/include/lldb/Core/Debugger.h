@@ -35,6 +35,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
@@ -103,6 +104,7 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public Properties {
 public:
   using DebuggerList = std::vector<lldb::DebuggerSP>;
+  using DebuggerIterable = LockingAdaptedIterable<std::mutex, DebuggerList>;
 
   static llvm::StringRef GetStaticBroadcasterClass();
 
@@ -137,6 +139,9 @@ public:
   static size_t GetNumDebuggers();
 
   static lldb::DebuggerSP GetDebuggerAtIndex(size_t index);
+
+  /// Get locking iterator for debuggers.
+  static DebuggerIterable Debuggers();
 
   static bool FormatDisassemblerAddress(const FormatEntity::Entry *format,
                                         const SymbolContext *sc,

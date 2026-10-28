@@ -1655,6 +1655,13 @@ lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
   return nullptr;
 }
 
+Debugger::DebuggerIterable Debugger::Debuggers() {
+  static const DebuggerList g_empty_debugger_list;
+  return DebuggerIterable(g_debugger_list_ptr ? *g_debugger_list_ptr
+                                              : g_empty_debugger_list,
+                          GetDebuggerListMutex());
+}
+
 DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
   std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
   if (!g_debugger_list_ptr)
