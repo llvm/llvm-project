@@ -260,31 +260,40 @@ public:
   /// \p VF elements, and a nearby loop-carried load cannot use store-to-load
   /// forwarding. When \p ConflictingLoads is non-null, every conflicting load
   /// found is appended to it instead of stopping at the first one. When
-  /// \p OnlyLoad is non-null, inspect only
-  /// that load and use \p LoadSizeOverride as its effective width in bytes.
+  /// \p OnlyLoad is non-null, inspect only that load and use
+  /// \p LoadSizeOverride as its effective width in bytes.
   bool findStoreLoadForwardingConflict(
       StoreInst *BaseStore, unsigned VF,
       SmallVectorImpl<LoadInst *> *ConflictingLoads = nullptr,
       LoadInst *OnlyLoad = nullptr,
-      std::optional<uint64_t> LoadSizeOverride = std::nullopt);
+      std::optional<uint64_t> LoadSizeOverride = std::nullopt) const;
 
   /// \returns true if widening \p BaseLoad to \p VF elements creates a
   /// forwarding hazard with a same-base store in the load's loop that is not
   /// handled by the current vector store entry. Stores widened by an earlier
   /// tree are part of the same per-loop store list.
-  bool findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad, unsigned VF);
+  bool findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
+                                            unsigned VF) const;
 
-  /// \returns true when \p LoadI conflicts with the widened store at \p
-  /// StorePtr
-  /// (\p StorePos orders a same-iteration overlap). \p LoadSizeOverride, when
-  /// set, is the load's effective width in bytes.
-  bool loadConflictsWithSTLFStore(LoadInst *LoadI, const Loop *StoreL,
-                                  Value *StorePtr, Type *StoreElemTy,
-                                  uint64_t ElementSize,
-                                  uint64_t VectorStoreBytes,
-                                  std::optional<int64_t> StoreStride,
-                                  Instruction *StorePos,
-                                  std::optional<uint64_t> LoadSizeOverride);
+  /// Returns the constant loop-carried byte stride of \p Ptr in \p L, i.e. the
+  /// step of its affine SCEV recurrence, 0 when \p Ptr is loop-invariant (it
+  /// never moves, so its "stride" is trivially constant), or std::nullopt when
+  /// \p Ptr is neither a simple affine recurrence in \p L with a constant step
+  /// nor loop-invariant. This is the same notion as LoopAccessAnalysis's
+  /// CommonStride; it is computed here directly from ScalarEvolution rather
+  /// than via getPtrStride, whose no-wrap versioning and
+  /// PredicatedScalarEvolution machinery is meant for legality, not costing.
+  std::optional<int64_t> getConstantLoopStrideInBytes(Value *Ptr,
+                                                      const Loop *L) const;
+
+  /// \returns true when \p LoadI conflicts with the widened store at
+  /// \p StorePtr (\p StorePos orders a same-iteration overlap).
+  /// \p LoadSizeOverride, when set, is the load's effective width in bytes.
+  bool loadConflictsWithSTLFStore(
+      LoadInst *LoadI, const Loop *StoreL, Value *StorePtr, Type *StoreElemTy,
+      uint64_t ElementSize, uint64_t VectorStoreBytes,
+      std::optional<int64_t> StoreStride, Instruction *StorePos,
+      std::optional<uint64_t> LoadSizeOverride) const;
 
   /// \returns true if \p StoreE's store-side STLF check (in getEntryCost)
   /// will actually run and charge for a hazard with it: a
@@ -3543,17 +3552,19 @@ private:
   unsigned NumCanonicalSplatSubtreeEntries = 0;
 
   /// Maps compress entries to their mask data for the final codegen.
-  SmallDenseMap<const TreeEntry *,
-                std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
+  mutable SmallDenseMap<
+      const TreeEntry *,
+      std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
       CompressEntryToData;
 
   /// Returns the mask data of the compress entry \p E, building it on the
   /// first request.
   const std::tuple<SmallVector<int>, VectorType *, unsigned, bool> &
-  getCompressEntryData(const TreeEntry &E);
+  getCompressEntryData(const TreeEntry &E) const;
 
   /// Simple stores of each loop, collected on first use.
-  SmallDenseMap<const Loop *, SmallVector<StoreInst *>> LoopSimpleStores;
+  mutable SmallDenseMap<const Loop *, SmallVector<StoreInst *>>
+      LoopSimpleStores;
 
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
@@ -16720,7 +16731,7 @@ getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
 }
 
 const std::tuple<SmallVector<int>, VectorType *, unsigned, bool> &
-BoUpSLP::getCompressEntryData(const TreeEntry &E) {
+BoUpSLP::getCompressEntryData(const TreeEntry &E) const {
   auto [It, Inserted] = CompressEntryToData.try_emplace(&E);
   if (!Inserted)
     return It->second;
@@ -29954,22 +29965,14 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   return Changed;
 }
 
-/// Returns the constant loop-carried byte stride of \p Ptr in \p L, i.e. the
-/// step of its affine SCEV recurrence, 0 when \p Ptr is loop-invariant (it
-/// never moves, so its "stride" is trivially constant), or std::nullopt when
-/// \p Ptr is neither a simple affine recurrence in \p L with a constant step
-/// nor loop-invariant. This is the same notion as LoopAccessAnalysis's
-/// CommonStride; it is computed here directly from ScalarEvolution rather
-/// than via getPtrStride, whose no-wrap versioning and
-/// PredicatedScalarEvolution machinery is meant for legality, not costing.
-static std::optional<int64_t>
-getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
-  const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+std::optional<int64_t>
+BoUpSLP::getConstantLoopStrideInBytes(Value *Ptr, const Loop *L) const {
+  const SCEV *PtrSCEV = SE->getSCEV(Ptr);
   const auto *AR = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
   if (!AR || AR->getLoop() != L)
-    return SE.isLoopInvariant(PtrSCEV, L) ? std::make_optional<int64_t>(0)
-                                          : std::nullopt;
-  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+    return SE->isLoopInvariant(PtrSCEV, L) ? std::make_optional<int64_t>(0)
+                                           : std::nullopt;
+  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
   if (!Step)
     return std::nullopt;
   const APInt &StepVal = Step->getAPInt();
@@ -29981,7 +29984,7 @@ getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
 bool BoUpSLP::findStoreLoadForwardingConflict(
     StoreInst *BaseStore, unsigned VF,
     SmallVectorImpl<LoadInst *> *ConflictingLoads, LoadInst *OnlyLoad,
-    std::optional<uint64_t> LoadSizeOverride) {
+    std::optional<uint64_t> LoadSizeOverride) const {
   assert(BaseStore && "Expected a valid base store");
 
   Type *StoreTy = getValueType(BaseStore, Opts.slp_revec);
@@ -30011,7 +30014,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
   // a future iteration's load re-reads the bytes this store wrote, which is a
   // property of the stride (see the per-load check below).
   std::optional<int64_t> StoreStride =
-      getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), *SE, StoreL);
+      getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), StoreL);
 
   // A load that stays scalar was already forwarded (or already stalled)
   // against the scalar stores; widening the store does not introduce a new
@@ -30067,7 +30070,7 @@ bool BoUpSLP::loadConflictsWithSTLFStore(
     LoadInst *LoadI, const Loop *StoreL, Value *StorePtr, Type *StoreElemTy,
     uint64_t ElementSize, uint64_t VectorStoreBytes,
     std::optional<int64_t> StoreStride, Instruction *StorePos,
-    std::optional<uint64_t> LoadSizeOverride) {
+    std::optional<uint64_t> LoadSizeOverride) const {
   // Only loads in the store's loop share its loop-carried dependence.
   if (LI->getLoopFor(LoadI->getParent()) != StoreL)
     return false;
@@ -30175,7 +30178,7 @@ bool BoUpSLP::isStoreSideSTLFHandled(const TreeEntry *StoreE) const {
 }
 
 bool BoUpSLP::findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
-                                                   unsigned VF) {
+                                                   unsigned VF) const {
   TypeSize ScalarLoadSize = DL->getTypeStoreSize(BaseLoad->getType());
   if (ScalarLoadSize.isScalable() || ScalarLoadSize.getFixedValue() == 0)
     return false;
@@ -30186,11 +30189,15 @@ bool BoUpSLP::findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
 
   Value *LoadBase = getUnderlyingObject(BaseLoad->getPointerOperand());
   auto [It, Inserted] = LoopSimpleStores.try_emplace(LoadL);
-  if (Inserted)
-    for (BasicBlock *BB : LoadL->blocks())
+  if (Inserted) {
+    for (BasicBlock *BB : LoadL->blocks()) {
+      if (LI->getLoopFor(BB) != LoadL)
+        continue;
       for (Instruction &I : *BB)
         if (auto *SI = dyn_cast<StoreInst>(&I); SI && SI->isSimple())
           It->second.push_back(SI);
+    }
+  }
   for (StoreInst *StoreI : It->second) {
     if (isDeleted(StoreI) ||
         getUnderlyingObject(StoreI->getPointerOperand()) != LoadBase)
