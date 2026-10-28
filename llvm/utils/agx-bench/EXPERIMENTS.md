@@ -97,6 +97,24 @@ min_nan_f16 +33% (IEEE results). Slower as a scheduling trade-off (A3): stencil 
 | R22 | 64-bit constants (REG_SEQUENCE of two mov_imm) as aligned uniform pairs under A15, so AGXFoldOperands folds them into 64-bit sources | (reverted) | G14C cycles -0.01% geomean, tput -0.1% (spmv_csr -3.2%); G13G +0.57% (spilling tile GEMMs at 128 GPRs swing -15..+62%) | not worth the code; 64-bit constants are rare once A14 handles 32-bit adds |
 | R23 | **Preamble (upper bound only)**: share of simulated cycles in instructions whose sources are only uniforms (or values computed from them), which a Mesa-style per-dispatch preamble could compute once | (not implemented) | CUDA suite 2.2% of cycles (philox 58%, permute4d 18.5%, rope 17%, mandelbrot 16%, ddot 5%, nbody 3%; most kernels < 1%) | too small on average for a new dispatch path (preshader USC words, unknown hardware behaviour); philox-style kernels benefit from ZLUDA specialization instead. **Hardware check**: none needed yet |
 
+## Experiment: PTX -> upstream AIR -> AGX (`ZLUDA_AGX_VIA_AIR=1`)
+
+A separate path (llvm/docs/AIR/AIRHints.rst): `agx-raise-to-air` writes ZLUDA's AGX IR as upstream AIR with
+hints (operations AIR lacks, each with an AIR emulation; soft-f64 above AIR), AIR's portable passes run, and
+`agx-lower-air` restores the AGX operations; the same AIR goes to the Metal pipeline. The direct path is
+unchanged (asm identical, bench identical, d3 = d4).
+
+| # | Change (llvm commit) | Model result, AIR path vs direct (same `llc` flags) | Correctness |
+|---|---|---|---|
+| X1 | Raise + hints + soft-f64 above AIR, by-value parameters restored (727052a5d and before) | cycles geomean rw -0.01%, co -0.00%, lb -0.01%; no kernel > 2% slower | PTX-formalization 408 pass = direct |
+| X2 | Directed rounding / FP mode / exact min-max emulations (bb72df692, f534ac876) | AGX code unchanged (asm identical on the strict-FP tests) | every hint emulated: 381 -> 399 pass; left: f64 atomics, hardware approximations |
+| X3 | System values read where the kernel extracts them (e4934c6dd); scalar ones stay at the entry (reading them where their uses meet: G14C +0.02%, rejected) | rw 72/72 identical (was 64), co 474/476, lb 434/468 (tile GEMMs reading the SIMD lane); G14C geomean -0.007% | 408 pass |
+| X4 | Metal pipeline legalizes the hints: generic -> device, 65-128-bit integers as limbs, RMW loops (778b681ba) | n/a (Metal side) | Metal writer 241 -> 246 of 248 modules; limbs = LLVM on 20000 random i128 / i96 cases (lli) |
+
+Compile time: `zoc` (debug build) over the 40 largest PTX tests 258.7 s direct vs 265.1 s through AIR (+2.5%);
+`agx-raise-to-air` itself ~1.6 ms per module, the AGX side of the AIR (`agx-lower-air` + codegen) no slower than
+direct.
+
 ## Research sources (policy)
 
 Experiments are based only on publicly published work: open-access papers (arXiv, ACM / IEEE papers with public
