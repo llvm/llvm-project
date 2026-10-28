@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - hlsl-windows-self-hosted
+          - hlsl-windows
 
     uses: ./.github/workflows/hlsl-test-all.yaml
     with:
