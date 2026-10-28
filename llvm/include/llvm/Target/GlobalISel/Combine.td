@@ -1409,7 +1409,8 @@ def trunc_shift: GICombineRule <
 
 def simplify_demanded_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR):$root,
+  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR,
+                           G_XOR, G_SELECT, G_TRUNC):$root,
          [{ return Helper.matchSimplifyDemandedBits(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 

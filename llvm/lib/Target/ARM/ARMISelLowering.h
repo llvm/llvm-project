@@ -470,7 +470,9 @@ class VectorType;
     bool isDesirableToCommuteWithShift(const SDNode *N,
                                        CombineLevel Level) const override;
 
-    bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
+    bool isDesirableToCommuteXorWithShift(bool IsShl, const APInt &XorMask,
+                                          unsigned ShiftAmt,
+                                          bool IsVector) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 

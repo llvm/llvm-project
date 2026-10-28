@@ -385,3 +385,35 @@ define <2 x i32> @vnsrl_v2i64_v2i32_zext(<2 x i64> %x, <2 x i32> %y) {
   %b = trunc <2 x i64> %a to <2 x i32>
   ret <2 x i32> %b
 }
+
+; Keep the narrowing shift when only low result bits are demanded. Moving the
+; truncate before the shift would lose the free truncation provided by vnsrl.
+define <4 x i32> @trunc_lshr_low_demand(<4 x i64> %x) {
+; CHECK-LABEL: trunc_lshr_low_demand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v10, v8, 3
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vand.vx v8, v10, a0
+; CHECK-NEXT:    ret
+  %shift = lshr <4 x i64> %x, splat (i64 3)
+  %trunc = trunc <4 x i64> %shift to <4 x i32>
+  %mask = and <4 x i32> %trunc, splat (i32 255)
+  ret <4 x i32> %mask
+}
+
+; Keep the narrowing shift when only low result bits are demanded. Moving the
+; truncate before the shift would lose the free truncation provided by vnsrl.
+define <4 x i32> @trunc_ashr_low_demand(<4 x i64> %x) {
+; CHECK-LABEL: trunc_ashr_low_demand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v10, v8, 3
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vand.vx v8, v10, a0
+; CHECK-NEXT:    ret
+  %shift = ashr <4 x i64> %x, splat (i64 3)
+  %trunc = trunc <4 x i64> %shift to <4 x i32>
+  %mask = and <4 x i32> %trunc, splat (i32 255)
+  ret <4 x i32> %mask
+}

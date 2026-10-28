@@ -1880,7 +1880,9 @@ bool TargetLowering::SimplifyDemandedBits(
             Ones = Op0Opcode == ISD::SHL ? Ones.shl(ShiftAmt)
                                          : Ones.lshr(ShiftAmt);
             if ((DemandedBits & C->getAPIntValue()) == (DemandedBits & Ones) &&
-                isDesirableToCommuteXorWithShift(Op.getNode())) {
+                isDesirableToCommuteXorWithShift(Op0Opcode == ISD::SHL,
+                                                 C->getAPIntValue(), ShiftAmt,
+                                                 VT.isVector())) {
               // If the xor constant is a demanded mask, do a 'not' before the
               // shift:
               // xor (X << ShiftC), XorC --> (not X) << ShiftC

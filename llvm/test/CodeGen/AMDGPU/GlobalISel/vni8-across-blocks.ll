@@ -32,10 +32,10 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_sdwa v0, v2, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_and_b32_sdwa v1, v4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX906-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX906-NEXT:    v_mov_b32_e32 v1, 0
-; GFX906-NEXT:    global_store_short v1, v0, s[6:7]
-; GFX906-NEXT:    global_store_byte_d16_hi v1, v0, s[6:7] offset:2
+; GFX906-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX906-NEXT:    v_mov_b32_e32 v2, 0
+; GFX906-NEXT:    global_store_short v2, v0, s[6:7]
+; GFX906-NEXT:    global_store_byte_d16_hi v2, v1, s[6:7] offset:2
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()

@@ -2637,7 +2637,7 @@ define <3 x i32> @smul_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-GI-NEXT:    smull x8, w8, w9
 ; CHECK-GI-NEXT:    neg v2.4s, v2.4s
 ; CHECK-GI-NEXT:    smull v3.2d, v3.2s, v4.2s
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    sshl v2.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    sshr v3.2d, v3.2d, #32
 ; CHECK-GI-NEXT:    mov d4, v3.d[1]
@@ -4417,7 +4417,7 @@ define <2 x i128> @smul_v2i128(<2 x i128> %a, <2 x i128> %b) {
 ;
 ; CHECK-GI-LABEL: smul_v2i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str x25, [sp, #-64]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
@@ -4428,122 +4428,119 @@ define <2 x i128> @smul_v2i128(<2 x i128> %a, <2 x i128> %b) {
 ; CHECK-GI-NEXT:    .cfi_offset w22, -32
 ; CHECK-GI-NEXT:    .cfi_offset w23, -40
 ; CHECK-GI-NEXT:    .cfi_offset w24, -48
-; CHECK-GI-NEXT:    .cfi_offset w25, -56
-; CHECK-GI-NEXT:    .cfi_offset w26, -64
+; CHECK-GI-NEXT:    .cfi_offset w25, -64
 ; CHECK-GI-NEXT:    asr x9, x1, #63
 ; CHECK-GI-NEXT:    asr x13, x5, #63
 ; CHECK-GI-NEXT:    umulh x14, x1, x5
-; CHECK-GI-NEXT:    asr x22, x7, #63
+; CHECK-GI-NEXT:    asr x21, x7, #63
 ; CHECK-GI-NEXT:    umulh x12, x9, x4
 ; CHECK-GI-NEXT:    umulh x15, x0, x13
-; CHECK-GI-NEXT:    mul x20, x0, x13
+; CHECK-GI-NEXT:    mul x18, x0, x13
 ; CHECK-GI-NEXT:    add x12, x12, x14
-; CHECK-GI-NEXT:    umulh x23, x3, x7
+; CHECK-GI-NEXT:    umulh x22, x3, x7
 ; CHECK-GI-NEXT:    add x12, x12, x15
 ; CHECK-GI-NEXT:    madd x12, x0, x13, x12
-; CHECK-GI-NEXT:    umulh x24, x2, x22
+; CHECK-GI-NEXT:    umulh x23, x2, x21
 ; CHECK-GI-NEXT:    madd x12, x1, x13, x12
 ; CHECK-GI-NEXT:    asr x13, x3, #63
-; CHECK-GI-NEXT:    umulh x21, x13, x6
+; CHECK-GI-NEXT:    umulh x20, x13, x6
 ; CHECK-GI-NEXT:    umulh x8, x0, x4
-; CHECK-GI-NEXT:    mul x10, x0, x5
-; CHECK-GI-NEXT:    add x21, x21, x23
-; CHECK-GI-NEXT:    mul x11, x1, x4
-; CHECK-GI-NEXT:    add x21, x21, x24
-; CHECK-GI-NEXT:    umulh x18, x1, x4
-; CHECK-GI-NEXT:    adds x10, x8, x10
-; CHECK-GI-NEXT:    umulh x19, x0, x5
+; CHECK-GI-NEXT:    mul x11, x0, x5
+; CHECK-GI-NEXT:    add x20, x20, x22
+; CHECK-GI-NEXT:    mul x10, x1, x4
+; CHECK-GI-NEXT:    add x20, x20, x23
+; CHECK-GI-NEXT:    umulh x16, x1, x4
+; CHECK-GI-NEXT:    adds x11, x8, x11
+; CHECK-GI-NEXT:    umulh x17, x0, x5
 ; CHECK-GI-NEXT:    cset w23, hs
-; CHECK-GI-NEXT:    cmn x10, x11
-; CHECK-GI-NEXT:    mul x16, x1, x5
+; CHECK-GI-NEXT:    cmn x11, x10
+; CHECK-GI-NEXT:    and x10, x23, #0x1
+; CHECK-GI-NEXT:    mul x19, x1, x5
 ; CHECK-GI-NEXT:    cset w11, hs
 ; CHECK-GI-NEXT:    and x11, x11, #0x1
 ; CHECK-GI-NEXT:    madd x12, x9, x5, x12
-; CHECK-GI-NEXT:    adds x18, x18, x19
-; CHECK-GI-NEXT:    mul x17, x9, x4
-; CHECK-GI-NEXT:    cset w19, hs
-; CHECK-GI-NEXT:    adds x18, x18, x20
-; CHECK-GI-NEXT:    and x19, x19, #0x1
-; CHECK-GI-NEXT:    madd x21, x2, x22, x21
+; CHECK-GI-NEXT:    add x10, x10, x11
+; CHECK-GI-NEXT:    adds x16, x16, x17
+; CHECK-GI-NEXT:    mul x15, x9, x4
+; CHECK-GI-NEXT:    madd x20, x2, x21, x20
 ; CHECK-GI-NEXT:    madd x9, x9, x4, x12
 ; CHECK-GI-NEXT:    umulh x12, x2, x6
-; CHECK-GI-NEXT:    mul x15, x2, x7
-; CHECK-GI-NEXT:    mul x14, x3, x6
-; CHECK-GI-NEXT:    madd x20, x3, x22, x21
-; CHECK-GI-NEXT:    and x21, x23, #0x1
-; CHECK-GI-NEXT:    add x11, x21, x11
+; CHECK-GI-NEXT:    mul x14, x2, x7
+; CHECK-GI-NEXT:    mul x24, x3, x6
+; CHECK-GI-NEXT:    madd x20, x3, x21, x20
+; CHECK-GI-NEXT:    mul x17, x2, x21
+; CHECK-GI-NEXT:    cset w21, hs
+; CHECK-GI-NEXT:    adds x16, x16, x18
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    adds x16, x16, x19
+; CHECK-GI-NEXT:    cset w11, hs
+; CHECK-GI-NEXT:    adds x15, x16, x15
 ; CHECK-GI-NEXT:    umulh x25, x3, x6
-; CHECK-GI-NEXT:    umulh x26, x2, x7
-; CHECK-GI-NEXT:    mul x10, x2, x22
-; CHECK-GI-NEXT:    cset w22, hs
-; CHECK-GI-NEXT:    adds x16, x18, x16
+; CHECK-GI-NEXT:    cset w16, hs
+; CHECK-GI-NEXT:    adds x10, x15, x10
+; CHECK-GI-NEXT:    and x15, x21, #0x1
+; CHECK-GI-NEXT:    umulh x22, x2, x7
+; CHECK-GI-NEXT:    and x18, x18, #0x1
+; CHECK-GI-NEXT:    and x11, x11, #0x1
+; CHECK-GI-NEXT:    madd x19, x13, x7, x20
+; CHECK-GI-NEXT:    madd x8, x0, x5, x8
+; CHECK-GI-NEXT:    cset w5, hs
+; CHECK-GI-NEXT:    adds x14, x12, x14
+; CHECK-GI-NEXT:    cset w20, hs
+; CHECK-GI-NEXT:    cmn x14, x24
+; CHECK-GI-NEXT:    add x14, x15, x18
+; CHECK-GI-NEXT:    mul x21, x3, x7
+; CHECK-GI-NEXT:    add x11, x14, x11
+; CHECK-GI-NEXT:    and x14, x16, #0x1
+; CHECK-GI-NEXT:    cset w16, hs
+; CHECK-GI-NEXT:    add x11, x11, x14
+; CHECK-GI-NEXT:    and x14, x5, #0x1
+; CHECK-GI-NEXT:    madd x15, x13, x6, x19
+; CHECK-GI-NEXT:    and x18, x20, #0x1
+; CHECK-GI-NEXT:    and x16, x16, #0x1
+; CHECK-GI-NEXT:    add x11, x11, x14
+; CHECK-GI-NEXT:    add x14, x18, x16
+; CHECK-GI-NEXT:    adds x16, x25, x22
+; CHECK-GI-NEXT:    mul x13, x13, x6
 ; CHECK-GI-NEXT:    cset w18, hs
 ; CHECK-GI-NEXT:    adds x16, x16, x17
-; CHECK-GI-NEXT:    and x22, x22, #0x1
-; CHECK-GI-NEXT:    madd x17, x13, x7, x20
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    adds x11, x16, x11
-; CHECK-GI-NEXT:    cset w16, hs
-; CHECK-GI-NEXT:    adds x15, x12, x15
-; CHECK-GI-NEXT:    add x19, x19, x22
-; CHECK-GI-NEXT:    mul x23, x3, x7
-; CHECK-GI-NEXT:    and x18, x18, #0x1
-; CHECK-GI-NEXT:    cset w22, hs
-; CHECK-GI-NEXT:    cmn x15, x14
-; CHECK-GI-NEXT:    add x14, x19, x18
-; CHECK-GI-NEXT:    and x16, x16, #0x1
-; CHECK-GI-NEXT:    mul x21, x13, x6
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    adds x18, x25, x26
-; CHECK-GI-NEXT:    and x15, x15, #0x1
-; CHECK-GI-NEXT:    madd x13, x13, x6, x17
-; CHECK-GI-NEXT:    cset w17, hs
-; CHECK-GI-NEXT:    adds x10, x18, x10
-; CHECK-GI-NEXT:    and x18, x20, #0x1
-; CHECK-GI-NEXT:    and x17, x17, #0x1
-; CHECK-GI-NEXT:    add x14, x14, x18
-; CHECK-GI-NEXT:    madd x8, x0, x5, x8
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    adds x10, x10, x23
-; CHECK-GI-NEXT:    and x18, x18, #0x1
-; CHECK-GI-NEXT:    and x5, x22, #0x1
-; CHECK-GI-NEXT:    madd x12, x2, x7, x12
-; CHECK-GI-NEXT:    add x17, x17, x18
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    add x15, x5, x15
-; CHECK-GI-NEXT:    and x18, x18, #0x1
-; CHECK-GI-NEXT:    adds x10, x10, x21
-; CHECK-GI-NEXT:    madd x8, x1, x4, x8
-; CHECK-GI-NEXT:    add x17, x17, x18
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    adds x10, x10, x15
-; CHECK-GI-NEXT:    and x15, x18, #0x1
-; CHECK-GI-NEXT:    add x14, x14, x16
-; CHECK-GI-NEXT:    madd x12, x3, x6, x12
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    add x15, x17, x15
 ; CHECK-GI-NEXT:    and x17, x18, #0x1
-; CHECK-GI-NEXT:    add x9, x9, x14
-; CHECK-GI-NEXT:    add x15, x15, x17
-; CHECK-GI-NEXT:    mul x16, x0, x4
-; CHECK-GI-NEXT:    add x13, x13, x15
-; CHECK-GI-NEXT:    eor x11, x11, x8, asr #63
-; CHECK-GI-NEXT:    eor x9, x9, x8, asr #63
-; CHECK-GI-NEXT:    mul x14, x2, x6
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    adds x16, x16, x21
+; CHECK-GI-NEXT:    madd x12, x2, x7, x12
+; CHECK-GI-NEXT:    and x18, x18, #0x1
+; CHECK-GI-NEXT:    cset w5, hs
+; CHECK-GI-NEXT:    add x17, x17, x18
+; CHECK-GI-NEXT:    and x18, x5, #0x1
+; CHECK-GI-NEXT:    add x9, x9, x11
+; CHECK-GI-NEXT:    madd x8, x1, x4, x8
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    eor x10, x10, x12, asr #63
-; CHECK-GI-NEXT:    eor x13, x13, x12, asr #63
-; CHECK-GI-NEXT:    orr x9, x11, x9
-; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    adds x13, x16, x13
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    orr x10, x10, x13
+; CHECK-GI-NEXT:    cset w16, hs
+; CHECK-GI-NEXT:    adds x13, x13, x14
+; CHECK-GI-NEXT:    madd x12, x3, x6, x12
+; CHECK-GI-NEXT:    add x14, x17, x18
+; CHECK-GI-NEXT:    and x16, x16, #0x1
+; CHECK-GI-NEXT:    cset w17, hs
+; CHECK-GI-NEXT:    add x14, x14, x16
+; CHECK-GI-NEXT:    and x16, x17, #0x1
+; CHECK-GI-NEXT:    mul x17, x0, x4
+; CHECK-GI-NEXT:    add x11, x14, x16
+; CHECK-GI-NEXT:    eor x9, x9, x8, asr #63
+; CHECK-GI-NEXT:    add x11, x15, x11
+; CHECK-GI-NEXT:    mul x14, x2, x6
+; CHECK-GI-NEXT:    eor x11, x11, x12, asr #63
+; CHECK-GI-NEXT:    orr x9, x10, x9
+; CHECK-GI-NEXT:    cmp x9, #0
 ; CHECK-GI-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x0, x16, x0, ne
+; CHECK-GI-NEXT:    orr x10, x13, x11
+; CHECK-GI-NEXT:    csel x0, x17, x0, ne
 ; CHECK-GI-NEXT:    csel x1, x8, x1, ne
 ; CHECK-GI-NEXT:    cmp x10, #0
 ; CHECK-GI-NEXT:    csel x2, x14, x2, ne
 ; CHECK-GI-NEXT:    csel x3, x12, x3, ne
-; CHECK-GI-NEXT:    ldp x26, x25, [sp], #64 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x25, [sp], #64 // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
   %o = call {<2 x i128>, <2 x i1>} @llvm.smul.with.overflow(<2 x i128> %a, <2 x i128> %b)
   %e0 = extractvalue {<2 x i128>, <2 x i1>} %o, 0
@@ -5195,185 +5192,187 @@ define <3 x i128> @smul_v3i128(<3 x i128> %a, <3 x i128> %b) {
 ; CHECK-GI-NEXT:    .cfi_offset w28, -80
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
-; CHECK-GI-NEXT:    mul x9, x0, x7
-; CHECK-GI-NEXT:    asr x12, x1, #63
-; CHECK-GI-NEXT:    asr x13, x7, #63
-; CHECK-GI-NEXT:    ldp x10, x21, [sp, #128]
-; CHECK-GI-NEXT:    mul x8, x1, x6
-; CHECK-GI-NEXT:    umulh x15, x1, x7
-; CHECK-GI-NEXT:    asr x22, x21, #63
-; CHECK-GI-NEXT:    umulh x16, x0, x13
-; CHECK-GI-NEXT:    stp x9, x8, [sp, #16] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    umulh x8, x12, x6
-; CHECK-GI-NEXT:    umulh x23, x3, x21
-; CHECK-GI-NEXT:    umulh x24, x2, x22
-; CHECK-GI-NEXT:    add x8, x8, x15
-; CHECK-GI-NEXT:    asr x15, x3, #63
-; CHECK-GI-NEXT:    add x8, x8, x16
-; CHECK-GI-NEXT:    mul x19, x0, x13
-; CHECK-GI-NEXT:    madd x8, x0, x13, x8
-; CHECK-GI-NEXT:    umulh x17, x15, x10
-; CHECK-GI-NEXT:    madd x8, x1, x13, x8
-; CHECK-GI-NEXT:    mul x16, x12, x6
-; CHECK-GI-NEXT:    madd x13, x12, x7, x8
-; CHECK-GI-NEXT:    umulh x11, x0, x6
-; CHECK-GI-NEXT:    madd x9, x12, x6, x13
-; CHECK-GI-NEXT:    add x12, x17, x23
-; CHECK-GI-NEXT:    add x12, x12, x24
-; CHECK-GI-NEXT:    madd x12, x2, x22, x12
-; CHECK-GI-NEXT:    mul x24, x2, x22
-; CHECK-GI-NEXT:    madd x12, x3, x22, x12
-; CHECK-GI-NEXT:    asr x22, x5, #63
-; CHECK-GI-NEXT:    umulh x14, x1, x6
-; CHECK-GI-NEXT:    madd x12, x15, x21, x12
-; CHECK-GI-NEXT:    umulh x20, x0, x7
-; CHECK-GI-NEXT:    madd x8, x15, x10, x12
-; CHECK-GI-NEXT:    ldp x12, x17, [sp, #144]
-; CHECK-GI-NEXT:    mul x18, x1, x7
-; CHECK-GI-NEXT:    asr x28, x17, #63
-; CHECK-GI-NEXT:    umulh x27, x22, x12
-; CHECK-GI-NEXT:    stp x8, x9, [sp] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    ldp x8, x13, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    umulh x29, x5, x17
-; CHECK-GI-NEXT:    umulh x30, x4, x28
-; CHECK-GI-NEXT:    madd x7, x0, x7, x11
-; CHECK-GI-NEXT:    adds x11, x11, x8
-; CHECK-GI-NEXT:    cset w8, hs
-; CHECK-GI-NEXT:    cmn x11, x13
-; CHECK-GI-NEXT:    add x27, x27, x29
-; CHECK-GI-NEXT:    umulh x25, x2, x10
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x14, x14, x20
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    adds x14, x14, x19
-; CHECK-GI-NEXT:    add x27, x27, x30
-; CHECK-GI-NEXT:    mul x26, x2, x21
-; CHECK-GI-NEXT:    and x8, x8, #0x1
-; CHECK-GI-NEXT:    and x20, x20, #0x1
-; CHECK-GI-NEXT:    mul x9, x3, x10
-; CHECK-GI-NEXT:    mul x23, x15, x10
-; CHECK-GI-NEXT:    umulh x15, x3, x10
-; CHECK-GI-NEXT:    umulh x29, x2, x21
-; CHECK-GI-NEXT:    mul x30, x3, x21
-; CHECK-GI-NEXT:    madd x19, x2, x21, x25
-; CHECK-GI-NEXT:    cset w21, hs
-; CHECK-GI-NEXT:    adds x14, x14, x18
-; CHECK-GI-NEXT:    and x18, x11, #0x1
-; CHECK-GI-NEXT:    and x21, x21, #0x1
-; CHECK-GI-NEXT:    madd x27, x4, x28, x27
-; CHECK-GI-NEXT:    add x8, x8, x18
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    adds x14, x14, x16
-; CHECK-GI-NEXT:    add x20, x20, x21
-; CHECK-GI-NEXT:    and x18, x18, #0x1
-; CHECK-GI-NEXT:    cset w16, hs
-; CHECK-GI-NEXT:    adds x8, x14, x8
-; CHECK-GI-NEXT:    umulh x13, x4, x12
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x25, x25, x26
+; CHECK-GI-NEXT:    mul x8, x0, x7
+; CHECK-GI-NEXT:    asr x13, x1, #63
+; CHECK-GI-NEXT:    asr x9, x7, #63
+; CHECK-GI-NEXT:    ldp x11, x10, [sp, #128]
+; CHECK-GI-NEXT:    asr x22, x3, #63
+; CHECK-GI-NEXT:    umulh x14, x1, x7
+; CHECK-GI-NEXT:    asr x26, x5, #63
+; CHECK-GI-NEXT:    umulh x17, x0, x9
+; CHECK-GI-NEXT:    asr x23, x10, #63
 ; CHECK-GI-NEXT:    str x8, [sp, #24] // 8-byte Spill
+; CHECK-GI-NEXT:    mul x8, x1, x6
+; CHECK-GI-NEXT:    umulh x19, x22, x11
+; CHECK-GI-NEXT:    umulh x20, x3, x10
+; CHECK-GI-NEXT:    str x8, [sp] // 8-byte Spill
+; CHECK-GI-NEXT:    umulh x8, x13, x6
+; CHECK-GI-NEXT:    umulh x25, x2, x23
+; CHECK-GI-NEXT:    mul x21, x0, x9
+; CHECK-GI-NEXT:    add x8, x8, x14
+; CHECK-GI-NEXT:    add x8, x8, x17
+; CHECK-GI-NEXT:    mul x24, x13, x6
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
+; CHECK-GI-NEXT:    umulh x12, x0, x6
+; CHECK-GI-NEXT:    madd x8, x1, x9, x8
+; CHECK-GI-NEXT:    umulh x15, x1, x6
+; CHECK-GI-NEXT:    madd x14, x13, x7, x8
+; CHECK-GI-NEXT:    umulh x16, x0, x7
+; CHECK-GI-NEXT:    madd x9, x13, x6, x14
+; CHECK-GI-NEXT:    add x13, x19, x20
+; CHECK-GI-NEXT:    ldr x20, [sp] // 8-byte Reload
+; CHECK-GI-NEXT:    add x13, x13, x25
+; CHECK-GI-NEXT:    madd x13, x2, x23, x13
+; CHECK-GI-NEXT:    mul x17, x1, x7
+; CHECK-GI-NEXT:    madd x13, x3, x23, x13
+; CHECK-GI-NEXT:    madd x7, x0, x7, x12
+; CHECK-GI-NEXT:    madd x13, x22, x10, x13
+; CHECK-GI-NEXT:    umulh x18, x2, x11
+; CHECK-GI-NEXT:    madd x8, x22, x11, x13
+; CHECK-GI-NEXT:    ldp x13, x19, [sp, #144]
+; CHECK-GI-NEXT:    mul x25, x2, x10
+; CHECK-GI-NEXT:    asr x28, x19, #63
+; CHECK-GI-NEXT:    umulh x27, x26, x13
+; CHECK-GI-NEXT:    stp x9, x8, [sp, #8] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    ldr x8, [sp, #24] // 8-byte Reload
+; CHECK-GI-NEXT:    umulh x29, x5, x19
+; CHECK-GI-NEXT:    adds x12, x12, x8
+; CHECK-GI-NEXT:    umulh x30, x4, x28
+; CHECK-GI-NEXT:    cset w8, hs
+; CHECK-GI-NEXT:    cmn x12, x20
+; CHECK-GI-NEXT:    and x8, x8, #0x1
+; CHECK-GI-NEXT:    mul x20, x4, x28
+; CHECK-GI-NEXT:    add x27, x27, x29
+; CHECK-GI-NEXT:    mul x9, x3, x11
+; CHECK-GI-NEXT:    add x27, x27, x30
+; CHECK-GI-NEXT:    madd x27, x4, x28, x27
+; CHECK-GI-NEXT:    umulh x14, x3, x11
 ; CHECK-GI-NEXT:    madd x27, x5, x28, x27
-; CHECK-GI-NEXT:    cset w26, hs
-; CHECK-GI-NEXT:    cmn x25, x9
-; CHECK-GI-NEXT:    cset w25, hs
-; CHECK-GI-NEXT:    adds x15, x15, x29
-; CHECK-GI-NEXT:    add x18, x20, x18
-; CHECK-GI-NEXT:    mul x8, x4, x17
-; CHECK-GI-NEXT:    and x25, x25, #0x1
-; CHECK-GI-NEXT:    and x16, x16, #0x1
-; CHECK-GI-NEXT:    and x11, x11, #0x1
-; CHECK-GI-NEXT:    mul x14, x4, x28
 ; CHECK-GI-NEXT:    cset w28, hs
-; CHECK-GI-NEXT:    adds x15, x15, x24
-; CHECK-GI-NEXT:    madd x24, x22, x17, x27
-; CHECK-GI-NEXT:    cset w27, hs
-; CHECK-GI-NEXT:    adds x15, x15, x30
-; CHECK-GI-NEXT:    cset w29, hs
-; CHECK-GI-NEXT:    adds x15, x15, x23
-; CHECK-GI-NEXT:    and x23, x26, #0x1
-; CHECK-GI-NEXT:    mul x30, x5, x12
-; CHECK-GI-NEXT:    add x21, x23, x25
-; CHECK-GI-NEXT:    cset w23, hs
+; CHECK-GI-NEXT:    adds x15, x15, x16
+; CHECK-GI-NEXT:    cset w16, hs
 ; CHECK-GI-NEXT:    adds x15, x15, x21
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    adds x8, x13, x8
-; CHECK-GI-NEXT:    umulh x26, x5, x12
-; CHECK-GI-NEXT:    cset w25, hs
-; CHECK-GI-NEXT:    umulh x21, x4, x17
-; CHECK-GI-NEXT:    cmn x8, x30
-; CHECK-GI-NEXT:    add x8, x18, x16
-; CHECK-GI-NEXT:    and x16, x28, #0x1
-; CHECK-GI-NEXT:    and x18, x27, #0x1
-; CHECK-GI-NEXT:    add x8, x8, x11
-; CHECK-GI-NEXT:    mul x9, x5, x17
-; CHECK-GI-NEXT:    add x11, x16, x18
-; CHECK-GI-NEXT:    and x16, x29, #0x1
-; CHECK-GI-NEXT:    add x11, x11, x16
-; CHECK-GI-NEXT:    and x16, x23, #0x1
-; CHECK-GI-NEXT:    mul x18, x22, x12
-; CHECK-GI-NEXT:    add x11, x11, x16
-; CHECK-GI-NEXT:    and x16, x20, #0x1
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    madd x24, x22, x12, x24
-; CHECK-GI-NEXT:    and x22, x25, #0x1
-; CHECK-GI-NEXT:    and x20, x20, #0x1
-; CHECK-GI-NEXT:    add x11, x11, x16
-; CHECK-GI-NEXT:    add x16, x22, x20
-; CHECK-GI-NEXT:    adds x20, x26, x21
-; CHECK-GI-NEXT:    cset w21, hs
-; CHECK-GI-NEXT:    adds x14, x20, x14
-; CHECK-GI-NEXT:    madd x13, x4, x17, x13
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    adds x9, x14, x9
-; CHECK-GI-NEXT:    and x17, x21, #0x1
-; CHECK-GI-NEXT:    and x14, x20, #0x1
-; CHECK-GI-NEXT:    cset w20, hs
-; CHECK-GI-NEXT:    adds x9, x9, x18
-; CHECK-GI-NEXT:    add x14, x17, x14
-; CHECK-GI-NEXT:    and x17, x20, #0x1
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    adds x9, x9, x16
-; CHECK-GI-NEXT:    madd x7, x1, x6, x7
-; CHECK-GI-NEXT:    add x14, x14, x17
-; CHECK-GI-NEXT:    and x16, x18, #0x1
+; CHECK-GI-NEXT:    umulh x29, x2, x10
+; CHECK-GI-NEXT:    and x16, x16, #0x1
+; CHECK-GI-NEXT:    madd x21, x26, x19, x27
+; CHECK-GI-NEXT:    cset w27, hs
+; CHECK-GI-NEXT:    adds x15, x15, x17
+; CHECK-GI-NEXT:    and x17, x28, #0x1
+; CHECK-GI-NEXT:    mul x23, x2, x23
+; CHECK-GI-NEXT:    add x8, x8, x17
 ; CHECK-GI-NEXT:    cset w17, hs
-; CHECK-GI-NEXT:    madd x19, x3, x10, x19
-; CHECK-GI-NEXT:    add x14, x14, x16
+; CHECK-GI-NEXT:    adds x15, x15, x24
+; CHECK-GI-NEXT:    and x17, x17, #0x1
+; CHECK-GI-NEXT:    mul x30, x3, x10
+; CHECK-GI-NEXT:    cset w24, hs
+; CHECK-GI-NEXT:    adds x8, x15, x8
+; CHECK-GI-NEXT:    cset w12, hs
+; CHECK-GI-NEXT:    adds x15, x18, x25
+; CHECK-GI-NEXT:    str x8, [sp, #24] // 8-byte Spill
+; CHECK-GI-NEXT:    mul x22, x22, x11
+; CHECK-GI-NEXT:    cset w25, hs
+; CHECK-GI-NEXT:    cmn x15, x9
+; CHECK-GI-NEXT:    cset w15, hs
+; CHECK-GI-NEXT:    adds x14, x14, x29
+; CHECK-GI-NEXT:    and x12, x12, #0x1
+; CHECK-GI-NEXT:    madd x8, x26, x13, x21
+; CHECK-GI-NEXT:    and x15, x15, #0x1
+; CHECK-GI-NEXT:    mul x21, x26, x13
+; CHECK-GI-NEXT:    and x26, x27, #0x1
+; CHECK-GI-NEXT:    add x16, x16, x26
+; CHECK-GI-NEXT:    cset w26, hs
+; CHECK-GI-NEXT:    adds x14, x14, x23
+; CHECK-GI-NEXT:    umulh x28, x4, x13
+; CHECK-GI-NEXT:    cset w23, hs
+; CHECK-GI-NEXT:    adds x14, x14, x30
+; CHECK-GI-NEXT:    cset w30, hs
+; CHECK-GI-NEXT:    adds x14, x14, x22
+; CHECK-GI-NEXT:    and x22, x25, #0x1
+; CHECK-GI-NEXT:    mul x27, x4, x19
+; CHECK-GI-NEXT:    add x15, x22, x15
+; CHECK-GI-NEXT:    add x16, x16, x17
+; CHECK-GI-NEXT:    cset w17, hs
+; CHECK-GI-NEXT:    adds x15, x14, x15
+; CHECK-GI-NEXT:    and x14, x24, #0x1
+; CHECK-GI-NEXT:    mul x29, x5, x13
+; CHECK-GI-NEXT:    and x24, x26, #0x1
+; CHECK-GI-NEXT:    and x23, x23, #0x1
+; CHECK-GI-NEXT:    add x14, x16, x14
+; CHECK-GI-NEXT:    add x16, x24, x23
+; CHECK-GI-NEXT:    and x23, x30, #0x1
+; CHECK-GI-NEXT:    umulh x25, x5, x13
+; CHECK-GI-NEXT:    cset w26, hs
+; CHECK-GI-NEXT:    add x12, x14, x12
+; CHECK-GI-NEXT:    adds x27, x28, x27
+; CHECK-GI-NEXT:    add x14, x16, x23
 ; CHECK-GI-NEXT:    and x16, x17, #0x1
+; CHECK-GI-NEXT:    umulh x22, x4, x19
+; CHECK-GI-NEXT:    ldr x17, [sp, #8] // 8-byte Reload
+; CHECK-GI-NEXT:    str x8, [sp] // 8-byte Spill
+; CHECK-GI-NEXT:    cset w8, hs
+; CHECK-GI-NEXT:    cmn x27, x29
 ; CHECK-GI-NEXT:    add x14, x14, x16
-; CHECK-GI-NEXT:    ldr x16, [sp, #24] // 8-byte Reload
-; CHECK-GI-NEXT:    mul x17, x0, x6
-; CHECK-GI-NEXT:    ldp x18, x6, [sp] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    eor x16, x16, x7, asr #63
-; CHECK-GI-NEXT:    add x14, x24, x14
-; CHECK-GI-NEXT:    madd x13, x5, x12, x13
-; CHECK-GI-NEXT:    ldp x22, x21, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    add x8, x6, x8
-; CHECK-GI-NEXT:    add x11, x18, x11
-; CHECK-GI-NEXT:    eor x15, x15, x19, asr #63
-; CHECK-GI-NEXT:    eor x8, x8, x7, asr #63
-; CHECK-GI-NEXT:    mul x10, x2, x10
-; CHECK-GI-NEXT:    eor x11, x11, x19, asr #63
+; CHECK-GI-NEXT:    mul x9, x5, x19
+; CHECK-GI-NEXT:    add x12, x17, x12
+; CHECK-GI-NEXT:    cset w16, hs
+; CHECK-GI-NEXT:    and x8, x8, #0x1
+; CHECK-GI-NEXT:    and x16, x16, #0x1
+; CHECK-GI-NEXT:    add x8, x8, x16
+; CHECK-GI-NEXT:    madd x10, x2, x10, x18
+; CHECK-GI-NEXT:    adds x17, x25, x22
 ; CHECK-GI-NEXT:    ldp x24, x23, [sp, #80] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mul x12, x4, x12
-; CHECK-GI-NEXT:    orr x8, x16, x8
-; CHECK-GI-NEXT:    orr x11, x15, x11
-; CHECK-GI-NEXT:    eor x9, x9, x13, asr #63
-; CHECK-GI-NEXT:    eor x14, x14, x13, asr #63
-; CHECK-GI-NEXT:    cmp x8, #0
-; CHECK-GI-NEXT:    csel x0, x17, x0, ne
-; CHECK-GI-NEXT:    csel x1, x7, x1, ne
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    orr x9, x9, x14
-; CHECK-GI-NEXT:    csel x3, x19, x3, ne
-; CHECK-GI-NEXT:    csel x2, x10, x2, ne
+; CHECK-GI-NEXT:    cset w22, hs
+; CHECK-GI-NEXT:    adds x17, x17, x20
+; CHECK-GI-NEXT:    madd x19, x4, x19, x28
+; CHECK-GI-NEXT:    and x20, x22, #0x1
+; CHECK-GI-NEXT:    cset w22, hs
+; CHECK-GI-NEXT:    adds x9, x17, x9
+; CHECK-GI-NEXT:    and x22, x22, #0x1
+; CHECK-GI-NEXT:    cset w17, hs
+; CHECK-GI-NEXT:    adds x9, x9, x21
+; CHECK-GI-NEXT:    add x16, x20, x22
+; CHECK-GI-NEXT:    and x17, x17, #0x1
+; CHECK-GI-NEXT:    madd x7, x1, x6, x7
+; CHECK-GI-NEXT:    add x16, x16, x17
+; CHECK-GI-NEXT:    cset w17, hs
+; CHECK-GI-NEXT:    adds x8, x9, x8
+; CHECK-GI-NEXT:    and x9, x17, #0x1
+; CHECK-GI-NEXT:    cset w17, hs
+; CHECK-GI-NEXT:    madd x10, x3, x11, x10
+; CHECK-GI-NEXT:    add x9, x16, x9
+; CHECK-GI-NEXT:    and x16, x17, #0x1
+; CHECK-GI-NEXT:    madd x18, x5, x13, x19
+; CHECK-GI-NEXT:    and x19, x26, #0x1
+; CHECK-GI-NEXT:    add x9, x9, x16
+; CHECK-GI-NEXT:    ldr x16, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    add x14, x14, x19
+; CHECK-GI-NEXT:    eor x12, x12, x7, asr #63
+; CHECK-GI-NEXT:    mul x6, x0, x6
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    add x14, x16, x14
+; CHECK-GI-NEXT:    ldr x16, [sp] // 8-byte Reload
+; CHECK-GI-NEXT:    mul x11, x2, x11
+; CHECK-GI-NEXT:    eor x14, x14, x10, asr #63
+; CHECK-GI-NEXT:    add x9, x16, x9
+; CHECK-GI-NEXT:    ldr x16, [sp, #24] // 8-byte Reload
+; CHECK-GI-NEXT:    mul x13, x4, x13
+; CHECK-GI-NEXT:    eor x9, x9, x18, asr #63
+; CHECK-GI-NEXT:    orr x14, x15, x14
+; CHECK-GI-NEXT:    orr x12, x16, x12
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #96] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    cmp x12, #0
+; CHECK-GI-NEXT:    orr x8, x8, x9
+; CHECK-GI-NEXT:    csel x0, x6, x0, ne
+; CHECK-GI-NEXT:    csel x1, x7, x1, ne
+; CHECK-GI-NEXT:    cmp x14, #0
 ; CHECK-GI-NEXT:    ldp x26, x25, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x4, x12, x4, ne
+; CHECK-GI-NEXT:    csel x2, x11, x2, ne
 ; CHECK-GI-NEXT:    ldp x28, x27, [sp, #48] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x5, x13, x5, ne
+; CHECK-GI-NEXT:    csel x3, x10, x3, ne
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    cmp x8, #0
+; CHECK-GI-NEXT:    csel x4, x13, x4, ne
+; CHECK-GI-NEXT:    csel x5, x18, x5, ne
 ; CHECK-GI-NEXT:    add sp, sp, #128
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i128>, <3 x i1>} @llvm.smul.with.overflow(<3 x i128> %a, <3 x i128> %b)
@@ -6285,14 +6284,14 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ;
 ; CHECK-GI-LABEL: smul_v4i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sub sp, sp, #224
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #128] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x28, x27, [sp, #144] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x26, x25, [sp, #160] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x24, x23, [sp, #176] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x22, x21, [sp, #192] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #208] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 224
+; CHECK-GI-NEXT:    sub sp, sp, #256
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #160] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x28, x27, [sp, #176] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x26, x25, [sp, #192] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x24, x23, [sp, #208] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x22, x21, [sp, #224] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #240] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w21, -24
@@ -6305,275 +6304,276 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    .cfi_offset w28, -80
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
-; CHECK-GI-NEXT:    ldp x25, x8, [sp, #224]
+; CHECK-GI-NEXT:    ldp x15, x8, [sp, #256]
 ; CHECK-GI-NEXT:    asr x10, x1, #63
-; CHECK-GI-NEXT:    mov x17, x5
-; CHECK-GI-NEXT:    ldp x5, x19, [sp, #240]
-; CHECK-GI-NEXT:    mov x18, x1
-; CHECK-GI-NEXT:    asr x26, x17, #63
-; CHECK-GI-NEXT:    mov x11, x6
+; CHECK-GI-NEXT:    mov x11, x0
+; CHECK-GI-NEXT:    mov x0, x3
+; CHECK-GI-NEXT:    mov x25, x1
+; CHECK-GI-NEXT:    asr x26, x5, #63
+; CHECK-GI-NEXT:    str x5, [sp, #16] // 8-byte Spill
+; CHECK-GI-NEXT:    mov x22, x7
 ; CHECK-GI-NEXT:    asr x12, x8, #63
-; CHECK-GI-NEXT:    umulh x9, x10, x25
-; CHECK-GI-NEXT:    asr x6, x7, #63
-; CHECK-GI-NEXT:    asr x16, x19, #63
-; CHECK-GI-NEXT:    str x2, [sp, #72] // 8-byte Spill
+; CHECK-GI-NEXT:    umulh x9, x10, x15
+; CHECK-GI-NEXT:    str x25, [sp, #24] // 8-byte Spill
+; CHECK-GI-NEXT:    str x2, [sp, #96] // 8-byte Spill
 ; CHECK-GI-NEXT:    umulh x13, x1, x8
-; CHECK-GI-NEXT:    stp x18, x3, [sp, #8] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x0, [sp, #48] // 8-byte Spill
-; CHECK-GI-NEXT:    umulh x14, x0, x12
-; CHECK-GI-NEXT:    umulh x20, x3, x19
+; CHECK-GI-NEXT:    umulh x14, x11, x12
+; CHECK-GI-NEXT:    umulh x17, x11, x15
 ; CHECK-GI-NEXT:    add x9, x9, x13
-; CHECK-GI-NEXT:    asr x13, x3, #63
-; CHECK-GI-NEXT:    umulh x22, x2, x16
+; CHECK-GI-NEXT:    mul x13, x11, x12
 ; CHECK-GI-NEXT:    add x9, x9, x14
-; CHECK-GI-NEXT:    madd x9, x0, x12, x9
-; CHECK-GI-NEXT:    mul x14, x0, x12
+; CHECK-GI-NEXT:    madd x9, x11, x12, x9
+; CHECK-GI-NEXT:    str x13, [sp, #120] // 8-byte Spill
 ; CHECK-GI-NEXT:    madd x9, x1, x12, x9
-; CHECK-GI-NEXT:    mul x12, x10, x25
-; CHECK-GI-NEXT:    umulh x15, x13, x5
-; CHECK-GI-NEXT:    umulh x21, x0, x25
-; CHECK-GI-NEXT:    str x12, [sp, #112] // 8-byte Spill
+; CHECK-GI-NEXT:    asr x13, x3, #63
+; CHECK-GI-NEXT:    ldp x3, x19, [sp, #272]
+; CHECK-GI-NEXT:    mul x12, x10, x15
+; CHECK-GI-NEXT:    umulh x14, x13, x3
+; CHECK-GI-NEXT:    asr x16, x19, #63
+; CHECK-GI-NEXT:    umulh x20, x0, x19
+; CHECK-GI-NEXT:    str x12, [sp, #136] // 8-byte Spill
 ; CHECK-GI-NEXT:    madd x12, x10, x8, x9
-; CHECK-GI-NEXT:    madd x9, x10, x25, x12
-; CHECK-GI-NEXT:    add x10, x15, x20
-; CHECK-GI-NEXT:    add x10, x10, x22
-; CHECK-GI-NEXT:    ldp x1, x22, [sp, #256]
-; CHECK-GI-NEXT:    madd x15, x2, x16, x10
-; CHECK-GI-NEXT:    asr x23, x22, #63
-; CHECK-GI-NEXT:    umulh x20, x26, x1
-; CHECK-GI-NEXT:    str x9, [sp, #120] // 8-byte Spill
-; CHECK-GI-NEXT:    madd x15, x3, x16, x15
-; CHECK-GI-NEXT:    mul x9, x2, x16
-; CHECK-GI-NEXT:    umulh x24, x17, x22
+; CHECK-GI-NEXT:    umulh x21, x2, x16
+; CHECK-GI-NEXT:    madd x9, x10, x15, x12
+; CHECK-GI-NEXT:    add x10, x14, x20
+; CHECK-GI-NEXT:    ldp x1, x20, [sp, #288]
+; CHECK-GI-NEXT:    umulh x12, x2, x3
+; CHECK-GI-NEXT:    add x10, x10, x21
+; CHECK-GI-NEXT:    madd x14, x2, x16, x10
+; CHECK-GI-NEXT:    asr x23, x20, #63
+; CHECK-GI-NEXT:    str x9, [sp, #152] // 8-byte Spill
+; CHECK-GI-NEXT:    umulh x21, x26, x1
+; CHECK-GI-NEXT:    umulh x24, x5, x20
 ; CHECK-GI-NEXT:    umulh x27, x4, x23
-; CHECK-GI-NEXT:    stp x9, x14, [sp, #80] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    madd x15, x13, x19, x15
-; CHECK-GI-NEXT:    add x16, x20, x24
-; CHECK-GI-NEXT:    mov x24, x17
-; CHECK-GI-NEXT:    mov x20, x4
-; CHECK-GI-NEXT:    mul x10, x13, x5
+; CHECK-GI-NEXT:    madd x14, x0, x16, x14
+; CHECK-GI-NEXT:    mul x9, x2, x16
+; CHECK-GI-NEXT:    add x16, x21, x24
+; CHECK-GI-NEXT:    mov x21, x6
 ; CHECK-GI-NEXT:    add x16, x16, x27
-; CHECK-GI-NEXT:    madd x9, x13, x5, x15
+; CHECK-GI-NEXT:    mov x24, x4
+; CHECK-GI-NEXT:    madd x14, x13, x19, x14
 ; CHECK-GI-NEXT:    madd x16, x4, x23, x16
-; CHECK-GI-NEXT:    mul x15, x2, x19
-; CHECK-GI-NEXT:    str x9, [sp, #104] // 8-byte Spill
-; CHECK-GI-NEXT:    madd x16, x17, x23, x16
+; CHECK-GI-NEXT:    stp x15, x9, [sp, #104] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    madd x9, x13, x3, x14
+; CHECK-GI-NEXT:    madd x16, x5, x23, x16
+; CHECK-GI-NEXT:    asr x5, x7, #63
+; CHECK-GI-NEXT:    mul x10, x13, x3
+; CHECK-GI-NEXT:    str x9, [sp, #144] // 8-byte Spill
 ; CHECK-GI-NEXT:    mul x9, x4, x23
-; CHECK-GI-NEXT:    ldp x14, x23, [sp, #272]
-; CHECK-GI-NEXT:    madd x13, x26, x22, x16
-; CHECK-GI-NEXT:    ldr x16, [sp, #88] // 8-byte Reload
-; CHECK-GI-NEXT:    asr x29, x23, #63
-; CHECK-GI-NEXT:    umulh x27, x6, x14
-; CHECK-GI-NEXT:    stp x10, x9, [sp, #56] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    umulh x28, x7, x23
-; CHECK-GI-NEXT:    umulh x30, x11, x29
+; CHECK-GI-NEXT:    madd x13, x26, x20, x16
+; CHECK-GI-NEXT:    ldp x16, x23, [sp, #304]
+; CHECK-GI-NEXT:    umulh x18, x2, x19
+; CHECK-GI-NEXT:    asr x28, x23, #63
+; CHECK-GI-NEXT:    stp x10, x9, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    madd x9, x26, x1, x13
-; CHECK-GI-NEXT:    add x27, x27, x28
-; CHECK-GI-NEXT:    mul x10, x0, x8
+; CHECK-GI-NEXT:    mov x13, x0
+; CHECK-GI-NEXT:    umulh x27, x5, x16
+; CHECK-GI-NEXT:    umulh x29, x7, x23
+; CHECK-GI-NEXT:    str x9, [sp, #128] // 8-byte Spill
+; CHECK-GI-NEXT:    mov x9, x11
+; CHECK-GI-NEXT:    umulh x30, x6, x28
+; CHECK-GI-NEXT:    mul x11, x11, x8
+; CHECK-GI-NEXT:    add x27, x27, x29
+; CHECK-GI-NEXT:    umulh x15, x9, x8
 ; CHECK-GI-NEXT:    add x27, x27, x30
-; CHECK-GI-NEXT:    madd x27, x11, x29, x27
-; CHECK-GI-NEXT:    str x9, [sp, #96] // 8-byte Spill
-; CHECK-GI-NEXT:    umulh x13, x0, x8
-; CHECK-GI-NEXT:    adds x10, x21, x10
-; CHECK-GI-NEXT:    madd x30, x7, x29, x27
-; CHECK-GI-NEXT:    mul x9, x11, x29
-; CHECK-GI-NEXT:    mul x29, x18, x8
-; CHECK-GI-NEXT:    madd x8, x0, x8, x21
-; CHECK-GI-NEXT:    mul x28, x26, x1
-; CHECK-GI-NEXT:    mov x26, x7
-; CHECK-GI-NEXT:    mov x7, x11
-; CHECK-GI-NEXT:    umulh x11, x2, x5
-; CHECK-GI-NEXT:    stp x8, x9, [sp, #24] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    mov x8, x2
-; CHECK-GI-NEXT:    cset w9, hs
-; CHECK-GI-NEXT:    umulh x17, x2, x19
-; CHECK-GI-NEXT:    and x9, x9, #0x1
-; CHECK-GI-NEXT:    madd x8, x8, x19, x11
-; CHECK-GI-NEXT:    mul x2, x3, x19
-; CHECK-GI-NEXT:    mul x19, x18, x25
-; CHECK-GI-NEXT:    str x8, [sp, #40] // 8-byte Spill
-; CHECK-GI-NEXT:    umulh x8, x18, x25
-; CHECK-GI-NEXT:    ldr x18, [sp, #112] // 8-byte Reload
-; CHECK-GI-NEXT:    mul x12, x3, x5
-; CHECK-GI-NEXT:    cmn x10, x19
+; CHECK-GI-NEXT:    mul x30, x25, x8
+; CHECK-GI-NEXT:    madd x8, x9, x8, x17
+; CHECK-GI-NEXT:    madd x27, x6, x28, x27
+; CHECK-GI-NEXT:    mul x10, x6, x28
+; CHECK-GI-NEXT:    stp x8, x9, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    madd x27, x7, x28, x27
+; CHECK-GI-NEXT:    madd x8, x2, x19, x12
+; CHECK-GI-NEXT:    str x10, [sp, #72] // 8-byte Spill
+; CHECK-GI-NEXT:    madd x10, x5, x23, x27
+; CHECK-GI-NEXT:    ldr x27, [sp, #104] // 8-byte Reload
+; CHECK-GI-NEXT:    umulh x9, x25, x27
+; CHECK-GI-NEXT:    str x8, [sp, #64] // 8-byte Spill
+; CHECK-GI-NEXT:    mul x8, x25, x27
+; CHECK-GI-NEXT:    ldr x25, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    stp x10, x0, [sp, #32] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    mov x10, x17
+; CHECK-GI-NEXT:    adds x11, x10, x11
+; CHECK-GI-NEXT:    mul x17, x2, x19
 ; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    umulh x21, x3, x5
-; CHECK-GI-NEXT:    adds x8, x8, x13
 ; CHECK-GI-NEXT:    and x10, x10, #0x1
+; CHECK-GI-NEXT:    mul x0, x0, x19
+; CHECK-GI-NEXT:    cmn x11, x8
+; CHECK-GI-NEXT:    ldr x8, [sp, #120] // 8-byte Reload
+; CHECK-GI-NEXT:    cset w11, hs
+; CHECK-GI-NEXT:    adds x9, x9, x15
+; CHECK-GI-NEXT:    mul x14, x13, x3
+; CHECK-GI-NEXT:    and x11, x11, #0x1
 ; CHECK-GI-NEXT:    cset w19, hs
-; CHECK-GI-NEXT:    adds x8, x8, x16
-; CHECK-GI-NEXT:    add x9, x9, x10
-; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    adds x8, x8, x29
-; CHECK-GI-NEXT:    umulh x13, x4, x1
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    adds x8, x8, x18
-; CHECK-GI-NEXT:    and x10, x10, #0x1
-; CHECK-GI-NEXT:    mul x16, x4, x22
-; CHECK-GI-NEXT:    and x0, x0, #0x1
-; CHECK-GI-NEXT:    umulh x18, x4, x22
-; CHECK-GI-NEXT:    cset w4, hs
-; CHECK-GI-NEXT:    adds x8, x8, x9
-; CHECK-GI-NEXT:    str x8, [sp, #112] // 8-byte Spill
-; CHECK-GI-NEXT:    cset w29, hs
-; CHECK-GI-NEXT:    adds x8, x11, x15
-; CHECK-GI-NEXT:    cset w9, hs
-; CHECK-GI-NEXT:    cmn x8, x12
-; CHECK-GI-NEXT:    ldr x11, [sp, #80] // 8-byte Reload
-; CHECK-GI-NEXT:    cset w8, hs
-; CHECK-GI-NEXT:    adds x12, x21, x17
-; CHECK-GI-NEXT:    and x9, x9, #0x1
-; CHECK-GI-NEXT:    cset w17, hs
-; CHECK-GI-NEXT:    adds x12, x12, x11
-; CHECK-GI-NEXT:    and x8, x8, #0x1
-; CHECK-GI-NEXT:    mul x21, x24, x1
-; CHECK-GI-NEXT:    ldr x11, [sp, #56] // 8-byte Reload
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    cset w9, hs
-; CHECK-GI-NEXT:    adds x12, x12, x2
-; CHECK-GI-NEXT:    and x17, x17, #0x1
-; CHECK-GI-NEXT:    mul x15, x24, x22
-; CHECK-GI-NEXT:    cset w2, hs
-; CHECK-GI-NEXT:    adds x12, x12, x11
-; CHECK-GI-NEXT:    cset w3, hs
-; CHECK-GI-NEXT:    adds x8, x12, x8
-; CHECK-GI-NEXT:    and x9, x9, #0x1
-; CHECK-GI-NEXT:    madd x27, x20, x22, x13
-; CHECK-GI-NEXT:    cset w12, hs
-; CHECK-GI-NEXT:    adds x13, x13, x16
-; CHECK-GI-NEXT:    str x8, [sp, #88] // 8-byte Spill
-; CHECK-GI-NEXT:    ldr x8, [sp, #64] // 8-byte Reload
-; CHECK-GI-NEXT:    add x9, x17, x9
-; CHECK-GI-NEXT:    umulh x22, x24, x1
-; CHECK-GI-NEXT:    and x4, x4, #0x1
-; CHECK-GI-NEXT:    and x2, x2, #0x1
-; CHECK-GI-NEXT:    add x9, x9, x2
-; CHECK-GI-NEXT:    and x2, x3, #0x1
-; CHECK-GI-NEXT:    madd x16, x6, x23, x30
-; CHECK-GI-NEXT:    cset w30, hs
-; CHECK-GI-NEXT:    cmn x13, x21
-; CHECK-GI-NEXT:    and x13, x19, #0x1
-; CHECK-GI-NEXT:    mov x19, x26
-; CHECK-GI-NEXT:    add x9, x9, x2
-; CHECK-GI-NEXT:    umulh x21, x7, x14
-; CHECK-GI-NEXT:    add x10, x13, x10
-; CHECK-GI-NEXT:    cset w13, hs
-; CHECK-GI-NEXT:    adds x18, x22, x18
-; CHECK-GI-NEXT:    add x11, x10, x0
-; CHECK-GI-NEXT:    and x13, x13, #0x1
-; CHECK-GI-NEXT:    mul x22, x7, x23
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    adds x18, x18, x8
-; CHECK-GI-NEXT:    cset w17, hs
-; CHECK-GI-NEXT:    adds x15, x18, x15
-; CHECK-GI-NEXT:    and x18, x30, #0x1
-; CHECK-GI-NEXT:    mul x10, x26, x14
-; CHECK-GI-NEXT:    add x13, x18, x13
-; CHECK-GI-NEXT:    cset w18, hs
-; CHECK-GI-NEXT:    adds x15, x15, x28
-; CHECK-GI-NEXT:    and x17, x17, #0x1
-; CHECK-GI-NEXT:    ldr x2, [sp, #32] // 8-byte Reload
-; CHECK-GI-NEXT:    umulh x30, x26, x14
-; CHECK-GI-NEXT:    cset w28, hs
-; CHECK-GI-NEXT:    adds x26, x15, x13
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    and x18, x18, #0x1
-; CHECK-GI-NEXT:    umulh x8, x7, x23
-; CHECK-GI-NEXT:    and x15, x15, #0x1
-; CHECK-GI-NEXT:    madd x13, x7, x23, x21
-; CHECK-GI-NEXT:    adds x21, x21, x22
-; CHECK-GI-NEXT:    cset w22, hs
-; CHECK-GI-NEXT:    cmn x21, x10
-; CHECK-GI-NEXT:    add x10, x11, x4
-; CHECK-GI-NEXT:    and x11, x29, #0x1
-; CHECK-GI-NEXT:    mul x3, x19, x23
-; CHECK-GI-NEXT:    ldr x23, [sp, #8] // 8-byte Reload
+; CHECK-GI-NEXT:    adds x9, x9, x8
 ; CHECK-GI-NEXT:    add x10, x10, x11
-; CHECK-GI-NEXT:    and x11, x12, #0x1
-; CHECK-GI-NEXT:    and x12, x0, #0x1
-; CHECK-GI-NEXT:    ldr x0, [sp, #120] // 8-byte Reload
-; CHECK-GI-NEXT:    add x9, x9, x11
-; CHECK-GI-NEXT:    add x11, x12, x17
+; CHECK-GI-NEXT:    ldr x11, [sp, #136] // 8-byte Reload
+; CHECK-GI-NEXT:    umulh x13, x13, x3
+; CHECK-GI-NEXT:    cset w7, hs
+; CHECK-GI-NEXT:    adds x9, x9, x30
+; CHECK-GI-NEXT:    cset w6, hs
+; CHECK-GI-NEXT:    adds x9, x9, x11
+; CHECK-GI-NEXT:    mul x29, x26, x1
+; CHECK-GI-NEXT:    cset w26, hs
+; CHECK-GI-NEXT:    adds x9, x9, x10
+; CHECK-GI-NEXT:    ldr x11, [sp, #112] // 8-byte Reload
+; CHECK-GI-NEXT:    cset w30, hs
+; CHECK-GI-NEXT:    adds x10, x12, x17
+; CHECK-GI-NEXT:    umulh x8, x4, x1
 ; CHECK-GI-NEXT:    cset w12, hs
-; CHECK-GI-NEXT:    adds x8, x30, x8
-; CHECK-GI-NEXT:    mul x17, x6, x14
-; CHECK-GI-NEXT:    add x10, x0, x10
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    adds x8, x8, x2
+; CHECK-GI-NEXT:    cmn x10, x14
+; CHECK-GI-NEXT:    str x9, [sp, #136] // 8-byte Spill
+; CHECK-GI-NEXT:    mul x15, x4, x20
+; CHECK-GI-NEXT:    cset w10, hs
+; CHECK-GI-NEXT:    adds x13, x13, x18
+; CHECK-GI-NEXT:    cset w4, hs
+; CHECK-GI-NEXT:    adds x13, x13, x11
+; CHECK-GI-NEXT:    ldr x11, [sp, #80] // 8-byte Reload
+; CHECK-GI-NEXT:    mul x9, x25, x1
 ; CHECK-GI-NEXT:    cset w2, hs
-; CHECK-GI-NEXT:    adds x8, x8, x3
-; CHECK-GI-NEXT:    and x0, x0, #0x1
-; CHECK-GI-NEXT:    and x2, x2, #0x1
-; CHECK-GI-NEXT:    and x3, x22, #0x1
+; CHECK-GI-NEXT:    adds x13, x13, x0
 ; CHECK-GI-NEXT:    and x12, x12, #0x1
-; CHECK-GI-NEXT:    add x0, x0, x2
-; CHECK-GI-NEXT:    cset w2, hs
-; CHECK-GI-NEXT:    madd x16, x6, x14, x16
-; CHECK-GI-NEXT:    adds x8, x8, x17
-; CHECK-GI-NEXT:    and x17, x2, #0x1
-; CHECK-GI-NEXT:    add x12, x3, x12
-; CHECK-GI-NEXT:    add x17, x0, x17
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    add x11, x11, x18
-; CHECK-GI-NEXT:    ldr x18, [sp, #24] // 8-byte Reload
-; CHECK-GI-NEXT:    ldr x22, [sp, #16] // 8-byte Reload
-; CHECK-GI-NEXT:    adds x8, x8, x12
-; CHECK-GI-NEXT:    and x12, x28, #0x1
-; CHECK-GI-NEXT:    and x0, x0, #0x1
-; CHECK-GI-NEXT:    madd x18, x23, x25, x18
-; CHECK-GI-NEXT:    add x11, x11, x12
-; CHECK-GI-NEXT:    add x12, x17, x0
+; CHECK-GI-NEXT:    and x10, x10, #0x1
+; CHECK-GI-NEXT:    and x7, x7, #0x1
+; CHECK-GI-NEXT:    umulh x14, x25, x1
+; CHECK-GI-NEXT:    add x10, x12, x10
+; CHECK-GI-NEXT:    cset w12, hs
+; CHECK-GI-NEXT:    adds x13, x13, x11
+; CHECK-GI-NEXT:    and x2, x2, #0x1
+; CHECK-GI-NEXT:    and x12, x12, #0x1
+; CHECK-GI-NEXT:    umulh x18, x24, x20
 ; CHECK-GI-NEXT:    cset w17, hs
-; CHECK-GI-NEXT:    ldr x2, [sp, #40] // 8-byte Reload
-; CHECK-GI-NEXT:    madd x3, x22, x5, x2
+; CHECK-GI-NEXT:    adds x10, x13, x10
+; CHECK-GI-NEXT:    str x10, [sp, #120] // 8-byte Spill
+; CHECK-GI-NEXT:    ldr x10, [sp, #88] // 8-byte Reload
 ; CHECK-GI-NEXT:    and x17, x17, #0x1
-; CHECK-GI-NEXT:    ldr x21, [sp, #48] // 8-byte Reload
+; CHECK-GI-NEXT:    mul x0, x25, x20
+; CHECK-GI-NEXT:    madd x28, x24, x20, x8
+; CHECK-GI-NEXT:    cset w20, hs
+; CHECK-GI-NEXT:    adds x8, x8, x15
+; CHECK-GI-NEXT:    cset w15, hs
+; CHECK-GI-NEXT:    cmn x8, x9
+; CHECK-GI-NEXT:    cset w9, hs
+; CHECK-GI-NEXT:    adds x14, x14, x18
+; CHECK-GI-NEXT:    umulh x8, x21, x16
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    adds x14, x14, x10
+; CHECK-GI-NEXT:    and x15, x15, #0x1
+; CHECK-GI-NEXT:    mul x10, x21, x23
+; CHECK-GI-NEXT:    cset w11, hs
+; CHECK-GI-NEXT:    adds x14, x14, x0
+; CHECK-GI-NEXT:    and x9, x9, #0x1
+; CHECK-GI-NEXT:    and x18, x18, #0x1
+; CHECK-GI-NEXT:    and x11, x11, #0x1
+; CHECK-GI-NEXT:    mul x0, x22, x16
+; CHECK-GI-NEXT:    add x9, x15, x9
+; CHECK-GI-NEXT:    cset w15, hs
+; CHECK-GI-NEXT:    adds x14, x14, x29
+; CHECK-GI-NEXT:    add x11, x18, x11
+; CHECK-GI-NEXT:    ldr x18, [sp, #152] // 8-byte Reload
+; CHECK-GI-NEXT:    cset w29, hs
+; CHECK-GI-NEXT:    adds x9, x14, x9
+; CHECK-GI-NEXT:    madd x14, x21, x23, x8
+; CHECK-GI-NEXT:    cset w13, hs
+; CHECK-GI-NEXT:    adds x8, x8, x10
+; CHECK-GI-NEXT:    and x10, x19, #0x1
+; CHECK-GI-NEXT:    cset w19, hs
+; CHECK-GI-NEXT:    str x9, [sp, #112] // 8-byte Spill
+; CHECK-GI-NEXT:    umulh x9, x21, x23
+; CHECK-GI-NEXT:    cmn x8, x0
+; CHECK-GI-NEXT:    add x8, x10, x7
+; CHECK-GI-NEXT:    and x10, x6, #0x1
+; CHECK-GI-NEXT:    add x8, x8, x10
+; CHECK-GI-NEXT:    and x10, x26, #0x1
+; CHECK-GI-NEXT:    mul x0, x22, x23
+; CHECK-GI-NEXT:    add x8, x8, x10
+; CHECK-GI-NEXT:    and x10, x4, #0x1
+; CHECK-GI-NEXT:    ldr x4, [sp, #32] // 8-byte Reload
+; CHECK-GI-NEXT:    add x10, x10, x2
+; CHECK-GI-NEXT:    umulh x2, x22, x16
+; CHECK-GI-NEXT:    and x15, x15, #0x1
+; CHECK-GI-NEXT:    add x10, x10, x12
+; CHECK-GI-NEXT:    and x12, x30, #0x1
 ; CHECK-GI-NEXT:    add x11, x11, x15
+; CHECK-GI-NEXT:    add x8, x8, x12
+; CHECK-GI-NEXT:    add x10, x10, x17
+; CHECK-GI-NEXT:    and x12, x20, #0x1
+; CHECK-GI-NEXT:    add x10, x10, x12
+; CHECK-GI-NEXT:    cset w12, hs
+; CHECK-GI-NEXT:    mul x17, x5, x16
+; CHECK-GI-NEXT:    add x8, x18, x8
+; CHECK-GI-NEXT:    and x12, x12, #0x1
+; CHECK-GI-NEXT:    ldr x20, [sp, #24] // 8-byte Reload
+; CHECK-GI-NEXT:    adds x9, x2, x9
+; CHECK-GI-NEXT:    ldp x6, x2, [sp, #64] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    madd x4, x5, x16, x4
+; CHECK-GI-NEXT:    and x13, x13, #0x1
+; CHECK-GI-NEXT:    and x18, x18, #0x1
+; CHECK-GI-NEXT:    ldp x15, x7, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    adds x9, x9, x2
+; CHECK-GI-NEXT:    madd x15, x20, x27, x15
+; CHECK-GI-NEXT:    and x2, x29, #0x1
+; CHECK-GI-NEXT:    cset w5, hs
+; CHECK-GI-NEXT:    adds x9, x9, x0
+; CHECK-GI-NEXT:    and x0, x19, #0x1
+; CHECK-GI-NEXT:    and x5, x5, #0x1
+; CHECK-GI-NEXT:    add x12, x0, x12
+; CHECK-GI-NEXT:    cset w0, hs
+; CHECK-GI-NEXT:    add x18, x18, x5
+; CHECK-GI-NEXT:    adds x9, x9, x17
+; CHECK-GI-NEXT:    and x17, x0, #0x1
+; CHECK-GI-NEXT:    add x17, x18, x17
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    adds x9, x9, x12
+; CHECK-GI-NEXT:    and x12, x18, #0x1
+; CHECK-GI-NEXT:    cset w18, hs
+; CHECK-GI-NEXT:    ldr x19, [sp, #40] // 8-byte Reload
+; CHECK-GI-NEXT:    add x12, x17, x12
+; CHECK-GI-NEXT:    and x17, x18, #0x1
+; CHECK-GI-NEXT:    madd x5, x25, x1, x28
 ; CHECK-GI-NEXT:    add x12, x12, x17
-; CHECK-GI-NEXT:    madd x6, x24, x1, x27
-; CHECK-GI-NEXT:    ldp x17, x15, [sp, #88] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x0, [sp, #104] // 8-byte Reload
-; CHECK-GI-NEXT:    add x12, x16, x12
-; CHECK-GI-NEXT:    ldr x2, [sp, #72] // 8-byte Reload
-; CHECK-GI-NEXT:    madd x13, x19, x14, x13
-; CHECK-GI-NEXT:    ldr x16, [sp, #112] // 8-byte Reload
-; CHECK-GI-NEXT:    eor x10, x10, x18, asr #63
-; CHECK-GI-NEXT:    add x9, x0, x9
-; CHECK-GI-NEXT:    add x11, x15, x11
-; CHECK-GI-NEXT:    eor x17, x17, x3, asr #63
-; CHECK-GI-NEXT:    mul x4, x21, x25
-; CHECK-GI-NEXT:    eor x16, x16, x18, asr #63
-; CHECK-GI-NEXT:    eor x9, x9, x3, asr #63
-; CHECK-GI-NEXT:    eor x0, x26, x6, asr #63
-; CHECK-GI-NEXT:    eor x11, x11, x6, asr #63
-; CHECK-GI-NEXT:    mul x15, x2, x5
-; CHECK-GI-NEXT:    orr x10, x16, x10
-; CHECK-GI-NEXT:    orr x9, x17, x9
-; CHECK-GI-NEXT:    eor x8, x8, x13, asr #63
-; CHECK-GI-NEXT:    eor x12, x12, x13, asr #63
-; CHECK-GI-NEXT:    cmp x10, #0
-; CHECK-GI-NEXT:    mul x5, x20, x1
-; CHECK-GI-NEXT:    orr x11, x0, x11
-; CHECK-GI-NEXT:    csel x1, x18, x23, ne
-; CHECK-GI-NEXT:    csel x0, x4, x21, ne
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    orr x8, x8, x12
-; CHECK-GI-NEXT:    mul x14, x7, x14
-; CHECK-GI-NEXT:    csel x3, x3, x22, ne
-; CHECK-GI-NEXT:    csel x2, x15, x2, ne
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    ldp x22, x21, [sp, #192] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x4, x5, x20, ne
-; CHECK-GI-NEXT:    csel x5, x6, x24, ne
+; CHECK-GI-NEXT:    ldp x0, x17, [sp, #136] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    madd x6, x19, x3, x6
+; CHECK-GI-NEXT:    add x11, x11, x2
+; CHECK-GI-NEXT:    ldr x18, [sp, #96] // 8-byte Reload
+; CHECK-GI-NEXT:    eor x8, x8, x15, asr #63
+; CHECK-GI-NEXT:    add x11, x11, x13
+; CHECK-GI-NEXT:    add x12, x4, x12
+; CHECK-GI-NEXT:    madd x14, x22, x16, x14
+; CHECK-GI-NEXT:    add x10, x17, x10
+; CHECK-GI-NEXT:    ldr x17, [sp, #128] // 8-byte Reload
+; CHECK-GI-NEXT:    orr x8, x0, x8
+; CHECK-GI-NEXT:    ldp x29, x30, [sp, #160] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mul x2, x7, x27
+; CHECK-GI-NEXT:    add x11, x17, x11
 ; CHECK-GI-NEXT:    cmp x8, #0
-; CHECK-GI-NEXT:    ldp x24, x23, [sp, #176] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x6, x14, x7, ne
-; CHECK-GI-NEXT:    csel x7, x13, x19, ne
-; CHECK-GI-NEXT:    ldp x20, x19, [sp, #208] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x26, x25, [sp, #160] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x28, x27, [sp, #144] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x29, x30, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    add sp, sp, #224
+; CHECK-GI-NEXT:    eor x10, x10, x6, asr #63
+; CHECK-GI-NEXT:    eor x11, x11, x5, asr #63
+; CHECK-GI-NEXT:    mul x13, x18, x3
+; CHECK-GI-NEXT:    ldp x28, x27, [sp, #176] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    eor x12, x12, x14, asr #63
+; CHECK-GI-NEXT:    mul x17, x24, x1
+; CHECK-GI-NEXT:    ldp x0, x1, [sp, #112] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    orr x9, x9, x12
+; CHECK-GI-NEXT:    mul x16, x21, x16
+; CHECK-GI-NEXT:    orr x10, x1, x10
+; CHECK-GI-NEXT:    orr x11, x0, x11
+; CHECK-GI-NEXT:    csel x0, x2, x7, ne
+; CHECK-GI-NEXT:    csel x1, x15, x20, ne
+; CHECK-GI-NEXT:    cmp x10, #0
+; CHECK-GI-NEXT:    csel x2, x13, x18, ne
+; CHECK-GI-NEXT:    csel x3, x6, x19, ne
+; CHECK-GI-NEXT:    cmp x11, #0
+; CHECK-GI-NEXT:    csel x4, x17, x24, ne
+; CHECK-GI-NEXT:    csel x5, x5, x25, ne
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    csel x6, x16, x21, ne
+; CHECK-GI-NEXT:    csel x7, x14, x22, ne
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #240] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x22, x21, [sp, #224] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x24, x23, [sp, #208] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp x26, x25, [sp, #192] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    add sp, sp, #256
 ; CHECK-GI-NEXT:    ret
   %o = call {<4 x i128>, <4 x i1>} @llvm.smul.with.overflow(<4 x i128> %a, <4 x i128> %b)
   %e0 = extractvalue {<4 x i128>, <4 x i1>} %o, 0

@@ -543,17 +543,30 @@ end:
 }
 
 define void @test19(i64 %in) {
-; CHECK-LABEL: test19:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    tbnz w0, #3, .LBB18_2
-; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl t
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB18_2: // %end
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test19:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    tbnz w0, #3, .LBB18_2
+; CHECK-SD-NEXT:  // %bb.1: // %then
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl t
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB18_2: // %end
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test19:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ubfx w8, w0, #3, #1
+; CHECK-GI-NEXT:    tbnz w8, #0, .LBB18_2
+; CHECK-GI-NEXT:  // %bb.1: // %then
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl t
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:  .LBB18_2: // %end
+; CHECK-GI-NEXT:    ret
   %shl = lshr i64 %in, 3
   %trunc = trunc i64 %shl to i32
   %and = and i32 %trunc, 1
