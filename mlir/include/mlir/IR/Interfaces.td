@@ -109,6 +109,11 @@ class Interface<string name, list<Interface> baseInterfacesArg = []> {
   // "A::B", ops will be placed in `namespace A { namespace B { <def> } }`.
   string cppNamespace = "";
 
+  // The C++ headers declaring this interface, as written in an `#include`
+  // directive. Generated declarations of any entity using this interface
+  // include these headers.
+  list<string> cppIncludes = [];
+
   // The list of methods defined by this interface.
   list<InterfaceMethod> methods = [];
 
