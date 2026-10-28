@@ -1932,7 +1932,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
   for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
-    auto elementInfo = getConstant(id);
+    std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
       // spirv.Constant cannot represent undefined constituents.
       if (getUndefType(id)) {
