@@ -62,6 +62,13 @@ func.func @bfmmla_fixed_dimension_acc(%acc: vector<4xf32>,
   return %0 : vector<4xf32>
 }
 
+func.func @bfmmla_not_rank_1(%acc: vector<1x[4]xf32>,
+                             %lhs: vector<1x[8]xbf16>,
+                             %rhs: vector<1x[8]xbf16>) -> vector<1x[4]xf32> {
+  // expected-error@+1 {{op operand #0 must be a 1D vector with length 4 of 32-bit float values, but got 'vector<1x[4]xf32>'}}
+  %0 = arm_neon.intr.bfmmla %acc, %lhs, %rhs : vector<1x[8]xbf16> to vector<1x[4]xf32>
+  return %0 : vector<1x[4]xf32>
+
 // -----
 
 //===----------------------------------------------------------------------===//
