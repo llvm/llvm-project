@@ -9,6 +9,9 @@ one file per kernel listed in a shapes file (lib_shapes.txt), extracted from the
   lib_shapes.py --mlir-dir ZLUDA/agx_libs/kernels --llvm-extract BIN/llvm-extract --shapes lib_shapes.txt \\
       -o OUT_DIR LIB.opt.ll...
 
+The pointer arguments are 0 and a zero-filled 16 MiB buffer is mapped at address 0, which makes agx_cost trace with
+its functional executor (every instruction runs, so trip counts computed by divisions are known).
+
 Arguments are named as in the MLIR source (`%N_` is `N_`); their widths come from the IR (a pointer or a 64-bit
 index two 32-bit uniform words, a 32-bit index, i32 or f32 one), so a build with 32-bit indices (kernel names ending
 in `_i32`) takes the same shape line. Unnamed arguments are 0; f32 arguments named alpha are 1.
@@ -106,7 +109,11 @@ def main():
                         if n == 2 and iv >> 32:
                             words.append((idx + 1, iv >> 32))
                     idx += n
-                header = "; agx-cost: " + " ".join("--uniform %d=%d" % w for w in words if w[1]) + " " + launch
+                # A zero-filled buffer at address 0 (the pointer arguments are 0): agx_cost then traces with the
+                # functional executor, which runs every instruction (its default trace skips rcp and convert, so
+                # a trip count computed by a division would be unknown).
+                header = ("; agx-cost: " + " ".join("--uniform %d=%d" % w for w in words if w[1]) + " " + launch
+                          + " --alloc 0=16777216")
                 out = os.path.join(a.out, "%s.ll" % name)
                 subprocess.run([a.llvm_extract, "--func=" + name, "-S", lib, "-o", out + ".tmp"], check=True)
                 open(out, "w").write(header + "\n" + open(out + ".tmp").read())
