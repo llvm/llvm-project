@@ -47,7 +47,9 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::Or:
+  case RecurKind::OrWithSelect:
   case RecurKind::And:
+  case RecurKind::AndWithSelect:
   case RecurKind::Xor:
   case RecurKind::SMax:
   case RecurKind::SMin:
@@ -1017,9 +1019,11 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
   case Instruction::Mul:
     return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
-    return InstDesc(Kind == RecurKind::And, I);
+    return InstDesc(Kind == RecurKind::And || Kind == RecurKind::AndWithSelect,
+                    I);
   case Instruction::Or:
-    return InstDesc(Kind == RecurKind::Or, I);
+    return InstDesc(Kind == RecurKind::Or || Kind == RecurKind::OrWithSelect,
+                    I);
   case Instruction::Xor:
     return InstDesc(Kind == RecurKind::Xor, I);
   case Instruction::FDiv:
@@ -1042,6 +1046,15 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
       return isConditionalRdxPattern(I);
     if (isFindRecurrenceKind(Kind) && SE)
       return isFindPattern(L, OrigPhi, I, *SE);
+    // select(a, b, false) and select(a, true, b) are a logical and/or. When b
+    // is the reduction phi, leave the select to the any-of reduction.
+    if (Kind == RecurKind::AndWithSelect || Kind == RecurKind::OrWithSelect) {
+      Value *B;
+      bool IsLogicalOp = Kind == RecurKind::AndWithSelect
+                             ? match(I, m_LogicalAnd(m_Value(), m_Value(B)))
+                             : match(I, m_LogicalOr(m_Value(), m_Value(B)));
+      return InstDesc(IsLogicalOp && B != OrigPhi, I);
+    }
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
@@ -1092,12 +1105,26 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
     return true;
   }
+  // Only an i1 reduction can have a logical and/or step.
+  bool IsBool = Phi->getType()->isIntOrIntVectorTy(1);
   if (AddReductionVar(Phi, RecurKind::Or, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
     return true;
   }
+  if (IsBool && AddReductionVar(Phi, RecurKind::OrWithSelect, TheLoop, RedDes,
+                                DB, AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found an OR reduction PHI with a logical or." << *Phi
+                      << "\n");
+    return true;
+  }
   if (AddReductionVar(Phi, RecurKind::And, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (IsBool && AddReductionVar(Phi, RecurKind::AndWithSelect, TheLoop, RedDes,
+                                DB, AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found an AND reduction PHI with a logical and."
+                      << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::Xor, TheLoop, RedDes, DB, AC, DT, SE)) {
@@ -1255,8 +1282,10 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
+  case RecurKind::OrWithSelect:
   case RecurKind::Or:
     return Instruction::Or;
+  case RecurKind::AndWithSelect:
   case RecurKind::And:
     return Instruction::And;
   case RecurKind::Xor:

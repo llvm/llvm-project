@@ -41,7 +41,11 @@ enum class RecurKind {
   AddChainWithSubs, ///< A chain of adds and subs
   Mul,      ///< Product of integers.
   Or,       ///< Bitwise or logical OR of integers.
+  OrWithSelect, ///< A chain of ors and logical ors, select(a, true, b).
+                ///< Unlike Or, the steps can't be reordered.
   And,      ///< Bitwise or logical AND of integers.
+  AndWithSelect, ///< A chain of ands and logical ands, select(a, b, false).
+                 ///< Unlike And, the steps can't be reordered.
   Xor,      ///< Bitwise or logical XOR of integers.
   SMin,     ///< Signed integer min implemented in terms of select(cmp()).
   SMax,     ///< Signed integer max implemented in terms of select(cmp()).

@@ -7,22 +7,44 @@
 define i1 @and_reduction_logical_and_step(ptr %p, i64 %n) {
 ; CHECK-LABEL: define i1 @and_reduction_logical_and_step(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N_RND_UP]], 7
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP0]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ splat (i1 true), %[[LOOP]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ splat (i1 true), %[[LOOP]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IV]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP1]], i64 [[N]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[LO:%.*]] = icmp sgt i32 [[V]], 0
-; CHECK-NEXT:    [[HI:%.*]] = icmp slt i32 [[V]], 10
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[RDX]], [[HI]]
-; CHECK-NEXT:    [[RDX_NEXT]] = select i1 [[LO]], i1 [[AND]], i1 false
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[GEP]], i64 4
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[GEP]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP3]], <4 x i1> [[ACTIVE_LANE_MASK2]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[WIDE_MASKED_LOAD3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 10)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[WIDE_MASKED_LOAD3]], splat (i32 10)
+; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i1> [[VEC_PHI]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i1> [[VEC_PHI1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP5]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i1 [ [[RDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i1> [[TMP10]], <4 x i1> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK2]], <4 x i1> [[TMP11]], <4 x i1> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP14]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <4 x i1> [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i1 [[RDX_NEXT_LCSSA]]
 ;
 entry:
@@ -44,3 +66,8 @@ loop:
 exit:
   ret i1 %rdx.next
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+;.

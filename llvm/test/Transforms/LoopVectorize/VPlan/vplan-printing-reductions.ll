@@ -1855,6 +1855,69 @@ exit:
 }
 
 define i1 @print_and_reduction_logical_and(ptr %p, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'print_and_reduction_logical_and'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<true>, ir<true>, ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (and-with-select) vp<[[VP3]]>, vp<[[VP7:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%p>, vp<[[VP5]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%v> = load vp<[[VP6]]>
+; CHECK-NEXT:      WIDEN ir<%lo> = icmp sgt ir<%v>, ir<0>
+; CHECK-NEXT:      WIDEN ir<%hi> = icmp slt ir<%v>, ir<10>
+; CHECK-NEXT:      WIDEN ir<%and> = and ir<%rdx>, ir<%hi>
+; CHECK-NEXT:      WIDEN ir<%rdx.next> = select ir<%lo>, ir<%and>, ir<false>
+; CHECK-NEXT:      EMIT vp<[[VP7]]> = freeze ir<%rdx.next>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (and-with-select) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %rdx.next.lcssa = phi i1 [ %rdx.next, %loop ] (extra operand: vp<[[VP9]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP9]]>, middle.block ], [ ir<true>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %rdx = phi i1 [ true, %entry ], [ %rdx.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+; CHECK-NEXT:    IR   %v = load i32, ptr %gep, align 4
+; CHECK-NEXT:    IR   %lo = icmp sgt i32 %v, 0
+; CHECK-NEXT:    IR   %hi = icmp slt i32 %v, 10
+; CHECK-NEXT:    IR   %and = and i1 %rdx, %hi
+; CHECK-NEXT:    IR   %rdx.next = select i1 %lo, i1 %and, i1 false
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
 entry:
   br label %loop
 
@@ -1876,6 +1939,69 @@ exit:
 }
 
 define i1 @print_or_reduction_logical_or(ptr %p, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'print_or_reduction_logical_or'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<false>, ir<false>, ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (or-with-select) vp<[[VP3]]>, vp<[[VP7:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%p>, vp<[[VP5]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%v> = load vp<[[VP6]]>
+; CHECK-NEXT:      WIDEN ir<%lo> = icmp slt ir<%v>, ir<0>
+; CHECK-NEXT:      WIDEN ir<%hi> = icmp sgt ir<%v>, ir<10>
+; CHECK-NEXT:      WIDEN ir<%or> = or ir<%rdx>, ir<%hi>
+; CHECK-NEXT:      WIDEN ir<%rdx.next> = select ir<%lo>, ir<true>, ir<%or>
+; CHECK-NEXT:      EMIT vp<[[VP7]]> = freeze ir<%rdx.next>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (or-with-select) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %rdx.next.lcssa = phi i1 [ %rdx.next, %loop ] (extra operand: vp<[[VP9]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP9]]>, middle.block ], [ ir<false>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %rdx = phi i1 [ false, %entry ], [ %rdx.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+; CHECK-NEXT:    IR   %v = load i32, ptr %gep, align 4
+; CHECK-NEXT:    IR   %lo = icmp slt i32 %v, 0
+; CHECK-NEXT:    IR   %hi = icmp sgt i32 %v, 10
+; CHECK-NEXT:    IR   %or = or i1 %rdx, %hi
+; CHECK-NEXT:    IR   %rdx.next = select i1 %lo, i1 true, i1 %or
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
 entry:
   br label %loop
 
