@@ -16,3 +16,10 @@ entry:
   %0 = call i32 @llvm.dx.start.vertex.location()
   ret i32 %0
 }
+
+; CHECK: Function start_instance_location : [[FLAG]]
+define i32 @start_instance_location() {
+entry:
+  %0 = call i32 @llvm.dx.start.instance.location()
+  ret i32 %0
+}
