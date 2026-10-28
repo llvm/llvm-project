@@ -1,0 +1,92 @@
+# RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+
+# A callee may return with GLOBAL_INV events outstanding. A subsequent load
+# prevents treating a preexisting loadcnt(1) wait as redundant.
+---
+name: call_then_load_soft_wait
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr34_sgpr35, $vgpr40
+
+    ; CHECK-LABEL: name: call_then_load_soft_wait
+    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    ; CHECK-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT 1
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_ENDPGM 0
+    dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    $vgpr0 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    S_WAIT_LOADCNT_soft 1
+    S_NOP 0
+    S_ENDPGM 0
+...
+
+# Unknown INV-only LOAD state does not require a wait at return.
+---
+name: call_inv_only_return
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: false
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr34_sgpr35
+
+    ; CHECK-LABEL: name: call_inv_only_return
+    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    ; CHECK-NEXT: S_SETPC_B64_return $sgpr34_sgpr35
+    dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    S_SETPC_B64_return $sgpr34_sgpr35
+...
+
+# An explicit soft LOAD wait also sees the unknown post-call count. GFX12
+# simplifies these waits using the count, while return waits allow pending INV.
+---
+name: call_then_soft_load_wait
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: call_then_soft_load_wait
+    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    ; CHECK-NEXT: S_WAIT_LOADCNT 0
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_ENDPGM 0
+    dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    S_WAIT_LOADCNT_soft 0
+    S_NOP 0
+    S_ENDPGM 0
+...
+
+# Retire the caller's old loads and preserve relaxed waits for its new loads.
+---
+name: call_retires_pre_call_loads
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr34_sgpr35, $vgpr40
+
+    ; CHECK-LABEL: name: call_retires_pre_call_loads
+    ; CHECK: $vgpr42 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    ; CHECK-NEXT: dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr42, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr1 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT 1
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr42 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    dead $sgpr30_sgpr31 = SI_CALL $sgpr0_sgpr1, 0, csr_amdgpu
+    $vgpr2 = V_MOV_B32_e32 $vgpr42, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD_SADDR $sgpr34_sgpr35, $vgpr40, 0, 0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    S_ENDPGM 0
+...
