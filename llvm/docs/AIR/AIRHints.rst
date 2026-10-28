@@ -102,6 +102,7 @@ constrained floating point          the constrained intrinsic               to n
 ``llvm.agx.sin``, ``cos``           the hardware approximation              ``sin(x * pi / 2)`` (afn)
 (argument in quadrants)
 ``llvm.agx.core.id``                the core number                         0
+scalar system values (``+value``)   the special register, read at the hint  the AIR value (a parameter)
 ``llvm.agx.simdgroup.matrix.fma``   the matrix unit or AGX's expansion      24 shuffles and 16 FMAs per thread,
                                                                             in the layout of AGXUsage.rst
 double ``atomicrmw``                the atomic                              none (no 64-bit AIR atomics)

@@ -50,6 +50,10 @@
 ; RZ: call void @__air_hint.call_llvm.agx.set.fpmode___(i32 4)
 ; RZ: call float @__air_hint.call_llvm.experimental.constrained.fadd.f32_____round.dynamic_fpexcept.ignore__mode(float %{{[0-9]+}}, float %{{[0-9]+}}, i32 4)
 ; RZ: call half @__air_hint.call_llvm.minimum.f16______mode(half %{{[0-9]+}}, half %{{[0-9]+}}, i32 4)
+; A scalar system value: AIR's value through a "+value" hint at the read, so
+; that AGX reads it there again.
+; RZ: %[[L:[0-9]+]] = call i32 @air.thread_index_in_simdgroup()
+; RZ: call i32 @__air_hint.call_llvm.agx.thread.index.in.simdgroup____value(i32 %[[L]])
 
 ; AGX-LABEL: rz:
 ; AGX: stop
@@ -84,9 +88,13 @@ define agx_kernel void @rz(ptr addrspace(4) byref(i64) %pp, float %x, float %y, 
   %m = call half @llvm.minimum.f16(half %h, half %h2)
   %hp = getelementptr i8, ptr addrspace(1) %g, i64 8
   store half %m, ptr addrspace(1) %hp
+  %lane = call i32 @llvm.agx.thread.index.in.simdgroup()
+  %lp = getelementptr i8, ptr addrspace(1) %g, i64 12
+  store i32 %lane, ptr addrspace(1) %lp
   ret void
 }
 
 declare void @llvm.agx.set.fpmode(i32)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare half @llvm.minimum.f16(half, half)
+declare i32 @llvm.agx.thread.index.in.simdgroup()

@@ -109,6 +109,7 @@ unchanged (asm identical, bench identical, d3 = d4).
 | X1 | Raise + hints + soft-f64 above AIR, by-value parameters restored (727052a5d and before) | cycles geomean rw -0.01%, co -0.00%, lb -0.01%; no kernel > 2% slower | PTX-formalization 408 pass = direct |
 | X2 | Directed rounding / FP mode / exact min-max emulations (bb72df692, f534ac876) | AGX code unchanged (asm identical on the strict-FP tests) | every hint emulated: 381 -> 399 pass; left: f64 atomics, hardware approximations |
 | X3 | System values read where the kernel extracts them (e4934c6dd); scalar ones stay at the entry (reading them where their uses meet: G14C +0.02%, rejected) | rw 72/72 identical (was 64), co 474/476, lb 434/468 (tile GEMMs reading the SIMD lane); G14C geomean -0.007% | 408 pass |
+| X5 | Scalar system values (SIMD lane, SIMD-group index, thread index) through a `+value` hint at the read, whose emulation is AIR's parameter; AGX reads the register at the hint | **every kernel identical to direct**: rw 72/72, co 476/476, lb 468/468 | 407 pass native (tex-mip: the debug zoc's 121 s vs the checker's 120 s, both paths); emulated 404; Metal 246/248 |
 | X4 | Metal pipeline legalizes the hints: generic -> device, 65-128-bit integers as limbs, RMW loops (778b681ba) | n/a (Metal side) | Metal writer 241 -> 246 of 248 modules; limbs = LLVM on 20000 random i128 / i96 cases (lli) |
 
 Compile time: `zoc` (debug build) over the 40 largest PTX tests 258.7 s direct vs 265.1 s through AIR (+2.5%);

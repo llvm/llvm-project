@@ -322,7 +322,13 @@ bool RaiseToAIR::raiseIntrinsic(IntrinsicInst &II) {
       continue;
     Value *V;
     if (S.Element < 0) {
+      // AIR passes a scalar system value as a parameter, which keeps no
+      // place in the code: a hint "+value" at the read, whose emulation is
+      // the AIR value and which AGX reads here again (as the direct path).
       V = B.CreateCall(M.getOrInsertFunction(S.AIR, I32));
+      std::string Key =
+          ("call:" + II.getCalledFunction()->getName() + "|-|+value").str();
+      V = B.CreateCall(hint(Key, FunctionType::get(I32, {I32}, false)), {V});
     } else {
       auto *V3 = FixedVectorType::get(I32, 3);
       V = B.CreateExtractElement(
@@ -827,6 +833,9 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
   StringRef Op = Parts[0], Mask = Parts.size() > 1 ? Parts[1] : "";
   if (Op.starts_with("atomic:"))
     return NoEmulation();
+  // A value AIR has (a scalar system value), placed where AGX reads it.
+  if (Parts.back() == "+value")
+    return Fin(A.back());
   bool DblIn = Mask.size() > 1 && Mask[1] == 'd';
   bool DblOut = !Mask.empty() && Mask[0] == 'd';
   // The floating point mode, a trailing operand.
