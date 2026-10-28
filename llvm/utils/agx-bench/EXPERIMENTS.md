@@ -5,6 +5,18 @@ simulator is calibrated on an M2 Max, but several decisions rest on single measu
 entry). This file lists each experiment so that it can be re-run on a real M2 (Asahi Linux, ZLUDA `zluda_agx`,
 or any harness that loads the objects `llc` emits and times dispatches).
 
+## Library kernels with realistic launch inputs (`lr` set)
+
+agx-bench costs ZLUDA's agx_libs kernels (the `lb` set) with every argument 0, which measures their prologue only:
+the conv and DNN rows of A26 / A27 come from launch inputs set by hand. `tools/lib_shapes.py` writes one file per
+kernel listed in `tools/lib_shapes.txt` (realistic shapes: a 1 x 64 x 56 x 56 image and 3 x 3 filters for cuDNN,
+256 x 256 x 256 products for cuBLAS), with argument names from the MLIR source and widths from the compiled IR (so
+the `_i32` builds take the same line):
+
+    tools/lib_shapes.py --mlir-dir ZLUDA/agx_libs/kernels --llvm-extract BIN/llvm-extract \
+        --shapes tools/lib_shapes.txt -o lr/ libll/*.opt.ll
+    agx-bench.py ... --ll lr/*.ll
+
 ## How to verify an entry
 
 1. Build `llc` from this branch. Each entry gives an **A/B switch**: an `llc` option (both settings in one

@@ -1,0 +1,18 @@
+# Realistic launch inputs for ZLUDA's agx_libs kernels (tools/lib_shapes.py): kernel, its arguments by MLIR name,
+# and agx_cost's launch options. One workgroup in the middle of the launch is costed.
+#
+# cuDNN: one 1 x 64 x 56 x 56 NCHW image, 64 3 x 3 filters, padding 1 (ResNet's second stage).
+agx_conv2d_fwd_f32 N_=1 C_=64 H_=56 W_=56 K_=64 R_=3 S_=3 P_=56 Q_=56 ph_=1 pw_=1 sh_=1 sw_=1 dh_=1 dw_=1 G_=1 xsn_=200704 xsc_=3136 xsh_=56 xsw_=1 ysn_=200704 ysc_=3136 ysh_=56 ysw_=1 --wg 256,1,1 --wg-id 100,0,0
+agx_conv2d_fwd_f16 N_=1 C_=64 H_=56 W_=56 K_=64 R_=3 S_=3 P_=56 Q_=56 ph_=1 pw_=1 sh_=1 sw_=1 dh_=1 dw_=1 G_=1 xsn_=200704 xsc_=3136 xsh_=56 xsw_=1 ysn_=200704 ysc_=3136 ysh_=56 ysw_=1 --wg 256,1,1 --wg-id 100,0,0
+agx_conv2d_bwd_data_f32 N_=1 C_=64 H_=56 W_=56 K_=64 R_=3 S_=3 P_=56 Q_=56 ph_=1 pw_=1 sh_=1 sw_=1 dh_=1 dw_=1 G_=1 xsn_=200704 xsc_=3136 xsh_=56 xsw_=1 ysn_=200704 ysc_=3136 ysh_=56 ysw_=1 --wg 256,1,1 --wg-id 100,0,0
+agx_conv2d_bwd_filter_f32 N_=1 C_=64 H_=56 W_=56 K_=64 R_=3 S_=3 P_=56 Q_=56 ph_=1 pw_=1 sh_=1 sw_=1 dh_=1 dw_=1 G_=1 xsn_=200704 xsc_=3136 xsh_=56 xsw_=1 ysn_=200704 ysc_=3136 ysh_=56 ysw_=1 --wg 256,1,1 --wg-id 100,0,0
+# pointwise, softmax over channels, 2 x 2 max pooling, batch normalization on the same tensor
+agx_dnn_act_fwd total=200704 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 mode=1 --wg 64,1,1 --wg-id 100,0,0
+agx_dnn_pointwise total=200704 C=64 H=56 W=56 as0=200704 as1=3136 as2=56 as3=1 cs0=200704 cs1=3136 cs2=56 cs3=1 --wg 64,1,1 --wg-id 100,0,0
+agx_dnn_softmax_fwd rows=3136 K=64 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 instance=1 algo=1 --wg 64,1,1 --wg-id 100,0,0
+agx_dnn_pool_fwd total=50176 C=64 H=56 W=56 P=28 Q=28 R=2 S=2 sh=2 sw=2 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=50176 ys1=784 ys2=28 ys3=1 --wg 64,1,1 --wg-id 100,0,0
+agx_dnn_bn_apply total=200704 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 spatial=1 eps=0.00001 --wg 64,1,1 --wg-id 100,0,0
+# cuBLAS: 256 x 256 x 256 products
+agx_sgemm_tile64 M=256 N=256 K=256 lda=256 ldb=256 ldc=256 --wg 128,1,1 --wg-id 5,0,0
+agx_hgemm_tile64_cf32 M=256 N=256 K=256 lda=256 ldb=256 ldc=256 --wg 128,1,1 --wg-id 5,0,0
+agx_sgemm_generic M=64 N=64 K=64 sar=64 sac=1 sbr=64 sbc=1 scr=64 scc=1 --wg 256,1,1 --wg-id 3,0,0
