@@ -35,6 +35,39 @@ func.func @private_parallel_levels() {
 
 // -----
 
+// Ownership par_dims can be narrower than the active dimensions the kernel
+// indexes the storage by, e.g. a vector reduction temporary allocated inside a
+// gang loop. The storage is replicated across both.
+
+// CHECK-LABEL: func.func @private_active_wider_than_par_dims
+// CHECK: %[[PRIV:.*]] = acc.privatize
+// CHECK: acc.map_info varPtr(%[[PRIV]] : !acc.private_type<memref<8xi32>>)
+// CHECK-SAME: mapFlags(private,gang_private,vector_private)
+func.func @private_active_wider_than_par_dims() {
+  %priv = acc.privatize par_dims(#acc<par_dims[thread_x]>)
+      {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<8xi32>>
+  return
+}
+
+// -----
+
+// Without par_dims the storage is not replicated per level, even when the op
+// has active dimensions.
+
+// CHECK-LABEL: func.func @private_active_without_par_dims
+// CHECK: %[[PRIV:.*]] = acc.privatize
+// CHECK: acc.map_info varPtr(%[[PRIV]] : !acc.private_type<memref<8xi32>>)
+// CHECK-SAME: mapFlags(private)
+func.func @private_active_without_par_dims() {
+  %priv = acc.privatize
+      {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<8xi32>>
+  return
+}
+
+// -----
+
 // Privatized storage need not name any parallel dimension - storage promoted to
 // shared memory is private without being replicated per level. Such a
 // privatization carries no par_dims at all, not an empty one.
@@ -51,15 +84,16 @@ func.func @private_without_par_dims() {
 
 // -----
 
-// A record element uses the padded stride: real(8) + real(4) has a size of 12
-// and an alignment of 8, so consecutive elements are 16 bytes apart.
+// A record element uses the padded stride: real(8) + real(4) has a stored
+// representation of 12 bytes and an alignment of 8, so consecutive elements
+// are 16 bytes apart (allocation extent rounded up to alignment).
 
 // CHECK-LABEL: func.func @private_static_record
 // CHECK: %[[PRIV:.*]] = acc.privatize
 // CHECK: %[[SIZE:.*]] = arith.constant 128 : i64
 // CHECK: acc.map_info varPtr(%[[PRIV]]
 // CHECK-SAME: size(%[[SIZE]] : i64)
-// CHECK-SAME: elementSize(12)
+// CHECK-SAME: elementSize(16)
 // CHECK-SAME: mapFlags(private)
 func.func @private_static_record() {
   %priv = acc.privatize par_dims(#acc<par_dims[]>)

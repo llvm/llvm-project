@@ -506,7 +506,7 @@ public:
   MachineFunction &getMachineFunction() const { return *MF; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
-  bool hasSwiftErrorArg() const;
+  LLVM_ABI bool hasSwiftErrorArg() const;
 
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
@@ -2081,6 +2081,13 @@ public:
                                           EVT VT, ArrayRef<SDValue> Ops,
                                           SDNodeFlags Flags = SDNodeFlags());
 
+  /// Constant fold a node with multiple results, returning a MERGE_VALUES of
+  /// the folded results on success.
+  LLVM_ABI SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                          SDVTList VTList,
+                                          ArrayRef<SDValue> Ops,
+                                          SDNodeFlags Flags = SDNodeFlags());
+
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -2711,6 +2718,8 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
+  LLVM_ABI const BasicBlock *getBasicBlock() const;
+
   /// Get the (commutative) identity element for the given opcode, if it exists.
   LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       SDNodeFlags Flags);
@@ -2757,17 +2766,17 @@ public:
   }
 
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                         SDValue InChain, const SDLoc &DLoc);
+                                         SDValue InChain, SDNode *Node);
 
   /// Returns the maximum runtime number of elements in VT if known, or 0
   /// otherwise.
-  unsigned getMaxRuntimeNumElements(EVT VT) const;
+  LLVM_ABI unsigned getMaxRuntimeNumElements(EVT VT) const;
 
   /// Returns a vector constructed from the scalar values in order. The number
   /// of scalars must match the maximum runtime length of VT, but only the first
   /// actual runtime length scalars are included in the result.
-  SDValue buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
-                                       ArrayRef<SDValue> Scalars);
+  LLVM_ABI SDValue buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
+                                                ArrayRef<SDValue> Scalars);
 
 private:
 #ifndef NDEBUG

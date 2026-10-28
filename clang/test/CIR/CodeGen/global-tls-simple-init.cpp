@@ -87,34 +87,34 @@ struct CtorDtor {
 // LLVM-BOTH-DAG: @_ZTH11tls_int_dyn = alias void (), ptr @__tls_init
 
 // Wrappers: 
-// LLVM: define linkonce_odr hidden ptr @_ZTW12maybe_inited() {
+// LLVM: define linkonce_odr hidden ptr @_ZTW12maybe_inited() comdat {
 // LLVM:   %[[HAS_INIT_FUNC:.*]] = icmp ne ptr @_ZTH12maybe_inited, null
 // LLVM:   br i1 %[[HAS_INIT_FUNC]]
 // LLVM:   call void @_ZTH12maybe_inited()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @maybe_inited)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW21definitely_inited_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW21definitely_inited_dyn() comdat {
 // LLVM:   call void @_ZTH21definitely_inited_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @definitely_inited_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW17definitely_inited() {
+// LLVM: define weak_odr hidden ptr @_ZTW17definitely_inited() comdat {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @definitely_inited)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW17tls_int_self_init() {
+// LLVM: define weak_odr hidden ptr @_ZTW17tls_int_self_init() comdat {
 // LLVM:   call void @_ZTH17tls_int_self_init()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_self_init)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_ref() {
+// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_ref() comdat {
 // LLVM:   call void @_ZTH11tls_int_ref()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_ref)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_dyn() comdat {
 // LLVM:   call void @_ZTH11tls_int_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
@@ -133,7 +133,7 @@ struct CtorDtor {
 // LLVM:   br label 
 // LLVM:   ret void
 
-// LLVM: define weak_odr hidden ptr @_ZTW7tls_int() {
+// LLVM: define weak_odr hidden ptr @_ZTW7tls_int() comdat {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
@@ -144,7 +144,7 @@ thread_local int tls_int = 5;
 // CIR: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW7tls_int", "_ZTH7tls_int"> @tls_int = #cir.int<5> : !s32i
 
 thread_local int tls_int_dyn = get_i();
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW11tls_int_dyn", "_ZTH11tls_int_dyn"> @tls_int_dyn = ctor : !s32i {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW11tls_int_dyn", "_ZTH11tls_int_dyn"> @tls_int_dyn = #cir.int<0> : !s32i ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_dyn : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>
@@ -164,7 +164,7 @@ thread_local int tls_int_dyn = get_i();
 // LLVM-BOTH:   ret void
 
 thread_local int &tls_int_ref = tls_int_dyn;
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW11tls_int_ref", "_ZTH11tls_int_ref"> @tls_int_ref = ctor : !cir.ptr<!s32i> {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW11tls_int_ref", "_ZTH11tls_int_ref"> @tls_int_ref = #cir.ptr<null> : !cir.ptr<!s32i> ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_ref : !cir.ptr<!cir.ptr<!s32i>>
 // CIR-BEFORE-LPP:   %[[GET_OTHER:.*]] = cir.get_global thread_local @tls_int_dyn : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[GET_OTHER]], %[[GET_GLOB]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -189,7 +189,7 @@ thread_local int &tls_int_ref = tls_int_dyn;
 // OGCG:   ret ptr %[[GET_GLOB]]
 
 thread_local int tls_int_self_init = tls_int_self_init + get_i();
-// CIR-BEFORE-LPP:  cir.global external tls_model = tls_dyn tls_refs = <"_ZTW17tls_int_self_init", "_ZTH17tls_int_self_init"> @tls_int_self_init = ctor : !s32i {
+// CIR-BEFORE-LPP:  cir.global external tls_model = tls_dyn tls_refs = <"_ZTW17tls_int_self_init", "_ZTH17tls_int_self_init"> @tls_int_self_init = #cir.int<0> : !s32i ctor {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_int_self_init : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:    %[[GET_SELF:.*]] = cir.get_global thread_local @tls_int_self_init : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:    %[[LOAD_SELF:.*]] = cir.load {{.*}}%[[GET_SELF]] : !cir.ptr<!s32i>, !s32i
@@ -227,7 +227,7 @@ extern thread_local int definitely_inited = 5;
 // CIR: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW17definitely_inited", "_ZTH17definitely_inited"> @definitely_inited = #cir.int<5> : !s32i
 
 extern thread_local int definitely_inited_dyn = get_i();
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW21definitely_inited_dyn", "_ZTH21definitely_inited_dyn"> @definitely_inited_dyn = ctor : !s32i {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW21definitely_inited_dyn", "_ZTH21definitely_inited_dyn"> @definitely_inited_dyn = #cir.int<0> : !s32i ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @definitely_inited_dyn : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !s32i, !cir.ptr<!s32i>

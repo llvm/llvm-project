@@ -278,12 +278,12 @@ define i64 @ashr64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movem.l %d2-%d3, (0,%sp) ; 12-byte Folded Spill
 ; CHECK-NEXT:    move.l (24,%sp), %d2
 ; CHECK-NEXT:    move.l (12,%sp), %d0
-; CHECK-NEXT:    move.l %d2, %d3
-; CHECK-NEXT:    add.l #-32, %d3
 ; CHECK-NEXT:    move.l %d2, %d1
 ; CHECK-NEXT:    add.l #-32, %d1
 ; CHECK-NEXT:    bmi .LBB19_1
 ; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    move.l %d2, %d3
+; CHECK-NEXT:    add.l #-32, %d3
 ; CHECK-NEXT:    move.l %d0, %d1
 ; CHECK-NEXT:    asr.l %d3, %d1
 ; CHECK-NEXT:    bra .LBB19_3

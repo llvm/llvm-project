@@ -14,6 +14,8 @@ add_lldb_unittest(ProcessTests
   ProcessEventDataTest.cpp
   ProcessTraceTest.cpp
 
+  LINK_COMPONENTS
+      Option
   LINK_LIBS
       lldbCore
       lldbHost

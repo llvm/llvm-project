@@ -110,6 +110,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   StringRef getPassName() const override { return AARCH64_EXPAND_PSEUDO_NAME; }
 };
 
@@ -899,10 +904,14 @@ static MachineInstr *createCallWithOps(MachineBasicBlock &MBB,
                                        unsigned Opcode,
                                        ArrayRef<MachineOperand> ExplicitOps,
                                        unsigned RegMaskStartIdx) {
-  // Build the MI, with explicit operands first (including the call target).
-  MachineInstr *Call = BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode))
-                           .add(ExplicitOps)
-                           .getInstr();
+  // Be careful not to duplicate the LR def which the original instruction
+  // already carries.
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr *Call =
+      MF.CreateMachineInstr(TII->get(Opcode), MBBI->getDebugLoc(),
+                            /*NoImplicit=*/true);
+  MBB.insert(MBBI, Call);
+  MachineInstrBuilder(MF, Call).add(ExplicitOps);
 
   // Register arguments are added during ISel, but cannot be added as explicit
   // operands of the branch as it expects to be B <target> which is only one

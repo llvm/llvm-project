@@ -929,28 +929,27 @@ static llvm::cl::opt<bool>
 /// Return a string containing the given Fortran intrinsic name
 /// with the type of its arguments specified in funcType
 /// surrounded by the given prefix/suffix.
-static std::string
-prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
-                         llvm::StringRef prefix, llvm::StringRef name,
-                         llvm::StringRef suffix, mlir::FunctionType funcType) {
+static std::string prettyPrintIntrinsicName(mlir::Location loc,
+                                            llvm::StringRef prefix,
+                                            llvm::StringRef name,
+                                            llvm::StringRef suffix,
+                                            mlir::FunctionType funcType) {
   std::string output = prefix.str();
   llvm::raw_string_ostream sstream(output);
   if (name == "pow" || name == "pow-unsigned") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+    sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc,
                                           displayName)
             << displayName
-            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+            << mlirTypeToIntrinsicFortran(funcType.getInput(1), loc,
                                           displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
-                                            name);
+      sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc, name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", "
-              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
+      sstream << ", " << mlirTypeToIntrinsicFortran(argType, loc, name);
     }
     sstream << ")";
   }
@@ -1786,7 +1785,7 @@ searchMathOperation(fir::FirOpBuilder &builder,
 static void checkPrecisionLoss(llvm::StringRef name,
                                mlir::FunctionType funcType,
                                const FunctionDistance &distance,
-                               fir::FirOpBuilder &builder, mlir::Location loc) {
+                               mlir::Location loc) {
   if (!distance.isLosingPrecision())
     return;
 
@@ -1797,8 +1796,8 @@ static void checkPrecisionLoss(llvm::StringRef name,
   // generating the code with the narrowing cast so that the user
   // can get a complete list of the problematic intrinsic calls.
   std::string message = prettyPrintIntrinsicName(
-      builder, loc, "not yet implemented: no math runtime available for '",
-      name, "'", funcType);
+      loc, "not yet implemented: no math runtime available for '", name, "'",
+      funcType);
   mlir::emitError(loc, message);
 }
 
@@ -2444,7 +2443,7 @@ static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, builder, loc);
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
     mathOp = bestNearMatch;
   }
 
@@ -6024,23 +6023,175 @@ void IntrinsicLibrary::genIeeeSetFlagOrHaltingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // IEEE_SET_FLAG: Set an exception FLAG to a FLAG_VALUE.
   // IEEE_SET_HALTING: Set an exception halting mode FLAG to a HALTING value.
+  //
+  // On Linux PPC, feraiseexcept may deliver SIGFPE when the corresponding
+  // exception trap is enabled, including under PR_FP_EXC_PRECISE. Update
+  // the FPSCR exception-status bits directly with mffs/mtfsf.
   assert(args.size() == 2);
   mlir::Type i1Ty = builder.getI1Type();
   mlir::Type i32Ty = builder.getIntegerType(32);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value field = fir::LoadOp::create(builder, loc, fieldRef);
-  mlir::Value except = fir::runtime::genMapExcept(
-      builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, field));
+  mlir::Value fieldVal = fir::ConvertOp::create(builder, loc, i32Ty, field);
+
+  llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+  const bool isLinuxPPC = triple.isOSLinux() && triple.isPPC();
+
+  auto getExcept = [&]() -> mlir::Value {
+    return fir::runtime::genMapExcept(builder, loc, fieldVal);
+  };
+
+  // Inline OR/AND masks for FPSCR sticky bits (lower 32 bits of mffs output).
+  //
+  // The Fortran ieee_flag_type internal encoding (magic-numbers.h) and the
+  // PPC FPSCR sticky bit positions are both distinct from the fenv.h FE_*
+  // values used by feraiseexcept/feclearexcept. There is no libm call that
+  // writes raw FPSCR sticky bits without risking SIGFPE when trapping is
+  // armed (PR_FP_EXC_PRECISE). The OR/AND masks are computed directly from
+  // the Fortran flag encoding here.
+  //
+  // Fortran encoding (magic-numbers.h):
+  //   IEEE_INVALID=1, IEEE_DENORM=2, IEEE_DIVIDE_BY_ZERO=4,
+  //   IEEE_OVERFLOW=8, IEEE_UNDERFLOW=16, IEEE_INEXACT=32
+  //
+  // FPSCR sticky-bit positions (lower 32 of mffs):
+  //   FP_INVALID summary + VXSOFT = 0x20000400 (IEEE_INVALID)
+  //   FP_OVERFLOW                 = 0x10000000 (IEEE_OVERFLOW)
+  //   FP_UNDERFLOW                = 0x08000000 (IEEE_UNDERFLOW)
+  //   FP_DIV_BY_ZERO              = 0x04000000 (IEEE_DIVIDE_BY_ZERO)
+  //   FP_INEXACT                  = 0x02000000 (IEEE_INEXACT)
+  //   IEEE_DENORM                 = 0          (no PPC sticky bit)
+  //
+  // Clear mask for IEEE_INVALID is wider (0x21f80700) to wipe the summary bit
+  // and all detail bits (VXSNAN, VXISI, VXIDI, VXZDZ, VXIMZ, VXVC, VXSOFT,
+  // VXSQRT, VXCVI); clearing only VXSOFT would leave the summary bit set.
+
+  // Compute the OR-mask to SET the sticky bits for one exception flag.
+  auto makePPCStickySetMask = [&](mlir::Value excepts) -> mlir::Value {
+    // Test each Fortran flag bit and accumulate the corresponding FPSCR bits.
+    // Bits are ORed together; unused (IEEE_DENORM) contributes 0.
+    auto bit = [&](int flagBit, uint32_t fpscrBits) -> mlir::Value {
+      mlir::Value test = mlir::arith::AndIOp::create(
+          builder, loc, excepts,
+          builder.createIntegerConstant(loc, i32Ty, flagBit));
+      mlir::Value nonzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::ne, test,
+          builder.createIntegerConstant(loc, i32Ty, 0));
+      return mlir::arith::SelectOp::create(
+          builder, loc, nonzero,
+          builder.createIntegerConstant(loc, i32Ty,
+                                        static_cast<int32_t>(fpscrBits)),
+          builder.createIntegerConstant(loc, i32Ty, 0));
+    };
+    mlir::Value mask = bit(1, 0x20000400u); // IEEE_INVALID
+    mask = mlir::arith::OrIOp::create(
+        builder, loc, mask, bit(4, 0x04000000u)); // IEEE_DIVIDE_BY_ZERO
+    mask = mlir::arith::OrIOp::create(builder, loc, mask,
+                                      bit(8, 0x10000000u)); // IEEE_OVERFLOW
+    mask = mlir::arith::OrIOp::create(builder, loc, mask,
+                                      bit(16, 0x08000000u)); // IEEE_UNDERFLOW
+    mask = mlir::arith::OrIOp::create(builder, loc, mask,
+                                      bit(32, 0x02000000u)); // IEEE_INEXACT
+    return mask;
+  };
+
+  // Compute the AND-mask to CLEAR the sticky bits for one exception flag.
+  // Returns NOT(status_bits); caller ANDs this into FPSCR lower-32.
+  auto makePPCStickyClearMask = [&](mlir::Value excepts) -> mlir::Value {
+    auto bit = [&](int flagBit, uint32_t statusBits) -> mlir::Value {
+      mlir::Value test = mlir::arith::AndIOp::create(
+          builder, loc, excepts,
+          builder.createIntegerConstant(loc, i32Ty, flagBit));
+      mlir::Value nonzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::ne, test,
+          builder.createIntegerConstant(loc, i32Ty, 0));
+      return mlir::arith::SelectOp::create(
+          builder, loc, nonzero,
+          builder.createIntegerConstant(loc, i32Ty,
+                                        static_cast<int32_t>(statusBits)),
+          builder.createIntegerConstant(loc, i32Ty, 0));
+    };
+    // IEEE_INVALID: clear summary + all detail bits (VXSNAN...VXCVI).
+    mlir::Value status = bit(1, 0x21f80700u);
+    status = mlir::arith::OrIOp::create(
+        builder, loc, status, bit(4, 0x04000000u)); // IEEE_DIVIDE_BY_ZERO
+    status = mlir::arith::OrIOp::create(builder, loc, status,
+                                        bit(8, 0x10000000u)); // IEEE_OVERFLOW
+    status = mlir::arith::OrIOp::create(builder, loc, status,
+                                        bit(16, 0x08000000u)); // IEEE_UNDERFLOW
+    status = mlir::arith::OrIOp::create(builder, loc, status,
+                                        bit(32, 0x02000000u)); // IEEE_INEXACT
+    // Return NOT(status) - caller ANDs this into FPSCR to clear the bits.
+    return mlir::arith::XOrIOp::create(
+        builder, loc, status, builder.createIntegerConstant(loc, i32Ty, ~0u));
+  };
+
+  // Emit readflm/binary-op/setflm as a single RMW on the FPSCR.
+  // doOr=true:  fpscr |= mask32  (set sticky bit via OR)
+  // doOr=false: fpscr &= (mask32 | upper32ones)  (clear sticky bit via AND;
+  //   mask32 from makePPCStickyClearMask holds NOT(status) in bits[31:0];
+  //   ORing in upper32ones ensures the AND leaves bits[63:32] untouched).
+  auto emitPPCFpscrRMW = [&](mlir::Value mask32, bool doOr) {
+    mlir::Type i64Ty = builder.getIntegerType(64);
+    mlir::Type f64Ty = builder.getF64Type();
+    mlir::func::FuncOp readFlm = fir::factory::getLlvmPpcReadflm(builder);
+    mlir::func::FuncOp setFlm = fir::factory::getLlvmPpcSetflm(builder);
+    mlir::Value fpscr = fir::CallOp::create(builder, loc, readFlm).getResult(0);
+    mlir::Value fpscr64 =
+        mlir::arith::BitcastOp::create(builder, loc, i64Ty, fpscr);
+    mlir::Value mask64 = builder.createConvert(loc, i64Ty, mask32);
+    mlir::Value newFpscr64;
+    if (doOr) {
+      newFpscr64 = mlir::arith::OrIOp::create(builder, loc, fpscr64, mask64);
+    } else {
+      // Zero-extend mask32 to 64 bits, then OR in the upper 32 ones so that
+      // AND only clears the intended lower-32 sticky bits.
+      mlir::Value upper32ones = builder.createIntegerConstant(
+          loc, i64Ty, static_cast<int64_t>(0xFFFFFFFF00000000LL));
+      mask64 = mlir::arith::OrIOp::create(builder, loc, mask64, upper32ones);
+      newFpscr64 = mlir::arith::AndIOp::create(builder, loc, fpscr64, mask64);
+    }
+    mlir::Value newFpscr =
+        mlir::arith::BitcastOp::create(builder, loc, f64Ty, newFpscr64);
+    fir::CallOp::create(builder, loc, setFlm, newFpscr);
+  };
+
+  mlir::Value except = (isLinuxPPC && isFlag) ? mlir::Value{} : getExcept();
+
   auto ifOp = fir::IfOp::create(
       builder, loc,
       fir::ConvertOp::create(builder, loc, i1Ty, getBase(args[1])),
       /*withElseRegion=*/true);
+
+  // --- then branch (set flag / enable halting) ---
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  (isFlag ? fir::runtime::genFeraiseexcept : fir::runtime::genFeenableexcept)(
-      builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+  if constexpr (isFlag) {
+    if (isLinuxPPC) {
+      emitPPCFpscrRMW(makePPCStickySetMask(fieldVal), /*doOr=*/true);
+      // No prctl needed: setting a sticky bit does not change trap-enable bits.
+    } else {
+      fir::runtime::genFeraiseexcept(
+          builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+    }
+  } else {
+    fir::runtime::genFeenableexcept(
+        builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+  }
+
+  // --- else branch (clear flag / disable halting) ---
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  (isFlag ? fir::runtime::genFeclearexcept : fir::runtime::genFedisableexcept)(
-      builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+  if constexpr (isFlag) {
+    if (isLinuxPPC) {
+      emitPPCFpscrRMW(makePPCStickyClearMask(fieldVal), /*doOr=*/false);
+    } else {
+      fir::runtime::genFeclearexcept(
+          builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+    }
+  } else {
+    fir::runtime::genFedisableexcept(
+        builder, loc, fir::ConvertOp::create(builder, loc, i32Ty, except));
+  }
+
   builder.setInsertionPointAfter(ifOp);
 }
 
@@ -7107,7 +7258,8 @@ void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Type toType{fir::dyn_cast_ptrEleTy(toAddr.getType())};
   assert(toType.getIntOrFloatBitWidth() == fromType.getIntOrFloatBitWidth() &&
          "mismatched mvbits types");
-  auto to = fir::LoadOp::create(builder, loc, signlessType, toAddr);
+  mlir::Value to = fir::LoadOp::create(builder, loc, toAddr);
+  to = builder.createConvert(loc, signlessType, to);
   mlir::Value topos = builder.createConvert(loc, signlessType, unbox(args[4]));
   mlir::Value zero = builder.createIntegerConstant(loc, signlessType, 0);
   mlir::Value ones = builder.createAllOnesInteger(loc, signlessType);
@@ -8999,22 +9151,69 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
         (fir::isa_trivial(sourceType) ||
          mlir::isa<fir::RecordType>(sourceType)) &&
         fir::isa_trivial(moldType)) {
+      // Compare sizes from getTypeSizeAndAlignment. For RecordType, this
+      // includes tail padding to match the allocation extent used by
+      // STORAGE_SIZE and the TRANSFER runtime path. Alignment is handled
+      // separately: when the source alignment is less than the result type's
+      // alignment, the RecordType path below copies into a result-aligned
+      // alloca rather than loading directly from the source pointer.
       auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
           loc, sourceType, builder.getDataLayout(), builder.getKindMap());
       auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
           loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        if (sourceType.isSignlessIntOrFloat() &&
-            resultType.isSignlessIntOrFloat()) {
-          mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
-          if (sourceType != resultType)
-            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
-          return val;
+        if (fir::isa_trivial(sourceType)) {
+          // Both source and result are trivial scalars of the same store
+          // size.  Use arith.bitcast for signless integer/float pairs;
+          // for other trivial types (e.g. unsigned integers) arith.bitcast
+          // is not available, so cast the source address and load.
+          if (sourceType.isSignlessIntOrFloat() &&
+              resultType.isSignlessIntOrFloat()) {
+            mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
+            if (sourceType != resultType)
+              val =
+                  mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+            return val;
+          }
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
         }
-        mlir::Type refTy = builder.getRefType(resultType);
-        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
-        return fir::LoadOp::create(builder, loc, cast);
+        // The source is a RecordType.
+        //
+        // When sourceAlign >= resultAlign, a direct address cast and load is
+        // safe: the existing source storage satisfies the result type's
+        // alignment requirement.
+        //
+        // When sourceAlign < resultAlign (e.g. {i32,i8} is 4-byte aligned
+        // while integer(8) requires 8-byte alignment), loading resultType
+        // directly from sourceBase would assert an over-aligned address and
+        // produce undefined behaviour.  In that case, copy the allocation-size
+        // bytes into a result-typed alloca (which has resultType's natural
+        // alignment) using fir.copy (a non-overlapping byte copy, equivalent
+        // to memcpy), then load from the properly-aligned alloca.
+        //
+        // Note: fir.copy copies exactly sourceSizeAndAlign->first bytes (the
+        // allocation size, including tail padding).  Inter-field and tail
+        // padding bytes of the record are preserved, matching the runtime copy
+        // width and satisfying F2023 16.9.212.
+        if (sourceSizeAndAlign->second >= resultSizeAndAlign->second) {
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
+        }
+        mlir::Value tmp = fir::AllocaOp::create(builder, loc, resultType);
+        mlir::Type byteType = fir::SequenceType::get(
+            {static_cast<int64_t>(sourceSizeAndAlign->first)},
+            builder.getI8Type());
+        mlir::Type byteRefType = builder.getRefType(byteType);
+        mlir::Value sourceBytes =
+            builder.createConvert(loc, byteRefType, sourceBase);
+        mlir::Value resultBytes = builder.createConvert(loc, byteRefType, tmp);
+        fir::CopyOp::create(builder, loc, sourceBytes, resultBytes,
+                            /*noOverlap=*/true);
+        return fir::LoadOp::create(builder, loc, tmp);
       }
     }
   }
