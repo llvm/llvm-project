@@ -8,10 +8,12 @@
 
 #include "orc-rt-internal/tools/OptionParser.h"
 #include "orc-rt/support/Error.h"
-#include "llvm/Testing/Support/Error.h"
+
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 class OptionParserTest : public ::testing::Test {
 protected:
@@ -34,43 +36,29 @@ protected:
 TEST_F(OptionParserTest, NoopTest) {
   OptionParser Parser;
   const char *Argv[] = {""};
-  auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
-  EXPECT_FALSE(!!Err);
+  EXPECT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
 }
 
 TEST_F(OptionParserTest, ValueRequired) {
   const char *Argv[] = {"--host"};
-  auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
-  if (!Err) {
-    ADD_FAILURE() << "--host requires a value, shouldn't succeed.";
-  } else {
-    orc_rt::consumeError(std::move(Err));
-  }
+  EXPECT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)), Failed());
 }
 
 TEST_F(OptionParserTest, UnknownOption) {
   const char *Argv[] = {"--unknown=foo"};
-  auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
-  if (!Err) {
-    ADD_FAILURE() << "unknown option, shouldn't succeed.";
-  } else {
-    orc_rt::consumeError(std::move(Err));
-  }
+  EXPECT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)), Failed());
 }
 
 TEST_F(OptionParserTest, InvalidInteger) {
   const char *Argv[] = {"--port=not_a_number"};
-  auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
-  if (!Err) {
-    ADD_FAILURE() << "Invalid integer, shouldn't succeed.";
-  } else {
-    orc_rt::consumeError(std::move(Err));
-  }
+  EXPECT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)), Failed());
 }
 
 TEST_F(OptionParserTest, ParseFullConfiguration) {
   const char *Argv[] = {"--host=example.com", "--port=8080", "--verbose=true"};
-  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
+  ASSERT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
   EXPECT_EQ(Host, "example.com");
   EXPECT_EQ(Port, 8080);
   EXPECT_EQ(Verbose, true);
@@ -78,28 +66,32 @@ TEST_F(OptionParserTest, ParseFullConfiguration) {
 
 TEST_F(OptionParserTest, ShortFlagClustering) {
   const char *Argv[] = {"-v?"};
-  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
+  ASSERT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
   EXPECT_TRUE(Verbose);
   EXPECT_TRUE(Help);
 }
 
 TEST_F(OptionParserTest, ShortFlagWithValue) {
   const char *Argv[] = {"-p", "1234", "-hlocalhost"};
-  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
+  ASSERT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
   EXPECT_EQ(Port, 1234);
   EXPECT_EQ(Host, "localhost");
 }
 
 TEST_F(OptionParserTest, ClusterWithValueAtEnd) {
   const char *Argv[] = {"-vp9999"};
-  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
+  ASSERT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
   EXPECT_TRUE(Verbose);
   EXPECT_EQ(Port, 9999);
 }
 
 TEST_F(OptionParserTest, DoubleDashTerminatesOptionParsing) {
   const char *Argv[] = {"-v", "--", "-p", "1234"};
-  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
+  ASSERT_THAT_ERROR(Parser.parse(std::begin(Argv), std::end(Argv)),
+                    Succeeded());
 
   EXPECT_TRUE(Verbose);
   EXPECT_EQ(Port, 8080); // Should remain default
@@ -110,13 +102,16 @@ TEST_F(OptionParserTest, DoubleDashTerminatesOptionParsing) {
 
 TEST_F(OptionParserTest, ParseAsMainWithEmptyArgsSucceeds) {
   const char *Argv[] = {"appname"};
-  auto Err = Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv));
-  EXPECT_FALSE(!!Err);
+  EXPECT_THAT_ERROR(
+      Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv)),
+      Succeeded());
 }
 
 TEST_F(OptionParserTest, ParseAsMainWithRegularArgsSucceeds) {
   const char *Argv[] = {"appname", "-v", "--", "-p", "1234"};
-  cantFail(Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv)));
+  ASSERT_THAT_ERROR(
+      Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv)),
+      Succeeded());
 
   EXPECT_TRUE(Verbose);
   EXPECT_EQ(Port, 8080); // Should remain default
@@ -127,10 +122,9 @@ TEST_F(OptionParserTest, ParseAsMainWithRegularArgsSucceeds) {
 
 TEST_F(OptionParserTest, ParseAsMainWithEmptyListFails) {
   std::vector<char *> Argv;
-  auto Err = Parser.parseAsMainArgs(static_cast<int>(Argv.size()), Argv.data());
-
-  EXPECT_TRUE(!!Err);
-  consumeError(std::move(Err));
+  EXPECT_THAT_ERROR(
+      Parser.parseAsMainArgs(static_cast<int>(Argv.size()), Argv.data()),
+      Failed());
 }
 
 TEST_F(OptionParserTest, PrintHelpAlignmentWithShortFlags) {
@@ -163,4 +157,27 @@ TEST_F(OptionParserTest, PrintHelpAlignmentWithShortFlags) {
   size_t PortFlagCol = (PortFlagPos - Result.rfind('\n', PortFlagPos) - 1);
 
   EXPECT_EQ(LogFlagCol, PortFlagCol);
+}
+
+TEST_F(OptionParserTest, HelpDescribesPositionalsGenericallyByDefault) {
+  std::string Result = Parser.formatHelp("appname");
+  EXPECT_EQ(
+      Result.rfind("Usage: appname [options] [positional arguments]\n", 0), 0u);
+  EXPECT_EQ(Result.back(), '\n') << "nothing follows the options by default";
+  EXPECT_NE(Result.find("Enable verbose logging\n"), std::string::npos);
+}
+
+TEST_F(OptionParserTest, HelpUsesPositionalUsageAndEpilogue) {
+  Parser.setPositionalUsage("<input-file>").setEpilogue("INPUT FILES:\n  x\n");
+  std::string Result = Parser.formatHelp("appname");
+
+  EXPECT_EQ(Result.rfind("Usage: appname [options] <input-file>\n", 0), 0u);
+
+  // The epilogue follows the options, after a blank line.
+  size_t LastOpt = Result.find("Enable verbose logging\n");
+  ASSERT_NE(LastOpt, std::string::npos);
+  EXPECT_EQ(Result.substr(LastOpt), "Enable verbose logging\n"
+                                    "\n"
+                                    "INPUT FILES:\n"
+                                    "  x\n");
 }

@@ -352,6 +352,31 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   uint64_t StoreSize =
       (DL.getTypeSizeInBits(SrcVal->getType()).getFixedValue() + 7) / 8;
   uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy).getFixedValue() + 7) / 8;
+
+  // Shift the bits to the least significant depending on endianness.
+  unsigned ShiftAmt;
+  if (DL.isLittleEndian())
+    ShiftAmt = Offset * 8;
+  else
+    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
+
+  Type *SrcTy = SrcVal->getType();
+  // Integers drop provenance, and one poison bit poisons the whole value.
+  if (SrcTy->isByteOrByteVectorTy() ||
+      (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy())) {
+    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
+    unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
+    if (LoadBits == SrcBits)
+      return Builder.CreateBitCast(SrcVal, LoadTy);
+    // bitextract needs a scalar byte source and can't return a vector.
+    SrcVal = Builder.CreateBitCast(SrcVal, Type::getByteNTy(Ctx, SrcBits));
+    Type *ExtractTy =
+        LoadTy->isVectorTy() ? Type::getByteNTy(Ctx, LoadBits) : LoadTy;
+    SrcVal =
+        Builder.CreateBitExtract(ExtractTy, SrcVal, Builder.getInt32(ShiftAmt));
+    return Builder.CreateBitCast(SrcVal, LoadTy);
+  }
+
   // Compute which bits of the stored value are being used by the load.  Convert
   // to an integer type to start with.
   if (SrcVal->getType()->isPtrOrPtrVectorTy())
@@ -361,12 +386,6 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     SrcVal =
         Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
 
-  // Shift the bits to the least significant depending on endianness.
-  unsigned ShiftAmt;
-  if (DL.isLittleEndian())
-    ShiftAmt = Offset * 8;
-  else
-    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
   if (ShiftAmt)
     SrcVal = Builder.CreateLShr(SrcVal,
                                 ConstantInt::get(SrcVal->getType(), ShiftAmt));

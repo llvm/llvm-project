@@ -31,6 +31,7 @@ def Float : Type;
 def Ptr : Type;
 def MemberPtr : Type;
 def FixedPoint : Type;
+def Reflect : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -72,6 +73,8 @@ def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
+def ArgVoidPtr : ArgType { let Name = "const void *"; }
+def ArgReflectionKind : ArgType { let Name = "ReflectionKind"; }
 def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
 def ArgCtorDecl : ArgType { let Name = "const CXXConstructorDecl *"; }
 
@@ -124,7 +127,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [Reflect]);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -264,9 +267,6 @@ def Destroy : Opcode {
   let Args = [ArgUint32];
   let HasCustomEval = 1;
 }
-def InitScope : SuccessOpcode {
-  let Args = [ArgUint32];
-}
 
 def GetLocalEnabled : SuccessOpcode {
   let Args = [ArgUint32];
@@ -380,13 +380,19 @@ def CastMemberPtrDerivedPop : Opcode {
   let NeedsOpPC = 0;
 }
 
+def ReflectValue : Opcode {
+  let Args = [ArgReflectionKind, ArgVoidPtr];
+}
+
 def FinishInitPop : SuccessOpcode;
 def FinishInit : SuccessOpcode;
 def FinishInitActivate : SuccessOpcode;
 def FinishInitActivatePop : SuccessOpcode;
 def FinishInitGlobal : SuccessOpcode;
 
-def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
+def GetPtrDerivedPop : Opcode {
+  let Args = [ArgBool, ArgTypePtr, ArgTypePtr];
+}
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
@@ -961,6 +967,10 @@ def InvalidShuffleVectorIndex : Opcode {
   let Args = [ArgUint32];
 }
 
+def InvalidTargetLabel : Opcode {
+  let Args = [ArgBool];
+}
+
 def Assume : Opcode;
 
 def ArrayDecay : Opcode;
@@ -1025,6 +1035,7 @@ def CheckNewTypeMismatchArray : Opcode {
   let HasGroup = 1;
 }
 def InvalidNewDeleteExpr : Opcode { let Args = [ArgExpr]; }
+def CheckPlacementNew : Opcode { let Args = [ArgExpr]; }
 
 def IsConstantContext: SuccessOpcode;
 def CheckAllocations : Opcode {

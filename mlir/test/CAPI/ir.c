@@ -2051,6 +2051,20 @@ int testClone(void) {
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %" PRIdPTR ") <<\n",
           (intptr_t)userData);
+  switch (mlirDiagnosticGetSeverity(diagnostic)) {
+  case MlirDiagnosticError:
+    fprintf(stderr, "severity: Error\n");
+    break;
+  case MlirDiagnosticWarning:
+    fprintf(stderr, "severity: Warning\n");
+    break;
+  case MlirDiagnosticNote:
+    fprintf(stderr, "severity: Note\n");
+    break;
+  case MlirDiagnosticRemark:
+    fprintf(stderr, "severity: Remark\n");
+    break;
+  }
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
@@ -2474,35 +2488,55 @@ void testDiagnostics(void) {
   MlirAttribute nullAttr = {0};
   MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
   mlirEmitError(fusedLoc, "test diagnostics");
+  mlirEmitWarning(unknownLoc, "test warning");
+  mlirEmitRemark(unknownLoc, "test remark");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Warning
+  // CHECK:   test warning
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Remark
+  // CHECK:   test remark
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
@@ -3347,6 +3381,68 @@ int testOperationEquivalence(MlirContext ctx) {
   return 0;
 }
 
+int testOperationIsAncestor(MlirContext ctx) {
+  fprintf(stderr, "@testOperationIsAncestor\n");
+  // CHECK-LABEL: @testOperationIsAncestor
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f() {\n"
+                          "  %c0 = arith.constant 0 : i32\n"
+                          "  return\n"
+                          "}\n"
+                          "func.func @g() {\n"
+                          "  %c1 = arith.constant 1 : i32\n"
+                          "  return\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation constOp = mlirBlockGetFirstOperation(funcBody);
+
+  // A sibling func @g, and the constant in its own body, are both unrelated to
+  // @f and @f's constant.
+  MlirOperation otherFuncOp = mlirOperationGetNextInBlock(funcOp);
+  MlirRegion otherFuncRegion = mlirOperationGetRegion(otherFuncOp, 0);
+  MlirBlock otherFuncBody = mlirRegionGetFirstBlock(otherFuncRegion);
+  MlirOperation otherConstOp = mlirBlockGetFirstOperation(otherFuncBody);
+
+  // The module and the func both (properly) contain the constant.
+  assert(mlirOperationIsAncestor(moduleOp, constOp));
+  assert(mlirOperationIsProperAncestor(moduleOp, constOp));
+  assert(mlirOperationIsAncestor(funcOp, constOp));
+  assert(mlirOperationIsProperAncestor(funcOp, constOp));
+
+  // An operation is its own ancestor, but not its own proper ancestor.
+  assert(mlirOperationIsAncestor(constOp, constOp));
+  assert(!mlirOperationIsProperAncestor(constOp, constOp));
+
+  // The containment relation is not symmetric.
+  assert(!mlirOperationIsAncestor(constOp, moduleOp));
+
+  // Operations in disjoint subtrees are genuinely unrelated: neither is an
+  // ancestor of the other, in either direction. The sibling funcs, and the
+  // constants living in their separate bodies, share the module as a common
+  // root but do not contain one another -- so an implementation that merely
+  // tested for a shared root would be caught here.
+  assert(!mlirOperationIsAncestor(funcOp, otherFuncOp));
+  assert(!mlirOperationIsAncestor(otherFuncOp, funcOp));
+  assert(!mlirOperationIsProperAncestor(funcOp, otherFuncOp));
+  assert(!mlirOperationIsAncestor(funcOp, otherConstOp));
+  assert(!mlirOperationIsAncestor(otherConstOp, constOp));
+  assert(!mlirOperationIsAncestor(constOp, otherConstOp));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testOperationIsAncestor: PASSED
+  fprintf(stderr, "testOperationIsAncestor: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3407,6 +3503,8 @@ int main(void) {
     return 21;
   if (testOperationEquivalence(ctx))
     return 22;
+  if (testOperationIsAncestor(ctx))
+    return 23;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

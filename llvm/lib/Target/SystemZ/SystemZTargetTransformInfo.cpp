@@ -611,13 +611,13 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
 InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
-  if (CxtI && Ty && !Ty->isVectorTy() && isFoldableRMW(CxtI, Ty))
+                                         Op2Info, Args, CtxI);
+  if (CtxI && Ty && !Ty->isVectorTy() && isFoldableRMW(CtxI, Ty))
     return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
@@ -791,13 +791,13 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost SystemZTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {

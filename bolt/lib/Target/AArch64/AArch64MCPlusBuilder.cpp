@@ -45,7 +45,7 @@ static cl::opt<bool> NoLSEAtomics(
     "no-lse-atomics",
     cl::desc("generate instrumentation code sequence without using LSE atomic "
              "instruction"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 } // namespace opts
 
 namespace {
@@ -3695,17 +3695,28 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKind FKind = Fixup.getKind();
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(FKind);
 
-    assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
-    const uint64_t RelOffset = Fixup.getOffset();
+    switch (FKind) {
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19):
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14):
+      assert(FKI.TargetOffset == 5 && "5-bit relocation offset expected");
+      break;
+    default:
+      assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
+      break;
+    }
 
     uint32_t RelType;
-    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
+    if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
-    else if (Fixup.getKind() ==
-             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19))
+      RelType = ELF::R_AARCH64_CONDBR19;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14))
+      RelType = ELF::R_AARCH64_TSTBR14;
     else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
@@ -3735,7 +3746,7 @@ public:
         break;
       }
     }
-
+    const uint64_t RelOffset = Fixup.getOffset();
     auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});

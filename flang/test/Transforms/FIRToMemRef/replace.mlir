@@ -21,7 +21,7 @@
 // CHECK-NEXT:  fir.call @z_([[CONVERT3]])
 func.func @x_() attributes {fir.internal_name = "_QPx"} {
   %1 = fir.alloca i32 {bindc_name = "i"}
-  %2 = fir.declare %1 {uniq_name = "_QFxEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("_QFxEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.load %2 : !fir.ref<i32>
   fir.call @y_(%2) fastmath<contract> : (!fir.ref<i32>) -> ()
   fir.call @z_(%2) fastmath<contract> : (!fir.ref<i32>) -> ()

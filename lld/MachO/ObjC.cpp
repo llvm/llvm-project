@@ -545,16 +545,16 @@ ObjcCategoryMerger::tryGetSymbolReferenceAtIsecOffset(
 
   Symbol *sym = dyn_cast_if_present<Symbol *>(reloc->referent);
 
-  if (reloc->addend && sym) {
+  if (reloc->getAddend() && sym) {
     assert(isa<Defined>(sym) && "Expected defined for non-zero addend");
     Defined *definedSym = cast<Defined>(sym);
-    uint64_t targetOffset = definedSym->value + reloc->addend;
+    uint64_t targetOffset = definedSym->value + reloc->getAddend();
     if (Defined *targetSym =
             tryFindDefinedOnIsec(definedSym->isec(), targetOffset))
       return {targetSym, targetOffset - targetSym->value};
   }
 
-  return {sym, reloc->addend};
+  return {sym, reloc->getAddend()};
 }
 
 Symbol *
@@ -625,7 +625,7 @@ void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
   if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec()))
     eraseISec(cisec);
   else if (auto *csisec = dyn_cast_or_null<CStringInputSection>(sym->isec())) {
-    uint32_t totalOffset = sym->value + reloc->addend;
+    uint32_t totalOffset = sym->value + reloc->getAddend();
     StringPiece &piece = csisec->getStringPiece(totalOffset);
     piece.live = false;
   } else {
@@ -1155,7 +1155,7 @@ void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
                                                int64_t addend) {
   Relocation r = relocTemplate;
   r.offset = offset;
-  r.addend = addend;
+  r.setAddend(addend);
   r.referent = const_cast<Symbol *>(refTo);
   refFrom->isec()->relocs.push_back(r);
 }
