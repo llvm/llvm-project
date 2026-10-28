@@ -110,8 +110,6 @@ LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,
-  // In the signature, but not packed. This includes DXC's Shadow
-  // interpretation, whose value is read with a dedicated intrinsic.
   NotPacked,
   Arbitrary,
   SV,
