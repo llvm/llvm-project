@@ -1,11 +1,18 @@
-//===-- Exhaustive test for asinhbf16 ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Tests asinhbf16 against MPFR for every non-NaN bfloat16 input, in all
+/// rounding modes.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/asinhbf16.h"
 #include "test/UnitTest/FPMatcher.h"

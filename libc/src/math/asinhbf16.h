@@ -1,9 +1,15 @@
-//===-- Implementation header for asinhbf16 --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Declaration of the asinhbf16 entrypoint, which computes the inverse
+/// hyperbolic sine of a bfloat16 value.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_MATH_ASINHBF16_H
