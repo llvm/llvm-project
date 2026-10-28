@@ -4,9 +4,9 @@ define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep(i32 %idx, ptr ad
 ; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep(
 ; CHECK-SAME: i32 [[IDX:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BUF:%.*]] = freeze <20 x i32> poison
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <20 x i32> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <20 x i32> [[BUF]], i32 1, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <20 x i32> [[ALLOCA]], i32 1, i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i32> [[TMP1]], i32 2, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[IDX]], 2
@@ -56,13 +56,13 @@ define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_twice_idx(i32 %idx, ptr
 ; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_twice_idx(
 ; CHECK-SAME: i32 [[IDX:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BUF:%.*]] = freeze <20 x i32> poison
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <20 x i32> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[IDX]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <20 x i32> [[BUF]], i32 1, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <20 x i32> [[ALLOCA]], i32 1, i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i32> [[TMP4]], i32 2, i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[IDX]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <20 x i32> [[TMP3]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i32> [[TMP1]], i32 2, i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[IDX]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <20 x i32> [[TMP3]], i32 [[TMP4]]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -76,4 +76,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" }
+attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" "amdgpu-promote-alloca-to-vector-divergent-max-regs"="32" }
