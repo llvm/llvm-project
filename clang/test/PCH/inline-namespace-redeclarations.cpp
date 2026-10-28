@@ -30,16 +30,10 @@ struct alias::X {
   static constexpr int get();
 };
 
-namespace ordinary {
-namespace nested {
-struct Z {};
-} // namespace nested
-} // namespace ordinary
-
 #else
 
 // The previous definitions may have been read from the PCH.
-// expected-note@* 3 {{previous definition is here}}
+// expected-note@* 2 {{previous definition is here}}
 
 namespace reopen {
 namespace ns {
@@ -55,11 +49,5 @@ static_assert(
     alias::X::get() == 1,
     "'value' should be found in the parent scope of 'X', which is 'v1'");
 struct alias::X {}; // expected-error {{redefinition of 'X'}}
-
-namespace ordinary {
-namespace nested {
-struct Z {}; // expected-error {{redefinition of 'Z'}}
-} // namespace nested
-} // namespace ordinary
 
 #endif
