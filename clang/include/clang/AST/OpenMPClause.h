@@ -10220,6 +10220,7 @@ class OMPChildren final
   friend TrailingObjects;
   friend class OMPClauseReader;
   friend class OMPExecutableDirective;
+  friend class OMPMetaDirective;
   template <typename T> friend class OMPDeclarativeDirective;
 
   /// Numbers of clauses.

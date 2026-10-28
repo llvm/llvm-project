@@ -796,7 +796,38 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
 
 void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   Indent() << "#pragma omp metadirective";
-  PrintOMPExecutableDirective(Node);
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
+  ArrayRef<Stmt *> Variants = Node->variants();
+  ArrayRef<OMPTraitInfo *> TraitInfos = Node->traitInfos();
+  unsigned NumClauses =
+      Node->getNumVariants() - (Node->hasImplicitOtherwise() ? 1 : 0);
+  for (unsigned I = 0; I != NumClauses; ++I) {
+    if (TraitInfos[I]->Sets.empty()) {
+      OS << (OpenMPVersion < 52 ? " default(" : " otherwise(");
+    } else {
+      OS << " when(";
+      TraitInfos[I]->print(OS, Policy);
+      OS << ": ";
+    }
+    if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
+      OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
+      for (OMPClause *C : D->clauses())
+        if (C && !C->isImplicit()) {
+          OS << ' ';
+          Printer.Visit(C);
+        }
+    }
+    OS << ')';
+  }
+  OS << NL;
+  // Every variant has the same associated statement; print it once.
+  Stmt *Body = Variants.front();
+  if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
+    Body = D->getStructuredBlock();
+  PrintStmt(Body);
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
