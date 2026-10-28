@@ -159,6 +159,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                         ISD::FMAXNUM, ISD::FEXP2, ISD::FLOG2},
                        VT, Legal);
     setOperationAction(ISD::FCOPYSIGN, VT, Custom);
+    setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, VT, Custom);
     setOperationAction({ISD::FSUB, ISD::SELECT_CC,
                         ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM_IEEE,
                         ISD::FMAXNUM_IEEE, ISD::FSINCOS},
@@ -659,6 +660,9 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerFREM(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return lowerFMinMaxNum(Op, DAG);
   case ISD::FROUND:
     return lowerFROUND(Op, DAG);
   case ISD::FSIN:
@@ -1475,6 +1479,31 @@ SDValue AGXTargetLowering::lowerFDIV(SDValue Op, SelectionDAG &DAG) const {
 }
 
 /// copysign(m, s) = (m & ~sign) | (s & sign), on the bits.
+/// minimumnum / maximumnum: the hardware's NaN-ignoring min / max (fminnum /
+/// fmaxnum, one fcmpsel with an "n" condition), except for operands that
+/// compare equal: there the bits of both ORed (min) or ANDed (max), which
+/// orders -0 below +0 and leaves equal nonzero values as they are.
+SDValue AGXTargetLowering::lowerFMinMaxNum(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue A = Op.getOperand(0), B = Op.getOperand(1);
+  bool Max = Op.getOpcode() == ISD::FMAXIMUMNUM;
+  SDValue MinMax =
+      DAG.getNode(Max ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, A, B,
+                  Op->getFlags());
+  if (Op->getFlags().hasNoSignedZeros())
+    return MinMax;
+  EVT IntVT = VT.changeTypeToInteger();
+  SDValue Bits = DAG.getNode(Max ? ISD::AND : ISD::OR, DL, IntVT,
+                             DAG.getBitcast(IntVT, A),
+                             DAG.getBitcast(IntVT, B));
+  SDValue Equal = DAG.getSetCC(
+      DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), A, B,
+      ISD::SETOEQ);
+  return DAG.getSelect(DL, VT, Equal, DAG.getBitcast(VT, Bits), MinMax);
+}
+
 SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc DL(Op);
