@@ -160,8 +160,8 @@ StringRef Interface::getCppNamespace() const {
 }
 
 // Return the C++ headers declaring this interface.
-std::vector<StringRef> Interface::getDeclaredIn() const {
-  return def->getValueAsListOfStrings("declaredIn");
+std::vector<StringRef> Interface::getCppIncludes() const {
+  return def->getValueAsListOfStrings("cppIncludes");
 }
 
 // Return the methods of this interface.

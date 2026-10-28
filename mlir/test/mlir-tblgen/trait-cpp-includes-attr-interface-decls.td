@@ -10,5 +10,5 @@ include "mlir/IR/Interfaces.td"
 
 def TestAttrInterface : AttrInterface<"TestAttrInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/TestAttrInterface.h"];
+  let cppIncludes = ["test/TestAttrInterface.h"];
 }

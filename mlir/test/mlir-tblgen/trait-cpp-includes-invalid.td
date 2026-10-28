@@ -21,7 +21,7 @@ def Test_Dialect : Dialect {
 #ifdef ERROR1
 // ERROR1: error: cannot emit '#include' for header "test/Evil.h\"\nvoid injected();\n#include \"test/X.h": header must not contain '"'
 def InjectionTypeTrait : NativeTypeTrait<"InjectionTypeTrait"> {
-  let declaredIn = ["test/Evil.h\"\nvoid injected();\n#include \"test/X.h"];
+  let cppIncludes = ["test/Evil.h\"\nvoid injected();\n#include \"test/X.h"];
 }
 def TestType : TypeDef<Test_Dialect, "Test", [InjectionTypeTrait]> {
   let mnemonic = "test";
@@ -31,7 +31,7 @@ def TestType : TypeDef<Test_Dialect, "Test", [InjectionTypeTrait]> {
 #ifdef ERROR2
 // ERROR2: error: cannot emit '#include' for header "test\\A.h": header must not contain '\'
 def BackslashOpTrait : NativeOpTrait<"BackslashOpTrait"> {
-  let declaredIn = ["test\\A.h"];
+  let cppIncludes = ["test\\A.h"];
 }
 def TestOp : Op<Test_Dialect, "test", [BackslashOpTrait]>;
 #endif
@@ -39,7 +39,7 @@ def TestOp : Op<Test_Dialect, "test", [BackslashOpTrait]>;
 #ifdef ERROR3
 // ERROR3: error: cannot emit '#include' for header "test/*/A.h": header must not contain a comment
 def BlockCommentAttrTrait : NativeAttrTrait<"BlockCommentAttrTrait"> {
-  let declaredIn = ["test/*/A.h"];
+  let cppIncludes = ["test/*/A.h"];
 }
 def TestAttr : AttrDef<Test_Dialect, "Test", [BlockCommentAttrTrait]> {
   let mnemonic = "test";
@@ -49,7 +49,7 @@ def TestAttr : AttrDef<Test_Dialect, "Test", [BlockCommentAttrTrait]> {
 #ifdef ERROR4
 // ERROR4: error: cannot emit '#include' for header "test//A.h": header must not contain a comment
 def LineCommentOpTrait : NativeOpTrait<"LineCommentOpTrait"> {
-  let declaredIn = ["test//A.h"];
+  let cppIncludes = ["test//A.h"];
 }
 def TestOp : Op<Test_Dialect, "test", [LineCommentOpTrait]>;
 #endif
@@ -57,7 +57,7 @@ def TestOp : Op<Test_Dialect, "test", [LineCommentOpTrait]>;
 #ifdef ERROR5
 // ERROR5: error: cannot emit '#include' for header "test/A.h\n": header must not contain non-printable characters
 def NewlineOpTrait : NativeOpTrait<"NewlineOpTrait"> {
-  let declaredIn = ["test/A.h\n"];
+  let cppIncludes = ["test/A.h\n"];
 }
 def TestOp : Op<Test_Dialect, "test", [NewlineOpTrait]>;
 #endif
@@ -66,7 +66,7 @@ def TestOp : Op<Test_Dialect, "test", [NewlineOpTrait]>;
 // ERROR6: error: cannot emit '#include' for header "test/A.h\"": header must not contain '"'
 def BaseOpInterface : OpInterface<"BaseOpInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/A.h\""];
+  let cppIncludes = ["test/A.h\""];
 }
 def DerivedOpInterface : OpInterface<"DerivedOpInterface", [BaseOpInterface]> {
   let cppNamespace = "::test";

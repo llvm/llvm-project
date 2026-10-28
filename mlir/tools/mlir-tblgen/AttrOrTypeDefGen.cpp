@@ -261,7 +261,7 @@ void DefGen::createParentWithTraits() {
         isa<NativeTrait>(&trait)
             ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
             : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName());
-    llvm::append_range(requiredIncludes, trait.getDeclaredIn());
+    llvm::append_range(requiredIncludes, trait.getCppIncludes());
   }
   for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
@@ -273,7 +273,7 @@ void DefGen::createParentWithTraits() {
   if (def.genMnemonicAlias() &&
       !llvm::is_contained(traitNames, opAsmInterfaceTraitName)) {
     defParent.addTemplateParam(opAsmInterfaceTraitName);
-    // `OpAsmAttrInterface` and `OpAsmTypeInterface` are defined in by
+    // `OpAsmAttrInterface` and `OpAsmTypeInterface` are declared in
     // `BuiltinAttributeInterfaces.h` and `BuiltinTypeInterfaces.h`
     // respectively.
     requiredIncludes.push_back(isa<AttrDef>(def)

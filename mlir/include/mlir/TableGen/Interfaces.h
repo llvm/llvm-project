@@ -103,7 +103,7 @@ public:
   StringRef getCppNamespace() const;
 
   // Return the C++ headers declaring this interface.
-  std::vector<StringRef> getDeclaredIn() const;
+  std::vector<StringRef> getCppIncludes() const;
 
   // Return the methods of this interface.
   ArrayRef<InterfaceMethod> getMethods() const;

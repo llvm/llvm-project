@@ -10,16 +10,17 @@ def Test_Dialect : Dialect {
 
 def TestAttrInterface : AttrInterface<"TestAttrInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/TestAttrInterface.h"];
+  let cppIncludes = ["test/TestAttrInterface.h"];
 }
 def TestAttrTrait : NativeAttrTrait<"TestAttrTrait"> {
-  let declaredIn = ["test/TestAttrTrait.h"];
+  let cppIncludes = ["test/TestAttrTrait.h"];
 }
 
 // CHECK-LABEL: #ifdef GET_ATTRDEF_CLASSES
 // CHECK-NEXT: #undef GET_ATTRDEF_CLASSES
 // CHECK-EMPTY:
 // CHECK-NEXT: #include "mlir/IR/Attributes.h"
+// CHECK-NEXT: #include "mlir/IR/BuiltinAttributeInterfaces.h"
 // CHECK-NEXT: #include "test/TestAttrInterface.h"
 // CHECK-NEXT: #include "test/TestAttrTrait.h"
 // CHECK-EMPTY:
@@ -28,4 +29,10 @@ def TestAttrTrait : NativeAttrTrait<"TestAttrTrait"> {
 def TestAttr : AttrDef<Test_Dialect, "Test", [
     TestAttrTrait, TestAttrInterface]> {
   let mnemonic = "test";
+}
+
+// A generated mnemonic alias implements OpAsmAttrInterface.
+def AliasAttr : AttrDef<Test_Dialect, "Alias"> {
+  let mnemonic = "alias";
+  let genMnemonicAlias = 1;
 }

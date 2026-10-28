@@ -692,7 +692,7 @@ bool InterfaceGenerator::emitInterfaceDecls() {
   for (const Record *def : sortedDefs) {
     Interface interface(def);
     for (const Interface &base : interface.getBaseInterfaces())
-      llvm::append_range(includes, base.getDeclaredIn());
+      llvm::append_range(includes, base.getCppIncludes());
   }
   tblgen::emitIncludes(os, includes);
 

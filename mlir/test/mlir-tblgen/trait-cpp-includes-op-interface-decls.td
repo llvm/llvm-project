@@ -12,9 +12,9 @@ include "mlir/IR/OpBase.td"
 
 def BaseOpInterface : OpInterface<"BaseOpInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/BaseOpInterface.h"];
+  let cppIncludes = ["test/BaseOpInterface.h"];
 }
 def DerivedOpInterface : OpInterface<"DerivedOpInterface", [BaseOpInterface]> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/DerivedOpInterface.h"];
+  let cppIncludes = ["test/DerivedOpInterface.h"];
 }

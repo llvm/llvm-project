@@ -495,7 +495,7 @@ comprised of the following components:
         etc.
 *   C++ Namespace (`cppNamespace`)
     -   The C++ namespace that the interface class should be generated in.
-*   Declaring Headers (Optional: `declaredIn`)
+*   C++ Includes (Optional: `cppIncludes`)
     -   The C++ headers declaring the interface class, as written in an
         `#include` directive (e.g. `["mlir/Interfaces/SideEffectInterfaces.h"]`).
     -   Generated declarations of attributes, operations, types, and interfaces

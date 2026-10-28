@@ -24,7 +24,7 @@ class Trait {
   // The C++ headers declaring this trait, as written in an `#include`
   // directive (e.g. "mlir/Interfaces/SideEffectInterfaces.h"). Generated
   // declarations of any entity using this trait include these headers.
-  list<string> declaredIn = [];
+  list<string> cppIncludes = [];
 }
 
 // Define a Trait corresponding to a list of Traits, this allows for specifying

@@ -179,14 +179,14 @@ def OpWithInferTypeInterfaceOp : Op<...[MyTrait, MyParametricTrait<10>]> { ... }
 See the documentation on [operation definitions](../DefiningDialects/Operations.md) for more
 details.
 
-The C++ headers declaring a trait can be specified with the `declaredIn` list.
+The C++ headers declaring a trait can be specified with the `cppIncludes` list.
 The generated declarations of every op, attribute, or type using the trait then
 include these headers, making them independent of the include order in the
 surrounding header:
 
 ```tablegen
 def MyTrait : NativeOpTrait<"MyTrait"> {
-  let declaredIn = ["MyDialect/MyTrait.h"];
+  let cppIncludes = ["MyDialect/MyTrait.h"];
 }
 ```
 

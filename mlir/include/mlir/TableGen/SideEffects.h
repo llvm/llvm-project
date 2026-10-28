@@ -33,7 +33,7 @@ public:
   std::string getInterfaceTrait() const;
 
   // Return the C++ headers declaring the interface that the effect belongs to.
-  std::vector<StringRef> getDeclaredIn() const;
+  std::vector<StringRef> getCppIncludes() const;
 
   // Return the name of the resource class.
   StringRef getResource() const;

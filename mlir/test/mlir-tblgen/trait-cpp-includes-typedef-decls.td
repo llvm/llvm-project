@@ -8,7 +8,7 @@ def Test_Dialect : Dialect {
 }
 
 def TestTypeTrait : NativeTypeTrait<"TestTypeTrait"> {
-  let declaredIn = ["test/TestTypeTrait.h"];
+  let cppIncludes = ["test/TestTypeTrait.h"];
 }
 
 // A generated mnemonic alias implements OpAsmTypeInterface.

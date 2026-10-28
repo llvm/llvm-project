@@ -10,41 +10,41 @@ def Test_Dialect : Dialect {
 
 def NoHeaderTrait : NativeOpTrait<"NoHeaderTrait">;
 def OpTraitA : NativeOpTrait<"OpTraitA"> {
-  let declaredIn = ["test/OpTraitA.h"];
+  let cppIncludes = ["test/OpTraitA.h"];
 }
 // A trait can be declared across several headers.
 def OpTraitB : NativeOpTrait<"OpTraitB"> {
-  let declaredIn = ["test/OpTraitB.h", "test/OpTraitBUtils.h"];
+  let cppIncludes = ["test/OpTraitB.h", "test/OpTraitBUtils.h"];
 }
 
 def BaseOpInterface : OpInterface<"BaseOpInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/BaseOpInterface.h"];
+  let cppIncludes = ["test/BaseOpInterface.h"];
 }
 def DerivedOpInterface : OpInterface<"DerivedOpInterface", [BaseOpInterface]> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/DerivedOpInterface.h"];
+  let cppIncludes = ["test/DerivedOpInterface.h"];
 }
 def DeclaredMethodsOpInterface : OpInterface<"DeclaredMethodsOpInterface"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/DeclaredMethodsOpInterface.h"];
+  let cppIncludes = ["test/DeclaredMethodsOpInterface.h"];
   let methods = [InterfaceMethod<"", "void", "foo">];
 }
 
 def TraitEffectInterface
     : EffectOpInterfaceBase<"TraitEffectOpInterface", "::test::TraitEffect"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/TraitEffects.h"];
+  let cppIncludes = ["test/TraitEffects.h"];
 }
 def DecoratorEffectInterface
     : EffectOpInterfaceBase<"DecoratorEffectOpInterface",
                             "::test::DecoratorEffect"> {
   let cppNamespace = "::test";
-  let declaredIn = ["test/DecoratorEffects.h"];
+  let cppIncludes = ["test/DecoratorEffects.h"];
 }
 
-// The headers of all ops are emitted once, sorted, at the start of the class
-// declarations. Traits without `declaredIn` don't add an include.
+// The headers of all used traits are emitted once, sorted, before the start of
+// the class declarations. Traits without `cppIncludes` don't add an include.
 
 // CHECK-LABEL: #ifdef GET_OP_CLASSES
 // CHECK-NEXT: #undef GET_OP_CLASSES
@@ -52,6 +52,8 @@ def DecoratorEffectInterface
 // CHECK-NEXT: #include "mlir/Bytecode/BytecodeOpInterface.h"
 // CHECK-NEXT: #include "mlir/IR/Builders.h"
 // CHECK-NEXT: #include "mlir/IR/OpDefinition.h"
+// CHECK-NEXT: #include "mlir/IR/OpImplementation.h"
+// CHECK-NEXT: #include "mlir/Interfaces/DerivedAttributeOpInterface.h"
 // CHECK-NEXT: #include "test/BaseOpInterface.h"
 // CHECK-NEXT: #include "test/DeclaredMethodsOpInterface.h"
 // CHECK-NEXT: #include "test/DecoratorEffects.h"
@@ -90,4 +92,15 @@ def EffectDecoratorOp : Op<Test_Dialect, "effect_decorator"> {
 // Ops with properties implement the bytecode interface.
 def PropertiesOp : Op<Test_Dialect, "properties"> {
   let arguments = (ins I32Attr:$value);
+}
+
+// Ops with derived attributes implement the derived attribute interface.
+def DerivedAttrOp : Op<Test_Dialect, "derived_attr"> {
+  let results = (outs AnyType:$output);
+  DerivedTypeAttr element_dtype = DerivedTypeAttr<"return {};">;
+}
+
+// Ops with multiple named results implement the asm interface.
+def MultiResultOp : Op<Test_Dialect, "multi_result"> {
+  let results = (outs AnyType:$a, AnyType:$b);
 }

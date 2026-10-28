@@ -558,9 +558,9 @@ private:
   void emitDecl(raw_ostream &os);
   void emitDef(raw_ostream &os);
 
-  // Adds `trait` to the op class and records `declaredIn` as headers required
+  // Adds `trait` to the op class and records `cppIncludes` as headers required
   // by the op declaration.
-  void addTrait(const Twine &trait, ArrayRef<StringRef> declaredIn);
+  void addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes);
   void addTrait(const tblgen::NativeTrait &trait);
   void addTrait(const tblgen::InterfaceTrait &trait);
 
@@ -1086,17 +1086,17 @@ void OpEmitter::emitDef(raw_ostream &os) {
   opClass.writeDefTo(os);
 }
 
-void OpEmitter::addTrait(const Twine &trait, ArrayRef<StringRef> declaredIn) {
+void OpEmitter::addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes) {
   opClass.addTrait(trait);
-  llvm::append_range(requiredIncludes, declaredIn);
+  llvm::append_range(requiredIncludes, cppIncludes);
 }
 
 void OpEmitter::addTrait(const tblgen::NativeTrait &trait) {
-  addTrait(trait.getFullyQualifiedTraitName(), trait.getDeclaredIn());
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
 }
 
 void OpEmitter::addTrait(const tblgen::InterfaceTrait &trait) {
-  addTrait(trait.getFullyQualifiedTraitName(), trait.getDeclaredIn());
+  addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
 }
 
 static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
@@ -3543,7 +3543,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
       if (SideEffect *effect = dyn_cast<SideEffect>(&decorator)) {
-        addTrait(effect->getInterfaceTrait(), effect->getDeclaredIn());
+        addTrait(effect->getInterfaceTrait(), effect->getCppIncludes());
         interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
       }

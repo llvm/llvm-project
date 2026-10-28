@@ -54,7 +54,7 @@ public:
   const llvm::Record &getDef() const { return *def; }
 
   // Returns the C++ headers declaring this trait.
-  std::vector<StringRef> getDeclaredIn() const;
+  std::vector<StringRef> getCppIncludes() const;
 
 protected:
   // The TableGen definition of this trait.
