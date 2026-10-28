@@ -11,6 +11,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/AIR.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1387,6 +1389,164 @@ void gepsOfIntToPtrAsIntegers(Module &M) {
   }
 }
 
+
+// Half denormals flushed where the function's denormal mode for half asks for
+// it (PTX .ftz on f16 / f16x2: ZLUDA gives such functions
+// denormal_fpenv(preservesign) for every type). The GPU keeps half denormals,
+// so the arithmetic on half reads its operands and writes its result through
+// flush(x) = |x| < 2^-14 ? +-0 : x, as AGXCodeGenPrepare does for AGX
+// (PTX-formalization half-0 k12: min.ftz.f16x2 kept a denormal).
+bool isHalfTy(const Type *Ty) { return Ty->getScalarType()->isHalfTy(); }
+
+bool isHalfArithmetic(const Instruction &I) {
+  if (!isHalfTy(I.getType()))
+    return false;
+  switch (I.getOpcode()) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+    return true;
+  default:
+    break;
+  }
+  const auto *CI = dyn_cast<CallInst>(&I);
+  const Function *Callee = CI ? CI->getCalledFunction() : nullptr;
+  if (!Callee)
+    return false;
+  switch (Callee->getIntrinsicID()) {
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::sqrt:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::exp2:
+  case Intrinsic::log2:
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::roundeven:
+  case Intrinsic::canonicalize:
+    return true;
+  case Intrinsic::not_intrinsic:
+    break;
+  default:
+    return false;
+  }
+  // The portable passes' AIR math functions (air.fma.f16, air.fast_exp2.f16).
+  StringRef Name = Callee->getName();
+  if (!Name.consume_front("air."))
+    return false;
+  Name.consume_front("fast_") || Name.consume_front("precise_");
+  Name = Name.take_until([](char C) { return C == '.'; });
+  return StringSwitch<bool>(Name)
+      .Cases({"fma", "fmax", "fmin", "fmax3", "fmin3", "sqrt", "rsqrt"}, true)
+      .Cases({"exp", "exp2", "exp10", "log", "log2", "log10"}, true)
+      .Cases({"sin", "cos", "tan", "floor", "ceil", "trunc", "rint"}, true)
+      .Cases({"round", "divide", "recip", "pow", "powr", "fdim"}, true)
+      .Default(false);
+}
+
+void flushHalfDenormals(Module &M) {
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    DenormalMode Mode = F.getDenormalMode(APFloat::IEEEhalf());
+    bool FlushInputs = Mode.Input != DenormalMode::IEEE &&
+                       Mode.Input != DenormalMode::Dynamic;
+    bool FlushOutputs = Mode.Output != DenormalMode::IEEE &&
+                        Mode.Output != DenormalMode::Dynamic;
+    if (!FlushInputs && !FlushOutputs)
+      continue;
+    bool PositiveZero = Mode.Output == DenormalMode::PositiveZero;
+
+    SmallPtrSet<Value *, 16> Flushed;
+    auto Flush = [&](IRBuilder<> &B, Value *X, bool Positive) -> Value * {
+      if (Flushed.contains(X))
+        return X;
+      if (auto *C = dyn_cast<ConstantFP>(X))
+        if (!C->getValueAPF().isDenormal())
+          return X;
+      if (isa<Constant>(X) && !isa<ConstantFP>(X) &&
+          !cast<Constant>(X)->containsUndefOrPoisonElement() &&
+          !isa<ConstantExpr>(X)) {
+        // A vector constant: flush only one with a denormal element.
+        auto *CV = cast<Constant>(X);
+        bool Denormal = false;
+        if (auto *VT = dyn_cast<FixedVectorType>(CV->getType()))
+          for (unsigned K = 0; K < VT->getNumElements(); ++K)
+            if (auto *E = dyn_cast_or_null<ConstantFP>(
+                    CV->getAggregateElement(K)))
+              Denormal |= E->getValueAPF().isDenormal();
+        if (!Denormal)
+          return X;
+      }
+      Type *Ty = X->getType();
+      Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+      Value *Small = B.CreateFCmpOLT(
+          Abs, ConstantFP::get(Ty, APFloat::getSmallestNormalized(
+                                       APFloat::IEEEhalf())));
+      Value *Zero = Positive ? ConstantFP::get(Ty, 0.0)
+                             : B.CreateBinaryIntrinsic(
+                                   Intrinsic::copysign,
+                                   ConstantFP::get(Ty, 0.0), X);
+      Value *R = B.CreateSelect(Small, Zero, X);
+      Flushed.insert(R);
+      return R;
+    };
+
+    SmallVector<Instruction *, 32> Worklist;
+    for (Instruction &I : instructions(F)) {
+      Type *Op0 = I.getNumOperands() ? I.getOperand(0)->getType() : nullptr;
+      bool Reads = isHalfArithmetic(I) ||
+                   ((isa<FCmpInst>(I) || isa<FPExtInst>(I) ||
+                     isa<FPToSIInst>(I) || isa<FPToUIInst>(I)) &&
+                    isHalfTy(Op0));
+      bool Writes = isa<FPTruncInst>(I) && isHalfTy(I.getType());
+      if (Reads || Writes)
+        Worklist.push_back(&I);
+    }
+    for (Instruction *I : Worklist) {
+      IRBuilder<> B(I);
+      bool Arith = isHalfArithmetic(*I);
+      if (FlushInputs && !isa<FPTruncInst>(I)) {
+        unsigned NumOps = isa<CallBase>(I) ? cast<CallBase>(I)->arg_size()
+                                           : I->getNumOperands();
+        for (unsigned Op = 0; Op < NumOps; ++Op)
+          if (I->getOperand(Op)->getType()->isFPOrFPVectorTy() &&
+              isHalfTy(I->getOperand(Op)->getType()))
+            I->setOperand(Op, Flush(B, I->getOperand(Op), false));
+      }
+      if (auto *II = dyn_cast<IntrinsicInst>(I);
+          II && II->getIntrinsicID() == Intrinsic::canonicalize) {
+        Value *Op = II->getArgOperand(0);
+        if (FlushOutputs && !Flushed.contains(Op))
+          Op = Flush(B, Op, PositiveZero);
+        II->replaceAllUsesWith(Op);
+        II->eraseFromParent();
+        continue;
+      }
+      if (FlushOutputs && (Arith || isa<FPTruncInst>(I))) {
+        B.SetInsertPoint(I->getNextNode());
+        SmallVector<User *, 4> OldUsers(I->users());
+        Value *R = Flush(B, I, PositiveZero);
+        I->replaceUsesWithIf(R, [&](Use &U) {
+          return is_contained(OldUsers, U.getUser());
+        });
+      }
+    }
+  }
+}
+
 bool legalizeUnsupportedIR(Module &M) {
   genericToDevice(M);
   defineThreadgroupGlobals(M);
@@ -1395,6 +1555,7 @@ bool legalizeUnsupportedIR(Module &M) {
   wideAIRFunctionsToIntrinsics(M);
   expandWideIntegers(M);
   gepsOfIntToPtrAsIntegers(M);
+  flushHalfDenormals(M);
   lowerFreezeInsts(M);
   canonicalizeNNegZExt(M);
   stripDisjointFlags(M);
