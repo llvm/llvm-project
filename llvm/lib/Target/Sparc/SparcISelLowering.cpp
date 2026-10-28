@@ -3624,7 +3624,7 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return std::make_pair(0U, nullptr);
 
   unsigned CCReg = StringSwitch<unsigned>(RegName)
-                       .Cases({"cc", "icc", "xcc"}, SP::ICC)
+                       .Cases({"cc", "icc"}, SP::ICC)
                        .Case("fcc0", SP::FCC0)
                        .Case("fcc1", SP::FCC1)
                        .Case("fcc2", SP::FCC2)

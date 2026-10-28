@@ -73,40 +73,6 @@ define i32 @clobber_icc(i32 %a, i32 %b) nounwind {
   ret i32 %r
 }
 
-define i32 @clobber_xcc(i32 %a, i32 %b) nounwind {
-; V8-LABEL: clobber_xcc:
-; V8:       ! %bb.0:
-; V8-NEXT:    save %sp, -96, %sp
-; V8-NEXT:    !APP
-; V8-NEXT:    cmp %g0, 1
-; V8-NEXT:    !NO_APP
-; V8-NEXT:    cmp %i0, %i1
-; V8-NEXT:    bcs .LBB2_2
-; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1:
-; V8-NEXT:    ret
-; V8-NEXT:    restore %g0, 20, %o0
-; V8-NEXT:  .LBB2_2:
-; V8-NEXT:    ret
-; V8-NEXT:    restore %g0, 10, %o0
-;
-; V9-LABEL: clobber_xcc:
-; V9:       ! %bb.0:
-; V9-NEXT:    save %sp, -128, %sp
-; V9-NEXT:    !APP
-; V9-NEXT:    cmp %g0, 1
-; V9-NEXT:    !NO_APP
-; V9-NEXT:    mov 20, %i2
-; V9-NEXT:    cmp %i0, %i1
-; V9-NEXT:    movcs %icc, 10, %i2
-; V9-NEXT:    ret
-; V9-NEXT:    restore %g0, %i2, %o0
-  %c = icmp ult i32 %a, %b
-  call void asm sideeffect "cmp %g0, 1", "~{xcc}"()
-  %r = select i1 %c, i32 10, i32 20
-  ret i32 %r
-}
-
 define float @clobber_fcc0(float %a, float %b) nounwind {
 ; V8-LABEL: clobber_fcc0:
 ; V8:       ! %bb.0:
@@ -120,11 +86,11 @@ define float @clobber_fcc0(float %a, float %b) nounwind {
 ; V8-NEXT:    !NO_APP
 ; V8-NEXT:    fcmps %f0, %f1
 ; V8-NEXT:    nop
-; V8-NEXT:    fbl .LBB3_2
+; V8-NEXT:    fbl .LBB2_2
 ; V8-NEXT:    nop
 ; V8-NEXT:  ! %bb.1:
 ; V8-NEXT:    fmovs %f1, %f0
-; V8-NEXT:  .LBB3_2:
+; V8-NEXT:  .LBB2_2:
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
