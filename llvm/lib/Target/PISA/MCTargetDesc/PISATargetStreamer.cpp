@@ -29,6 +29,7 @@
 #include "llvm/Support/PISAAddrSpace.h"
 
 using namespace llvm;
+using namespace llvm::PISA;
 
 PISA::StorageSpace PISA::mapAddrSpaceToStorageSpace(unsigned AS) {
   switch (PISAAS::AddressSpace(AS)) {

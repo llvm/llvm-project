@@ -12,6 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PISAEnum.h"
+#include "llvm/ADT/ArrayRef.h"
+
+#include <algorithm>
+#include <cstddef>
+#include <string>
 
 namespace llvm {
 namespace PISA {
