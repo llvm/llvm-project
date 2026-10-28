@@ -1526,9 +1526,14 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// Loop order K-batch, accumulating over both loops: the inner loops doesn't
-// satisfy the condition for block indexing (last two indices are non-zero).
-func.func @negative_k_batch_order(%A: memref<?x?x?xbf16>, %B: memref<?x?x?xbf16>, %C: memref<?x?xf32>,
+// Loop order K-batch, accumulating over both loops: the inner batch loop
+// carries the accumulator, its IV appears exactly once in each operand read and
+// its step is 1. It is a valid accumulation loop, indistinguishable from a
+// K-loop over a blocked layout, and is treated as such.
+//
+// Again, spilling the accumulator value to memory in the outer loop is correct,
+// but not ideal.
+func.func @amx_bf16_flat_k_batch_order(%A: memref<?x?x?xbf16>, %B: memref<?x?x?xbf16>, %C: memref<?x?xf32>,
                                        %m: index, %n: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -1556,11 +1561,52 @@ func.func @negative_k_batch_order(%A: memref<?x?x?xbf16>, %B: memref<?x?x?xbf16>
   func.return
 }
 
-// CHECK-LABEL: func.func @negative_k_batch_order(
-// CHECK:         vector.contract {{.*}} : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
+// CHECK-LABEL: func.func @amx_bf16_flat_k_batch_order(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?x?xbf16>, %[[B:.+]]: memref<?x?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.+]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C96:.+]] = arith.constant 96 : index
+// CHECK-DAG:     %[[BATCH:.+]] = memref.dim %[[A]], %[[C0]]
+// CHECK-DAG:     %[[K:.+]] = memref.dim %[[A]], %[[C2]]
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     memref.subview
+// CHECK:         %[[ACC_INIT:.+]] = vector.transfer_read %[[C]][%[[M]], %[[N]]]
+// CHECK:         %[[ACC_RES:.+]] = scf.for %[[IV_K:.+]] = %[[C0]] to %[[K]] step %[[C32]] iter_args(%[[ACC_K:.+]] = %[[ACC_INIT]])
+// CHECK:           %[[BUF:.+]] = memref.alloca() : memref<64x96xf32>
+// CHECK:           vector.transfer_write %[[ACC_K]], %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK-NOT:       memref.alloca
+// CHECK:           scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:             scf.for %[[IV_N:.+]] = %[[C0]] to %[[C96]] step %[[C32]] {
+// CHECK:               %[[ACC_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:       vector.transfer_read %[[ACC_VIEW]]{{.*}} vector<16x16xf32>
+// CHECK:               %[[OFF_M:.+]] = arith.addi %[[M]], %[[IV_M]]
+// CHECK:               %[[OFF_N:.+]] = arith.addi %[[N]], %[[IV_N]]
+// CHECK:               %[[RES:.+]]:4 = scf.for %[[IV_B:.+]] = %[[C0]] to %[[BATCH]] step %[[C1]]
+// CHECK-NOT:             arith.addi
+// CHECK:                 %[[A_VIEW:.+]] = memref.subview %[[A]][%[[IV_B]], %[[OFF_M]], %[[IV_K]]] [1, 32, 32] [1, 1, 1]
+// CHECK:                 %[[B_VIEW:.+]] = memref.subview %[[B]][%[[IV_B]], %[[IV_K]], %[[OFF_N]]] [1, 32, 32] [1, 1, 1]
+// CHECK:                 vector.transfer_read %[[A_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x32xbf16>
+// CHECK:                 vector.transfer_read %[[A_VIEW]][%[[C16]], %[[C0]]], {{.*}} vector<16x32xbf16>
+// CHECK:                 vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<32x16xbf16>
+// CHECK:                 vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<32x16xbf16>
+// CHECK-COUNT-4:         vector.contract {{.*}} {x86_vcmlu_native_shape = array<i64: 16, 16, 32>} : vector<16x32xbf16>, vector<32x16xbf16> into vector<16x16xf32>
+// CHECK:                 scf.yield
+// CHECK:               }
+// CHECK-NOT:           memref.subview %[[BUF]]
+// CHECK-COUNT-4:       vector.transfer_write %[[RES]]#{{[0-3]}}, %[[ACC_VIEW]]
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[ACC_NEXT:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]], {{.*}} vector<64x96xf32>
+// CHECK:           scf.yield %[[ACC_NEXT]]
+// CHECK:         }
+// CHECK:         vector.transfer_write %[[ACC_RES]], %[[C]][%[[M]], %[[N]]]
 
-// NANO-LABEL:  func.func @negative_k_batch_order(
-// NANO:          vector.contract
+// NANO-LABEL: func.func @amx_bf16_flat_k_batch_order(
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

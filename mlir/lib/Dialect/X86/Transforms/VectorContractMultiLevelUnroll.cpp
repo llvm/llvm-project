@@ -23,6 +23,7 @@
 using namespace mlir;
 
 using llvm::all_of;
+using llvm::drop_begin;
 
 // Discardable attribute to control vector unroll patterns.
 static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
@@ -60,12 +61,6 @@ struct MLUCandidate {
   bool accIsZeroInit = false;
   vector::TransferReadOp lhsRead;
   vector::TransferReadOp rhsRead;
-
-  // Distinguishes whether the IV of the accumulation loop is used to index a
-  // vector dimension ("offset") or a non-vector dimension ("block") on the
-  // operand transfer reads.
-  enum class IndexKind { Unknown, Offset, Block };
-  IndexKind operandIndexKind = IndexKind::Unknown;
 
   // Memory backing the accumulator.
   Value accMemIn;
@@ -430,23 +425,20 @@ matchTypesAndShape(MLUCandidate &candidate,
 }
 
 // Check constraints on the accumulation loop. We're looking for an index-based
-// for-loop with a constant step and a single accumulator block argument. The
-// body shall only contain the transfer_reads for the operands, the contraction
-// and the yield operation. This restriction is in place because the pattern
-// rebuilds accumulation loops from scratch with the known operations.
+// for-loop with a step of 1 or K, a single accumulator block argument. The body
+// shall only contain the transfer_reads for the operands, the contraction and
+// the yield operation. This restriction is in place because the pattern
+// rebuilds the accumulation loop from scratch with the known operations.
 //
 // For the operand reads, we require that they have a minor identity permutation
 // map, impose no bounds checks and don't carry a mask. In addition, they shall
-// use the induction variable as exactly one of their indices. We check the
-// loop's step based on the index kind of the reads: IndexKind::Offset requires
-// a step equal to the contraction's K extent, whereas IndexKind::Block requires
-// unit steps.
+// use the induction variable as exactly one of their indices. This covers plain
+// 2D memrefs as well as block-based layouts.
 //
 // If all these conditions are met, the loop op, initial value of the
-// accumulator and the operand reads (with their index kind) are recorded in the
-// candidate struct.
+// accumulator and the operand reads are recorded in the candidate struct.
 //
-// Example (IndexKind::Block):
+// Example:
 //   !accType = vector<64x128xf32>
 //   !lhsType = vector<64x32xbf16>
 //   !rhsType = vector<32x128xbf16>
@@ -469,6 +461,11 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
   if (!accLoop || !accLoop.getInductionVar().getType().isIndex())
     return rewriter.notifyMatchFailure(contract,
                                        "is not in an index-based for-loop");
+
+  if (auto step = getConstantIntValue(accLoop.getStep());
+      !step || (*step != 1 && *step != candidate.contractK))
+    return rewriter.notifyMatchFailure(contract,
+                                       "accumulation loop step is not 1 or K");
 
   BlockArgument accIterArg = dyn_cast<BlockArgument>(contract.getAcc());
   if (!accIterArg || accIterArg.getOwner() != accLoop.getBody())
@@ -498,15 +495,18 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return rewriter.notifyMatchFailure(
         contract, "LHS/RHS are not vector.transfer_read ops");
 
-  auto matchOperandRead = [&](vector::TransferReadOp transferOp, bool isLhs) {
-    using IK = MLUCandidate::IndexKind;
-
+  auto matchOperandRead = [&](vector::TransferReadOp transferOp,
+                              unsigned kVecDim) {
     if (!isSimpleTransferOp(transferOp))
       return rewriter.notifyMatchFailure(
           contract, "operand read has non-identity permutation, mask, or "
                     "out-of-bounds check");
 
     auto indices = transferOp.getIndices();
+    if (candidate.isInVnniLayout && !isZeroInteger(indices.back()))
+      return rewriter.notifyMatchFailure(
+          contract, "operand read VNNI dimension offset must be zero");
+
     auto ivIt =
         std::find(indices.begin(), indices.end(), accLoop.getInductionVar());
     if (ivIt == indices.end())
@@ -517,59 +517,38 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
       return rewriter.notifyMatchFailure(
           contract, "operand read uses loop index more than once");
 
-    unsigned firstVecDim =
-        indices.size() - transferOp.getVectorType().getRank();
+    // The following situation is a limitation in the implementation, so detect
+    // and bail out:
+    //
+    // If the loop index selects a block in a blocked layout, and tiling of the
+    // contraction dimension is required, we have to construct a new innermost
+    // tiling loop over the result vector's K dimension (called "L-loop" in the
+    // transformation later). Now if the operand read has a non-zero offset in
+    // that dimension, we would have to insert an addition into the new loop,
+    // which currently would prevent application of the nanokernel pattern.
+    //
+    // Sketch:
+    //         non-zero offset in the vector's K dimension
+    //        IV used in non-vector dimension,          |
+    //                        selects a block           |
+    //                                     |            |
+    //                                     v            v
+    //  vector.transfer_read %A[%block_M, %IV, %c0, %offset_k] ...
+    //                        : memref<?x?x?x?xi8>, vector<64x64xi8>
+    unsigned firstVecDimPos = transferOp.getLeadingShapedRank();
     unsigned ivPos = std::distance(indices.begin(), ivIt);
-    unsigned kPos = firstVecDim + isLhs;
-    if (ivPos >= firstVecDim) {
-      if (ivPos != kPos)
-        return rewriter.notifyMatchFailure(
-            contract,
-            "loop index is not in expected K position in operand read");
-      if (candidate.operandIndexKind != IK::Unknown &&
-          candidate.operandIndexKind != IK::Offset)
-        return rewriter.notifyMatchFailure(contract,
-                                           "inconsistent operand index kind");
-      candidate.operandIndexKind = IK::Offset;
-    } else {
-      // Temporary limitation: having a zero index in the K position means that
-      // we can apply an offset without introducing additional operations in the
-      // accumulation loop.
-      if (!isZeroInteger(indices[kPos]))
-        return rewriter.notifyMatchFailure(
-            contract, "operand read K index must be zero for block index kind");
-      if (candidate.operandIndexKind != IK::Unknown &&
-          candidate.operandIndexKind != IK::Block)
-        return rewriter.notifyMatchFailure(contract,
-                                           "inconsistent operand index kind");
-      candidate.operandIndexKind = IK::Block;
-    }
-    assert(candidate.operandIndexKind != IK::Unknown &&
-           "operand index kind must be determined");
-
-    if (candidate.isInVnniLayout && !isZeroInteger(indices.back()))
-      return rewriter.notifyMatchFailure(
-          contract, "operand read VNNI dimension offset must be zero");
-
-    auto maybeStep = getConstantIntValue(accLoop.getStep());
-    if (!maybeStep)
-      return rewriter.notifyMatchFailure(
-          contract, "accumulation loop step is not constant");
-
-    if (candidate.operandIndexKind == IK::Offset &&
-        *maybeStep != candidate.contractK)
-      return rewriter.notifyMatchFailure(
-          contract,
-          "loop step must match contraction's K extent for offset indexing");
-    if (candidate.operandIndexKind == IK::Block && *maybeStep != 1)
-      return rewriter.notifyMatchFailure(
-          contract, "loop step must be 1 for block index kind");
+    if (ivPos < firstVecDimPos &&
+        candidate.contractK > candidate.contractNativeShape[2] &&
+        !isZeroInteger(indices[firstVecDimPos + kVecDim]))
+      return rewriter.notifyMatchFailure(contract,
+                                         "operand read from blocked layout has "
+                                         "offset in vector's K dimension");
 
     return success();
   };
 
-  if (failed(matchOperandRead(lhsRead, /*isLhs=*/true)) ||
-      failed(matchOperandRead(rhsRead, /*isLhs=*/false)))
+  if (failed(matchOperandRead(lhsRead, /*[m, k] -> kVecDim=*/1)) ||
+      failed(matchOperandRead(rhsRead, /*[k, n] -> kVecDim=*/0)))
     return failure();
 
   candidate.accLoop = accLoop;
@@ -744,10 +723,9 @@ static void buildLoopNestForCandidate(MLUCandidate &candidate,
 // 2. Split the initial value into accNativeType-shaped slices.
 // 3. Create the K-loop with the initial value slices as loop-carried arguments,
 //    i.e. the iter_args have accNativeType. Tiling along the K-dimension
-//    depends on the operand reads' index kind:
-//     IndexKind::Offset: Use the same bounds but smaller steps/more iterations.
-//     IndexKind::Block:  Nest an additional L-loop to move over the block in
-//                        steps.
+//    depends on the step:
+//     K:  Use the same bounds but smaller steps/more iterations.
+//     1:  Nest an additional L-loop to traverse the block in smaller steps.
 // 4. -> buildKLLoopBody
 // 5. Splice the final value slices back into an accRegTileType-shaped value and
 //    write it back to memory.
@@ -756,8 +734,6 @@ static void buildLoopNestForCandidate(MLUCandidate &candidate,
 // to unroll them with the vector-dialect's unroll patterns.
 static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
                             Value ivM, Value ivN) {
-  using IK = MLUCandidate::IndexKind;
-
   ArrayRef<int64_t> accRegTileShape = candidate.accRegTileType.getShape();
 
   Value c0 = arith::ConstantIndexOp::create(b, loc, 0);
@@ -787,29 +763,49 @@ static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
   SmallVector<Value> accInitSliced =
       slice(b, loc, accInit->getResult(0), candidate.accNativeType);
 
+  // Iteration space for accumulation loop (nest).
   Value lbK = candidate.accLoop.getLowerBound();
   Value ubK = candidate.accLoop.getUpperBound();
+  Value stepK = candidate.accLoop.getStep();
+  Value lbL;
+  Value ubL;
+  Value stepL;
+
+  // If we need to tile the K dimension, the simplest way is to adjust the
+  // step to the native K extent. However, if the original accumulation loop
+  // uses unit steps, we have to insert an inner loop to handle the tiling
+  // explicitly.
+  //
   // Note: Using _native_ shape here as we never unroll along the reduction
   // dimension, so the K extents of the register-tile and native shapes match.
-  int64_t stepKInt = candidate.operandIndexKind == IK::Offset
-                         ? candidate.contractNativeShape[2]
-                         : 1;
-  Value stepK = arith::ConstantIndexOp::create(b, loc, stepKInt);
+  int64_t contractNativeK = candidate.contractNativeShape[2];
+  bool needToTileK = candidate.contractK > contractNativeK;
+  bool needLLoop = false;
+  if (needToTileK) {
+    needLLoop = *getConstantIntValue(stepK) % contractNativeK != 0;
+    Value cContractNativeK =
+        arith::ConstantIndexOp::create(b, loc, contractNativeK);
+    if (needLLoop) {
+      lbL = c0;
+      ubL = arith::ConstantIndexOp::create(b, loc, candidate.contractK);
+      stepL = cContractNativeK;
+    } else {
+      stepK = cContractNativeK;
+    }
+  }
+
   candidate.slicedAccLoop = scf::ForOp::create(
       b, loc, lbK, ubK, stepK, accInitSliced,
       [&](OpBuilder &b, Location loc, Value ivK, ValueRange iterArgsK) {
-        if (candidate.operandIndexKind == IK::Offset) {
+        if (!needLLoop) {
           SmallVector<Value> newIterArgs = buildKLLoopBody(
               candidate, b, loc, ivM, ivN, ivK, /*ivL=*/Value{}, iterArgsK);
           scf::YieldOp::create(b, loc, newIterArgs);
           return;
         }
 
-        Value ubL = arith::ConstantIndexOp::create(b, loc, candidate.contractK);
-        Value stepL = arith::ConstantIndexOp::create(
-            b, loc, candidate.contractNativeShape[2]);
         candidate.slicedInnerAccLoop = scf::ForOp::create(
-            b, loc, c0, ubL, stepL, iterArgsK,
+            b, loc, lbL, ubL, stepL, iterArgsK,
             [&](OpBuilder &b, Location loc, Value ivL, ValueRange iterArgsL) {
               SmallVector<Value> newIterArgs = buildKLLoopBody(
                   candidate, b, loc, ivM, ivN, ivK, ivL, iterArgsL);
@@ -857,8 +853,12 @@ static SmallVector<Value> buildKLLoopBody(MLUCandidate &candidate, OpBuilder &b,
   if (ivL) {
     unsigned lPosL = lhsIndices.size() - 1 - candidate.isInVnniLayout;
     unsigned lPosR = rhsIndices.size() - 2 - candidate.isInVnniLayout;
-    lhsIndices[lPosL] = arith::AddIOp::create(b, loc, lhsIndices[lPosL], ivL);
-    rhsIndices[lPosR] = arith::AddIOp::create(b, loc, rhsIndices[lPosR], ivL);
+    // Checked in matchAccumulationLoop.
+    assert(isZeroInteger(lhsIndices[lPosL]) &&
+           isZeroInteger(rhsIndices[lPosR]) &&
+           "Expected zero offsets for L dimension");
+    lhsIndices[lPosL] = ivL;
+    rhsIndices[lPosR] = ivL;
   }
 
   Value lhsView = makeRankReducingSubview(b, loc, candidate.lhsRead.getBase(),
