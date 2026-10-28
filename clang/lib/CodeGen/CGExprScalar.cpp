@@ -993,17 +993,17 @@ public:
                      llvm::CmpInst::Predicate FCmpOpc, bool IsSignaling);
   Value *EmitSoftX87Compare(const BinaryOperator *E,
                             llvm::CmpInst::Predicate FCmpOpc);
-  Value *EmitSoftX87BinOp(
-      const BinOpInfo &Ops,
-      Value *(ScalarExprEmitter::*Emit)(const BinOpInfo &));
-#define VISITCOMP(CODE, UI, SI, FP, SIG) \
-    Value *VisitBin##CODE(const BinaryOperator *E) { \
-      if (CGF.getTarget().hasSoftX87LongDouble() && \
-          E->getLHS()->getType()->isSpecificBuiltinType( \
-              BuiltinType::LongDouble)) \
-        return EmitSoftX87Compare(E, llvm::FCmpInst::FP); \
-      return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI, \
-                         llvm::FCmpInst::FP, SIG); }
+  Value *EmitSoftX87BinOp(const BinOpInfo &Ops,
+                          Value *(ScalarExprEmitter::*Emit)(const BinOpInfo &));
+#define VISITCOMP(CODE, UI, SI, FP, SIG)                                       \
+  Value *VisitBin##CODE(const BinaryOperator *E) {                             \
+    if (CGF.getTarget().hasSoftX87LongDouble() &&                              \
+        E->getLHS()->getType()->isSpecificBuiltinType(                         \
+            BuiltinType::LongDouble))                                          \
+      return EmitSoftX87Compare(E, llvm::FCmpInst::FP);                        \
+    return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI,              \
+                       llvm::FCmpInst::FP, SIG);                               \
+  }
   VISITCOMP(LT, ICMP_ULT, ICMP_SLT, FCMP_OLT, true)
   VISITCOMP(GT, ICMP_UGT, ICMP_SGT, FCMP_OGT, true)
   VISITCOMP(LE, ICMP_ULE, ICMP_SLE, FCMP_OLE, true)
@@ -1066,9 +1066,8 @@ Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
       SrcType->isSpecificBuiltinType(BuiltinType::LongDouble)) {
     llvm::Constant *Low79 = llvm::ConstantInt::get(
         Src->getType(), llvm::APInt::getLowBitsSet(128, 79));
-    return CGF.Builder.CreateICmpNE(
-        CGF.Builder.CreateAnd(Src, Low79),
-        llvm::ConstantInt::get(Src->getType(), 0));
+    return CGF.Builder.CreateICmpNE(CGF.Builder.CreateAnd(Src, Low79),
+                                    llvm::ConstantInt::get(Src->getType(), 0));
   }
 
   if (SrcType->isRealFloatingType())

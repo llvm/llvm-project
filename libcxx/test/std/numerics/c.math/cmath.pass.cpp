@@ -1122,10 +1122,10 @@ void test_fmin()
 struct TestHypot3 {
   template <class Real>
   void operator()() const {
-#if defined(__arm64ec__) && __LDBL_MANT_DIG__ == 64
+#  if defined(__arm64ec__) && __LDBL_MANT_DIG__ == 64
     if constexpr (std::is_same_v<Real, long double>)
       return;
-#endif
+#  endif
 
     const auto check = [](Real elem, Real abs_tol) {
       assert(std::isfinite(std::hypot(elem, Real(0), Real(0))));
