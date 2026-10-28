@@ -98,23 +98,19 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   if (!isTransferSlotAccess(
           cast<VectorTransferOpInterface>(readOp.getOperation()), slot,
-          blockingUses))
-    return failure();
-  if (readOp.isMasked() || !readOp.getPermutationMap().isIdentity())
+          blockingUses) ||
+      !readOp.getPermutationMap().isIdentity())
     return failure();
 
   auto slotType = dyn_cast<VectorType>(slot.valueType);
   VectorType readType = readOp.getVectorType();
   if (!slotType || slotType.isScalable() || readType.isScalable() ||
       readType.getRank() != slotType.getRank() ||
-      readOp.getIndices().size() != static_cast<size_t>(readType.getRank()) ||
       readType.getElementType() != slotType.getElementType())
     return failure();
 
-  auto memrefType = cast<MemRefType>(slot.ptr.getType());
   if (!memref::isDynamicSubViewSlot(slot.ptr) &&
-      (!memrefType.hasStaticShape() ||
-       memrefType.getShape() != slotType.getShape()))
+      readOp.getShapedType().getShape() != slotType.getShape())
     return failure();
 
   SmallVector<int64_t> offsets;

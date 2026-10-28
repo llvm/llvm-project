@@ -1149,3 +1149,35 @@ func.func @partial_read_offset_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size
   %r = vector.transfer_read %sv[%c0], %pad : memref<?xf32, strided<[1], offset: 2>>, vector<4xf32>
   return %r : vector<4xf32>
 }
+
+// -----
+
+// Mem2Reg cannot promote accesses through the vector.mask region.
+// CHECK-LABEL: func.func @partial_read_mask_region
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.mask
+// CHECK-SAME: vector.transfer_read
+func.func @partial_read_mask_region(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.mask %mask { vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// Transfers can change element width, but extracting a slice cannot.
+// CHECK-LABEL: func.func @partial_read_element_width
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_element_width(%v: vector<8xi32>, %pad: i32) -> vector<4xi64> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xi32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xi32>, memref<8xi32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xi32>, vector<4xi64>
+  return %r : vector<4xi64>
+}
