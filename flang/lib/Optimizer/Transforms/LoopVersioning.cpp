@@ -210,7 +210,7 @@ static bool isLocalPointer(mlir::Value var) {
 /// POINTER, including the rest of any loop that contains the load. Return
 /// nullptr otherwise.
 static mlir::Value getAssignedDescriptor(fir::LoadOp load,
-                                         fir::AliasAnalysis &aliasAnalysis) {
+                                         mlir::AliasAnalysis &aliasAnalysis) {
   mlir::Value var = load.getMemref();
   if (!isLocalPointer(var))
     return nullptr;
@@ -485,16 +485,24 @@ void LoopVersioningPass::runOnOperation() {
     return;
   }
 
+  // This pass runs on a function, so FIR alias analysis must not look up
+  // callees or globals. Its recursive effects cache must be cleared when the
+  // IR changes between queries.
+  fir::AliasAnalysisRecursiveEffectsCache recursiveEffectsCache;
+  auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+  fir::AliasAnalysis firAliasAnalysis{recursiveEffectsCache};
+  firAliasAnalysis.disableSymbolLookups();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
+
   // A local POINTER associated with one of the dummies above, or with a
   // section of one that keeps the first dimension contiguous, is as likely
   // contiguous as the dummy. When nothing can change such a POINTER between
   // its pointer assignment and a load of it inside a loop, use the assigned
   // descriptor instead of the load, so that the loop is versioned like a loop
   // over the dummy. All decisions are made before any IR is changed.
+  // TODO: This is not specific to loop versioning. Move it into a separate
+  // optimization pass.
   {
-    fir::AliasAnalysis aliasAnalysis;
-    // This pass runs on a function, so it must not look up callees or globals.
-    aliasAnalysis.disableSymbolLookups();
     llvm::SmallVector<std::pair<fir::LoadOp, mlir::Value>> forwards;
     func.walk([&](fir::LoadOp load) {
       if (!load->getParentOfType<fir::DoLoopOp>() ||
@@ -514,6 +522,9 @@ void LoopVersioningPass::runOnOperation() {
       load.getResult().replaceAllUsesWith(assigned);
       load.erase();
     }
+    // The cached effects may refer to the erased loads.
+    if (!forwards.empty())
+      recursiveEffectsCache.clear();
   }
 
   // A list of all loops in the function in post-order.
@@ -660,9 +671,6 @@ void LoopVersioningPass::runOnOperation() {
   // so that a descriptor checked for a loop is not checked again for its inner
   // loops.
   {
-    fir::AliasAnalysis aliasAnalysis;
-    // This pass runs on a function, so it must not look up callees or globals.
-    aliasAnalysis.disableSymbolLookups();
     llvm::DenseMap<mlir::Operation *, llvm::SmallPtrSet<mlir::Value, 4>> added;
     llvm::SmallVector<std::pair<fir::LoadOp, mlir::Operation *>> hoists;
     for (OpsWithArgs &info : llvm::reverse(loopsOfInterest)) {
