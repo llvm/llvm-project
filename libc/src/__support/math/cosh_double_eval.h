@@ -30,6 +30,17 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
+// Bound constants (with biased exponent and mantissa bits):
+// - Tiny bound: 2^-27 = 0x1.0p-27
+LIBC_INLINE_VAR constexpr uint64_t COSH_TINY_BOUND = 0x3e40'0000'0000'0000ULL;
+// - Overflow bound:
+//   > round(acosh(2^1023 * (2 - 2^-52)), D, RU) = 0x1.633ce8fb9f87ep+9
+//   > round(acosh(2^1023 * (2 - 2^-52)), D, RD) = 0x1.633ce8fb9f87dp+9
+//   > round(cosh(0x1.633ce8fb9f87dp+9), D, RN)  = 0x1.ffffffffffd3bp+1023
+//   > round(cosh(0x1.633ce8fb9f87ep+9), D, RN)  = +inf
+LIBC_INLINE_VAR constexpr uint64_t COSH_OVERFLOW_BOUND =
+    0x4086'33ce'8fb9'f87eULL;
+
 // Handle tiny (|x| <= 2^-27), overflow (|x| >= 0x1.633ce8fb9f87ep+9), inf, and
 // nan for cosh(x):
 LIBC_NOINLINE LIBC_INLINE double cosh_exceptional(double x) {
@@ -41,7 +52,7 @@ LIBC_NOINLINE LIBC_INLINE double cosh_exceptional(double x) {
   //   0 < cosh(x) - 1 ~ x^2 / 2 < 2^-55 < 0.5 * ulp(1.0),
   // so cosh(x) rounds to 1.0 + 2^-52 when rounding mode is FE_UPWARD and to
   // 1.0 otherwise, with FE_INEXACT raised for all x != 0.
-  if (xbits.abs().uintval() <= 0x3e40'0000'0000'0000ULL) {
+  if (xbits.abs().uintval() <= COSH_TINY_BOUND) {
     if (LIBC_UNLIKELY(x == 0.0))
       return 1.0;
     return fputil::round_result_slightly_up(1.0);
@@ -71,17 +82,7 @@ LIBC_ALWAYS_INLINE double cosh(double x) {
 
   uint64_t x_abs = xbits.abs().uintval();
 
-  // Bound constants (with biased exponent and mantissa bits):
-  // - Tiny bound: 2^-27 = 0x1.0p-27
-  constexpr uint64_t TINY_BOUND = 0x3e40'0000'0000'0000ULL;
-  // - Overflow bound:
-  //   > round(acosh(2^1023 * (2 - 2^-52)), D, RU) = 0x1.633ce8fb9f87ep+9
-  //   > round(acosh(2^1023 * (2 - 2^-52)), D, RD) = 0x1.633ce8fb9f87dp+9
-  //   > round(cosh(0x1.633ce8fb9f87dp+9), D, RN)  = 0x1.ffffffffffd3bp+1023
-  //   > round(cosh(0x1.633ce8fb9f87ep+9), D, RN)  = +inf
-  constexpr uint64_t OVERFLOW_BOUND = 0x4086'33ce'8fb9'f87eULL;
-
-  if (LIBC_UNLIKELY(x_abs <= TINY_BOUND || x_abs >= OVERFLOW_BOUND))
+  if (LIBC_UNLIKELY(x_abs <= COSH_TINY_BOUND || x_abs >= COSH_OVERFLOW_BOUND))
     return cosh_exceptional(x);
 
   return exp_pm_eval(xbits.abs().get_val(), /*is_sinh=*/false);
