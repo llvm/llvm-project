@@ -39,7 +39,7 @@ jobs:
   select:
     name: Select refinement commits for ${{ inputs.lnt-machine }}
     runs-on: ubuntu-26.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash # for pipefail, which the default shell doesn't set

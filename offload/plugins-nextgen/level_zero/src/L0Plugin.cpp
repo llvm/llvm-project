@@ -193,7 +193,8 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
       return false;
 
     if (ImageKind != llvm::object::IMG_SPIRV &&
-        ImageKind != llvm::object::IMG_Object)
+        ImageKind != llvm::object::IMG_Object &&
+        ImageKind != llvm::object::IMG_PISA)
       return false;
 
     return true;
