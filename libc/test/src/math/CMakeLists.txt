@@ -74,7 +74,7 @@ add_fp_unittest(
   daddf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     daddf128_test.cpp
   DEPENDS
