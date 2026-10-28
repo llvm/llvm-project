@@ -47,8 +47,8 @@ With --compare-backends (and --agx-run), every case runs on both, and the two
 outputs are compared with each other bit for bit (the references are still
 computed, and each side's verdict reported). A case is SAME or DIFF-<class>,
 from the most severe differing thread: ftz (equal once float32 subnormals are
-flushed), nan (both NaNs), ulp (a case with a tolerance, within 16 ULPs; the
-distance is reported) or real; NOT-COMPARED when a side did not run it.
+flushed), nan (both NaNs), ulp (a case with a tolerance, within 16 ULPs or
+its own ULP tolerance; the distance is reported) or real; NOT-COMPARED when a side did not run it.
 
 Requests to the service are sent one at a time under the device lock
 (/scratch/air-device.lock, AIR_DEVICE_LOCK), named in --progress before they
@@ -490,9 +490,9 @@ FLOAT_BITS = {'f32': (32, 0x7f800000, 0x7fffff), 'f16': (16, 0x7c00, 0x3ff), 'bf
 
 def classify_diff(c, a, b, max_ulps=16):
     """(class, ULP distance or None) of two differing output encodings a (device) and b (AGX) of case c:
-    ftz   equal once float32 subnormals are flushed to zero (one side flushed)
+    ftz   one side is a float32 subnormal, the other a zero (one side flushed)
     nan   both NaNs (payload or sign only)
-    ulp   a case with a tolerance (an approximate function) and within max_ulps ULPs
+    ulp   a case with a tolerance (an approximate function) and within max(max_ulps, its ULP tolerance)
     real  anything else"""
     if c.out not in FLOAT_BITS:
         return 'real', None
@@ -502,13 +502,15 @@ def classify_diff(c, a, b, max_ulps=16):
         return 'nan', None
     if c.out == 'f32':
         ftz = lambda x: x & 0x80000000 if (x & exp) == 0 else x
-        if (ftz(a) != a or ftz(b) != b) and (ftz(a) == ftz(b) or (ftz(a) | ftz(b)) & 0x7fffffff == 0):
+        # one side is the other's value flushed (to a zero of either sign)
+        if (ftz(a) != a and b & 0x7fffffff == 0) or (ftz(b) != b and a & 0x7fffffff == 0):
             return 'ftz', None
     if (c.ulps is not None or c.abstol is not None) and not nan(a) and not nan(b):
         sign = 1 << (n - 1)
         order = lambda x: -(x & (sign - 1)) if x & sign else x
         d = abs(order(a) - order(b))
-        if d <= max_ulps:
+        # an approximate function may differ by its own tolerance between two implementations
+        if d <= max(max_ulps, c.ulps or 0):
             return 'ulp', d
     return 'real', None
 
