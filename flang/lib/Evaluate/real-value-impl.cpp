@@ -15,7 +15,7 @@
 #include <cstring>
 #include <string>
 
-// Some environments, including older glibc allow the macro HUGE to leak out of
+// Some environments, including older glibc, allow the macro HUGE to leak out of
 // <math.h>.
 #undef HUGE
 
