@@ -5895,6 +5895,66 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchUDivByShiftedPow2(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Base, Shift;
+  if (!mi_match(RHS, MRI, m_GShl(m_Reg(Base), m_Reg(Shift))))
+    return false;
+
+  if (!matchUnaryPredicate(MRI, Base, [](const Constant *C) {
+        auto *CI = dyn_cast_if_present<ConstantInt>(C);
+        return CI && CI->getValue().isPowerOf2();
+      }))
+    return false;
+
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftTy = MRI.getType(Shift);
+  // The shift type must be able to represent every valid shift amount.
+  if (ShiftTy.getScalarSizeInBits() < Log2_64_Ceil(Ty.getScalarSizeInBits()))
+    return false;
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_CTTZ, {ShiftTy, Ty}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {ShiftTy, ShiftTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftTy}}))
+    return false;
+
+  unsigned Flags =
+      MI.getFlag(MachineInstr::IsExact) ? MachineInstr::IsExact : 0;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Log2 = B.buildCTTZ(ShiftTy, Base);
+    auto Amount = B.buildAdd(ShiftTy, Shift, Log2);
+    B.buildLShr(Dst, LHS, Amount, Flags);
+  };
+  return true;
+}
+
+bool CombinerHelper::matchSignedDivRemToUnsigned(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) const {
+  assert((MI.getOpcode() == TargetOpcode::G_SDIV ||
+          MI.getOpcode() == TargetOpcode::G_SREM) &&
+         "Expected SDIV or SREM");
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  if (!VT || !VT->signBitIsZero(LHS) || !VT->signBitIsZero(RHS))
+    return false;
+
+  unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SDIV
+                        ? TargetOpcode::G_UDIV
+                        : TargetOpcode::G_UREM;
+  LLT Ty = MRI.getType(Dst);
+  if (!isLegalOrBeforeLegalizer({Opcode, {Ty}}))
+    return false;
+
+  unsigned Flags = MI.getFlags();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildInstr(Opcode, {Dst}, {LHS, RHS}, Flags);
+  };
+  return true;
+}
+
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_SREM && "Expected SREM");
   auto &SRem = cast<GBinOp>(MI);
