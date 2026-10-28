@@ -318,7 +318,7 @@ LIBC_INLINE constexpr int canonicalize(T &cx, const T &x) {
         cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa())
                  .get_val();
         raise_except_if_required(FE_INVALID);
-        return 1;
+        return 0;
       } else
         cx = x;
     } else if (exponent == 0 && bit63)
@@ -331,13 +331,13 @@ LIBC_INLINE constexpr int canonicalize(T &cx, const T &x) {
       cx =
           FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
       raise_except_if_required(FE_INVALID);
-      return 1;
+      return 0;
     } else
       cx = x;
   } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
     cx = FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
     raise_except_if_required(FE_INVALID);
-    return 1;
+    return 0;
   } else
     cx = x;
   return 0;
