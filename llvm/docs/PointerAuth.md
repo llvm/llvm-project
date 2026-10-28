@@ -400,3 +400,18 @@ as follows:
 | ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
 | address diversity | reserved | key      | reserved | discriminator | reserved for addend |
 ```
+
+#### ELF Module flags
+
+The following module flags control aspects of code-generation for
+pointer authentication on ELF platforms.
+
+* `ptrauth-elf-got` is a flag that determines if the GOT is signed
+  with the process-independent instruction key.
+* `ptrauth-init-fini` is a flag that determines if the pointers in
+  .init and .fini are signed with the process-independent instruction
+  key.
+* `ptrauth-init-fini-address-discrimination` is a flag used in
+  combination with `ptrauth-init-fini`, it determines whether address
+  diversity is used in the discriminator for the pointers in the .init
+  and .fini array.
