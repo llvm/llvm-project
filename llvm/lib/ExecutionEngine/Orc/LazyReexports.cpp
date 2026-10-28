@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
 #include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/TargetParser/Triple.h"
@@ -258,27 +257,6 @@ private:
 
   LazyReexportsManager &LRMgr;
   SymbolAliasMap Reexports;
-};
-
-class LazyReexportsManager::Plugin : public ObjectLinkingLayer::Plugin {
-public:
-  void modifyPassConfig(MaterializationResponsibility &MR,
-                        jitlink::LinkGraph &G,
-                        jitlink::PassConfiguration &Config) override {}
-
-  Error notifyFailed(MaterializationResponsibility &MR) override {
-    return Error::success();
-  }
-
-  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
-    return Error::success();
-  }
-
-  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
-                                   ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;
