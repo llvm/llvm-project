@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1081,6 +1082,41 @@ void defineThreadgroupGlobals(Module &M) {
       GV->eraseFromParent();
 }
 
+// A GEP of an address made by inttoptr as integer arithmetic and an inttoptr
+// of its own. ZLUDA forms device addresses so (pointer parameters arrive as
+// integers), and the AIR writer gives such an address one pointee type from
+// its uses: two byte GEPs of it storing a float and an i32 made Metal's reader
+// reject the library ("Unexpected bitcode file", PTX-formalization
+// half-oob-set and half-cmp-pk2). Each address then has its own pointee.
+void gepsOfIntToPtrAsIntegers(Module &M) {
+  const DataLayout &DL = M.getDataLayout();
+  for (Function &F : M) {
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (Instruction &I : make_early_inc_range(instructions(F))) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(&I);
+        auto *Base =
+            GEP ? dyn_cast<IntToPtrInst>(GEP->getPointerOperand()) : nullptr;
+        if (!Base || GEP->getType()->isVectorTy())
+          continue;
+        IRBuilder<> B(GEP);
+        Type *IntTy = DL.getIntPtrType(GEP->getType());
+        Value *Addr = B.CreateZExtOrTrunc(Base->getOperand(0), IntTy);
+        Value *Off = emitGEPOffset(&B, DL, GEP, /*NoAssumptions=*/true);
+        Value *R = B.CreateIntToPtr(
+            B.CreateAdd(Addr, B.CreateSExtOrTrunc(Off, IntTy)), GEP->getType());
+        R->takeName(GEP);
+        GEP->replaceAllUsesWith(R);
+        GEP->eraseFromParent();
+        if (Base->use_empty())
+          Base->eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
+}
+
 bool legalizeUnsupportedIR(Module &M) {
   genericToDevice(M);
   defineThreadgroupGlobals(M);
@@ -1088,6 +1124,7 @@ bool legalizeUnsupportedIR(Module &M) {
   expandIntrinsicsMetalMishandles(M);
   wideAIRFunctionsToIntrinsics(M);
   expandWideIntegers(M);
+  gepsOfIntToPtrAsIntegers(M);
   lowerFreezeInsts(M);
   canonicalizeNNegZExt(M);
   stripDisjointFlags(M);
