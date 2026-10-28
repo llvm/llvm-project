@@ -134,6 +134,7 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ;
 ; PAUTHLR-LABEL: leaf_sign_all:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp0:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -187,6 +188,7 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ;
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp0:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -234,6 +236,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ;
 ; PAUTHLR-LABEL: leaf_clobbers_lr:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp1:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp1
@@ -322,6 +325,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ;
 ; NEGATE-PAUTHLR-LABEL: leaf_clobbers_lr:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp1:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -375,6 +379,7 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; PAUTHLR-LABEL: non_leaf_sign_all:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp2:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp2
@@ -453,6 +458,7 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; NEGATE-PAUTHLR-LABEL: non_leaf_sign_all:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp2:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -502,6 +508,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ;
 ; PAUTHLR-LABEL: non_leaf_sign_non_leaf:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp3:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp3
@@ -580,6 +587,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ;
 ; NEGATE-PAUTHLR-LABEL: non_leaf_sign_non_leaf:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp3:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -617,6 +625,7 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ;
 ; PAUTHLR-LABEL: non_leaf_scs:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp4
@@ -673,6 +682,7 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ;
 ; NEGATE-PAUTHLR-LABEL: non_leaf_scs:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp4:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -704,6 +714,7 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_v83:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp5:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp5
@@ -733,6 +744,7 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp5:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -783,6 +795,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ;
 ; PAUTHLR-LABEL: spill_lr_and_tail_call:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp6:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp6
@@ -874,6 +887,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ;
 ; NEGATE-PAUTHLR-LABEL: spill_lr_and_tail_call:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp6:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -917,6 +931,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_a_key:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp7:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp7
@@ -970,6 +985,7 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ;
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_a_key:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp7:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
@@ -1006,6 +1022,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; PAUTHLR-LABEL: leaf_sign_all_b_key:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp8:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp8
@@ -1064,6 +1081,7 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_b_key:
 ; NEGATE-PAUTHLR:       // %bb.0:
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp8:
 ; NEGATE-PAUTHLR-NEXT:    pacibsppc
@@ -1087,6 +1105,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-LABEL: leaf_sign_all_v83_b_key:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:  .Ltmp9:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp9
@@ -1119,6 +1138,7 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83_b_key:
 ; NEGATE-PAUTHLR:       // %bb.0:
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp9:
 ; NEGATE-PAUTHLR-NEXT:    pacibsppc
@@ -1155,6 +1175,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
 ; PAUTHLR:       // %bb.0:
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp10:
 ; PAUTHLR-NEXT:    paciasppc
@@ -1213,6 +1234,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
 ; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp10:
@@ -1253,6 +1275,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-LABEL: leaf_sign_all_b_key_bti:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp11:
 ; PAUTHLR-NEXT:    pacibsppc
@@ -1316,6 +1339,7 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_b_key_bti:
 ; NEGATE-PAUTHLR:       // %bb.0:
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp11:
@@ -1342,6 +1366,7 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; PAUTHLR-LABEL: leaf_sign_all_v83_b_key_bti:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
+; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp12:
 ; PAUTHLR-NEXT:    pacibsppc
@@ -1377,6 +1402,7 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83_b_key_bti:
 ; NEGATE-PAUTHLR:       // %bb.0:
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp12:

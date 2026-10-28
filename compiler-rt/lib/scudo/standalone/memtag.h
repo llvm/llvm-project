@@ -25,8 +25,9 @@ namespace scudo {
 // tagging. Not all operating systems enable TBI, so we only claim architectural
 // support for memory tagging if the operating system enables TBI.
 // HWASan uses the top byte for its own purpose and Scudo should not touch it.
+// ASan also does not support TBI when computing shadow addresses.
 #if SCUDO_CAN_USE_MTE && !defined(SCUDO_DISABLE_TBI) &&                        \
-    !__has_feature(hwaddress_sanitizer)
+    !__has_feature(hwaddress_sanitizer) && !__has_feature(address_sanitizer)
 inline constexpr bool archSupportsMemoryTagging() { return true; }
 #else
 inline constexpr bool archSupportsMemoryTagging() { return false; }
@@ -120,12 +121,12 @@ inline NORETURN void enableSystemMemoryTaggingTestOnly() {
 
 #endif // SCUDO_CAN_USE_MTE
 
-class ScopedDisableMemoryTagChecks {
+class ScopedTestOnlyDisableMemoryTagChecks {
   uptr PrevTCO;
   bool active;
 
 public:
-  ScopedDisableMemoryTagChecks(bool cond = true) : active(cond) {
+  ScopedTestOnlyDisableMemoryTagChecks(bool cond = true) : active(cond) {
     if (!active)
       return;
     __asm__ __volatile__(
@@ -137,7 +138,7 @@ public:
         : "=r"(PrevTCO));
   }
 
-  ~ScopedDisableMemoryTagChecks() {
+  ~ScopedTestOnlyDisableMemoryTagChecks() {
     if (!active)
       return;
     __asm__ __volatile__(
@@ -276,8 +277,8 @@ inline NORETURN void enableSystemMemoryTaggingTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
-struct ScopedDisableMemoryTagChecks {
-  ScopedDisableMemoryTagChecks(UNUSED bool cond = true) {}
+struct ScopedTestOnlyDisableMemoryTagChecks {
+  ScopedTestOnlyDisableMemoryTagChecks(UNUSED bool cond = true) {}
 };
 
 inline NORETURN uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {

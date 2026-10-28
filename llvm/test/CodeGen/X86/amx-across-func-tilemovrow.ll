@@ -94,7 +94,7 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    pushq %rbp
 ; O0-NEXT:    movq %rsp, %rbp
 ; O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; O0-NEXT:    subq $4096, %rsp # imm = 0x1000
+; O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; O0-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)

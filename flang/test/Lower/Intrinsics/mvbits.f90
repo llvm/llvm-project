@@ -4,11 +4,11 @@
 function mvbits_test(from, frompos, len, to, topos)
   integer :: from, frompos, len, to, topos
   integer :: mvbits_test
-  ! CHECK: %[[from_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFmvbits_testEfrom"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[frompos_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 2 {uniq_name = "_QFmvbits_testEfrompos"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[len_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 3 {uniq_name = "_QFmvbits_testElen"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[to_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 4 {uniq_name = "_QFmvbits_testEto"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[topos_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 5 {uniq_name = "_QFmvbits_testEtopos"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[from_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 uniq_name("_QFmvbits_testEfrom") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[frompos_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 2 uniq_name("_QFmvbits_testEfrompos") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[len_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 3 uniq_name("_QFmvbits_testElen") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[to_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 4 uniq_name("_QFmvbits_testEto") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[topos_decl:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 5 uniq_name("_QFmvbits_testEtopos") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-DAG: %[[from:.*]] = fir.load %[[from_decl]]#0 : !fir.ref<i32>
   ! CHECK-DAG: %[[frompos:.*]] = fir.load %[[frompos_decl]]#0 : !fir.ref<i32>
   ! CHECK-DAG: %[[len:.*]] = fir.load %[[len_decl]]#0 : !fir.ref<i32>
@@ -38,8 +38,8 @@ end
 subroutine mvbits_array_test(from, frompos, len, to, topos)
   integer :: from(:), frompos, len, to(:), topos
 
-  ! CHECK: %[[from_decl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFmvbits_array_testEfrom"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  ! CHECK: %[[to_decl:.*]]:2 = hlfir.declare %[[VAL_3]] {{.*}} {uniq_name = "_QFmvbits_array_testEto"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  ! CHECK: %[[from_decl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFmvbits_array_testEfrom") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  ! CHECK: %[[to_decl:.*]]:2 = hlfir.declare %[[VAL_3]] {{.*}} uniq_name("_QFmvbits_array_testEto") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[from_decl]]#0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = arith.constant 1 : index

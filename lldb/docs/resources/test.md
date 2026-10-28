@@ -159,12 +159,15 @@ decorator you pick says which:
 The `require*` decorators mirror the `skip*` ones one-for-one:
 `requireDarwin` / `requireNotDarwin`, `requireLinux` / `requireNotLinux`,
 `requireWindows` / `requireNotWindows`, plus `requirePOSIX`, `requireSignals`,
-`requireNotWasm`, `requireDarwinHost`, and the general
+`requireNotWasm`, `requireDarwinHost`, `requireClang`, and the general
 `requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
 
 Reach for `require*` when the test is tied to a platform-specific file format,
-API, or OS feature. If the test is merely untested or broken somewhere, keep
-`skipIf*` so nobody mistakes a bug for a design decision.
+API, or OS feature, or to a specific compiler. If the test is merely untested
+or broken somewhere, keep `skipIf*` so nobody mistakes a bug for a design
+decision. For example, a test that only uses Clang-specific debug info
+options belongs behind `@requireClang` rather than
+`@skipIf(compiler=no_match("clang"))`.
 
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
@@ -189,8 +192,8 @@ similar to what you want to do.
 
 Another thing this enables is having different variants for the same test
 case. By default, we run every test for two debug info formats, once with
-DWARF from the object files and another with a dSYM on macOS or split
-DWARF (DWO) on Linux. But there are many more things we can test
+DWARF from the object files and another with a dSYM on macOS, split DWARF
+(DWO) on Linux or PDB on Windows. But there are many more things we can test
 that are orthogonal to the test itself. On GreenDragon we have a matrix bot
 that runs the test suite under different configurations, with older host
 compilers and different DWARF versions.
@@ -717,6 +720,13 @@ actual hardware. {doc}`/resources/qemu-testing` describes how to setup an
 emulation environment using QEMU helper scripts found in
 `llvm-project/lldb/scripts/lldb-test-qemu`. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
+
+### Running tests against WebAssembly
+
+The API tests can be compiled to WebAssembly and run under a standalone Wasm
+runtime. {doc}`/resources/wasm-testing` describes how to configure LLDB's `wasm`
+platform for a runtime serving a GDB remote stub, with WAMR and WasmKit as
+examples.
 
 ## Debugging Test Failures
 

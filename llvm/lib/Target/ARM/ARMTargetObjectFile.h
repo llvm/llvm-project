@@ -16,9 +16,12 @@
 namespace llvm {
 
 class ARMElfTargetObjectFile : public TargetLoweringObjectFileELF {
+  bool UsesARMEH = false;
+
 public:
   ARMElfTargetObjectFile();
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   MCRegister getStaticBase() const override;
 

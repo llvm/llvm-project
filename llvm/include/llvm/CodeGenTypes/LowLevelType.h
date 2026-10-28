@@ -538,6 +538,9 @@ public:
 #endif
 
   bool operator==(const LLT &RHS) const {
+    if (Info == RHS.Info && RawData == RHS.RawData)
+      return true;
+
     if (isAnyScalar() || RHS.isAnyScalar())
       return isScalar() == RHS.isScalar() &&
              getScalarSizeInBits() == RHS.getScalarSizeInBits();
@@ -546,7 +549,7 @@ public:
       return getElementType() == RHS.getElementType() &&
              getElementCount() == RHS.getElementCount();
 
-    return Info == RHS.Info && RawData == RHS.RawData;
+    return false;
   }
 
   bool operator!=(const LLT &RHS) const { return !(*this == RHS); }

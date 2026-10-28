@@ -207,7 +207,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
+    auto PassPlugin = PassPlugin::load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
@@ -239,10 +239,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  assert(!Conf.Options.MCOptions.LibraryOptions &&
+         "set Config::LibraryOptions instead");
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
+  TargetOpts.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
@@ -294,7 +297,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf, PB);
 
@@ -336,6 +339,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
+
   ModulePassManager MPM;
 
   if (!Conf.DisableVerify)
@@ -375,7 +381,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
@@ -485,7 +491,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
     CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        TM->Options.ExceptionModel, TM->Options.EABIVersion,
         TM->Options.MCOptions.ABIName, TM->Options.VecLib));
 
     // No need to make index available if the module is empty.
@@ -713,7 +718,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
+      Mod.getTargetTriple().isOSBinFormatELF() &&
       TM->getRelocationModel() != Reloc::Static &&
       Mod.getPIELevel() == PIELevel::Default;
   renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);

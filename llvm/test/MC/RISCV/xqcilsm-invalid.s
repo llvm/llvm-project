@@ -26,7 +26,6 @@ qc.swm x5, x20, 45(x3)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 qc.swm x5, x20, 12(x3)
 
-
 # CHECK: :[[@LINE+1]]:20: error: expected register
 qc.swmi x10, 4, 20(4)
 
@@ -53,7 +52,6 @@ qc.swmi x10, 4, 45(x4)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 qc.swmi x10, 4, 20(x4)
 
-
 # CHECK: :[[@LINE+1]]:23: error: expected register
 qc.setwm x4, x30, 124(2)
 
@@ -71,7 +69,6 @@ qc.setwm x4, x30, 128(x2)
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 qc.setwm x4, x30, 124(x2)
-
 
 # CHECK: :[[@LINE+1]]:22: error: expected register
 qc.setwmi x5, 31, 12(12)
@@ -95,7 +92,6 @@ qc.setwmi x5, 31, 98(x12)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 qc.setwmi x5, 31, 12(x12)
 
-
 # CHECK: :[[@LINE+1]]:19: error: expected register
 qc.lwm x7, x1, 24(20)
 
@@ -113,7 +109,6 @@ qc.lwm x7, x1, 46(x20)
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 qc.lwm x7, x1, 24(x20)
-
 
 # CHECK: :[[@LINE+1]]:19: error: expected register
 qc.lwmi x13, 9, 4(23)

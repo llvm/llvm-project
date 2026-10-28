@@ -57,8 +57,6 @@
 using namespace llvm;
 using namespace AArch64GISelUtils;
 
-extern cl::opt<bool> EnableSVEGISel;
-
 static bool isSimpleGPRCallValue(const CallLowering::ArgInfo &Arg) {
   if (Arg.Regs.size() != 1 || any_of(Arg.Flags, [](ISD::ArgFlagsTy Flags) {
         auto FlagVals = Flags.getFlags();
@@ -635,10 +633,11 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
   const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
 
-  if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
-                          llvm::any_of(F.args(), [](const Argument &A) {
-                            return A.getType()->isScalableTy();
-                          })))
+  if (!TM.getCLOpts().enable_gisel_sve &&
+      (F.getReturnType()->isScalableTy() ||
+       llvm::any_of(F.args(), [](const Argument &A) {
+         return A.getType()->isScalableTy();
+       })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
@@ -654,7 +653,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
 
   auto OptLevel = MF.getTarget().getOptLevel();
   bool IsGlobalISelPreferred =
-      getCGPassBuilderOption().EnableGlobalISelOption ==
+      getCGPassBuilderOption(TM).EnableGlobalISelOption ==
           cl::boolOrDefault::BOU_TRUE ||
       static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
       F.hasOptNone();
@@ -768,9 +767,14 @@ bool AArch64CallLowering::lowerFormalArguments(
       F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
     return false;
 
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg()) &&
-      !Subtarget.isWindowsArm64EC();
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
+
+  // If an argument is marked "sret" and "inreg", it must be returned in x0.
+  // Bail for now.
+  if (IsWin64 && any_of(F.args(), [](const Argument &A) {
+        return A.hasStructRetAttr() && A.hasInRegAttr();
+      }))
+    return false;
 
   SmallVector<ArgInfo, 8> SplitArgs;
   SmallVector<std::pair<Register, Register>> BoolArgs;
@@ -1093,9 +1097,9 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (Info.Callee.isGlobal()) {
     const GlobalValue *GV = Info.Callee.getGlobal();
-    const Triple &TT = MF.getTarget().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
       LLVM_DEBUG(dbgs() << "... Cannot tail call externally-defined function "
                            "with weak linkage for this OS.\n");
@@ -1218,6 +1222,8 @@ bool AArch64CallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, Info.PAI, MRI);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Tell the call which registers are clobbered.
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
@@ -1241,7 +1247,7 @@ bool AArch64CallLowering::lowerTailCall(
 
     MIB.addImm(IntDisc);
     MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    if (AddrDisc.isValid()) {
       MIB->getOperand(4).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
           *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
@@ -1469,6 +1475,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
   unsigned CalleeOpNo = 0;
 
   if (Opc == AArch64::BLR_RVMARKER || Opc == AArch64::BLRA_RVMARKER) {
@@ -1519,7 +1527,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     MIB.addImm(IntDisc);
     MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    if (AddrDisc.isValid()) {
       constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
                                *MF.getSubtarget().getRegBankInfo(), *MIB,
                                MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),
@@ -1538,11 +1546,18 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
+  // Add dead flag to already inserted implicit-def.
+  MIB->addRegisterDead(AArch64::LR, TRI);
+
   uint64_t CalleePopBytes =
       doesCalleeRestoreStack(Info.CallConv,
                              MF.getTarget().Options.GuaranteedTailCallOpt)
           ? alignTo(Assigner.StackSize, 16)
           : 0;
+
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget.isTargetWindows() && CalleePopBytes != 0)
+    MF.getInfo<AArch64FunctionInfo>()->setHasWinCallToCalleePopFunction(true);
 
   CallSeqStart.addImm(Assigner.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
