@@ -6603,6 +6603,7 @@ cc_library(
     deps = [
         ":ArithToLLVM",
         ":ConversionPassIncGen",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUDialect",
