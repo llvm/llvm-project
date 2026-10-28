@@ -365,6 +365,17 @@ void LoopInvariantCodeMotion::runOnOperation() {
           return false;
         }
 
+        // Never hoist a loop. Moving it out of the loop it is nested in
+        // changes how it is scheduled relative to the iterations of that loop
+        // (e.g. an inner loop of an OpenACC parallel loop that ends up outside
+        // of the parallel region is no longer executed by every iteration of
+        // the parallel loop).
+        // TODO This is a workaround, we should find a better solution here.
+        if (isa<LoopLikeOpInterface>(op)) {
+          LDBG() << "Not hoisting loop-like operation: " << *op;
+          return false;
+        }
+
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;

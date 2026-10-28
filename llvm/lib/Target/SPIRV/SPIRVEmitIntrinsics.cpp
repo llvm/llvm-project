@@ -334,6 +334,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -4309,9 +4310,37 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
   bool Changed = false;
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // Only entry-block allocations execute once per call, so a single array
+    // object has the same meaning as the counted allocation. Allocations in
+    // other blocks keep their lowering.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
+        continue;
+      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
+      if (Count->isZero() || !Count->getValue().isIntN(32))
+        continue;
+      AI->setAllocatedType(
+          ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
+      AI->setOperand(0, ConstantInt::get(I32Ty, 1));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
 
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  // Fold static allocation counts before pointer type inference.
+  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);

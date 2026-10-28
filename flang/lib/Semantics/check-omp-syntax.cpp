@@ -47,7 +47,7 @@ static llvm::omp::Properties GetProperties(
 static llvm::omp::Version GetClosestVersion(
     llvm::directive::VersionRange range, llvm::omp::Version version) {
   if (range.isValid()) {
-    int intVer{static_cast<int>(static_cast<unsigned>(version))};
+    int intVer{static_cast<int>(version.value())};
     return llvm::omp::Version(
         intVer >= range.Min ? std::min(intVer, range.Max) : range.Min);
   }
