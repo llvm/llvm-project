@@ -1438,7 +1438,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
     return;
   case SemanticKind::SampleIndex:
-    if (DeclaredTy != T || !T->isScalarType() || !isIntUpTo32Element(Ctx, T))
+    if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar */ 0 << 1
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
