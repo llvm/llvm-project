@@ -1242,6 +1242,20 @@ public:
   }
 };
 
+/// Returns true if `type` is, or (transitively) includes, a runtime array.
+/// Such types have no fixed size, so they cannot be copied with a static byte
+/// count; the SPIR-V spec also forbids them as the copied type of
+/// `OpCopyMemory`.
+static bool containsRuntimeArray(Type type) {
+  if (isa<spirv::RuntimeArrayType>(type))
+    return true;
+  if (auto arrayType = dyn_cast<spirv::ArrayType>(type))
+    return containsRuntimeArray(arrayType.getElementType());
+  if (auto structType = dyn_cast<spirv::StructType>(type))
+    return llvm::any_of(structType.getElementTypes(), containsRuntimeArray);
+  return false;
+}
+
 /// Converts `spirv.CopyMemory` to `llvm.intr.memcpy`.
 class CopyMemoryPattern : public SPIRVToLLVMConversion<spirv::CopyMemoryOp> {
 public:
@@ -1252,20 +1266,19 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Type pointeeType =
         cast<spirv::PointerType>(op.getTarget().getType()).getPointeeType();
+    // The op verifier does not reject runtime arrays, so check here. Note that
+    // a struct containing a runtime array still converts to an LLVM type with
+    // a well-defined (but meaningless here) size.
+    if (containsRuntimeArray(pointeeType))
+      return rewriter.notifyMatchFailure(op, "pointee has no static size");
+
     Type dstPointeeType = getTypeConverter()->convertType(pointeeType);
     if (!dstPointeeType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    // A 0-element LLVM array is the conversion of `spirv.rtarray`, which has
-    // no fixed size (and is forbidden by the SPIR-V spec for CopyMemory).
-    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(dstPointeeType))
-      if (arrayType.getNumElements() == 0)
-        return rewriter.notifyMatchFailure(op, "pointee has no static size");
-
-    llvm::TypeSize typeSize =
-        DataLayout::closest(op).getTypeSize(dstPointeeType);
-    if (typeSize.isScalable())
-      return rewriter.notifyMatchFailure(op, "pointee has scalable size");
+    // SPIR-V types have no scalable components, so the size is always fixed.
+    uint64_t byteSize =
+        DataLayout::closest(op).getTypeSize(dstPointeeType).getFixedValue();
 
     // In SPIR-V < 1.4, a single memory-operands mask applies to both Target
     // and Source; in SPIR-V >= 1.4, a second mask (if present) applies to
@@ -1298,7 +1311,7 @@ public:
     Location loc = op.getLoc();
     Value size = LLVM::ConstantOp::create(
         rewriter, loc, rewriter.getI64Type(),
-        rewriter.getI64IntegerAttr(typeSize.getFixedValue()));
+        rewriter.getI64IntegerAttr(byteSize));
     auto memcpy = rewriter.replaceOpWithNewOp<LLVM::MemcpyOp>(
         op, adaptor.getTarget(), adaptor.getSource(), size, isVolatile);
 

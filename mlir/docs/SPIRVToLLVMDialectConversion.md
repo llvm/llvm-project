@@ -451,7 +451,8 @@ order to go through the pointer.
 `spirv.CopyMemory` is converted to the `llvm.intr.memcpy` intrinsic. The number
 of bytes copied is the static size of the converted pointee type as reported by
 the module's data layout (`DataLayout::closest(op).getTypeSize(...)`), passed as
-an `i64` constant.
+an `i64` constant. Pointee types that are, or include, a runtime array have no
+static size and are not supported.
 
 Memory-access attributes on `spirv.CopyMemory` are mapped as follows (following
 SPIR-V 1.4 rules where a single mask applies to both Target and Source, and a

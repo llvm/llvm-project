@@ -256,6 +256,14 @@ spirv.func @copy_memory_volatile(%arg0: !spirv.ptr<i64, Function>, %arg1: !spirv
   spirv.Return
 }
 
+// CHECK-LABEL: @copy_memory_nontemporal
+spirv.func @copy_memory_nontemporal(%arg0: !spirv.ptr<i32, Function>, %arg1: !spirv.ptr<i32, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 ["Nontemporal"] : i32
+  spirv.Return
+}
+
 // CHECK-LABEL: @copy_memory_aligned_single_mask
 spirv.func @copy_memory_aligned_single_mask(%arg0: !spirv.ptr<vector<4xf32>, Function>, %arg1: !spirv.ptr<vector<4xf32>, Function>) "None" {
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(16 : i64) : i64
