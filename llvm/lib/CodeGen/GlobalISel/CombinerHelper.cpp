@@ -5607,21 +5607,6 @@ void CombinerHelper::applyUDivOrURemByConst(MachineInstr &MI) const {
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
-/// Return true if \p Opc on \p Ty is legal, or becomes legal after the
-/// legalizer splits it into fewer elements.
-static bool isLegalOrSplitsToLegal(const LegalizerInfo &LI, unsigned Opc,
-                                   LLT Ty) {
-  for (unsigned Step = 0; Step < 4; ++Step) {
-    LegalizeActionStep Action = LI.getAction({Opc, {Ty}});
-    if (Action.Action == LegalizeAction::Legal)
-      return true;
-    if (Action.Action != LegalizeAction::FewerElements || Action.TypeIdx != 0)
-      return false;
-    Ty = Action.NewType;
-  }
-  return false;
-}
-
 bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM);
@@ -5660,7 +5645,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrSplitsToLegal(*LI, TargetOpcode::G_SMULH, DstTy) &&
+    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
     if (Opcode == TargetOpcode::G_SREM &&
