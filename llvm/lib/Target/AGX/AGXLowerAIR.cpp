@@ -1651,9 +1651,10 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     Type *Ty = I.getType();
     bool Float = Ty->isFloatTy();
     Value *X = nullptr, *R = nullptr;
-    if (Float && Afn(&I) && match(&I, m_FDiv(m_Value(X), m_Value(R))) &&
-        IsOne(X)) {
-      // 1 / sqrt(x) and 1 / x
+    if (Float && Afn(&I) && I.getOpcode() == Instruction::FDiv &&
+        IsOne(I.getOperand(0))) {
+      // 1 / sqrt(x) and 1 / x (R is only set for these: it replaces I)
+      R = I.getOperand(1);
       Value *S;
       if (match(R, m_Intrinsic<Intrinsic::sqrt>(m_Value(S))) && Afn(R))
         R = B.CreateIntrinsic(Intrinsic::agx_rsqrt, {Ty}, {S});

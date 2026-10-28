@@ -41,6 +41,17 @@ define void @k(ptr addrspace(1) %out, float %x, float %y, bfloat %b, bfloat %c) 
   ret void
 }
 
+; An afn division of anything but 1 stays a division (it was replaced by its
+; divisor).
+; CHECK-LABEL: define agx_kernel void @div(
+; CHECK: %r = fdiv afn float %x.val, %y.val
+; CHECK-NEXT: store float %r,
+define void @div(ptr addrspace(1) %out, float %x, float %y) "air-kernel" {
+  %r = fdiv afn float %x, %y
+  store float %r, ptr addrspace(1) %out
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.sin.f32(float)
 declare float @llvm.minimum.f32(float, float)
