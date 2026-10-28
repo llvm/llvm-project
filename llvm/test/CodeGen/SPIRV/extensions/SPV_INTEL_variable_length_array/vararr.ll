@@ -85,6 +85,24 @@ entry:
   ret i32 %elem
 }
 
+; A constant count outside the entry block keeps the variable-length lowering:
+; each execution allocates a new object.
+; CHECK-COMMON: Begin function constant_count_loop
+; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]]
+define spir_func void @constant_count_loop(i1 %repeat) {
+entry:
+  br label %loop
+
+loop:
+  %array = alloca i32, i32 4, align 4
+  store volatile i32 1, ptr %array, align 4
+  br i1 %repeat, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare ptr @llvm.stacksave.p0()
 declare void @llvm.stackrestore.p0(ptr)
