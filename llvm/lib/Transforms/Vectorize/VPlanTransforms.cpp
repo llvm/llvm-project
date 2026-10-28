@@ -1355,7 +1355,7 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
                         m_VPValue(), m_Specific(Phi->getOperand(1)),
                         m_Sub(m_ZExtOrTruncOrSelf(m_Specific(&Plan.getVF())),
                               m_One())))))
-        return Phi->getOperand(0);
+        return Phi->getOperand(1);
     }
     return nullptr;
   }
