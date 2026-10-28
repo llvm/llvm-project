@@ -49,9 +49,12 @@ void testLocalInts() {
 // loop's exit.
 void testLoopVar() {
   for(int i = 0; i < 3; ++i) {}
+  helper();
 }
 
 // CHECK-LOOP-VAR:      LifetimeEnd
+// CHECK-LOOP-VAR-NEXT: PreCall (helper) [SimpleFunctionCall]
+// CHECK-LOOP-VAR-NEXT: PostCall (helper) [SimpleFunctionCall]
 // CHECK-LOOP-VAR-NEXT: EndFunction
 // CHECK-LOOP-VAR-NEXT: ReturnStmt: no
 // CHECK-LOOP-VAR-NOT:  LifetimeEnd
