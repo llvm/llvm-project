@@ -5947,6 +5947,8 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
     llvm_unreachable("unhandled lane op");
   }
   unsigned ClampOpc = Opc;
+  if (Opc == AMDGPU::V_SUB_F32_e64)
+    ClampOpc = AMDGPU::V_ADD_F32_e64;
   if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
     if (Opc == AMDGPU::S_SUB_I32)
       ClampOpc = AMDGPU::S_ADD_I32;
@@ -6080,21 +6082,18 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addImm(1)
             .setOperandDead(3); // Dead scc
         // Check if Src is a known identity constant.
-        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
-        if (SrcDef && SrcDef->isMoveImmediate()) {
-          int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 1) { // 1 * parity(exec) = parity(exec)
-            if (Opc == AMDGPU::S_XOR_B32) {
-              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
-                  .addReg(ParityRegister);
-            } else {
-              Register DstHi =
-                  MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-              BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
-              BuildRegSequence(BB, MI, DstReg, ParityRegister, DstHi);
-            }
-            break;
+        if (TII->getImmOrMaterializedImm(MRI, SrcReg) == 1) {
+          // 1 * parity(exec) = parity(exec)
+          if (Opc == AMDGPU::S_XOR_B32) {
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
+                .addReg(ParityRegister);
+          } else {
+            Register DstHi =
+                MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
+            BuildRegSequence(BB, MI, DstReg, ParityRegister, DstHi);
           }
+          break;
         }
         if (Opc == AMDGPU::S_XOR_B32) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
@@ -6131,14 +6130,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::S_ADD_I32: {
         // Check if Src is a known identity constant.
-        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
-        if (SrcDef && SrcDef->isMoveImmediate()) {
-          int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 1) { // 1 * bitcount(exec) = bitcount(exec)
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), DstReg)
-                .addReg(NewAccumulator->getOperand(0).getReg());
-            break;
-          }
+        if (TII->getImmOrMaterializedImm(MRI, SrcReg) == 1) {
+          // 1 * bitcount(exec) = bitcount(exec)
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), DstReg)
+              .addReg(NewAccumulator->getOperand(0).getReg());
+          break;
         }
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
             .addReg(SrcReg)
@@ -6163,18 +6159,14 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         auto [Op1L, Op1H] = ExtractSubRegs(MI, MI.getOperand(1),
                                            MRI.getRegClass(SrcReg), ST, MRI);
         // Check if Src is a known identity constant.
-        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
-        if (SrcDef && SrcDef->isMoveImmediate()) {
-          int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 1 && Opc == AMDGPU::S_ADD_U64_PSEUDO) {
-            // 1 * bitcount(exec) = bitcount(exec)
-            Register DstHi =
-                MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
-            BuildRegSequence(BB, MI, DstReg,
-                             NewAccumulator->getOperand(0).getReg(), DstHi);
-            break;
-          }
+        if (Opc == AMDGPU::S_ADD_U64_PSEUDO &&
+            TII->getImmOrMaterializedImm(MRI, SrcReg) == 1) {
+          // 1 * bitcount(exec) = bitcount(exec)
+          Register DstHi = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstHi).addImm(0);
+          BuildRegSequence(BB, MI, DstReg,
+                           NewAccumulator->getOperand(0).getReg(), DstHi);
+          break;
         }
         if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
@@ -19492,18 +19484,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SCALAR_TO_VECTOR: {
     SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
-
-    // When bf16 inline constants live in the upper half of the expanded fp32
-    // constant, only a splat is encodable as an inline constant. The high lane
-    // is dead here, so splat it.
-    if (VT == MVT::v2bf16 && Subtarget->hasBF16InlineConstFromUpperFP32()) {
-      auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
-      if (C && AMDGPU::isInlinableLiteralBF16(
-                   C->getValueAPF().bitcastToAPInt().getSExtValue(),
-                   Subtarget->hasInv2PiInlineImm()))
-        return DAG.getBuildVector(VT, SDLoc(N),
-                                  {N->getOperand(0), N->getOperand(0)});
-    }
 
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
     if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
