@@ -350,7 +350,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
 
   // Check if the pointer is derived from a conditional induction PHI. If so,
   // return a conservative stride (assuming the PHI is always updated).
-  if (std::optional<CompressedPtrInfo> PtrInfo = getCompressedPtrInfo(Ptr))
+  if (const CompressedPtrInfo *PtrInfo = getCompressedPtrInfo(Ptr))
     return getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, AccessTy, Ptr, PSE)
         .value_or(0);
 

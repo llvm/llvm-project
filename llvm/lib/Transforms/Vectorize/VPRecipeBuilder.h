@@ -19,6 +19,7 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 struct HistogramInfo;
 struct VFRange;
+struct CompressedPtrInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -73,11 +74,10 @@ public:
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
 
-  /// Returns true if \p VPI represents a compressed load or store (as
-  /// determined by LoopVectorizationLegality) whose pointer is derived from \p
-  /// PhiR.
-  bool isCompressedLoadOrStore(VPInstruction *VPI,
-                               VPConditionalInductionPHIRecipe *PhiR);
+  /// Returns the CompressedPtrInfo for \p VPI if it is a compressed load or
+  /// store (as determined by LoopVectorizationLegality), otherwise
+  /// nullptr.
+  const CompressedPtrInfo *getCompressedPtrInfo(VPInstruction *VPI);
 
   /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
   /// \p VPI. \p VPI must be a predicated memory operation. Legality should be
