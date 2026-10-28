@@ -1877,6 +1877,64 @@ bool MachProcess::Detach() {
 
   m_task.ShutDownExceptionThread();
 
+  // If PT_DETACH runs before the thread stopped by DoSIGSTOP has consumed our
+  // reply to its exception, the process can be left stopped. Waiting, while
+  // still traced, until that thread has consumed the reply (sigwait clear and
+  // the thread waiting) avoids that. Detach proceeds on a timeout or error.
+  MachThreadSP thread_sp;
+  if (thread_idx != UINT32_MAX)
+    thread_sp =
+        m_thread_list.GetThreadByID(m_thread_list.ThreadIDAtIndex(thread_idx));
+  if (thread_sp) {
+    const auto start = std::chrono::steady_clock::now();
+    uint32_t probes = 0;
+    int sysctl_errno = 0;
+    bool thread_info_failed = false, consumed = false;
+    while (true) {
+      ++probes;
+      struct kinfo_proc kinfo;
+      int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, m_pid};
+      size_t len = sizeof(struct kinfo_proc);
+      if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0)
+        sysctl_errno = errno;
+      else if (len != sizeof(struct kinfo_proc))
+        sysctl_errno = ESRCH;
+      if (sysctl_errno != 0)
+        break;
+      if (!kinfo.kp_proc.sigwait) {
+        struct thread_basic_info *info = thread_sp->GetBasicInfo();
+        thread_info_failed = info == NULL;
+        consumed = info && info->run_state == TH_STATE_WAITING;
+        if (thread_info_failed || consumed)
+          break;
+      }
+      if (std::chrono::steady_clock::now() - start >= std::chrono::seconds(1))
+        break;
+      ::usleep(100);
+    }
+    const long long elapsed_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start)
+            .count();
+    if (sysctl_errno != 0)
+      DNBLog("MachProcess::Detach() signal stop wait: Unknown after %lld us, "
+             "probes=%u (errno=%d)",
+             elapsed_us, probes, sysctl_errno);
+    else if (thread_info_failed)
+      DNBLog("MachProcess::Detach() signal stop wait: Unknown after %lld us, "
+             "probes=%u (thread_info failed)",
+             elapsed_us, probes);
+    else if (consumed)
+      DNBLogThreadedIf(LOG_PROCESS,
+                       "MachProcess::Detach() signal stop wait: Consumed after "
+                       "%lld us, probes=%u",
+                       elapsed_us, probes);
+    else
+      DNBLog("MachProcess::Detach() signal stop wait: Pending after %lld us, "
+             "probes=%u",
+             elapsed_us, probes);
+  }
+
   // Detach from our process
   errno = 0;
   nub_process_t pid = m_pid;
