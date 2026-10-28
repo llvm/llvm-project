@@ -113,14 +113,13 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; AARCH64-NEXT:    .cfi_def_cfa_offset 64
 ; AARCH64-NEXT:    movi v0.2d, #0000000000000000
 ; AARCH64-NEXT:    mov w8, w4
-; AARCH64-NEXT:    and x10, x3, #0x7fffffffff
-; AARCH64-NEXT:    lsr x9, x8, #3
-; AARCH64-NEXT:    mov x11, sp
-; AARCH64-NEXT:    stp x2, x10, [sp, #16]
-; AARCH64-NEXT:    and x9, x9, #0x18
-; AARCH64-NEXT:    stp q0, q0, [sp, #32]
-; AARCH64-NEXT:    add x9, x11, x9
+; AARCH64-NEXT:    mov x10, sp
+; AARCH64-NEXT:    ubfx x9, x8, #6, #2
 ; AARCH64-NEXT:    mvn w11, w4
+; AARCH64-NEXT:    add x9, x10, x9, lsl #3
+; AARCH64-NEXT:    and x10, x3, #0x7fffffffff
+; AARCH64-NEXT:    stp q0, q0, [sp, #32]
+; AARCH64-NEXT:    stp x2, x10, [sp, #16]
 ; AARCH64-NEXT:    ldp x9, x10, [x9]
 ; AARCH64-NEXT:    lsl x10, x10, #1
 ; AARCH64-NEXT:    lsr x8, x9, x8

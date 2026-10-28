@@ -459,6 +459,18 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   return Size == getContext().getTypeSize(Ty);
 }
 
+static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBooleanType())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  if (!Info.getTarget().getTriple().isOSDarwin())
+    return false;
+
+  return Info.isPromotableIntegerTypeForABI(RetTy);
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -565,8 +577,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     if (EIT->getNumBits() > 64)
       return getIndirectReturnResult(RetTy, State);
 
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                               : ABIArgInfo::getDirect());
+  return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                              : ABIArgInfo::getDirect();
 }
 
 unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
@@ -2385,8 +2397,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     llvm::Type *IRTy = CGT.ConvertType(Ty);
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
-                                              : ABIArgInfo::getDirect(IRTy));
+    return shouldExtendReturnType(*this, Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                             : ABIArgInfo::getDirect(IRTy);
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2829,17 +2841,16 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   case Integer:
     ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
 
-    // If we have a sign or zero extended integer, make sure to return Extend
-    // so that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && isa<llvm::IntegerType>(ResType)) {
-      // Treat an enum type as its underlying type.
-      if (const auto *ED = RetTy->getAsEnumDecl())
-        RetTy = ED->getIntegerType();
+    // Treat an enum type as its underlying type.
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
-      if (RetTy->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(RetTy))
-        return ABIArgInfo::getExtend(RetTy);
-    }
+    // Always returns integral types as plain integers, without padding to a
+    // larger type or splitting into a struct. For some targets, small integers
+    // are additionally sign/zero extended.
+    if (RetTy->isIntegralOrEnumerationType())
+      return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                  : ABIArgInfo::getDirect();
 
     if (ResType->isIntegerTy(128)) {
       // i128 are passed directly

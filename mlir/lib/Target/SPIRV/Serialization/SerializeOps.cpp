@@ -954,15 +954,29 @@ LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
 }
 
 LogicalResult Serializer::processSwitchOp(spirv::SwitchOp switchOp) {
-  uint32_t selectorID = getValueID(switchOp.getSelector());
+  Value selector = switchOp.getSelector();
+  uint32_t selectorID = getValueID(selector);
   uint32_t defaultLabelID = getOrCreateBlockID(switchOp.getDefaultTarget());
   SmallVector<uint32_t> arguments{selectorID, defaultLabelID};
 
   std::optional<mlir::DenseIntElementsAttr> literals = switchOp.getLiterals();
   BlockRange targets = switchOp.getTargets();
   if (literals) {
+    Type selectorType = selector.getType();
+    unsigned bitWidth = selectorType.getIntOrFloatBitWidth();
+    bool isSigned = selectorType.isSignedInteger();
     for (auto [literal, target] : llvm::zip_equal(*literals, targets)) {
-      arguments.push_back(literal.getLimitedValue());
+      if (bitWidth <= 32) {
+        // Sub-word literals occupy the low-order bits of the word and are
+        // sign-extended for signed selector types, zero-extended otherwise.
+        arguments.push_back(
+            isSigned ? static_cast<uint32_t>(literal.getSExtValue())
+                     : static_cast<uint32_t>(literal.getZExtValue()));
+      } else {
+        // Wider literals span multiple words, low-order word first.
+        for (unsigned offset = 0; offset < bitWidth; offset += 32)
+          arguments.push_back(literal.extractBitsAsZExtValue(32, offset));
+      }
       uint32_t targetLabelID = getOrCreateBlockID(target);
       arguments.push_back(targetLabelID);
     }

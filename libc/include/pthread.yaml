@@ -399,7 +399,7 @@ functions:
     arguments:
       - type: pthread_barrier_t *__restrict
       - type: const pthread_barrierattr_t *__restrict
-      - type: int
+      - type: unsigned
   - name: pthread_barrier_wait
     return_type: int
     arguments:

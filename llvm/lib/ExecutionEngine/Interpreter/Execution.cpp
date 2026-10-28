@@ -2001,11 +2001,7 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   switch (CE->getOpcode()) {
   case Instruction::Add:  Dest.IntVal = Op0.IntVal + Op1.IntVal; break;
   case Instruction::Sub:  Dest.IntVal = Op0.IntVal - Op1.IntVal; break;
-  case Instruction::Mul:  Dest.IntVal = Op0.IntVal * Op1.IntVal; break;
   case Instruction::Xor:  Dest.IntVal = Op0.IntVal ^ Op1.IntVal; break;
-  case Instruction::Shl:
-    Dest.IntVal = Op0.IntVal.shl(Op1.IntVal.getZExtValue());
-    break;
   default:
     dbgs() << "Unhandled ConstantExpr: " << *CE << "\n";
     llvm_unreachable("Unhandled ConstantExpr");

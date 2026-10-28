@@ -65,3 +65,7 @@ __device__ int get_oc(__attribute__((opencl_constant)) int *p) { return *p; }
 // Function aliases point into the program address space 4.
 extern "C" __device__ int alias_target() { return 1; }
 [[gnu::alias("alias_target")]] __device__ int alias();
+
+// Host-only aliases are skipped on the device.
+extern "C" int host_target() { return 2; }
+[[gnu::alias("host_target")]] int host_alias();
