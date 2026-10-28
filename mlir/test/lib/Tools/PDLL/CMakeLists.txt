@@ -31,9 +31,3 @@ mlir_target_link_libraries(MLIRTestPDLL PUBLIC
   MLIRSupport
   MLIRTransformUtils
   )
-
-target_include_directories(MLIRTestPDLL
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../../Dialect/Test
-  )

@@ -78,7 +78,9 @@ def AttrWithTypeBuilder
   let assemblyFormat = "$attr";
 }
 
-def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
+def TestAttrTrait : NativeAttrTrait<"TestAttrTrait"> {
+  let cppIncludes = ["TestTraits.h"];
+}
 
 // The definition of a singleton attribute that has a trait.
 def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
