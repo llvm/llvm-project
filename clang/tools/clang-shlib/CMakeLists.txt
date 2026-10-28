@@ -50,6 +50,10 @@ add_clang_library(clang-cpp
 
 configure_file(simple_version_script.map.in simple_version_script.map)
 
+if (TARGET clang-cpp-cir)
+  target_link_libraries(clang-cpp PUBLIC clang-cpp-cir)
+endif()
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(clang-cpp PRIVATE LINKER:--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
 endif()
