@@ -420,12 +420,15 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }
-  case IIT_VEC_OF_ANYPTRS_TO_ELT: {
+  case IIT_ANY_SAME_VEC_WIDTH_ARG: {
     unsigned short OverloadIndex = Infos[NextElt++];
     unsigned short RefOverloadIndex = Infos[NextElt++];
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecOfAnyPtrsToElt,
-                                             /*Hi=*/RefOverloadIndex,
-                                             /*Lo=*/OverloadIndex));
+    unsigned short ElementConstraint = Infos[NextElt++];
+    // Pack the element constraint into bits [4:7], leaving the low 4 bits for
+    // this type's overload index.
+    OutputTable.push_back(IITDescriptor::get(
+        IITDescriptor::AnySameVecWidth, /*Hi=*/RefOverloadIndex,
+        /*Lo=*/ElementConstraint << 4 | OverloadIndex));
     return;
   }
   case IIT_STRUCT: {
@@ -588,7 +591,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   // corresponding concrete type from OverloadTys. Additionally, do the same
   // for the fully dependent type that matches an overload type.
   case IITDescriptor::Overloaded:
-  case IITDescriptor::VecOfAnyPtrsToElt:
+  case IITDescriptor::AnySameVecWidth:
   case IITDescriptor::Match:
     return OverloadTys[D.getOverloadIndex()];
   case IITDescriptor::Extend:
@@ -1242,13 +1245,13 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return matchIntrinsicType(EltTy, Infos, Position, OverloadTys,
                               DeferredChecks, IsDeferredCheck, OS);
   }
-  case IITDescriptor::VecOfAnyPtrsToElt: {
+  case IITDescriptor::AnySameVecWidth: {
     unsigned RefOverloadIndex = D.getRefOverloadIndex();
     if (RefOverloadIndex >= OverloadTys.size()) {
       if (IsDeferredCheck)
         return true;
-      // If forward referencing, already add the pointer-vector type and
-      // defer the checks for later.
+      // If forward referencing, already add the type and defer the checks for
+      // later.
       assert(D.getOverloadIndex() == OverloadTys.size() &&
              "Table consistency error");
       OverloadTys.push_back(Ty);
@@ -1261,26 +1264,47 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       OverloadTys.push_back(Ty);
     }
 
-    // Verify the overloaded type "matches" the Ref type.
-    // i.e. Ty is a vector with the same width as Ref and composed of pointers.
+    Type *EltTy = Ty->getScalarType();
+    bool ElemValid;
+    StringRef Kind;
+    switch (D.getElementConstraint()) {
+    case IITDescriptor::EC_None:
+      ElemValid = true;
+      Kind = "value";
+      break;
+    case IITDescriptor::EC_Integer:
+      ElemValid = EltTy->isIntegerTy();
+      Kind = "integer";
+      break;
+    case IITDescriptor::EC_Float:
+      ElemValid = EltTy->isFloatingPointTy();
+      Kind = "fp";
+      break;
+    case IITDescriptor::EC_Pointer:
+      ElemValid = EltTy->isPointerTy();
+      Kind = "pointer";
+      break;
+    }
 
-    StringRef Qualifier = "vector of pointers to elements of";
     auto *ReferenceType = dyn_cast<VectorType>(OverloadTys[RefOverloadIndex]);
-    if (!ReferenceType)
-      return PrintMsgInvalidOverloadTy(Qualifier, "vector", RefOverloadIndex);
-
     auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
-    if (!ThisArgVecTy)
-      return PrintMsgInvalidDepType(false, Qualifier, "vector",
+    StringRef Qualifier = "same vector width of";
+    if (ReferenceType) {
+      auto ExpectedCount = ReferenceType->getElementCount();
+      auto Expected =
+          formatv("{0} vector with {1} elements", Kind, ExpectedCount);
+      if (!ThisArgVecTy)
+        return PrintMsgInvalidDepType(false, Qualifier, Expected,
+                                      RefOverloadIndex);
+      bool IsValid =
+          ThisArgVecTy->getElementCount() == ExpectedCount && ElemValid;
+      return PrintMsgInvalidDepType(IsValid, Qualifier, Expected,
                                     RefOverloadIndex);
+    }
 
-    auto ExpectedCount = ReferenceType->getElementCount();
-    auto Expected =
-        formatv("vector of pointers with {} elements", ExpectedCount);
-    bool IsValid = ThisArgVecTy->getElementCount() == ExpectedCount &&
-                   ThisArgVecTy->getElementType()->isPointerTy();
-    return PrintMsgInvalidDepType(IsValid, Qualifier, Expected,
-                                  RefOverloadIndex);
+    if (ThisArgVecTy)
+      return PrintMsgInvalidDepType(false, Qualifier, Kind, RefOverloadIndex);
+    return PrintMsgInvalidDepType(ElemValid, Qualifier, Kind, RefOverloadIndex);
   }
   case IITDescriptor::VecElement: {
     unsigned OIdx = D.getOverloadIndex();
