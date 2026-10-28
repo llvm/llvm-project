@@ -760,9 +760,19 @@ InstructionCost
 GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
   switch (ICA.getID()) {
-  case Intrinsic::fabs:
-    // Free source modifier in the common case.
-    return 0;
+  case Intrinsic::fabs: {
+    // Free source modifier in the common case. Packed math has no abs source
+    // modifier though, so a vector of 32/64-bit elements consumed by packed
+    // instructions needs a real and per element.
+    auto *VecTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
+    if (!VecTy)
+      return 0;
+    Type *EltTy = VecTy->getElementType();
+    if (!(EltTy->isFloatTy() && ST->hasAnyPackedFP32Ops()) &&
+        !(EltTy->isDoubleTy() && ST->hasAnyPackedFP64Ops()))
+      return 0;
+    return VecTy->getNumElements() * getFullRateInstrCost();
+  }
   case Intrinsic::amdgcn_workitem_id_x:
   case Intrinsic::amdgcn_workitem_id_y:
   case Intrinsic::amdgcn_workitem_id_z:
