@@ -27,7 +27,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
@@ -195,12 +194,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  CondBrInst *BI = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
-  if (Leaf.Weight > 0) {
-    MDBuilder MDB(NewLeaf->getContext());
-    BI->setMetadata(LLVMContext::MD_prof,
-                    MDB.createBranchWeights(Leaf.Weight, 0));
-  }
+  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
