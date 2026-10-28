@@ -24,6 +24,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include "llvm/TargetParser/AMDGPUCounterLayout.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -602,6 +603,29 @@ static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
   return Value;
 }
 
+// CounterLayout members by FieldName, in declaration order. Defaults come
+// from CounterLayout's member initializers.
+static constexpr std::pair<StringLiteral, uint8_t AMDGPU::CounterLayout::*>
+    CounterLayoutFields[] = {
+        {"VmcntLoShift", &AMDGPU::CounterLayout::VmcntLoShift},
+        {"VmcntLoBits", &AMDGPU::CounterLayout::VmcntLoBits},
+        {"VmcntHiBits", &AMDGPU::CounterLayout::VmcntHiBits},
+        {"ExpcntShift", &AMDGPU::CounterLayout::ExpcntShift},
+        {"LgkmcntShift", &AMDGPU::CounterLayout::LgkmcntShift},
+        {"LgkmcntBits", &AMDGPU::CounterLayout::LgkmcntBits},
+        {"LoadStorecntShift", &AMDGPU::CounterLayout::LoadStorecntShift},
+        {"LoadcntBits", &AMDGPU::CounterLayout::LoadcntBits},
+        {"SamplecntBits", &AMDGPU::CounterLayout::SamplecntBits},
+        {"BvhcntBits", &AMDGPU::CounterLayout::BvhcntBits},
+        {"DscntBits", &AMDGPU::CounterLayout::DscntBits},
+        {"StorecntBits", &AMDGPU::CounterLayout::StorecntBits},
+        {"KmcntBits", &AMDGPU::CounterLayout::KmcntBits},
+        {"XcntBits", &AMDGPU::CounterLayout::XcntBits},
+        {"AsynccntBits", &AMDGPU::CounterLayout::AsynccntBits},
+        {"HoldCntBits", &AMDGPU::CounterLayout::HoldCntBits},
+        {"BarrierMemberCountBits",
+         &AMDGPU::CounterLayout::BarrierMemberCountBits}};
+
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
 static void
@@ -633,7 +657,12 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
        << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
        << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
        << getFeatureValue(R, "LDSBankCount", 32) << ", "
-       << getFeatureValue(R, "BufferResourceNumRecordsWidth", 0) << "},\n";
+       << getFeatureValue(R, "BufferResourceNumRecordsWidth", 0) << ", {";
+    ListSeparator LS;
+    static constexpr AMDGPU::CounterLayout Defaults;
+    for (const auto &[Field, Member] : CounterLayoutFields)
+      OS << LS << getFeatureValue(R, Field, Defaults.*Member);
+    OS << "}},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";

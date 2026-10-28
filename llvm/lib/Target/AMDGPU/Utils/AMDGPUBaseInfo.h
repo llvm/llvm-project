@@ -49,7 +49,6 @@ class raw_ostream;
 namespace AMDGPU {
 
 struct AMDGPUMCKernelCodeT;
-struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
 ///
@@ -1052,139 +1051,8 @@ inline bool isTgSplitEnabled(const Function &F) {
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
-// The following methods are only meaningful on targets that support
-// S_WAITCNT.
-
-/// \returns Vmcnt bit mask for given isa \p Version.
-unsigned getVmcntBitMask(const IsaVersion &Version);
-
-/// \returns Expcnt bit mask for given isa \p Version.
-unsigned getExpcntBitMask(const IsaVersion &Version);
-
-/// \returns Lgkmcnt bit mask for given isa \p Version.
-unsigned getLgkmcntBitMask(const IsaVersion &Version);
-
-/// \returns Waitcnt bit mask for given isa \p Version.
-unsigned getWaitcntBitMask(const IsaVersion &Version);
-
-/// \returns Decoded Vmcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeVmcnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// \returns Decoded Expcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// \returns Decoded Lgkmcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// \returns Decoded Loadcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// \returns Decoded Storecnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeStorecnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// \returns Decoded Dscnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeDscnt(const IsaVersion &Version, unsigned Waitcnt);
-
-/// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
-/// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
-/// \p Lgkmcnt respectively. Should not be used on gfx12+, the instruction
-/// which needs it is deprecated
-///
-/// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are decoded as follows:
-///     \p Vmcnt = \p Waitcnt[3:0]        (pre-gfx9)
-///     \p Vmcnt = \p Waitcnt[15:14,3:0]  (gfx9,10)
-///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11)
-///     \p Expcnt = \p Waitcnt[6:4]       (pre-gfx11)
-///     \p Expcnt = \p Waitcnt[2:0]       (gfx11)
-///     \p Lgkmcnt = \p Waitcnt[11:8]     (pre-gfx10)
-///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
-///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
-///
-void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
-                   unsigned &Expcnt, unsigned &Lgkmcnt);
-
-/// \returns \p Waitcnt with encoded \p Vmcnt for given isa \p Version.
-unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
-                     unsigned Vmcnt);
-
-/// \returns \p Waitcnt with encoded \p Expcnt for given isa \p Version.
-unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
-                      unsigned Expcnt);
-
-/// \returns \p Waitcnt with encoded \p Lgkmcnt for given isa \p Version.
-unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
-                       unsigned Lgkmcnt);
-
-/// Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
-/// \p Version. Should not be used on gfx12+, the instruction which needs
-/// it is deprecated
-///
-/// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
-///     Waitcnt[2:0]   = \p Expcnt      (gfx11+)
-///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9)
-///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9,10)
-///     Waitcnt[6:4]   = \p Expcnt      (pre-gfx11)
-///     Waitcnt[9:4]   = \p Lgkmcnt     (gfx11)
-///     Waitcnt[11:8]  = \p Lgkmcnt     (pre-gfx10)
-///     Waitcnt[13:8]  = \p Lgkmcnt     (gfx10)
-///     Waitcnt[15:10] = \p Vmcnt       (gfx11)
-///     Waitcnt[15:14] = \p Vmcnt[5:4]  (gfx9,10)
-///
-/// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
-/// isa \p Version.
-///
-unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
-                       unsigned Expcnt, unsigned Lgkmcnt);
-
-/// \returns Waitcnt with encoded \p Loadcnt and \p Dscnt for given isa \p
-/// Version.
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
-                            unsigned Dscnt);
-
-/// \returns Waitcnt with encoded \p Storecnt and \p Dscnt for given isa \p
-/// Version.
-unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
-                             unsigned Dscnt);
-
-// The following methods are only meaningful on targets that support
-// S_WAIT_*CNT, introduced with gfx12.
-
-/// \returns Loadcnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support LOADcnt
-unsigned getLoadcntBitMask(const IsaVersion &Version);
-
-/// \returns Samplecnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support SAMPLEcnt
-unsigned getSamplecntBitMask(const IsaVersion &Version);
-
-/// \returns Bvhcnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support BVHcnt
-unsigned getBvhcntBitMask(const IsaVersion &Version);
-
-/// \returns Asynccnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support Asynccnt
-unsigned getAsynccntBitMask(const IsaVersion &Version);
-
-/// \returns Dscnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support DScnt
-unsigned getDscntBitMask(const IsaVersion &Version);
-
-/// \returns Dscnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support KMcnt
-unsigned getKmcntBitMask(const IsaVersion &Version);
-
-/// \returns Xcnt bit mask for given isa \p Version.
-/// Returns 0 for versions that do not support Xcnt.
-unsigned getXcntBitMask(const IsaVersion &Version);
-
-/// \return STOREcnt or VScnt bit mask for given isa \p Version.
-/// returns 0 for versions that do not support STOREcnt or VScnt.
-/// STOREcnt and VScnt are the same counter, the name used
-/// depends on the ISA version.
-unsigned getStorecntBitMask(const IsaVersion &Version);
-
-/// \returns barrier member count bit mask in M0 for given isa \p Version.
-unsigned getBarrierMemberCountBitMask(const IsaVersion &Version);
+/// \returns Wait counter field layout of \p STI, from its subtarget features.
+CounterLayout getCounterLayout(const MCSubtargetInfo &STI);
 
 namespace Hwreg {
 
@@ -1222,9 +1090,6 @@ unsigned getVaSdstBitMask();
 /// \returns Maximum VaSsrc value that can be encoded.
 unsigned getVaSsrcBitMask();
 
-/// \returns Maximum HoldCnt value that can be encoded.
-unsigned getHoldCntBitMask(const IsaVersion &Version);
-
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
 
@@ -1251,9 +1116,6 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 
 /// \returns Decoded SaSrc from given immediate \p Encoded.
 unsigned decodeFieldVaSsrc(unsigned Encoded);
-
-/// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
@@ -1287,10 +1149,6 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 /// \returns \p HoldCnt as an encoded Depctr immediate.
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
-
-/// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
-                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);

@@ -66,22 +66,22 @@ StringLiteral getInstCounterName(InstCounterType T) {
   llvm_unreachable("Unhandled InstCounterType");
 }
 
-HardwareLimits::HardwareLimits(const IsaVersion &IV) {
-  bool HasExtendedWaitCounts = IV.Major >= 12;
+HardwareLimits::HardwareLimits(const CounterLayout &Layout) {
+  bool HasExtendedWaitCounts = Layout.LoadcntBits != 0;
   if (HasExtendedWaitCounts) {
-    LoadcntMax = getLoadcntBitMask(IV);
-    DscntMax = getDscntBitMask(IV);
+    LoadcntMax = getLoadcntBitMask(Layout);
+    DscntMax = getDscntBitMask(Layout);
   } else {
-    LoadcntMax = getVmcntBitMask(IV);
-    DscntMax = getLgkmcntBitMask(IV);
+    LoadcntMax = getVmcntBitMask(Layout);
+    DscntMax = getLgkmcntBitMask(Layout);
   }
-  ExpcntMax = getExpcntBitMask(IV);
-  StorecntMax = getStorecntBitMask(IV);
-  SamplecntMax = getSamplecntBitMask(IV);
-  BvhcntMax = getBvhcntBitMask(IV);
-  KmcntMax = getKmcntBitMask(IV);
-  XcntMax = getXcntBitMask(IV);
-  AsyncMax = getAsynccntBitMask(IV);
+  ExpcntMax = getExpcntBitMask(Layout);
+  StorecntMax = getStorecntBitMask(Layout);
+  SamplecntMax = getSamplecntBitMask(Layout);
+  BvhcntMax = getBvhcntBitMask(Layout);
+  KmcntMax = getKmcntBitMask(Layout);
+  XcntMax = getXcntBitMask(Layout);
+  AsyncMax = getAsynccntBitMask(Layout);
   VaVdstMax = DepCtr::getVaVdstBitMask();
   VmVsrcMax = DepCtr::getVmVsrcBitMask();
 }
@@ -118,41 +118,42 @@ unsigned HardwareLimits::get(InstCounterType T) const {
 void Waitcnt::dump() const { dbgs() << *this << '\n'; }
 #endif
 
-Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
+Waitcnt decodeWaitcnt(const CounterLayout &Layout, unsigned Encoded) {
   Waitcnt Decoded;
-  Decoded.set(LOAD_CNT, decodeVmcnt(Version, Encoded));
-  Decoded.set(EXP_CNT, decodeExpcnt(Version, Encoded));
-  Decoded.set(DS_CNT, decodeLgkmcnt(Version, Encoded));
+  Decoded.set(LOAD_CNT, decodeVmcnt(Layout, Encoded));
+  Decoded.set(EXP_CNT, decodeExpcnt(Layout, Encoded));
+  Decoded.set(DS_CNT, decodeLgkmcnt(Layout, Encoded));
   return Decoded;
 }
 
-unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeWaitcnt(Version, Decoded.get(LOAD_CNT), Decoded.get(EXP_CNT),
+unsigned encodeWaitcnt(const CounterLayout &Layout, const Waitcnt &Decoded) {
+  return encodeWaitcnt(Layout, Decoded.get(LOAD_CNT), Decoded.get(EXP_CNT),
                        Decoded.get(DS_CNT));
 }
 
-Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
+Waitcnt decodeLoadcntDscnt(const CounterLayout &Layout, unsigned LoadcntDscnt) {
   Waitcnt Decoded;
-  Decoded.set(LOAD_CNT, decodeLoadcnt(Version, LoadcntDscnt));
-  Decoded.set(DS_CNT, decodeDscnt(Version, LoadcntDscnt));
+  Decoded.set(LOAD_CNT, decodeLoadcnt(Layout, LoadcntDscnt));
+  Decoded.set(DS_CNT, decodeDscnt(Layout, LoadcntDscnt));
   return Decoded;
 }
 
-Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt) {
+Waitcnt decodeStorecntDscnt(const CounterLayout &Layout,
+                            unsigned StorecntDscnt) {
   Waitcnt Decoded;
-  Decoded.set(STORE_CNT, decodeStorecnt(Version, StorecntDscnt));
-  Decoded.set(DS_CNT, decodeDscnt(Version, StorecntDscnt));
+  Decoded.set(STORE_CNT, decodeStorecnt(Layout, StorecntDscnt));
+  Decoded.set(DS_CNT, decodeDscnt(Layout, StorecntDscnt));
   return Decoded;
 }
 
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeLoadcntDscnt(Version, Decoded.get(LOAD_CNT),
-                            Decoded.get(DS_CNT));
+unsigned encodeLoadcntDscnt(const CounterLayout &Layout,
+                            const Waitcnt &Decoded) {
+  return encodeLoadcntDscnt(Layout, Decoded.get(LOAD_CNT), Decoded.get(DS_CNT));
 }
 
-unsigned encodeStorecntDscnt(const IsaVersion &Version,
+unsigned encodeStorecntDscnt(const CounterLayout &Layout,
                              const Waitcnt &Decoded) {
-  return encodeStorecntDscnt(Version, Decoded.get(STORE_CNT),
+  return encodeStorecntDscnt(Layout, Decoded.get(STORE_CNT),
                              Decoded.get(DS_CNT));
 }
 

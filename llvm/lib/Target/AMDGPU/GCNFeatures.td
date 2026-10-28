@@ -460,6 +460,39 @@ class SubtargetFeatureDataCacheLineSize <int Value> : SubtargetFeature <
 
 def FeatureDataCacheLineSize128 : SubtargetFeatureDataCacheLineSize<128>;
 
+// A wait counter field's bit shift or width, read by TargetParser and the
+// backend. Absent means the SI layout value, which pseudo targets also use.
+class CounterFieldFeature<string name, string fieldName, int value>
+    : SubtargetFeature<name # "-" # value, fieldName, !cast<string>(value),
+                       "Counter field " # fieldName # " is " # value>;
+
+def FeatureVmcntLoShift10 :
+  CounterFieldFeature<"vmcnt-lo-shift", "VmcntLoShift", 10>;
+def FeatureVmcntLoBits6 :
+  CounterFieldFeature<"vmcnt-lo-bits", "VmcntLoBits", 6>;
+def FeatureVmcntHiBits2 :
+  CounterFieldFeature<"vmcnt-hi-bits", "VmcntHiBits", 2>;
+def FeatureExpcntShift0 : CounterFieldFeature<"expcnt-shift", "ExpcntShift", 0>;
+def FeatureLgkmcntShift4 :
+  CounterFieldFeature<"lgkmcnt-shift", "LgkmcntShift", 4>;
+def FeatureLgkmcntBits6 : CounterFieldFeature<"lgkmcnt-bits", "LgkmcntBits", 6>;
+def FeatureLoadStorecntShift8 :
+  CounterFieldFeature<"loadcnt-storecnt-shift", "LoadStorecntShift", 8>;
+def FeatureLoadcntBits6 : CounterFieldFeature<"loadcnt-bits", "LoadcntBits", 6>;
+def FeatureSamplecntBits6 :
+  CounterFieldFeature<"samplecnt-bits", "SamplecntBits", 6>;
+def FeatureBvhcntBits3 : CounterFieldFeature<"bvhcnt-bits", "BvhcntBits", 3>;
+def FeatureDscntBits6 : CounterFieldFeature<"dscnt-bits", "DscntBits", 6>;
+def FeatureStorecntBits6 :
+  CounterFieldFeature<"storecnt-bits", "StorecntBits", 6>;
+def FeatureKmcntBits5 : CounterFieldFeature<"kmcnt-bits", "KmcntBits", 5>;
+def FeatureXcntBits6 : CounterFieldFeature<"xcnt-bits", "XcntBits", 6>;
+def FeatureAsynccntBits6 :
+  CounterFieldFeature<"asynccnt-bits", "AsynccntBits", 6>;
+def FeatureHoldCntBits1 : CounterFieldFeature<"holdcnt-bits", "HoldCntBits", 1>;
+def FeatureBarrierMemberCountBits8 :
+  CounterFieldFeature<"barrier-member-count-bits", "BarrierMemberCountBits", 8>;
+
 defm GCN3Encoding : AMDGPUSubtargetFeature<"gcn3-encoding",
   "Encoding format for VI",
   /*GenPredicate=*/0
@@ -1792,7 +1825,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureVmcntHiBits2
   ]
 >;
 
@@ -1827,7 +1861,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureVmcntHiBits2, FeatureLgkmcntBits6, FeatureStorecntBits6
   ]
 >;
 
@@ -1862,7 +1897,10 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature32BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16,
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
+   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
+   FeatureHoldCntBits1
   ]
 >;
 
@@ -1892,7 +1930,12 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16,
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
+   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
+   FeatureHoldCntBits1,
+   FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6,
+   FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5
   ]
 >;
 
@@ -1926,7 +1969,13 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16, FeatureCacheFillSize
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize,
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
+   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
+   FeatureHoldCntBits1,
+   FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6,
+   FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5,
+   FeatureBarrierMemberCountBits8
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2279,6 +2328,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureMSAALoadInsts,
      FeatureGFX10_BEncoding,
      FeatureGFX10_3Insts,
+     FeatureHoldCntBits1,
      FeatureDot1Insts,
      FeatureDot2Insts,
      FeatureDot5Insts,
@@ -2539,6 +2589,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
    FeatureAsynccnt,
+   FeatureXcntBits6, FeatureAsynccntBits6,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
