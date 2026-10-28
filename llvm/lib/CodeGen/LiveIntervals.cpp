@@ -18,10 +18,10 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalCalc.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -59,6 +59,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+
+STATISTIC(NumUnreferencedIntervals,
+          "Number of intervals removed for unreferenced virtual registers");
 
 AnalysisKey LiveIntervalsAnalysis::Key;
 
@@ -111,7 +114,6 @@ static cl::opt<bool> UseSegmentSetForPhysRegs(
 
 void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreservedID(MachineLoopInfoID);
   AU.addRequiredTransitiveID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
@@ -178,6 +180,19 @@ void LiveIntervals::analyze(MachineFunction &fn) {
     for (MCRegUnit Unit : TRI->regunits())
       getRegUnit(Unit);
   }
+}
+
+unsigned LiveIntervals::removeUnreferencedIntervals() {
+  unsigned Removed = 0;
+  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (hasInterval(Reg) && MRI->reg_empty(Reg)) {
+      removeInterval(Reg);
+      ++Removed;
+    }
+  }
+  NumUnreferencedIntervals += Removed;
+  return Removed;
 }
 
 void LiveIntervals::print(raw_ostream &OS) const {

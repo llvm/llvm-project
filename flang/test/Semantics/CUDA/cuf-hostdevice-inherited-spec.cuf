@@ -1,0 +1,163 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Inherited specification expressions in separate MODULE PROCEDURE bodies.
+! See llvm-project PR #228176.
+
+! An inherited host-only bound is invalid in host,device code.
+module inherited_host
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_host) implementation_host
+contains
+  !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! An inherited device-only bound is invalid in host,device code.
+module inherited_device
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  attributes(device) pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_device) implementation_device
+contains
+  !ERROR: 'extent', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! Positive control: a host,device bound function is valid in both contexts.
+module inherited_host_device
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  attributes(host,device) pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_host_device) implementation_host_device
+contains
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! Inherited dummy character lengths are evaluated on entry.
+module inherited_character
+  interface
+    attributes(host,device) module subroutine caller(a)
+      character(length()) :: a
+    end subroutine
+  end interface
+contains
+  pure integer function length()
+    length = 1
+  end function
+end module
+submodule(inherited_character) implementation_character
+contains
+  !ERROR: 'length', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 'x'
+  end procedure
+end submodule
+
+! Inherited result bounds are evaluated on entry.
+module inherited_result
+  interface
+    attributes(host,device) module function caller() result(a)
+      integer :: a(extent())
+    end function
+  end interface
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_result) implementation_result
+contains
+  !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! A device-only function also evaluates its inherited result length.
+module inherited_spec
+  interface
+    attributes(device) module function from_interface(n) result(r)
+      integer, intent(in) :: n
+      character(host_len(n)) :: r
+    end function
+  end interface
+contains
+  pure integer function host_len(n)
+    integer, intent(in) :: n
+    host_len = n + 1
+  end function
+end module
+submodule(inherited_spec) impl
+contains
+  !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from device code
+  module procedure from_interface
+    r = 'x'
+  end procedure
+end submodule
+
+! Diagnostic control: a specification expression in an ordinary subprogram
+! is checked for a host-only call in device code.
+module ordinary_spec_control
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+  attributes(host,device) subroutine caller(a)
+    !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+    integer :: a(extent())
+    a = 1
+  end subroutine
+end module
+
+! A same-module implementation reuses its interface scope. Both bounds need
+! checking even though the implementation has no moduleInterface() link.
+module same_module_spec
+  interface
+    attributes(host,device) module subroutine caller(n,a)
+      integer, intent(in) :: n
+      integer :: a(lower(n):upper(n))
+    end subroutine
+  end interface
+contains
+  pure integer function lower(n)
+    integer, intent(in) :: n
+    lower = n
+  end function
+  attributes(device) pure integer function upper(n)
+    integer, intent(in) :: n
+    upper = n+1
+  end function
+  !ERROR: 'lower', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  !ERROR: 'upper', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 1
+  end procedure
+end module

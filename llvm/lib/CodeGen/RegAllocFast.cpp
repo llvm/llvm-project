@@ -279,12 +279,14 @@ private:
   uint32_t InstrGen;
   SmallVector<unsigned, 0> UsedInInstr;
 
-  /// Register units defined by a non-dead physreg def of the current
-  /// instruction, indexed by MCRegUnit. Stamped with InstrGen like
-  /// UsedInInstr, so a unit is set if LiveDefUnits[Unit] == InstrGen.
-  SmallVector<uint32_t, 0> LiveDefUnits;
+  /// Physical registers with a non-dead def on the current instruction.
+  SmallVector<MCRegister, 4> LiveDefRegs;
 
   SmallVector<unsigned, 8> DefOperandIndexes;
+
+  /// Set if an error assignment was used for a def in the current instruction.
+  bool HasErrorDef = false;
+
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
 
@@ -337,18 +339,11 @@ private:
       UsedInInstr[static_cast<unsigned>(Unit)] = 0;
   }
 
-  /// Record that a non-dead def of the current instruction keeps every register
-  /// unit of \p PhysReg live.
-  void markLiveDefUnits(MCRegister PhysReg) {
-    for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      LiveDefUnits[static_cast<unsigned>(Unit)] = InstrGen;
-  }
-
-  /// Check if every register unit of \p PhysReg is defined by a non-dead def of
-  /// the current instruction.
-  bool hasLiveDefUnits(MCRegister PhysReg) const {
-    return all_of(TRI->regunits(PhysReg), [this](MCRegUnit Unit) {
-      return LiveDefUnits[static_cast<unsigned>(Unit)] == InstrGen;
+  /// Check if \p PhysReg or a super-register has a non-dead def on the current
+  /// instruction.
+  bool hasLiveDefOfSuperReg(MCRegister PhysReg) const {
+    return any_of(LiveDefRegs, [&](MCRegister LiveReg) {
+      return TRI->isSuperRegisterEq(PhysReg, LiveReg);
     });
   }
 
@@ -1365,6 +1360,14 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   return setPhysReg(MI, MO, *LRI);
 }
 
+/// Clear dead flags on defs of any register which also has a live def on \p MI.
+static void clearDeadsOfLiveDefs(MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.all_defs()) {
+    if (!MO.isDead())
+      MI.clearRegisterDeads(MO.getReg());
+  }
+}
+
 /// Query a physical register to use as a filler in contexts where the
 /// allocation has failed. This will raise an error, but not abort the
 /// compilation.
@@ -1424,6 +1427,8 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
     // assigned to a reserved register.
     if (MO.isUse())
       MO.setIsUndef(true);
+    else
+      HasErrorDef = true;
   }
 
   if (!MO.getSubReg()) {
@@ -1641,10 +1646,10 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // In the event we ever get more than 2**31 instructions...
   if (LLVM_UNLIKELY(InstrGen == 0)) {
     UsedInInstr.assign(UsedInInstr.size(), 0);
-    LiveDefUnits.assign(LiveDefUnits.size(), 0);
     InstrGen = 2;
   }
   RegMasks.clear();
+  LiveDefRegs.clear();
   BundleVirtRegsMap.clear();
 
   // Scan for special cases; Apply pre-assigned register defs to state.
@@ -1653,6 +1658,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool HasVRegDef = false;
   bool HasDef = false;
   bool HasEarlyClobber = false;
+  bool HasTiedDef = false;
   bool NeedToAssignLiveThroughs = false;
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
@@ -1665,6 +1671,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
           HasVRegDef = true;
           if (MO.isEarlyClobber())
             HasEarlyClobber = true;
+          if (LowerTiedOps && MO.isTied())
+            HasTiedDef = true;
           if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
         }
@@ -1678,7 +1686,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             if (!displacedAny)
               MO.setIsDead(true);
             if (!MO.isDead())
-              markLiveDefUnits(Reg.asMCReg());
+              LiveDefRegs.push_back(Reg.asMCReg());
           }
           if (MO.readsReg())
             HasPhysRegUse = true;
@@ -1745,9 +1753,10 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     for (MachineOperand &MO : reverse(MI.all_defs())) {
       Register Reg = MO.getReg();
 
-      // A dead def whose register units are all covered by non-dead aliasing
-      // defs is kept alive by them, so clear the inconsistent dead flag.
-      if (Reg.isPhysical() && MO.isDead() && hasLiveDefUnits(Reg.asMCReg()))
+      // A dead def is kept alive by a non-dead def of the same register or a
+      // super-register, so clear the inconsistent dead flag.
+      if (Reg.isPhysical() && MO.isDead() &&
+          hasLiveDefOfSuperReg(Reg.asMCReg()))
         MO.setIsDead(false);
 
       // subreg defs don't free the full register. We left the subreg number
@@ -1811,6 +1820,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Implicit MOs can get moved/removed by useVirtReg(), so loop multiple
   // times to ensure no operand is missed.
   bool HasUndefUse = false;
+  bool TiedOnly = HasTiedDef;
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
@@ -1818,7 +1828,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
-      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
+      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg) ||
+          (TiedOnly && !MO.isTied()))
         continue;
 
       if (MO.isUndef()) {
@@ -1835,6 +1846,13 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       ReArrangedImplicitMOs = useVirtReg(MI, MO, Reg);
       if (ReArrangedImplicitMOs)
         break;
+    }
+    // Given %1 = OP %0, %0(tied-def 0), allocate tied %0 first, so that %0
+    // takes %1's register. In operand order, the untied %0 would take another
+    // register and the tied use would need a copy.
+    if (TiedOnly && !ReArrangedImplicitMOs) {
+      TiedOnly = false;
+      ReArrangedImplicitMOs = true;
     }
   }
 
@@ -1984,6 +2002,12 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
 
     allocateInstruction(MI);
 
+    // An error assignment may give a live and a dead def the same register.
+    if (HasErrorDef) {
+      clearDeadsOfLiveDefs(MI);
+      HasErrorDef = false;
+    }
+
     // Once BUNDLE header is assigned registers, same assignments need to be
     // done for bundled MIs.
     if (MI.getOpcode() == TargetOpcode::BUNDLE) {
@@ -2091,7 +2115,6 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   unsigned NumRegUnits = TRI->getNumRegUnits();
   InstrGen = 0;
   UsedInInstr.assign(NumRegUnits, 0);
-  LiveDefUnits.assign(NumRegUnits, 0);
 
   // MIR that already went through TwoAddressInstructionPass carries
   // TiedOpsRewritten, so partial pipelines (-run-pass, -start-before) follow

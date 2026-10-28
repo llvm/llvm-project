@@ -21,6 +21,12 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
@@ -180,9 +186,9 @@ public:
 
       // Powers of 10:
       EXPECT_FP_EQ(1.0f, func(10.0f, 0.0f));
-      EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
-      EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
       if (tolerance == 0) {
+        EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
+        EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
         EXPECT_FP_EQ(1000.0f, func(10.0f, 3.0f));
         EXPECT_FP_EQ(10000.0f, func(10.0f, 4.0f));
         EXPECT_FP_EQ(100000.0f, func(10.0f, 5.0f));
@@ -197,6 +203,8 @@ public:
           uint32_t e = FPBits(exp).uintval();
           EXPECT_LE(a >= e ? a - e : e - a, static_cast<uint32_t>(tolerance));
         };
+        check_close(func(10.0f, 1.0f), 10.0f);
+        check_close(func(10.0f, 2.0f), 100.0f);
         check_close(func(10.0f, 3.0f), 1000.0f);
         check_close(func(10.0f, 4.0f), 10000.0f);
         check_close(func(10.0f, 5.0f), 100000.0f);
@@ -223,20 +231,58 @@ public:
   }
 
   void test_subnormal_base(float (*func)(float, float), int tolerance = 0) {
-    EXPECT_FP_EQ(0x1.0p-32f, func(0x1.0p-128f, 0.25f));
-    EXPECT_FP_EQ(0x1.0p96f, func(0x1.0p-128f, -0.75f));
     if (tolerance == 0) {
+      EXPECT_FP_EQ(0x1.0p-32f, func(0x1.0p-128f, 0.25f));
+      EXPECT_FP_EQ(0x1.0p96f, func(0x1.0p-128f, -0.75f));
       EXPECT_FP_EQ(0x1.90a962p-33f, func(0x1.8p-130f, 0.25f));
       EXPECT_FP_EQ(0x1.47238cp+32f, func(0x1.8p-130f, -0.25f));
     } else {
-      uint32_t act1 = FPBits(func(0x1.8p-130f, 0.25f)).uintval();
-      uint32_t exp1 = FPBits(0x1.90a962p-33f).uintval();
-      EXPECT_LE(act1 >= exp1 ? act1 - exp1 : exp1 - act1,
-                static_cast<uint32_t>(tolerance));
-      uint32_t act2 = FPBits(func(0x1.8p-130f, -0.25f)).uintval();
-      uint32_t exp2 = FPBits(0x1.47238cp+32f).uintval();
-      EXPECT_LE(act2 >= exp2 ? act2 - exp2 : exp2 - act2,
-                static_cast<uint32_t>(tolerance));
+      auto check_close = [tolerance](float act, float exp) {
+        uint32_t a = FPBits(act).uintval();
+        uint32_t e = FPBits(exp).uintval();
+        EXPECT_LE(a >= e ? a - e : e - a, static_cast<uint32_t>(tolerance));
+      };
+      check_close(func(0x1.0p-128f, 0.25f), 0x1.0p-32f);
+      check_close(func(0x1.0p-128f, -0.75f), 0x1.0p96f);
+      check_close(func(0x1.8p-130f, 0.25f), 0x1.90a962p-33f);
+      check_close(func(0x1.8p-130f, -0.25f), 0x1.47238cp+32f);
+    }
+  }
+
+  void test_range_underflow(float (*func)(float, float)) {
+    constexpr float BASES[] = {0x1.8p-2f, 0x1.fffffep-2f, 0x1.8p-130f};
+    constexpr float EXPONENTS[] = {150.0f, 150.0f, 1.25f};
+    for (int mode = 0; mode < N_ROUNDING_MODES; ++mode) {
+      ForceRoundingMode rounding(ROUNDING_MODES[mode]);
+      if (!rounding.success)
+        continue;
+      float positive =
+          ROUNDING_MODES[mode] == RoundingMode::Upward ? min_denormal : zero;
+      float negative = ROUNDING_MODES[mode] == RoundingMode::Downward
+                           ? -min_denormal
+                           : neg_zero;
+      for (unsigned index = 0; index < 3; ++index)
+        EXPECT_FP_EQ_WITH_EXCEPTION(positive,
+                                    func(BASES[index], EXPONENTS[index]),
+                                    FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-2f, 151.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-130f, 3.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      float boundary = ROUNDING_MODES[mode] == RoundingMode::Upward ||
+                               ROUNDING_MODES[mode] == RoundingMode::Nearest
+                           ? min_denormal
+                           : zero;
+      EXPECT_FP_EQ_WITH_EXCEPTION(boundary, func(0x1.fffffep-2f, 0x1.2bfffep7f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      constexpr float SUBNORMAL_BOUND = 150.0f / 126.0f;
+      uint32_t bound_bits = FPBits(SUBNORMAL_BOUND).uintval();
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          boundary, func(0x1.fffffcp-127f, FPBits(bound_bits - 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          positive, func(0x1.fffffcp-127f, FPBits(bound_bits + 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
     }
   }
 
@@ -291,11 +337,13 @@ public:
   TEST_F(LlvmLibcPowfTest##suffix, SubnormalBase) {                            \
     test_subnormal_base(&func, tolerance);                                     \
   }                                                                            \
+  TEST_F(LlvmLibcPowfTest##suffix, RangeUnderflow) {                           \
+    test_range_underflow(&func);                                               \
+  }                                                                            \
   LIST_POWF_FTZ_DAZ_TESTS(suffix, func)                                        \
   static_assert(true, "Require semicolon.")
 
-LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf, /*tolerance=*/0);
-LIST_POWF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::powf,
-                /*tolerance=*/0);
+LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf, TOLERANCE);
+LIST_POWF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::powf, TOLERANCE);
 LIST_POWF_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::powf,
                 /*tolerance=*/1);

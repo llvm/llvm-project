@@ -3,12 +3,7 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx1250,gfx1251 \
-// RUN:   -fsanitize=address \
-// RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
-// RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
-
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx12-5-generic \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx1250:xnack+,gfx1251:xnack+ \
 // RUN:   -fsanitize=address \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s

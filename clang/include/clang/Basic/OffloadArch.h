@@ -115,9 +115,6 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
-/// Append the canonical names of all NVIDIA and AMDGPU GPUs.
-void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values);
-
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
 llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 

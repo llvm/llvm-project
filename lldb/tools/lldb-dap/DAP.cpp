@@ -273,6 +273,9 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 }
 
 Id DAP::Send(const Message &message) {
+  // WARN: Don't call the SBAPI while holding the call mutex.
+  // SBAPI calls can log to the console,
+  // and the main loop needs this lock to forward that output.
   std::lock_guard<std::mutex> guard(call_mutex);
   Message msg = std::visit(
       [this](auto &&msg) -> Message {
@@ -298,21 +301,7 @@ Id DAP::Send(const Message &message) {
   }
 
   if (const Response *resp = std::get_if<Response>(&msg)) {
-    // FIXME: After all the requests have migrated from LegacyRequestHandler >
-    // RequestHandler<> this should be handled in RequestHandler<>::operator().
-    // If the debugger was interrupted, convert this response into a
-    // 'cancelled' response because we might have a partial result.
-    llvm::Error err = (debugger.InterruptRequested())
-                          ? transport.Send({
-                                /*request_seq=*/resp->request_seq,
-                                /*command=*/resp->command,
-                                /*success=*/false,
-                                /*message=*/eResponseMessageCancelled,
-                                /*body=*/std::nullopt,
-                                /*seq=*/resp->seq,
-                            })
-                          : transport.Send(*resp);
-    if (err)
+    if (llvm::Error err = transport.Send(*resp))
       DAP_LOG_ERROR(log, std::move(err), "sending response failed: {0}");
     return resp->seq;
   }
@@ -857,7 +846,18 @@ void DAP::Received(const protocol::Event &event) {
   // no-op, no supported events from the client to the server as of DAP v1.68.
 }
 
+void DAP::InterruptActiveAttach() {
+  std::lock_guard<std::mutex> guard(m_active_request_mutex);
+  if (m_active_request && m_active_request->command == "attach")
+    target.GetProcess().SendAsyncInterrupt();
+}
+
 void DAP::Received(const protocol::Request &request) {
+  // A disconnect must not wait behind a request that can block indefinitely,
+  // such as a waitFor attach.
+  if (request.command == "disconnect")
+    InterruptActiveAttach();
+
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
   if (cancel_args) {
@@ -874,6 +874,8 @@ void DAP::Received(const protocol::Request &request) {
       DAP_LOG(log, "interrupting inflight request (command={0} seq={1})",
               m_active_request->command, m_active_request->seq);
       debugger.RequestInterrupt();
+      if (m_active_request->command == "attach")
+        target.GetProcess().SendAsyncInterrupt();
     }
   }
 
@@ -893,11 +895,13 @@ void DAP::Received(const protocol::Response &response) {
 
 void DAP::OnError(llvm::Error error) {
   DAP_LOG_ERROR(log, std::move(error), "transport error: {0}");
+  InterruptActiveAttach();
   TerminateLoop(/*failed=*/true);
 }
 
 void DAP::OnClosed() {
   DAP_LOG(log, "transport closed");
+  InterruptActiveAttach();
   TerminateLoop();
 }
 
