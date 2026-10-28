@@ -1,0 +1,220 @@
+# RUN: llc -mtriple=nvptx64 -run-pass=opt-phis -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
+# RUN: llc -mtriple=nvptx64 -run-pass=opt-phis -hoist-phi-consts=false -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,DISABLED
+# RUN: llc -mtriple=nvptx64 -run-pass=opt-phis -hoist-phi-consts=true -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,ENABLED
+
+---
+name: test_phi_hoist_option_fp
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.4
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %3:b32 = MOV_F32_i float 1.000000e+00
+    CBranch killed %1, %bb.4, 0
+
+  bb.3:
+    successors: %bb.4
+
+    %4:b32 = MOV_F32_i float 2.000000e+00
+
+  bb.4:
+    %5:b32 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    ST_i32 %5, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_option_fp
+# DISABLED: bb.4:
+# DISABLED:   PHI %{{[0-9]+}}, %bb.1, %{{[0-9]+}}, %bb.2, %{{[0-9]+}}, %bb.3
+# DEFAULT: bb.0:
+# DEFAULT:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# DEFAULT: bb.4:
+# DEFAULT:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+# ENABLED: bb.0:
+# ENABLED:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# ENABLED: bb.4:
+# ENABLED:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+...
+
+---
+name: test_phi_hoist_option_int
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.4
+
+    %2:b32 = MOV_B32_i 1
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %3:b32 = MOV_B32_i 1
+    CBranch killed %1, %bb.4, 0
+
+  bb.3:
+    successors: %bb.4
+
+    %4:b32 = MOV_B32_i 2
+
+  bb.4:
+    %5:b32 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    ST_i32 %5, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_option_int
+# DEFAULT: bb.0:
+# DEFAULT-NOT: MOV_B32_i
+# DEFAULT: bb.1:
+# DISABLED: bb.0:
+# DISABLED-NOT: MOV_B32_i
+# DISABLED: bb.1:
+# ENABLED: bb.0:
+# ENABLED:   [[HOISTED:%[0-9]+]]:b32 = MOV_B32_i 1
+# ENABLED: bb.4:
+# ENABLED:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+...
+
+---
+name: test_phi_hoist_option_b64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.4
+
+    %2:b64 = MOV_B64_i 1
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %3:b64 = MOV_B64_i 1
+    CBranch killed %1, %bb.4, 0
+
+  bb.3:
+    successors: %bb.4
+
+    %4:b64 = MOV_B64_i 2
+
+  bb.4:
+    %5:b64 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    ST_i64 %5, 0, 0, 101, 64, &func_retval0, 0, 0, $noreg :: (store (s64), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_option_b64
+# DEFAULT: bb.0:
+# DEFAULT-NOT: MOV_B64_i
+# DEFAULT: bb.1:
+# DISABLED: bb.0:
+# DISABLED-NOT: MOV_B64_i
+# DISABLED: bb.1:
+# ENABLED: bb.0:
+# ENABLED:   [[HOISTED:%[0-9]+]]:b64 = MOV_B64_i 1
+# ENABLED: bb.4:
+# ENABLED:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+...
+
+---
+name: test_phi_hoist_option_no_dominating_pred
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.4
+
+    GOTO %bb.4
+
+  bb.3:
+    successors: %bb.5
+
+    %1:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.5
+
+  bb.4:
+    successors: %bb.5
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+
+  bb.5:
+    %3:b32 = PHI %1, %bb.3, %2, %bb.4
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_option_no_dominating_pred
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
+# CHECK: bb.3:
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.4:
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.5:
+# CHECK:   PHI [[A]], %bb.3, [[B]], %bb.4
+...
+
+---
+name: test_phi_fold_option_int
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %1:b32 = MOV_B32_i 1
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %2:b32 = MOV_B32_i 1
+
+  bb.3:
+    %3:b32 = PHI %1, %bb.1, %2, %bb.2
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_fold_option_int
+# CHECK: bb.3:
+# CHECK-NOT: PHI
+# CHECK:   MOV_B32_i 1
+...
