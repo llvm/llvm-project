@@ -98,7 +98,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
-  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR, ISD::SRL});
+  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR, ISD::SRL,
+                       ISD::ZERO_EXTEND});
   // Vectors are not legal types; 4-byte aligned loads and stores of 2 to 4
   // 32-bit elements still become one access (lowerVectorLoad/Store).
   for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
@@ -1137,11 +1138,60 @@ SDValue AGXTargetLowering::performBRCONDCombine(SDNode *N,
   return Result;
 }
 
+/// Whether V (i16) is a boolean expression: compares, 0 / 1 constants,
+/// truncations of 32-bit 0 / 1 values, and and / or / xor of those, each used
+/// once.
+static bool isBoolean16(SDValue V, SelectionDAG &DAG, unsigned Depth) {
+  if (auto *C = dyn_cast<ConstantSDNode>(V))
+    return C->getZExtValue() <= 1;
+  if (Depth > 4 || !V.hasOneUse())
+    return false;
+  switch (V.getOpcode()) {
+  case ISD::SETCC:
+    return true;
+  case ISD::TRUNCATE:
+    // Of a value that is 0 or 1.
+    return V.getOperand(0).getValueType() == MVT::i32 &&
+           DAG.computeKnownBits(V.getOperand(0)).countMaxActiveBits() <= 1;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    return isBoolean16(V.getOperand(0), DAG, Depth + 1) &&
+           isBoolean16(V.getOperand(1), DAG, Depth + 1);
+  default:
+    return false;
+  }
+}
+
+/// A boolean expression accepted by isBoolean16, rebuilt in i32.
+static SDValue widenBoolean(SDValue V, SelectionDAG &DAG, const SDLoc &DL) {
+  if (auto *C = dyn_cast<ConstantSDNode>(V))
+    return DAG.getConstant(C->getZExtValue(), DL, MVT::i32);
+  if (V.getOpcode() == ISD::TRUNCATE)
+    return V.getOperand(0);
+  if (V.getOpcode() == ISD::SETCC)
+    return DAG.getNode(ISD::SETCC, DL, MVT::i32, V.getOperand(0),
+                       V.getOperand(1), V.getOperand(2));
+  return DAG.getNode(V.getOpcode(), DL, MVT::i32,
+                     widenBoolean(V.getOperand(0), DAG, DL),
+                     widenBoolean(V.getOperand(1), DAG, DL));
+}
+
 SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   case ISD::BRCOND:
     return performBRCONDCombine(N, DCI);
+  case ISD::ZERO_EXTEND: {
+    // Booleans (i1 promoted to i16) combined with and / or / xor and then
+    // extended to 32 bits (for a branch): compute them in 32 bits, where
+    // compares produce them directly, instead of a 16-bit chain and a move.
+    SDValue A = N->getOperand(0);
+    if (N->getValueType(0) != MVT::i32 || A.getValueType() != MVT::i16 ||
+        !isBoolean16(A, DCI.DAG, 0))
+      return SDValue();
+    return widenBoolean(A, DCI.DAG, SDLoc(N));
+  }
   case ISD::SRL: {
     // (x & (m << s)) >> s = (x >> s) & m: one bfeil (a field extract).
     SDValue A = N->getOperand(0);
@@ -1175,6 +1225,22 @@ SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
         Lo.getOperand(0) == Hi.getOperand(0))
       return Lo.getOperand(0);
     return SDValue();
+  }
+  case AGXISD::IF:
+  case AGXISD::LOOP: {
+    // On (b ^ 1) for a boolean b: on b == 0, which the branch compares
+    // itself (AGXFoldOperands), instead of an xor and a compare with zero.
+    SDValue Cond = N->getOperand(1);
+    if (Cond.getOpcode() != ISD::XOR || !isOneConstant(Cond.getOperand(1)) ||
+        !Cond.hasOneUse() ||
+        DCI.DAG.computeKnownBits(Cond.getOperand(0)).countMaxActiveBits() > 1)
+      return SDValue();
+    SDLoc DL(N);
+    SDValue Zero = DCI.DAG.getSetCC(DL, MVT::i32, Cond.getOperand(0),
+                                    DCI.DAG.getConstant(0, DL, MVT::i32),
+                                    ISD::SETEQ);
+    return DCI.DAG.getNode(N->getOpcode(), DL, MVT::Other, N->getOperand(0),
+                           Zero, N->getOperand(2));
   }
   case AGXISD::BFI7:
   case AGXISD::EXTR7:
