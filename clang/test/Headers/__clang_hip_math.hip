@@ -8335,6 +8335,40 @@ extern "C" __device__ float test___exp10f(float x) {
   return __exp10f(x);
 }
 
+// DEFAULT-LABEL: define dso_local noundef float @test___exp2f(
+// DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.amdgcn.exp2.f32(float [[X]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
+//
+// FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test___exp2f(
+// FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// FINITEONLY-NEXT:  [[ENTRY:.*:]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @llvm.amdgcn.exp2.f32(float nofpclass(nan inf) [[X]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
+//
+// APPROX-LABEL: define dso_local noundef float @test___exp2f(
+// APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// APPROX-NEXT:  [[ENTRY:.*:]]
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.amdgcn.exp2.f32(float [[X]])
+// APPROX-NEXT:    ret float [[TMP0]]
+//
+// NCRDIV-LABEL: define dso_local noundef float @test___exp2f(
+// NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// NCRDIV-NEXT:  [[ENTRY:.*:]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.amdgcn.exp2.f32(float [[X]])
+// NCRDIV-NEXT:    ret float [[TMP0]]
+//
+// AMDGCNSPIRV-LABEL: define spir_func noundef float @test___exp2f(
+// AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
+// AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.amdgcn.exp2.f32(float [[X]])
+// AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
+//
+extern "C" __device__ float test___exp2f(float x) {
+  return __exp2f(x);
+}
+
 // DEFAULT-LABEL: define dso_local noundef float @test___expf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]

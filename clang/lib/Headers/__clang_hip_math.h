@@ -167,6 +167,9 @@ float __exp10f(float __x) {
 }
 
 __DEVICE__
+float __exp2f(float __x) { return __builtin_amdgcn_exp2f(__x); }
+
+__DEVICE__
 float __expf(float __x) {
   const float __log2_e = 0x1.715476p+0;
   return __builtin_amdgcn_exp2f(__log2_e * __x);
