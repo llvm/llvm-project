@@ -258,8 +258,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
   constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
 
   FPBits<T> xbits(x);
-  if (xbits.is_nan() || xbits == FPBits<T>::max_normal(sign) ||
-      xbits == FPBits<T>::inf(sign))
+  if (xbits.is_nan() || xbits == FPBits<T>::inf(sign))
     return x;
 
   using StorageType = typename FPBits<T>::StorageType;
