@@ -30184,53 +30184,31 @@ bool BoUpSLP::loadConflictsWithSTLFStore(
   if (WidenedLoadEntry && WidenedLoadEntry->State == TreeEntry::Vectorize)
     Offset -=
         static_cast<int64_t>(getVectorLoadShift(WidenedLoadEntry->Scalars));
+  const auto StoreBytes = static_cast<int64_t>(VectorStoreBytes);
+  const auto LoadBytes = static_cast<int64_t>(LoadElementSize);
+  // A load overlapping the store of the same iteration, or of every iteration
+  // for loop-invariant addresses, is forwarded only if the store covers it.
+  if ((StoreStride == 0 || DT->dominates(StorePos, LoadI)) &&
+      Offset < StoreBytes && Offset + LoadBytes > 0)
+    return Offset < 0 || Offset + LoadBytes > StoreBytes;
+  if (StoreStride == 0)
+    return false;
   // A descending loop mirrors an ascending one: reflect the addresses so the
   // bytes written by earlier iterations always lie below the store.
   if (StoreStride && *StoreStride < 0)
-    Offset = static_cast<int64_t>(VectorStoreBytes) - Offset -
-             static_cast<int64_t>(LoadElementSize);
+    Offset = StoreBytes - Offset - LoadBytes;
   if (Offset >= 0)
     return false;
   uint64_t Distance = -static_cast<uint64_t>(Offset);
   LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance=" << Distance
                     << " bytes from chain base\n");
 
-  // A conflict is only a real hazard if a future iteration's load actually
-  // re-reads the bytes this store wrote. The load and the store are a constant
-  // distance apart, so they share the loop-carried stride S. With |S| the
-  // store's bytes are re-read iff there is an integer k >= 1 with
+  // A later iteration re-reads the stored bytes only if some k >= 1 gives
   //   Distance - LoadElementSize < k * |S| < Distance + VectorStoreBytes.
-  // If no such k exists the accesses are strided-independent, so there is no
-  // forwarding hazard. When the stride is unknown, fall back to the
-  // conservative check below.
-  // The strided-independence test below only rules out re-reads by *future*
-  // iterations (k >= 1); it says nothing about the current iteration (k == 0,
-  // i.e. Distance < LoadElementSize), where a load wide enough to reach
-  // forward into the store's own bytes already overlaps it and must go
-  // through the conflict predicate.
-  // A k == 0 overlap is a store-to-load *forwarding* hazard only when the
-  // store executes before the load in program order, so the load reads bytes
-  // the store just wrote (RAW). If the load precedes the store (a WAR
-  // overlap, e.g. a read-then-write sweep), nothing is forwarded. Dominance
-  // lets a store in an earlier block count; when the store does not
-  // dominate the load, the order is not established and it is not treated
-  // as a current-iteration hazard.
-  bool OverlapsCurrentStore =
-      Distance < LoadElementSize && DT->dominates(StorePos, LoadI);
-  // Both pointers are loop-invariant, so their byte distance never changes
-  // across iterations: if they do not overlap now, they never will.
-  if (!OverlapsCurrentStore && StoreStride == 0 &&
-      Distance >= LoadElementSize) {
-    LLVM_DEBUG(dbgs() << "SLP: STLF: both pointers loop-invariant, "
-                      << "distance never changes -> no conflict\n");
-    return false;
-  }
-  if (!OverlapsCurrentStore && StoreStride && *StoreStride != 0) {
+  if (StoreStride) {
     int64_t Stride = std::abs(*StoreStride);
-    int64_t Lo =
-        static_cast<int64_t>(Distance) - static_cast<int64_t>(LoadElementSize);
-    int64_t Hi =
-        static_cast<int64_t>(Distance) + static_cast<int64_t>(VectorStoreBytes);
+    int64_t Lo = static_cast<int64_t>(Distance) - LoadBytes;
+    int64_t Hi = static_cast<int64_t>(Distance) + StoreBytes;
     int64_t K = Lo < Stride ? 1 : (Lo / Stride) + 1;
     if (Stride * K >= Hi) {
       LLVM_DEBUG(dbgs() << "SLP: STLF: strided-independent (stride " << Stride

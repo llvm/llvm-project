@@ -5,28 +5,39 @@ define void @test(ptr %0, i32 %.sroa.31.0.copyload4033) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[DOTSROA_31_0_COPYLOAD4033:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[_PREHEADER1937_PREHEADER:.*:]]
-; CHECK-NEXT:    br [[DOTPREHEADER1927_PREHEADER:label %.*]]
-; CHECK:       [[_PREHEADER1927_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[DOTSROA_31_0_COPYLOAD4033]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br [[DOTPREHEADER1927:label %.*]]
-; CHECK:       [[_LOOPEXIT1924:.*:]]
-; CHECK-NEXT:    br i1 false, [[DOTPREHEADER1927]], [[DOTPREHEADER1927_PREHEADER]]
-; CHECK:       [[_PREHEADER1927:.*:]]
-; CHECK-NEXT:    br i1 false, [[DOTLR_PH2669_PREHEADER:label %.*]], [[DOTCRITEDGE1844_LOOPEXIT2813:label %.*]]
-; CHECK:       [[_LR_PH2669_PREHEADER:.*:]]
-; CHECK-NEXT:    br i1 false, [[DOTLOOPEXIT1924:label %.*]], [[DOT_CRIT_EDGE2670:label %.*]]
-; CHECK:       [[__CRIT_EDGE2670:.*:]]
+; CHECK-NEXT:    br label %[[DOTPREHEADER1927_PREHEADER:.*]]
+; CHECK:       [[DOTPREHEADER1927_PREHEADER]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[DOTSROA_31_0_COPYLOAD4033]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[DOTPREHEADER1927:.*]]
+; CHECK:       [[_LOOPEXIT1924:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[DOTPREHEADER1927]], label %[[DOTPREHEADER1927_PREHEADER]]
+; CHECK:       [[DOTPREHEADER1927]]:
+; CHECK-NEXT:    br i1 false, label %[[DOTLR_PH2669_PREHEADER:.*]], label %[[DOTCRITEDGE1844_LOOPEXIT2813:.*]]
+; CHECK:       [[DOTLR_PH2669_PREHEADER]]:
+; CHECK-NEXT:    br i1 false, label %[[_LOOPEXIT1924]], label %[[__CRIT_EDGE2670:.*]]
+; CHECK:       [[__CRIT_EDGE2670]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[_CRITEDGE1844_LOOPEXIT2813:.*:]]
+; CHECK:       [[DOTCRITEDGE1844_LOOPEXIT2813]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -24
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -36
-; CHECK-NEXT:    [[TMP5:%.*]] = call <7 x i32> @llvm.masked.load.v7i32.p0(ptr align 4 [[TMP3]], <7 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <7 x i32> poison)
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <7 x i32> [[TMP5]], <7 x i32> poison, <4 x i32> <i32 0, i32 1, i32 6, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i32> [[TMP10]], [[TMP2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP11]], splat (i32 1)
-; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP4]], align 4
-; CHECK-NEXT:    br [[DOTLOOPEXIT1924]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -20
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
+; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = or i32 [[TMP12]], [[DOTSROA_31_0_COPYLOAD4033]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], 1
+; CHECK-NEXT:    [[DOTSROA_54126_0__SROA_IDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -28
+; CHECK-NEXT:    store i32 [[TMP14]], ptr [[DOTSROA_54126_0__SROA_IDX]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = or i32 [[TMP6]], [[DOTSROA_31_0_COPYLOAD4033]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], 1
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    br label %[[_LOOPEXIT1924]]
 ;
 .preheader1937.preheader:
   br label %.preheader1927.preheader
