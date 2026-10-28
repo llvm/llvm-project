@@ -259,9 +259,8 @@ public:
   /// \returns true if the store chain anchored at \p BaseStore, widened to
   /// \p VF elements, and a nearby loop-carried load cannot use store-to-load
   /// forwarding. When \p ConflictingLoads is non-null, every conflicting load
-  /// found is appended to it instead of stopping at the first one, so callers
-  /// can dedup the resulting penalty across multiple tree entries that
-  /// conflict with the same load. When \p OnlyLoad is non-null, inspect only
+  /// found is appended to it instead of stopping at the first one. When
+  /// \p OnlyLoad is non-null, inspect only
   /// that load and use \p LoadSizeOverride as its effective width in bytes.
   bool findStoreLoadForwardingConflict(
       StoreInst *BaseStore, unsigned VF,
@@ -581,8 +580,6 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
-    // Charged-load and committed-store state lives as long as this object.
-    PendingSTLFChargedLoads.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
   }
@@ -3554,33 +3551,6 @@ private:
   /// first request.
   const std::tuple<SmallVector<int>, VectorType *, unsigned, bool> &
   getCompressEntryData(const TreeEntry &E);
-
-  /// Pointer operands of loads that a store-to-load forwarding conflict
-  /// penalty has already been charged for, across the whole function (the
-  /// lifetime of this BoUpSLP object), because some earlier tree that
-  /// conflicted with them was actually committed to vectorized IR. Keyed by
-  /// the pointer operand rather than the LoadInst: vectorizeTree erases the
-  /// scalar loads, so a later tree sees a new load of the same address.
-  /// Several store or load tree entries -- in the same tree or in different
-  /// trees/store chains -- can conflict with that address; hardware stalls
-  /// once per load, not once per conflicting entry, so only the first
-  /// *committed* tree pays. Deliberately never cleared during this object's
-  /// lifetime (unlike the other buildTree-scoped state in deleteTree()): a
-  /// dedup set that resets per attempt cannot catch the common case, since
-  /// every store chain is costed as its own separate tree (see
-  /// buildTreeRec()'s single-operand recursion), so there is never more than
-  /// one charge to dedup within a single cost pass.
-  SmallPtrSet<const Value *, 8> STLFChargedLoads;
-
-  /// (Tree entry, load) pairs the tree currently being costed would charge a
-  /// store-to-load forwarding penalty for, staged here until vectorizeTree().
-  /// Only entries that are still emitted (not deleted or turned into a
-  /// gather while trimming) are promoted, and the recorded key is the load's
-  /// pointer operand. Nothing is promoted -- and no later chain is ever
-  /// under-charged -- if this tree is costed but rejected. Cleared per
-  /// buildTree attempt in deleteTree().
-  SmallVector<std::pair<const TreeEntry *, const LoadInst *>>
-      PendingSTLFChargedLoads;
 
   /// Simple stores of each loop, collected on first use.
   SmallDenseMap<const Loop *, SmallVector<StoreInst *>> LoopSimpleStores;
@@ -18034,17 +18004,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             HazardCheckVF =
                 getNumElements(std::get<1>(getCompressEntryData(*E))) /
                 getNumElements(LI0->getType());
-          // The vector load is emitted at the main op's address (shifted down
-          // by any leading non-load lanes), so LI0 is the load that would
-          // stall: skip the charge if some earlier, already-committed tree
-          // already paid for it (see STLFChargedLoads); otherwise stage it so
-          // it is only actually charged to the persistent set if this tree is
-          // chosen for vectorization.
-          if (!STLFChargedLoads.contains(LI0->getPointerOperand()) &&
-              findStoreLoadForwardingHazardForLoad(LI0, HazardCheckVF)) {
+          if (findStoreLoadForwardingHazardForLoad(LI0, HazardCheckVF))
             VecLdCost += STLFCost;
-            PendingSTLFChargedLoads.emplace_back(E, LI0);
-          }
         }
       }
       return VecLdCost + CommonCost;
@@ -18130,12 +18091,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // nearby loop-carried load. Rather than reject the tree outright, add
       // the target's modeled STLF penalty so a chain that is still profitable
       // after paying it can vectorize. The penalty is a throughput/latency
-      // hazard, so only account for it under those cost kinds. Collect every
-      // conflicting load (not just the first) so a load already paid for by
-      // an earlier committed tree does not, on its own, cause a second
-      // charge here: each load this store is the *first* committed conflict
-      // for adds its own penalty and is staged for promotion. A load an
-      // earlier committed tree already paid for does not.
+      // hazard, so only account for it under those cost kinds. Each
+      // conflicting load stalls separately and pays its own penalty.
       //
       // Covers Vectorize (one contiguous vector store, emitted at VL0).
       if (Opts.slp_store_load_forward_check &&
@@ -18150,16 +18107,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         if (STLFCost != 0) {
           SmallVector<LoadInst *> ConflictingLoads;
           if (findStoreLoadForwardingConflict(
-                  cast<StoreInst>(VL0), E->Scalars.size(), &ConflictingLoads)) {
-            unsigned NewConflicts = 0;
-            for (LoadInst *LI : ConflictingLoads) {
-              if (STLFChargedLoads.contains(LI->getPointerOperand()))
-                continue;
-              ++NewConflicts;
-              PendingSTLFChargedLoads.emplace_back(E, LI);
-            }
-            VecStCost += NewConflicts * STLFCost;
-          }
+                  cast<StoreInst>(VL0), E->Scalars.size(), &ConflictingLoads))
+            VecStCost += ConflictingLoads.size() * STLFCost;
         }
       }
       return VecStCost + CommonCost;
@@ -26507,20 +26456,6 @@ Value *
 BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                        Instruction *ReductionRoot,
                        ArrayRef<ReductionVectorPart> VectorValuesAndScales) {
-  // This tree is now actually being emitted: any store-to-load forwarding
-  // conflict penalty staged for it while costing is now real, so promote the
-  // loads it paid for into the function-wide charged set. Every commit path
-  // (store chains, lists, reductions) funnels through this one function, so
-  // this is the single chokepoint to hook. A tree that was only costed and
-  // then rejected never reaches here, so it never suppresses a later
-  // chain's real charge. Entries trimmed away or turned into gathers did
-  // not emit the wide access the penalty was priced for, so they must not
-  // suppress a later chain. Record the pointer operand: the LoadInst itself
-  // is erased by the emission below.
-  for (auto [TE, Ld] : PendingSTLFChargedLoads)
-    if (!DeletedNodes.contains(TE) && !TransformedToGatherNodes.contains(TE))
-      STLFChargedLoads.insert(Ld->getPointerOperand());
-  PendingSTLFChargedLoads.clear();
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
