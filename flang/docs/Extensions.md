@@ -556,6 +556,11 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A local data object may appear in a specification expression, even
   when it is not a dummy argument or in COMMON, so long as it is
   has the SAVE attribute and was initialized.
+* A nonallocatable nonpointer function result may be declared with a
+  rank-1 integer array as its bounds (F2023 R818 `explicit-shape-bounds-spec`),
+  e.g. `real :: res(shape_of_input)`.  F2023 C816 permits only an
+  `explicit-shape-spec-list` there, although R814 allows the rank-1 form
+  for other entities.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
 * A character length specifier in a component or entity declaration
