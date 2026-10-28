@@ -24,7 +24,7 @@ public:
   void testNaN(NextUpFunc func) { ASSERT_FP_EQ(func(aNaN), aNaN); }
 
   void testBoundaries(NextUpFunc func) {
-    ASSERT_FP_EQ(neg_zero, func(neg_min_denormal));
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_zero, func(neg_min_denormal), 0);
 
     ASSERT_FP_EQ(min_denormal, func(zero));
     ASSERT_FP_EQ(min_denormal, func(neg_zero));

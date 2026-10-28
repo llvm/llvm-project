@@ -37,7 +37,7 @@ LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR long double nextupdown(long double x) {
   if (xbits == FPBits_t::min_normal(sign.negate()))
     return FPBits_t::max_subnormal(sign.negate()).get_val();
 
-  if (x == 0.0l)
+  if (xbits.is_zero())
     return FPBits_t::min_subnormal(sign).get_val();
 
   using StorageType = typename FPBits_t::StorageType;

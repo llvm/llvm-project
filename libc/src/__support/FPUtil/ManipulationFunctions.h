@@ -262,7 +262,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
     return x;
 
   using StorageType = typename FPBits<T>::StorageType;
-  if (x != T(0)) {
+  if (!xbits.is_zero()) {
     if (xbits.sign() == sign) {
       xbits = FPBits<T>(StorageType(xbits.uintval() + 1));
     } else {
