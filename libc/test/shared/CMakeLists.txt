@@ -193,6 +193,7 @@ else()
       libc.src.__support.math.fmaxf
       libc.src.__support.math.fmaxf128
       libc.src.__support.math.fmaxf16
+      libc.src.__support.math.fmaxf80
       libc.src.__support.math.fmaximum
       libc.src.__support.math.fmaximum_mag
       libc.src.__support.math.fmaximum_mag_num
@@ -223,6 +224,7 @@ else()
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
@@ -621,6 +623,7 @@ else()
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
