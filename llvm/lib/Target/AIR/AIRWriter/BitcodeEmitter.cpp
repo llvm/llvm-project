@@ -488,6 +488,29 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
       FnAttrListID[&F] = ListID;
     }
 
+    // SIMD-group and quad functions and barriers are convergent: the result
+    // depends on which threads execute the call together. Without the
+    // attribute Metal's compiler merged identical calls from both sides of a
+    // divergent branch into one before it (air.simd_ballot of true gave the
+    // whole SIMD-group's mask in each branch: PTX activemask and vote in
+    // divergent code, found on an M2 Max).
+    for (auto &F : M) {
+      if (!F.isDeclaration())
+        continue;
+      StringRef Name = F.getName();
+      if (!Name.starts_with("air.simd_") && !Name.starts_with("air.quad_") &&
+          Name != "air.wg.barrier" && Name != "air.simdgroup.barrier")
+        continue;
+      SynthGroup FnG;
+      FnG.Index = ~0u;
+      FnG.EnumKinds.push_back(BK_CONVERGENT);
+      FnG.EnumKinds.push_back(BK_NO_UNWIND);
+      FnG.EnumKinds.push_back(BK_WILLRETURN);
+      unsigned ListID = AttrLists.size() + 1;
+      AttrLists.push_back({addSynthGroup(std::move(FnG))});
+      FnAttrListID[&F] = ListID;
+    }
+
     for (auto &F : M) {
       if (!F.isDeclaration())
         continue;
