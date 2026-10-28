@@ -1355,6 +1355,12 @@ def G_SET_ROUNDING : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_IS_DEBUGGING_ENABLED : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
