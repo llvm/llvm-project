@@ -30,7 +30,7 @@ define float @rcp_full_intrinsic(float %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [rcp_full_intrinsic_param_0];
-; CHECK-NEXT:    div.full.f32 %r2, 0f3F800000, %r1;
+; CHECK-NEXT:    rcp.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = call float @llvm.nvvm.div.full(float 1.0, float %b)
@@ -44,7 +44,7 @@ define float @rcp_full_ftz_intrinsic(float %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [rcp_full_ftz_intrinsic_param_0];
-; CHECK-NEXT:    div.full.ftz.f32 %r2, 0f3F800000, %r1;
+; CHECK-NEXT:    rcp.approx.ftz.f32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = call float @llvm.nvvm.div.full.ftz(float 1.0, float %b)
