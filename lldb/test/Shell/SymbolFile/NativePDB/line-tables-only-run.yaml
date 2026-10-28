@@ -2,10 +2,11 @@
 
 # Check that lldb can generate a backtrace when fed with a PDB without locals or function types.
 
-# RUN: llvm-pdbutil yaml2pdb %p/Inputs/line-tables-only-pdb.yaml --pdb=%t.pdb
-# RUN: yaml2obj %s -o %t.exe
+# RUN: mkdir -p %t.dir
+# RUN: llvm-pdbutil yaml2pdb %p/Inputs/line-tables-only-pdb.yaml --pdb=%t.dir/line-tables-only.pdb
+# RUN: yaml2obj %s -o %t.dir/line-tables-only.exe
 
-# RUN: %lldb %t.exe -o 'b line-tables-only.cpp:3' -o r -o bt -o q | FileCheck %s
+# RUN: %lldb %t.dir/line-tables-only.exe -o 'b line-tables-only.cpp:3' -o r -o bt -o q | FileCheck %s
 
 # CHECK:      (lldb) target create
 # CHECK-NEXT: Current executable set to '{{.*}}' (x86_64).
@@ -102,7 +103,7 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
     VirtualSize:     120
-    SectionData:     000000008141E26A00000000020000003A0000001C2000001C0600005253445389A26FAA121B63474C4C44205044422E01000000463A5C4465765C64756D6D795C6C696E657461626C65735C726570726F2E7064620000000104010004420000010401000462000001040100044200000101010001020000
+    SectionData:     000000008141E26A00000000020000003A0000001C2000001C0600005253445389A26FAA121B63474C4C44205044422E010000002F746D702F6C696E652D7461626C65732D6F6E6C792E70646200000000000000000000000104010004420000010401000462000001040100044200000101010001020000
     SizeOfRawData:   512
   - Name:            .pdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]

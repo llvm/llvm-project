@@ -23,6 +23,12 @@
 # int main() { return callme(); }
 
 ---
+PdbStream:
+  Age:             1
+  Guid:            '{AA6FA289-1B12-4763-4C4C-44205044422E}'
+  Signature:       2859442825
+  Features:        [ VC140 ]
+  Version:         VC70
 DbiStream:
   VerHeader:       V70
   Age:             1
