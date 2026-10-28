@@ -37,6 +37,7 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     avr-isel
+; CHECK-NEXT:     avr-frame-analyzer
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
@@ -74,6 +75,7 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     avr-expand-pseudo
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement
 ; CHECK-NEXT:     fentry-insert
