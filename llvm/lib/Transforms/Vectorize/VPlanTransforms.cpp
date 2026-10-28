@@ -6483,7 +6483,7 @@ bool VPlanTransforms::handleCompressingPatterns(
 
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
-    for (VPInstruction *&VPI : CondIndToMemOps[CondIndPhi.getPHINode()]) {
+    for (VPInstruction *VPI : CondIndToMemOps[CondIndPhi.getPHINode()]) {
       // Bail out if the mask for the memory op does not match the condition
       // used to update the conditional induction.
       if (!VPI->getMask() || VPI->getMask() != Mask)
