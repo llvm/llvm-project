@@ -112,9 +112,15 @@ define i32 @myctlz64_as_32_2(i64 %a) {
 define i32 @myctlz64_as_32_lshr_5(i64 %a) {
 ; CHECK-LABEL: myctlz64_as_32_lshr_5(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_as_32_lshr_5_param_0];
+; CHECK-NEXT:    or.b64 %rd2, %rd1, 1;
+; CHECK-NEXT:    clz.b64 %r1, %rd2;
+; CHECK-NEXT:    shr.u32 %r2, %r1, 5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %or = or i64 %a, 1
   %val = call i64 @llvm.ctlz.i64(i64 %or, i1 true) readnone
@@ -127,13 +133,16 @@ define i32 @myctlz64_as_32_lshr_5(i64 %a) {
 define i32 @myctlz64_as_32_select_32(i64 %a) {
 ; CHECK-LABEL: myctlz64_as_32_select_32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_as_32_select_32_param_0];
 ; CHECK-NEXT:    clz.b64 %r1, %rd1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, 0;
+; CHECK-NEXT:    selp.b32 %r2, 32, %r1, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %val = call i64 @llvm.ctlz.i64(i64 %a, i1 true) readnone
   %trunc = trunc i64 %val to i32
