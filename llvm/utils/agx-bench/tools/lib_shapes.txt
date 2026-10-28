@@ -18,3 +18,8 @@ agx_dnn_bn_apply total=200704 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys
 agx_sgemm_tile64 M=256 N=256 K=256 lda=256 ldb=256 ldc=256 --wg 128,1,1 --wg-id 5,0,0
 agx_hgemm_tile64_cf32 M=256 N=256 K=256 lda=256 ldb=256 ldc=256 --wg 128,1,1 --wg-id 5,0,0
 agx_sgemm_generic M=64 N=64 K=64 sar=64 sac=1 sbr=64 sbc=1 scr=64 scc=1 --wg 256,1,1 --wg-id 3,0,0
+agx_hgemm_tile64_cf16 M=256 N=256 K=256 lda=256 ldb=256 ldc=256 --wg 128,1,1 --wg-id 5,0,0
+# unaligned sizes (not multiples of 64) take the _u tiles
+agx_sgemm_tile64_u M=250 N=250 K=250 lda=250 ldb=250 ldc=250 --wg 128,1,1 --wg-id 5,0,0
+agx_hgemm_tile64_cf16_u M=250 N=250 K=250 lda=250 ldb=250 ldc=250 --wg 128,1,1 --wg-id 5,0,0
+agx_hgemm_tile64_cf32_u M=250 N=250 K=250 lda=250 ldb=250 ldc=250 --wg 128,1,1 --wg-id 5,0,0

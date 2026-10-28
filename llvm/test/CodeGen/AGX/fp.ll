@@ -388,7 +388,11 @@ define agx_kernel void @rounding(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    floor r1, u2
+; CHECK-NEXT:    fadd32 r1, r1, u3
 ; CHECK-NEXT:    ceil r1, r1
+; CHECK-NEXT:    fadd32 r1, r1, u3
+; CHECK-NEXT:    trunc r1, r1
+; CHECK-NEXT:    fadd32 r1, r1, u3
 ; CHECK-NEXT:    rint r1, r1
 ; CHECK-NEXT:    fcmpsel ltn, r1, r1, u3, r1, u3
 ; CHECK-NEXT:    fadd32.sat r1, r1, -0.0
@@ -402,10 +406,14 @@ define agx_kernel void @rounding(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap
+  ; each rounding of a sum with %b, so that none folds into the one before
   %f = call float @llvm.floor.f32(float %a)
-  %c = call float @llvm.ceil.f32(float %f)
-  %t = call float @llvm.trunc.f32(float %c)
-  %r = call float @llvm.roundeven.f32(float %t)
+  %f1 = fadd float %f, %b
+  %c = call float @llvm.ceil.f32(float %f1)
+  %c1 = fadd float %c, %b
+  %t = call float @llvm.trunc.f32(float %c1)
+  %t1 = fadd float %t, %b
+  %r = call float @llvm.roundeven.f32(float %t1)
   %mn = call float @llvm.minnum.f32(float %r, float %b)
   %mx = call float @llvm.maxnum.f32(float %mn, float 0.0)
   %sat = call float @llvm.minnum.f32(float %mx, float 1.0)

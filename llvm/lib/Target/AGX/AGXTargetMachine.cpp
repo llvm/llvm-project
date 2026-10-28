@@ -36,6 +36,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -226,6 +227,12 @@ TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AGXPassConfig(*this, PM);
 }
 
+static cl::opt<unsigned> AGXStraightLineSR(
+    "agx-straight-line-sr", cl::init(1), cl::Hidden,
+    cl::desc("Straight-line strength reduction and n-ary reassociation of "
+             "address arithmetic before vectorization (1: then EarlyCSE, "
+             "2: then GVN)"));
+
 void AGXPassConfig::addIRPasses() {
   // AIR input becomes AGX kernels first (a no-op without !air.kernel).
   addPass(createAGXLowerAIRPass(&getAGXTargetMachine()));
@@ -265,6 +272,18 @@ void AGXPassConfig::addIRPasses() {
   // mode, which checks the accesses as the source wrote them); threadgroup
   // and private addresses computed in integers become base + constant first.
   if (getOptLevel() != CodeGenOptLevel::None) {
+    // Address arithmetic shared between straight-line computations (the
+    // unrolled tiles of agx_libs' GEMMs): each address from a neighbour's
+    // plus a difference, and sums reassociated so common parts are computed
+    // once, as NVPTX does (straight-line strength reduction and n-ary
+    // reassociation).
+    if (AGXStraightLineSR) {
+      addPass(createStraightLineStrengthReducePass());
+      addPass(createEarlyCSEPass());
+      addPass(createNaryReassociatePass());
+      addPass(AGXStraightLineSR > 1 ? createGVNPass()
+                                    : createEarlyCSEPass());
+    }
     // Loads that all-pairs loops skip for one element issue together.
     addPass(createAGXHoistGuardedLoadsPass());
     addPass(createAGXThreadgroupAddressesPass());
