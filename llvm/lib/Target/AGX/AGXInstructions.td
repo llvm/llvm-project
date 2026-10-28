@@ -512,6 +512,15 @@ def : Pat<(i32 (ctlz AGXIntSrc32:$a)),
           (ISUB_I32 0, (i32 31), 0, (FFS_I32 0, $a), 0)>;
 def : Pat<(i32 (cttz AGXIntSrc32:$a)),
           (ISUB_I32 0, (i32 31), 0, (FFS_I32 0, (BITREV_I32 0, $a)), 0)>;
+// The constants around them fold into the subtraction: ctlz + 32 (the low
+// half of a 64-bit count) is 63 - ffs(x), and 31 - ctlz(x) (an integer
+// log2) is ffs(x).
+def : Pat<(i32 (add (ctlz AGXIntSrc32:$a), 32)),
+          (ISUB_I32 0, (i32 63), 0, (FFS_I32 0, $a), 0)>;
+def : Pat<(i32 (add (cttz AGXIntSrc32:$a), 32)),
+          (ISUB_I32 0, (i32 63), 0, (FFS_I32 0, (BITREV_I32 0, $a)), 0)>;
+def : Pat<(i32 (sub 31, (ctlz AGXIntSrc32:$a))), (FFS_I32 0, $a)>;
+def : Pat<(i32 (xor (ctlz AGXIntSrc32:$a), 31)), (FFS_I32 0, $a)>;
 def : Pat<(i64 (ctpop i64:$a)),
           (IADD_I64_FROM32 0, (IADD_I32 0, (POPCOUNT_I32 0, (EXTRACT_SUBREG $a, sub0)),
                                         0, (POPCOUNT_I32 0, (EXTRACT_SUBREG $a, sub1)),
