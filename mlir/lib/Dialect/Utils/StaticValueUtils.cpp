@@ -400,7 +400,7 @@ std::optional<APInt> constantTripCount(
   }
   LDBG() << "constantTripCount: " << (isSigned ? "isSigned" : "isUnsigned")
          << ", ub-lb: " << diff << "(" << diff.getBitWidth() << "b)";
-  if (diff.isNegative()) {
+  if (isSigned && diff.isNegative()) {
     LDBG() << "constantTripCount is 0 because ub-lb diff is negative";
     return APInt(bitwidth, 0);
   }
@@ -470,6 +470,25 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes) {
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides) {
   return foldDynamicIndexList(strides, /*onlyNonNegative=*/false,
                               /*onlyNonZero=*/true);
+}
+
+MemRefType updateTypeFromMetadata(MemRefType type, OpFoldResult offset,
+                                  ArrayRef<OpFoldResult> sizes,
+                                  ArrayRef<OpFoldResult> strides) {
+  SmallVector<OpFoldResult> offsets{offset};
+  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
+  SmallVector<int64_t> staticSizes = decomposeMixedValues(sizes).first;
+  SmallVector<int64_t> staticStrides = decomposeMixedValues(strides).first;
+  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
+                                       staticStrides);
+  // Build a MemRefType using the original element type and memory space,
+  // but derive its shape, offset, and strides from the supplied metadata.
+  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
+                                           layout, type.getMemorySpace());
+  if (!type.getLayout().isIdentity())
+    return updatedType;
+  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
+  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
 }
 
 } // namespace mlir

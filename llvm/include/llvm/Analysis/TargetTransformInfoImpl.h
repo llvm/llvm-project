@@ -317,6 +317,11 @@ public:
 
   virtual bool isLegalICmpImmediate(int64_t Imm) const { return false; }
 
+  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &,
+                                                    const APInt &) const {
+    return false;
+  }
+
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
@@ -368,6 +373,11 @@ public:
     return false;
   }
 
+  virtual bool isLegalSpeculativeLoad(Type *DataType,
+                                      unsigned AddressSpace) const {
+    return false;
+  }
+
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
@@ -412,7 +422,8 @@ public:
 
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
-                               const SmallBitVector &OpcodeMask) const {
+                               const SmallBitVector &OpcodeMask,
+                               ArrayRef<const Value *> Scalars) const {
     return false;
   }
 
@@ -421,6 +432,13 @@ public:
   }
 
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  virtual bool
+  hasMultiVectorLoadStore(unsigned NumVectors, TTI::MaskSource Mask,
+                          VectorType *VectorTy, bool IsStore,
+                          std::optional<Instruction::CastOps> CastHint) const {
     return false;
   }
 
@@ -571,8 +589,6 @@ public:
   }
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
-
-  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
 
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
@@ -770,10 +786,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                          unsigned Opcode1,
-                                          const SmallBitVector &OpcodeMask,
-                                          TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const {
     return InstructionCost::getInvalid();
   }
 
@@ -933,10 +950,6 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
-    case Intrinsic::dbg_assign:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
@@ -990,6 +1003,7 @@ public:
     case Intrinsic::vp_gather:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
+    case Intrinsic::speculative_load:
       return 1;
     }
     return InstructionCost::getInvalid();
@@ -1235,11 +1249,6 @@ public:
   }
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
-
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
 
   virtual void collectKernelLaunchBounds(
       const Function &F,

@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -117,11 +118,33 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
   return std::nullopt;
 }
 
+/// Return the minimal extent from \p V to the end of the underlying object,
+/// assuming the result is used in an aliasing query. E.g., we do use the query
+/// location size and the fact that null pointers cannot alias here.
+static TypeSize getMinimalExtentFrom(const Value &V,
+                                     const LocationSize &LocSize,
+                                     const DataLayout &DL,
+                                     bool NullIsValidLoc) {
+  // If we have dereferenceability information we know a lower bound for the
+  // extent as accesses for a lower offset would be valid. We need to exclude
+  // the "or null" part if null is a valid pointer. We can ignore frees, as an
+  // access after free would be undefined behavior.
+  bool CanBeNull;
+  uint64_t DerefBytes =
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
+  // If queried with a precise location size, we assume that location size to be
+  // accessed, thus valid.
+  if (LocSize.isPrecise())
+    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
+  return TypeSize::getFixed(DerefBytes);
+}
+
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size. Bails out early unless the root object is passed as the first
-/// parameter.
-static bool isObjectSmallerThan(const Value *V, TypeSize Size,
-                                const DataLayout &DL,
+/// the minimal extent accessed from OtherV with size OtherSize. Bails out early
+/// unless the root object is passed as the first parameter.
+static bool isObjectSmallerThan(const Value *V, const Value &OtherV,
+                                LocationSize OtherSize, const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
                                 bool NullIsValidLoc) {
   // Note that the meanings of the "object" are slightly different in the
@@ -151,30 +174,11 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   // reads a bit past the end given sufficient alignment.
   std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
                                                      /*RoundToAlign*/ true);
+  if (!ObjectSize)
+    return false;
 
-  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
-}
-
-/// Return the minimal extent from \p V to the end of the underlying object,
-/// assuming the result is used in an aliasing query. E.g., we do use the query
-/// location size and the fact that null pointers cannot alias here.
-static TypeSize getMinimalExtentFrom(const Value &V,
-                                     const LocationSize &LocSize,
-                                     const DataLayout &DL,
-                                     bool NullIsValidLoc) {
-  // If we have dereferenceability information we know a lower bound for the
-  // extent as accesses for a lower offset would be valid. We need to exclude
-  // the "or null" part if null is a valid pointer. We can ignore frees, as an
-  // access after free would be undefined behavior.
-  bool CanBeNull;
-  uint64_t DerefBytes =
-      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
-  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
-  // If queried with a precise location size, we assume that location size to be
-  // accessed, thus valid.
-  if (LocSize.isPrecise())
-    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
-  return TypeSize::getFixed(DerefBytes);
+  TypeSize Size = getMinimalExtentFrom(OtherV, OtherSize, DL, NullIsValidLoc);
+  return TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
@@ -251,6 +255,10 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
+    // Handle longjmp during re-entry.
+    if (callsReturnsTwiceFn())
+      return false;
+
     if (I == CaptureInst) {
       if (OrAt)
         return false;
@@ -262,6 +270,13 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::callsReturnsTwiceFn() {
+  if (!CallsReturnsTwiceFn)
+    CallsReturnsTwiceFn =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *CallsReturnsTwiceFn;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -882,15 +897,6 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
-  switch (F->getIntrinsicID()) {
-  case Intrinsic::experimental_guard:
-  case Intrinsic::experimental_deoptimize:
-    // These intrinsics can read arbitrary memory, and additionally modref
-    // inaccessible memory to model control dependence.
-    return MemoryEffects::readOnly() |
-           MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
-  }
-
   return F->getMemoryEffects();
 }
 
@@ -1615,12 +1621,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // If the size of one access is larger than the entire object on the other
   // side, then we know such behavior is undefined and can assume no alias.
   bool NullIsValidLocation = NullPointerIsDefined(&F);
-  if ((isObjectSmallerThan(
-          O2, getMinimalExtentFrom(*V1, V1Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)) ||
-      (isObjectSmallerThan(
-          O1, getMinimalExtentFrom(*V2, V2Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)))
+  if (isObjectSmallerThan(O2, *V1, V1Size, DL, TLI, NullIsValidLocation) ||
+      isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
   if (EnableSeparateStorageAnalysis) {
@@ -1630,7 +1632,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
       AssumeInst *Assume = cast<AssumeInst>(Elem);
       OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
-      if (OBU.getTagName() == "separate_storage") {
+      if (getBundleAttrFromOBU(OBU) == BundleAttr::SeparateStorage) {
         assert(OBU.Inputs.size() == 2);
         const Value *Hint1 = OBU.Inputs[0].get();
         const Value *Hint2 = OBU.Inputs[1].get();
@@ -1659,8 +1661,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
           // so strictly more assumptions are valid for them.
           if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
-                                               /* AllowEphemerals */ true)) ||
-              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
+                                               AAQI.AllowEphemerals)) ||
+              (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
+                                        ValidAssumeForPtrContext(V2)))) {
             return AliasResult::NoAlias;
           }
         }

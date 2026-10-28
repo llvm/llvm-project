@@ -223,6 +223,26 @@ void setGPUBlockRedundantAttr(Operation *op) {
                          GPUBlockRedundantAttr::get(op->getContext()));
 }
 
+ChunkSizeAttr getChunkSizeAttr(Operation *op) {
+  return op->getDiscardableAttrOfType<ChunkSizeAttr>(ChunkSizeAttr::name);
+}
+
+bool hasChunkSizeAttr(Operation *op) { return getChunkSizeAttr(op) != nullptr; }
+
+void setChunkSizeAttr(Operation *op, ChunkSizeAttr attr) {
+  op->setDiscardableAttr(ChunkSizeAttr::name, attr);
+}
+
+void setChunkSizeAttr(Operation *op, int64_t chunkSize) {
+  setChunkSizeAttr(op, ChunkSizeAttr::get(op->getContext(), chunkSize));
+}
+
+std::optional<int64_t> getChunkSize(Operation *op) {
+  if (ChunkSizeAttr attr = getChunkSizeAttr(op))
+    return attr.getChunkSize();
+  return std::nullopt;
+}
+
 void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");
@@ -611,13 +631,21 @@ MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
   if (!parDims)
     return flags;
 
-  for (GPUParallelDimAttr parDim : parDims.getArray()) {
-    if (policy.isGang(parDim))
-      flags = flags | MapFlags::gang_private;
-    else if (policy.isWorker(parDim))
-      flags = flags | MapFlags::worker_private;
-    else if (policy.isVector(parDim))
-      flags = flags | MapFlags::vector_private;
+  auto addLevelFlags = [&](ArrayRef<GPUParallelDimAttr> dims) {
+    for (GPUParallelDimAttr parDim : dims) {
+      if (policy.isGang(parDim))
+        flags = flags | MapFlags::gang_private;
+      else if (policy.isWorker(parDim))
+        flags = flags | MapFlags::worker_private;
+      else if (policy.isVector(parDim))
+        flags = flags | MapFlags::vector_private;
+    }
+  };
+  addLevelFlags(parDims.getArray());
+  // Ownership par_dims may be narrower than the dimensions the kernel indexes
+  // the storage by, so replicate across the active dimensions as well.
+  if (ActiveParDimsAttr activeParDims = getActiveParDimsAttr(privatizeOp)) {
+    addLevelFlags(activeParDims.getArray());
   }
   return flags;
 }
@@ -721,6 +749,8 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::ptr_and_obj;
   if (getImplicitFlag(entryOp))
     flags = flags | MapFlags::implicit;
+  if (entryOp->hasDiscardableAttr(getNoDeviceDescriptorAttrName()))
+    flags = flags | MapFlags::no_device_descriptor;
   if (bitEnumContainsAny(getEntryModifiers(entryOp), DataClauseModifier::zero))
     flags = flags | MapFlags::init_zero;
 

@@ -1045,7 +1045,8 @@ public:
 
   /// Build a new matrix type given the element type and dimensions.
   QualType RebuildConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                     unsigned NumColumns);
+                                     unsigned NumColumns,
+                                     SourceLocation AttributeLoc);
 
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
@@ -1136,9 +1137,7 @@ public:
   QualType RebuildDecltypeType(Expr *Underlying, SourceLocation Loc);
 
   QualType RebuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                   SourceLocation Loc,
-                                   SourceLocation EllipsisLoc,
-                                   bool FullySubstituted,
+                                   SourceLocation Loc, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions = {});
 
   /// Build a new C++11 auto type.
@@ -6297,7 +6296,7 @@ TreeTransform<Derived>::TransformConstantMatrixType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
     Result = getDerived().RebuildConstantMatrixType(
-        ElementType, T->getNumRows(), T->getNumColumns());
+        ElementType, T->getNumRows(), T->getNumColumns(), TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -7286,8 +7285,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       if (NotYetExpanded) {
         FullySubstituted = false;
         QualType Out = getDerived().RebuildPackIndexingType(
-            Pack, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-            FullySubstituted);
+            Pack, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted);
         if (Out.isNull())
           return QualType();
 
@@ -7325,8 +7323,8 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
 
   QualType Out = getDerived().RebuildPackIndexingType(
-      Result, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-      FullySubstituted, SubtitutedTypes);
+      Result, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted,
+      SubtitutedTypes);
   if (Out.isNull())
     return Out;
 
@@ -7855,6 +7853,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
           getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
       if (equivalentType.isNull())
         return QualType();
+    }
+
+    if (SemaRef.getLangOpts().HLSL) {
+      if (oldType->getAttrKind() == attr::HLSLRowMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::RowMajor);
+      else if (oldType->getAttrKind() == attr::HLSLColumnMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::ColumnMajor);
     }
 
     // Check whether we can add nullability; it is only represented as
@@ -8782,7 +8789,7 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -8797,7 +8804,7 @@ TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -13630,7 +13637,20 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
-  assert(false && "not implemented yet");
+
+  switch (E->getKind()) {
+  case ReflectionKind::Type: {
+    TypeSourceInfo *NewT = getDerived().TransformType(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    if (!NewT)
+      return ExprError();
+    return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
+  }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
   return ExprError();
 }
 
@@ -15284,7 +15304,7 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
 
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
       E->getUsedContext() == SemaRef.CurContext &&
-      InitRes.get() == E->getRewrittenExpr())
+      InitRes.get() == E->getExpr())
     return E;
 
   return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
@@ -18204,9 +18224,17 @@ TreeTransform<Derived>::RebuildDependentSizedExtVectorType(QualType ElementType,
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildConstantMatrixType(
-    QualType ElementType, unsigned NumRows, unsigned NumColumns) {
-  return SemaRef.Context.getConstantMatrixType(ElementType, NumRows,
-                                               NumColumns);
+    QualType ElementType, unsigned NumRows, unsigned NumColumns,
+    SourceLocation AttributeLoc) {
+  ASTContext &Ctx = SemaRef.Context;
+  QualType SizeTy = Ctx.getSizeType();
+  unsigned SizeWidth = Ctx.getIntWidth(SizeTy);
+  IntegerLiteral *RowExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumRows), SizeTy, AttributeLoc);
+  IntegerLiteral *ColumnExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumColumns), SizeTy, AttributeLoc);
+  return SemaRef.BuildMatrixType(ElementType, RowExpr, ColumnExpr,
+                                 AttributeLoc);
 }
 
 template <typename Derived>
@@ -18308,9 +18336,8 @@ QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E, SourceLocation) {
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildPackIndexingType(
     QualType Pattern, Expr *IndexExpr, SourceLocation Loc,
-    SourceLocation EllipsisLoc, bool FullySubstituted,
-    ArrayRef<QualType> Expansions) {
-  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc,
+    bool FullySubstituted, ArrayRef<QualType> Expansions) {
+  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc,
                                        FullySubstituted, Expansions);
 }
 

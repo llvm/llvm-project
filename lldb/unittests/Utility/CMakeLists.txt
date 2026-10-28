@@ -8,6 +8,7 @@ add_lldb_unittest(UtilityTests
   BroadcasterTest.cpp
   ChecksumTest.cpp
   ConstStringTest.cpp
+  StringPoolTest.cpp
   CompletionRequestTest.cpp
   DataBufferTest.cpp
   DataEncoderTest.cpp

@@ -12,6 +12,8 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <vector>
+
 namespace lldb_private {
 
 struct CTFType {

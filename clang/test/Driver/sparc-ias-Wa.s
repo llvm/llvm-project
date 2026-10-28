@@ -32,6 +32,8 @@
 // V8PLUSD: "-target-feature" "+vis"
 // V8PLUSD: "-target-feature" "+vis2"
 // V8PLUSD: "-target-feature" "+vis3"
+// V8PLUSD: "-target-feature" "+ua2005"
+// V8PLUSD: "-target-feature" "+ua2007"
 
 // RUN: %clang --target=sparc-linux-gnu -### -fintegrated-as -c %s -Wa,-Av9 2>&1 | \
 // RUN:   FileCheck -check-prefix=V9 %s
@@ -58,6 +60,8 @@
 // V9D: "-target-feature" "+vis"
 // V9D: "-target-feature" "+vis2"
 // V9D: "-target-feature" "+vis3"
+// V9D: "-target-feature" "+ua2005"
+// V9D: "-target-feature" "+ua2007"
 
 // RUN: %clang --target=sparc64-linux-gnu -### -fintegrated-as -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=VIS-DEFAULT %s

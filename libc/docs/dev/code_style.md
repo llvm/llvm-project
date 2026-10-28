@@ -85,41 +85,138 @@ rules:
    class methods (static and non-static) defined inline and `constexpr`
    functions.
 
+(setting_errno)=
+
 ## Setting `errno` from runtime code
 
 Many libc functions set `errno` to indicate an error condition. If LLVM's libc
 is being used as the only libc, then the `errno` from LLVM's libc is affected.
-If LLVM's libc is being used in the {ref}`overlay_mode`, then the `errno` from
-the system libc is affected. When a libc function, which can potentially affect
-the `errno`, is called from a unit test, we do not want the global `errno`
+If LLVM's libc is being used in {ref}`overlay_mode`, then the `errno` from
+the system libc is affected. When a libc function that can potentially affect
+`errno` is called from a unit test, we do not want the global `errno`
 (as in, the `errno` of the process thread running the unit test) to be
 affected. If the global `errno` is affected, then the operation of the unit
-test infrastructure itself can be affected. To avoid perturbing the unit test
-infrastructure around the setting of `errno`, the following rules are to be
-followed:
+test infrastructure itself can be affected.
 
-1. A special macro named `libc_errno` defined in `src/__support/libc_errno.h`
-   should be used when setting `errno` from libc runtime code. For example,
-   code to set `errno` to `EINVAL` should be:
+To handle `errno` correctly across all build modes and avoid silent thread-local
+storage mismatches, the following rules must be followed:
+
+1. **Header Inclusion:**
+   Runtime code and unit tests must **ONLY** `#include "src/__support/libc_errno.h"`
+   and refer to `libc_errno`.
+   - Never `#include <errno.h>`.
+   - Never `#include "src/errno/libc_errno.h"` (this is a legacy path; the header
+     lives in `src/__support/`).
+   - For standard error constants (such as `EINVAL`, `ENOMEM`), include
+     `"hdr/errno_macros.h"`.
+
+   Setting `errno` should be done directly via `libc_errno`:
 
    ```c++
    libc_errno = EINVAL;
    ```
 
-2. `errno` should be set just before returning from the implementation of the
-   public function. It should not be set from within helper functions. Helper
+2. **Where to set `errno`:**
+   `errno` should only be set just before returning from the implementation of
+   the public function. It should not be set from within helper functions. Helper
    functions should use idiomatic C++ constructs like
    [cpp::optional](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h)
    and
    [ErrorOr](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/error_or.h)
    to return error values.
 
-3. The header file `src/__support/libc_errno.h` is shipped as part of the target
-   corresponding to the `errno` entrypoint `libc.src.errno.errno`. We do
-   not in general allow dependencies between entrypoints. However, the `errno`
-   entrypoint is the only exceptional entrypoint on which other entrypoints
-   should explicitly depend on if they set `errno` to indicate error
-   conditions.
+3. **CMake Dependencies for Public Entrypoints:**
+   Any entrypoint that reads or sets `errno` should ideally declare **BOTH** of the
+   following in the `DEPENDS` list of its `add_entrypoint_object`:
+   - **`libc.src.__support.libc_errno`**: Satisfies the header dependency for
+     `src/__support/libc_errno.h`.
+   - **`libc.src.errno.errno`**: Satisfies the link-time requirement for the compiled
+     runtime storage (`libc_errno.cpp`) defining `thread_errno`, `__llvm_libc_errno()`,
+     and the C++ `Errno` class.
+
+   While LLVM-libc generally disallows dependencies between public entrypoints,
+   `libc.src.errno.errno` is an **explicitly allowed exception** in the build system
+   (see `ALLOWED_DEPS` in `libc/cmake/modules/LLVMLibCObjectRules.cmake`). Downstream
+   consumers and test suites that link the entrypoint require this dependency so that
+   the storage for `libc_errno` is linked.
+
+4. **CMake Dependencies for Internal Support Libraries:**
+   Header-only utility libraries under `libc/src/__support/` (such as `OSUtil` syscall
+   wrappers or `FPUtil`) that reference `libc_errno.h` should depend on
+   **`libc.src.__support.libc_errno`** so they remain pure header libraries without
+   introducing compiled entrypoint object dependencies.
+
+5. **Unit and Hermetic Testing:**
+   Unit tests verifying functions that set `errno` must use the `ErrnoCheckingTest`
+   fixture (`test/UnitTest/ErrnoCheckingTest.h`) and `ErrnoSetterMatcher`
+   (`test/UnitTest/ErrnoSetterMatcher.h`).
+   - Both `ErrnoCheckingTest` and `ErrnoSetterMatcher` already declare `DEPENDS libc.src.errno.errno`,
+     so tests using them inherit the compiled `errno` object transitively.
+   - Tests that check `libc_errno` directly without those matchers must declare
+     `libc.src.errno.errno` in their test `DEPENDS`.
+   - Tests must never `#include <errno.h>`.
+
+6. **The "Dual-TLS" Pitfall in Overlay Mode:**
+   Why is strictly adhering to `libc_errno` and `"src/__support/libc_errno.h"` critical?
+   In overlay mode, the host system libc (e.g., glibc) maintains its own thread-local
+   `errno` location (accessed via `*__errno_location()`). In unit tests, LLVM-libc
+   runs in internal thread-local mode (`LIBC_ERRNO_MODE_THREAD_LOCAL`), writing to
+   LLVM-libc's own `thread_errno`.
+   If implementation code or tests mistakenly `#include <errno.h>` and use raw `errno`,
+   the code will compile cleanly without warnings, but reads and writes will target
+   different thread-local storage locations in the same thread. This results in silent
+   test failures or error values that appear to vanish or go to the wrong thread.
+
+(expected_and_optional)=
+
+## Accessing values from `cpp::expected`, `ErrorOr`, and `cpp::optional`
+
+Because LLVM-libc builds with `-fno-exceptions`,
+[`cpp::expected`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/expected.h)
+(along with `ErrorOr<T>`, which aliases `cpp::expected<T, int>`) and
+[`cpp::optional`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h)
+cannot throw on invalid access. Instead, their observers provide two distinct
+safety contracts:
+
+- **`.value()` and `.error()` are checked in all build modes:** Calling
+  `.value()` when `!has_value()` (or `.error()` on `cpp::expected` when
+  `has_value()`) unconditionally executes `__builtin_trap()`, including in
+  release (`NDEBUG`) builds.
+- **`operator*` and `operator->` are unchecked in release builds:** They trap
+  under `#ifndef NDEBUG` when `!has_value()` to catch bugs during testing, and
+  compile to direct member access with no check in release builds.
+
+Choose between them as follows:
+
+1. **Prefer `*` and `->` after an explicit check:** Once `has_value()` or
+   `operator bool` has been checked, prefer `*res` and `res->member`, especially
+   in performance-sensitive paths (such as math or formatting fast paths) and
+   whenever accessing members of the contained object (`res->field` rather than
+   `res.value().field`). When the unwrapped value is needed more than once in a
+   scope, bind it to a local variable instead of unwrapping repeatedly:
+
+   ```c++
+   auto res = linux_syscalls::open(path, flags, mode);
+   if (!res) {
+     libc_errno = res.error();
+     return -1;
+   }
+   int fd = *res;
+   ```
+
+2. **Use `.value()` when relying on an invariant without a branch:** If an
+   algorithm or API invariant guarantees that a value is present and you
+   intentionally omit an `if (!res)` check, you **must** use `.value()` rather
+   than `*res`. That ensures any unexpected violation traps deterministically
+   in release builds instead of reading an inactive union member.
+
+3. **`.value()` is also acceptable for readability on `bool` or pointer types:**
+   After a dominating `if (!res)` check, writing `if (!res.value())` on
+   `ErrorOr<bool>` or `FILE *stream = res.value();` on `ErrorOr<FILE *>` avoids
+   visually ambiguous `!*res` expressions or confusion between unwrapping the
+   container and dereferencing the pointer. Under optimization, jump-threading
+   eliminates the redundant check in `res.value()` when no opaque calls
+   intervene.
 
 ## Assertions in libc runtime code
 
@@ -178,14 +275,14 @@ not required.
 ## Warnings in sources
 
 We expect contributions to be free of warnings from the [minimum supported
-compiler versions](https://libc.llvm.org/compiler_support.html#minimum-supported-versions) (and newer).
+compiler versions](../compiler_support.md#minimum-supported-versions) (and newer).
 
 ## Header Inclusion Policy
 
 Because llvm-libc supports
-[Overlay Mode](https://libc.llvm.org/overlay_mode.html),
-[Full Host Build Mode](https://libc.llvm.org/full_host_build.html) and
-[Full Cross Build Mode](https://libc.llvm.org/full_cross_build.html) care
+[Overlay Mode](../overlay_mode.md),
+[Full Host Build Mode](../full_host_build.md) and
+[Full Cross Build Mode](../full_cross_build.md) care
 must be taken when `#include`'ing certain headers.
 
 The `include/` directory contains public facing headers that users must
@@ -297,6 +394,35 @@ LLVM libc uses layered `.clang-tidy` configuration files:
   implementation code under `libc/src` and also enables
   `readability-identifier-naming` and `llvm-header-guard`. Diagnostics from
   `llvmlibc-*` checks are treated as errors.
+
+### Running the checks
+
+Configure with `-DLLVM_LIBC_ENABLE_LINTING=ON` and build the `libc-lint`
+target. CMake looks for `clang-tidy` in the LLVM tools directory first (the
+build tree in a bootstrapping build, so the freshly built `clang-tidy` wins)
+and then on `PATH`. The `clang-tidy` it finds must have the same major
+version as the compiler, because `clang-tidy` carries its own clang front end
+and a mismatch shows up as spurious diagnostics. To use a specific binary,
+pass `-DLLVM_LIBC_CLANG_TIDY=<path>`; this also turns linting on, and a
+version mismatch is then reported as a warning rather than an error.
+
+The `.clang-tidy` files and the `llvmlibc-*` checks live in the same
+repository and change together, so the configuration is written for the
+`clang-tidy` built from the same revision as the libc sources, not for the
+latest release. An older `clang-tidy` does not fail loudly on a newer
+configuration: it ignores checks and check options it does not know, and
+releases up to at least 21 react to an unknown top-level key by discarding
+the file and running their default checks, exiting 0 either way. Results
+from an older `clang-tidy` are therefore not comparable with a build at the
+same revision. To match, add `clang-tools-extra` to a bootstrapping build
+and point `LLVM_LIBC_CLANG_TIDY` at the `clang-tidy` it produces;
+`clang-tidy --verify-config --config-file=libc/src/.clang-tidy` reports
+anything your `clang-tidy` would silently skip.
+
+A configuration that asks for linting but cannot run it (no `clang-tidy`, a
+non-clang compiler, or a discovered `clang-tidy` of the wrong major version)
+fails to configure. There is no mode in which `libc-lint` exists but does
+nothing, so a green `libc-lint` build always means the checks ran.
 
 ### LLVM-libc checks
 

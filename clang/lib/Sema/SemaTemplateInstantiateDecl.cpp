@@ -554,28 +554,33 @@ static void instantiateOMPDeclareVariantAttr(
     }
   }
 
-  SmallVector<Expr *, 8> NothingExprs;
-  SmallVector<Expr *, 8> NeedDevicePtrExprs;
-  SmallVector<Expr *, 8> NeedDeviceAddrExprs;
+  SmallVector<OMPAdjustArgsDescriptor *, 4> AdjustArgs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
-  for (Expr *E : Attr.adjustArgsNothing()) {
+  auto SubstAdjustArgsExpr = [&](Expr *&E) {
+    if (!E)
+      return false;
     ExprResult ER = Subst(E);
     if (ER.isInvalid())
-      continue;
-    NothingExprs.push_back(ER.get());
-  }
-  for (Expr *E : Attr.adjustArgsNeedDevicePtr()) {
-    ExprResult ER = Subst(E);
-    if (ER.isInvalid())
-      continue;
-    NeedDevicePtrExprs.push_back(ER.get());
-  }
-  for (Expr *E : Attr.adjustArgsNeedDeviceAddr()) {
-    ExprResult ER = Subst(E);
-    if (ER.isInvalid())
-      continue;
-    NeedDeviceAddrExprs.push_back(ER.get());
+      return true;
+    E = ER.get();
+    return false;
+  };
+  for (const OMPAdjustArgsDescriptor *Desc : Attr.adjustArgs()) {
+    SmallVector<OMPAdjustArgsItem, 4> Items;
+    for (const OMPAdjustArgsItem &Item : Desc->items()) {
+      OMPAdjustArgsItem NewItem = Item;
+      if (SubstAdjustArgsExpr(NewItem.E) ||
+          SubstAdjustArgsExpr(NewItem.Lower.E) ||
+          SubstAdjustArgsExpr(NewItem.Upper.E))
+        continue;
+      Items.push_back(NewItem);
+    }
+    if (!Items.empty())
+      if (OMPAdjustArgsDescriptor *D = S.OpenMP().ActOnOpenMPAdjustArgsClause(
+              Desc->AdjustOp, Desc->NeedDevicePtrModifier, Items,
+              Attr.getLocation()))
+        AdjustArgs.push_back(D);
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
@@ -600,8 +605,8 @@ static void instantiateOMPDeclareVariantAttr(
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
-      FD, E, TI, NothingExprs, NeedDevicePtrExprs, NeedDeviceAddrExprs,
-      AppendArgs, SourceLocation(), SourceLocation(), Attr.getRange());
+      FD, E, TI, AdjustArgs, AppendArgs, SourceLocation(), SourceLocation(),
+      Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -3156,18 +3161,16 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         FunctionTemplate,
         TemplateArgumentList::CreateCopy(SemaRef.Context, Innermost),
         /*InsertToken=*/{});
-  } else if (FunctionRewriteKind == RewriteKind::None) {
-    if (isFriend && D->isThisDeclarationADefinition()) {
-      // Do not connect the friend to the template unless it's actually a
-      // definition. We don't want non-template functions to be marked as being
-      // template instantiations.
-      Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
-    } else if (!isFriend) {
-      // If this is not a function template, and this is not a friend (that is,
-      // this is a locally declared function), save the instantiation
-      // relationship for the purposes of constraint instantiation.
-      Function->setInstantiatedFromDecl(D);
-    }
+  } else if (isFriend && D->isThisDeclarationADefinition()) {
+    // Do not connect the friend to the template unless it's actually a
+    // definition. We don't want non-template functions to be marked as being
+    // template instantiations.
+    Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
+  } else if (!isFriend) {
+    // If this is not a function template, and this is not a friend (that is,
+    // this is a locally declared function), save the instantiation
+    // relationship for the purposes of constraint instantiation.
+    Function->setInstantiatedFromDecl(D);
   }
 
   if (isFriend) {
@@ -3566,7 +3569,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         FunctionTemplate,
         TemplateArgumentList::CreateCopy(SemaRef.Context, Innermost),
         /*InsertToken=*/{});
-  } else if (!isFriend && FunctionRewriteKind == RewriteKind::None) {
+  } else if (!isFriend) {
     // Record that this is an instantiation of a member function.
     Method->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
   }
@@ -6354,6 +6357,10 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   InstantiatingTemplate Inst(*this, PointOfInstantiation, FromVar);
   if (Inst.isInvalid())
     return nullptr;
+
+  // A variable template specialization is never a local declaration, so it
+  // must not see the locals of whatever instantiation we are currently in.
+  LocalInstantiationScope Local(*this);
 
   // Instantiate the first declaration of the variable template: for a partial
   // specialization of a static data member template, the first declaration may

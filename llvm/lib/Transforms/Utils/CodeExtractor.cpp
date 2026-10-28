@@ -455,14 +455,14 @@ Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
                                         const Twine &Name,
                                         AddrSpaceCastInst **CastedAlloc) {
   // An alloca needs no debug location, so the one passed in goes unused here.
-  const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
-  Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
-                                       nullptr, Name, AllocaIP.getPoint());
+  BasicBlock *BB = AllocaIP.getNodeParent();
+  const DataLayout &DL = BB->getDataLayout();
+  Instruction *Alloca =
+      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocaIP);
 
   if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
     *CastedAlloc = new AddrSpaceCastInst(
-        Alloca, PointerType::get(AllocaIP.getBlock()->getContext(), 0),
-        Name + ".ascast");
+        Alloca, PointerType::get(BB->getContext(), 0), Name + ".ascast");
     (*CastedAlloc)->insertAfter(Alloca->getIterator());
   }
   return Alloca;
@@ -565,83 +565,6 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
       LLVM_DEBUG(dbgs() << "Sinking alloca: " << *AI << "\n");
       SinkCands.insert(AI);
       continue;
-    }
-
-    // Find bitcasts in the outlined region that have lifetime marker users
-    // outside that region. Replace the lifetime marker use with an
-    // outside region bitcast to avoid unnecessary alloca/reload instructions
-    // and extra lifetime markers.
-    SmallVector<Instruction *, 2> LifetimeBitcastUsers;
-    for (User *U : AI->users()) {
-      if (!definedInRegion(Blocks, U))
-        continue;
-
-      if (U->stripInBoundsConstantOffsets() != AI)
-        continue;
-
-      Instruction *Bitcast = cast<Instruction>(U);
-      for (User *BU : Bitcast->users()) {
-        auto *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
-        if (!IntrInst)
-          continue;
-
-        if (definedInRegion(Blocks, IntrInst))
-          continue;
-
-        LLVM_DEBUG(dbgs() << "Replace use of extracted region bitcast"
-                          << *Bitcast << " in out-of-region lifetime marker "
-                          << *IntrInst << "\n");
-        LifetimeBitcastUsers.push_back(IntrInst);
-      }
-    }
-
-    for (Instruction *I : LifetimeBitcastUsers) {
-      Module *M = AIFunc->getParent();
-      LLVMContext &Ctx = M->getContext();
-      auto *Int8PtrTy = PointerType::getUnqual(Ctx);
-      CastInst *CastI =
-          CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I->getIterator());
-      I->replaceUsesOfWith(I->getOperand(1), CastI);
-    }
-
-    // Follow any bitcasts.
-    SmallVector<Instruction *, 2> Bitcasts;
-    SmallVector<LifetimeMarkerInfo, 2> BitcastLifetimeInfo;
-    for (User *U : AI->users()) {
-      if (U->stripInBoundsConstantOffsets() == AI) {
-        Instruction *Bitcast = cast<Instruction>(U);
-        LifetimeMarkerInfo LMI = getLifetimeMarkers(CEAC, Bitcast, ExitBlock);
-        if (LMI.LifeStart) {
-          Bitcasts.push_back(Bitcast);
-          BitcastLifetimeInfo.push_back(LMI);
-          continue;
-        }
-      }
-
-      // Found unknown use of AI.
-      if (!definedInRegion(Blocks, U)) {
-        Bitcasts.clear();
-        break;
-      }
-    }
-
-    // Either no bitcasts reference the alloca or there are unknown uses.
-    if (Bitcasts.empty())
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Sinking alloca (via bitcast): " << *AI << "\n");
-    SinkCands.insert(AI);
-    for (unsigned I = 0, E = Bitcasts.size(); I != E; ++I) {
-      Instruction *BitcastAddr = Bitcasts[I];
-      const LifetimeMarkerInfo &LMI = BitcastLifetimeInfo[I];
-      assert(LMI.LifeStart &&
-             "Unsafe to sink bitcast without lifetime markers");
-      moveOrIgnoreLifetimeMarkers(LMI);
-      if (!definedInRegion(Blocks, BitcastAddr)) {
-        LLVM_DEBUG(dbgs() << "Sinking bitcast-of-alloca: " << *BitcastAddr
-                          << "\n");
-        SinkCands.insert(BitcastAddr);
-      }
     }
   }
 }
@@ -1330,9 +1253,12 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     // Iterate the debug users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVR : DPUsers)
-      UpdateOrInsertDebugRecord(DVR, Input, NewVal, DVR->getExpression(),
-                                DVR->isDbgDeclare());
+    for (auto *DVR : DPUsers) {
+      DIExpression *Expr = DVR->getNumVariableLocationOps() == 1
+                               ? DVR->getExpression()
+                               : DIB.createExpression();
+      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
+    }
   }
 
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
@@ -1904,9 +1830,8 @@ CallInst *CodeExtractor::emitReplacerCall(
       continue;
 
     Value *OutAlloc =
-        allocateVar(IRBuilder<>::InsertPoint(
-                        AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                    DL, output->getType(), output->getName() + ".loc");
+        allocateVar(AllocaBlock->getFirstInsertionPt(), DL, output->getType(),
+                    output->getName() + ".loc");
     params.push_back(OutAlloc);
     ReloadOutputs.push_back(OutAlloc);
   }
@@ -1914,9 +1839,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
     AddrSpaceCastInst *StructSpaceCast = nullptr;
-    Struct = allocateVar(IRBuilder<>::InsertPoint(
-                             AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                         DL, StructArgTy, "structArg", &StructSpaceCast);
+    Struct = allocateVar(AllocaBlock->getFirstInsertionPt(), DL, StructArgTy,
+                         "structArg", &StructSpaceCast);
     if (StructSpaceCast)
       params.push_back(StructSpaceCast);
     else
@@ -2060,25 +1984,22 @@ CallInst *CodeExtractor::emitReplacerCall(
                                        {}, call);
 
   // Deallocate intermediate variables if they need explicit deallocation.
-  auto deallocVars = [&](BasicBlock *DeallocBlock,
-                         BasicBlock::iterator DeallocIP) {
+  auto deallocVars = [&](BasicBlock::iterator DeallocIP) {
     int Index = 0;
     for (Value *Output : outputs) {
       if (!StructValues.contains(Output))
-        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
-                      ReloadOutputs[Index++], Output->getType());
+        deallocateVar(DeallocIP, DL, ReloadOutputs[Index++], Output->getType());
     }
 
     if (Struct)
-      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
-                    Struct, StructArgTy);
+      deallocateVar(DeallocIP, DL, Struct, StructArgTy);
   };
 
   if (DeallocationBlocks.empty()) {
-    deallocVars(codeReplacer, codeReplacer->end());
+    deallocVars(codeReplacer->end());
   } else {
     for (BasicBlock *DeallocationBlock : DeallocationBlocks)
-      deallocVars(DeallocationBlock, DeallocationBlock->getFirstInsertionPt());
+      deallocVars(DeallocationBlock->getFirstInsertionPt());
   }
 
   return call;

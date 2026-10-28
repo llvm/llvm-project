@@ -117,46 +117,46 @@ sw.epilog:                                        ; preds = %entry, %sw.bb9, %sw
 ; CHECK:             .long   1                       # BTF_KIND_STRUCT(id = 2)
 ; CHECK:             .byte   115                     # string offset=1
 ; CHECK:             .ascii  ".text"                 # string offset=30
-; CHECK:             .ascii  "0:2"                   # string offset=36
+; CHECK:             .ascii  "0:2"                   # string offset=[[ACCESS:[0-9]+]]
 
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   30                      # Field reloc section string offset=30
 ; CHECK-NEXT:        .long   9
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   [[ACCESS]]
 ; CHECK-NEXT:        .long   3
 
 ; Function Attrs: nounwind readnone
