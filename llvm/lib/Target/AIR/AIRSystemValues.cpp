@@ -273,12 +273,18 @@ static bool airSystemValues(Module &M) {
       SysValArgs[NewF].push_back({SysArg->getArgNo(), USV.Info});
 
       if (USV.Info->IsVector) {
-        Value *Components[3];
-        for (int K = 0; K < 3; ++K) {
-          IRBuilder<> B(&*EntryBB.begin());
-          Components[K] = B.CreateExtractElement(
-              SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
-        }
+        // The components, extracted at the entry only for the calls that
+        // return an array (a vector result is the parameter itself, and its
+        // users' extractions stay where the calls were).
+        Value *Components[3] = {};
+        auto Component = [&](unsigned K) {
+          if (!Components[K]) {
+            IRBuilder<> B(&*EntryBB.begin());
+            Components[K] = B.CreateExtractElement(
+                SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
+          }
+          return Components[K];
+        };
         for (CallInst *CI : USV.Calls) {
           // The sysval call may return a <3 x i32> vector (extractelement
           // users) instead of the [3 x i32] array aggregate (extractvalue
@@ -295,7 +301,7 @@ static bool airSystemValues(Module &M) {
               Extracts.push_back(EV);
           for (ExtractValueInst *EV : Extracts) {
             unsigned Idx = EV->getIndices()[0];
-            EV->replaceAllUsesWith(Components[std::min(Idx, 2u)]);
+            EV->replaceAllUsesWith(Component(std::min(Idx, 2u)));
             EV->eraseFromParent();
           }
           // Any remaining users (e.g. a `freeze [3 x i32]` inserted by the
@@ -311,7 +317,7 @@ static bool airSystemValues(Module &M) {
             IRBuilder<> B(CI);
             Value *Agg = UndefValue::get(CI->getType());
             for (unsigned K = 0; K < 3; ++K)
-              Agg = B.CreateInsertValue(Agg, Components[K], {K});
+              Agg = B.CreateInsertValue(Agg, Component(K), {K});
             CI->replaceAllUsesWith(Agg);
           }
           CI->eraseFromParent();

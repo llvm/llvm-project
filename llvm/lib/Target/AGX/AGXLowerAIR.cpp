@@ -184,7 +184,8 @@ private:
   Function *newKernel(AIRKernel &K, AIRToAGXTypes &Types);
   void cloneKernel(AIRKernel &K, Function *NewF, ValueToValueMapTy &VMap,
                    AIRToAGXTypes &Types);
-  Value *systemValue(IRBuilder<> &B, StringRef Role, Type *Ty, Function *F);
+  Value *systemValue(IRBuilder<> &B, StringRef Role, Type *Ty, Function *F,
+                     int Only = -1);
   void passConstantBuffersByReference(AIRKernel &K, Function *NewF);
   void lowerMatrices(Function &F);
   void foldOrderedAtomics(Function &F);
@@ -382,11 +383,16 @@ static Type *namedType(StringRef Name, LLVMContext &Ctx) {
   return T;
 }
 
+// The system value Role as a value of the parameter type Ty, or its
+// component Only (of Ty's element type) alone.
 Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
-                             Function *F) {
+                             Function *F, int Only) {
   auto Read = [&](Intrinsic::ID ID) { return B.CreateIntrinsic(ID, {}); };
   auto XYZ = [&](Intrinsic::ID X, Intrinsic::ID Y, Intrinsic::ID Z) {
-    return SmallVector<Value *, 3>{Read(X), Read(Y), Read(Z)};
+    SmallVector<Value *, 3> V;
+    for (auto [I, ID] : enumerate(ArrayRef<Intrinsic::ID>{X, Y, Z}))
+      V.push_back(Only < 0 || int(I) == Only ? Read(ID) : nullptr);
+    return V;
   };
   using namespace Intrinsic;
   SmallVector<Value *, 3> C;
@@ -414,7 +420,7 @@ Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
     auto T = XYZ(agx_threads_per_threadgroup_x, agx_threads_per_threadgroup_y,
                  agx_threads_per_threadgroup_z);
     for (unsigned I = 0; I < 3; ++I)
-      C.push_back(B.CreateMul(G[I], T[I]));
+      C.push_back(G[I] ? B.CreateMul(G[I], T[I]) : nullptr);
   } else if (Role == air::ThreadIndexInThreadgroup)
     C = {Read(agx_thread_index_in_threadgroup)};
   else if (Role == air::ThreadIndexInSimdgroup)
@@ -424,6 +430,7 @@ Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
   else if (Role == air::ThreadsPerSimdgroup)
     C = {B.getInt32(32)};
   else if (Role == air::SimdgroupsPerThreadgroup) {
+    Only = -1; // all three, for one value
     auto T = XYZ(agx_threads_per_threadgroup_x, agx_threads_per_threadgroup_y,
                  agx_threads_per_threadgroup_z);
     Value *N = B.CreateMul(B.CreateMul(T[0], T[1]), T[2]);
@@ -443,6 +450,12 @@ Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
     return I < C.size() ? B.CreateZExtOrTrunc(C[I], EltTy)
                         : ConstantInt::get(EltTy, 0);
   };
+  if (Only >= 0) {
+    Type *EltTy = Ty;
+    if (auto *VT = dyn_cast<FixedVectorType>(Ty))
+      EltTy = VT->getElementType();
+    return Component(Only, EltTy);
+  }
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Value *V = PoisonValue::get(VT);
     for (unsigned I = 0; I < VT->getNumElements(); ++I)
@@ -522,6 +535,35 @@ void LowerAIR::cloneKernel(AIRKernel &K, Function *NewF,
   auto *Body = cast<BasicBlock>(VMap[&F.getEntryBlock()]);
   B.CreateBr(Body);
   MergeBlockIntoPredecessor(Body);
+
+  // AIR passes the system values as parameters, whose components the body
+  // extracts where agx-raise-to-air (or AIR's own code) read them. Each
+  // component is read at its extraction, as an AGX kernel reads it there.
+  // (A scalar one stays at the entry: AIR keeps no place for it, and reading
+  // it where its uses meet moved as many kernels the wrong way as the
+  // right one.)
+  for (Argument &A : F.args()) {
+    const Param &Pm = K.Params[A.getArgNo()];
+    Value *V = VMap.lookup(&A);
+    if (Pm.Kind != Param::SystemValue || !V ||
+        !isa<FixedVectorType>(A.getType()))
+      continue;
+    for (User *U : make_early_inc_range(V->users())) {
+      auto *EE = dyn_cast<ExtractElementInst>(U);
+      auto *Idx = EE ? dyn_cast<ConstantInt>(EE->getIndexOperand()) : nullptr;
+      if (!Idx || Idx->getZExtValue() >= 3)
+        continue;
+      if (!EE->use_empty()) {
+        IRBuilder<> UB(EE);
+        Value *C =
+            systemValue(UB, Pm.Role, A.getType(), &F, Idx->getZExtValue());
+        C->takeName(EE);
+        EE->replaceAllUsesWith(C);
+      }
+      EE->eraseFromParent();
+    }
+    RecursivelyDeleteTriviallyDeadInstructions(V);
+  }
 }
 
 // Whether every use of Ptr, at Offset bytes into the buffer, is a simple load

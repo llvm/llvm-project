@@ -7,15 +7,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32"
 
 ; CHECK-LABEL: define agx_kernel void @k(ptr addrspace(1) %out)
-; CHECK: call i32 @llvm.agx.thread.position.in.grid.x()
-; CHECK: call i32 @llvm.agx.threadgroup.position.in.grid.x()
-; CHECK: call i32 @llvm.agx.thread.position.in.threadgroup.x()
-; CHECK: call i32 @llvm.agx.threads.per.threadgroup.x()
-; CHECK: call i32 @llvm.agx.threadgroups.per.grid.x()
-; threads_per_grid
-; CHECK: %[[G:[0-9]+]] = call i32 @llvm.agx.threadgroups.per.grid.x()
-; CHECK: %[[T:[0-9]+]] = call i32 @llvm.agx.threads.per.threadgroup.x()
-; CHECK: mul i32 %[[G]], %[[T]]
+; Scalar system values are read at the entry.
 ; CHECK: call i32 @llvm.agx.thread.index.in.threadgroup()
 ; CHECK: call i32 @llvm.agx.thread.index.in.simdgroup()
 ; CHECK: call i32 @llvm.agx.simdgroup.index.in.threadgroup()
@@ -23,6 +15,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: %[[A:[0-9]+]] = add i32 %{{[0-9]+}}, 31
 ; CHECK: lshr i32 %[[A]], 5
 ; CHECK: trunc i32 %{{[0-9]+}} to i16
+; The components of vector ones where the kernel extracts them.
+; CHECK: %a = call i32 @llvm.agx.thread.position.in.grid.x()
+; CHECK: %b = call i32 @llvm.agx.threadgroup.position.in.grid.x()
+; CHECK: %c = call i32 @llvm.agx.thread.position.in.threadgroup.x()
+; CHECK: %d = call i32 @llvm.agx.threads.per.threadgroup.x()
+; CHECK: %e = call i32 @llvm.agx.threadgroups.per.grid.x()
+; threads_per_grid
+; CHECK: %[[G:[0-9]+]] = call i32 @llvm.agx.threadgroups.per.grid.x()
+; CHECK: %[[T:[0-9]+]] = call i32 @llvm.agx.threads.per.threadgroup.x()
+; CHECK: %f = mul i32 %[[G]], %[[T]]
 ; threads_per_simdgroup is 32.
 ; CHECK: store i32 32, ptr addrspace(1)
 

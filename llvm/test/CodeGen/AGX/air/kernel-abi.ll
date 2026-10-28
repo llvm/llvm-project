@@ -14,8 +14,8 @@
 ; CHECK-SAME: ptr addrspace(1) %x, ptr addrspace(1) %y,
 ; CHECK-SAME: ptr addrspace(4) noalias noundef nonnull readonly byref(i32) align 4 dereferenceable(4) %n)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call i32 @llvm.agx.thread.position.in.grid.x()
-; CHECK: call i32 @llvm.agx.thread.index.in.simdgroup()
+; CHECK-NEXT: call i32 @llvm.agx.thread.index.in.simdgroup()
+; CHECK-NEXT: %tid_x = call i32 @llvm.agx.thread.position.in.grid.x()
 ; CHECK: %tmp = alloca [4 x float], align 4, addrspace(5)
 ; CHECK: store float 1.000000e+00, ptr addrspace(5)
 ; CHECK-NOT: !air.

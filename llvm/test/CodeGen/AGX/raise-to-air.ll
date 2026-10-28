@@ -43,13 +43,13 @@
 ; RZ: fadd float %{{[0-9]+}}, %{{[0-9]+}}
 ; RZ: icmp eq i32 %[[RM]], 1
 ; The exact minimum, on the bits.
-; RZ: define internal half @__air_hint.call_llvm.minimum.f16____(half %0, half %1)
+; RZ: define internal half @__air_hint.call_llvm.minimum.f16______mode(half %0, half %1, i32 %2)
 ; RZ-NOT: @llvm.minimum
 ; RZ: ret half
 ; RZ-LABEL: define void @rz(
 ; RZ: call void @__air_hint.call_llvm.agx.set.fpmode___(i32 4)
 ; RZ: call float @__air_hint.call_llvm.experimental.constrained.fadd.f32_____round.dynamic_fpexcept.ignore__mode(float %{{[0-9]+}}, float %{{[0-9]+}}, i32 4)
-; RZ: call half @__air_hint.call_llvm.minimum.f16____(half %{{[0-9]+}}, half %{{[0-9]+}})
+; RZ: call half @__air_hint.call_llvm.minimum.f16______mode(half %{{[0-9]+}}, half %{{[0-9]+}}, i32 4)
 
 ; AGX-LABEL: rz:
 ; AGX: stop
