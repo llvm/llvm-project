@@ -273,6 +273,9 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 }
 
 Id DAP::Send(const Message &message) {
+  // WARN: Don't call the SBAPI while holding the call mutex.
+  // SBAPI calls can log to the console,
+  // and the main loop needs this lock to forward that output.
   std::lock_guard<std::mutex> guard(call_mutex);
   Message msg = std::visit(
       [this](auto &&msg) -> Message {
@@ -298,21 +301,7 @@ Id DAP::Send(const Message &message) {
   }
 
   if (const Response *resp = std::get_if<Response>(&msg)) {
-    // FIXME: After all the requests have migrated from LegacyRequestHandler >
-    // RequestHandler<> this should be handled in RequestHandler<>::operator().
-    // If the debugger was interrupted, convert this response into a
-    // 'cancelled' response because we might have a partial result.
-    llvm::Error err = (debugger.InterruptRequested())
-                          ? transport.Send({
-                                /*request_seq=*/resp->request_seq,
-                                /*command=*/resp->command,
-                                /*success=*/false,
-                                /*message=*/eResponseMessageCancelled,
-                                /*body=*/std::nullopt,
-                                /*seq=*/resp->seq,
-                            })
-                          : transport.Send(*resp);
-    if (err)
+    if (llvm::Error err = transport.Send(*resp))
       DAP_LOG_ERROR(log, std::move(err), "sending response failed: {0}");
     return resp->seq;
   }

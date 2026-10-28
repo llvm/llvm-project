@@ -515,7 +515,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   }
 
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (MIS.begin() == MII)
     HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
@@ -1235,7 +1235,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   else if (Ops.front().second == 0) {
     ++NumSpills;
     // If there is only 1 store instruction is required for spill, add it
-    // to mergeable list. In X86 AMX, 2 intructions are required to store.
+    // to mergeable list. In X86 AMX, 2 instructions are required to store.
     // We disable the merge for this case.
     if (std::distance(MIS.begin(), MIS.end()) <= 1)
       HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
@@ -1305,7 +1305,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
       dumpMachineInstrRangeWithSlotIndex(Spill, MIS.end(), LIS, "spill"));
   ++NumSpills;
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (IsRealSpill && std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);

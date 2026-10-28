@@ -942,13 +942,10 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
       TB.getIntegerType(13, llvm::Align(2), /*IsSigned=*/true,
                         /*IsBitInt=*/true);
   expectDirectInteger(classifyRet(BitInt13, FI, TI), 13);
-
-  // _BitInt > 32-bit gets passed as 64-bit, to match Clang ABI behavior.
-  // Returning this as i40 would be equivalent.
   const ABIType *BitInt40 =
       TB.getIntegerType(40, llvm::Align(8), /*IsSigned=*/false,
                         /*IsBitInt=*/true);
-  expectDirectInteger(classifyRet(BitInt40, FI, TI), 64);
+  expectDirectInteger(classifyRet(BitInt40, FI, TI), 40);
 
   // char, short and int must not be extended.
   expectDirectInteger(classifyRet(I8, FI, TI), 8);

@@ -9396,7 +9396,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     if (sinkCommonCodeFromPredecessors(BB, DTU) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
-      // so we may now how duplicate PHI's.
+      // so we may now have duplicate PHI's.
       // Let's rerun EliminateDuplicatePHINodes() first,
       // before foldTwoEntryPHINode() potentially converts them into select's,
       // after which we'd need a whole EarlyCSE pass run to cleanup them.
