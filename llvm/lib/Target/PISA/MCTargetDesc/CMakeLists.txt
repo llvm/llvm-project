@@ -9,7 +9,6 @@ add_llvm_component_library(LLVMPISADesc
 
   LINK_COMPONENTS
   CodeGenTypes
-  Core
   MC
   PISAInfo
   Support
