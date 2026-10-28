@@ -7646,20 +7646,6 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-
-    // manifest() needs a size for the alloca, either the constant above or one
-    // ObjectSizeOffsetEvaluator can materialize at runtime. An allocation
-    // function with no allocsize attribute and no built-in size knowledge
-    // offers neither, however it is otherwise attributed.
-    if (!Size && !hasComputableAllocSize(AI.CB, TLI)) {
-      LLVM_DEBUG(dbgs() << "[H2S] Unsizable allocation: " << *AI.CB << "\n");
-      AI.Status = AllocationInfo::INVALID;
-      Changed = ChangeStatus::CHANGED;
-      continue;
-    }
-
-    // A globalized local is exempt from the size cap, since moving it to the
-    // stack is worthwhile however large it is, but not from the check above.
     if (!AI.IsGlobalizedLocal && MaxHeapToStackSize != -1) {
       if (!Size || Size->ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
