@@ -11,11 +11,11 @@
 #define __CLANG_META
 
 #if !defined(__clang__)
-#error "this meta header was vendored by clang and only works when compiling with clang"
+#error "this <meta> header is part of Clang and can only be used when compiling with Clang"
 #elif !defined(__cplusplus)
-#error "meta header is only available in C++ mode"
+#error "<meta> is only available in C++ mode"
 #elif !defined(__CLANG_CXX_REFLECTION__)
-#error "meta header is only available when -freflection is enabled"
+#error "<meta> is only available when -freflection is enabled"
 #else
 
 
