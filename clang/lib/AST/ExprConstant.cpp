@@ -11391,8 +11391,9 @@ static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
   return ReflectionEvaluator(Info, Result).Visit(E);
 }
 
-static bool EvaluateReflectionBuiltinMetaIsType(EvalInfo &Info, const CallExpr *E,
-                                      APValue &Result) {
+static bool EvaluateReflectionBuiltinMetaIsType(EvalInfo &Info,
+                                                const CallExpr *E,
+                                                APValue &Result) {
   APValue Reflection;
   if (!EvaluateReflection(E->getArg(0), Reflection, Info))
     return false;
@@ -11402,8 +11403,10 @@ static bool EvaluateReflectionBuiltinMetaIsType(EvalInfo &Info, const CallExpr *
   return true;
 }
 
-static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info, const CallExpr *E,
-                                        unsigned BuiltinOp, APValue &Result) {
+static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info,
+                                                  const CallExpr *E,
+                                                  unsigned BuiltinOp,
+                                                  APValue &Result) {
   switch (BuiltinOp) {
   case Builtin::BI__builtin_meta_is_type:
     return EvaluateReflectionBuiltinMetaIsType(Info, E, Result);

@@ -2489,16 +2489,18 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-static bool interp__reflection_builtin_meta_is_type(InterpState &S, CodePtr OpPC,
-                                         const CallExpr *) {
+static bool interp__reflection_builtin_meta_is_type(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const CallExpr *) {
   const Reflect &R = S.Stk.pop<Reflect>();
   S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
   return true;
 }
 
-static bool interp__reflection_metafunction_builtin(InterpState &S, CodePtr OpPC,
-                                       const CallExpr *Call,
-                                       uint32_t BuiltinID) {
+static bool interp__reflection_metafunction_builtin(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const CallExpr *Call,
+                                                    uint32_t BuiltinID) {
   switch (BuiltinID) {
   case Builtin::BI__builtin_meta_is_type:
     return interp__reflection_builtin_meta_is_type(S, OpPC, Call);
