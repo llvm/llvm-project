@@ -82,10 +82,11 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
         if (x_bits.is_inf())
           return x;
 
+        fputil::raise_overflow_except_if_required<float>();
+
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         // If we can only RN, then it'll go towards INF
         fputil::set_errno_if_required(ERANGE);
-        fputil::raise_overflow_except_if_required<float>();
         return FPBits::inf().get_val();
 #else
         // If not, get what other rounding modes are available
@@ -94,7 +95,6 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
         case FE_UPWARD:
           // Both of these go to Inf
           fputil::set_errno_if_required(ERANGE);
-          fputil::raise_overflow_except_if_required<float>();
           return FPBits::inf().get_val();
         default:
           // RD and RZ go to the maximum possible value in the

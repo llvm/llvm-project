@@ -53,11 +53,11 @@ TEST_F(LlvmLibcExpm1f16Test, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
+      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
+      max_normal, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 }
 
@@ -102,4 +102,26 @@ TEST_F(LlvmLibcExpm1f16Test, ResultNearNegOne) {
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
       LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
       LIBC_NAMESPACE::expm1f16(x), FE_INEXACT);
+}
+
+TEST_F(LlvmLibcExpm1f16Test, OverflowStatusAllRoundingModes) {
+  using Bits = LIBC_NAMESPACE::fputil::FPBits<float16>;
+  const float16 x = Bits(uint16_t(0x5000)).get_val();
+  const float16 largest = Bits(uint16_t(0x7bff)).get_val();
+  const float16 infinity = Bits::inf().get_val();
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      infinity, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
+      infinity, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
+      largest, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      largest, LIBC_NAMESPACE::expm1f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }

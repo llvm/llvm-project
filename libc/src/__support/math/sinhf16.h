@@ -129,9 +129,10 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf(x_bits.sign()).get_val();
 
+      fputil::raise_overflow_except_if_required<float>();
+
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       return FPBits::inf(x_bits.sign()).get_val();
 #else
       int rounding_mode = fputil::quick_get_round();
@@ -139,7 +140,6 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
           (x_bits.is_pos() && rounding_mode == FE_UPWARD) ||
           (x_bits.is_neg() && rounding_mode == FE_DOWNWARD)) {
         fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return FPBits::inf(x_bits.sign()).get_val();
       }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
