@@ -64,6 +64,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXSinkAddressesPass(PR);
   initializeAGXThreadgroupAddressesPass(PR);
   initializeAGXHoistGuardedLoadsPass(PR);
+  initializeAGXVectorAccessesPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -266,7 +267,9 @@ void AGXPassConfig::addIRPasses() {
     // Loads that all-pairs loops skip for one element issue together.
     addPass(createAGXHoistGuardedLoadsPass());
     addPass(createAGXThreadgroupAddressesPass());
+    addPass(createAGXVectorAccessesPass(/*BeforeVectorizer=*/true));
     addPass(createLoadStoreVectorizerPass());
+    addPass(createAGXVectorAccessesPass(/*BeforeVectorizer=*/false));
   }
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.

@@ -43,6 +43,7 @@ FunctionPass *createAGXAnnotateControlFlowPass();
 FunctionPass *createAGXSinkAddressesPass();
 FunctionPass *createAGXThreadgroupAddressesPass();
 FunctionPass *createAGXHoistGuardedLoadsPass();
+FunctionPass *createAGXVectorAccessesPass(bool BeforeVectorizer);
 FunctionPass *createAGXLowerGenericAddressesPass();
 
 // Replaces recursive functions by state machines over an explicit stack
@@ -78,6 +79,7 @@ void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXSinkAddressesPass(PassRegistry &);
 void initializeAGXThreadgroupAddressesPass(PassRegistry &);
 void initializeAGXHoistGuardedLoadsPass(PassRegistry &);
+void initializeAGXVectorAccessesPass(PassRegistry &);
 void initializeAGXLowerGenericAddressesPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);
