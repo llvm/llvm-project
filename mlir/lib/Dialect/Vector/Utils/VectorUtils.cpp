@@ -584,37 +584,51 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   if (useInBoundsInsteadOfMasking)
     return write;
 
-  // Check if masking is needed. If not, exit.
-  if (llvm::equal(vecToStoreShape, destShape.take_back(vecToStoreRank)))
+  // The dest dims written to are those the permutation map selects. A null map
+  // means a minor identity: the trailing dims.
+  AffineMap map = permutationMap
+                      ? permutationMap
+                      : AffineMap::getMinorIdentityMap(destRank, vecToStoreRank,
+                                                       builder.getContext());
+
+  // A write that starts at 0 and fills the dims it writes to needs no mask.
+  bool startsAtZero = llvm::all_of(map.getResults(), [&](AffineExpr expr) {
+    return isZeroInteger(writeIndices[cast<AffineDimExpr>(expr).getPosition()]);
+  });
+  if (startsAtZero &&
+      llvm::equal(vecToStoreShape, applyPermutationMap(map, destShape)))
     return write;
 
   // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
-                                       vecToStoreType.getScalableDims());
+  VectorType writeMaskType = inferTransferOpMaskType(vecToStoreType, map);
 
   SmallVector<OpFoldResult> destSizes =
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
 
-  // Compute sizes for write-mask
+  // The map has a dim per dest dim but a result per vector dim, and the vector
+  // can have fewer dims than the dest (e.g. rank-reducing `insert_slice`). The
+  // mask has a dim for each dest dim that the map selects, in increasing order.
+  // For each, collect the mask size (`dim - index`), write index and dest size.
+  SmallVector<int64_t> maskedDestDims;
+  for (AffineExpr expr : map.getResults())
+    maskedDestDims.push_back(cast<AffineDimExpr>(expr).getPosition());
+  // A transposing map selects them out of order.
+  llvm::sort(maskedDestDims);
   SmallVector<OpFoldResult> maskSizes;
-  if (useDefaultWriteIdxs) {
-    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
-                                          destSizes.end());
-  } else {
-    size_t diff = destShape.size() - vecToStoreRank;
-    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
-      auto value =
-          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg =
-          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
-      maskSizes.push_back(OpFoldResult(neg));
-    }
+  SmallVector<Value> maskedDestIndices;
+  SmallVector<int64_t> maskedDestShape;
+  for (int64_t dim : maskedDestDims) {
+    Value size = getValueOrCreateConstantIndexOp(builder, loc, destSizes[dim]);
+    maskSizes.push_back(
+        builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
+    maskedDestIndices.push_back(writeIndices[dim]);
+    maskedDestShape.push_back(destShape[dim]);
   }
 
-  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
-                              vecToStoreShape))
+  if (isMaskTriviallyFoldable(maskSizes, maskedDestIndices, maskedDestShape,
+                              writeMaskType.getShape()))
     return write;
 
   Value maskForWrite =

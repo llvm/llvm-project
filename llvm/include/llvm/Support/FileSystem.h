@@ -702,6 +702,22 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
   return std::error_code();
 }
 
+/// Get file size.
+///
+/// @param FileHandle Input File
+/// @returns The size of the file in \a FileHandle, if successful, otherwise a
+///          std::error_code.
+#ifdef _WIN32
+LLVM_ABI ErrorOr<uint64_t> file_size(file_t FileHandle);
+#else
+inline ErrorOr<uint64_t> file_size(file_t FileHandle) {
+  file_status Status;
+  if (std::error_code EC = status(FileHandle, Status))
+    return EC;
+  return Status.getSize();
+}
+#endif
+
 /// Set the file modification and access time.
 ///
 /// @returns errc::success if the file times were successfully set, otherwise a

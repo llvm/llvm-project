@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
@@ -257,6 +257,36 @@ struct ReturnsSelf {
     return *this;                  // expected-note {{param returned here}}
   }
 };
+
+template <class C> struct SelfCapturingIter {
+  C *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIter(C &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+template <class T> struct AutoReturnSelf {
+  auto make() { return SelfCapturingIter<AutoReturnSelf>(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+auto test_auto_return_implicit_this() {
+  AutoReturnSelf<char> b;
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
+}
+
+struct AutoReturnSelfNonTemplate;
+
+struct SelfCapturingIterNonTemplate {
+  AutoReturnSelfNonTemplate *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIterNonTemplate(AutoReturnSelfNonTemplate &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+struct AutoReturnSelfNonTemplate {
+  auto make() { return SelfCapturingIterNonTemplate(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+auto test_auto_return_implicit_this_non_template() {
+  AutoReturnSelfNonTemplate b;
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
+}
 
 struct ReturnThisAnnotated {
   const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
@@ -817,6 +847,52 @@ struct FieldTypes {
     return *str_ptr_;                         // expected-note {{returned here}}
   }
 };
+
+namespace FieldOriginEscapeThroughAnonStruct {
+struct FieldInAnonStruct {
+  struct {
+    int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+
+struct FieldInNestedAnonStruct {
+  struct {
+    struct {
+      int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+    };
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonStructSuggestsOnlyForReturnedField {
+  struct {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonUnionSuggestsOnlyForReturnedField {
+  union {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
+} // namespace FieldOriginEscapeThroughAnonStruct
 
 struct Base {
   int *pub_ptr_; // expected-note {{if field 'pub_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
