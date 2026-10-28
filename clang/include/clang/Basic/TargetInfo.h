@@ -709,6 +709,12 @@ public:
   /// Whether half args and returns are supported.
   virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
 
+  /// Determine whether the target has the x87-specific `long double` type
+  /// without a physical x87. The target arm64ec-w64-mingw32 has this property.
+  /// On such a target, `long double` is an integer image and is not a true
+  /// floating-point type.
+  virtual bool hasSoftX87LongDouble() const { return false; }
+
   /// Determine whether the __float128 type is supported on this target.
   virtual bool hasFloat128Type() const { return HasFloat128; }
 

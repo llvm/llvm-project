@@ -295,6 +295,11 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
+  bool hasSoftX87LongDouble() const override {
+    return Triple.isWindowsArm64EC() &&
+           LongDoubleFormat == &llvm::APFloat::x87DoubleExtended();
+  }
 };
 
 // Windows ARM, MS (C++) ABI
