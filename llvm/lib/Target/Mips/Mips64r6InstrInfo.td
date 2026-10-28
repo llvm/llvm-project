@@ -374,7 +374,7 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
                 (BGEUC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
 }
 
-let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
+let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsJmpLink (i64 texternalsym:$dst)),
                 (JAL_R6 texternalsym:$dst)>, ISA_MIPS64R6;
   def : MipsPat<(MipsJmpLink (i64 tglobaladdr:$dst)),
@@ -383,15 +383,4 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
                 (TAILCALL_R6 tglobaladdr:$dst)>, ISA_MIPS64R6;
   def : MipsPat<(MipsTailCall (i64 texternalsym:$dst)),
                 (TAILCALL_R6 texternalsym:$dst)>, ISA_MIPS64R6;
-}
-
-let AdditionalPredicates = [NotInMicroMips, NotUseCompactBranches] in {
-  def : MipsPat<(MipsJmpLink (i64 texternalsym:$dst)),
-                (JAL texternalsym:$dst)>, ISA_MIPS64R6;
-  def : MipsPat<(MipsJmpLink (i64 tglobaladdr:$dst)),
-                (JAL tglobaladdr:$dst)>, ISA_MIPS64R6;
-  def : MipsPat<(MipsTailCall (i64 tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS64R6;
-  def : MipsPat<(MipsTailCall (i64 texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS64R6;
 }

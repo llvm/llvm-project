@@ -234,8 +234,6 @@ def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
                       AssemblerPredicate<(none_of FeaturePTR64Bit)>;
 def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
                          AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
-def NotUseCompactBranches : Predicate<"!Subtarget->useCompactBranches()">,
-                            AssemblerPredicate<(all_of (not FeatureUseCompactBranches))>;
 
 //===----------------------------------------------------------------------===//
 // HwModes

@@ -1271,7 +1271,7 @@ class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
 def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
 def TAILCALL_R6 : TailCallR6<BC, brtarget26>, ISA_MIPS32R6;
 
-let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
+let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
                 (JAL_R6 texternalsym:$dst)>, ISA_MIPS32R6;
   def : MipsPat<(MipsJmpLink (i32 tglobaladdr:$dst)),
@@ -1280,15 +1280,4 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
                 (TAILCALL_R6 tglobaladdr:$dst)>, ISA_MIPS32R6;
   def : MipsPat<(MipsTailCall (i32 texternalsym:$dst)),
                 (TAILCALL_R6 texternalsym:$dst)>, ISA_MIPS32R6;
-}
-
-let AdditionalPredicates = [NotInMicroMips, NotUseCompactBranches] in {
-  def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
-                (JAL texternalsym:$dst)>, ISA_MIPS32R6;
-  def : MipsPat<(MipsJmpLink (i32 tglobaladdr:$dst)),
-                (JAL tglobaladdr:$dst)>, ISA_MIPS32R6;
-  def : MipsPat<(MipsTailCall (i32 tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS32R6;
-  def : MipsPat<(MipsTailCall (i32 texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS32R6;
 }
