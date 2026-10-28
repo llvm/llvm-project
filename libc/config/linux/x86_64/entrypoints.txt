@@ -1741,6 +1741,12 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # math.h entrypoints
+      libc.src.math.cosh
+      libc.src.math.sinh
+      libc.src.math.tanh
+      libc.src.math.erf
+
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 
