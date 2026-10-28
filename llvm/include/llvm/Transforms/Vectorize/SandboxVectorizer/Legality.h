@@ -376,6 +376,9 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   LLVM_ABI const LegalityResult &canVectorize(BndlRef<Value *> Bndl,
                                               bool SkipScheduling = false);
+  /// Similar to canVectorize() but specific to LoadStoreVec.
+  // TODO: Try to unify with canVectorize().
+  LLVM_ABI const LegalityResult &canVectorizeLSV(BndlRef<Instruction *> Bndl);
   /// \Returns a Pack with reason 'ForcePackForDebugging'.
   const LegalityResult &getForcedPackForDebugging() {
     return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);

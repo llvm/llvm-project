@@ -328,6 +328,44 @@ func.func private @insert_slice_constant_non_zero_offset(
 
 // -----
 
+// The vector shape equals the destination shape, but the insert index for dim 1
+// is 2: only 6 elements are left in that dim, so the write needs a mask.
+
+func.func private @insert_slice_vector_matches_dest_non_zero_offset(
+    %source: tensor<4x6xi32>, %dest: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %res = tensor.insert_slice %source into %dest[0, 2] [4, 6] [1, 1] : tensor<4x6xi32> into tensor<4x8xi32>
+  return %res : tensor<4x8xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_vector_matches_dest_non_zero_offset(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<4x6xi32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<4x8xi32>) -> tensor<4x8xi32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_4:.*]] = arith.constant 4 : index
+// CHECK:           %[[C_6:.*]] = arith.constant 6 : index
+// CHECK:           %[[MASK_READ:.*]] = vector.create_mask %[[C_4]], %[[C_6]] : vector<4x8xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK_READ]] { vector.transfer_read %[[SRC]][%[[C_0_1]], %[[C_0_1]]], %[[PAD]] {in_bounds = [true, true]} : tensor<4x6xi32>, vector<4x8xi32> } : vector<4x8xi1> -> vector<4x8xi32>
+// CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C_4_1:.*]] = arith.constant 4 : index
+// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
+// CHECK:           %[[C_6_1:.*]] = arith.constant 6 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_4_1]], %[[C_6_1]] : vector<4x8xi1>
+// CHECK:           %[[RES:.*]] = vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[DEST]][%[[C_0_2]], %[[C_2]]] {in_bounds = [true, true]} : vector<4x8xi32>, tensor<4x8xi32> } : vector<4x8xi1> -> tensor<4x8xi32>
+// CHECK:           return %[[RES]] : tensor<4x8xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
 // One of the destination dimensions is dynamic and the the corresponding
 // insert index is != 0. Make sure that the mask is computed correctly (note arith.subi in the output).
 

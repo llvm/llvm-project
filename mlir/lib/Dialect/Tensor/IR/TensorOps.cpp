@@ -1409,6 +1409,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return {};
   }
 
+  if (Value result = foldExtractAfterInsert(*this))
+    return result;
+
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : adaptor.getIndices()) {
@@ -1443,9 +1446,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     if (elementsAttr && elementsAttr.isValidIndex(indices))
       return elementsAttr.getValues<Attribute>()[indices];
   }
-
-  if (Value result = foldExtractAfterInsert(*this))
-    return result;
 
   return {};
 }
@@ -2074,12 +2074,15 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 
   // Reshape must preserve the number of elements when statically known.
   if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
-    int64_t expandedNumElements = expandedType.getNumElements();
-    int64_t collapsedNumElements = collapsedType.getNumElements();
-    if (expandedNumElements != collapsedNumElements) {
+    std::optional<int64_t> expandedNumElements =
+        ShapedType::tryGetNumElements(expandedType.getShape());
+    std::optional<int64_t> collapsedNumElements =
+        ShapedType::tryGetNumElements(collapsedType.getShape());
+    if (!expandedNumElements || !collapsedNumElements)
+      return op.emitOpError("number of elements exceeds the int64 range");
+    if (*expandedNumElements != *collapsedNumElements)
       return op.emitOpError("number of elements must be preserved: ")
-             << expandedNumElements << " != " << collapsedNumElements;
-    }
+             << *expandedNumElements << " != " << *collapsedNumElements;
   }
 
   auto maps = op.getReassociationMaps();
@@ -2273,7 +2276,10 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
         APInt cst;
         if (matchPattern(val, m_ConstantInt(&cst))) {
-          newOutputShape[outDim] = cst.getSExtValue();
+          int64_t dim = cst.getSExtValue();
+          if (dim < 0)
+            return failure();
+          newOutputShape[outDim] = dim;
         } else {
           dynamicOutputShape.push_back(val);
         }
@@ -4196,13 +4202,30 @@ struct FoldTensorCastProducerOp
   }
 };
 
+namespace {
+/// A splat of a scalar condition selects the same arm in every element.
+struct SelectSplatCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto splat = select.getCondition().getDefiningOp<SplatOp>();
+    if (!splat)
+      return failure();
+    rewriter.modifyOpInPlace(
+        select, [&] { select.getConditionMutable().assign(splat.getInput()); });
+    return success();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TensorDialect
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<FoldTensorCastProducerOp>(getContext());
+  results.add<FoldTensorCastProducerOp, SelectSplatCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

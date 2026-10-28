@@ -294,6 +294,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
       .legalFor({i64, v16i8, v8i16, v4i32})
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder(
