@@ -183,10 +183,17 @@ Results (AGX Performance Simulator, 2026-10-28)
 * Correctness, PTX-formalization (413 programs) through ZLUDA with
   ``ZLUDA_AGX_VIA_AIR=1``: 408 pass, the direct path's result (its own
   failures), with the matrix hint compiled natively and with it emulated.
-* Speed, agx-bench against the direct path with the same ``llc`` flags:
-  cycles geomean +0.29% (CUDA suite: ``ddot`` +11%, its throughput -1.2%),
-  -0.01% (PTX tests: ``call_rnd``, directed rounding, +73%; ``cvt_f64_f32``
-  -36%), -0.01% (agx_libs).
+* Speed, agx-bench against the direct path with the same ``llc`` flags (after
+  agx-bench EXPERIMENTS.md L1 to L6): cycles / throughput geomean +0.48% /
+  -0.10% on the CUDA suite (``ddot``: +18.7% cycles, -3.6% throughput; the
+  portable soft-f64 issues fewer instructions but has a longer dependent
+  chain), -5.41% / -3.45% on the PTX tests (``call_rnd`` -48%: directed
+  float rounding by error-free transformations; device accesses that the
+  direct path keeps generic now vectorize), -0.02% / +0.04% on agx_libs.
+  Most of the AGX-side work in those rounds (store vectorization under
+  register pressure, shaped vector accesses, shared divisor reciprocals,
+  32-bit loop counters, bitfield extracts, 32-bit branch conditions) helps
+  the direct path as much.
 * The AIR: 2 of the 248 raised benchmark modules have a hint (the matrix
   FMA); the Metal pipeline writes a ``.metallib`` for 246 (the others need a
   128-bit atomic and a 64-bit compare-exchange). None was run on Metal here.
