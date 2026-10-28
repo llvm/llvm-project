@@ -54,7 +54,7 @@ Error AVRCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   // Install an instruction selector.
   addMachineFunctionPass(AVRISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
   // Create the frame analyzer pass used by the PEI pass.
-  // TODO(boomanaiden154): Add AVRFrameAnalyzer
+  addMachineFunctionPass(AVRFrameAnalyzerPass(), PMW);
   return Error::success();
 }
 
