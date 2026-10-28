@@ -120,6 +120,26 @@ LIBC_INLINE constexpr float16 expm1f16(float16 x) {
 
     // When 0 < |x| <= 2^(-3).
     if (x_abs <= 0x3000U && !x_bits.is_zero()) {
+      // The correction to x is nonzero but less than half a subnormal ulp.
+      // Select the adjacent half value directly, preserving signed zero.
+      if (LIBC_UNLIKELY(x_abs < 0x0400U || x_u == 0x8400U)) {
+        uint16_t out = x_u;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+        int mode = fputil::quick_get_round();
+        bool increase =
+            (x_bits.is_pos() && mode == FE_UPWARD) ||
+            (x_bits.is_neg() && (mode == FE_UPWARD || mode == FE_TOWARDZERO));
+        if (increase)
+          out = static_cast<uint16_t>(x_u + (x_bits.is_neg() ? -1 : 1));
+#endif
+        int excepts = FE_INEXACT;
+        if ((out & 0x7fffU) < 0x0400U) {
+          fputil::set_errno_if_required(ERANGE);
+          excepts |= FE_UNDERFLOW;
+        }
+        fputil::raise_except_if_required(excepts);
+        return FPBits(out).get_val();
+      }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       if (auto r = EXPM1F16_EXCEPTS_LO.lookup(x_u);
