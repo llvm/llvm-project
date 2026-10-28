@@ -146,15 +146,13 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   }
   case Type::ObjCObject:
   case Type::ObjCInterface:
-  case Type::ObjCObjectPointer: {
-    // Objective-C objects are represented as pointers in the ABI.
-    const TargetInfo &TI = ASTCtx.getTargetInfo();
-    unsigned TargetAddrSpace = TI.getTargetAddressSpace(QT.getAddressSpace());
+  case Type::ObjCObjectPointer:
+    // Objective-C objects are represented as pointers in the ABI. Clang lowers
+    // them to a pointer in address space 0.
     return Builder.getPointerType(
-        TI.getPointerWidth(QT.getAddressSpace()),
-        llvm::Align(TI.getPointerAlign(QT.getAddressSpace()) / 8),
-        TargetAddrSpace, QT.hasAddressSpace() || TargetAddrSpace != 0);
-  }
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
