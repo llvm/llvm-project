@@ -510,7 +510,9 @@ The extensions are:
   the 32-bit uniform from ``half``. With ``l = ceil(log2(d))``, kind 0 is
   ``2^32 * (2^l - d) / d + 1`` (truncated to 32 bits), kind 1 is
   ``min(l, 1)`` and kind 2 is ``max(l, 1) - 1``; kinds 3, 4 and 5 are the
-  same of ``|d|`` (a signed divisor). All are 0 for ``d = 0``. The kernel
+  same of ``|d|`` (a signed divisor), and kinds 6, 7 and 8 the same of
+  ``max(d, 1)`` (ZLUDA's guard of a PTX division's divisor). All are 0 for
+  ``d = 0``. The kernel
   divides as ``q = (t + ((x - t) >> s1)) >> s2``, ``t = mulhi(x, m)``,
   exact for every 32-bit ``x`` (Granlund and Montgomery, "Division by
   Invariant Integers using Multiplication", PLDI 1994), in place of a

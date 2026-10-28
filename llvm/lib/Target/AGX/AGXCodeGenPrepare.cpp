@@ -552,8 +552,9 @@ static cl::opt<bool> AGXLaunchDivisors(
 static constexpr unsigned MaxLaunchDivisors = 8;
 
 /// The kernel argument and 32-bit word of it that divisor Y is, if any: an
-/// i32 argument, or the low or high word of an i64 one (as the 32-bit fast
-/// path of a 64-bit division takes it).
+/// i32 argument, or the low or high word of an i64 one or the low word of an
+/// extended i32 one (as the 32-bit fast path of a 64-bit division takes
+/// them).
 static std::optional<std::pair<unsigned, unsigned>>
 launchDivisorSource(Value *Y) {
   using namespace PatternMatch;
@@ -562,6 +563,16 @@ launchDivisorSource(Value *Y) {
     return Fr ? Fr->getOperand(0) : V;
   };
   Y = Unfrozen(Y);
+  // umax(d, 1), ZLUDA's guard of a PTX division's divisor: the launch
+  // computes the values of max(d, 1) (word 2 and 3 stand for words 0 and 1
+  // so guarded)
+  Value *Guarded;
+  if (match(Y, m_UMax(m_Value(Guarded), m_One()))) {
+    auto Src = launchDivisorSource(Guarded);
+    if (!Src || Src->second >= 2)
+      return std::nullopt;
+    return std::pair(Src->first, Src->second + 2);
+  }
   if (auto *A = dyn_cast<Argument>(Y))
     return A->getType()->isIntegerTy(32)
                ? std::optional(std::pair(A->getArgNo(), 0u))
@@ -580,6 +591,12 @@ launchDivisorSource(Value *Y) {
   }
   if (auto *A = dyn_cast<Argument>(V); A && A->getType()->isIntegerTy(64))
     return std::pair(A->getArgNo(), Word);
+  // the low word of an extended i32 argument (an index built from 32-bit
+  // arguments) is the argument
+  Value *Narrow;
+  if (Word == 0 && match(V, m_ZExtOrSExt(m_Value(Narrow))))
+    if (auto *A = dyn_cast<Argument>(Narrow); A && A->getType()->isIntegerTy(32))
+      return std::pair(A->getArgNo(), 0u);
   return std::nullopt;
 }
 
@@ -599,9 +616,12 @@ static Value *expandLaunchDivRem32(BinaryOperator &BO, unsigned Arg,
   Type *I32 = B.getInt32Ty();
   Function *LV = Intrinsic::getOrInsertDeclaration(
       BO.getModule(), Intrinsic::agx_launch_value);
+  // words 2 and 3: max(d, 1) of word 0 or 1 (kinds 6 to 8)
+  bool Guarded = Word >= 2;
   auto Launch = [&](unsigned Kind) {
-    return B.CreateCall(LV, {B.getInt32(Arg), B.getInt32(Word),
-                             B.getInt32(Kind + (IsSigned ? 3 : 0))});
+    return B.CreateCall(
+        LV, {B.getInt32(Arg), B.getInt32(Word & 1),
+             B.getInt32(Kind + (Guarded ? 6 : IsSigned ? 3 : 0))});
   };
   Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
   Value *Neg = nullptr;
@@ -620,7 +640,7 @@ static Value *expandLaunchDivRem32(BinaryOperator &BO, unsigned Arg,
   Value *Res = IsRem ? B.CreateSub(X, B.CreateMul(Q, Y)) : Q;
   if (IsSigned)
     Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
-  if (IsRem)
+  if (IsRem || Guarded)
     return Res;
   Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
   return B.CreateSelect(Zero, B.getInt32(-1), Res);
@@ -677,8 +697,12 @@ bool AGXCodeGenPrepare::expandDivisions(Function &F) {
       Wide.push_back(BO);
       continue;
     }
-    if (auto Src = Kernel ? launchDivisorSource(BO->getOperand(1))
-                          : std::nullopt) {
+    auto Src = Kernel ? launchDivisorSource(BO->getOperand(1)) : std::nullopt;
+    // max(d, 1) has unsigned values only
+    if (Src && Src->second >= 2 && (BO->getOpcode() == Instruction::SDiv ||
+                                     BO->getOpcode() == Instruction::SRem))
+      Src = std::nullopt;
+    if (Src) {
       bool Known = is_contained(LaunchDivisors, *Src);
       if (Known || LaunchDivisors.size() < MaxLaunchDivisors) {
         if (!Known)

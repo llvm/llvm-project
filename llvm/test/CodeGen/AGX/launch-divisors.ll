@@ -66,3 +66,33 @@ define agx_kernel void @udiv_not_arg(ptr addrspace(1) %p, i32 %x, i32 %d) {
   store i32 %q, ptr addrspace(1) %p
   ret void
 }
+
+; The low word of an extended i32 argument, as the 32-bit fast path of a
+; 64-bit index division takes it.
+; CHECK-LABEL: udiv_extended:
+; CHECK-NOT:   rcp
+; CHECK:       icmpsel ueq, {{r[0-9]+}}, u3, 0,
+define agx_kernel void @udiv_extended(ptr addrspace(1) %p, i32 %x, i32 %d) {
+  %e = sext i32 %d to i64
+  %f = freeze i64 %e
+  %t = trunc i64 %f to i32
+  %q = udiv i32 %x, %t
+  store i32 %q, ptr addrspace(1) %p
+  ret void
+}
+
+; ZLUDA's guarded divisor umax(d, 1): the values of max(d, 1) (kinds 6 to
+; 8), and no zero check.
+; CHECK-LABEL: udiv_guarded:
+; CHECK-NOT:   rcp
+; CHECK-NOT:   icmpsel ueq
+; CHECK:       device_store
+; SECTION: 07000000 03000000 0e000000 06000000
+; SECTION: 06000000 10000000 06000000 07000000
+; SECTION: 12000000 06000000 08000000
+define agx_kernel void @udiv_guarded(ptr addrspace(1) %p, i32 %x, i32 %d) {
+  %g = call i32 @llvm.umax.i32(i32 %d, i32 1)
+  %q = udiv i32 %x, %g
+  store i32 %q, ptr addrspace(1) %p
+  ret void
+}

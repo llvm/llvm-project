@@ -35,9 +35,11 @@ class Kernel:
 
 def launch_value(d, kind):
     """Value `kind` of .agx.kernels extension 7 for the 32-bit argument word d, a divisor (|d| of a signed one for
-    kinds 3 to 5): with l = ceil(log2(d)), the multiplier 2^32 (2^l - d) / d + 1 and the shifts min(l, 1) and
+    kinds 3 to 5; of max(d, 1) for kinds 6 to 8): with l = ceil(log2(d)), the multiplier 2^32 (2^l - d) / d + 1 and the shifts min(l, 1) and
     max(l, 1) - 1; all 0 for d = 0."""
     d &= 0xFFFFFFFF
+    if kind >= 6:  # of max(d, 1), a guarded unsigned divisor
+        d, kind = max(d, 1), kind - 6
     if kind >= 3 and d >> 31:
         d = (1 << 32) - d
     if d == 0:
