@@ -8886,7 +8886,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
       return true;
-    bool Modified = tryToSinkFreeOperands(I);
+    // Skip operand sinking when store is in loop.
+    bool Modified =
+        !LI->getLoopFor(SI->getParent()) && tryToSinkFreeOperands(I);
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     unsigned AS = SI->getPointerAddressSpace();
     Modified |= optimizeMemoryInst(I, SI->getOperand(1),
