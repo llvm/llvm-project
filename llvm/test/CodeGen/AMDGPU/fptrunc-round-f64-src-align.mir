@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgpu12.50 -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck %s
 
 # The 64-bit VGPR source of FPTRUNC_ROUND_F32_F64_PSEUDO must be an even-aligned
 # VGPR tuple on subtargets that require aligned VGPRs: SIModeRegister lowers the
