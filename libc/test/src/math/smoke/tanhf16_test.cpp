@@ -15,6 +15,74 @@
 
 using LlvmLibcTanhf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
+TEST_F(LlvmLibcTanhf16Test, AllSubnormalRounding) {
+  using Bits = LIBC_NAMESPACE::fputil::FPBits<float16>;
+  using namespace LIBC_NAMESPACE::fputil::testing;
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  constexpr RoundingMode MODES[] = {RoundingMode::Nearest};
+#else
+  constexpr RoundingMode MODES[] = {RoundingMode::Nearest, RoundingMode::Upward,
+                                    RoundingMode::Downward,
+                                    RoundingMode::TowardZero};
+#endif
+  for (RoundingMode mode : MODES) {
+    ForceRoundingMode rounding(mode);
+    if (!rounding.success)
+      continue;
+    for (uint16_t magnitude = 1; magnitude < 0x0400; ++magnitude) {
+      constexpr uint16_t SIGNS[] = {0, 0x8000};
+      for (uint16_t sign : SIGNS) {
+        bool negative = sign != 0;
+        uint16_t expected = static_cast<uint16_t>(magnitude | sign);
+        if ((!negative && (mode == RoundingMode::Downward ||
+                           mode == RoundingMode::TowardZero)) ||
+            (negative && (mode == RoundingMode::Upward ||
+                          mode == RoundingMode::TowardZero)))
+          --expected;
+        bool tiny = (expected & 0x7fff) < 0x0400;
+        EXPECT_FP_EQ_WITH_EXCEPTION(
+            Bits(expected).get_val(),
+            LIBC_NAMESPACE::tanhf16(Bits(uint16_t(magnitude | sign)).get_val()),
+            FE_INEXACT | (tiny ? FE_UNDERFLOW : 0));
+        EXPECT_MATH_ERRNO(tiny ? ERANGE : 0);
+      }
+    }
+  }
+}
+
+TEST_F(LlvmLibcTanhf16Test, MinNormalTininessAfterRounding) {
+  using Bits = LIBC_NAMESPACE::fputil::FPBits<float16>;
+  using namespace LIBC_NAMESPACE::fputil::testing;
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  constexpr RoundingMode MODES[] = {RoundingMode::Nearest};
+#else
+  constexpr RoundingMode MODES[] = {RoundingMode::Nearest, RoundingMode::Upward,
+                                    RoundingMode::Downward,
+                                    RoundingMode::TowardZero};
+#endif
+  for (RoundingMode mode : MODES) {
+    ForceRoundingMode rounding(mode);
+    if (!rounding.success)
+      continue;
+    constexpr uint16_t SIGNS[] = {0, 0x8000};
+    for (uint16_t sign : SIGNS) {
+      bool negative = sign != 0;
+      uint16_t expected = static_cast<uint16_t>(0x0400 | sign);
+      if ((!negative && (mode == RoundingMode::Downward ||
+                         mode == RoundingMode::TowardZero)) ||
+          (negative &&
+           (mode == RoundingMode::Upward || mode == RoundingMode::TowardZero)))
+        --expected;
+      bool tiny = (expected & 0x7fff) < 0x0400;
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          Bits(expected).get_val(),
+          LIBC_NAMESPACE::tanhf16(Bits(uint16_t(0x0400 | sign)).get_val()),
+          FE_INEXACT | (tiny ? FE_UNDERFLOW : 0));
+      EXPECT_MATH_ERRNO(tiny ? ERANGE : 0);
+    }
+  }
+}
+
 TEST_F(LlvmLibcTanhf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::tanhf16(aNaN));
   EXPECT_MATH_ERRNO(0);
