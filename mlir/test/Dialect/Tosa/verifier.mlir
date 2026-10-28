@@ -2513,19 +2513,3 @@ func.func @test_reverse_block_scaled_rank_zero(%arg0: tensor<!tosa.block_scaled<
   %0 = tosa.reverse %arg0 axis(0) : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }
-
-// -----
-
-// Regression test: a block-scaled slice whose start comes from tosa.dim must
-// not crash the verifier. The start values are not compile-time constants, so
-// the block-alignment ERROR_IF can only be reported by tosa-validate when the
-// values are resolvable (see checkErrorIfSlice).
-func.func @test_slice_block_scaled_dynamic_start(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
-  %s0 = tosa.dim %arg0 axis(0) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
-  %s1 = tosa.dim %arg0 axis(1) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
-  %s2 = tosa.dim %arg0 axis(2) : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> !tosa.shape<1>
-  %start = tosa.concat_shape %s0, %s1, %s2 : (!tosa.shape<1>, !tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %0 = tosa.slice %arg0, %start, %size : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
-  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
-}

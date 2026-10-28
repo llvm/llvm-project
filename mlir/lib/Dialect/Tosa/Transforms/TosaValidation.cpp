@@ -1420,9 +1420,20 @@ LogicalResult checkErrorIfSlice(Operation *op) {
     return op->emitOpError("size values must be > 0, got [")
            << sizeValues << "]";
 
+  // MLIR-specific: output shape must match the size values.
+  if (hasSizeValues) {
+    const auto outputType = sliceOp.getOutput().getType();
+    if (const auto rankedOutput = dyn_cast<RankedTensorType>(outputType)) {
+      if (failed(verifyCompatibleShape(rankedOutput.getShape(), sizeValues)))
+        return op->emitOpError(
+                   "expected output shape to match size values, got ")
+               << outputType << " vs [" << sizeValues << "]";
+    }
+  }
+
   // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
   // get_innermost_block_size<in_out_t>() != 0)
-  if (hasStartValues) {
+  if (hasStartValues && !startValues.empty()) {
     auto elemType = getElementTypeOrSelf(sliceOp.getInput1().getType());
     if (auto blockScaledType = dyn_cast<BlockScaledType>(elemType)) {
       const int64_t startBlock = startValues.back();
@@ -1723,23 +1734,23 @@ void TosaValidation::runOnOperation() {
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
     if (failed(applyConstantOperandCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do level checks
     if (failed(applyLevelCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // check additional attribute restrictions
     if (failed(applyAttributeCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do variable type checks
     if (failed(applyVariableCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do error if checks
     if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
   });
 }
 } // namespace
