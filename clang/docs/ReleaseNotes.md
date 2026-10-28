@@ -760,6 +760,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- `-Waddress-of-packed-member` now also diagnoses members packed by
+  `#pragma pack`, `#pragma options align=mac68k`, or `-fpack-struct`, and
+  members whose typedef lowers their alignment. (#GH97091)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
