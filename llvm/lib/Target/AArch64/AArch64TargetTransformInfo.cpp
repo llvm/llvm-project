@@ -8096,7 +8096,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
       break;
 
     unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
-    if (Factor >= 2 && Factor <= 4) {
+    if (Factor) {
       Ops.push_back(&SI->getOperandUse(0));
       return true;
     }
