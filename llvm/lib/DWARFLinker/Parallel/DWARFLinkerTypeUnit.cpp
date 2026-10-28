@@ -162,10 +162,10 @@ void TypeUnit::prepareDataForTreeCreation() {
     DebugInfoSection.ListDebugTypeDeclFilePatch.forEach(
         [&](DebugTypeDeclFilePatch &Patch) {
           TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
-          assert(TypeEntry &&
-                 formatv("No data for type {0}", Patch.TypeName->getKey())
-                     .str()
-                     .c_str());
+          assert(TypeEntry && formatv("No data for type {0}",
+                                      getExpandedTypeKey(*Patch.TypeName))
+                                  .str()
+                                  .c_str());
           if (&TypeEntry->getFinalDie() != Patch.Die)
             return;
 
