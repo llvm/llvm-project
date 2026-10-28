@@ -16,10 +16,8 @@ define amdgpu_ps <2 x float> @image_gather4_lz_2d_v4f16_tfe(<8 x i32> inreg %rsr
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v8, v4
 ; GFX8-UNPACKED-NEXT:    image_gather4_lz v[4:8], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v0, 0xffff, v5
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v1, 0xffff, v7
-; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v0, 16, v5
+; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v1, 16, v7
 ; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v1, v6, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-UNPACKED-NEXT:    flat_store_dword v[2:3], v8

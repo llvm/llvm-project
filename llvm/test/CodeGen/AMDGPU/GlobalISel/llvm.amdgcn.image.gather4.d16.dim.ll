@@ -15,8 +15,6 @@ define amdgpu_ps <2 x float> @image_gather4_b_2d_v4f16(<8 x i32> inreg %rsrc, <4
 ; GFX8-UNPACKED-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX8-UNPACKED-NEXT:    image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x4 d16
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
@@ -60,8 +58,6 @@ define amdgpu_ps <2 x float> @image_gather4_lz_2d_v4f16(<8 x i32> inreg %rsrc, <
 ; GFX8-UNPACKED:       ; %bb.0: ; %main_body
 ; GFX8-UNPACKED-NEXT:    image_gather4_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1 d16
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
