@@ -179,8 +179,8 @@ private:
   static unsigned getRegKind(const TargetRegisterClass *RC,
                              const SIRegisterInfo *STI);
 
-  friend GCNRegPressure max(const GCNRegPressure &P1,
-                            const GCNRegPressure &P2);
+  friend GCNRegPressure maxPerRegFile(const GCNRegPressure &P1,
+                                      const GCNRegPressure &P2);
 
   friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                          unsigned DynamicVGPRBlockSize);
@@ -191,17 +191,27 @@ private:
 /// the larger sum. The AGPR maximum stays separate also for a unified VGPR
 /// file: ArchVGPRs and AGPRs use separate ranges of it, so the unified pressure
 /// is the sum of both peaks even when they are at different points.
-inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
+inline GCNRegPressure maxPerRegFile(const GCNRegPressure &P1,
+                                    const GCNRegPressure &P2) {
   GCNRegPressure Res;
-  for (unsigned I = 0; I < GCNRegPressure::ValueArraySize; ++I)
-    Res.Value[I] = std::max(P1.Value[I], P2.Value[I]);
-  for (unsigned Base : {0u, unsigned(GCNRegPressure::TOTAL_KINDS)}) {
-    unsigned V = Base + GCNRegPressure::VGPR;
-    unsigned AV = Base + GCNRegPressure::AVGPR;
-    const GCNRegPressure &From =
-        P1.Value[V] + P1.Value[AV] >= P2.Value[V] + P2.Value[AV] ? P1 : P2;
-    Res.Value[V] = From.Value[V];
-    Res.Value[AV] = From.Value[AV];
+  // Value holds the register counts, then the tuple weights, in the same
+  // RegKind order.
+  for (unsigned I = 0; I < GCNRegPressure::ValueArraySize; ++I) {
+    switch (I % GCNRegPressure::TOTAL_KINDS) {
+    case GCNRegPressure::VGPR: {
+      unsigned AV = I - GCNRegPressure::VGPR + GCNRegPressure::AVGPR;
+      const GCNRegPressure &From =
+          P1.Value[I] + P1.Value[AV] >= P2.Value[I] + P2.Value[AV] ? P1 : P2;
+      Res.Value[I] = From.Value[I];
+      Res.Value[AV] = From.Value[AV];
+      break;
+    }
+    case GCNRegPressure::AVGPR:
+      // Already set with VGPR, which comes first in RegKind.
+      break;
+    default:
+      Res.Value[I] = std::max(P1.Value[I], P2.Value[I]);
+    }
   }
   return Res;
 }

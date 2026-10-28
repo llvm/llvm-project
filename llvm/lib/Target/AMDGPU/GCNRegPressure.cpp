@@ -627,7 +627,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   DefPressure += CurPressure;
   if (HasECDefs)
     DefPressure += ECDefPressure;
-  MaxPressure = max(DefPressure, MaxPressure);
+  MaxPressure = maxPerRegFile(DefPressure, MaxPressure);
 
   // Make uses alive.
   SmallVector<VRegMaskOrUnit, 8> RegUses;
@@ -640,8 +640,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   }
 
   // Update MaxPressure with uses plus early-clobber defs pressure.
-  MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
-                          : max(CurPressure, MaxPressure);
+  MaxPressure = HasECDefs
+                    ? maxPerRegFile(CurPressure + ECDefPressure, MaxPressure)
+                    : maxPerRegFile(CurPressure, MaxPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
@@ -713,7 +714,7 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
                         *MRI);
   }
 
-  MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
+  MaxPressure = maxPerRegFile(MaxPressure, CurPressure + ECDefPressure);
 
   SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
   assert(SI.isValid());
@@ -736,7 +737,7 @@ void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
       retireVirtReg(Reg, SI);
   }
 
-  MaxPressure = max(MaxPressure, CurPressure);
+  MaxPressure = maxPerRegFile(MaxPressure, CurPressure);
 }
 
 void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
@@ -752,7 +753,7 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
     LiveMask |= getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
-  MaxPressure = max(MaxPressure, CurPressure);
+  MaxPressure = maxPerRegFile(MaxPressure, CurPressure);
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext() {
