@@ -12,7 +12,8 @@
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
 //
-// A read uses the slot's current value; a write defines its next value.
+// A read uses the slot's current value or extracts an in-bounds sub-vector;
+// a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
 // sub-vector from the parent, and writes insert it back into the parent.
 // Supported transfers through dynamic subviews use a vector type matching the
@@ -36,6 +37,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -88,6 +90,40 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   return true;
 }
 
+/// Return offsets for an unmasked, in-bounds read of a fixed-size sub-vector
+/// of the slot. Dynamic subview slots hold the entire parent vector, not the
+/// runtime extent of the view, so containment in that vector is insufficient.
+static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
+    TransferReadOp readOp, const MemorySlot &slot,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
+      readOp.getBase() != slot.ptr || !isa<MemRefType>(slot.ptr.getType()))
+    return failure();
+  if (readOp.getMask() || readOp.isMasked() || readOp.hasOutOfBoundsDim() ||
+      !readOp.getPermutationMap().isIdentity() ||
+      memref::isDynamicSubViewSlot(slot.ptr))
+    return failure();
+
+  auto slotType = dyn_cast<VectorType>(slot.valueType);
+  VectorType readType = readOp.getVectorType();
+  if (!slotType || slotType.isScalable() || readType.isScalable() ||
+      readType.getRank() != slotType.getRank() ||
+      readOp.getIndices().size() != static_cast<size_t>(readType.getRank()) ||
+      readType.getElementType() != slotType.getElementType())
+    return failure();
+
+  SmallVector<int64_t> offsets;
+  for (auto [index, size, extent] : llvm::zip_equal(
+           readOp.getIndices(), readType.getShape(), slotType.getShape())) {
+    auto offset = getConstantIntValue(index);
+    // Subtract first to avoid overflowing offset + size in the bounds check.
+    if (!offset || *offset < 0 || size > extent || *offset > extent - size)
+      return failure();
+    offsets.push_back(*offset);
+  }
+  return offsets;
+}
+
 //===----------------------------------------------------------------------===//
 //  PromotableMemOpInterface models
 //===----------------------------------------------------------------------===//
@@ -113,7 +149,9 @@ struct TransferReadOpMemOpModel
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
     return isPromotableTransfer(cast<VectorTransferOpInterface>(op), slot,
-                                blockingUses);
+                                blockingUses) ||
+           succeeded(getPromotableReadSliceOffsets(cast<TransferReadOp>(op),
+                                                   slot, blockingUses));
   }
 
   // Replace the read with the reaching definition, selecting padding for lanes
@@ -129,6 +167,16 @@ struct TransferReadOpMemOpModel
                      const DataLayout &dataLayout) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
+    if (readOp.getVectorType() != slot.valueType) {
+      auto offsets = getPromotableReadSliceOffsets(readOp, slot, blockingUses);
+      assert(succeeded(offsets) && "expected a promotable read slice");
+      SmallVector<int64_t> strides(offsets->size(), 1);
+      Value result = vector::ExtractStridedSliceOp::create(
+          builder, loc, reachingDefinition, *offsets,
+          readOp.getVectorType().getShape(), strides);
+      readOp.getVector().replaceAllUsesWith(result);
+      return DeletionKind::Delete;
+    }
     Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
     if (Value opMask = readOp.getMask())
       mask = mask

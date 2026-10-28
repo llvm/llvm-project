@@ -1,8 +1,7 @@
 // RUN: mlir-opt %s --mem2reg --split-input-file | FileCheck %s
 
-// A memref that is only ever accessed as a whole buffer through
-// vector.transfer_read / vector.transfer_write is promoted to a single vector
-// SSA value.
+// Whole-buffer transfers and supported sub-vector reads can be promoted to a
+// single vector SSA value.
 
 // CHECK-LABEL: func.func @whole_buffer_write_read
 //   CHECK-SAME:   (%[[PAD:.*]]: f32)
@@ -689,4 +688,333 @@ func.func @negative_masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vecto
   vector.mask %m { vector.transfer_write %w, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32> } : vector<8xi1>
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
   return %r : vector<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_origin
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: vector.transfer
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [0], sizes = [4], strides = [1]
+// CHECK: return %[[R]] : vector<4xf32>
+func.func @partial_read_origin(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_offset
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: vector.transfer
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: return %[[R]] : vector<4xf32>
+func.func @partial_read_offset(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_at_end
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: vector.transfer
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [4], sizes = [4], strides = [1]
+// CHECK: return %[[R]] : vector<4xf32>
+func.func @partial_read_at_end(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c4], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_2d
+// CHECK-SAME: (%[[V:.*]]: vector<4x8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: vector.transfer
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [1, 2], sizes = [2, 4], strides = [1, 1]
+// CHECK: return %[[R]] : vector<2x4xf32>
+func.func @partial_read_2d(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<4x8xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
+  %r = vector.transfer_read %a[%c1, %c2], %pad {in_bounds = [true, true]} : memref<4x8xf32>, vector<2x4xf32>
+  return %r : vector<2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_dynamic_index
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_dynamic_index(%v: vector<8xf32>, %pad: f32, %offset: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%offset], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_negative_index
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_negative_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c-1 = arith.constant -1 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c-1], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_exceeds_extent
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_exceeds_extent(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c6 = arith.constant 6 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c6], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_large_index
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_large_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c9223372036854775807 = arith.constant 9223372036854775807 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c9223372036854775807], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_unproven_bounds
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_unproven_bounds(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c2], %pad   : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_masked
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_masked(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c2], %pad, %mask {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_transpose
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_transpose(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<4x8xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : memref<4x8xf32>, vector<2x4xf32>
+  return %r : vector<2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_broadcast
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_broadcast(%v: vector<4x8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<4x8xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d1)>, in_bounds = [true]} : memref<4x8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// A read projects the definition reaching that program point, not a later write.
+// CHECK-LABEL: func.func @partial_read_before_write
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK: %[[POISON:.*]] = ub.poison : vector<8xf32>
+// CHECK: %[[FIRST:.*]] = vector.extract_strided_slice %[[POISON]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: %[[SECOND:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: return %[[FIRST]], %[[SECOND]]
+func.func @partial_read_before_write(%v: vector<8xf32>, %pad: f32) -> (vector<4xf32>, vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  %r0 = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r1 = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r0, %r1 : vector<4xf32>, vector<4xf32>
+}
+
+// -----
+
+// Static aliases provide their own sub-vector; the read extracts within it.
+// CHECK-LABEL: func.func @partial_read_static_alias
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: memref.subview
+// CHECK: %[[ALIAS:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[ALIAS]] offsets = [1], sizes = [2], strides = [1]
+// CHECK: return %[[R]]
+func.func @partial_read_static_alias(%v: vector<8xf32>, %pad: f32) -> vector<2xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
+  %r = vector.transfer_read %sv[%c1], %pad {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 2>>, vector<2xf32>
+  return %r : vector<2xf32>
+}
+
+// -----
+
+// Each slice reads the current loop-carried vector.
+// CHECK-LABEL: func.func @partial_read_loop
+// CHECK-NOT: memref.alloca
+// CHECK: %[[LOOP:.*]] = scf.for {{.*}} iter_args(%[[IT:.*]] = %{{.*}}) -> (vector<8xf32>)
+// CHECK: %[[SLICE:.*]] = vector.extract_strided_slice %[[IT]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: %[[NEXT:.*]] = arith.addf %[[SLICE]], %[[SLICE]]
+// CHECK: %[[FULL:.*]] = vector.insert_strided_slice %[[NEXT]], %[[IT]] offsets = [2], strides = [1]
+// CHECK: scf.yield %[[FULL]]
+// CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[LOOP]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: return %[[RESULT]]
+func.func @partial_read_loop(%v: vector<8xf32>, %pad: f32, %lb: index, %ub: index, %step: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  scf.for %iv = %lb to %ub step %step {
+    %whole = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+    %part = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+    %next = arith.addf %part, %part : vector<4xf32>
+    %full = vector.insert_strided_slice %next, %whole offsets = [2], strides = [1] : vector<4xf32> into vector<8xf32>
+    vector.transfer_write %full, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  }
+  %r = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @partial_read_branch
+// CHECK-NOT: memref.alloca
+// CHECK: %[[DEF:.*]] = scf.if {{.*}} -> (vector<8xf32>)
+// CHECK: scf.yield %{{.*}} : vector<8xf32>
+// CHECK: scf.yield %{{.*}} : vector<8xf32>
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[DEF]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: return %[[R]]
+func.func @partial_read_branch(%a0: vector<8xf32>, %a1: vector<8xf32>, %pad: f32, %cond: i1) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %a = memref.alloca() : memref<8xf32>
+  scf.if %cond {
+    vector.transfer_write %a0, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  } else {
+    vector.transfer_write %a1, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  }
+  %r = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// A dynamic subview's slot value represents its parent, not its runtime shape.
+// CHECK-LABEL: func.func @partial_read_dynamic_alias
+// CHECK: memref.alloca
+// CHECK: memref.subview
+// CHECK: vector.transfer_read
+func.func @partial_read_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[0] [%size] [1] : memref<8xf32> to memref<?xf32, strided<[1]>>
+  %r = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<?xf32, strided<[1]>>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// Scalable transfers keep the whole-buffer requirement.
+// CHECK-LABEL: func.func @partial_read_scalable
+// CHECK: memref.alloca
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+func.func @partial_read_scalable(%v: vector<[8]xf32>, %pad: f32) -> vector<[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %scale = vector.vscale
+  %size = arith.muli %scale, %c8 : index
+  %a = memref.alloca(%size) : memref<?xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<[8]xf32>, memref<?xf32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<?xf32>, vector<[4]xf32>
+  return %r : vector<[4]xf32>
+}
+
+// -----
+
+// A slice may span lanes written through an alias and untouched parent lanes.
+// CHECK-LABEL: func.func @partial_read_after_alias_write
+// CHECK-SAME: (%[[INIT:.*]]: vector<8xf32>, %[[V:.*]]: vector<4xf32>,
+// CHECK-NOT: memref.alloca
+// CHECK: %[[MERGED:.*]] = vector.insert_strided_slice %[[V]], %[[INIT]] offsets = [2], strides = [1]
+// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[MERGED]] offsets = [1], sizes = [4], strides = [1]
+// CHECK: return %[[R]]
+func.func @partial_read_after_alias_write(%init: vector<8xf32>, %v: vector<4xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
+  vector.transfer_write %v, %sv[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
+  %r = vector.transfer_read %a[%c1], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %r : vector<4xf32>
 }
