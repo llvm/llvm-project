@@ -477,6 +477,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
     case BuiltinType::LongDouble:
       LongDoubleReferenced = true;
+      if (getTarget().hasSoftX87LongDouble()) {
+        // For ARM64EC, the software x87 `long double` is an integer image
+        // of the value in a 16-byte slot.  All computation goes through
+        // `double` via runtime helper calls.
+        ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
+        break;
+      }
       [[fallthrough]];
     case BuiltinType::BFloat16:
     case BuiltinType::Float:

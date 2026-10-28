@@ -555,6 +555,9 @@ public:
     return Builder.getInt(E->getValue());
   }
   Value *VisitFloatingLiteral(const FloatingLiteral *E) {
+    if (CGF.getTarget().hasSoftX87LongDouble() &&
+        E->getType()->isSpecificBuiltinType(BuiltinType::LongDouble))
+      return CGF.CGM.EmitSoftX87LdConstant(E->getValue());
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
   Value *VisitCharacterLiteral(const CharacterLiteral *E) {
@@ -838,6 +841,9 @@ public:
 
   // Binary Operators.
   Value *EmitMul(const BinOpInfo &Ops) {
+    if (CGF.getTarget().hasSoftX87LongDouble() &&
+        Ops.Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+      return EmitSoftX87BinOp(Ops, &ScalarExprEmitter::EmitMul);
     if (Ops.Ty->isSignedIntegerOrEnumerationType() ||
         Ops.Ty->isUnsignedIntegerType()) {
       const bool isSigned = Ops.Ty->isSignedIntegerOrEnumerationType();
@@ -985,8 +991,17 @@ public:
   Value *EmitCompare(const BinaryOperator *E, llvm::CmpInst::Predicate UICmpOpc,
                      llvm::CmpInst::Predicate SICmpOpc,
                      llvm::CmpInst::Predicate FCmpOpc, bool IsSignaling);
+  Value *EmitSoftX87Compare(const BinaryOperator *E,
+                            llvm::CmpInst::Predicate FCmpOpc);
+  Value *EmitSoftX87BinOp(
+      const BinOpInfo &Ops,
+      Value *(ScalarExprEmitter::*Emit)(const BinOpInfo &));
 #define VISITCOMP(CODE, UI, SI, FP, SIG) \
     Value *VisitBin##CODE(const BinaryOperator *E) { \
+      if (CGF.getTarget().hasSoftX87LongDouble() && \
+          E->getLHS()->getType()->isSpecificBuiltinType( \
+              BuiltinType::LongDouble)) \
+        return EmitSoftX87Compare(E, llvm::FCmpInst::FP); \
       return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI, \
                          llvm::FCmpInst::FP, SIG); }
   VISITCOMP(LT, ICMP_ULT, ICMP_SLT, FCMP_OLT, true)
@@ -1043,6 +1058,18 @@ public:
 /// boolean (i1) truth value.  This is equivalent to "Val != 0".
 Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
   assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
+
+  // ARM64EC: a soft x87 `long double` is zero if and only if both the
+  // significand and the exponent field of its image are zero, so this test
+  // stays exact even for values below the `double` range.
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      SrcType->isSpecificBuiltinType(BuiltinType::LongDouble)) {
+    llvm::Constant *Low79 = llvm::ConstantInt::get(
+        Src->getType(), llvm::APInt::getLowBitsSet(128, 79));
+    return CGF.Builder.CreateICmpNE(
+        CGF.Builder.CreateAnd(Src, Low79),
+        llvm::ConstantInt::get(Src->getType(), 0));
+  }
 
   if (SrcType->isRealFloatingType())
     return EmitFloatToBoolConversion(Src);
@@ -1629,12 +1656,60 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
   return Builder.CreateFPExt(Src, DstTy, "conv");
 }
 
+/// Evaluate a binary operation on soft x87 `long double` operands: both sides
+/// are converted to `double`, the operation is carried out in `double`, and the
+/// result is converted back into the x87 image.
+Value *ScalarExprEmitter::EmitSoftX87BinOp(
+    const BinOpInfo &Ops,
+    Value *(ScalarExprEmitter::*Emit)(const BinOpInfo &)) {
+  SourceLocation Loc = Ops.E ? Ops.E->getExprLoc() : SourceLocation();
+  BinOpInfo DoubleOps = Ops;
+  DoubleOps.Ty = CGF.getContext().DoubleTy;
+  DoubleOps.LHS = CGF.EmitSoftX87LdToDouble(Ops.LHS, Loc);
+  DoubleOps.RHS = CGF.EmitSoftX87LdToDouble(Ops.RHS, Loc);
+  return CGF.EmitDoubleToSoftX87Ld((this->*Emit)(DoubleOps), Loc);
+}
+
+Value *ScalarExprEmitter::EmitSoftX87Compare(const BinaryOperator *E,
+                                             llvm::CmpInst::Predicate FCmpOpc) {
+  SourceLocation Loc = E->getExprLoc();
+  llvm::Value *LHS =
+      CGF.EmitSoftX87LdToDouble(CGF.EmitScalarExpr(E->getLHS()), Loc);
+  llvm::Value *RHS =
+      CGF.EmitSoftX87LdToDouble(CGF.EmitScalarExpr(E->getRHS()), Loc);
+  llvm::Value *Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
+  return EmitScalarConversion(Result, CGF.getContext().BoolTy, E->getType(),
+                              Loc);
+}
+
 /// Emit a conversion from the specified type to the specified destination type,
 /// both of which are LLVM scalar types.
 Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
                                                QualType DstType,
                                                SourceLocation Loc,
                                                ScalarConversionOpts Opts) {
+  // ARM64EC: `long double` is an x87 image held in a 16-byte integer slot.
+  // Every conversion goes through `double` and the runtime helpers.
+  if (Src && CGF.getTarget().hasSoftX87LongDouble()) {
+    QualType CSrcType = CGF.getContext().getCanonicalType(SrcType);
+    QualType CDstType = CGF.getContext().getCanonicalType(DstType);
+    const bool SrcIsLd =
+        CSrcType->isSpecificBuiltinType(BuiltinType::LongDouble);
+    const bool DstIsLd =
+        CDstType->isSpecificBuiltinType(BuiltinType::LongDouble);
+    if (CSrcType != CDstType && (SrcIsLd || DstIsLd)) {
+      QualType DoubleTy = CGF.getContext().DoubleTy;
+      if (SrcIsLd) {
+        Src = CGF.EmitSoftX87LdToDouble(Src, Loc);
+        SrcType = DoubleTy;
+      }
+      if (DstIsLd) {
+        Src = EmitScalarConversion(Src, SrcType, DoubleTy, Loc, Opts);
+        return CGF.EmitDoubleToSoftX87Ld(Src, Loc);
+      }
+    }
+  }
+
   // All conversions involving fixed point types should be handled by the
   // EmitFixedPoint family functions. This is done to prevent bloating up this
   // function more, and although fixed point numbers are represented by
@@ -3131,7 +3206,13 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
-    return EmitFloatToBoolConversion(Visit(E));
+    Value *Src = Visit(E);
+    // ARM64EC: a soft x87 `long double` is an integer image, not an FP value,
+    // so it has to be tested with integer operations; see EmitConversionToBool.
+    if (CGF.getTarget().hasSoftX87LongDouble() &&
+        E->getType()->isSpecificBuiltinType(BuiltinType::LongDouble))
+      return EmitConversionToBool(Src, E->getType().getCanonicalType());
+    return EmitFloatToBoolConversion(Src);
   }
   case CK_MemberPointerToBoolean: {
     llvm::Value *MemPtr = Visit(E);
@@ -3561,6 +3642,14 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
+    // ARM64EC: a soft x87 `long double` is an integer image with no FP
+    // representation, so the increment goes through `double` and the runtime
+    // helpers.
+    const bool SoftX87 = CGF.getTarget().hasSoftX87LongDouble() &&
+                         type->isSpecificBuiltinType(BuiltinType::LongDouble);
+    if (SoftX87)
+      value = CGF.EmitSoftX87LdToDouble(value, E->getExprLoc());
+
     // Another special case: half FP increment should be done via float.
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
@@ -3596,6 +3685,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
+
+    if (SoftX87)
+      value = CGF.EmitDoubleToSoftX87Ld(value, E->getExprLoc());
 
     // Fixed-point types.
   } else if (type->isFixedPointType()) {
@@ -3712,6 +3804,16 @@ Value *ScalarExprEmitter::VisitMinus(const UnaryOperator *E,
   if (Op->getType()->isFPOrFPVectorTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     return Builder.CreateFNeg(Op, "fneg");
+  }
+
+  // ARM64EC: negate a soft x87 `long double` by flipping its sign bit.  This
+  // keeps the exact bit pattern (in particular -(+0.0) is -0.0, which the
+  // 0.0 - x formulation below would get wrong).
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      E->getType()->isSpecificBuiltinType(BuiltinType::LongDouble)) {
+    llvm::APInt SignMask = llvm::APInt::getOneBitSet(128, 79);
+    return Builder.CreateXor(Op, llvm::ConstantInt::get(VMContext, SignMask),
+                             "fneg");
   }
 
   // Emit unary minus with EmitSub so we handle overflow cases etc.
@@ -4320,6 +4422,9 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 }
 
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      Ops.Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+    return EmitSoftX87BinOp(Ops, &ScalarExprEmitter::EmitDiv);
   {
     SanitizerDebugLocation SanScope(&CGF,
                                     {SanitizerKind::SO_IntegerDivideByZero,
@@ -4374,6 +4479,9 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
 }
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      Ops.Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+    return EmitSoftX87BinOp(Ops, &ScalarExprEmitter::EmitRem);
   // Rem in C can't be a floating point type: C99 6.5.5p2.
   if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
        CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
@@ -4784,6 +4892,9 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
 }
 
 Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      op.Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+    return EmitSoftX87BinOp(op, &ScalarExprEmitter::EmitAdd);
   if (op.LHS->getType()->isPointerTy() ||
       op.RHS->getType()->isPointerTy())
     return emitPointerArithmetic(CGF, op, CodeGenFunction::NotSubtraction);
@@ -4946,6 +5057,9 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
 }
 
 Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
+  if (CGF.getTarget().hasSoftX87LongDouble() &&
+      op.Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+    return EmitSoftX87BinOp(op, &ScalarExprEmitter::EmitSub);
   // The LHS is always a pointer if either side is.
   if (!op.LHS->getType()->isPointerTy()) {
     if (op.Ty->isSignedIntegerOrEnumerationType() ||
@@ -5415,11 +5529,22 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     }
 
     Value *ResultR, *ResultI;
-    if (CETy->isRealFloatingType()) {
+    if (CETy->isRealFloatingType() &&
+        LHS.first->getType()->isFloatingPointTy()) {
       // As complex comparisons can only be equality comparisons, they
       // are never signaling comparisons.
       ResultR = Builder.CreateFCmp(FCmpOpc, LHS.first, RHS.first, "cmp.r");
       ResultI = Builder.CreateFCmp(FCmpOpc, LHS.second, RHS.second, "cmp.i");
+    } else if (CETy->isRealFloatingType()) {
+      // ARM64EC: the element is an x87 image held in an integer, so compare
+      // the components through `double` instead of with an integer predicate.
+      SourceLocation Loc = E->getExprLoc();
+      ResultR = Builder.CreateFCmp(
+          FCmpOpc, CGF.EmitSoftX87LdToDouble(LHS.first, Loc),
+          CGF.EmitSoftX87LdToDouble(RHS.first, Loc), "cmp.r");
+      ResultI = Builder.CreateFCmp(
+          FCmpOpc, CGF.EmitSoftX87LdToDouble(LHS.second, Loc),
+          CGF.EmitSoftX87LdToDouble(RHS.second, Loc), "cmp.i");
     } else {
       // Complex comparisons can only be equality comparisons.  As such, signed
       // and unsigned opcodes are the same.
@@ -6231,6 +6356,36 @@ Value *CodeGenFunction::EmitComplexToScalarConversion(ComplexPairTy Src,
       .EmitComplexToScalarConversion(Src, SrcTy, DstTy, Loc);
 }
 
+Address CodeGenFunction::CreateSoftX87LdTemp(SourceLocation Loc) {
+  QualType LDTy = getContext().LongDoubleTy;
+  CharUnits Align = getContext().getTypeAlignInChars(LDTy);
+  llvm::Type *Ty = ConvertType(LDTy);
+  return Address(CreateTempAlloca(Ty, Align, "x87ld.tmp"));
+}
+
+llvm::Value *CodeGenFunction::EmitSoftX87LdToDouble(llvm::Value *Bits,
+                                                    SourceLocation Loc) {
+  Address Tmp = CreateSoftX87LdTemp(Loc);
+  Builder.CreateStore(Bits, Tmp);
+  llvm::FunctionType *FT = llvm::FunctionType::get(
+      llvm::Type::getDoubleTy(getLLVMContext()), {Builder.getPtrTy()}, false);
+  llvm::FunctionCallee Fn =
+      CGM.CreateRuntimeFunction(FT, "__arm64ec_load_x87_long_double");
+  return Builder.CreateCall(Fn, {Tmp.getPointerIfNotSigned()},
+                            "x87ld.to.double");
+}
+
+llvm::Value *CodeGenFunction::EmitDoubleToSoftX87Ld(llvm::Value *Value,
+                                                    SourceLocation Loc) {
+  Address Tmp = CreateSoftX87LdTemp(Loc);
+  llvm::FunctionType *FT = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(getLLVMContext()),
+      {Builder.getPtrTy(), llvm::Type::getDoubleTy(getLLVMContext())}, false);
+  llvm::FunctionCallee Fn =
+      CGM.CreateRuntimeFunction(FT, "__arm64ec_store_x87_long_double");
+  Builder.CreateCall(Fn, {Tmp.getPointerIfNotSigned(), Value});
+  return Builder.CreateLoad(Tmp, "double.to.x87ld");
+}
 
 Value *
 CodeGenFunction::EmitPromotedScalarExpr(const Expr *E,

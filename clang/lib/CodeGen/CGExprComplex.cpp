@@ -276,6 +276,19 @@ public:
   ComplexPairTy EmitBinSub(const BinOpInfo &Op);
   ComplexPairTy EmitBinMul(const BinOpInfo &Op);
   ComplexPairTy EmitBinDiv(const BinOpInfo &Op);
+
+  /// ARM64EC: `long double` in the x87 80-bit format is represented by a
+  /// 128-bit integer, so `long double _Complex` would otherwise be emitted as
+  /// *integer* complex arithmetic, which neither implements x87 semantics nor
+  /// even accepts a real operand next to a complex one.  Report whether `Op`
+  /// is such an operation.
+  bool isSoftX87ComplexOp(const BinOpInfo &Op) const {
+    return CGF.getTarget().hasSoftX87LongDouble() &&
+           !Op.LHS.first->getType()->isFloatingPointTy();
+  }
+  /// Rewrite the components of a soft-x87 `BinOpInfo` as `double`.
+  BinOpInfo softX87ComplexToDouble(const BinOpInfo &Op);
+
   ComplexPairTy EmitAlgebraicDiv(llvm::Value *A, llvm::Value *B, llvm::Value *C,
                                  llvm::Value *D);
   ComplexPairTy EmitRangeReductionDiv(llvm::Value *A, llvm::Value *B,
@@ -695,6 +708,16 @@ ComplexPairTy ComplexExprEmitter::VisitMinus(const UnaryOperator *E,
   if (Op.first->getType()->isFloatingPointTy()) {
     ResR = Builder.CreateFNeg(Op.first, "neg.r");
     ResI = Builder.CreateFNeg(Op.second, "neg.i");
+  } else if (CGF.getTarget().hasSoftX87LongDouble()) {
+    // ARM64EC: the components are x87 images held in integers, so negate them
+    // through `double` rather than with a two's complement negation.
+    SourceLocation Loc;
+    ResR = CGF.EmitDoubleToSoftX87Ld(
+        Builder.CreateFNeg(CGF.EmitSoftX87LdToDouble(Op.first, Loc), "neg.r"),
+        Loc);
+    ResI = CGF.EmitDoubleToSoftX87Ld(
+        Builder.CreateFNeg(CGF.EmitSoftX87LdToDouble(Op.second, Loc), "neg.i"),
+        Loc);
   } else {
     ResR = Builder.CreateNeg(Op.first, "neg.r");
     ResI = Builder.CreateNeg(Op.second, "neg.i");
@@ -710,14 +733,44 @@ ComplexPairTy ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *E) {
   llvm::Value *ResI;
   if (Op.second->getType()->isFloatingPointTy())
     ResI = Builder.CreateFNeg(Op.second, "conj.i");
-  else
+  else if (CGF.getTarget().hasSoftX87LongDouble()) {
+    // ARM64EC: flip the sign bit of the imaginary part by way of `double`.
+    SourceLocation Loc;
+    ResI = CGF.EmitDoubleToSoftX87Ld(
+        Builder.CreateFNeg(CGF.EmitSoftX87LdToDouble(Op.second, Loc), "conj.i"),
+        Loc);
+  } else
     ResI = Builder.CreateNeg(Op.second, "conj.i");
 
   return ComplexPairTy(Op.first, ResI);
 }
 
+/// Rewrite the components of a soft-x87 `BinOpInfo` as `double`.
+ComplexExprEmitter::BinOpInfo
+ComplexExprEmitter::softX87ComplexToDouble(const BinOpInfo &Op) {
+  SourceLocation Loc;
+  auto ToDouble = [&](llvm::Value *V) -> llvm::Value * {
+    return V ? CGF.EmitSoftX87LdToDouble(V, Loc) : nullptr;
+  };
+  BinOpInfo Out = Op;
+  Out.LHS = ComplexPairTy(ToDouble(Op.LHS.first), ToDouble(Op.LHS.second));
+  Out.RHS = ComplexPairTy(ToDouble(Op.RHS.first), ToDouble(Op.RHS.second));
+  // The ABI lowering of the operands and of the '__muldc3'/'__divdc3' libcalls
+  // is driven by this type, which has to follow the components.
+  Out.Ty = CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
+  return Out;
+}
+
 ComplexPairTy ComplexExprEmitter::EmitBinAdd(const BinOpInfo &Op) {
   llvm::Value *ResR, *ResI;
+
+  if (isSoftX87ComplexOp(Op)) {
+    BinOpInfo DblOp = softX87ComplexToDouble(Op);
+    ComplexPairTy Res = EmitBinAdd(DblOp);
+    SourceLocation Loc;
+    return ComplexPairTy(CGF.EmitDoubleToSoftX87Ld(Res.first, Loc),
+                         CGF.EmitDoubleToSoftX87Ld(Res.second, Loc));
+  }
 
   if (Op.LHS.first->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
@@ -738,6 +791,15 @@ ComplexPairTy ComplexExprEmitter::EmitBinAdd(const BinOpInfo &Op) {
 
 ComplexPairTy ComplexExprEmitter::EmitBinSub(const BinOpInfo &Op) {
   llvm::Value *ResR, *ResI;
+
+  if (isSoftX87ComplexOp(Op)) {
+    BinOpInfo DblOp = softX87ComplexToDouble(Op);
+    ComplexPairTy Res = EmitBinSub(DblOp);
+    SourceLocation Loc;
+    return ComplexPairTy(CGF.EmitDoubleToSoftX87Ld(Res.first, Loc),
+                         CGF.EmitDoubleToSoftX87Ld(Res.second, Loc));
+  }
+
   if (Op.LHS.first->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     ResR = Builder.CreateFSub(Op.LHS.first, Op.RHS.first, "sub.r");
@@ -824,6 +886,14 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
   using llvm::Value;
   Value *ResR, *ResI;
   llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+
+  if (isSoftX87ComplexOp(Op)) {
+    BinOpInfo DblOp = softX87ComplexToDouble(Op);
+    ComplexPairTy Res = EmitBinMul(DblOp);
+    SourceLocation Loc;
+    return ComplexPairTy(CGF.EmitDoubleToSoftX87Ld(Res.first, Loc),
+                         CGF.EmitDoubleToSoftX87Ld(Res.second, Loc));
+  }
 
   if (Op.LHS.first->getType()->isFloatingPointTy()) {
     // The general formulation is:
@@ -1034,6 +1104,15 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
   llvm::Value *LHSr = Op.LHS.first, *LHSi = Op.LHS.second;
   llvm::Value *RHSr = Op.RHS.first, *RHSi = Op.RHS.second;
   llvm::Value *DSTr, *DSTi;
+
+  if (isSoftX87ComplexOp(Op)) {
+    BinOpInfo DblOp = softX87ComplexToDouble(Op);
+    ComplexPairTy Res = EmitBinDiv(DblOp);
+    SourceLocation Loc;
+    return ComplexPairTy(CGF.EmitDoubleToSoftX87Ld(Res.first, Loc),
+                         CGF.EmitDoubleToSoftX87Ld(Res.second, Loc));
+  }
+
   if (LHSr->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (!RHSi) {

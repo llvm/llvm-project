@@ -4899,6 +4899,13 @@ public:
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
 
+  /// ARM64EC: lower a builtin that takes or returns a soft x87 `long double`
+  /// without ever creating floating-point values of that type.  Returns false
+  /// if the builtin does not need special treatment.
+  bool EmitSoftX87LongDoubleBuiltin(unsigned BuiltinID, const CallExpr *E,
+                                    ReturnValueSlot ReturnValue,
+                                    RValue &Result);
+
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
 
   RValue emitStdcCountIntrinsic(const CallExpr *E, llvm::Intrinsic::ID IntID,
@@ -5214,6 +5221,11 @@ public:
   /// type, both of which are LLVM scalar types.
   llvm::Value *EmitScalarConversion(llvm::Value *Src, QualType SrcTy,
                                     QualType DstTy, SourceLocation Loc);
+
+  /// Emit intermediate conversions for software x86 `long double`.
+  Address CreateSoftX87LdTemp(SourceLocation Loc);
+  llvm::Value *EmitSoftX87LdToDouble(llvm::Value *Bits, SourceLocation Loc);
+  llvm::Value *EmitDoubleToSoftX87Ld(llvm::Value *Value, SourceLocation Loc);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.

@@ -1454,6 +1454,10 @@ public:
   /// null constant.
   llvm::Constant *EmitNullConstant(QualType T);
 
+  /// ARM64EC: return the 16-byte integer image of an x87 extended-precision
+  /// value, which is how `long double` constants are represented.
+  llvm::Constant *EmitSoftX87LdConstant(const llvm::APFloat &Value);
+
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   llvm::Constant *EmitNullConstantForBase(const CXXRecordDecl *Record);
