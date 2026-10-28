@@ -204,6 +204,7 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   } else {
     // Required for correct stack lowering
     addFunctionPass(NVPTXLowerAllocaPass(), PMW);
+    addFunctionPass(NVPTXAtomicLowerPass(), PMW);
   }
 
   addFunctionPass(AtomicExpandPass(TM), PMW);

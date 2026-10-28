@@ -287,6 +287,7 @@ void NVPTXPassConfig::addIRPasses() {
   } else {
     // Required for correct stack lowering
     addPass(createNVPTXLowerAllocaLegacyPass());
+    addPass(createNVPTXAtomicLowerLegacyPass());
   }
 
   addPass(createAtomicExpandLegacyPass());
