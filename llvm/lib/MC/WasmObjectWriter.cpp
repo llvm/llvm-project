@@ -73,12 +73,6 @@ struct WasmFunction {
   MCSection *Section;
 };
 
-// A wasm global to be written into the global section.
-struct WasmGlobal {
-  wasm::WasmGlobalType Type;
-  uint64_t InitialValue;
-};
-
 // Information about a single item which is part of a COMDAT.  For each data
 // segment or function which is in the COMDAT, there is a corresponding
 // WasmComdatEntry.
@@ -321,6 +315,8 @@ private:
   }
 
   void writeValueType(wasm::ValType Ty) { W->OS << static_cast<char>(Ty); }
+
+  void reportUnsupportedGlobal(const MCSymbolWasm &WS, uint8_t Type);
 
   void writeTypeSection(ArrayRef<wasm::WasmSignature> Signatures);
   void writeImportSection(ArrayRef<wasm::WasmImport> Imports, uint64_t DataSize,
@@ -902,6 +898,16 @@ void WasmObjectWriter::writeTagSection(ArrayRef<uint32_t> TagTypes) {
   endSection(Section);
 }
 
+void WasmObjectWriter::reportUnsupportedGlobal(const MCSymbolWasm &WS,
+                                               uint8_t Type) {
+  // llvm/lib/MC cannot call the WebAssembly target's typeToString.
+  getContext().reportError(SMLoc(),
+                           "WebAssembly global '" + WS.getName() +
+                               "' has a type that cannot be initialized "
+                               "(type 0x" +
+                               Twine::utohexstr(Type) + ")");
+}
+
 void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
   if (Globals.empty())
     return;
@@ -917,24 +923,24 @@ void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
       llvm_unreachable("extected init expressions not supported");
     } else {
       W->OS << char(Global.InitExpr.Inst.Opcode);
-      switch (Global.Type.Type) {
-      case wasm::WASM_TYPE_I32:
-        encodeSLEB128(0, W->OS);
+      switch (Global.InitExpr.Inst.Opcode) {
+      case wasm::WASM_OPCODE_I32_CONST:
+        encodeSLEB128(Global.InitExpr.Inst.Value.Int32, W->OS);
         break;
-      case wasm::WASM_TYPE_I64:
-        encodeSLEB128(0, W->OS);
+      case wasm::WASM_OPCODE_I64_CONST:
+        encodeSLEB128(Global.InitExpr.Inst.Value.Int64, W->OS);
         break;
-      case wasm::WASM_TYPE_F32:
-        writeI32(0);
+      case wasm::WASM_OPCODE_F32_CONST:
+        writeI32(Global.InitExpr.Inst.Value.Float32);
         break;
-      case wasm::WASM_TYPE_F64:
-        writeI64(0);
+      case wasm::WASM_OPCODE_F64_CONST:
+        writeI64(Global.InitExpr.Inst.Value.Float64);
         break;
-      case wasm::WASM_TYPE_EXTERNREF:
-        writeValueType(wasm::ValType::EXTERNREF);
+      case wasm::WASM_OPCODE_REF_NULL:
+        writeValueType(static_cast<wasm::ValType>(Global.Type.Type));
         break;
       default:
-        llvm_unreachable("unexpected type");
+        llvm_unreachable("unexpected init expression opcode");
       }
     }
     W->OS << char(wasm::WASM_OPCODE_END);
@@ -1386,6 +1392,11 @@ void WasmObjectWriter::prepareImports(
       } else if (WS.isGlobal()) {
         if (WS.isWeak())
           report_fatal_error("undefined global symbol cannot be weak");
+        if (WS.hasGlobalInitExpr())
+          getContext().reportError(SMLoc(), "WebAssembly global '" +
+                                                WS.getName() +
+                                                "' has an initial value but "
+                                                "is not defined");
 
         wasm::WasmImport Import;
         Import.Field = WS.getImportName();
@@ -1669,21 +1680,37 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           switch (Global.Type.Type) {
           case wasm::WASM_TYPE_I32:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+            Global.InitExpr.Inst.Value.Int32 = 0;
             break;
           case wasm::WASM_TYPE_I64:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I64_CONST;
+            Global.InitExpr.Inst.Value.Int64 = 0;
             break;
           case wasm::WASM_TYPE_F32:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F32_CONST;
+            Global.InitExpr.Inst.Value.Float32 = 0;
             break;
           case wasm::WASM_TYPE_F64:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F64_CONST;
+            Global.InitExpr.Inst.Value.Float64 = 0;
             break;
           case wasm::WASM_TYPE_EXTERNREF:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_REF_NULL;
             break;
           default:
-            llvm_unreachable("unexpected type");
+            // Keep the entry: relocations and the symbol table look up this
+            // global's index in WasmIndices. The error discards the object.
+            reportUnsupportedGlobal(WS, Global.Type.Type);
+            Global.Type.Type = uint8_t(wasm::ValType::I32);
+            Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+            Global.InitExpr.Inst.Value.Int32 = 0;
+            break;
+          }
+          if (WS.hasGlobalInitExpr()) {
+            assert(WS.getGlobalInitExpr().Inst.Opcode ==
+                       Global.InitExpr.Inst.Opcode &&
+                   "global init expression does not match the global's type");
+            Global.InitExpr = WS.getGlobalInitExpr();
           }
           assert(!WasmIndices.contains(&WS));
           WasmIndices[&WS] = Global.Index;
