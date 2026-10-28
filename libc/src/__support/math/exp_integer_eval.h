@@ -139,11 +139,11 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
   uint64_t x_s_shifted = (x_s << 11) | (1ull << 63);
 
   int x_e_unbiased = static_cast<int>(x_e) - FPBits::EXP_BIAS;
-  uint64_t l2y_r_hi;
+  Frac128 l2y_r;
   uint64_t e_y;
   int d;
 
-  exp_scale(x_s_shifted, x_e_unbiased, is_neg, l2y_r_hi, e_y, d);
+  exp_scale(x_s_shifted, x_e_unbiased, is_neg, l2y_r, e_y, d);
 
   // d >= 53 --> k >= 1076
   // --> guaranteed to be below 2^-1074
@@ -153,40 +153,27 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
     return 0.0;
   }
 
-  Frac64 result = exp_fast_path(l2y_r_hi);
-
-  uint64_t result_bits = result.val[0] << 1;
+  Frac64 result = exp_fast_path(l2y_r.val[1]);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   return exp_handle_rounding(result, is_neg, d, e_y, rounding);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-  // Rounding test
-  constexpr uint32_t LAST_BITS = 12;
-  constexpr uint32_t ROUNDING_ERROR = (1ull << 11);
+  unsigned shift = is_neg && d >= 0 ? static_cast<unsigned>(12 + d) : 11;
+  uint64_t mask = UINT64_MAX >> (64 - shift);
 
-  uint32_t result_last_bits =
-      static_cast<uint32_t>(result_bits & ((1u << LAST_BITS) - 1));
-  bool is_hard;
-  if (rounding == FE_TONEAREST) {
-    uint32_t rounded_lo =
-        (result_last_bits + (1u << (LAST_BITS - 1)) - ROUNDING_ERROR) >>
-        LAST_BITS;
-    uint32_t rounded_hi =
-        (result_last_bits + (1u << (LAST_BITS - 1)) + ROUNDING_ERROR) >>
-        LAST_BITS;
-    is_hard = rounded_lo != rounded_hi;
-  } else {
-    is_hard = result_last_bits <= ROUNDING_ERROR ||
-              result_last_bits >= (1u << LAST_BITS) - ROUNDING_ERROR;
-  }
+  constexpr uint64_t ROUNDING_ERROR = 32;
+  uint64_t tail = result.val[0];
+  if (rounding == FE_TONEAREST)
+    tail += uint64_t(1) << (shift - 1);
+  bool is_hard = ((tail + ROUNDING_ERROR) & mask) <= 2 * ROUNDING_ERROR;
 
   if (LIBC_LIKELY(!is_hard)) {
     return exp_handle_rounding(result, is_neg, d, e_y, rounding);
   }
 
   // Dial back to 128-bit path for hard-to-round cases
-  return exp_accurate_path(x_s_shifted, x_e_unbiased, is_neg, rounding);
+  return exp_accurate_path(l2y_r, is_neg, d, e_y, rounding);
 }
 
 LIBC_ALWAYS_INLINE double exp(double x, [[maybe_unused]] int rounding) {
