@@ -23,19 +23,12 @@ define i16 @smulh_i16(i16 %x, i16 %y) nounwind {
 }
 
 define i32 @smulh_i32(i32 %x, i32 %y) nounwind {
-; CHECK-SD-LABEL: smulh_i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    smull x8, w0, w1
-; CHECK-SD-NEXT:    lsr x0, x8, #32
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: smulh_i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull x8, w0, w1
-; CHECK-GI-NEXT:    asr x0, x8, #32
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: smulh_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull x8, w0, w1
+; CHECK-NEXT:    lsr x0, x8, #32
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %r = call i32 @llvm.smulh(i32 %x, i32 %y)
   ret i32 %r
 }
@@ -329,7 +322,7 @@ define <3 x i32> @smulh_v3i32(<3 x i32> %x, <3 x i32> %y) nounwind {
 ; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    smull x8, w8, w9
 ; CHECK-GI-NEXT:    smull v2.2d, v2.2s, v3.2s
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    sshr v2.2d, v2.2d, #32
 ; CHECK-GI-NEXT:    mov d0, v2.d[1]
 ; CHECK-GI-NEXT:    fmov x10, d2

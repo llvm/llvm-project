@@ -20632,27 +20632,14 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
 }
 
 bool AArch64TargetLowering::isDesirableToCommuteXorWithShift(
-    const SDNode *N) const {
-  assert(N->getOpcode() == ISD::XOR &&
-         (N->getOperand(0).getOpcode() == ISD::SHL ||
-          N->getOperand(0).getOpcode() == ISD::SRL) &&
-         "Expected XOR(SHIFT) pattern");
+    bool IsShl, const APInt &XorMask, unsigned ShiftAmt, bool IsVector) const {
+  assert(ShiftAmt < XorMask.getBitWidth() && "Expected valid shift amount");
 
-  // Only commute if the entire NOT mask is a hidden shifted mask.
-  auto *XorC = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  auto *ShiftC = dyn_cast<ConstantSDNode>(N->getOperand(0).getOperand(1));
-  if (XorC && ShiftC) {
-    unsigned MaskIdx, MaskLen;
-    if (XorC->getAPIntValue().isShiftedMask(MaskIdx, MaskLen)) {
-      unsigned ShiftAmt = ShiftC->getZExtValue();
-      unsigned BitWidth = N->getValueType(0).getScalarSizeInBits();
-      if (N->getOperand(0).getOpcode() == ISD::SHL)
-        return MaskIdx == ShiftAmt && MaskLen == (BitWidth - ShiftAmt);
-      return MaskIdx == 0 && MaskLen == (BitWidth - ShiftAmt);
-    }
-  }
-
-  return false;
+  // Only commute scalar shifts whose entire NOT mask is a hidden shifted mask.
+  if (IsVector)
+    return false;
+  APInt Ones = APInt::getAllOnes(XorMask.getBitWidth());
+  return XorMask == (IsShl ? Ones.shl(ShiftAmt) : Ones.lshr(ShiftAmt));
 }
 
 bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(

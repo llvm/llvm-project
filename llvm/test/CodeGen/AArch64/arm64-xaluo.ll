@@ -477,7 +477,7 @@ define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    smull x8, w0, w1
 ; CHECK-GI-NEXT:    mul w9, w0, w1
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    str w9, [x2]
 ; CHECK-GI-NEXT:    cmp w8, w9, asr #31
 ; CHECK-GI-NEXT:    cset w0, ne
@@ -1106,7 +1106,7 @@ define i32 @smulo.select.i32(i32 %v1, i32 %v2) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    smull x8, w0, w1
 ; CHECK-GI-NEXT:    mul w9, w0, w1
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    cmp w8, w9, asr #31
 ; CHECK-GI-NEXT:    csel w0, w0, w1, ne
 ; CHECK-GI-NEXT:    ret
@@ -1136,7 +1136,7 @@ define i1 @smulo.not.i32(i32 %v1, i32 %v2) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    smull x8, w0, w1
 ; CHECK-GI-NEXT:    mul w9, w0, w1
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    cmp w8, w9, asr #31
 ; CHECK-GI-NEXT:    cset w8, ne
 ; CHECK-GI-NEXT:    eor w0, w8, #0x1
@@ -2028,7 +2028,7 @@ define i32 @smulo.selectboth.i32(i32 %a, i32 %b) {
 ; CHECK-GI-NEXT:    smull x9, w0, w1
 ; CHECK-GI-NEXT:    mov w8, #10 // =0xa
 ; CHECK-GI-NEXT:    mul w10, w0, w1
-; CHECK-GI-NEXT:    asr x9, x9, #32
+; CHECK-GI-NEXT:    lsr x9, x9, #32
 ; CHECK-GI-NEXT:    cmp w9, w10, asr #31
 ; CHECK-GI-NEXT:    csel w0, w10, w8, ne
 ; CHECK-GI-NEXT:    ret
@@ -2414,7 +2414,7 @@ define zeroext i1 @smulo.br.i32(i32 %v1, i32 %v2) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    smull x8, w0, w1
 ; CHECK-GI-NEXT:    mul w9, w0, w1
-; CHECK-GI-NEXT:    asr x8, x8, #32
+; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    cmp w8, w9, asr #31
 ; CHECK-GI-NEXT:    cset w8, ne
 ; CHECK-GI-NEXT:    eor w0, w8, #0x1

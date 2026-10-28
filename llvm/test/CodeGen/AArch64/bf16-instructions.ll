@@ -3247,41 +3247,14 @@ define bfloat @test_fabs(bfloat %a) #0 {
 }
 
 define bfloat @test_fneg(bfloat %a) #0 {
-; CHECK-CVT-SD-LABEL: test_fneg:
-; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-CVT-SD-NEXT:    fmov w8, s0
-; CHECK-CVT-SD-NEXT:    eor w8, w8, #0x8000
-; CHECK-CVT-SD-NEXT:    fmov s0, w8
-; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-BF16-SD-LABEL: test_fneg:
-; CHECK-BF16-SD:       // %bb.0:
-; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-BF16-SD-NEXT:    fmov w8, s0
-; CHECK-BF16-SD-NEXT:    eor w8, w8, #0x8000
-; CHECK-BF16-SD-NEXT:    fmov s0, w8
-; CHECK-BF16-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-BF16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: test_fneg:
-; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    eor w8, w8, #0xffff8000
-; CHECK-CVT-GI-NEXT:    fmov s0, w8
-; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-BF16-GI-LABEL: test_fneg:
-; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-BF16-GI-NEXT:    fmov w8, s0
-; CHECK-BF16-GI-NEXT:    eor w8, w8, #0xffff8000
-; CHECK-BF16-GI-NEXT:    fmov s0, w8
-; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-BF16-GI-NEXT:    ret
+; CHECK-LABEL: test_fneg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    eor w8, w8, #0x8000
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
   %r = fneg bfloat %a
   ret bfloat %r
 }

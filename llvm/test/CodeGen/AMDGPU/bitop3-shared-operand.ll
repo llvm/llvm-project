@@ -207,7 +207,7 @@ define amdgpu_ps float @bitop3_fshl_or_xor(i32 %v) {
 ;
 ; GISEL-LABEL: bitop3_fshl_or_xor:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_xor_b32_e32 v1, 0x9e3779b9, v0
+; GISEL-NEXT:    v_xor_b32_e32 v1, 0x9e000000, v0
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 24, v1
 ; GISEL-NEXT:    v_and_b32_e32 v2, v1, v0
 ; GISEL-NEXT:    v_alignbit_b32 v2, v2, 0, 27
