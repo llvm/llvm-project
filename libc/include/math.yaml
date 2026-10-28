@@ -2653,6 +2653,12 @@ functions:
       - type: float
       - type: float *
       - type: float *
+  - name: sinh
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: sinhf
     standards:
       - stdc
