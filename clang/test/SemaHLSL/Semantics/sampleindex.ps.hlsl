@@ -20,7 +20,6 @@ void uint16(uint16_t s : SV_SampleIndex) {}
 void int16(int16_t s : SV_SampleIndex) {}
 
 struct Input {
-  float4 p : SV_Position;
   uint s : SV_SampleIndex;
 };
 [shader("pixel")]
