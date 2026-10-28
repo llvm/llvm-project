@@ -3542,6 +3542,16 @@ TEST(SignatureHelpTest, StaticCallOperator) {
       C{}($c^);
       D{}($d^);
       D{}(true, $d2^);
+      B::operator()($static^);
+      B::operator()(true, $static2^);
+      D::operator()($staticTemplate^);
+      D::operator()(true, $staticTemplate2^);
+      auto Lambda = [](bool a, bool b) static {};
+      Lambda($lambda^);
+      Lambda(true, $lambda2^);
+      auto GenericLambda = []<typename T>(T a, bool b) static -> void {};
+      GenericLambda($genericLambda^);
+      GenericLambda(true, $genericLambda2^);
     }
   )cpp");
   auto TU = TestTU::withCode(Code.code());
@@ -3562,6 +3572,14 @@ TEST(SignatureHelpTest, StaticCallOperator) {
       {"c", "operator()([[T a]]) -> void", 0},
       {"d", "operator()([[T a]], [[bool b]]) -> void", 0},
       {"d2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"static", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"static2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"staticTemplate", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"staticTemplate2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"lambda", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"lambda2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"genericLambda", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"genericLambda2", "operator()([[T a]], [[bool b]]) -> void", 1},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Point);
