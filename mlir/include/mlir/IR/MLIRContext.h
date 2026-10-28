@@ -215,6 +215,15 @@ public:
   /// this call in this case.
   void setThreadPool(llvm::ThreadPoolInterface &pool);
 
+  /// Set a new thread pool to be used in this context. This method requires
+  /// that multithreading is disabled for this context prior to the call. This
+  /// allows supplying a custom thread pool that shares the lifetime of the
+  /// context. Multi-threading will be enabled as part of this method.
+  /// The command line debugging flag `--mlir-disable-threading` will still
+  /// prevent threading from being enabled and threading won't be enabled after
+  /// this call in this case.
+  void setOwnedThreadPool(std::unique_ptr<llvm::ThreadPoolInterface> pool);
+
   /// Return the number of threads used by the thread pool in this context. The
   /// number of computed hardware threads can change over the lifetime of a
   /// process based on affinity changes, so users should use the number of

@@ -661,6 +661,15 @@ void MLIRContext::setThreadPool(llvm::ThreadPoolInterface &pool) {
   enableMultithreading();
 }
 
+void MLIRContext::setOwnedThreadPool(
+    std::unique_ptr<llvm::ThreadPoolInterface> pool) {
+  assert(!isMultithreadingEnabled() &&
+         "expected multi-threading to be disabled when setting a ThreadPool");
+  impl->ownedThreadPool = std::move(pool);
+  impl->threadPool = impl->ownedThreadPool.get();
+  enableMultithreading();
+}
+
 unsigned MLIRContext::getNumThreads() {
   if (isMultithreadingEnabled()) {
     assert(impl->threadPool &&
