@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
+; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -pgo-instrument-dense-wave-counts=false -S %t/input.ll | FileCheck %s --check-prefix=GEN
 ; RUN: %python %t/raw.py > %t/profile.raw
 ; RUN: llvm-profdata merge %t/profile.raw -o %t/profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/profile -S %t/input.ll -o %t/default.ll
@@ -65,7 +65,7 @@ import sys
 mode = sys.argv[1] if len(sys.argv) > 1 else "uniform"
 name = b"missing" if mode == "missing" else b"diamond"
 name_ref = int.from_bytes(hashlib.md5(name).digest()[:8], "little")
-# Raw v11, IR entry-first layout; hash checked against pgo-instr-gen above.
+# Raw v12, sparse IR entry-first layout; hash checked against pgo-instr-gen above.
 func_hash = 942389667449461396
 if mode == "mismatch":
     func_hash += 1
@@ -73,17 +73,17 @@ lanes = [6400, 3200, 1600]
 if mode == "zero":
     lanes = [0, 0, 0]
 uniform = lanes[:]
-version = 11 | (1 << 56) | (1 << 58)
+version = 12 | (1 << 56) | (1 << 58)
 num_counters = len(lanes)
-counter_delta = 72
+counter_delta = 80
 uniform_delta = counter_delta + num_counters * 8
 names_delta = uniform_delta + len(uniform) * 8
 names = bytes([len(name), 0]) + name
 header = [0xff6c70726f667281, version, 0, 1, 0, num_counters, 0,
           0, 0, len(uniform), 0, uniform_delta, len(names), counter_delta,
           uniform_delta, names_delta, 0, 0, 2]
-record = struct.pack("<7QI4HI", name_ref, func_hash, counter_delta,
-                     uniform_delta, 0, 0, 0, num_counters, 0, 0, 0, 64, 0)
+record = struct.pack("<7QI4HII4x", name_ref, func_hash, counter_delta,
+                     uniform_delta, 0, 0, 0, num_counters, 0, 0, 0, 64, 0, 0)
 counts = lanes + uniform
 sys.stdout.buffer.write(struct.pack("<19Q", *header) + record +
                         struct.pack("<" + "Q" * len(counts), *counts) +

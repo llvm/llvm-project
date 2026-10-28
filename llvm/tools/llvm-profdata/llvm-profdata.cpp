@@ -936,8 +936,14 @@ static Error mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
 
-  if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
-    return makeError(std::move(E));
+  // Empty input files have no layout to reconcile. In particular, a worker
+  // that only saw empty files must not turn a dense wave profile into a mixed
+  // dense/sparse merge.
+  if (Src->Writer.getProfileKind() != InstrProfKind::Unknown ||
+      !Src->Writer.getProfileData().empty()) {
+    if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
+      return makeError(std::move(E));
+  }
 
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
@@ -1013,15 +1019,21 @@ static Error writeInstrProfile(StringRef OutputFilename,
   if (EC)
     return makeError(EC, OutputFilename);
 
-  if (OutputFormat == PF_Text) {
-    if (Error E = Writer.writeText(Output))
-      warn(std::move(E));
-  } else {
-    if (Output.is_displayed())
-      return makeError(
-          "cannot write a non-text format profile to the terminal");
-    if (Error E = Writer.write(Output))
-      warn(std::move(E));
+  if (OutputFormat != PF_Text && Output.is_displayed())
+    return makeError("cannot write a non-text format profile to the terminal");
+
+  if (Error E = OutputFormat == PF_Text ? Writer.writeText(Output)
+                                        : Writer.write(Output)) {
+    // Unsupported formats cannot represent the profile at all. Preserve the
+    // existing warning behavior for recoverable profile-data errors.
+    bool UnsupportedVersion = false;
+    E = handleErrors(std::move(E), [&](const InstrProfError &IPE) -> Error {
+      UnsupportedVersion = IPE.get() == instrprof_error::unsupported_version;
+      return make_error<InstrProfError>(IPE.get(), IPE.getMessage());
+    });
+    if (UnsupportedVersion)
+      return makeError(std::move(E), OutputFilename);
+    warn(std::move(E));
   }
   return Error::success();
 }
@@ -3034,8 +3046,9 @@ static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
-      InstrProfWriter::writeRecordInText(Func.Name, Func.Hash, Func, Symtab,
-                                         OS);
+      if (Error E = InstrProfWriter::writeRecordInText(Func.Name, Func.Hash,
+                                                       Func, Symtab, OS))
+        return makeError(std::move(E), Filename);
       continue;
     }
 
@@ -3121,6 +3134,13 @@ static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         }
         OS << "]\n";
 
+        if (!Func.WaveCounts.empty()) {
+          OS << "    Block wave counts: [";
+          for (size_t I = 0, E = Func.WaveCounts.size(); I < E; ++I)
+            OS << (I ? ", " : "") << Func.WaveCounts[I];
+          OS << "]\n";
+        }
+
         // Show uniformity bits if present
         if (!Func.UniformityBits.empty()) {
           OS << "    Block uniformity: [";
@@ -3164,6 +3184,7 @@ static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
     OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
+    OS << "  dense_wave = " << Reader->hasDenseWaveProfile();
   }
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
