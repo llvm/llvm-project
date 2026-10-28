@@ -1853,3 +1853,45 @@ loop:
 exit:
   ret i32 %red.next
 }
+
+define i1 @print_and_reduction_logical_and(ptr %p, i64 %n) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i1 [ true, %entry ], [ %rdx.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+  %v = load i32, ptr %gep, align 4
+  %lo = icmp sgt i32 %v, 0
+  %hi = icmp slt i32 %v, 10
+  %and = and i1 %rdx, %hi
+  %rdx.next = select i1 %lo, i1 %and, i1 false
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i1 %rdx.next
+}
+
+define i1 @print_or_reduction_logical_or(ptr %p, i64 %n) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i1 [ false, %entry ], [ %rdx.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+  %v = load i32, ptr %gep, align 4
+  %lo = icmp slt i32 %v, 0
+  %hi = icmp sgt i32 %v, 10
+  %or = or i1 %rdx, %hi
+  %rdx.next = select i1 %lo, i1 true, i1 %or
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i1 %rdx.next
+}
