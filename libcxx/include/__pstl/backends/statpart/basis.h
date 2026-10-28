@@ -123,6 +123,15 @@ struct _LIBCPP_HIDE_FROM_ABI __partitioning_result {
   __partitioning_status __status_ = __partitioning_status::__ok;
 };
 
+// This function allows basis.h to compile when _LIBCPP_HAS_THREADS=0
+_LIBCPP_HIDE_FROM_ABI inline unsigned __thread_hardware_concurrency() noexcept {
+#  if _LIBCPP_HAS_THREADS
+  return std::__thread_hardware_concurrency();
+#  else
+  return 0;
+#  endif // _LIBCPP_HAS_THREADS
+}
+
 // Splits the input iterator range into a finite set of partitions, such that every iterator sub-range can be queried in
 // a O(1) time later.
 // If partitioning fails, returns nullopt and reports the reason in __result.
@@ -138,7 +147,7 @@ __partition(_Iterator __first,
             size_t __min_partition_size = 1,
             size_t __prefix_to_skip     = 0,
             size_t __suffix_to_skip     = 0,
-            size_t __workers_count      = std::__thread_hardware_concurrency()) noexcept {
+            size_t __workers_count      = __statpart::__thread_hardware_concurrency()) noexcept {
   // Forward iterators will be supported later.
   static_assert(__has_random_access_iterator_category_or_concept<_Iterator>::value);
 
