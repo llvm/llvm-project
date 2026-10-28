@@ -297,8 +297,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))

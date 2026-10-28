@@ -559,6 +559,7 @@ def OpenACC_GPUAsyncTokenType : Type<
 def OpenACC_ComputeRegionOp
     : OpenACC_Op<"compute_region",
                  [OffloadRegionOpInterface, AffineScope,
+                  AutomaticAllocationScope,
                   HasParallelRegion, RecursiveMemoryEffects,
                   SingleBlockImplicitTerminator<"YieldOp">,
                   IsolatedFromAbove, AttrSizedOperandSegments]> {
@@ -655,6 +656,10 @@ def OpenACC_ComputeRegionOp
 
     /// Check whether all parallel dimensions have width 1.
     bool isEffectivelySerial();
+
+    /// Check whether the launch covers more than one thread block. A width that
+    /// is not known at compile time is conservatively counted as more than one.
+    bool launchesMultipleBlocks();
 
     /// Get the block argument representing the width for a given dimension.
     ::mlir::BlockArgument parDimToWidth(

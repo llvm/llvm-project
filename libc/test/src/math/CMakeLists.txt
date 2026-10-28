@@ -1,10 +1,10 @@
-add_custom_target(libc-math-unittests)
+add_libc_testsuite(libc-math-tests)
 
 add_fp_unittest(
   cosf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cosf_test.cpp
   HDRS
@@ -24,7 +24,7 @@ add_fp_unittest(
   cos_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cos_test.cpp
   DEPENDS
@@ -36,7 +36,7 @@ add_fp_unittest(
   cosf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cosf16_test.cpp
   DEPENDS
@@ -47,7 +47,7 @@ add_fp_unittest(
   cospif_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cospif_test.cpp
   HDRS
@@ -63,7 +63,7 @@ add_fp_unittest(
   cospif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cospif16_test.cpp
   DEPENDS
@@ -87,7 +87,7 @@ add_fp_unittest(
   daddl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     daddl_test.cpp
   HDRS
@@ -100,7 +100,7 @@ add_fp_unittest(
   sinf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinf_test.cpp
   HDRS
@@ -120,7 +120,7 @@ add_fp_unittest(
   sinf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinf16_test.cpp
   DEPENDS
@@ -131,7 +131,7 @@ add_fp_unittest(
   sinpif_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinpif_test.cpp
   HDRS
@@ -147,7 +147,7 @@ add_fp_unittest(
   sinpif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinpif16_test.cpp
   DEPENDS
@@ -158,7 +158,7 @@ add_fp_unittest(
   sin_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sin_test.cpp
   DEPENDS
@@ -170,7 +170,7 @@ add_fp_unittest(
   sincosf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sincosf_test.cpp
   HDRS
@@ -186,7 +186,7 @@ add_fp_unittest(
   sincos_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sincos_test.cpp
   DEPENDS
@@ -198,7 +198,7 @@ add_fp_unittest(
   tanbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanbf16_test.cpp
   DEPENDS
@@ -211,7 +211,7 @@ add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanf_test.cpp
   HDRS
@@ -230,7 +230,7 @@ add_fp_unittest(
   tanf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanf16_test.cpp
   DEPENDS
@@ -241,7 +241,7 @@ add_fp_unittest(
   tanpif_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanpif_test.cpp
   HDRS
@@ -256,7 +256,7 @@ add_fp_unittest(
   lgammaf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lgammaf_test.cpp
   DEPENDS
@@ -268,7 +268,7 @@ add_fp_unittest(
   lgammaf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lgammaf16_test.cpp
   DEPENDS
@@ -279,7 +279,7 @@ add_fp_unittest(
   tanpif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanpif16_test.cpp
   DEPENDS
@@ -290,7 +290,7 @@ add_fp_unittest(
   fabs_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fabs_test.cpp
   HDRS
@@ -304,7 +304,7 @@ add_fp_unittest(
   fabsf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fabsf_test.cpp
   HDRS
@@ -318,7 +318,7 @@ add_fp_unittest(
   fabsf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fabsf16_test.cpp
   HDRS
@@ -332,7 +332,7 @@ add_fp_unittest(
   fabsbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fabsbf16_test.cpp
   HDRS
@@ -347,7 +347,7 @@ add_fp_unittest(
   fabsl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fabsl_test.cpp
   HDRS
@@ -361,7 +361,7 @@ add_fp_unittest(
   fadd_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fadd_test.cpp
   HDRS
@@ -375,7 +375,7 @@ add_fp_unittest(
   faddl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     faddl_test.cpp
   HDRS
@@ -388,7 +388,7 @@ add_fp_unittest(
   trunc_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     trunc_test.cpp
   HDRS
@@ -403,7 +403,7 @@ add_fp_unittest(
   truncf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     truncf_test.cpp
   HDRS
@@ -418,7 +418,7 @@ add_fp_unittest(
   truncl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     truncl_test.cpp
   HDRS
@@ -433,7 +433,7 @@ add_fp_unittest(
   truncf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     truncf128_test.cpp
   HDRS
@@ -449,7 +449,7 @@ add_fp_unittest(
   truncf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     truncf16_test.cpp
   HDRS
@@ -464,7 +464,7 @@ add_fp_unittest(
   truncbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     truncbf16_test.cpp
   HDRS
@@ -480,7 +480,7 @@ add_fp_unittest(
   ceil_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceil_test.cpp
   HDRS
@@ -495,7 +495,7 @@ add_fp_unittest(
   ceilf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceilf128_test.cpp
   HDRS
@@ -511,7 +511,7 @@ add_fp_unittest(
   ceilf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceilf_test.cpp
   HDRS
@@ -526,7 +526,7 @@ add_fp_unittest(
   ceill_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceill_test.cpp
   HDRS
@@ -541,7 +541,7 @@ add_fp_unittest(
   ceilf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceilf16_test.cpp
   HDRS
@@ -556,7 +556,7 @@ add_fp_unittest(
   ceilbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ceilbf16_test.cpp
   HDRS
@@ -572,7 +572,7 @@ add_fp_unittest(
   floor_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floor_test.cpp
   HDRS
@@ -587,7 +587,7 @@ add_fp_unittest(
   floorf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floorf_test.cpp
   HDRS
@@ -602,7 +602,7 @@ add_fp_unittest(
   floorl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floorl_test.cpp
   HDRS
@@ -617,7 +617,7 @@ add_fp_unittest(
   floorf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floorf128_test.cpp
   HDRS
@@ -633,7 +633,7 @@ add_fp_unittest(
   floorf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floorf16_test.cpp
   HDRS
@@ -648,7 +648,7 @@ add_fp_unittest(
   floorbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     floorbf16_test.cpp
   HDRS
@@ -664,7 +664,7 @@ add_fp_unittest(
   round_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     round_test.cpp
   HDRS
@@ -679,7 +679,7 @@ add_fp_unittest(
   roundf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundf_test.cpp
   HDRS
@@ -694,7 +694,7 @@ add_fp_unittest(
   roundl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundl_test.cpp
   HDRS
@@ -709,7 +709,7 @@ add_fp_unittest(
   roundf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundf16_test.cpp
   HDRS
@@ -724,7 +724,7 @@ add_fp_unittest(
   roundbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundbf16_test.cpp
   HDRS
@@ -740,7 +740,7 @@ add_fp_unittest(
   roundf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundf128_test.cpp
   HDRS
@@ -755,7 +755,7 @@ add_fp_unittest(
   roundeven_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundeven_test.cpp
   HDRS
@@ -770,7 +770,7 @@ add_fp_unittest(
   roundevenf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundevenf_test.cpp
   HDRS
@@ -785,7 +785,7 @@ add_fp_unittest(
   roundevenl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundevenl_test.cpp
   HDRS
@@ -800,7 +800,7 @@ add_fp_unittest(
   roundevenf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundevenf16_test.cpp
   HDRS
@@ -815,7 +815,7 @@ add_fp_unittest(
   roundevenbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     roundevenbf16_test.cpp
   HDRS
@@ -831,7 +831,7 @@ add_fp_unittest(
   lround_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lround_test.cpp
   HDRS
@@ -849,7 +849,7 @@ add_fp_unittest(
   lroundf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lroundf_test.cpp
   HDRS
@@ -867,7 +867,7 @@ add_fp_unittest(
   lroundl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lroundl_test.cpp
   HDRS
@@ -885,7 +885,7 @@ add_fp_unittest(
   lroundf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lroundf16_test.cpp
   HDRS
@@ -903,7 +903,7 @@ add_fp_unittest(
   lroundbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lroundbf16_test.cpp
   HDRS
@@ -922,7 +922,7 @@ add_fp_unittest(
   llround_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llround_test.cpp
   HDRS
@@ -940,7 +940,7 @@ add_fp_unittest(
   llroundf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llroundf_test.cpp
   HDRS
@@ -958,7 +958,7 @@ add_fp_unittest(
   llroundl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llroundl_test.cpp
   HDRS
@@ -976,7 +976,7 @@ add_fp_unittest(
   llroundf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llroundf16_test.cpp
   HDRS
@@ -994,7 +994,7 @@ add_fp_unittest(
   llroundbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llroundbf16_test.cpp
   HDRS
@@ -1013,7 +1013,7 @@ add_fp_unittest(
   nearbyint_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nearbyint_test.cpp
   HDRS
@@ -1028,7 +1028,7 @@ add_fp_unittest(
   nearbyintf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nearbyintf_test.cpp
   HDRS
@@ -1043,7 +1043,7 @@ add_fp_unittest(
   nearbyintl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nearbyintl_test.cpp
   HDRS
@@ -1058,7 +1058,7 @@ add_fp_unittest(
   nearbyintf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nearbyintf16_test.cpp
   HDRS
@@ -1073,7 +1073,7 @@ add_fp_unittest(
   nearbyintbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nearbyintbf16_test.cpp
   HDRS
@@ -1089,7 +1089,7 @@ add_fp_unittest(
   rint_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rint_test.cpp
   HDRS
@@ -1106,7 +1106,7 @@ add_fp_unittest(
   rintf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rintf_test.cpp
   HDRS
@@ -1123,7 +1123,7 @@ add_fp_unittest(
   rintl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rintl_test.cpp
   HDRS
@@ -1140,7 +1140,7 @@ add_fp_unittest(
   rintf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rintf16_test.cpp
   HDRS
@@ -1157,7 +1157,7 @@ add_fp_unittest(
   rintbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rintbf16_test.cpp
   HDRS
@@ -1175,7 +1175,7 @@ add_fp_unittest(
   lrint_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lrint_test.cpp
   HDRS
@@ -1191,7 +1191,7 @@ add_fp_unittest(
   lrintf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lrintf_test.cpp
   HDRS
@@ -1207,7 +1207,7 @@ add_fp_unittest(
   lrintl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lrintl_test.cpp
   HDRS
@@ -1223,7 +1223,7 @@ add_fp_unittest(
   lrintf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lrintf16_test.cpp
   HDRS
@@ -1239,7 +1239,7 @@ add_fp_unittest(
   lrintbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     lrintbf16_test.cpp
   HDRS
@@ -1256,7 +1256,7 @@ add_fp_unittest(
   llrint_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llrint_test.cpp
   HDRS
@@ -1272,7 +1272,7 @@ add_fp_unittest(
   llrintf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llrintf_test.cpp
   HDRS
@@ -1288,7 +1288,7 @@ add_fp_unittest(
   llrintl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llrintl_test.cpp
   HDRS
@@ -1304,7 +1304,7 @@ add_fp_unittest(
   llrintf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llrintf16_test.cpp
   HDRS
@@ -1320,7 +1320,7 @@ add_fp_unittest(
   llrintbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     llrintbf16_test.cpp
   HDRS
@@ -1337,19 +1337,23 @@ add_fp_unittest(
   exp_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp
+    libc.src.__support.math.exp_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
   expf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expf_test.cpp
   DEPENDS
@@ -1367,7 +1371,7 @@ add_fp_unittest(
   expf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expf16_test.cpp
   DEPENDS
@@ -1378,7 +1382,7 @@ add_fp_unittest(
   expbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expbf16_test.cpp
   DEPENDS
@@ -1390,7 +1394,7 @@ add_fp_unittest(
   exp2_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2_test.cpp
   DEPENDS
@@ -1406,7 +1410,7 @@ add_fp_unittest(
   exp2f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2f_test.cpp
   DEPENDS
@@ -1424,7 +1428,7 @@ add_fp_unittest(
   exp2bf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2bf16_test.cpp
   DEPENDS
@@ -1436,7 +1440,7 @@ add_fp_unittest(
   exp2f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2f16_test.cpp
   DEPENDS
@@ -1447,7 +1451,7 @@ add_fp_unittest(
   exp2m1f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2m1f_test.cpp
   DEPENDS
@@ -1461,7 +1465,7 @@ add_fp_unittest(
   exp2m1f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp2m1f16_test.cpp
   DEPENDS
@@ -1472,7 +1476,7 @@ add_fp_unittest(
   exp10_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp10_test.cpp
   DEPENDS
@@ -1484,7 +1488,7 @@ add_fp_unittest(
   exp10f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp10f_test.cpp
   DEPENDS
@@ -1501,7 +1505,7 @@ add_fp_unittest(
   exp10f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp10f16_test.cpp
   DEPENDS
@@ -1512,7 +1516,7 @@ add_fp_unittest(
   exp10m1f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp10m1f16_test.cpp
   DEPENDS
@@ -1523,7 +1527,7 @@ add_fp_unittest(
   exp10m1f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     exp10m1f_test.cpp
   DEPENDS
@@ -1537,7 +1541,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysign_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     copysign_test.cpp
   HDRS
@@ -1550,7 +1554,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysignf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     copysignf_test.cpp
   HDRS
@@ -1563,7 +1567,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysignl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     copysignl_test.cpp
   HDRS
@@ -1577,7 +1581,7 @@ add_fp_unittest(
   frexp_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexp_test.cpp
   HDRS
@@ -1591,7 +1595,7 @@ add_fp_unittest(
   frexpf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexpf_test.cpp
   HDRS
@@ -1605,7 +1609,7 @@ add_fp_unittest(
   frexpf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexpf16_test.cpp
   HDRS
@@ -1619,7 +1623,7 @@ add_fp_unittest(
   frexpbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexpbf16_test.cpp
   HDRS
@@ -1634,7 +1638,7 @@ add_fp_unittest(
   frexpl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexpl_test.cpp
   HDRS
@@ -1645,9 +1649,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+)
+
+add_fp_unittest(
   ilogb_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ilogb_test.cpp
   HDRS
@@ -1662,7 +1681,7 @@ add_fp_unittest(
 add_fp_unittest(
   ilogbf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ilogbf_test.cpp
   HDRS
@@ -1677,7 +1696,7 @@ add_fp_unittest(
 add_fp_unittest(
   ilogbl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ilogbl_test.cpp
   HDRS
@@ -1690,9 +1709,25 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogbf128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    ilogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   ldexp_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ldexp_test.cpp
   HDRS
@@ -1707,7 +1742,7 @@ add_fp_unittest(
 add_fp_unittest(
   ldexpf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ldexpf_test.cpp
   HDRS
@@ -1722,7 +1757,7 @@ add_fp_unittest(
 add_fp_unittest(
   ldexpl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ldexpl_test.cpp
   HDRS
@@ -1737,7 +1772,7 @@ add_fp_unittest(
 add_fp_unittest(
   logb_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logb_test.cpp
   DEPENDS
@@ -1748,7 +1783,7 @@ add_fp_unittest(
 add_fp_unittest(
   logbf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logbf_test.cpp
   DEPENDS
@@ -1759,7 +1794,7 @@ add_fp_unittest(
 add_fp_unittest(
   logbl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logbl_test.cpp
   HDRS
@@ -1770,9 +1805,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  logbf128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    logbf128_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   modf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     modf_test.cpp
   HDRS
@@ -1786,7 +1835,7 @@ add_fp_unittest(
 add_fp_unittest(
   modff_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     modff_test.cpp
   HDRS
@@ -1800,7 +1849,7 @@ add_fp_unittest(
 add_fp_unittest(
   modfl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     modfl_test.cpp
   HDRS
@@ -1814,7 +1863,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdimf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fdimf_test.cpp
   HDRS
@@ -1828,7 +1877,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdim_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fdim_test.cpp
   HDRS
@@ -1842,7 +1891,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdiml_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fdiml_test.cpp
   HDRS
@@ -1856,7 +1905,7 @@ add_fp_unittest(
 add_fp_unittest(
   fminf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fminf_test.cpp
   HDRS
@@ -1869,7 +1918,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmin_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmin_test.cpp
   HDRS
@@ -1882,7 +1931,7 @@ add_fp_unittest(
 add_fp_unittest(
   fminl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fminl_test.cpp
   HDRS
@@ -1895,7 +1944,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmaxf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmaxf_test.cpp
   HDRS
@@ -1908,7 +1957,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmax_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmax_test.cpp
   HDRS
@@ -1921,7 +1970,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmaxl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmaxl_test.cpp
   HDRS
@@ -1935,7 +1984,7 @@ add_fp_unittest(
   sqrtf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrtf_test.cpp
   HDRS
@@ -1948,7 +1997,7 @@ add_fp_unittest(
   sqrt_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrt_test.cpp
   HDRS
@@ -1961,7 +2010,7 @@ add_fp_unittest(
   sqrtl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrtl_test.cpp
   HDRS
@@ -1974,7 +2023,7 @@ add_fp_unittest(
   rsqrtf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rsqrtf_test.cpp
   DEPENDS
@@ -1985,7 +2034,7 @@ add_fp_unittest(
   rsqrtf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
@@ -1996,7 +2045,7 @@ add_fp_unittest(
   sqrtf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrtf16_test.cpp
   DEPENDS
@@ -2007,7 +2056,7 @@ add_fp_unittest(
   sqrtf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrtf128_test.cpp
   HDRS
@@ -2022,7 +2071,7 @@ add_fp_unittest(
   sqrtbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sqrtbf16_test.cpp
   DEPENDS
@@ -2034,7 +2083,7 @@ add_fp_unittest(
   generic_sqrtf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     generic_sqrtf_test.cpp
   HDRS
@@ -2042,15 +2091,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
   generic_sqrt_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     generic_sqrt_test.cpp
   HDRS
@@ -2058,15 +2105,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrt
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
   generic_sqrtl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     generic_sqrtl_test.cpp
   HDRS
@@ -2074,15 +2119,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtl
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
   remquof_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     remquof_test.cpp
   HDRS
@@ -2098,7 +2141,7 @@ add_fp_unittest(
   remquof16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     remquof16_test.cpp
   HDRS
@@ -2114,7 +2157,7 @@ add_fp_unittest(
   remquobf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     remquobf16_test.cpp
   HDRS
@@ -2131,7 +2174,7 @@ add_fp_unittest(
   remquo_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     remquo_test.cpp
   HDRS
@@ -2147,7 +2190,7 @@ add_fp_unittest(
   remquol_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     remquol_test.cpp
   HDRS
@@ -2163,7 +2206,7 @@ add_fp_unittest(
   hypotf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     hypotf_test.cpp
   DEPENDS
@@ -2175,7 +2218,7 @@ add_fp_unittest(
   hypot_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     hypot_test.cpp
   DEPENDS
@@ -2187,7 +2230,7 @@ add_fp_unittest(
   hypotbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     hypotbf16_test.cpp
   DEPENDS
@@ -2200,7 +2243,7 @@ add_fp_unittest(
   hypotf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     hypotf16_test.cpp
   DEPENDS
@@ -2210,7 +2253,7 @@ add_fp_unittest(
 add_fp_unittest(
   nextafter_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nextafter_test.cpp
   HDRS
@@ -2224,7 +2267,7 @@ add_fp_unittest(
 add_fp_unittest(
   nextafterf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nextafterf_test.cpp
   HDRS
@@ -2238,7 +2281,7 @@ add_fp_unittest(
 add_fp_unittest(
   nextafterl_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nextafterl_test.cpp
   HDRS
@@ -2252,7 +2295,7 @@ add_fp_unittest(
 add_fp_unittest(
   nextafterf128_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     nextafterf128_test.cpp
   HDRS
@@ -2269,7 +2312,7 @@ add_fp_unittest(
   fmaf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmaf_test.cpp
   HDRS
@@ -2286,7 +2329,7 @@ add_fp_unittest(
   fmaf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmaf16_test.cpp
   HDRS
@@ -2301,7 +2344,7 @@ add_fp_unittest(
   fma_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fma_test.cpp
   HDRS
@@ -2316,7 +2359,7 @@ add_fp_unittest(
   fmabf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmabf16_test.cpp
   DEPENDS
@@ -2329,7 +2372,7 @@ add_fp_unittest(
   tan_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tan_test.cpp
   DEPENDS
@@ -2341,7 +2384,7 @@ add_fp_unittest(
   expm1_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expm1_test.cpp
   DEPENDS
@@ -2353,7 +2396,7 @@ add_fp_unittest(
   expm1f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expm1f_test.cpp
   DEPENDS
@@ -2366,7 +2409,7 @@ add_fp_unittest(
   expm1f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     expm1f16_test.cpp
   DEPENDS
@@ -2377,7 +2420,7 @@ add_fp_unittest(
   log_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log_test.cpp
   DEPENDS
@@ -2389,7 +2432,7 @@ add_fp_unittest(
   logf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logf_test.cpp
   DEPENDS
@@ -2401,7 +2444,7 @@ add_fp_unittest(
   logf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logf16_test.cpp
   DEPENDS
@@ -2412,7 +2455,7 @@ add_fp_unittest(
   log_bf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log_bf16_test.cpp
   DEPENDS
@@ -2424,7 +2467,7 @@ add_fp_unittest(
   log2_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log2_test.cpp
   DEPENDS
@@ -2436,7 +2479,7 @@ add_fp_unittest(
   log2f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log2f_test.cpp
   DEPENDS
@@ -2449,7 +2492,7 @@ add_fp_unittest(
   log2f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log2f16_test.cpp
   DEPENDS
@@ -2460,7 +2503,7 @@ add_fp_unittest(
   log10_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log10_test.cpp
   DEPENDS
@@ -2472,7 +2515,7 @@ add_fp_unittest(
   log10f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log10f_test.cpp
   DEPENDS
@@ -2484,7 +2527,7 @@ add_fp_unittest(
   log10f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log10f16_test.cpp
   DEPENDS
@@ -2495,7 +2538,7 @@ add_fp_unittest(
   log10p1f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log10p1f16_test.cpp
   DEPENDS
@@ -2506,7 +2549,7 @@ add_fp_unittest(
   log2p1f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log2p1f16_test.cpp
   DEPENDS
@@ -2517,7 +2560,7 @@ add_fp_unittest(
   log1p_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log1p_test.cpp
   DEPENDS
@@ -2529,7 +2572,7 @@ add_fp_unittest(
   log1pf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     log1pf_test.cpp
   DEPENDS
@@ -2540,7 +2583,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmodf_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmodf_test.cpp
   HDRS
@@ -2555,7 +2598,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmod_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmod_test.cpp
   HDRS
@@ -2571,7 +2614,7 @@ add_fp_unittest(
   explogxf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   HDRS
     in_float_range_test_helper.h
   SRCS
@@ -2584,10 +2627,26 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    cosh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.cosh
+    libc.src.__support.math.cosh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_fp_unittest(
   coshf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     coshf_test.cpp
   HDRS
@@ -2603,7 +2662,7 @@ add_fp_unittest(
   coshf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     coshf16_test.cpp
   DEPENDS
@@ -2611,10 +2670,26 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    sinh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.sinh
+    libc.src.__support.math.sinh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_fp_unittest(
   sinhf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinhf_test.cpp
   HDRS
@@ -2630,7 +2705,7 @@ add_fp_unittest(
   sinhf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sinhf16_test.cpp
   DEPENDS
@@ -2641,7 +2716,7 @@ add_fp_unittest(
   tanhf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanhf_test.cpp
   DEPENDS
@@ -2653,7 +2728,7 @@ add_fp_unittest(
   tanhf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     tanhf16_test.cpp
   DEPENDS
@@ -2664,7 +2739,7 @@ add_fp_unittest(
   atanhf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanhf_test.cpp
   DEPENDS
@@ -2677,7 +2752,7 @@ add_fp_unittest(
   atanhf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanhf16_test.cpp
   DEPENDS
@@ -2688,7 +2763,7 @@ add_fp_unittest(
   atanpif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanpif16_test.cpp
   DEPENDS
@@ -2699,7 +2774,7 @@ add_fp_unittest(
   fmul_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmul_test.cpp
   HDRS
@@ -2714,7 +2789,7 @@ add_fp_unittest(
   fmull_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fmull_test.cpp
   HDRS
@@ -2729,7 +2804,7 @@ add_fp_unittest(
   asinhf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinhf_test.cpp
   DEPENDS
@@ -2741,7 +2816,7 @@ add_fp_unittest(
   asinhf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinhf16_test.cpp
   DEPENDS
@@ -2752,7 +2827,7 @@ add_fp_unittest(
   acoshf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acoshf_test.cpp
   DEPENDS
@@ -2765,7 +2840,7 @@ add_fp_unittest(
   acoshf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acoshf16_test.cpp
   DEPENDS
@@ -2776,7 +2851,7 @@ add_fp_unittest(
   asinf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinf_test.cpp
   DEPENDS
@@ -2789,7 +2864,7 @@ add_fp_unittest(
   asin_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asin_test.cpp
   DEPENDS
@@ -2800,7 +2875,7 @@ add_fp_unittest(
   asinbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinbf16_test.cpp
   DEPENDS
@@ -2813,7 +2888,7 @@ add_fp_unittest(
   asinf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinf16_test.cpp
   DEPENDS
@@ -2824,7 +2899,7 @@ add_fp_unittest(
   asinpi_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinpi_test.cpp
   DEPENDS
@@ -2835,7 +2910,7 @@ add_fp_unittest(
   asinpif_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinpif_test.cpp
   DEPENDS
@@ -2846,7 +2921,7 @@ add_fp_unittest(
   asinpif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     asinpif16_test.cpp
   DEPENDS
@@ -2857,7 +2932,7 @@ add_fp_unittest(
   acosbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acosbf16_test.cpp
   DEPENDS
@@ -2870,7 +2945,7 @@ add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acosf_test.cpp
   DEPENDS
@@ -2883,7 +2958,7 @@ add_fp_unittest(
   acos_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acos_test.cpp
   DEPENDS
@@ -2894,7 +2969,7 @@ add_fp_unittest(
   acosf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acosf16_test.cpp
   DEPENDS
@@ -2905,7 +2980,7 @@ add_fp_unittest(
   acospif_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acospif_test.cpp
   DEPENDS
@@ -2916,7 +2991,7 @@ add_fp_unittest(
   acospif16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     acospif16_test.cpp
   DEPENDS
@@ -2927,7 +3002,7 @@ add_fp_unittest(
   atanf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanf_test.cpp
   DEPENDS
@@ -2939,7 +3014,7 @@ add_fp_unittest(
   atan_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atan_test.cpp
   DEPENDS
@@ -2951,7 +3026,7 @@ add_fp_unittest(
   atanbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanbf16_test.cpp
   DEPENDS
@@ -2964,7 +3039,7 @@ add_fp_unittest(
   atanf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atanf16_test.cpp
   DEPENDS
@@ -2975,7 +3050,7 @@ add_fp_unittest(
   scalbn_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     scalbn_test.cpp
   HDRS
@@ -2990,7 +3065,7 @@ add_fp_unittest(
   scalbnf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     scalbnf_test.cpp
   HDRS
@@ -3005,7 +3080,7 @@ add_fp_unittest(
   scalbnl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     scalbnl_test.cpp
   HDRS
@@ -3020,7 +3095,7 @@ add_fp_unittest(
   scalbnf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     scalbnf128_test.cpp
   HDRS
@@ -3035,7 +3110,7 @@ add_fp_unittest(
   erff_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     erff_test.cpp
   DEPENDS
@@ -3047,7 +3122,7 @@ add_fp_unittest(
   erff16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     erff16_test.cpp
   DEPENDS
@@ -3059,7 +3134,7 @@ add_fp_unittest(
   erfcf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     erfcf16_test.cpp
   DEPENDS
@@ -3071,7 +3146,7 @@ add_fp_unittest(
   pow_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     pow_test.cpp
   DEPENDS
@@ -3082,7 +3157,7 @@ add_fp_unittest(
   powf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     powf_test.cpp
   DEPENDS
@@ -3096,7 +3171,7 @@ add_fp_unittest(
   atan2f_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atan2f_test.cpp
   DEPENDS
@@ -3108,7 +3183,7 @@ add_fp_unittest(
   atan2f16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atan2f16_test.cpp
   DEPENDS
@@ -3120,7 +3195,7 @@ add_fp_unittest(
   atan2_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atan2_test.cpp
   DEPENDS
@@ -3132,7 +3207,7 @@ add_fp_unittest(
   atan2f128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     atan2f128_test.cpp
   DEPENDS
@@ -3145,7 +3220,7 @@ add_fp_unittest(
   f16add_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16add_test.cpp
   HDRS
@@ -3158,7 +3233,7 @@ add_fp_unittest(
   f16addf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16addf_test.cpp
   HDRS
@@ -3171,7 +3246,7 @@ add_fp_unittest(
   f16addl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16addl_test.cpp
   HDRS
@@ -3184,7 +3259,7 @@ add_fp_unittest(
   f16sub_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16sub_test.cpp
   HDRS
@@ -3197,7 +3272,7 @@ add_fp_unittest(
   f16subf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16subf_test.cpp
   HDRS
@@ -3210,7 +3285,7 @@ add_fp_unittest(
   f16subl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16subl_test.cpp
   HDRS
@@ -3223,7 +3298,7 @@ add_fp_unittest(
   f16div_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16div_test.cpp
   HDRS
@@ -3236,7 +3311,7 @@ add_fp_unittest(
   f16divf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16divf_test.cpp
   HDRS
@@ -3249,7 +3324,7 @@ add_fp_unittest(
   f16divl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16divl_test.cpp
   HDRS
@@ -3262,7 +3337,7 @@ add_fp_unittest(
   f16fma_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16fma_test.cpp
   HDRS
@@ -3277,7 +3352,7 @@ add_fp_unittest(
   f16fmaf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16fmaf_test.cpp
   HDRS
@@ -3292,7 +3367,7 @@ add_fp_unittest(
   f16fmal_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16fmal_test.cpp
   HDRS
@@ -3307,7 +3382,7 @@ add_fp_unittest(
   f16sqrt_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16sqrt_test.cpp
   HDRS
@@ -3320,7 +3395,7 @@ add_fp_unittest(
   f16sqrtf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16sqrtf_test.cpp
   HDRS
@@ -3333,7 +3408,7 @@ add_fp_unittest(
   f16sqrtl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16sqrtl_test.cpp
   HDRS
@@ -3346,7 +3421,7 @@ add_fp_unittest(
   fsqrt_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fsqrt_test.cpp
   HDRS
@@ -3359,7 +3434,7 @@ add_fp_unittest(
   fsqrtl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fsqrtl_test.cpp
   HDRS
@@ -3372,7 +3447,7 @@ add_fp_unittest(
   fsub_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fsub_test.cpp
   HDRS
@@ -3385,7 +3460,7 @@ add_fp_unittest(
   fsubl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fsubl_test.cpp
   HDRS
@@ -3398,7 +3473,7 @@ add_fp_unittest(
   dsqrtl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     dsqrtl_test.cpp
   HDRS
@@ -3411,7 +3486,7 @@ add_fp_unittest(
   cbrtf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cbrtf_test.cpp
   DEPENDS
@@ -3423,7 +3498,7 @@ add_fp_unittest(
   cbrt_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cbrt_test.cpp
   DEPENDS
@@ -3435,7 +3510,7 @@ add_fp_unittest(
   cbrtf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cbrtf16_test.cpp
   DEPENDS
@@ -3447,7 +3522,7 @@ add_fp_unittest(
   cbrtbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     cbrtbf16_test.cpp
   DEPENDS
@@ -3459,7 +3534,7 @@ add_fp_unittest(
   dmull_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     dmull_test.cpp
   HDRS
@@ -3474,7 +3549,7 @@ add_fp_unittest(
   f16mul_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16mul_test.cpp
   HDRS
@@ -3489,7 +3564,7 @@ add_fp_unittest(
   f16mulf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16mulf_test.cpp
   HDRS
@@ -3504,7 +3579,7 @@ add_fp_unittest(
   f16mull_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     f16mull_test.cpp
   HDRS
@@ -3519,7 +3594,7 @@ add_fp_unittest(
   ddivl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ddivl_test.cpp
   HDRS
@@ -3532,7 +3607,7 @@ add_fp_unittest(
   dfmal_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     dfmal_test.cpp
   HDRS
@@ -3547,7 +3622,7 @@ add_fp_unittest(
   dsubl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     dsubl_test.cpp
   HDRS
@@ -3560,7 +3635,7 @@ add_fp_unittest(
   fdiv_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fdiv_test.cpp
   HDRS
@@ -3573,7 +3648,7 @@ add_fp_unittest(
   fdivl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     fdivl_test.cpp
   HDRS
@@ -3586,7 +3661,7 @@ add_fp_unittest(
   ffma_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ffma_test.cpp
   HDRS
@@ -3601,7 +3676,7 @@ add_fp_unittest(
   ffmal_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ffmal_test.cpp
   HDRS
@@ -3616,7 +3691,7 @@ add_fp_unittest(
   add_same_type_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     add_same_type_test.cpp
   HDRS
@@ -3631,7 +3706,7 @@ add_fp_unittest(
   sub_same_type_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     sub_same_type_test.cpp
   HDRS
@@ -3646,7 +3721,7 @@ add_fp_unittest(
   bf16add_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16add_test.cpp
   HDRS
@@ -3660,7 +3735,7 @@ add_fp_unittest(
   bf16addf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16addf_test.cpp
   HDRS
@@ -3674,7 +3749,7 @@ add_fp_unittest(
   bf16addl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16addl_test.cpp
   HDRS
@@ -3688,7 +3763,7 @@ add_fp_unittest(
   bf16addf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16addf128_test.cpp
   HDRS
@@ -3702,7 +3777,7 @@ add_fp_unittest(
   bf16div_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16div_test.cpp
   HDRS
@@ -3716,7 +3791,7 @@ add_fp_unittest(
   bf16divf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16divf_test.cpp
   HDRS
@@ -3730,7 +3805,7 @@ add_fp_unittest(
   bf16divl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16divl_test.cpp
   HDRS
@@ -3744,7 +3819,7 @@ add_fp_unittest(
   bf16divf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16divf128_test.cpp
   HDRS
@@ -3758,7 +3833,7 @@ add_fp_unittest(
   bf16fma_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16fma_test.cpp
   HDRS
@@ -3774,7 +3849,7 @@ add_fp_unittest(
   bf16fmaf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16fmaf_test.cpp
   HDRS
@@ -3790,7 +3865,7 @@ add_fp_unittest(
   bf16fmal_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16fmal_test.cpp
   HDRS
@@ -3806,7 +3881,7 @@ add_fp_unittest(
   bf16fmaf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16fmaf128_test.cpp
   HDRS
@@ -3822,7 +3897,7 @@ add_fp_unittest(
   bf16mul_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16mul_test.cpp
   HDRS
@@ -3838,7 +3913,7 @@ add_fp_unittest(
   bf16mulf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16mulf_test.cpp
   HDRS
@@ -3854,7 +3929,7 @@ add_fp_unittest(
   bf16mull_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16mull_test.cpp
   HDRS
@@ -3870,7 +3945,7 @@ add_fp_unittest(
   bf16mulf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16mulf128_test.cpp
   HDRS
@@ -3886,7 +3961,7 @@ add_fp_unittest(
   bf16sub_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16sub_test.cpp
   HDRS
@@ -3900,7 +3975,7 @@ add_fp_unittest(
   bf16subf_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16subf_test.cpp
   HDRS
@@ -3914,7 +3989,7 @@ add_fp_unittest(
   bf16subl_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16subl_test.cpp
   HDRS
@@ -3928,7 +4003,7 @@ add_fp_unittest(
   bf16subf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     bf16subf128_test.cpp
   HDRS

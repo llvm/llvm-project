@@ -780,10 +780,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP18]])
-; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, ptr [[SRC_3]], align 4
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP21]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp ogt <8 x float> [[TMP20]], [[BROADCAST_SPLAT13]]
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp ogt <8 x float> [[TMP20]], [[BROADCAST_SPLAT11]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <8 x i1> [[TMP22]], i64 0
 ; DEFAULT-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -933,10 +930,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP23:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP21]])
-; PRED-NEXT:    [[TMP24:%.*]] = load float, ptr [[SRC_3]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP24]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT13]]
+; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT11]]
 ; PRED-NEXT:    [[TMP26:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> [[TMP25]], <8 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP26]], i64 0
@@ -1193,16 +1187,16 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-LABEL: define void @pred_udiv_select_cost(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR1]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 8)
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 3
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], -1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -1213,37 +1207,78 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; DEFAULT-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; DEFAULT:       [[VECTOR_PH1]]:
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK9:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK9]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[Y]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[Y]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[WIDE_LOAD8:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
-; DEFAULT-NEXT:    [[TMP91:%.*]] = uitofp <vscale x 4 x i8> [[WIDE_LOAD8]] to <vscale x 4 x float>
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP10]], align 1
+; DEFAULT-NEXT:    [[TMP22:%.*]] = uitofp <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x float>
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[WIDE_LOAD12:%.*]] = load <vscale x 4 x i8>, ptr [[TMP12]], align 1
-; DEFAULT-NEXT:    [[TMP32:%.*]] = icmp ne <vscale x 4 x i8> [[WIDE_LOAD12]], zeroinitializer
-; DEFAULT-NEXT:    [[TMP36:%.*]] = xor <vscale x 4 x i8> [[WIDE_LOAD8]], splat (i8 1)
-; DEFAULT-NEXT:    [[TMP40:%.*]] = call <vscale x 4 x i8> @llvm.masked.udiv.nxv4i8(<vscale x 4 x i8> [[TMP36]], <vscale x 4 x i8> [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP32]])
-; DEFAULT-NEXT:    [[TMP44:%.*]] = icmp ugt <vscale x 4 x i8> [[TMP40]], splat (i8 1)
-; DEFAULT-NEXT:    [[TMP48:%.*]] = select <vscale x 4 x i1> [[TMP44]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> splat (i32 255)
-; DEFAULT-NEXT:    [[PREDPHI15:%.*]] = select <vscale x 4 x i1> [[TMP32]], <vscale x 4 x i32> [[TMP48]], <vscale x 4 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP52:%.*]] = zext <vscale x 4 x i8> [[WIDE_LOAD8]] to <vscale x 4 x i32>
-; DEFAULT-NEXT:    [[TMP56:%.*]] = sub <vscale x 4 x i32> [[PREDPHI15]], [[TMP52]]
-; DEFAULT-NEXT:    [[TMP60:%.*]] = sitofp <vscale x 4 x i32> [[TMP56]] to <vscale x 4 x float>
-; DEFAULT-NEXT:    [[TMP64:%.*]] = call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[TMP60]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> [[TMP91]])
-; DEFAULT-NEXT:    [[TMP68:%.*]] = fptoui <vscale x 4 x float> [[TMP64]] to <vscale x 4 x i8>
+; DEFAULT-NEXT:    [[WIDE_LOAD10:%.*]] = load <vscale x 16 x i8>, ptr [[TMP12]], align 1
+; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD10]], zeroinitializer
+; DEFAULT-NEXT:    [[TMP41:%.*]] = xor <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
+; DEFAULT-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.masked.udiv.nxv16i8(<vscale x 16 x i8> [[TMP41]], <vscale x 16 x i8> [[BROADCAST_SPLAT]], <vscale x 16 x i1> [[TMP23]])
+; DEFAULT-NEXT:    [[TMP15:%.*]] = icmp ugt <vscale x 16 x i8> [[TMP14]], splat (i8 1)
+; DEFAULT-NEXT:    [[TMP16:%.*]] = select <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i32> zeroinitializer, <vscale x 16 x i32> splat (i32 255)
+; DEFAULT-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP23]], <vscale x 16 x i32> [[TMP16]], <vscale x 16 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP17:%.*]] = zext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
+; DEFAULT-NEXT:    [[TMP18:%.*]] = sub <vscale x 16 x i32> [[PREDPHI]], [[TMP17]]
+; DEFAULT-NEXT:    [[TMP19:%.*]] = sitofp <vscale x 16 x i32> [[TMP18]] to <vscale x 16 x float>
+; DEFAULT-NEXT:    [[TMP20:%.*]] = call <vscale x 16 x float> @llvm.fmuladd.nxv16f32(<vscale x 16 x float> [[TMP19]], <vscale x 16 x float> splat (float 3.000000e+00), <vscale x 16 x float> [[TMP22]])
+; DEFAULT-NEXT:    [[TMP21:%.*]] = fptoui <vscale x 16 x float> [[TMP20]] to <vscale x 16 x i8>
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX]]
-; DEFAULT-NEXT:    store <vscale x 4 x i8> [[TMP68]], ptr [[TMP24]], align 1
+; DEFAULT-NEXT:    store <vscale x 16 x i8> [[TMP21]], ptr [[TMP24]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[CMP_N25]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br i1 [[CMP_N25]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
+; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP3]]
+; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF30:![0-9]+]]
+; DEFAULT:       [[VEC_EPILOG_PH]]:
+; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH1]] ]
+; DEFAULT-NEXT:    [[TMP42:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP43:%.*]] = shl nuw i64 [[TMP42]], 3
+; DEFAULT-NEXT:    [[N_MOD_VF11:%.*]] = urem i64 [[TMP0]], [[TMP43]]
+; DEFAULT-NEXT:    [[N_VEC12:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF11]]
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[Y]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT13]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX15:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX15]]
+; DEFAULT-NEXT:    [[WIDE_LOAD16:%.*]] = load <vscale x 8 x i8>, ptr [[TMP26]], align 1
+; DEFAULT-NEXT:    [[TMP27:%.*]] = uitofp <vscale x 8 x i8> [[WIDE_LOAD16]] to <vscale x 8 x float>
+; DEFAULT-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX15]]
+; DEFAULT-NEXT:    [[WIDE_LOAD17:%.*]] = load <vscale x 8 x i8>, ptr [[TMP28]], align 1
+; DEFAULT-NEXT:    [[TMP29:%.*]] = icmp ne <vscale x 8 x i8> [[WIDE_LOAD17]], zeroinitializer
+; DEFAULT-NEXT:    [[TMP30:%.*]] = xor <vscale x 8 x i8> [[WIDE_LOAD16]], splat (i8 1)
+; DEFAULT-NEXT:    [[TMP31:%.*]] = call <vscale x 8 x i8> @llvm.masked.udiv.nxv8i8(<vscale x 8 x i8> [[TMP30]], <vscale x 8 x i8> [[BROADCAST_SPLAT14]], <vscale x 8 x i1> [[TMP29]])
+; DEFAULT-NEXT:    [[TMP32:%.*]] = icmp ugt <vscale x 8 x i8> [[TMP31]], splat (i8 1)
+; DEFAULT-NEXT:    [[TMP33:%.*]] = select <vscale x 8 x i1> [[TMP32]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> splat (i32 255)
+; DEFAULT-NEXT:    [[PREDPHI18:%.*]] = select <vscale x 8 x i1> [[TMP29]], <vscale x 8 x i32> [[TMP33]], <vscale x 8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP34:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD16]] to <vscale x 8 x i32>
+; DEFAULT-NEXT:    [[TMP35:%.*]] = sub <vscale x 8 x i32> [[PREDPHI18]], [[TMP34]]
+; DEFAULT-NEXT:    [[TMP36:%.*]] = sitofp <vscale x 8 x i32> [[TMP35]] to <vscale x 8 x float>
+; DEFAULT-NEXT:    [[TMP37:%.*]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[TMP36]], <vscale x 8 x float> splat (float 3.000000e+00), <vscale x 8 x float> [[TMP27]])
+; DEFAULT-NEXT:    [[TMP38:%.*]] = fptoui <vscale x 8 x float> [[TMP37]] to <vscale x 8 x i8>
+; DEFAULT-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX15]]
+; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP38]], ptr [[TMP39]], align 1
+; DEFAULT-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX15]], [[TMP43]]
+; DEFAULT-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC12]]
+; DEFAULT-NEXT:    br i1 [[TMP40]], label %[[VEC_EPILOG_MIDDLE_BLOCK1:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
+; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK1]]:
+; DEFAULT-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC12]]
+; DEFAULT-NEXT:    br i1 [[CMP_N20]], [[EXIT]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
 ;
 ; PRED-LABEL: define void @pred_udiv_select_cost(
@@ -1256,7 +1291,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
+; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; PRED-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -1
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
 ; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
@@ -1267,35 +1302,35 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP2]])
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[Y]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[Y]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(ptr align 1 [[TMP12]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i8> poison)
-; PRED-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 4 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 4 x float>
+; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP12]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; PRED-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x float>
 ; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; PRED-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(ptr align 1 [[TMP14]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i8> poison)
-; PRED-NEXT:    [[TMP10:%.*]] = icmp ne <vscale x 4 x i8> [[WIDE_MASKED_LOAD5]], zeroinitializer
-; PRED-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i1> zeroinitializer
-; PRED-NEXT:    [[TMP21:%.*]] = xor <vscale x 4 x i8> [[WIDE_MASKED_LOAD]], splat (i8 1)
-; PRED-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i8> @llvm.masked.udiv.nxv4i8(<vscale x 4 x i8> [[TMP21]], <vscale x 4 x i8> [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP11]])
-; PRED-NEXT:    [[TMP22:%.*]] = icmp ugt <vscale x 4 x i8> [[TMP13]], splat (i8 1)
-; PRED-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[TMP22]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> splat (i32 255)
-; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP16:%.*]] = zext <vscale x 4 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 4 x i32>
-; PRED-NEXT:    [[TMP17:%.*]] = sub <vscale x 4 x i32> [[PREDPHI]], [[TMP16]]
-; PRED-NEXT:    [[TMP18:%.*]] = sitofp <vscale x 4 x i32> [[TMP17]] to <vscale x 4 x float>
-; PRED-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[TMP18]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> [[TMP9]])
-; PRED-NEXT:    [[TMP20:%.*]] = fptoui <vscale x 4 x float> [[TMP19]] to <vscale x 4 x i8>
+; PRED-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; PRED-NEXT:    [[TMP11:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD9]], zeroinitializer
+; PRED-NEXT:    [[TMP22:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP11]], <vscale x 16 x i1> zeroinitializer
+; PRED-NEXT:    [[TMP13:%.*]] = xor <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 1)
+; PRED-NEXT:    [[TMP24:%.*]] = call <vscale x 16 x i8> @llvm.masked.udiv.nxv16i8(<vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[BROADCAST_SPLAT]], <vscale x 16 x i1> [[TMP22]])
+; PRED-NEXT:    [[TMP15:%.*]] = icmp ugt <vscale x 16 x i8> [[TMP24]], splat (i8 1)
+; PRED-NEXT:    [[TMP16:%.*]] = select <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i32> zeroinitializer, <vscale x 16 x i32> splat (i32 255)
+; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP11]], <vscale x 16 x i32> [[TMP16]], <vscale x 16 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP17:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i32>
+; PRED-NEXT:    [[TMP18:%.*]] = sub <vscale x 16 x i32> [[PREDPHI]], [[TMP17]]
+; PRED-NEXT:    [[TMP19:%.*]] = sitofp <vscale x 16 x i32> [[TMP18]] to <vscale x 16 x float>
+; PRED-NEXT:    [[TMP20:%.*]] = call <vscale x 16 x float> @llvm.fmuladd.nxv16f32(<vscale x 16 x float> [[TMP19]], <vscale x 16 x float> splat (float 3.000000e+00), <vscale x 16 x float> [[TMP9]])
+; PRED-NEXT:    [[TMP21:%.*]] = fptoui <vscale x 16 x float> [[TMP20]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[C]], i64 [[INDEX]]
-; PRED-NEXT:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP20]], ptr align 1 [[TMP27]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
-; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr align 1 [[TMP27]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
