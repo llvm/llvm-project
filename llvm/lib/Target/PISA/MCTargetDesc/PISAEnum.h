@@ -14,30 +14,9 @@
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAENUM_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAENUM_H
 
-#include "MCTargetDesc/PISAMCExpr.h"
-#include "MCTargetDesc/PISAMCTargetDesc.h"
-#include "MCTargetDesc/PISARegEncoder.h"
-#include "MCTargetDesc/PISATargetStreamer.h"
-#include "PISADefines.h"
-#include "PISAMCInstLower.h"
-#include "TargetInfo/PISATargetInfo.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-
-using namespace llvm::PISA;
+#include <cstdint>
 
 namespace llvm {
 namespace PISA {
