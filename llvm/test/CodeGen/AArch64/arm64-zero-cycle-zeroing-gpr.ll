@@ -8,6 +8,9 @@
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCZ-GPR32,ZCZ-GPR64
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCZ-GPR32,ZCZ-GPR64
 
+;; Test Global ISel
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -global-isel | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCZ-GPR32,ZCZ-GPR64
+
 define i8 @ti8() {
 entry:
 ; ALL-LABEL: {{_?}}ti8:{{ *(;|//) *}}@ti8

@@ -165,7 +165,12 @@ spirv.module Logical GLSL450 {
     spirv.FunctionCall @f_2() : () -> ()
     // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) : (i32) -> i32
     %1 = spirv.FunctionCall @f_3(%arg2) : (i32) -> i32
-    spirv.ReturnValue %1 : i32
+    // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) arg_attrs = [{{.*}}] res_attrs = [{{.*}}] : (i32) -> i32
+    %2 = spirv.FunctionCall @f_3(%arg2)
+        arg_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        res_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        : (i32) -> i32
+    spirv.ReturnValue %2 : i32
   }
 
   spirv.func @f_0(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> (vector<4xf32>) "None" {
@@ -1076,6 +1081,78 @@ func.func @kill() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @lifetime
+func.func @lifetime() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+
+  %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i8, Function>
+  // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<i8, Function>
+  spirv.LifetimeStart %1, 0 : !spirv.ptr<i8, Function>
+  // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<i8, Function>
+  spirv.LifetimeStop %1, 0 : !spirv.ptr<i8, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_wrong_storage_class(%arg0: !spirv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{pointer must have the Function storage class}}
+  spirv.LifetimeStart %arg0, 0 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_wrong_storage_class(%arg0: !spirv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{pointer must have the Function storage class}}
+  spirv.LifetimeStop %arg0, 0 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_size_on_typed_pointer() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_size_on_typed_pointer() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStop %0, 4 : !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStart %ptr, 4 : !spirv.ptr<i8, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStop %ptr, 4 : !spirv.ptr<i8, Function>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.Switch
 //===----------------------------------------------------------------------===//
 
@@ -1137,6 +1214,22 @@ func.func @switch_operands(%selector : i32, %operand : i32) {
   spirv.Branch ^merge
 
 ^case1(%arg1 : i32):
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+func.func @switch_targets_no_literals(%selector: i32) -> () {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1
+  "spirv.Switch"(%selector)[^default, ^target]
+    {case_operand_segments = array<i32: 0>,
+     operandSegmentSizes = array<i32: 1, 0, 0>} : (i32) -> ()
+^default:
+  spirv.Branch ^merge
+
+^target:
   spirv.Branch ^merge
 
 ^merge:

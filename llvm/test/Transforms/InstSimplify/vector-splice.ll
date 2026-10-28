@@ -92,3 +92,85 @@ define <2 x i32> @right_offset_0(<2 x i32> %a, <2 x i32> %b) {
   %res = call <2 x i32> @llvm.vector.splice.right(<2 x i32> %a, <2 x i32> %b, i32 0)
   ret <2 x i32> %res
 }
+
+
+; Tests for folding splice.right(splice.left(poison, x, offset), poison, offset) -> x
+
+; Construct splice roundtrip on input and return it with set offset of 2
+define <4 x i32> @splice_left_right_cancel_offset_2(<4 x i32> %a) {
+; CHECK-LABEL: define <4 x i32> @splice_left_right_cancel_offset_2(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    ret <4 x i32> [[A]]
+;
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> poison, <4 x i32> %a, i32 2)
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %l, <4 x i32> poison, i32 2)
+  ret <4 x i32> %r
+}
+
+; Construct splice roundtrip on input and return it with set offset of 0
+define <4 x i32> @splice_left_right_cancel_offset_0(<4 x i32> %a) {
+; CHECK-LABEL: define <4 x i32> @splice_left_right_cancel_offset_0(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    ret <4 x i32> poison
+;
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> poison, <4 x i32> %a, i32 0)
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %l, <4 x i32> poison, i32 0)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @splice_left_right_cancel_offset_dynamic(<4 x i32> %a, i32 %offset) {
+; CHECK-LABEL: define <4 x i32> @splice_left_right_cancel_offset_dynamic(
+; CHECK-SAME: <4 x i32> [[A:%.*]], i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    ret <4 x i32> [[A]]
+;
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> poison, <4 x i32> %a, i32 %offset)
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %l, <4 x i32> poison, i32 %offset)
+  ret <4 x i32> %r
+}
+
+define <vscale x 4 x i32> @splice_left_right_cancel_offset_2_scalable(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: define <vscale x 4 x i32> @splice_left_right_cancel_offset_2_scalable(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+  %l = call <vscale x 4 x i32> @llvm.vector.splice.left(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 2)
+  %r = call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> %l, <vscale x 4 x i32> poison, i32 2)
+  ret <vscale x 4 x i32> %r
+}
+
+define <4 x i32> @splice_left_right_non_poison_outer(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define <4 x i32> @splice_left_right_non_poison_outer(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[L:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> poison, <4 x i32> [[A]], i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> [[L]], <4 x i32> [[B]], i32 2)
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> poison, <4 x i32> %a, i32 2)
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %l, <4 x i32> %b, i32 2)
+  ret <4 x i32> %r
+}
+
+; Different offsets
+define <4 x i32> @splice_left_right_cancel_mismatch_offset(<4 x i32> %a) {
+; CHECK-LABEL: define <4 x i32> @splice_left_right_cancel_mismatch_offset(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[L:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> poison, <4 x i32> [[A]], i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> [[L]], <4 x i32> poison, i32 1)
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> poison, <4 x i32> %a, i32 2)
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %l, <4 x i32> poison, i32 1)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @splice_right_then_left(<4 x i32> %a) {
+; CHECK-LABEL: define <4 x i32> @splice_right_then_left(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> poison, <4 x i32> [[A]], i32 2)
+; CHECK-NEXT:    [[L:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> [[R]], <4 x i32> poison, i32 2)
+; CHECK-NEXT:    ret <4 x i32> [[L]]
+;
+  %r = call <4 x i32> @llvm.vector.splice.right(<4 x i32> poison, <4 x i32> %a, i32 2)
+  %l = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %r, <4 x i32> poison, i32 2)
+  ret <4 x i32> %l
+}

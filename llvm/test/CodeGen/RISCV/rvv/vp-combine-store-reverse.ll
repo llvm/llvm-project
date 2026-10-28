@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+v -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+v -verify-machineinstrs < %s | FileCheck %s
 
-define void @test_store_reverse_combiner(<vscale x 2 x float> %val, <vscale x 2 x float>* %ptr, i32 zeroext %evl) {
+define void @test_store_reverse_combiner(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: test_store_reverse_combiner:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -13,11 +13,11 @@ define void @test_store_reverse_combiner(<vscale x 2 x float> %val, <vscale x 2 
 ; CHECK-NEXT:    vsse32.v v8, (a0), a2
 ; CHECK-NEXT:    ret
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> splat (i1 true), i32 %evl)
-  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
-define void @test_store_mask_is_vp_reverse(<vscale x 2 x float> %val, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
+define void @test_store_mask_is_vp_reverse(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_store_mask_is_vp_reverse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -29,11 +29,11 @@ define void @test_store_mask_is_vp_reverse(<vscale x 2 x float> %val, <vscale x 
 ; CHECK-NEXT:    ret
   %storemask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> splat (i1 true), i32 %evl)
-  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %storemask, i32 %evl)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, ptr %ptr, <vscale x 2 x i1> %storemask, i32 %evl)
   ret void
 }
 
-define void @test_store_mask_is_vp_reverse_with_mask(<vscale x 2 x float> %val, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 zeroext %evl) {
+define void @test_store_mask_is_vp_reverse_with_mask(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_store_mask_is_vp_reverse_with_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a2, a1, 2
@@ -45,36 +45,36 @@ define void @test_store_mask_is_vp_reverse_with_mask(<vscale x 2 x float> %val, 
 ; CHECK-NEXT:    ret
   %storemask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> splat (i1 true), i32 %evl)
-  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %storemask, i32 %evl)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, ptr %ptr, <vscale x 2 x i1> %storemask, i32 %evl)
   ret void
 }
 
-define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
+define void @test_different_evl(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_different_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vrsub.vx v9, v9, a1
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v11, v11, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v10, v9
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vrgatherei16.vv v11, v10, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vv v9, v8, v11
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmsne.vi v0, v11, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v9, v9, a1
+; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v9, (a0), v0.t
+; CHECK-NEXT:    vse32.v v10, (a0), v0.t
 ; CHECK-NEXT:    ret
   %storemask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
-  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %storemask, i32 %evl2)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, ptr %ptr, <vscale x 2 x i1> %storemask, i32 %evl2)
   ret void
 }
 
@@ -115,9 +115,9 @@ define void @test_store_splice_mask_is_reverse(<vscale x 2 x float> %val, ptr %p
 define void @test_store_splice_different_evl(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_store_splice_different_evl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    vsetvli a4, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a3, a3, 2
 ; CHECK-NEXT:    addi a4, a3, -1
 ; CHECK-NEXT:    vrsub.vx v9, v9, a4

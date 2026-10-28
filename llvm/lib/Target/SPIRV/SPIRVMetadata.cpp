@@ -16,7 +16,7 @@
 using namespace llvm;
 
 static MDString *getOCLKernelArgAttribute(const Function &F, unsigned ArgIdx,
-                                          const StringRef AttributeName) {
+                                          StringRef AttributeName) {
   assert(
       F.getCallingConv() == CallingConv::SPIR_KERNEL &&
       "Kernel attributes are attached/belong only to OpenCL kernel functions");
@@ -73,13 +73,6 @@ MDString *getOCLKernelArgAccessQual(const Function &F, unsigned ArgIdx) {
       F.getCallingConv() == CallingConv::SPIR_KERNEL &&
       "Kernel attributes are attached/belong only to OpenCL kernel functions");
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_access_qual");
-}
-
-MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
-  assert(
-      F.getCallingConv() == CallingConv::SPIR_KERNEL &&
-      "Kernel attributes are attached/belong only to OpenCL kernel functions");
-  return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
 }
 
 } // namespace llvm

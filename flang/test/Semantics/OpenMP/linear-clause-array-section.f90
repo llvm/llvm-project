@@ -8,7 +8,7 @@ subroutine test_array_section_in_linear()
   integer, dimension(0:99, -99:10, 200) :: a, b, c
 
   !$omp parallel
-    !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a LINEAR clause
+    !ERROR: An array element cannot appear in a LINEAR clause
     !$omp do linear(a(:,1,1))
     do i = 0, 99
       c(i, 1, 1) = a(i, 1, 1) + b(i, 1, 1)
@@ -23,7 +23,7 @@ subroutine test_array_element_in_linear()
   integer :: arr(10)
 
   !$omp parallel
-    !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a LINEAR clause
+    !ERROR: An array element cannot appear in a LINEAR clause
     !$omp do linear(arr(1))
     do i = 1, 10
       arr(i) = i
@@ -41,7 +41,7 @@ subroutine test_structure_component_in_linear()
   type(my_type) :: obj
 
   !$omp parallel
-    !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a LINEAR clause
+    !ERROR: A structure component cannot appear in a LINEAR clause
     !$omp do linear(obj%field)
     do i = 1, 10
     end do

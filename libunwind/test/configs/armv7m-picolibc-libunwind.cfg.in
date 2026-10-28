@@ -5,7 +5,7 @@ libc_linker_script = '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'
 config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
 
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include}'
+    '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
     '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib} -lunwind'

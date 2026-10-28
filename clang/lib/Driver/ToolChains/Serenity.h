@@ -65,7 +65,7 @@ public:
   bool isPIEDefault(const llvm::opt::ArgList &) const override { return true; }
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsMathErrnoDefault() const override { return false; }

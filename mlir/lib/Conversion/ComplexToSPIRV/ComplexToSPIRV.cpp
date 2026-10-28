@@ -25,6 +25,12 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// Creates a scalar floating-point constant of the given value.
+Value createFPConstant(OpBuilder &builder, Location loc, Type type,
+                       double value) {
+  return spirv::ConstantOp::create(
+      builder, loc, type, builder.getFloatAttr(cast<FloatType>(type), value));
+}
 
 struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
   using Base::Base;
@@ -125,6 +131,36 @@ struct ElementwiseBinaryOpPattern final : OpConversionPattern<ComplexOp> {
   }
 };
 
+template <typename ComplexOp, typename SPIRVCompareOp, typename SPIRVCombinerOp>
+struct ComparisonOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+
+    Value lhsRe = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {0});
+    Value lhsIm = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {1});
+    Value rhsRe = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {0});
+    Value rhsIm = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {1});
+
+    Value cmpRe = SPIRVCompareOp::create(rewriter, loc, lhsRe, rhsRe);
+    Value cmpIm = SPIRVCompareOp::create(rewriter, loc, lhsIm, rhsIm);
+
+    rewriter.replaceOpWithNewOp<SPIRVCombinerOp>(op, spirvType, cmpRe, cmpIm);
+    return success();
+  }
+};
+
 struct MulOpPattern final : OpConversionPattern<complex::MulOp> {
   using Base::Base;
 
@@ -186,6 +222,37 @@ struct AbsOpPattern final : OpConversionPattern<complex::AbsOp> {
   }
 };
 
+template <typename ComplexOp, bool NegateReal>
+struct NegationOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value resultRe =
+        NegateReal ? spirv::FNegateOp::create(rewriter, loc, re) : re;
+    Value resultIm = spirv::FNegateOp::create(rewriter, loc, im);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
+
 struct DivOpPattern final : OpConversionPattern<complex::DivOp> {
   using Base::Base;
 
@@ -223,6 +290,85 @@ struct DivOpPattern final : OpConversionPattern<complex::DivOp> {
   }
 };
 
+template <typename Atan2Op>
+struct AngleOpPattern final : OpConversionPattern<complex::AngleOp> {
+  using OpConversionPattern<complex::AngleOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::AngleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    rewriter.replaceOpWithNewOp<Atan2Op>(op, im, re);
+    return success();
+  }
+};
+
+/// Computes complex.sign as z / abs(z), selecting a zero result when z is
+/// zero to avoid a division by zero. abs(z) is computed as
+/// max * sqrt(1 + (min / max)^2) to avoid overflow in squaring.
+template <typename SqrtOp, typename FAbsOp, typename FMaxOp, typename FMinOp>
+struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
+  using OpConversionPattern<complex::SignOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::SignOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value absRe = FAbsOp::create(rewriter, loc, re);
+    Value absIm = FAbsOp::create(rewriter, loc, im);
+    Value max = FMaxOp::create(rewriter, loc, absRe, absIm);
+    Value min = FMinOp::create(rewriter, loc, absRe, absIm);
+    Value ratio = spirv::FDivOp::create(rewriter, loc, min, max);
+    Value ratioSq = spirv::FMulOp::create(rewriter, loc, ratio, ratio);
+    Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+    Value ratioSqPlusOne = spirv::FAddOp::create(rewriter, loc, ratioSq, one);
+    Value sqrt = SqrtOp::create(rewriter, loc, ratioSqPlusOne);
+    Value abs = spirv::FMulOp::create(rewriter, loc, max, sqrt);
+
+    Value signRe = spirv::FDivOp::create(rewriter, loc, re, abs);
+    Value signIm = spirv::FDivOp::create(rewriter, loc, im, abs);
+
+    Value zero = createFPConstant(rewriter, loc, re.getType(), 0.0);
+    Value reIsZero = spirv::FOrdEqualOp::create(rewriter, loc, re, zero);
+    Value imIsZero = spirv::FOrdEqualOp::create(rewriter, loc, im, zero);
+    Value isZero =
+        spirv::LogicalAndOp::create(rewriter, loc, reIsZero, imIsZero);
+
+    // Select per component: spirv.Select with a scalar condition and a
+    // composite result requires SPIR-V 1.4, so operate on scalars here and
+    // assemble the result afterwards.
+    Value resultRe = spirv::SelectOp::create(rewriter, loc, isZero, re, signRe);
+    Value resultIm = spirv::SelectOp::create(rewriter, loc, isZero, im, signIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -233,9 +379,21 @@ void mlir::populateComplexToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
-               ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
-               ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
-               MulOpPattern, DivOpPattern, AbsOpPattern<spirv::GLSqrtOp>,
-               AbsOpPattern<spirv::CLSqrtOp>>(typeConverter, context);
+  patterns
+      .add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
+           ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
+           ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
+           ComparisonOpPattern<complex::EqualOp, spirv::FOrdEqualOp,
+                               spirv::LogicalAndOp>,
+           ComparisonOpPattern<complex::NotEqualOp, spirv::FUnordNotEqualOp,
+                               spirv::LogicalOrOp>,
+           MulOpPattern, DivOpPattern,
+           NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
+           NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
+           AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>,
+           AngleOpPattern<spirv::GLAtan2Op>, AngleOpPattern<spirv::CLAtan2Op>,
+           SignOpPattern<spirv::GLSqrtOp, spirv::GLFAbsOp, spirv::GLFMaxOp,
+                         spirv::GLFMinOp>,
+           SignOpPattern<spirv::CLSqrtOp, spirv::CLFAbsOp, spirv::CLFMaxOp,
+                         spirv::CLFMinOp>>(typeConverter, context);
 }

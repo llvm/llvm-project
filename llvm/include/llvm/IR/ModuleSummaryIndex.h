@@ -19,12 +19,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
@@ -40,12 +42,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -77,11 +79,32 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasTailCall : 1;
 
+  // True if at least one of the calls to the callee is an indirect call, i.e.
+  // the edge was added for a profiled indirect call target (from value profile
+  // metadata) or for a possible target from !callees metadata.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t HasIndirectCall : 1;
+
+  // True if the thin link determined that at least a declaration of the callee
+  // must be available in any module containing the caller (including any
+  // module the caller is imported into), e.g. so that the ThinLTO backend can
+  // perform MemProf ICP to it. If the callee definition is not imported into
+  // such a module, a declaration is imported instead. This is only computed
+  // and used within the thin link, and is not serialized.
+  // Note that keeping this in-memory only information here does not increase
+  // the size of CalleeInfo, since it fits in the existing bit-field storage.
+  // If that changes, it could instead be tracked in a side structure computed
+  // by the thin link MemProf context disambiguation and passed to the function
+  // importer.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t RequiresDeclImport : 1;
+
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false) {}
-  explicit CalleeInfo(HotnessType Hotness, bool HasTC)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC) {}
+        HasTailCall(false), HasIndirectCall(false), RequiresDeclImport(false) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, bool HasIC = false)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        HasIndirectCall(HasIC), RequiresDeclImport(false) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -90,6 +113,14 @@ struct CalleeInfo {
   bool hasTailCall() const { return HasTailCall; }
 
   void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
+
+  bool hasIndirectCall() const { return HasIndirectCall; }
+
+  void setHasIndirectCall(const bool HasIC) { HasIndirectCall = HasIC; }
+
+  bool requiresDeclImport() const { return RequiresDeclImport; }
+
+  void setRequiresDeclImport(const bool RI) { RequiresDeclImport = RI; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 };
@@ -181,13 +212,93 @@ private:
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
-/// std::map rather than a DenseMap so that pointers to the map's value_type
-/// (which are used by ValueInfo) are not invalidated by insertion. Also it will
-/// likely incur less overhead, as the value type is not very small and the size
-/// of the map is unknown, resulting in inefficiencies due to repeated
-/// insertions and resizing.
-using GlobalValueSummaryMapTy =
-    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
+/// DenseMap for O(1) lookup and a std::deque for storage. std::deque
+/// guarantees that pointers to elements are not invalidated by push_back,
+/// which is required because ValueInfo stores a raw pointer to elements of
+/// this container.
+class GlobalValueSummaryMap {
+public:
+  using key_type = GlobalValue::GUID;
+  using mapped_type = GlobalValueSummaryInfo;
+  using value_type = std::pair<key_type, mapped_type>;
+  using iterator = std::deque<value_type>::iterator;
+  using const_iterator = std::deque<value_type>::const_iterator;
+  using size_type = std::deque<value_type>::size_type;
+
+private:
+  /// Vector of pointers into Storage, used for key-sorted iteration.
+  using SortedEntriesVec = SmallVector<const value_type *, 0>;
+
+  DenseMap<key_type, unsigned> Map;
+  std::deque<value_type> Storage;
+
+public:
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(key_type Key, Ts &&...Args) {
+    auto Res = Map.try_emplace(Key, Storage.size());
+    if (Res.second) {
+      Storage.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                           std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(Storage.end()), true};
+    }
+    return {Storage.begin() + Res.first->second, false};
+  }
+
+  iterator find(key_type Key) {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  const_iterator find(key_type Key) const {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  iterator begin() { return Storage.begin(); }
+  const_iterator begin() const { return Storage.begin(); }
+  iterator end() { return Storage.end(); }
+  const_iterator end() const { return Storage.end(); }
+  size_type size() const { return Storage.size(); }
+  bool empty() const { return Storage.empty(); }
+
+  /// An owning range over the entries sorted by key, yielding each entry by
+  /// reference.
+  class SortedEntriesRange {
+    SortedEntriesVec Entries;
+
+  public:
+    using iterator = pointee_iterator<SortedEntriesVec::const_iterator>;
+
+    explicit SortedEntriesRange(SortedEntriesVec Entries)
+        : Entries(std::move(Entries)) {}
+
+    iterator begin() const { return iterator(Entries.begin()); }
+    iterator end() const { return iterator(Entries.end()); }
+    size_t size() const { return Entries.size(); }
+    bool empty() const { return Entries.empty(); }
+  };
+
+  /// Return an owning range over the entries sorted by key. Storage is in
+  /// insertion order; some serialization paths and tests rely on key-sorted
+  /// iteration.
+  SortedEntriesRange sortedRange() const {
+    return SortedEntriesRange(getSortedEntries());
+  }
+
+private:
+  SortedEntriesVec getSortedEntries() const {
+    SortedEntriesVec Sorted;
+    Sorted.reserve(Storage.size());
+    for (const auto &E : Storage)
+      Sorted.push_back(&E);
+    llvm::sort(Sorted, [](const auto *A, const auto *B) {
+      return A->first < B->first;
+    });
+    return Sorted;
+  }
+};
+
+using GlobalValueSummaryMapTy = GlobalValueSummaryMap;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
@@ -271,8 +382,6 @@ struct ValueInfo {
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
-
-  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -1401,7 +1510,7 @@ using ModuleToSummariesForIndexTy =
     std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 0>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1544,7 +1653,7 @@ private:
 
   GlobalValueSummaryMapTy::value_type *
   getOrInsertValuePtr(GlobalValue::GUID GUID) {
-    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
+    return &*GlobalValueMap.try_emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
                  .first;
   }
 
@@ -1582,6 +1691,11 @@ public:
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
+
+  GlobalValueSummaryMapTy::SortedEntriesRange
+  sortedGlobalValueSummariesRange() const {
+    return GlobalValueMap.sortedRange();
+  }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
 
@@ -1750,12 +1864,19 @@ public:
     return ValueInfo(HaveGVs, VP);
   }
 
-  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
-  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to
+  /// GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV,
+                                 GlobalValue::GUID GUID) {
     assert(HaveGVs);
-    auto VP = getOrInsertValuePtr(GV->getGUID());
+    auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.GV = GV;
     return ValueInfo(HaveGVs, VP);
+  }
+
+  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+    return getOrInsertValueInfo(GV, GV->getGUID());
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.

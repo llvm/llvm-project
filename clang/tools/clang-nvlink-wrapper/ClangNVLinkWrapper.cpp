@@ -16,11 +16,12 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/Frontend/Offloading/ArchiveLinker.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -110,24 +112,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "NVLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "NVLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "NVLinkOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -207,6 +197,47 @@ Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
   return *Path;
 }
 
+std::optional<std::string> findFile(StringRef Dir, StringRef Root,
+                                    const Twine &Name) {
+  SmallString<128> Path;
+  if (Dir.starts_with("="))
+    sys::path::append(Path, Root, Dir.substr(1), Name);
+  else
+    sys::path::append(Path, Dir, Name);
+
+  if (sys::fs::exists(Path))
+    return static_cast<std::string>(Path);
+  return std::nullopt;
+}
+
+std::optional<std::string>
+findFromSearchPaths(StringRef Name, StringRef Root,
+                    ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths)
+    if (std::optional<std::string> File = findFile(Dir, Root, Name))
+      return File;
+  return std::nullopt;
+}
+
+std::optional<std::string>
+searchLibraryBaseName(StringRef Name, StringRef Root,
+                      ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths)
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".a"))
+      return File;
+  return std::nullopt;
+}
+
+/// Search for static libraries in the linker's library path given input like
+/// `-lfoo` or `-l:libfoo.a`.
+std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
+                                         ArrayRef<StringRef> SearchPaths) {
+  if (Input.starts_with(":"))
+    return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
+  return searchLibraryBaseName(Input, Root, SearchPaths);
+}
+
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
     return;
@@ -214,6 +245,87 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << " \"" << CmdArgs.front() << "\" ";
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
+
+Error executeProgram(StringRef Executable, ArrayRef<StringRef> Args,
+                     const ArgList &WrapperArgs) {
+  if (WrapperArgs.hasArg(OPT_dry_run) || WrapperArgs.hasArg(OPT_verbose))
+    printCommands(Args);
+  if (WrapperArgs.hasArg(OPT_dry_run))
+    return Error::success();
+
+  if (sys::commandLineFitsWithinSystemLimits(Executable, Args)) {
+    if (sys::ExecuteAndWait(Executable, Args))
+      return createStringError("'%s' failed",
+                               sys::path::filename(Executable).str().c_str());
+    return Error::success();
+  }
+
+  auto TempFileOrErr = createTempFile(WrapperArgs, "response", "txt");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  SmallString<256> Contents;
+  raw_svector_ostream OS(Contents);
+  for (StringRef Arg : llvm::drop_begin(Args)) {
+    sys::printArg(OS, Arg, /*Quote=*/true);
+    OS << " ";
+  }
+
+  if (std::error_code EC = sys::writeFileWithEncoding(*TempFileOrErr, Contents))
+    return createStringError("failed to write response file: %s",
+                             EC.message().c_str());
+
+  // How nvlink spells its response file support.
+  std::string ResponseFile = ("--options-file=" + *TempFileOrErr).str();
+  SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
+  if (sys::ExecuteAndWait(Executable, NewArgs))
+    return createStringError("'%s' failed",
+                             sys::path::filename(Executable).str().c_str());
+  return Error::success();
+}
+
+/// A minimum symbol interface that provides the necessary information to
+/// extract archive members and resolve LTO symbols.
+struct Symbol {
+  enum Flags {
+    None = 0,
+    Undefined = 1 << 0,
+    Weak = 1 << 1,
+  };
+
+  Symbol() : File(), Flags(None), UsedInRegularObj(false) {}
+  Symbol(Symbol::Flags Flags) : File(), Flags(Flags), UsedInRegularObj(true) {}
+
+  Symbol(MemoryBufferRef File, const irsymtab::Reader::SymbolRef Sym)
+      : File(File), Flags(0), UsedInRegularObj(false) {
+    if (Sym.isUndefined())
+      Flags |= Undefined;
+    if (Sym.isWeak())
+      Flags |= Weak;
+  }
+
+  Symbol(MemoryBufferRef File, const SymbolRef Sym)
+      : File(File), Flags(0), UsedInRegularObj(false) {
+    auto FlagsOrErr = Sym.getFlags();
+    if (!FlagsOrErr)
+      reportError(FlagsOrErr.takeError());
+    if (*FlagsOrErr & SymbolRef::SF_Undefined)
+      Flags |= Undefined;
+    if (*FlagsOrErr & SymbolRef::SF_Weak)
+      Flags |= Weak;
+
+    auto NameOrErr = Sym.getName();
+    if (!NameOrErr)
+      reportError(NameOrErr.takeError());
+  }
+
+  bool isWeak() const { return Flags & Weak; }
+  bool isUndefined() const { return Flags & Undefined; }
+
+  MemoryBufferRef File;
+  uint32_t Flags;
+  bool UsedInRegularObj;
+};
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   SmallVector<StringRef, 1> SearchPaths;
@@ -249,21 +361,22 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
   }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
+  for (const Arg *A : Args.filtered(OPT_Xptxas))
+    AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(AssemblerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Args.MakeArgString(*TempFileOrErr);
-  if (sys::ExecuteAndWait(*PTXAsPath, AssemblerArgs))
-    return createStringError("'" + sys::path::filename(*PTXAsPath) + "'" +
-                             " failed");
+  if (Error Err = executeProgram(*PTXAsPath, AssemblerArgs, Args))
+    return Err;
   return Args.MakeArgString(*TempFileOrErr);
 }
 
-Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
+Expected<std::unique_ptr<lto::LTO>>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          const ArgList &Args) {
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -330,10 +443,98 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   return std::make_unique<lto::LTO>(std::move(Conf), Backend, Partitions, Kind);
 }
 
-Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
-  // Build input descriptors for the archive resolver
-  SmallVector<offloading::InputDesc> InputDescs;
+Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer,
+                                     StringMap<Symbol> &SymTab, bool IsLazy) {
+  Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
+  if (!IRSymtabOrErr)
+    return IRSymtabOrErr.takeError();
+  bool Extracted = !IsLazy;
+  StringMap<Symbol> PendingSymbols;
+  for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
+    for (const auto &IRSym : IRSymtabOrErr->TheReader.module_symbols(I)) {
+      if (IRSym.isFormatSpecific() || !IRSym.isGlobal())
+        continue;
+
+      Symbol &OldSym = !SymTab.count(IRSym.getName()) && IsLazy
+                           ? PendingSymbols[IRSym.getName()]
+                           : SymTab[IRSym.getName()];
+      Symbol Sym = Symbol(Buffer, IRSym);
+      if (OldSym.File.getBuffer().empty())
+        OldSym = Sym;
+
+      bool ResolvesReference =
+          !Sym.isUndefined() &&
+          (OldSym.isUndefined() || (OldSym.isWeak() && !Sym.isWeak())) &&
+          !(OldSym.isWeak() && OldSym.isUndefined() && IsLazy);
+      Extracted |= ResolvesReference;
+
+      Sym.UsedInRegularObj = OldSym.UsedInRegularObj;
+      if (ResolvesReference)
+        OldSym = Sym;
+    }
+  }
+  if (Extracted)
+    for (const auto &[Name, Symbol] : PendingSymbols)
+      SymTab[Name] = Symbol;
+  return Extracted;
+}
+
+Expected<bool> getSymbolsFromObject(ObjectFile &ObjFile,
+                                    StringMap<Symbol> &SymTab, bool IsLazy) {
+  bool Extracted = !IsLazy;
+  StringMap<Symbol> PendingSymbols;
+  for (SymbolRef ObjSym : ObjFile.symbols()) {
+    auto NameOrErr = ObjSym.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    Symbol &OldSym = !SymTab.count(*NameOrErr) && IsLazy
+                         ? PendingSymbols[*NameOrErr]
+                         : SymTab[*NameOrErr];
+    Symbol Sym = Symbol(ObjFile.getMemoryBufferRef(), ObjSym);
+    if (OldSym.File.getBuffer().empty())
+      OldSym = Sym;
+
+    bool ResolvesReference = OldSym.isUndefined() && !Sym.isUndefined() &&
+                             (!OldSym.isWeak() || !IsLazy);
+    Extracted |= ResolvesReference;
+
+    if (ResolvesReference)
+      OldSym = Sym;
+    OldSym.UsedInRegularObj = true;
+  }
+  if (Extracted)
+    for (const auto &[Name, Symbol] : PendingSymbols)
+      SymTab[Name] = Symbol;
+  return Extracted;
+}
+
+Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
+                          bool IsLazy) {
+  switch (identify_magic(Buffer.getBuffer())) {
+  case file_magic::bitcode: {
+    return getSymbolsFromBitcode(Buffer, SymTab, IsLazy);
+  }
+  case file_magic::elf_relocatable: {
+    Expected<std::unique_ptr<ObjectFile>> ObjFile =
+        ObjectFile::createObjectFile(Buffer);
+    if (!ObjFile)
+      return ObjFile.takeError();
+    return getSymbolsFromObject(**ObjFile, SymTab, IsLazy);
+  }
+  default:
+    return createStringError("Unsupported file type");
+  }
+}
+
+Expected<SmallVector<StringRef>>
+getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
+  SmallVector<StringRef> LibraryPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
+    LibraryPaths.push_back(Arg->getValue());
+
   bool WholeArchive = false;
+  SmallVector<std::pair<std::unique_ptr<MemoryBuffer>, bool>> InputFiles;
   for (const opt::Arg *Arg : Args.filtered(
            OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
@@ -342,43 +543,84 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       continue;
     }
 
-    offloading::InputDesc Desc;
-    Desc.Value = Arg->getValue();
-    Desc.InputKind = Arg->getOption().matches(OPT_library)
-                         ? offloading::InputDesc::Kind::Library
-                         : offloading::InputDesc::Kind::File;
-    Desc.WholeArchive = WholeArchive;
-    InputDescs.push_back(Desc);
+    std::optional<std::string> Filename =
+        Arg->getOption().matches(OPT_library)
+            ? searchLibrary(Arg->getValue(), /*Root=*/"", LibraryPaths)
+            : std::string(Arg->getValue());
+
+    if (!Filename && Arg->getOption().matches(OPT_library))
+      return createStringError("unable to find library -l%s", Arg->getValue());
+
+    if (!Filename || !sys::fs::exists(*Filename) ||
+        sys::fs::is_directory(*Filename))
+      continue;
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(*Filename);
+    if (std::error_code EC = BufferOrErr.getError())
+      return createFileError(*Filename, EC);
+
+    MemoryBufferRef Buffer = **BufferOrErr;
+    switch (identify_magic(Buffer.getBuffer())) {
+    case file_magic::bitcode:
+    case file_magic::elf_relocatable:
+      InputFiles.emplace_back(std::move(*BufferOrErr), /*IsLazy=*/false);
+      break;
+    case file_magic::archive: {
+      Expected<std::unique_ptr<object::Archive>> LibFile =
+          object::Archive::create(Buffer);
+      if (!LibFile)
+        return LibFile.takeError();
+      Error Err = Error::success();
+      for (auto Child : (*LibFile)->children(Err)) {
+        auto ChildBufferOrErr = Child.getMemoryBufferRef();
+        if (!ChildBufferOrErr)
+          return ChildBufferOrErr.takeError();
+        std::unique_ptr<MemoryBuffer> ChildBuffer =
+            MemoryBuffer::getMemBufferCopy(
+                ChildBufferOrErr->getBuffer(),
+                ChildBufferOrErr->getBufferIdentifier());
+        InputFiles.emplace_back(std::move(ChildBuffer), !WholeArchive);
+      }
+      if (Err)
+        return Err;
+      break;
+    }
+    default:
+      return createStringError("Unsupported file type");
+    }
   }
 
-  // Gather search paths and forced undefined symbols
-  SmallVector<StringRef> LibraryPaths;
-  for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
-    LibraryPaths.push_back(Arg->getValue());
+  bool Extracted = true;
+  StringMap<Symbol> SymTab;
+  for (auto &Sym : Args.getAllArgValues(OPT_u))
+    SymTab[Sym] = Symbol(Symbol::Undefined);
+  SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput;
+  while (Extracted) {
+    Extracted = false;
+    for (auto &[Input, IsLazy] : InputFiles) {
+      if (!Input)
+        continue;
 
-  std::vector<std::string> ForcedUndefStorage = Args.getAllArgValues(OPT_u);
-  SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
-                                      ForcedUndefStorage.end());
+      if (hasFatBinary(Args, *Input)) {
+        LinkerInput.emplace_back(std::move(Input));
+        continue;
+      }
 
-  // The device code we are linking targets NVPTX. Any other ELF object is a
-  // host "fat binary" that should be forwarded without symbol scanning. The
-  // --assume-device-object flag (under --dry-run) overrides this and treats
-  // every input as device code, so disable detection by passing no archs.
-  SmallVector<Triple::ArchType> DeviceArchs;
-  if (!(Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object)))
-    DeviceArchs = {Triple::nvptx, Triple::nvptx64};
+      // Archive members only extract if they define needed symbols. We will
+      // re-scan all the inputs if any files were extracted for the link job.
+      Expected<bool> ExtractOrErr = getSymbols(*Input, SymTab, IsLazy);
+      if (!ExtractOrErr)
+        return ExtractOrErr.takeError();
 
-  // Resolve archive members.
-  Expected<offloading::ResolvedInputs> ResolvedOrErr =
-      offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs,
-                                        "", DeviceArchs);
-  if (!ResolvedOrErr)
-    return ResolvedOrErr.takeError();
+      Extracted |= *ExtractOrErr;
+      if (!*ExtractOrErr)
+        continue;
 
-  offloading::ResolvedInputs &Resolved = *ResolvedOrErr;
-  SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput =
-      std::move(Resolved.Buffers);
-  StringMap<offloading::Symbol> &SymTab = Resolved.SymTab;
+      LinkerInput.emplace_back(std::move(Input));
+    }
+  }
+  InputFiles.clear();
 
   // Extract any bitcode files to be passed to the LTO pipeline.
   SmallVector<std::unique_ptr<MemoryBuffer>> BitcodeFiles;
@@ -390,7 +632,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
   if (!BitcodeFiles.empty()) {
-    auto LTOBackendOrErr = createLTO(Args);
+    auto LTOBackendOrErr = createLTO(LibraryOptions, Args);
     if (!LTOBackendOrErr)
       return LTOBackendOrErr.takeError();
     lto::LTO &LTOBackend = **LTOBackendOrErr;
@@ -405,7 +647,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       size_t Idx = 0;
       for (auto &Sym : Symbols) {
         lto::SymbolResolution &Res = Resolutions[Idx++];
-        offloading::Symbol ObjSym = SymTab[Sym.getName()];
+        Symbol ObjSym = SymTab[Sym.getName()];
         // We will use this as the prevailing symbol in LTO if it is not
         // undefined and it is from the file that contained the canonical
         // definition.
@@ -540,14 +782,7 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   for (StringRef Arg : NewLinkerArgs)
     LinkerArgs.push_back(Arg);
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(LinkerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Error::success();
-  if (sys::ExecuteAndWait(*NVLinkPath, LinkerArgs))
-    return createStringError("'" + sys::path::filename(*NVLinkPath) + "'" +
-                             " failed");
-  return Error::success();
+  return executeProgram(*NVLinkPath, LinkerArgs, Args);
 }
 
 } // namespace
@@ -588,10 +823,11 @@ int main(int argc, char **argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   // Get the input files to pass to 'nvlink'.
-  auto FilesOrErr = getInput(Args);
+  auto FilesOrErr = getInput(LibraryOptions, Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
 

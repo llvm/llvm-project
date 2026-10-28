@@ -19,27 +19,31 @@ namespace pr41427 {
 namespace Access {
   struct B {
   protected:
-    struct type {};
+    struct type {}; // #Access-B-type
   };
-  template<typename T> struct D : B { // expected-note {{not viable}} \
-                                         expected-note {{implicit deduction guide declared as 'template <typename T> D(Access::D<T>) -> Access::D<T>'}}
-    D(T, typename T::type); // expected-note {{private member}} \
-                            // expected-note {{implicit deduction guide declared as 'template <typename T> D(T, typename T::type) -> Access::D<T>'}}
+  template<typename T> struct D : B { // #Access-D
+    D(T, typename T::type); // #Access-D-ctor
+    // expected-error@-1 {{'type' is a private member of 'Access::Y'}}
+    //   expected-note@#Access-Y-type {{implicitly declared private here}}
+    //   expected-note@#Access-D-ctor {{implicit deduction guide declared as 'template <typename T> D(T, typename T::type) -> Access::D<T>'}}
   };
   D b = {B(), {}};
 
   class X {
     using type = int;
   };
-  D x = {X(), {}}; // expected-error {{no viable constructor or deduction guide}}
+  D x = {X(), {}};
+  // expected-error@-1 {{no viable constructor or deduction guide}}
+  //   expected-note@#Access-D {{implicit deduction guide declared as 'template <typename T> D(Access::D<T>) -> Access::D<T>'}}
+  //   expected-note@#Access-D {{candidate function template not viable: requires 1 argument, but 2 were provided}}
+  //   expected-note@#Access-D-ctor {{candidate template ignored: substitution failure [with T = X]: 'type' is a private member of 'Access::X'}}
 
-  // Once we implement proper support for dependent nested name specifiers in
-  // friends, this should still work.
   class Y {
-    template <typename T> friend D<T>::D(T, typename T::type); // expected-warning {{dependent nested name specifier}}
-    struct type {};
+    template <typename T> friend D<T>::D(T, typename T::type);
+    struct type {}; // #Access-Y-type
   };
   D y = {Y(), {}};
+  // expected-note@-1 {{in instantiation of template class 'Access::D<Access::Y>' requested here}}
 
   class Z {
     template <typename T> friend class D;
@@ -140,3 +144,20 @@ namespace GH200418 {
   using T = S<A>::X<0>;
 } // namespace GH200418
 #endif
+
+namespace GH203261 {
+  template <class> struct A {}; // expected-note {{template is declared here}}
+  template <template <class> class TT> struct S {
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduction guide must be declared in the same scope as template 'GH203261::A'}}
+    // expected-error@-2 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace GH203261
+
+namespace TemplateTemplateParm1 {
+  template <template <class> class TT> struct S {
+    template <class> struct A {};
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace TemplateTemplateParm1

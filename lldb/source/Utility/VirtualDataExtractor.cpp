@@ -246,24 +246,30 @@ uint64_t VirtualDataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
   return result;
 }
 
+/// A subset request that can't be mapped still returns a valid, non-null
+/// extractor, because most callers dereference the result directly.
+static DataExtractorSP MakeEmptySubsetExtractor(ByteOrder byte_order,
+                                                uint32_t addr_size) {
+  auto empty_sp = std::make_shared<DataExtractor>();
+  empty_sp->SetByteOrder(byte_order);
+  empty_sp->SetAddressByteSize(addr_size);
+  return empty_sp;
+}
+
 DataExtractorSP
 VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
                                            offset_t virtual_length) {
   const LookupTable::Entry *entry = FindEntry(virtual_offset);
-  assert(
-      entry &&
-      "VirtualDataExtractor subset extractor requires valid virtual address");
   if (!entry)
-    return {};
+    return MakeEmptySubsetExtractor(GetByteOrder(), GetAddressByteSize());
 
   // Entry::data is the offset into the DataBuffer's actual start/end range
   // Entry::base is the virtual address at the start of this region of data
   offset_t offset_into_entry_range = virtual_offset - entry->base;
-  assert(
-      offset_into_entry_range + virtual_length <= entry->size &&
-      "VirtualDataExtractor subset may not span multiple LookupTable entries");
+  // A subset may not span more than one entry; a range that overflows this
+  // entry is unmappable.
   if (offset_into_entry_range + virtual_length > entry->size)
-    return {};
+    return MakeEmptySubsetExtractor(GetByteOrder(), GetAddressByteSize());
 
   // We could support a Subset VirtualDataExtractor which covered
   // multiple LookupTable virtual entries, but we'd need to mutate
@@ -283,11 +289,8 @@ VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset,
 DataExtractorSP
 VirtualDataExtractor::GetSubsetExtractorSP(offset_t virtual_offset) {
   const LookupTable::Entry *entry = FindEntry(virtual_offset);
-  assert(
-      entry &&
-      "VirtualDataExtractor subset extractor requires valid virtual address");
   if (!entry)
-    return {};
+    return MakeEmptySubsetExtractor(GetByteOrder(), GetAddressByteSize());
 
   // Entry::data is the offset into the DataBuffer's actual start/end range
   // Entry::base is the virtual address at the start of this region of data

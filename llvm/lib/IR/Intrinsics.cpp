@@ -22,7 +22,6 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -44,15 +43,25 @@ static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS);
+                             raw_ostream &OS,
+                             unsigned NumMissingTrailingParams = 0);
 
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -358,10 +367,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmFuncref, 0));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -371,9 +380,11 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = Infos[NextElt++];
+    unsigned OverloadIndex = Infos[NextElt++];
+    unsigned ArgKindEnums = Infos[NextElt++];
+    unsigned Packed = (ArgKindEnums << 8) | OverloadIndex;
     OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
+        IITDescriptor::get(IITDescriptor::Overloaded, Packed));
     return;
   }
   case IIT_MATCH: {
@@ -556,7 +567,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return TargetExtType::get(Context, "wasm.funcref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
@@ -1029,6 +1043,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PrintMsg(isa<TargetExtType>(Ty) &&
                         cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
                     "aarch64.svcount");
+  case IITDescriptor::WasmExternref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.externref",
+                    "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.funcref",
+                    "wasm.funcref");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
@@ -1076,20 +1098,76 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
-    switch (D.getOverloadKind()) {
-    case IITDescriptor::AK_Any:
-      return false; // Success
-    case IITDescriptor::AK_AnyInteger:
-      return PrintMsg(Ty->isIntOrIntVectorTy(), "any integer or integer vector",
-                      OIdx);
-    case IITDescriptor::AK_AnyFloat:
-      return PrintMsg(Ty->isFPOrFPVectorTy(), "any fp or fp vector", OIdx);
-    case IITDescriptor::AK_AnyVector:
-      return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
-    case IITDescriptor::AK_AnyPointer:
-      return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
+    // Token has no mangling (see getMangledTypeStr), so it cannot be an
+    // overload type; reject it with a signature error. Label is already
+    // excluded from function signatures, so it never reaches here.
+    if (Ty->isTokenTy())
+      return PrintMsg(false, "any manglable type", OIdx);
+
+    IITDescriptor::AnyKindVectorConstraint VC;
+    IITDescriptor::AnyKindElementConstraint EC;
+    std::tie(VC, EC) = D.getOverloadConstraints();
+
+    bool IsValid = [&]() {
+      switch (VC) {
+      case IITDescriptor::VC_None:
+        return true;
+      case IITDescriptor::VC_Vector:
+        return isa<VectorType>(Ty);
+      case IITDescriptor::VC_Scalar:
+        return !isa<VectorType>(Ty);
+      }
+      llvm_unreachable("invalid vector constraint");
+    }();
+
+    IsValid &= [&]() {
+      Type *ETy = Ty->getScalarType();
+      switch (EC) {
+      case IITDescriptor::EC_None:
+        return true;
+      case IITDescriptor::EC_Integer:
+        return ETy->isIntegerTy();
+      case IITDescriptor::EC_Float:
+        return ETy->isFloatingPointTy();
+      case IITDescriptor::EC_Pointer:
+        return ETy->isPointerTy();
+      }
+      llvm_unreachable("invalid element constraint");
+    }();
+
+    if (IsValid)
+      return false;
+
+    static constexpr StringLiteral VectorKinds[] = {
+        "",
+        "vector",
+        "scalar",
+    };
+    static constexpr StringLiteral ElementKinds[] = {
+        "",
+        "integer",
+        "fp",
+        "pointer",
+    };
+
+    if (EC == IITDescriptor::EC_None) {
+      // No constraint on element type.
+      // Expected = any {vector | scalar} type.
+      StringLiteral VK = ArrayRef(VectorKinds)[VC];
+      return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
-    llvm_unreachable("all argument kinds not covered");
+
+    StringLiteral EK = ArrayRef(ElementKinds)[EC];
+    switch (VC) {
+    case IITDescriptor::VC_None:
+      // Expected = any EK or EK vector.
+      return PrintMsg(false, formatv("any {0} or {0} vector", EK), OIdx);
+    case IITDescriptor::VC_Vector:
+      return PrintMsg(false, formatv("any {} vector", EK), OIdx);
+    case IITDescriptor::VC_Scalar:
+      return PrintMsg(false, formatv("any {} type", EK), OIdx);
+    }
+    llvm_unreachable("invalid vector constraint");
   }
 
   case IITDescriptor::Match: {
@@ -1261,13 +1339,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 /// \p IsVarArg. The overloaded types for the intrinsic are pushed to the
 /// \p OverloadTys vector.
 ///
+/// If \p NumMissingTrailingParams is non-zero, \p FTy may omit exactly that
+/// many trailing parameters. Omitted parameters must have concrete integer
+/// types and therefore cannot contribute an unresolved overload type.
+///
 /// If the type is not valid, returns false and prints an error message to
 /// \p OS.
 static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS) {
+                             raw_ostream &OS,
+                             unsigned NumMissingTrailingParams) {
   SmallVector<DeferredIntrinsicMatchInfo, 2> DeferredChecks;
 
   assert(!Infos.empty() && "Table consistency error");
@@ -1280,9 +1363,10 @@ static bool isSignatureValid(FunctionType *FTy,
                          DeferredChecks, false, OS))
     return false;
 
-  if (FTy->getNumParams() != NumArgs) {
+  unsigned ProvidedArgs = FTy->getNumParams();
+  if (ProvidedArgs + NumMissingTrailingParams != NumArgs) {
     OS << "intrinsic has incorrect number of args. Expected " << NumArgs
-       << ", but got " << FTy->getNumParams();
+       << ", but got " << ProvidedArgs;
     return false;
   }
 
@@ -1300,6 +1384,18 @@ static bool isSignatureValid(FunctionType *FTy,
                            DeferredChecks, true, OS))
       return false;
   }
+
+  // Default arguments are materialized as ConstantInt values, requiring one
+  // concrete integer descriptor per omitted parameter.
+  if (NumMissingTrailingParams != 0 &&
+      (Infos.size() != NumMissingTrailingParams ||
+       llvm::any_of(Infos, [](Intrinsic::IITDescriptor D) {
+         return D.Kind != Intrinsic::IITDescriptor::Integer;
+       }))) {
+    OS << "cannot omit trailing parameters that are overloaded or non-integer";
+    return false;
+  }
+  Infos = Infos.drop_front(NumMissingTrailingParams);
 
   if (!Infos.empty()) {
     OS << "intrinsic has too few arguments!";
@@ -1327,13 +1423,22 @@ bool Intrinsic::hasStructReturnType(ID id) {
 bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  raw_ostream &OS) {
+  return isSignatureValid(ID, FT, OverloadTys,
+                          /*NumMissingTrailingParams=*/0, OS);
+}
+
+bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                                 SmallVectorImpl<Type *> &OverloadTys,
+                                 unsigned NumMissingTrailingParams,
+                                 raw_ostream &OS) {
   if (!ID)
     return false;
 
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
   auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(ID, Table);
 
-  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS);
+  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS,
+                            NumMissingTrailingParams);
 }
 
 bool Intrinsic::isSignatureValid(Function *F,
@@ -1400,5 +1505,19 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
+#define GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS
+#include "llvm/IR/IntrinsicImpl.inc"
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

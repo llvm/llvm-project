@@ -43,9 +43,6 @@ public:
   bool operator==(const SPIRVTypeInst &Other) const { return MI == Other.MI; }
   bool operator!=(const SPIRVTypeInst &Other) const { return MI != Other.MI; }
 
-  bool operator==(const MachineInstr *Other) const { return MI == Other; }
-  bool operator!=(const MachineInstr *Other) const { return MI != Other; }
-
   operator bool() const { return MI; }
 
   // Returns true if this is an OpTypeInt instruction.
@@ -55,6 +52,13 @@ public:
   bool isAnyTypeFloat() const;
   // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
   bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
+  // Returns true if this is an OpTypePointer or OpTypeUntypedPointerKHR
+  // instruction.
+  bool isPointer() const;
+  // Returns true if this is an OpTypePointer instruction.
+  bool isTypePtr() const;
+  // Returns true if this is an OpTypeUntypedPointerKHR instruction.
+  bool isTypeUntypedPtr() const;
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };

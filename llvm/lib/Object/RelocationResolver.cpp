@@ -747,6 +747,7 @@ static bool supportsWasm64(uint64_t Type) {
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
   case wasm::R_WASM_FUNCTION_OFFSET_I64:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
     return true;
   default:
     return supportsWasm32(Type);
@@ -786,6 +787,7 @@ static uint64_t resolveWasm64(uint64_t Type, uint64_t Offset, uint64_t S,
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
   case wasm::R_WASM_FUNCTION_OFFSET_I64:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
     // For wasm section, its offset at 0 -- ignoring Value
     return LocData;
   default:
@@ -834,7 +836,7 @@ getRelocationResolver(const ObjectFile &Obj) {
         return {supportsSystemZ, resolveSystemZ};
       case Triple::sparcv9:
         return {supportsSparc64, resolveSparc64};
-      case Triple::amdgcn:
+      case Triple::amdgpu:
         return {supportsAmdgpu, resolveAmdgpu};
       case Triple::riscv64:
       case Triple::riscv64be:

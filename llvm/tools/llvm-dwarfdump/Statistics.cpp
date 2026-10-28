@@ -15,6 +15,8 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
+#include <cmath>
+#include <limits>
 
 #define DEBUG_TYPE "dwarfdump"
 using namespace llvm;
@@ -341,8 +343,7 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(toStringRef(D),
-                       Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
+    DataExtractor Data(D, Die.getDwarfUnit()->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     // Consider the expression containing the DW_OP_entry_value as

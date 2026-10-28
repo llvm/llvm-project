@@ -3,7 +3,7 @@
 !s8i = !cir.int<s, 8>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_E = !cir.struct<"E" padded {!u8i}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
 
 module {
 
@@ -29,7 +29,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
 // enclosing scope) followed by `cir.begin_catch`.
 cir.func @construct_catch_param_basic() {
   cir.scope {
-    %param = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %param = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -51,7 +51,7 @@ cir.func @construct_catch_param_basic() {
 }
 
 // CHECK-LABEL: cir.func @construct_catch_param_basic()
-// CHECK:         %[[E:.*]] = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"]
+// CHECK:         %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!rec_E>
 // CHECK:         cir.try {
 // CHECK:           cir.yield
 // CHECK:         } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -59,5 +59,178 @@ cir.func @construct_catch_param_basic() {
 // CHECK:           cir.construct_catch_param non_trivial_copy %[[EH]] to %[[E]]
 // CHECK-SAME:        using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
 // CHECK:           cir.begin_catch %[[EH]]
+
+// A reference to a pointer to a non-record, bound before `cir.begin_catch`.
+cir.func @construct_catch_param_ref_to_ptr() {
+  cir.scope {
+    %param = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param reference_to_pointer %eh_token to %param
+        using : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.init_catch_param reference_to_pointer %exn_ptr to %param
+          : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @construct_catch_param_ref_to_ptr()
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+// CHECK:         } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+// CHECK-SAME:        (%[[EH:.*]]: !cir.eh_token) {
+// CHECK:           cir.construct_catch_param reference_to_pointer %[[EH]] to %[[P]] using : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+// CHECK:           %{{.*}}, %[[EXN:.*]] = cir.begin_catch %[[EH]]
+// CHECK:             cir.init_catch_param reference_to_pointer %[[EXN]] to %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+
+// A reference to a pointer to a record, bound by `cir.init_catch_param`.
+cir.func @init_catch_param_ref_to_record_ptr() {
+  cir.scope {
+    %param = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!rec_E>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.init_catch_param reference_to_record_pointer %exn_ptr to %param
+          : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_E>>>
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @init_catch_param_ref_to_record_ptr()
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!rec_E>>>
+// CHECK:           %{{.*}}, %[[EXN:.*]] = cir.begin_catch
+// CHECK:             cir.init_catch_param reference_to_record_pointer %[[EXN]] to %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_E>>>
+
+// A `cir.construct_catch_param` in the handler of a nested `cir.try`.
+cir.func @construct_catch_param_nested_try() {
+  cir.scope {
+    %r = cir.alloca "r" align(8) : !cir.ptr<!cir.ptr<!rec_E>>
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.init_catch_param reference %exn_ptr to %r
+          : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!rec_E>>
+        cir.try {
+          cir.yield
+        } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+            (%inner_token: !cir.eh_token) {
+          cir.construct_catch_param reference_to_pointer %inner_token to %p
+            using : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+          %inner_catch, %inner_exn = cir.begin_catch %inner_token
+            : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+          cir.init_catch_param reference_to_pointer %inner_exn to %p
+            : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+          cir.end_catch %inner_catch : !cir.catch_token
+          cir.yield
+        }
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @construct_catch_param_nested_try()
+// CHECK:         %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!cir.ptr<!rec_E>>
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+// CHECK:             cir.init_catch_param reference %{{.*}} to %[[R]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!rec_E>>
+// CHECK:               cir.construct_catch_param reference_to_pointer %{{.*}} to %[[P]] using
+// CHECK:               cir.init_catch_param reference_to_pointer %{{.*}} to %[[P]]
+
+// A `cir.init_catch_param` on a parameter with no `cir.construct_catch_param`.
+cir.func @construct_catch_param_other_param() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+    %r = cir.alloca "r" align(8) : !cir.ptr<!cir.ptr<!rec_E>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param reference_to_pointer %eh_token to %p
+        using : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.init_catch_param reference_to_pointer %exn_ptr to %p
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+      cir.init_catch_param reference %exn_ptr to %r
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!rec_E>>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @construct_catch_param_other_param()
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+// CHECK:         %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!cir.ptr<!rec_E>>
+// CHECK:           cir.init_catch_param reference_to_pointer %{{.*}} to %[[P]]
+// CHECK:           cir.init_catch_param reference %{{.*}} to %[[R]]
+
+// A `cir.construct_catch_param` inside the lifetime cleanup scope.
+cir.func @construct_catch_param_in_lifetime_scope() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.lifetime.start %p : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+      cir.cleanup.scope {
+        cir.construct_catch_param reference_to_pointer %eh_token to %p
+          using : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+        %catch_token, %exn_ptr = cir.begin_catch %eh_token
+          : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        cir.init_catch_param reference_to_pointer %exn_ptr to %p
+          : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      } cleanup all {
+        cir.lifetime.end %p : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @construct_catch_param_in_lifetime_scope()
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
+// CHECK:           cir.lifetime.start %[[P]]
+// CHECK:           cir.cleanup.scope {
+// CHECK-NEXT:        cir.construct_catch_param reference_to_pointer %{{.*}} to %[[P]] using
+// CHECK:             cir.init_catch_param reference_to_pointer %{{.*}} to %[[P]]
 
 }

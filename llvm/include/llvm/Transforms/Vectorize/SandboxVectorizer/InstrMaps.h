@@ -32,7 +32,7 @@ struct Action {
   unsigned Depth;
   SmallVector<Action *> Operands;
   Value *Vec = nullptr;
-  Action(const LegalityResult *LR, ArrayRef<Value *> B, ArrayRef<Value *> UB,
+  Action(const LegalityResult *LR, BndlRef<Value *> B, BndlRef<Value *> UB,
          unsigned Depth)
       : LegalityRes(LR), Bndl(B), UserBndl(UB), Depth(Depth) {}
 #ifndef NDEBUG
@@ -84,7 +84,7 @@ public:
     return It2->second;
   }
   /// Update the map to reflect that \p Origs got vectorized into \p Vec.
-  void registerVector(ArrayRef<Value *> Origs, Action *Vec) {
+  void registerVector(BndlRef<Value *> Origs, Action *Vec) {
     auto &OrigToLaneMap = VectorToOrigLaneMap[Vec];
     unsigned Lane = 0;
     for (Value *Orig : Origs) {

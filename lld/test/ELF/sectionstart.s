@@ -42,11 +42,11 @@
 ## Errors:
 # RUN: not ld.lld %t.o --section-start .text100000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR1 %s
-# ERR1: invalid argument: --section-start .text100000
+# ERR1: invalid argument: --section-start=.text100000
 
 # RUN: not ld.lld %t.o --section-start .text=1Q0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR2 %s
-# ERR2: invalid argument: --section-start .text=1Q0000
+# ERR2: invalid argument: --section-start=.text=1Q0000
 
 # RUN: not ld.lld %t.o -Ttext=1w0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR3 %s

@@ -7,15 +7,15 @@ define void @test(ptr %src, i8 %0, i32 %conv2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[SRC]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i8> [[TMP6]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> <i32 1, i32 1, i32 poison, i32 1>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 1, i32 0>, i32 [[CONV2]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 1, i32 0>, i32 [[CONV2]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <4 x i32> [[TMP12]], [[TMP7]]

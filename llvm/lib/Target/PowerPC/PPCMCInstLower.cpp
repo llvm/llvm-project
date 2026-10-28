@@ -51,8 +51,8 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
   return Sym;
 }
 
-static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
-                              AsmPrinter &Printer) {
+static MCOperand GetSymbolRef(unsigned MIOpcode, const MachineOperand &MO,
+                              const MCSymbol *Symbol, AsmPrinter &Printer) {
   MCContext &Ctx = Printer.OutContext;
   PPCMCExpr::Specifier RefKind = PPC::S_None;
 
@@ -83,8 +83,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   }
 
   const TargetMachine &TM = Printer.TM;
-  const MachineInstr *MI = MO.getParent();
-  const MachineFunction *MF = MI->getMF();
+  const MachineFunction *MF = Printer.MF;
 
   if (MO.getTargetFlags() == PPCII::MO_PLT)
     RefKind = PPC::S_PLT;
@@ -123,7 +122,6 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   const Module *M = MF->getFunction().getParent();
   const PPCSubtarget *Subtarget = &(MF->getSubtarget<PPCSubtarget>());
 
-  unsigned MIOpcode = MI->getOpcode();
   assert((Subtarget->isUsingPCRelativeCalls() || MIOpcode != PPC::BL8_NOTOC) &&
          "BL8_NOTOC is only valid when using PC Relative Calls.");
   if (Subtarget->isUsingPCRelativeCalls()) {
@@ -153,8 +151,6 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   if (MO.getTargetFlags() == PPCII::MO_PIC_FLAG ||
       MO.getTargetFlags() == PPCII::MO_PIC_HA_FLAG ||
       MO.getTargetFlags() == PPCII::MO_PIC_LO_FLAG) {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-
     const MCExpr *PB = MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
     Expr = MCBinaryExpr::createSub(Expr, PB, Ctx);
   }
@@ -180,12 +176,13 @@ void llvm::LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
-    if (LowerPPCMachineOperandToMCOperand(MO, MCOp, AP))
+    if (LowerPPCMachineOperandToMCOperand(MI->getOpcode(), MO, MCOp, AP))
       OutMI.addOperand(MCOp);
   }
 }
 
-bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+bool llvm::LowerPPCMachineOperandToMCOperand(unsigned MIOpcode,
+                                             const MachineOperand &MO,
                                              MCOperand &OutMO, AsmPrinter &AP) {
   switch (MO.getType()) {
   default:
@@ -215,20 +212,20 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     return true;
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_ExternalSymbol:
-    OutMO = GetSymbolRef(MO, GetSymbolFromOperand(MO, AP), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, GetSymbolFromOperand(MO, AP), AP);
     return true;
   case MachineOperand::MO_JumpTableIndex:
-    OutMO = GetSymbolRef(MO, AP.GetJTISymbol(MO.getIndex()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, AP.GetJTISymbol(MO.getIndex()), AP);
     return true;
   case MachineOperand::MO_ConstantPoolIndex:
-    OutMO = GetSymbolRef(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, AP.GetCPISymbol(MO.getIndex()), AP);
     return true;
   case MachineOperand::MO_BlockAddress:
-    OutMO =
-        GetSymbolRef(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO,
+                         AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
     return true;
   case MachineOperand::MO_MCSymbol:
-    OutMO = GetSymbolRef(MO, MO.getMCSymbol(), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, MO.getMCSymbol(), AP);
     return true;
   case MachineOperand::MO_RegisterMask:
     return false;

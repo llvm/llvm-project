@@ -19,18 +19,18 @@ jobs:
   check_sycl:
     if: github.repository_owner == 'llvm'
     name: Test SYCL
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:cc4fd65c131d4de97ebc077a4608f78fa959e45f2f9e7cf690c133b48d9cd7fa
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           max-size: 2G
-          key: sycl-ubuntu-24.04
+          key: sycl-ubuntu-26.04
           variant: sccache
       - name: Build and Test
         run: |
@@ -44,6 +44,7 @@ jobs:
             -DLLVM_ENABLE_PROJECTS=clang \
             -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
             -DLLVM_TARGETS_TO_BUILD="host;SPIRV" \
-            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON
+            -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON \
+            -DLIBSYCL_ENABLE_WERROR=ON
 
           ninja -C build check-sycl

@@ -20,10 +20,10 @@ func.func @test_optional_firstprivate(%arg0: !fir.ref<i32> {fir.bindc_name = "x"
 // After acc-recipe-materialization: recipe is materialized, check the inlined body
 // CHECK: acc.firstprivate_map varPtr
 // CHECK: acc.parallel {
+// CHECK: %[[TEMP:.*]] = fir.alloca i32
 // CHECK: fir.is_present
 // CHECK: fir.if %{{.*}} -> (!fir.ref<i32>) {
-// CHECK: fir.alloca i32
-// CHECK: fir.result
+// CHECK: fir.result %[[TEMP]]
 // CHECK: } else {
 // CHECK: fir.absent !fir.ref<i32>
 // CHECK: fir.result

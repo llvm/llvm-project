@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,omp51 -fopenmp %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,omp51 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -102,7 +102,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target parallel for lastprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp target parallel for lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp target parallel for lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}} omp45-error 2 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target parallel for'}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for lastprivate(conditional: s,argc) lastprivate(conditional: // omp51-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for lastprivate(2 * 2) // expected-error {{expected variable name}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for lastprivate(ba) allocate(omp_thread_mem_alloc: ba) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target parallel for'}}
+#pragma omp target parallel for lastprivate(ba) allocate(omp_thread_mem_alloc: ba) uses_allocators(omp_thread_mem_alloc) // ge50-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target parallel for'}} omp45-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target parallel for'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target parallel for lastprivate(ca) // expected-error {{const-qualified variable without mutable fields cannot be lastprivate}}

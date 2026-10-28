@@ -1083,4 +1083,36 @@ namespace Revive {
   static_assert(h() == 20); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to}}
 }
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
+}
 #endif
+
+namespace TrivialDtorInEvaluateDtor{
+  template <class T> void foo() {
+    union { // both-error {{attempt to use a deleted function}}
+      T t; // both-note {{implicitly deleted}}
+    };
+  }
+  struct S {
+    ~S();
+  };
+  template void foo<S>(); // both-note {{in instantiation of function template specialization}}
+}

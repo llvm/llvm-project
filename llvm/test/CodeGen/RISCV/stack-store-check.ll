@@ -266,13 +266,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lw a4, 156(sp)
 ; CHECK-NEXT:    lw a5, 160(sp)
 ; CHECK-NEXT:    lw a6, 164(sp)
-; CHECK-NEXT:    lui a2, 786400
-; CHECK-NEXT:    addi a0, sp, 104
-; CHECK-NEXT:    addi a1, sp, 88
+; CHECK-NEXT:    lui a0, 786400
 ; CHECK-NEXT:    sw zero, 72(sp)
 ; CHECK-NEXT:    sw zero, 76(sp)
 ; CHECK-NEXT:    sw zero, 80(sp)
-; CHECK-NEXT:    sw a2, 84(sp)
+; CHECK-NEXT:    sw a0, 84(sp)
+; CHECK-NEXT:    addi a0, sp, 104
+; CHECK-NEXT:    addi a1, sp, 88
 ; CHECK-NEXT:    addi a2, sp, 72
 ; CHECK-NEXT:    sw a3, 88(sp)
 ; CHECK-NEXT:    sw a4, 92(sp)
@@ -281,13 +281,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    call __addtf3
 ; CHECK-NEXT:    lw a0, 112(sp)
 ; CHECK-NEXT:    lw a1, 116(sp)
-; CHECK-NEXT:    lw a2, 104(sp)
-; CHECK-NEXT:    lw a3, 108(sp)
+; CHECK-NEXT:    lw a2, 108(sp)
+; CHECK-NEXT:    lw a3, 104(sp)
 ; CHECK-NEXT:    lui a4, %hi(Y1)
 ; CHECK-NEXT:    sw a0, %lo(Y1+8)(a4)
 ; CHECK-NEXT:    sw a1, %lo(Y1+12)(a4)
-; CHECK-NEXT:    sw a2, %lo(Y1)(a4)
-; CHECK-NEXT:    sw a3, %lo(Y1+4)(a4)
+; CHECK-NEXT:    sw a3, %lo(Y1)(a4)
+; CHECK-NEXT:    sw a2, %lo(Y1+4)(a4)
 ; CHECK-NEXT:    lw ra, 700(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 696(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 692(sp) # 4-byte Folded Reload

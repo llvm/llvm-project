@@ -24,20 +24,20 @@ define void @test(ptr %j, ptr %b) {
 ; CHECK-NEXT:    [[BOUND050:%.*]] = icmp ugt ptr [[SCEVGEP5]], @f
 ; CHECK-NEXT:    [[BOUND151:%.*]] = icmp ult ptr [[B]], getelementptr inbounds nuw (i8, ptr @f, i16 1)
 ; CHECK-NEXT:    [[FOUND_CONFLICT52:%.*]] = and i1 [[BOUND050]], [[BOUND151]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr poison, ptr getelementptr inbounds nuw (i8, ptr @a, i64 1), ptr getelementptr inbounds nuw (i8, ptr @f, i64 1), ptr poison>, ptr [[SCEVGEP5]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> <ptr poison, ptr @a, ptr @f, ptr poison>, ptr [[B]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr poison, ptr getelementptr inbounds nuw (i8, ptr @a, i64 1), ptr getelementptr inbounds nuw (i8, ptr @f, i64 1), ptr poison>, ptr [[SCEVGEP5]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> <ptr poison, ptr @a, ptr @f, ptr poison>, ptr [[B]], i64 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr @c, align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr @e, align 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP2]], i16 1
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[TMP3]], i16 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x ptr> [[TMP4]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr [[SCEVGEP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr [[SCEVGEP4]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <4 x ptr> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x ptr> poison, ptr [[SCEVGEP]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x ptr> poison, ptr [[SCEVGEP]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x ptr> [[TMP9]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <4 x ptr> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <4 x i1> [[TMP7]], [[TMP11]]

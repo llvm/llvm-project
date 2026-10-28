@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -verify=ext -std=c23 -pedantic %s
 // RUN: %clang_cc1 -verify=ext -pedantic -x c++ %s
 // RUN: %clang_cc1 -verify=pre -std=c2y -pedantic -Wpre-c2y-compat %s
+// RUN: %clang_cc1 -verify=ok  -std=c23 -pedantic -Wno-counter-extension %s
+// RUN: %clang_cc1 -verify=ok  -std=c23 -Wno-counter-extension -pedantic-errors %s
+// ok-no-diagnostics
 
 /* WG14 N3457: Clang 22
  * The __COUNTER__ predefined macro

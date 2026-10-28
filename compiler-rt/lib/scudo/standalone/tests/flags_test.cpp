@@ -41,16 +41,21 @@ TEST(ScudoFlagsTest, BooleanFlags) {
 }
 
 TEST(ScudoFlagsDeathTest, BooleanFlags) {
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_bool, false, "flag_name", true),
-               "expected '='");
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_bool, false, "flag_name=", true),
-               "invalid value for bool option: ''");
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_bool, false, "flag_name=2", true),
-               "invalid value for bool option: '2'");
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_bool, false, "flag_name=-1", true),
-               "invalid value for bool option: '-1'");
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_bool, false, "flag_name=on", true),
-               "invalid value for bool option: 'on'");
+  SCUDO_EXPECT_DEATH(
+      testFlag(scudo::FlagType::FT_bool, false, "flag_name", true),
+      "expected '='");
+  SCUDO_EXPECT_DEATH(
+      testFlag(scudo::FlagType::FT_bool, false, "flag_name=", true),
+      "invalid value for bool option: ''");
+  SCUDO_EXPECT_DEATH(
+      testFlag(scudo::FlagType::FT_bool, false, "flag_name=2", true),
+      "invalid value for bool option: '2'");
+  SCUDO_EXPECT_DEATH(
+      testFlag(scudo::FlagType::FT_bool, false, "flag_name=-1", true),
+      "invalid value for bool option: '-1'");
+  SCUDO_EXPECT_DEATH(
+      testFlag(scudo::FlagType::FT_bool, false, "flag_name=on", true),
+      "invalid value for bool option: 'on'");
 }
 
 TEST(ScudoFlagsTest, IntFlags) {
@@ -67,10 +72,10 @@ TEST(ScudoFlagsTest, IntFlags) {
 }
 
 TEST(ScudoFlagsDeathTest, IntFlags) {
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_int, -11, "flag_name", 0),
-               "expected '='");
-  EXPECT_DEATH(testFlag(scudo::FlagType::FT_int, -11, "flag_name=42U", 0),
-               "invalid value for int option");
+  SCUDO_EXPECT_DEATH(testFlag(scudo::FlagType::FT_int, -11, "flag_name", 0),
+                     "expected '='");
+  SCUDO_EXPECT_DEATH(testFlag(scudo::FlagType::FT_int, -11, "flag_name=42U", 0),
+                     "invalid value for int option");
 }
 
 static void testTwoFlags(const char *Env, bool ExpectedFlag1,

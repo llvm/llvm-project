@@ -1766,8 +1766,10 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X86-NEXT:    shrl $4, %ecx
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NEXT:    imull $16843009, %ecx, %eax # imm = 0x1010101
-; X86-NEXT:    shrl $24, %eax
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-BASE-LABEL: popcount_zext_i32:
@@ -1785,8 +1787,10 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X64-BASE-NEXT:    shrl $4, %eax
 ; X64-BASE-NEXT:    addl %edi, %eax
 ; X64-BASE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X64-BASE-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
-; X64-BASE-NEXT:    shrl $24, %eax
+; X64-BASE-NEXT:    movl %eax, %ecx
+; X64-BASE-NEXT:    shrl $8, %ecx
+; X64-BASE-NEXT:    addl %eax, %ecx
+; X64-BASE-NEXT:    movzbl %cl, %eax
 ; X64-BASE-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: popcount_zext_i32:
@@ -1812,8 +1816,9 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X64-NDD-NEXT:    shrl $4, %eax, %ecx
 ; X64-NDD-NEXT:    addl %ecx, %eax
 ; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
-; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    shrl $8, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    movzbl %al, %eax
 ; X64-NDD-NEXT:    retq
   %z = zext i16 %x to i32
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %z)

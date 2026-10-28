@@ -1,5 +1,4 @@
 add_llvm_component_library(LLVMFrontendOffloading
-  ArchiveLinker.cpp
   Utility.cpp
   OffloadWrapper.cpp
   PropertySet.cpp

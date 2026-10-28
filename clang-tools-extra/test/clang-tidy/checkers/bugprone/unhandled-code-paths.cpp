@@ -12,11 +12,6 @@ struct Bitfields {
 int return_integer() { return 42; }
 
 void bad_switch(int i) {
-  switch (i) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: switch with only one case; use an if statement
-  case 0:
-    break;
-  }
   // No default in this switch
   switch (i) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: potential uncovered code path; add a default label
@@ -28,32 +23,11 @@ void bad_switch(int i) {
     break;
   }
 
-  // degenerate, maybe even warning
-  switch (i) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: switch statement without labels has no effect
-  }
-
   switch (int j = return_integer()) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: potential uncovered code path; add a default label
   case 0:
   case 1:
   case 2:
-    break;
-  }
-
-  // Degenerated, only default case.
-  switch (i) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: degenerated switch with default label only
-  default:
-    break;
-  }
-
-  // Degenerated, only one case label and default case -> Better as if-stmt.
-  switch (i) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: switch could be better written as an if/else statement
-  case 0:
-    break;
-  default:
     break;
   }
 
@@ -90,7 +64,10 @@ void bad_switch(int i) {
   case 1:
     break;
   }
-  // All paths explicitly covered.
+}
+
+void unproblematic_switch(unsigned char c) {
+  Bitfields Bf;
   switch (Bf.UInt) {
   case 0:
   case 1:
@@ -102,13 +79,6 @@ void bad_switch(int i) {
   case 7:
     break;
   }
-  // SInt has 1 bit size, so this is somewhat degenerated.
-  switch (Bf.SInt) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: switch with only one case; use an if statement
-  case 0:
-    break;
-  }
-  // All paths explicitly covered.
   switch (Bf.SInt) {
   case 0:
   case 1:
@@ -116,18 +86,6 @@ void bad_switch(int i) {
   }
 
   bool Flag = false;
-  switch (Flag) {
-    // CHECK-MESSAGES:[[@LINE-1]]:3: warning: switch with only one case; use an if statement
-  case true:
-    break;
-  }
-
-  switch (Flag) {
-    // CHECK-MESSAGES: [[@LINE-1]]:3: warning: degenerated switch with default label only
-  default:
-    break;
-  }
-
   // This `switch` will create a frontend warning from '-Wswitch-bool' but is
   // ok for this check.
   switch (Flag) {
@@ -136,9 +94,7 @@ void bad_switch(int i) {
   case false:
     break;
   }
-}
 
-void unproblematic_switch(unsigned char c) {
   //
   switch (c) {
   case 0:

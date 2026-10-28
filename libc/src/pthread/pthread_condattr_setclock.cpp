@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "pthread_condattr_setclock.h"
-
+#include "hdr/time_macros.h"     // CLOCK_MONOTONIC, CLOCK_REALTIME
+#include "hdr/types/clockid_t.h" // clockid_t
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include "hdr/time_macros.h" // CLOCK_MONOTONIC, CLOCK_REALTIME
-#include <pthread.h>         // pthread_condattr_t
-#include <sys/types.h>       // clockid_t
+#include <pthread.h> // pthread_condattr_t
 
 namespace LIBC_NAMESPACE_DECL {
 

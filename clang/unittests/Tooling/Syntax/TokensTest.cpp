@@ -552,6 +552,18 @@ file './input.cpp'
   }
 }
 
+TEST_F(TokenCollectorTest, FeatureLikeBuiltinMacros) {
+  recordTokens("__has_builtin(__builtin_allow_runtime_check)\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(AllOf(Kind(tok::numeric_constant), HasText("1")),
+                          Kind(tok::eof)));
+  auto ExpansionRange =
+      SourceMgr->getExpansionRange(findExpanded("1").front().location());
+  EXPECT_EQ(findSpelled("__has_builtin").front().location(),
+            ExpansionRange.getBegin());
+  EXPECT_EQ(findSpelled(")").front().location(), ExpansionRange.getEnd());
+}
+
 TEST_F(TokenCollectorTest, SpecialTokens) {
   // Tokens coming from concatenations.
   recordTokens(R"cpp(
@@ -1155,6 +1167,15 @@ TEST_F(TokenCollectorTest, Pragmas) {
       for(int i=0;i<4;++i);
     }
   )cpp");
+}
+
+TEST_F(TokenCollectorTest, DebugPragmaAtEndOfFile) {
+  AllowErrors = true;
+  recordTokens("}\n#pragma clang __debug dump\n");
+
+  // The end-of-directive token has no spelling and must not be collected.
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(Kind(tok::r_brace), Kind(tok::eof)));
 }
 
 TEST_F(TokenBufferTest, EofTokenOnBracketDepthLimit) {

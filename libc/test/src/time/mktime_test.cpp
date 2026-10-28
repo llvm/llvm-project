@@ -18,9 +18,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LIBC_NAMESPACE::time_constants::Month;
 
-#ifndef EOVERFLOW
-#define EOVERFLOW 0
-#endif
+#include "src/time/time_utils.h"
 
 static inline constexpr int tm_year(int year) {
   return year - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE;
@@ -37,7 +35,7 @@ TEST(LlvmLibcMkTime, FailureSetsErrno) {
                     .tm_yday = 0,
                     .tm_isdst = 0};
   EXPECT_THAT(static_cast<int>(LIBC_NAMESPACE::mktime(&tm_data)),
-              Fails(EOVERFLOW));
+              Fails(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW));
 }
 
 TEST(LlvmLibcMkTime, InvalidSeconds) {

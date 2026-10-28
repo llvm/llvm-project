@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -disable-cgp-select2branch < %s
+; RUN: llc -mcpu=corei7 -cgp-select2branch=0 < %s
 
 ; We should not crash on this test.
 

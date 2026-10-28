@@ -33,7 +33,7 @@ TEST(ScudoChunkDeathTest, ChunkBasic) {
   scudo::Chunk::loadHeader(Cookie, P, &Header);
   EXPECT_TRUE(scudo::Chunk::isValid(Cookie, P, &Header));
   EXPECT_FALSE(scudo::Chunk::isValid(InvalidCookie, P, &Header));
-  EXPECT_DEATH(scudo::Chunk::loadHeader(InvalidCookie, P, &Header), "");
+  SCUDO_EXPECT_DEATH(scudo::Chunk::loadHeader(InvalidCookie, P, &Header), "");
   free(Block);
 }
 
@@ -50,7 +50,7 @@ TEST(ScudoChunkDeathTest, CorruptHeader) {
   // Simulate a couple of corrupted bits per byte of header data.
   for (scudo::uptr I = 0; I < sizeof(scudo::Chunk::PackedHeader); I++) {
     *(reinterpret_cast<scudo::u8 *>(Block) + I) ^= 0x42U;
-    EXPECT_DEATH(scudo::Chunk::loadHeader(Cookie, P, &Header), "");
+    SCUDO_EXPECT_DEATH(scudo::Chunk::loadHeader(Cookie, P, &Header), "");
     *(reinterpret_cast<scudo::u8 *>(Block) + I) ^= 0x42U;
   }
   free(Block);

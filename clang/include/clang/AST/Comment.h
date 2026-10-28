@@ -346,15 +346,6 @@ protected:
 public:
   InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
                        unsigned CommandID, InlineCommandRenderKind RK,
-                       ArrayRef<Argument> Args)
-      : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
-                             LocEnd),
-        Args(Args) {
-    InlineCommandCommentBits.RenderKind = llvm::to_underlying(RK);
-    InlineCommandCommentBits.CommandID = CommandID;
-  }
-  InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
-                       unsigned CommandID, InlineCommandRenderKind RK,
                        CommandMarkerKind CommandMarker, ArrayRef<Argument> Args)
       : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
                              LocEnd),

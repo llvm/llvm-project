@@ -599,3 +599,11 @@ namespace NonNumbers {
   static_assert(fn() == 1); // both-error {{not an integral constant expression}} \
                             // ref-note {{in call to}}
 }
+
+namespace InvalidRecordDecl {
+ struct a :; // both-error {{expected class name}} \
+             // both-error {{expected '{' after base class list}}
+  constexpr struct {
+  } b;
+  a c = __builtin_bit_cast(a, b);
+}

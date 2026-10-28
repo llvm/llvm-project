@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -76,6 +77,28 @@ public:
     if (!fir::isBoxAddress(lhs.getType()))
       return rewriter.notifyMatchFailure(assign, "LHS is not a box address");
 
+    fir::MutableBoxValue mutableBox(lhs.getFirBase(), /*lenParameters=*/{},
+                                    /*mutableProperties=*/{});
+
+    // An allocatable with a CUDA Fortran data attribute is backed by a
+    // non-default allocator. The reallocation can still be split out, but it
+    // must use that allocator instead of an inline host allocation, so the
+    // attribute is forwarded to the reallocation helpers below.
+    // The plain hlfir.assign left behind copies the elements on the host, so
+    // only allocators that produce host-accessible storage can be handled here.
+    cuf::DataAttributeAttr dataAttr;
+    if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp()) {
+      if ((dataAttr = cuf::getDataAttr(lhsDef))) {
+        cuf::DataAttribute attr = dataAttr.getValue();
+        if (attr != cuf::DataAttribute::Managed &&
+            attr != cuf::DataAttribute::Pinned &&
+            attr != cuf::DataAttribute::Unified)
+          return rewriter.notifyMatchFailure(
+              assign, "LHS storage is not host-accessible; keep runtime "
+                      "realloc");
+      }
+    }
+
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
@@ -125,16 +148,14 @@ public:
         rhsLbounds.push_back(lb);
     }
 
-    fir::MutableBoxValue mutableBox(lhs.getFirBase(), /*lenParameters=*/{},
-                                    /*mutableProperties=*/{});
-
     auto noopHandler = [](fir::ExtendedValue) {};
     llvm::SmallVector<mlir::Value> lenParams;
     fir::factory::MutableBoxReallocation realloc =
         fir::factory::genReallocIfNeeded(builder, loc, mutableBox, rhsExtents,
-                                         lenParams, noopHandler);
+                                         lenParams, noopHandler, dataAttr);
     fir::factory::finalizeRealloc(builder, loc, mutableBox, rhsLbounds,
-                                  /*takeLboundsIfRealloc=*/true, realloc);
+                                  /*takeLboundsIfRealloc=*/true, realloc,
+                                  dataAttr);
 
     mlir::Value lhsBox = fir::LoadOp::create(builder, loc, lhs.getFirBase());
     hlfir::AssignOp::create(builder, loc, rhs, lhsBox,

@@ -23,7 +23,7 @@ class UniversalTestCase(TestBase):
         self.line = line_number("main.c", "// Set break point at this line.")
 
     @add_test_categories(["pyapi"])
-    @skipUnlessDarwin
+    @requireDarwin
     @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )
@@ -49,7 +49,7 @@ class UniversalTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )
@@ -112,7 +112,7 @@ class UniversalTestCase(TestBase):
         self.expect("image list -A -b", substrs=["x86_64h testit"])
         self.runCmd("continue")
 
-    @skipUnlessDarwin
+    @requireDarwin
     @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )

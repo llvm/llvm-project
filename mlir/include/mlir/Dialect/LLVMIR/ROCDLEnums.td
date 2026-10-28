@@ -32,6 +32,21 @@ class ROCDL_I32BitEnum<string name, string summary,
   let cppNamespace = "::mlir::ROCDL";
 }
 
+//===----------------------------------------------------------------------===//
+// Buffer out-of-bounds mode enum.
+//===----------------------------------------------------------------------===//
+
+// Keep these values in sync with OOBFlagValue in AMDGPUTargetMachine.cpp and
+// the LLVM IR verifier's AMDGPU module flag checks.
+def ROCDL_BufferOOBModeAny : I32EnumCase<"Any", 0, "any">;
+def ROCDL_BufferOOBModeRelaxed : I32EnumCase<"Relaxed", 1, "relaxed">;
+def ROCDL_BufferOOBModeStrict : I32EnumCase<"Strict", 2, "strict">;
+
+def ROCDL_BufferOOBMode :
+    ROCDL_I32Enum<"BufferOOBMode", "ROCDL buffer out-of-bounds mode",
+                  [ROCDL_BufferOOBModeAny, ROCDL_BufferOOBModeRelaxed,
+                   ROCDL_BufferOOBModeStrict]>;
+
 def ROCDL_MFMAPermB : ROCDL_I32Enum<"MFMAPermB",
     "permutations of the lanes storing B in an MFMA",
     [

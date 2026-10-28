@@ -1,0 +1,79 @@
+# This file defines a reusable workflow that submits the LNT reports contained in an artifact
+# of the current workflow run to LLVM's LNT instance.
+#
+# This allows separating concerns around submission (e.g. access tokens) and generating the
+# actual data. It is not specific to any project: any workflow that produces LNT v5 run
+# submissions can use it.
+#
+# The artifact must contain one or more `*.json` files at its root, each holding a single LNT v5
+# run submission. All the runs are submitted to the given test suite, which must already exist.
+
+name: "[LNT] Submit runs"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: 'The name of the artifact containing the LNT reports to submit'
+        required: true
+        type: string
+      test-suite:
+        description: 'The LNT test suite to submit to'
+        required: true
+        type: string
+    secrets:
+      LNT_SUBMISSION_TOKEN:
+        description: 'The token used to submit to LNT'
+        required: true
+
+jobs:
+  submit:
+    name: Submit runs to ${{ inputs.test-suite }}
+    runs-on: ubuntu-26.04
+    # This environment stores the token used to submit to LNT. Using an environment makes the token
+    # available in this job only.
+    environment:
+      name: lnt
+      deployment: false
+    env:
+      LNT_URL: https://lnt.llvm.org
+    steps:
+      - name: Checkout the LNT requirements
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/workflows
+
+      - name: Install Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.15'
+
+      - name: Install LNT
+        run: pip install --require-hashes -r .github/workflows/lnt-submit.requirements.lock.txt
+
+      - name: Download the LNT reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ runner.temp }}/reports
+
+      - name: Submit to LNT
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+          LNT_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
+          TEST_SUITE: ${{ inputs.test-suite }}
+        run: |
+          shopt -s nullglob
+          reports=("${RUNNER_TEMP}"/reports/*.json)
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "error: the ${ARTIFACT_NAME} artifact doesn't contain any LNT report"
+            exit 1
+          fi
+
+          # `lnt v5 submit` reads one run per line, so compact each report onto a single line.
+          jq -c . "${reports[@]}" > "${RUNNER_TEMP}/runs.jsonl"
+          lnt v5 submit "${LNT_URL}" "${RUNNER_TEMP}/runs.jsonl" --suite "${TEST_SUITE}"

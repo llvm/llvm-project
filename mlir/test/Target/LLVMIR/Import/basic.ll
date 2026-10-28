@@ -97,3 +97,9 @@ define i32 @variadic_function(i32 %X, ...) {
   ; CHECK: llvm.return
   ret i32 %ret
 }
+
+; CHECK-LABEL: llvm.func @byte_type(%arg0: !llvm.byte<8>) -> !llvm.byte<8>
+define b8 @byte_type(b8 %0) {
+  ; CHECK: llvm.return %arg0 : !llvm.byte<8>
+  ret b8 %0
+}

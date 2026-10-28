@@ -5,17 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template<size_t N>
-//     constexpr span(element_type (&arr)[N]) noexcept;
+// template<size_t N> constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept;
 //
-// Remarks: These constructors shall not participate in overload resolution unless:
+// Constraints: Let U be remove_pointer_t<decltype(std::data(arr))>.
 //   - extent == dynamic_extent || N == extent is true, and
-//   - remove_pointer_t<decltype(data(arr))>(*)[] is convertible to ElementType(*)[].
-//
+//   - is_convertible_v<U(*)[], element_type(*)[]> is true.
 
 #include <cassert>
 #include <span>
@@ -30,40 +29,40 @@ void checkCV() {
   volatile int varr[]        = {7, 8, 9};
   const volatile int cvarr[] = {1, 3, 5};
 
-  //  Types the same (dynamic sized)
+  // Types the same (dynamic sized)
   {
-    std::span< int> s1{arr};                 // a span<               int> pointing at int.
-    std::span<const int> s2{carr};           // a span<const          int> pointing at const int.
-    std::span< volatile int> s3{varr};       // a span<      volatile int> pointing at volatile int.
+    std::span<int> s1{arr};                  // a span<int> pointing at int.
+    std::span<const int> s2{carr};           // a span<const int> pointing at const int.
+    std::span<volatile int> s3{varr};        // a span<volatile int> pointing at volatile int.
     std::span<const volatile int> s4{cvarr}; // a span<const volatile int> pointing at const volatile int.
     assert(s1.size() + s2.size() + s3.size() + s4.size() == 12);
   }
 
-  //  Types the same (static sized)
+  // Types the same (static sized)
   {
-    std::span< int, 3> s1{arr};                 // a span<               int> pointing at int.
-    std::span<const int, 3> s2{carr};           // a span<const          int> pointing at const int.
-    std::span< volatile int, 3> s3{varr};       // a span<      volatile int> pointing at volatile int.
+    std::span<int, 3> s1{arr};                  // a span<int> pointing at int.
+    std::span<const int, 3> s2{carr};           // a span<const int> pointing at const int.
+    std::span<volatile int, 3> s3{varr};        // a span<volatile int> pointing at volatile int.
     std::span<const volatile int, 3> s4{cvarr}; // a span<const volatile int> pointing at const volatile int.
     assert(s1.size() + s2.size() + s3.size() + s4.size() == 12);
   }
 
-  //  types different (dynamic sized)
+  // types different (dynamic sized)
   {
-    std::span<const int> s1{arr};           // a span<const          int> pointing at int.
-    std::span< volatile int> s2{arr};       // a span<      volatile int> pointing at int.
-    std::span< volatile int> s3{arr};       // a span<      volatile int> pointing at const int.
+    std::span<const int> s1{arr};           // a span<const int> pointing at int.
+    std::span<volatile int> s2{arr};        // a span<volatile int> pointing at int.
+    std::span<volatile int> s3{arr};        // a span<volatile int> pointing at const int.
     std::span<const volatile int> s4{arr};  // a span<const volatile int> pointing at int.
     std::span<const volatile int> s5{carr}; // a span<const volatile int> pointing at const int.
     std::span<const volatile int> s6{varr}; // a span<const volatile int> pointing at volatile int.
     assert(s1.size() + s2.size() + s3.size() + s4.size() + s5.size() + s6.size() == 18);
   }
 
-  //  types different (static sized)
+  // types different (static sized)
   {
-    std::span<const int, 3> s1{arr};           // a span<const          int> pointing at int.
-    std::span< volatile int, 3> s2{arr};       // a span<      volatile int> pointing at int.
-    std::span< volatile int, 3> s3{arr};       // a span<      volatile int> pointing at const int.
+    std::span<const int, 3> s1{arr};           // a span<const int> pointing at int.
+    std::span<volatile int, 3> s2{arr};        // a span<volatile int> pointing at int.
+    std::span<volatile int, 3> s3{arr};        // a span<volatile int> pointing at const int.
     std::span<const volatile int, 3> s4{arr};  // a span<const volatile int> pointing at int.
     std::span<const volatile int, 3> s5{carr}; // a span<const volatile int> pointing at const int.
     std::span<const volatile int, 3> s6{varr}; // a span<const volatile int> pointing at volatile int.
@@ -116,39 +115,39 @@ int main(int, char**) {
 
   // Size wrong
   {
-    static_assert(!std::is_constructible<std::span<int, 2>, int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<int, 2>, int (&)[3]>);
   }
 
   // Type wrong
   {
-    static_assert(!std::is_constructible<std::span<float>, int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<float, 3>, int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<float>, int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<float, 3>, int (&)[3]>);
   }
 
   // CV wrong (dynamically sized)
   {
-    static_assert(!std::is_constructible<std::span<int>, const int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<int>, volatile int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<int>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<int>, const int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<int>, volatile int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<int>, const volatile int (&)[3]>);
 
-    static_assert(!std::is_constructible<std::span<const int>, volatile int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<const int>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<const int>, volatile int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<const int>, const volatile int (&)[3]>);
 
-    static_assert(!std::is_constructible<std::span<volatile int>, const int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<volatile int>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<volatile int>, const int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<volatile int>, const volatile int (&)[3]>);
   }
 
   // CV wrong (statically sized)
   {
-    static_assert(!std::is_constructible<std::span<int, 3>, const int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<int, 3>, volatile int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<int, 3>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<int, 3>, const int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<int, 3>, volatile int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<int, 3>, const volatile int (&)[3]>);
 
-    static_assert(!std::is_constructible<std::span<const int, 3>, volatile int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<const int, 3>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<const int, 3>, volatile int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<const int, 3>, const volatile int (&)[3]>);
 
-    static_assert(!std::is_constructible<std::span<volatile int, 3>, const int(&)[3]>::value, "");
-    static_assert(!std::is_constructible<std::span<volatile int, 3>, const volatile int(&)[3]>::value, "");
+    static_assert(!std::is_constructible_v<std::span<volatile int, 3>, const int (&)[3]>);
+    static_assert(!std::is_constructible_v<std::span<volatile int, 3>, const volatile int (&)[3]>);
   }
 
   return 0;

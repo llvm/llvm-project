@@ -10,9 +10,7 @@
 
 // Increment local_iterator past end.
 
-// REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
-// UNSUPPORTED: c++03
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 #include <unordered_map>
 #include <cassert>

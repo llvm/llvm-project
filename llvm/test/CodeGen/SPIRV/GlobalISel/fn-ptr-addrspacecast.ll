@@ -1,8 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-
-; TODO: Update when spirv-val accepts casts from CodeSectionINTEL to Generic
-; https://github.com/KhronosGroup/SPIRV-Tools/issues/6700
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 define void @addrspacecast(ptr addrspace(9) %a) {
 ; CHECK: %[[#Int8:]] = OpTypeInt 8 0

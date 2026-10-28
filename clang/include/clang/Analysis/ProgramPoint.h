@@ -59,33 +59,36 @@ public:
 
 class ProgramPoint {
 public:
-  enum Kind { BlockEdgeKind,
-              BlockEntranceKind,
-              BlockExitKind,
-              PreStmtKind,
-              PreStmtPurgeDeadSymbolsKind,
-              PostStmtPurgeDeadSymbolsKind,
-              PostStmtKind,
-              PreLoadKind,
-              PostLoadKind,
-              PreStoreKind,
-              PostStoreKind,
-              PostConditionKind,
-              PostLValueKind,
-              PostAllocatorCallKind,
-              MinPostStmtKind = PostStmtKind,
-              MaxPostStmtKind = PostAllocatorCallKind,
-              PostInitializerKind,
-              CallEnterKind,
-              CallExitBeginKind,
-              CallExitEndKind,
-              FunctionExitKind,
-              PreImplicitCallKind,
-              PostImplicitCallKind,
-              MinImplicitCallKind = PreImplicitCallKind,
-              MaxImplicitCallKind = PostImplicitCallKind,
-              LoopExitKind,
-              EpsilonKind};
+  enum Kind {
+    BlockEdgeKind,
+    BlockEntranceKind,
+    BlockExitKind,
+    PreStmtKind,
+    PreStmtPurgeDeadSymbolsKind,
+    PostStmtPurgeDeadSymbolsKind,
+    PostStmtKind,
+    PreLoadKind,
+    PostLoadKind,
+    PreStoreKind,
+    PostStoreKind,
+    PostConditionKind,
+    PostLValueKind,
+    PostAllocatorCallKind,
+    MinPostStmtKind = PostStmtKind,
+    MaxPostStmtKind = PostAllocatorCallKind,
+    PostInitializerKind,
+    CallEnterKind,
+    CallExitBeginKind,
+    CallExitEndKind,
+    FunctionExitKind,
+    PreImplicitCallKind,
+    PostImplicitCallKind,
+    MinImplicitCallKind = PreImplicitCallKind,
+    MaxImplicitCallKind = PostImplicitCallKind,
+    LoopExitKind,
+    LifetimeEndKind,
+    EpsilonKind
+  };
 
   static StringRef getProgramPointKindName(Kind K);
   std::optional<SourceLocation> getSourceLocation() const;
@@ -104,23 +107,22 @@ private:
 
 protected:
   ProgramPoint() = default;
-  ProgramPoint(const void *P, Kind k, const StackFrame *SF,
-               const ProgramPointTag *tag = nullptr,
+  ProgramPoint(const void *P, Kind K, const StackFrame *SF,
+               const ProgramPointTag *T = nullptr,
                CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
-      : Data1(P), Data2(nullptr, (((unsigned)k) >> 0) & 0x3),
-        S(SF, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
-        ElemRef(ElemRef) {
-    assert(getKind() == k);
-    assert(getStackFrame() == SF);
-    assert(getData1() == P);
-  }
+      : ProgramPoint(P, nullptr, K, SF, T, ElemRef) {}
 
-  ProgramPoint(const void *P1, const void *P2, Kind k, const StackFrame *SF,
-               const ProgramPointTag *tag = nullptr,
+  ProgramPoint(const void *P1, const void *P2, Kind K, const StackFrame *SF,
+               const ProgramPointTag *T = nullptr,
                CFGBlock::ConstCFGElementRef ElemRef = {nullptr, 0})
-      : Data1(P1), Data2(P2, (((unsigned)k) >> 0) & 0x3),
-        S(SF, (((unsigned)k) >> 2) & 0x3), Tag(tag, (((unsigned)k) >> 4) & 0x3),
-        ElemRef(ElemRef) {}
+      : Data1(P1), Data2(P2, (((unsigned)K) >> 0) & 0x3),
+        S(SF, (((unsigned)K) >> 2) & 0x3), Tag(T, (((unsigned)K) >> 4) & 0x3),
+        ElemRef(ElemRef) {
+    assert(getKind() == K);
+    assert(getStackFrame() == SF);
+    assert(getData1() == P1);
+    assert(getData2() == P2);
+  }
 
 protected:
   const void *getData1() const { return Data1; }
@@ -131,9 +133,9 @@ protected:
 public:
   /// Create a new ProgramPoint object that is the same as the original
   /// except for using the specified tag value.
-  ProgramPoint withTag(const ProgramPointTag *tag) const {
+  ProgramPoint withTag(const ProgramPointTag *NewTag) const {
     return ProgramPoint(getData1(), getData2(), getKind(), getStackFrame(),
-                        tag);
+                        NewTag, getElementRef());
   }
 
   /// Convert to the specified ProgramPoint type, asserting that this
@@ -183,7 +185,7 @@ public:
   unsigned getHashValue() const {
     llvm::FoldingSetNodeID ID;
     Profile(ID);
-    return ID.ComputeHash();
+    return ID.computeHash();
   }
 
   bool operator==(const ProgramPoint & RHS) const {
@@ -723,6 +725,29 @@ private:
     static bool isKind(const ProgramPoint &Location) {
       return Location.getKind() == LoopExitKind;
     }
+};
+
+/// Represents a point when the lifetime of an automatic object ends.
+class LifetimeEnd : public ProgramPoint {
+public:
+  LifetimeEnd(const Stmt *S, const VarDecl *D, const StackFrame *SF)
+      : ProgramPoint(S, D, LifetimeEndKind, SF) {}
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const Stmt *getTriggerStmt() const {
+    return static_cast<const Stmt *>(getData1());
+  }
+
+  /// Returns the variable declaration whose lifetime has ended.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const VarDecl *getDecl() const {
+    return static_cast<const VarDecl *>(getData2());
+  }
+
+private:
+  friend class ProgramPoint;
+  LifetimeEnd() = default;
+  static bool isKind(const ProgramPoint &Location) {
+    return Location.getKind() == LifetimeEndKind;
+  }
 };
 
 /// This is a meta program point, which should be skipped by all the diagnostic

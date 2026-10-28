@@ -13,26 +13,39 @@
 #ifndef BOLT_UTILS_NAME_RESOLVER_H
 #define BOLT_UTILS_NAME_RESOLVER_H
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/xxhash.h"
 
 namespace llvm {
 namespace bolt {
 
 class NameResolver {
-  /// Track the number of duplicate names.
-  StringMap<uint64_t> Counters;
+  /// Track the number of duplicate names, keyed by a 128-bit hash of the name
+  /// rather than by the name itself. Storing hashes instead of the full strings
+  /// avoids duplicating potentially large (mangled) symbol names, which is a
+  /// significant source of memory use while processing the symbol table. Using
+  /// a 128-bit hash makes collisions effectively impossible, so the counts (and
+  /// therefore the generated unique names) are identical to a string-keyed map
+  /// and remain reproducible to match profile (fdata) names.
+  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> Counters;
 
   /// Character guaranteed not to be used by any "native" name passed to
   /// uniquify() function.
   static constexpr char Sep = '/';
 
+  /// Return the map key used to track occurrences of \p Name.
+  static std::pair<uint64_t, uint64_t> getKey(StringRef Name) {
+    const XXH128_hash_t Hash = llvm::xxh3_128bits(
+        reinterpret_cast<const uint8_t *>(Name.data()), Name.size());
+    return {Hash.low64, Hash.high64};
+  }
+
 public:
   /// Return the number of uniquified versions of a given \p Name.
   uint64_t getUniquifiedNameCount(StringRef Name) const {
-    if (Counters.contains(Name))
-      return Counters.at(Name);
-    return 0;
+    return Counters.lookup(getKey(Name));
   }
 
   /// Return unique version of the \p Name in the form "Name<Sep><ID>".
@@ -43,9 +56,13 @@ public:
   /// Register new version of \p Name and return unique version in the form
   /// "Name<Sep><Number>".
   std::string uniquify(StringRef Name) {
-    const uint64_t ID = ++Counters[Name];
+    const uint64_t ID = ++Counters[getKey(Name)];
     return getUniqueName(Name, ID);
   }
+
+  /// Release the memory used to track name occurrences. Call once no more names
+  /// need to be uniquified (e.g. after file object discovery is complete).
+  void clear() { Counters.clear(); }
 
   /// For uniquified \p Name, return the original form (that may no longer be
   /// unique).

@@ -4,8 +4,8 @@
 .pushsection A
 f: 
 .cfi_startproc
-## TODO: Remove this line when the initial frame directives set the callee saved registers
-.cfi_undefined %flags
+.cfi_same_value %rbp
+.cfi_same_value %rsi
 addq $10, %rbp
 # CHECK: error: changed register RBP, that register RBP's unwinding rule uses, but there is no CFI directives about it
 nop
@@ -14,8 +14,7 @@ nop
 .pushsection B
 g: 
 .cfi_startproc
-## TODO: Remove this line when the initial frame directives set the callee saved registers
-.cfi_undefined %flags
+.cfi_same_value %rbp
 addq $10, %rbp
 # CHECK: error: changed register RBP, that register RBP's unwinding rule uses, but there is no CFI directives about it
 nop

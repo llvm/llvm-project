@@ -892,3 +892,74 @@ struct __attribute__((annotate("abc", &baz, &g0, 2))) Annotate1 {
   // c23-note@-3 {{attribute 'annotate' here}}
   int a;
 };
+
+// This was previously causing an assertion when checking structural
+// equivalence due to the the foward declared enum being invalid.
+struct GH199417_1 { // c17-note {{previous definition is here}}
+  // both-error@+3 {{field has incomplete type 'enum GH199417_E1'}}
+  // both-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+  // both-note@+1 {{forward declaration of 'enum GH199417_E1'}}
+  enum GH199417_E1 e;
+};
+// FIXME: This should be rejected in C23 mode as well; because it is a
+// tag type, the members have to have *the same* type, not merely
+// compatible ones. See GH201647.
+struct GH199417_1 {   // c17-error {{redefinition of 'GH199417_1'}}
+  int e;
+};
+
+struct GH190227_1 { // c17-note {{previous definition is here}}
+  unsigned m;       // c23-note {{field 'm' has type 'unsigned int' here}}
+};
+
+// c23-error@+2 {{type 'struct GH190227_1' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH190227_1'}}
+struct GH190227_1 {
+  // both-error@+3 {{field has incomplete type 'enum GH190227_E1'}}
+  // both-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+  // both-note@+1 {{forward declaration of 'enum GH190227_E1'}}
+ enum GH190227_E1 m;  // c23-note {{field 'm' has type 'enum GH190227_E1' here}}
+};
+
+struct GH199417_2 {   // c17-note {{previous definition is here}}
+  union { int i; } u; // c23-note-re {{field 'u' has type 'union (unnamed at {{.*}})' here}}
+};
+
+// c23-error@+2 {{type 'struct GH199417_2' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH199417_2'}}
+struct GH199417_2 {
+  enum GH199417_E2 { eGH199417 } u; // c23-note {{field 'u' has type 'enum GH199417_E2' here}}
+};
+
+struct GH199417_3 {     // c17-note {{previous definition is here}}
+  struct GH199417_4 {   // c17-note {{previous definition is here}}
+    union { int i; } u; // c23-note-re {{field 'u' has type 'union (unnamed at {{.*}})' here}}
+  } a;                  // c23-note {{field 'a' has type 'struct GH199417_4' here}}
+};
+
+// c23-error@+2 {{type 'struct GH199417_3' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH199417_3'}}
+struct GH199417_3 {
+  // c23-error@+2 {{type 'struct GH199417_4' has incompatible definitions}}
+  // c17-error@+1 {{redefinition of 'GH199417_4'}}
+  struct GH199417_4 {
+    enum GH199417_E3 { eeGH199417 } u; // c23-note {{field 'u' has type 'enum GH199417_E3' here}}
+    // FIXME: the below diagnostic uses type 'int' because of error recovery,
+    // it would be better to print the original type.
+  } a;                                 // c23-note {{field 'a' has type 'int' here}}
+};
+
+constexpr int n = 1; // c17-error {{unknown type name 'constexpr'}}
+constexpr int o = 1; // c17-error {{unknown type name 'constexpr'}}
+constexpr int m = 2; // c17-error {{unknown type name 'constexpr'}}
+struct GH232748 {
+  struct S { int i : n; } s1; // c23-note {{bit-field 'i' has bit-width 1 here}}
+                              // c17-note@-1 {{previous definition is here}}
+  struct S { int i : m; } s2; // c23-error {{type 'struct S' has incompatible definitions}}
+                              // c23-note@-1 {{bit-field 'i' has bit-width 2 here}}
+                              // c17-error@-2 {{redefinition of 'S'}}
+  struct M { int i : n; } m2; // c17-note {{previous definition is here}}
+  struct M { int i : n; } m1; // c17-error {{redefinition of 'M'}}
+  struct N { int i : o; } n1; // c17-note {{previous definition is here}}
+  struct N { int i : n; } n2; // c17-error {{redefinition of 'N}}
+};

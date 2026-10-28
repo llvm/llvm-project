@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950 allowed-dialects=func,arith,math' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950 index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu9.50-amd-amdhsa' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu9.50-amd-amdhsa allowed-dialects=func,arith,math' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu9.50-amd-amdhsa index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: @test_module
 // CHECK-SAME: llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
@@ -54,8 +54,8 @@ gpu.module @test_module {
     // CHECK-DAG: llvm.call @__ockl_get_num_groups(%[[GD_C2]]) : (i32) -> i64
     %gDimZ = gpu.grid_dim z
 
-    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]} : (i32, i32) -> i32
-    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} <res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]> : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} <res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]> : (i32, i32) -> i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 

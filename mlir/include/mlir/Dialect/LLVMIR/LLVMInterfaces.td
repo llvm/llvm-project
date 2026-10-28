@@ -35,6 +35,17 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
         return op.getFastmathFlagsAttr();
       }]
       >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the FastmathFlagsAttr attribute for the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setFastmathAttr",
+      /*args=*/        (ins "::mlir::LLVM::FastmathFlagsAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setFastmathFlagsAttr(attr);
+      }]
+      >,
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the FastmathFlagsAttr attribute
                          for the operation}],
@@ -332,6 +343,41 @@ def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
   ];
 }
 
+def RangeOpInterface : OpInterface<"RangeOpInterface"> {
+  let description = [{
+    An interface for operations that can carry range metadata. The default
+    implementations expect a ConstantRangeAttr named `range`.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyRangeOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the range attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::ConstantRangeAttr",
+      /*methodName=*/  "getRangeOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRangeAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the range attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setRange",
+      /*args=*/        (ins "::mlir::LLVM::ConstantRangeAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRangeAttr(attr);
+      }]
+      >
+  ];
+}
+
 def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface"> {
   let description = [{
     An interface for operations receiving an exception behavior attribute
@@ -578,6 +624,42 @@ def LLVM_IntrinsicIntegerAttrInterface :
         return ::mlir::IntegerAttr::get(
             type, static_cast<StorageType>($_attr.getValue()));
       }]
+    >
+  ];
+}
+
+def LLVM_ModuleFlagAttrInterface :
+    AttrInterface<"ModuleFlagAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM module flag metadata entries.
+
+    Implementing attributes provide the module flag merge behavior, metadata key,
+    and metadata value. This lets target dialects define richer, target-specific
+    module flag attributes while still sharing `llvm.module_flags` as the common
+    operation container. Values returned by this interface must use a shape that
+    can be exported to LLVM IR: integer attributes (exported as i32 constants),
+    string attributes, attributes implementing `IntrinsicIntegerAttrInterface`,
+    supported array values, or `ModuleFlagProfileSummaryAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the module flag merge behavior.",
+      /*retTy=*/"::mlir::LLVM::ModFlagBehavior",
+      /*methodName=*/"getModuleFlagBehavior",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata key.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getModuleFlagKey",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata value.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getModuleFlagValue",
+      /*args=*/(ins)
     >
   ];
 }

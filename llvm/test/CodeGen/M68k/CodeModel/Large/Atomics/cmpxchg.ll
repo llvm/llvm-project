@@ -19,7 +19,7 @@ define { i32, i1 } @std_thread_new() {
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    .cfi_def_cfa_offset -16
 ; NO-ATOMIC-NEXT:    move.l #1, (8,%sp)
-; NO-ATOMIC-NEXT:    move.l #0, (4,%sp)
+; NO-ATOMIC-NEXT:    clr.l (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l #thread_id, (%sp)
 ; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_4
 ; NO-ATOMIC-NEXT:    cmpi.l #0, %d0
@@ -36,7 +36,7 @@ define { i32, i1 } @std_thread_new() {
 ; NO-ATOMIC-PIC-NEXT:    adda.l #thread_id@GOTOFF, %a0
 ; NO-ATOMIC-PIC-NEXT:    move.l %a0, (%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l #1, (8,%sp)
-; NO-ATOMIC-PIC-NEXT:    move.l #0, (4,%sp)
+; NO-ATOMIC-PIC-NEXT:    clr.l (4,%sp)
 ; NO-ATOMIC-PIC-NEXT:    jsr (__sync_val_compare_and_swap_4@PLT,%pc)
 ; NO-ATOMIC-PIC-NEXT:    cmpi.l #0, %d0
 ; NO-ATOMIC-PIC-NEXT:    seq %d1
@@ -80,17 +80,17 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #20, %sp
 ; NO-ATOMIC-NEXT:    movem.l %d2, (16,%sp) ; 8-byte Folded Spill
+; NO-ATOMIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-NEXT:    move.b (31,%sp), %d0
-; NO-ATOMIC-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (8,%sp)
 ; NO-ATOMIC-NEXT:    move.b (27,%sp), %d2
-; NO-ATOMIC-NEXT:    move.l %d2, %d0
-; NO-ATOMIC-NEXT:    and.l #255, %d0
+; NO-ATOMIC-NEXT:    moveq #0, %d0
+; NO-ATOMIC-NEXT:    move.b %d2, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_1
-; NO-ATOMIC-NEXT:    sub.b %d2, %d0
+; NO-ATOMIC-NEXT:    cmp.b %d2, %d0
 ; NO-ATOMIC-NEXT:    seq %d0
 ; NO-ATOMIC-NEXT:    movem.l (16,%sp), %d2 ; 8-byte Folded Reload
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
@@ -100,17 +100,17 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-PIC:       ; %bb.0:
 ; NO-ATOMIC-PIC-NEXT:    suba.l #20, %sp
 ; NO-ATOMIC-PIC-NEXT:    movem.l %d2, (16,%sp) ; 8-byte Folded Spill
+; NO-ATOMIC-PIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.b (31,%sp), %d0
-; NO-ATOMIC-PIC-NEXT:    and.l #255, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (8,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.b (27,%sp), %d2
-; NO-ATOMIC-PIC-NEXT:    move.l %d2, %d0
-; NO-ATOMIC-PIC-NEXT:    and.l #255, %d0
+; NO-ATOMIC-PIC-NEXT:    moveq #0, %d0
+; NO-ATOMIC-PIC-NEXT:    move.b %d2, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l (32,%sp), %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-PIC-NEXT:    jsr (__sync_val_compare_and_swap_1@PLT,%pc)
-; NO-ATOMIC-PIC-NEXT:    sub.b %d2, %d0
+; NO-ATOMIC-PIC-NEXT:    cmp.b %d2, %d0
 ; NO-ATOMIC-PIC-NEXT:    seq %d0
 ; NO-ATOMIC-PIC-NEXT:    movem.l (16,%sp), %d2 ; 8-byte Folded Reload
 ; NO-ATOMIC-PIC-NEXT:    adda.l #20, %sp
@@ -125,7 +125,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; ATOMIC-NEXT:    move.b (11,%sp), %d1
 ; ATOMIC-NEXT:    move.b %d1, %d2
 ; ATOMIC-NEXT:    cas.b %d2, %d0, (%a0)
-; ATOMIC-NEXT:    sub.b %d1, %d2
+; ATOMIC-NEXT:    cmp.b %d1, %d2
 ; ATOMIC-NEXT:    seq %d0
 ; ATOMIC-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; ATOMIC-NEXT:    adda.l #4, %sp
@@ -140,7 +140,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; ATOMIC-PIC-NEXT:    move.b (11,%sp), %d1
 ; ATOMIC-PIC-NEXT:    move.b %d1, %d2
 ; ATOMIC-PIC-NEXT:    cas.b %d2, %d0, (%a0)
-; ATOMIC-PIC-NEXT:    sub.b %d1, %d2
+; ATOMIC-PIC-NEXT:    cmp.b %d1, %d2
 ; ATOMIC-PIC-NEXT:    seq %d0
 ; ATOMIC-PIC-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; ATOMIC-PIC-NEXT:    adda.l #4, %sp
@@ -154,11 +154,11 @@ define i16 @cmpxchg_i16_release_monotonic(i16 %cmp, i16 %new, ptr %mem) nounwind
 ; NO-ATOMIC-LABEL: cmpxchg_i16_release_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
+; NO-ATOMIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-NEXT:    move.w (22,%sp), %d0
-; NO-ATOMIC-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (8,%sp)
+; NO-ATOMIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-NEXT:    move.w (18,%sp), %d0
-; NO-ATOMIC-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (%sp)
@@ -169,11 +169,11 @@ define i16 @cmpxchg_i16_release_monotonic(i16 %cmp, i16 %new, ptr %mem) nounwind
 ; NO-ATOMIC-PIC-LABEL: cmpxchg_i16_release_monotonic:
 ; NO-ATOMIC-PIC:       ; %bb.0:
 ; NO-ATOMIC-PIC-NEXT:    suba.l #12, %sp
+; NO-ATOMIC-PIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.w (22,%sp), %d0
-; NO-ATOMIC-PIC-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (8,%sp)
+; NO-ATOMIC-PIC-NEXT:    moveq #0, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.w (18,%sp), %d0
-; NO-ATOMIC-PIC-NEXT:    and.l #65535, %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (4,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l (24,%sp), %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (%sp)

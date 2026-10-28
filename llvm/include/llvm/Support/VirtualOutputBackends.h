@@ -47,8 +47,8 @@ makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
 
 /// A helper class for proxying another backend, with the default
 /// implementation to forward to the underlying backend.
-class ProxyOutputBackend : public OutputBackend {
-  LLVM_ABI void anchor() override;
+class LLVM_ABI ProxyOutputBackend : public OutputBackend {
+  void anchor() override;
 
 protected:
   // Require subclass to implement cloneImpl().
@@ -76,15 +76,15 @@ private:
 };
 
 /// An output backend that creates files on disk, wrapping APIs in sys::fs.
-class OnDiskOutputBackend : public OutputBackend {
-  LLVM_ABI void anchor() override;
+class LLVM_ABI OnDiskOutputBackend : public OutputBackend {
+  void anchor() override;
 
 protected:
   IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {
     return clone();
   }
 
-  LLVM_ABI Expected<std::unique_ptr<OutputFileImpl>>
+  Expected<std::unique_ptr<OutputFileImpl>>
   createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override;
 
 public:

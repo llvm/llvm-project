@@ -73,3 +73,48 @@ contains
 !$omp end parallel
   end subroutine internal
 end subroutine host_assoc
+
+subroutine parallel_critical()
+  integer :: i
+  !$omp parallel default(none)
+  !$omp critical
+  !$omp parallel
+    do i = 1, 10
+    end do
+  !$omp end parallel
+  !$omp end critical
+  !$omp end parallel
+end subroutine
+
+subroutine implicit_predetermined()
+  !$omp parallel default(none)
+  !$omp parallel
+  !$omp do
+    do i = 0, 10
+    end do
+  !$omp end parallel
+  !$omp end parallel
+end subroutine
+
+subroutine implicit_explicit()
+  !$omp task default(none)
+  !$omp task
+  !$omp parallel private(i)
+  i = 1
+  !$omp end parallel
+  !$omp end task
+  !$omp end task
+end subroutine
+
+! Implied-DO variables in I/O lists are private.
+subroutine implied_do_in_io_list()
+  integer :: a(10)
+
+  !$omp parallel default(none)
+    write(6,*) (i,i=1,10)
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(a)
+    read(5,*) (a(i),i=1,10)
+  !$omp end parallel
+end subroutine
