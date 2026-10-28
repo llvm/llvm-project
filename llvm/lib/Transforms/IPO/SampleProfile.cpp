@@ -2290,9 +2290,10 @@ bool SampleProfileLoader::runOnFunction(Function &F,
         }
       }
       // Try use flattened profile as a fallback when no profile is found as a
-      // top-level function in Sample Reader nor Outlined function samples
-      if (!Samples && MatchingManager &&
-          LTOPhase != ThinOrFullLTOPhase::ThinLTOPreLink)
+      // top-level function in Sample Reader nor Outlined function samples. This
+      // applies to ThinLTO PreLink too, or a stale pre-inlined hot callee will
+      // be missed in the indexing causing performance regression
+      if (!Samples && MatchingManager)
         Samples = MatchingManager->getFlattenedSamplesFor(F);
     }
   }
