@@ -173,6 +173,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.daddf128
     libc.src.math.daddl
     libc.src.math.ddivl
     libc.src.math.dfmal
@@ -437,4 +438,3 @@ set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
 )
-
