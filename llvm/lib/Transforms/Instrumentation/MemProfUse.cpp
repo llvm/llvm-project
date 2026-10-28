@@ -242,8 +242,7 @@ struct AllocMatchInfo {
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   for (Function &F : M) {
@@ -550,7 +549,7 @@ static void handleCallSite(const InstrumentationOptions &Opts, Instruction &I,
                            OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
-  // to support cases where the instuction's inlined frames match multiple call
+  // to support cases where the instruction's inlined frames match multiple call
   // site entries, which can happen if the profile was collected from a binary
   // where this instruction was eventually inlined into multiple callers.
   SetVector<GlobalValue::GUID> CalleeGuids;
@@ -838,8 +837,7 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Return immediately if the module doesn't contain any function or global
   // variables.
   if (M.empty() && M.globals().empty())
