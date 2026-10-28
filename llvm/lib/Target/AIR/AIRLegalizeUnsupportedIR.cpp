@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/AIR.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -526,9 +527,274 @@ void genericToDevice(Module &M) {
   }
 }
 
+// The overload suffix of AIR's math functions for a float type (f16, f32,
+// v4f32), or "" for other types.
+std::string airFloatSuffix(Type *T) {
+  std::string S;
+  if (auto *VT = dyn_cast<FixedVectorType>(T)) {
+    if (VT->getNumElements() > 4)
+      return "";
+    S = "v" + utostr(VT->getNumElements());
+    T = VT->getElementType();
+  }
+  if (T->isHalfTy())
+    return S + "f16";
+  if (T->isFloatTy())
+    return S + "f32";
+  return "";
+}
+
+CallInst *callAIRMath(IRBuilder<> &B, StringRef Name, Type *RetTy,
+                      ArrayRef<Value *> Args, bool ReadNone = true) {
+  SmallVector<Type *, 2> Tys;
+  for (Value *A : Args)
+    Tys.push_back(A->getType());
+  Module &M = *B.GetInsertBlock()->getModule();
+  FunctionCallee F =
+      M.getOrInsertFunction(Name, FunctionType::get(RetTy, Tys, false));
+  if (auto *Fn = dyn_cast<Function>(F.getCallee())) {
+    Fn->setDoesNotThrow();
+    Fn->setWillReturn();
+    if (ReadNone)
+      Fn->setDoesNotAccessMemory();
+  }
+  return B.CreateCall(F, Args);
+}
+
+// Replaces CI, which returns a two-element struct, with Fields: its
+// extractvalue users directly, any other user through a rebuilt struct.
+void replaceStructResult(CallInst *CI, Value *F0, Value *F1) {
+  Value *Fields[] = {F0, F1};
+  for (User *U : make_early_inc_range(CI->users()))
+    if (auto *EV = dyn_cast<ExtractValueInst>(U);
+        EV && EV->getNumIndices() == 1) {
+      EV->replaceAllUsesWith(Fields[EV->getIndices()[0]]);
+      EV->eraseFromParent();
+    }
+  if (!CI->use_empty()) {
+    IRBuilder<> B(CI);
+    Value *S = B.CreateInsertValue(PoisonValue::get(CI->getType()), F0, 0);
+    CI->replaceAllUsesWith(B.CreateInsertValue(S, F1, 1));
+  }
+  CI->eraseFromParent();
+}
+
+// llvm.is.fpclass as integer tests of the encoding: AIR has no function for
+// it.
+Value *expandIsFPClass(IRBuilder<> &B, Value *X, FPClassTest Mask) {
+  Type *FTy = X->getType();
+  const fltSemantics &Sem = FTy->getScalarType()->getFltSemantics();
+  unsigned W = FTy->getScalarSizeInBits();
+  Type *ITy = FTy->getWithNewType(B.getIntNTy(W));
+  auto C = [&](const APInt &V) { return ConstantInt::get(ITy, V); };
+  APInt Inf = APFloat::getInf(Sem).bitcastToAPInt();
+  APInt QNaN = APFloat::getQNaN(Sem).bitcastToAPInt();
+  APInt MinNorm = APFloat::getSmallestNormalized(Sem).bitcastToAPInt();
+  Value *Bits = B.CreateBitCast(X, ITy);
+  Value *Abs = B.CreateAnd(Bits, C(APInt::getSignedMaxValue(W)));
+  Value *R = nullptr;
+  auto Or = [&](Value *T) { R = R ? B.CreateOr(R, T) : T; };
+  if ((Mask & fcNan) == fcNan)
+    Or(B.CreateICmpUGT(Abs, C(Inf)));
+  else if (Mask & fcSNan)
+    Or(B.CreateAnd(B.CreateICmpUGT(Abs, C(Inf)), B.CreateICmpULT(Abs, C(QNaN))));
+  else if (Mask & fcQNan)
+    Or(B.CreateICmpUGE(Abs, C(QNaN)));
+  // The other classes come in pairs, by sign.
+  auto Signed = [&](FPClassTest NegC, FPClassTest PosC, Value *T) {
+    if ((Mask & NegC) && (Mask & PosC))
+      Or(T);
+    else
+      Or(B.CreateAnd(T, B.CreateICmp(Mask & NegC ? ICmpInst::ICMP_SLT
+                                                  : ICmpInst::ICMP_SGE,
+                                     Bits, Constant::getNullValue(ITy))));
+  };
+  if (Mask & fcInf)
+    Signed(fcNegInf, fcPosInf, B.CreateICmpEQ(Abs, C(Inf)));
+  if (Mask & fcNormal)
+    Signed(fcNegNormal, fcPosNormal,
+           B.CreateICmpULT(B.CreateSub(Abs, C(MinNorm)), C(Inf - MinNorm)));
+  if (Mask & fcSubnormal)
+    Signed(fcNegSubnormal, fcPosSubnormal,
+           B.CreateICmpULT(B.CreateSub(Abs, C(APInt(W, 1))),
+                           C(MinNorm - 1)));
+  if (Mask & fcZero)
+    Signed(fcNegZero, fcPosZero,
+           B.CreateICmpEQ(Abs, Constant::getNullValue(ITy)));
+  return R ? R : Constant::getNullValue(FTy->getWithNewType(B.getInt1Ty()));
+}
+
+// What Metal miscompiles, crashes on or leaves undefined, found on the M2 Max
+// (llvm/utils/air-gpu, groups llvm-float-ieee, llvm-int-ops, llvm-conv and
+// llvm-memory-ir), in terms of what it compiles correctly:
+//
+// * frem: Metal's is inexact (up to 1e9 ulps), gives NaN for x frem inf and
+//   +0 for -3 frem 1. air.fmod.f32 is exact, with C's special cases.
+// * llvm.round: air.round(-0) is +0, so the sign is copied back.
+// * llvm.sadd/ssub.with.overflow: Metal sets the overflow bit wrongly for
+//   about half of the operands.
+// * llvm.fptosi.sat, llvm.fptoui.sat: crash Metal's compiler.
+// * llvm.ldexp, llvm.frexp, llvm.is.fpclass: undefined symbols. AIR has
+//   air.ldexp(x, i32) and air.frexp(x, thread i32 *), whose mantissa for -0
+//   is +0.
+// * llvm.roundeven, llvm.nearbyint: crash Metal's compiler; they are
+//   llvm.rint (air.rint) in the fixed rounding mode.
+void expandIntrinsicsMetalMishandles(Module &M) {
+  static constexpr Intrinsic::ID Expanded[] = {
+      Intrinsic::round,       Intrinsic::roundeven,  Intrinsic::nearbyint,
+      Intrinsic::sadd_with_overflow, Intrinsic::ssub_with_overflow,
+      Intrinsic::fptosi_sat,  Intrinsic::fptoui_sat, Intrinsic::is_fpclass,
+      Intrinsic::ldexp,       Intrinsic::frexp};
+  SmallVector<Instruction *, 16> Work;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F)) {
+      if (I.getOpcode() == Instruction::FRem) {
+        if (!airFloatSuffix(I.getType()).empty())
+          Work.push_back(&I);
+        continue;
+      }
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II || !is_contained(Expanded, II->getIntrinsicID()))
+        continue;
+      // AIR's ldexp and frexp exist for half and float, up to 4 lanes.
+      if ((II->getIntrinsicID() == Intrinsic::ldexp ||
+           II->getIntrinsicID() == Intrinsic::frexp) &&
+          airFloatSuffix(II->getArgOperand(0)->getType()).empty())
+        continue;
+      Work.push_back(II);
+    }
+
+  for (Instruction *I : Work) {
+    IRBuilder<> B(I);
+    if (I->getOpcode() == Instruction::FRem) {
+      // air.fmod.f16 has x fmod inf = NaN; in float, the remainder is exact
+      // and so is its truncation back to half.
+      Type *Ty = I->getType();
+      Type *FTy = Ty->getWithNewType(B.getFloatTy());
+      Value *X = B.CreateFPExt(I->getOperand(0), FTy);
+      Value *Y = B.CreateFPExt(I->getOperand(1), FTy);
+      Value *R = B.CreateFPTrunc(
+          callAIRMath(B, "air.fmod." + airFloatSuffix(FTy), FTy, {X, Y}), Ty);
+      R->takeName(I);
+      I->replaceAllUsesWith(R);
+      I->eraseFromParent();
+      continue;
+    }
+    auto *CI = cast<IntrinsicInst>(I);
+    Value *X = CI->getArgOperand(0);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::round: {
+      B.SetInsertPoint(CI->getNextNode());
+      B.setFastMathFlags(CI->getFastMathFlags());
+      Value *R = B.CreateCopySign(CI, X);
+      CI->replaceUsesWithIf(R, [&](Use &U) { return U.getUser() != R; });
+      break;
+    }
+    case Intrinsic::roundeven:
+    case Intrinsic::nearbyint: {
+      Value *R = B.CreateUnaryIntrinsic(Intrinsic::rint, X, CI);
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::ssub_with_overflow: {
+      Value *Y = CI->getArgOperand(1);
+      bool Add = CI->getIntrinsicID() == Intrinsic::sadd_with_overflow;
+      Value *R = Add ? B.CreateAdd(X, Y) : B.CreateSub(X, Y);
+      // Overflow: the result's sign differs from x's and from that of y
+      // (add) or of -y (sub).
+      Value *S = B.CreateAnd(B.CreateXor(X, R),
+                             Add ? B.CreateXor(Y, R) : B.CreateXor(X, Y));
+      replaceStructResult(
+          CI, R, B.CreateICmpSLT(S, Constant::getNullValue(S->getType())));
+      break;
+    }
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat: {
+      // The bounds rounded toward zero: beyond them the result saturates.
+      bool Signed = CI->getIntrinsicID() == Intrinsic::fptosi_sat;
+      Type *ITy = CI->getType();
+      unsigned W = ITy->getScalarSizeInBits();
+      const fltSemantics &Sem = X->getType()->getScalarType()->getFltSemantics();
+      APInt Min = Signed ? APInt::getSignedMinValue(W) : APInt::getMinValue(W);
+      APInt Max = Signed ? APInt::getSignedMaxValue(W) : APInt::getMaxValue(W);
+      APFloat MinF(Sem), MaxF(Sem);
+      MinF.convertFromAPInt(Min, Signed, APFloat::rmTowardZero);
+      MaxF.convertFromAPInt(Max, Signed, APFloat::rmTowardZero);
+      // A vector splat as ConstantDataVector (not a vector ConstantFP).
+      auto FC = [&](const APFloat &V) -> Constant * {
+        Constant *C = ConstantFP::get(M.getContext(), V);
+        if (auto *VT = dyn_cast<VectorType>(X->getType()))
+          return ConstantVector::getSplat(VT->getElementCount(), C);
+        return C;
+      };
+      Value *R = Signed ? B.CreateFPToSI(X, ITy) : B.CreateFPToUI(X, ITy);
+      R = B.CreateSelect(B.CreateFCmpULT(X, FC(MinF)), ConstantInt::get(ITy, Min),
+                         R);
+      R = B.CreateSelect(B.CreateFCmpOGT(X, FC(MaxF)), ConstantInt::get(ITy, Max),
+                         R);
+      R = B.CreateSelect(B.CreateFCmpUNO(X, X), Constant::getNullValue(ITy), R);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::is_fpclass: {
+      auto Mask = static_cast<FPClassTest>(
+          cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue());
+      CI->replaceAllUsesWith(expandIsFPClass(B, X, Mask));
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::ldexp: {
+      // AIR's exponent is an i32: a wider one is clamped, which does not
+      // change the result.
+      Value *E = CI->getArgOperand(1);
+      Type *I32Ty = E->getType()->getWithNewBitWidth(32);
+      unsigned EW = E->getType()->getScalarSizeInBits();
+      if (EW > 32) {
+        E = B.CreateBinaryIntrinsic(
+            Intrinsic::smin, E,
+            ConstantInt::get(E->getType(), APInt::getSignedMaxValue(32).sext(EW)));
+        E = B.CreateBinaryIntrinsic(
+            Intrinsic::smax, E,
+            ConstantInt::get(E->getType(), APInt::getSignedMinValue(32).sext(EW)));
+      }
+      E = B.CreateSExtOrTrunc(E, I32Ty);
+      CallInst *R = callAIRMath(B, "air.ldexp." + airFloatSuffix(X->getType()),
+                                X->getType(), {X, E});
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      break;
+    }
+    case Intrinsic::frexp: {
+      auto *STy = cast<StructType>(CI->getType());
+      Type *ETy = STy->getElementType(1);
+      Type *I32Ty = ETy->getWithNewBitWidth(32);
+      IRBuilder<> EB(&*CI->getFunction()->getEntryBlock().getFirstInsertionPt());
+      AllocaInst *Slot = EB.CreateAlloca(I32Ty);
+      CallInst *Mant = callAIRMath(B, "air.frexp." + airFloatSuffix(X->getType()),
+                                   X->getType(), {X, Slot}, false);
+      Value *E = B.CreateSExtOrTrunc(B.CreateLoad(I32Ty, Slot), ETy);
+      replaceStructResult(CI, B.CreateCopySign(Mant, X), E);
+      break;
+    }
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    }
+  }
+
+  for (Function &F : make_early_inc_range(M))
+    if (F.use_empty() && is_contained(Expanded, F.getIntrinsicID()))
+      F.eraseFromParent();
+}
+
 bool legalizeUnsupportedIR(Module &M) {
   genericToDevice(M);
   stripLifetimeIntrinsics(M);
+  expandIntrinsicsMetalMishandles(M);
   expandWideIntegers(M);
   lowerFreezeInsts(M);
   canonicalizeNNegZExt(M);

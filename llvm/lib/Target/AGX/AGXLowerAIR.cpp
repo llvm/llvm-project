@@ -406,7 +406,9 @@ Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
   auto Read = [&](Intrinsic::ID ID) { return B.CreateIntrinsic(ID, {}); };
   auto XYZ = [&](Intrinsic::ID X, Intrinsic::ID Y, Intrinsic::ID Z) {
     SmallVector<Value *, 3> V;
-    for (auto [I, ID] : enumerate(ArrayRef<Intrinsic::ID>{X, Y, Z}))
+    // Not ArrayRef{X, Y, Z}: its array would not outlive the range-init.
+    Intrinsic::ID IDs[] = {X, Y, Z};
+    for (auto [I, ID] : enumerate(IDs))
       V.push_back(Only < 0 || int(I) == Only ? Read(ID) : nullptr);
     return V;
   };

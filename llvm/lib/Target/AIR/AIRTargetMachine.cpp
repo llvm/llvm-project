@@ -152,7 +152,7 @@ public:
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());
     addPass(createAIRLegalizeUnsupportedIRLegacyPass());
-    addPass(createAIRNaNMinMaxLegacyPass());
+    addPass(createAIRNaNMinMaxLegacyPass(/*SignedZeros=*/true));
     addPass(createLLVMToAIRIntrinsicsLegacyPass());
     addPass(createAIRBarrierRenameLegacyPass());
     addPass(createAIRLowerAtomicRMWLegacyPass());

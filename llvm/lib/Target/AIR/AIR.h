@@ -59,7 +59,7 @@ void initializeAIRNaNMinMaxLegacyPass(PassRegistry &);
 
 /// Pass to lower llvm.minimum/maximum to air.fmin/fmax with NaN-propagation
 /// selects.
-ModulePass *createAIRNaNMinMaxLegacyPass();
+ModulePass *createAIRNaNMinMaxLegacyPass(bool SignedZeros = false);
 
 /// Initializer for the AIR LLVM-to-AIR intrinsic renaming pass.
 void initializeLLVMToAIRIntrinsicsLegacyPass(PassRegistry &);
