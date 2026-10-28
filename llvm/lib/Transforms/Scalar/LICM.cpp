@@ -2189,7 +2189,11 @@ static bool pointerInvalidatedByLoop(const SinkAndHoistDependencies &Deps,
     // 2) the earliest access is at the loop header,
     // if the memory loaded is the phi node
 
-    BatchAAResults BAA(MSSA->getAA());
+    // Use flow-sensitive capture information: an object captured only after
+    // the loop or on an unwind path cannot be accessed through pointers
+    // obtained inside the loop.
+    EarliestEscapeAnalysis EEA(MSSA->getDomTree());
+    BatchAAResults BAA(MSSA->getAA(), &EEA);
     MemoryAccess *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, MU);
     return !MSSA->isLiveOnEntryDef(Source) &&
            CurLoop->contains(Source->getBlock()) &&
