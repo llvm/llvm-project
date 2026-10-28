@@ -14,6 +14,8 @@
 // RUN:   -analyzer-config debug.AnalysisOrder:LifetimeEnd=true,debug.AnalysisOrder:PreCall=true,debug.AnalysisOrder:PostCall=true,debug.AnalysisOrder:EndFunction=true\
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=CHECK-EARLY-RETURN
 
+void helper();
+
 // Tests when does the check::LifetimeEnd callback fires compared to
 // other callbacks.
 
@@ -32,10 +34,13 @@ void testLocalInts() {
   {
     int i = 4, y = 5;
   }
+  helper();
 }
 
 // CHECK-LOCAL-INTS:      LifetimeEnd
 // CHECK-LOCAL-INTS-NEXT: LifetimeEnd
+// CHECK-LOCAL-INTS-NEXT: PreCall (helper) [SimpleFunctionCall]
+// CHECK-LOCAL-INTS-NEXT: PostCall (helper) [SimpleFunctionCall]
 // CHECK-LOCAL-INTS-NEXT: EndFunction
 // CHECK-LOCAL-INTS-NEXT: ReturnStmt: no
 // CHECK-LOCAL-INTS-NOT:  LifetimeEnd
