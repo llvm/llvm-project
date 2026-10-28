@@ -60,6 +60,18 @@ function(_lldb_links_liblldb_check out_var libs)
   endforeach()
 endfunction()
 
+# The static linker binds each undefined symbol to the first library on the
+# command line that defines it. Listing liblldb last keeps symbols liblldb
+# re-exports bound to the static libraries.
+function(lldb_check_liblldb_last name libs)
+  list(FIND libs liblldb index)
+  list(LENGTH libs length)
+  math(EXPR last "${length} - 1")
+  if(NOT index EQUAL -1 AND NOT index EQUAL last)
+    message(FATAL_ERROR "Target ${name} must list liblldb last in LINK_LIBS.")
+  endif()
+endfunction()
+
 function(_lldb_propagate_links_liblldb name libs)
   _lldb_links_liblldb_check(_links_liblldb "${libs}")
   set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
@@ -192,6 +204,8 @@ function(add_lldb_library name)
     "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
+
+  lldb_check_liblldb_last(${name} "${PARAM_LINK_LIBS}")
 
   foreach(link_lib ${PARAM_LINK_LIBS})
     # May not be a target yet.
@@ -387,6 +401,8 @@ function(add_lldb_executable name)
     ${ARGN}
     )
 
+  lldb_check_liblldb_last(${name} "${ARG_LINK_LIBS}")
+
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
@@ -541,7 +557,7 @@ endfunction()
 # sits beside it. A framework build moves liblldb into the bundle, so the plugin
 # must move with it and carry an rpath that reaches liblldb from its new
 # location.
-function(lldb_add_scriptinterpreter_plugin_to_framework name)
+function(lldb_add_scriptinterpreter_plugin_to_buildtree_framework name)
   if(NOT LLDB_BUILD_FRAMEWORK)
     return()
   endif()
@@ -553,8 +569,6 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
     )
   endif()
 
-  set_property(TARGET ${name} APPEND PROPERTY
-    INSTALL_RPATH "@loader_path/../../..")
   # Copy under the unversioned name: PluginManager derives a plugin's
   # initializer symbol from it. A versioned copy would load but never
   # initialize.
@@ -568,6 +582,37 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
     COMMENT "Removing ${name} from LLDB.framework")
   add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
+
+function(lldb_add_scriptinterpreter_dynamic_library name)
+  if (LLDB_BUILD_FRAMEWORK)
+    set(framework_install_prefix "${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/")
+    set(framework_arg INSTALL_PREFIX "${framework_install_prefix}")
+  endif()
+
+
+  # ScriptInterpreter shared libraries are loaded at runtime by PluginManager.
+  # Private lldb symbols are resolved via liblldb's re-exports, so we
+  # explicitly cannot link against any lldb_private libraries.
+  # FIXME: Add a mechanism to enforce this. We already have
+  # `ALLOWED_INTERNAL_DEPENDENCIES`, but it is not fine-grained enough to
+  # distinguish between link dependencies and header dependencies.
+  add_lldb_library(${name} SHARED
+    ${framework_arg}
+    ${ARGN}
+  )
+
+  if (LLDB_BUILD_FRAMEWORK)
+    lldb_add_post_install_steps_darwin(${name} ${framework_install_prefix})
+  endif()
+
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(${name})
+  endif()
+
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH "@loader_path/../../..")
+  lldb_add_scriptinterpreter_plugin_to_buildtree_framework(${name})
+endfunction(lldb_add_scriptinterpreter_dynamic_library)
 
 # Add extra install steps for dSYM creation and stripping for the given target.
 function(lldb_add_post_install_steps_darwin name install_prefix)
@@ -629,15 +674,16 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   endif()
 endfunction()
 
-# CMake's set_target_properties() doesn't allow to pass lists for RPATH
-# properties directly (error: "called with incorrect number of arguments").
-# Instead of defining two list variables each time, use this helper function.
-function(lldb_setup_rpaths name)
+function(lldb_add_rpaths name)
   cmake_parse_arguments(LIST "" "" "BUILD_RPATH;INSTALL_RPATH" ${ARGN})
-  set_target_properties(${name} PROPERTIES
+  set_property(TARGET ${name} PROPERTY
     BUILD_WITH_INSTALL_RPATH OFF
-    BUILD_RPATH "${LIST_BUILD_RPATH}"
-    INSTALL_RPATH "${LIST_INSTALL_RPATH}"
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
+    BUILD_RPATH ${LIST_BUILD_RPATH}
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH ${LIST_INSTALL_RPATH}
   )
 endfunction()
 

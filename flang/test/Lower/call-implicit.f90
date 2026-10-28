@@ -3,7 +3,7 @@
 ! calls with different argument types, one of which is character
 subroutine s2
   integer i(3)
-! CHECK:  %[[a0:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "i", uniq_name = "_QFs2Ei"}
+! CHECK:  %[[a0:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "i", uniq_name = "_QFs2Ei"}>
 ! CHECK:  %[[decl:.*]]:2 = hlfir.declare %[[a0]]
   ! CHECK: fir.call @_QPsub2(%[[decl]]#0) {{.*}}: (!fir.ref<!fir.array<3xi32>>) -> ()
   call sub2(i)

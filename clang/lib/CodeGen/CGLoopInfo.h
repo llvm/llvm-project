@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGLOOPINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_CGLOOPINFO_H
 
+#include "clang/CodeGenUtils/LoopAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugLoc.h"
@@ -32,62 +33,9 @@ class ASTContext;
 class CodeGenOptions;
 namespace CodeGen {
 
-/// Attributes that may be specified on loops.
-struct LoopAttributes {
-  explicit LoopAttributes(bool IsParallel = false);
-  void clear();
-
-  /// Generate llvm.loop.parallel metadata for loads and stores.
-  bool IsParallel;
-
-  /// State of loop vectorization or unrolling.
-  enum LVEnableState { Unspecified, Enable, Disable, Full };
-
-  /// Value for llvm.loop.vectorize.enable metadata.
-  LVEnableState VectorizeEnable;
-
-  /// Value for llvm.loop.unroll.* metadata (enable, disable, or full).
-  LVEnableState UnrollEnable;
-
-  /// Value for llvm.loop.unroll_and_jam.* metadata (enable, disable, or full).
-  LVEnableState UnrollAndJamEnable;
-
-  /// Value for llvm.loop.vectorize.predicate metadata
-  LVEnableState VectorizePredicateEnable;
-
-  /// Value for llvm.loop.vectorize.width metadata.
-  unsigned VectorizeWidth;
-
-  // Value for llvm.loop.vectorize.scalable.enable
-  LVEnableState VectorizeScalable;
-
-  /// Value for llvm.loop.interleave.count metadata.
-  unsigned InterleaveCount;
-
-  /// llvm.unroll.
-  unsigned UnrollCount;
-
-  /// llvm.unroll.
-  unsigned UnrollAndJamCount;
-
-  /// Value for llvm.loop.distribute.enable metadata.
-  LVEnableState DistributeEnable;
-
-  /// Value for llvm.loop.pipeline.disable metadata.
-  bool PipelineDisabled;
-
-  /// Value for llvm.licm.disable metadata.
-  bool LICMDisabled;
-
-  /// Value for llvm.loop.pipeline.iicount metadata.
-  unsigned PipelineInitiationInterval;
-
-  /// Value for 'llvm.loop.align' metadata.
-  unsigned CodeAlign;
-
-  /// Value for whether the loop is required to make progress.
-  bool MustProgress;
-};
+/// Attributes that may be specified on loops. The state, and how it is
+/// determined from the loop's attributes, is shared with CIR CodeGen.
+using LoopAttributes = clang::CodeGenUtils::LoopAttributes;
 
 /// Information used when generating a structured loop.
 class LoopInfo {

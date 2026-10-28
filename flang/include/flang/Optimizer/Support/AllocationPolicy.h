@@ -84,7 +84,19 @@ struct PendingAllocationInfo {
   bool isDynamic = false;
   /// The constant size of the allocation in bytes, if it can be determined.
   std::optional<std::int64_t> byteSize;
+  /// The alignment requested for the allocation in bytes, if any. The stack
+  /// budget charges the worst-case padding (alignment - 1) on top of byteSize.
+  std::optional<std::int64_t> alignment;
+  /// An operation at the point where the allocation lives or will be inserted,
+  /// used for context dependent decisions such as code that runs on a device.
+  /// Optional: without it the offload region rule is not applied.
+  mlir::Operation *context = nullptr;
 };
+
+/// The stack bytes the allocation described by \p info would consume, if its
+/// size is known: its byteSize plus the worst-case padding for its requested
+/// alignment. The same figure decides placement and is charged to the budget.
+std::optional<std::size_t> stackBytesNeeded(const PendingAllocationInfo &info);
 
 /// Module-level information needed to compute constant allocation sizes.
 struct AllocationSizeContext {
@@ -113,7 +125,9 @@ struct AllocationInfo : PendingAllocationInfo {
 /// Size-based placement policy, usable before the allocation is created.
 /// Decides whether an allocation described by \p info should live on the stack,
 /// given the \p policy in effect and the per-function stack bytes already
-/// committed to the stack (\p stackBytesUsed).
+/// committed to the stack (\p stackBytesUsed). When \p info carries a context
+/// inside an offload region, -fstack-arrays is not honored there and only the
+/// size based rules apply, as for a device procedure.
 bool shouldAllocateOnStack(const PendingAllocationInfo &info,
                            const AllocationPolicy &policy,
                            std::size_t stackBytesUsed);

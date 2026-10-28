@@ -87,6 +87,24 @@ void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
 }
 
+RISCVMachineFunctionInfo::ShadowStackKind
+RISCVMachineFunctionInfo::getShadowStackKind(const MachineFunction &MF) const {
+  // Prefer HW Shadow Stack
+  //
+  // Zicfiss is encoded using a Zimop, so that's the only extension we have to
+  // check here. MOPs will be compressed if they have the right structure to.
+  if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZimop() &&
+      MF.getFunction().hasFnAttribute("hw-shadow-stack"))
+    return ShadowStackKind::Hardware;
+
+  // ShadowCallStack attribute is used for software shadow call stack
+  if (MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+    return ShadowStackKind::Software;
+
+  // Otherwise, none
+  return ShadowStackKind::None;
+}
+
 RISCVMachineFunctionInfo::PushPopKind
 RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
   // We cannot use fixed locations for the callee saved spill slots if the

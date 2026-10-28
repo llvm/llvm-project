@@ -116,7 +116,7 @@ DWARF:
   SymbolFileDWARF &sym_file = dwarf_cu->GetSymbolFileDWARF();
   CompUnitSP comp_unit = sym_file.GetCompileUnitAtIndex(0);
   ASSERT_TRUE(static_cast<bool>(comp_unit.get()));
-  XcodeSDK sdk = sym_file.ParseXcodeSDK(*comp_unit);
+  XcodeSDKAndSysroot sdk = sym_file.ParseXcodeSDK(*comp_unit);
   ASSERT_EQ(sdk.GetType(), XcodeSDK::Type::MacOSX);
 }
 
@@ -263,7 +263,7 @@ DWARF:
   CompUnitSP comp_unit = sym_file.GetCompileUnitAtIndex(0);
   ASSERT_TRUE(static_cast<bool>(comp_unit.get()));
 
-  XcodeSDK cu_sdk = sym_file.ParseXcodeSDK(*comp_unit);
+  XcodeSDKAndSysroot cu_sdk = sym_file.ParseXcodeSDK(*comp_unit);
   EXPECT_EQ(cu_sdk.GetString(), "MacOSX10.9.sdk");
   EXPECT_EQ(cu_sdk.GetSysroot().GetPath(), "/REMAPPED_SYSROOT");
 

@@ -65,9 +65,10 @@ void populateACCAtomicPatterns(
 void configureACCDataDirectiveConversionLegality(ConversionTarget &target);
 
 /// Populate patterns that lower OpenACC data directives (`acc.data`,
-/// `enter_data`, `exit_data`, `update`) to `__tgt_acc_data_*` runtime calls.
-/// Clauses that can be repeated per device type are taken from the ones that
-/// apply to \p clauseDeviceType. The runtime declarations and globals the
+/// `enter_data`, `exit_data`, `update`, `declare_enter`, `declare_exit`) to
+/// `__tgt_acc_data_*`, `__tgt_acc_declare`, and `__tgt_acc_mirror_*` runtime
+/// calls. Clauses that can be repeated per device type are taken from the ones
+/// that apply to \p clauseDeviceType. The runtime declarations and globals the
 /// patterns add are created in \p globalSymbolRegion and registered in
 /// \p symbolTable.
 void populateACCDataDirectivePatterns(
@@ -88,6 +89,21 @@ void populateACCHostDataPatterns(LLVMTypeConverter &converter,
                                  Region &globalSymbolRegion,
                                  SymbolTable &symbolTable,
                                  const acc::ACCRuntimeCallConfig &config = {});
+
+/// Configure conversion legality for `acc.kernel_environment`. The
+/// `gpu.launch_func` operations it contains are lowered together with it.
+void configureACCKernelLaunchConversionLegality(ConversionTarget &target);
+
+/// Populate patterns that lower an `acc.kernel_environment` and all
+/// `gpu.launch_func` operations in its body together. The environment becomes
+/// an implicit data region and each launch becomes `__tgt_acc_kernel`. The
+/// async and wait clauses are taken from the ones that apply to
+/// \p clauseDeviceType. The runtime calls are made for the default device type.
+void populateACCKernelLaunchPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    acc::OpenACCSupport &accSupport, Region &globalSymbolRegion,
+    SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config = {},
+    acc::DeviceType clauseDeviceType = acc::DeviceType::None);
 
 /// Populate the patterns that remove OpenACC data clause operations once the
 /// constructs holding them have turned their mappings into runtime calls. A

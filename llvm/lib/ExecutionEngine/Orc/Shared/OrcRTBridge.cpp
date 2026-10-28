@@ -13,9 +13,9 @@ namespace orc {
 namespace rt {
 
 const SymbolNameSpec RegisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_registerEHFrameAllocAction");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_registerSection");
 const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_deregisterEHFrameAllocAction");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_deregisterSection");
 
 const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
     SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
@@ -35,12 +35,5 @@ const MachOUnwindInfoRegistrarSymbolNames
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt
-namespace rt_alt {
-const SymbolNameSpec UnwindInfoManagerRegisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_register");
-const SymbolNameSpec UnwindInfoManagerDeregisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_deregister");
-
-} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

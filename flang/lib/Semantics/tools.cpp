@@ -18,6 +18,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <set>
@@ -121,6 +122,18 @@ const Scope *FindOpenACCConstructContaining(const Scope *scope) {
                        return s.kind() == Scope::Kind::OpenACCConstruct;
                      })
                : nullptr;
+}
+
+bool IsOpenACCMapped(const Symbol &symbol, const Scope &scope) {
+  for (const Scope *current{&scope};; current = &current->parent()) {
+    if (current->kind() == Scope::Kind::OpenACCConstruct &&
+        current->IsOpenACCMappedSymbol(symbol)) {
+      return true;
+    }
+    if (current->IsGlobal()) {
+      return false;
+    }
+  }
 }
 
 bool HasOpenACCRoutineDirective(const Scope *scope) {
@@ -1979,5 +1992,79 @@ bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
   return symbol.name() == other.name() && symbol.owner().IsModule() &&
       other.owner().IsModule() && symbol.owner().GetName() &&
       symbol.owner().GetName() == other.owner().GetName();
+}
+
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op,
+    SemanticsContext &context) {
+  switch (op) {
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+    return parser::CharBlock{"op.*", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+    return parser::CharBlock{"op.+", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    return parser::CharBlock{"op.-", 4};
+
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+    return parser::CharBlock{"op.AND", 6};
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+    return parser::CharBlock{"op.OR", 5};
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+    return parser::CharBlock{"op.EQV", 6};
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return parser::CharBlock{"op.NEQV", 7};
+
+  default:
+    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
+    return parser::CharBlock{"op.?", 4};
+  }
+}
+
+parser::CharBlock MangleSpecialFunctions(parser::CharBlock name) {
+  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
+      .Case("max", {"op.max", 6})
+      .Case("min", {"op.min", 6})
+      .Case("iand", {"op.iand", 7})
+      .Case("ior", {"op.ior", 6})
+      .Case("ieor", {"op.ieor", 7})
+      .Default(name);
+}
+
+std::string MangleDefinedOperator(parser::CharBlock name) {
+  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
+  return "op" + name.ToString();
+}
+
+std::string GetReductionFortranId(parser::CharBlock mangledName) {
+  if (!mangledName.starts_with("op.")) {
+    return mangledName.str();
+  }
+  llvm::StringRef suffix{mangledName.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ -> operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  if (suffix == "AND") {
+    return "operator(.and.)";
+  }
+  if (suffix == "OR") {
+    return "operator(.or.)";
+  }
+  if (suffix == "EQV") {
+    return "operator(.eqv.)";
+  }
+  if (suffix == "NEQV") {
+    return "operator(.neqv.)";
+  }
+  // Defined operators: op.combine. -> .combine.
+  // MangleDefinedOperator prepends "op" to the operator name (e.g.,
+  // ".combine.") so after stripping "op.", the suffix ends with '.' for defined
+  // operators.
+  if (!suffix.empty() && suffix.back() == '.') {
+    return ("." + suffix).str();
+  }
+  // Named functions: op.max -> max
+  return suffix.str();
 }
 } // namespace Fortran::semantics
