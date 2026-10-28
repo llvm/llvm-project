@@ -22,6 +22,7 @@
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -323,8 +324,16 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         }
 
         V.push_back(GetID(CI->getCalledOperand()));
-        for (unsigned J = 0; J < CI->arg_size(); J++)
-          V.push_back(GetID(CI->getArgOperand(J)));
+        for (unsigned J = 0; J < CI->arg_size(); J++) {
+          // Metadata: its metadata ID, relative like a value's (the reader's
+          // getValue, then getFnMetadataByID for a metadata parameter).
+          auto *MV = dyn_cast<MetadataAsValue>(CI->getArgOperand(J));
+          if (MV && MD.hasID(MV->getMetadata()))
+            V.push_back(
+                unsigned(CurInstID - (MD.operandID(MV->getMetadata()) - 1)));
+          else
+            V.push_back(GetID(CI->getArgOperand(J)));
+        }
         W.EmitRecord(bitc::FUNC_CODE_INST_CALL, V);
       } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
 

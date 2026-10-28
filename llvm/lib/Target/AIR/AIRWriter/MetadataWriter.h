@@ -41,7 +41,12 @@ struct MetadataEnumerator {
   // alias.scope / noalias / tbaa MDNodes get IDs.
   void collect(Module &M, ValueEnumerator &E);
   void visitNode(const MDNode *N, ValueEnumerator &E);
+  /// A metadata operand of a call (or of a node): its ID.
+  void visitOperand(const Metadata *Op, ValueEnumerator &E);
   uint64_t operandID(const Metadata *Op) const;
+  /// Whether Op has an ID; operandID(Op) - 1 is then its metadata ID, which
+  /// a call argument of metadata type is written as.
+  bool hasID(const Metadata *Op) const;
 
   // Global metadata ID of an MDNode (matches reader's MetadataList index):
   // strings first, then values, then nodes.
