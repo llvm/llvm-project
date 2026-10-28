@@ -355,36 +355,178 @@ static bool isCheapDivision(const BinaryOperator &BO) {
   return BO.getType()->isIntegerTy(32);
 }
 
+static cl::opt<bool> ShareDivisors(
+    "agx-share-divisors", cl::init(true), cl::Hidden,
+    cl::desc("Compute the reciprocal of a 32-bit divisor once where the "
+             "divisor is defined, shared by every division by it"));
+
+namespace {
+/// The divisor-only part of a 32-bit division: |y|, whether y < 0, and the
+/// estimate z of 2^32 / |y|.
+struct Divisor {
+  Value *Y, *Neg, *Z;
+};
+
+/// Divisors computed once each. A divisor that is a cheap pure expression
+/// (ZLUDA's umax(y, 1), a trunc of a 64-bit value) is rebuilt right after
+/// the latest of its leaves, so that copies of it in different blocks (the
+/// unrolled iterations of a loop, the fast paths of 64-bit divisions) share
+/// one reciprocal.
+class DivisorCache {
+  Function &F;
+  DominatorTree DT;
+  DenseMap<Value *, Value *> Hoisted;
+  std::map<SmallVector<uintptr_t, 6>, Value *> Exprs;
+  DenseMap<std::pair<Value *, unsigned>, Divisor> Divisors;
+
+  static bool isCheapPure(const Instruction &I) {
+    if (isa<CastInst, BinaryOperator, ICmpInst, SelectInst>(I))
+      return !isa<BinaryOperator>(I) || !I.isIntDivRem();
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::abs:
+        return true;
+      default:
+        break;
+      }
+    return false;
+  }
+
+  /// Where a value defined by V can first be used.
+  BasicBlock::iterator after(Value *V) {
+    if (auto *I = dyn_cast_or_null<Instruction>(V)) {
+      if (isa<PHINode>(I))
+        return I->getParent()->getFirstInsertionPt();
+      return std::next(I->getIterator());
+    }
+    return F.getEntryBlock().getFirstInsertionPt();
+  }
+
+  /// The later of two definition points on one dominator chain.
+  Value *later(Value *A, Value *B) {
+    auto *IA = dyn_cast<Instruction>(A), *IB = dyn_cast<Instruction>(B);
+    if (!IA)
+      return B;
+    if (!IB)
+      return A;
+    return DT.dominates(IA, IB) ? B : A;
+  }
+
+  /// V rebuilt after its leaves; Last is set to the latest leaf (or null).
+  Value *hoist(Value *V, Value *&Last, unsigned Depth = 0) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I) {
+      Last = nullptr;
+      return V;
+    }
+    if (Depth > 4 || !isCheapPure(*I)) {
+      Last = I;
+      return I;
+    }
+    if (Value *H = Hoisted.lookup(I)) {
+      Last = H;
+      return H;
+    }
+    SmallVector<Value *, 3> Ops;
+    Value *Latest = nullptr;
+    SmallVector<uintptr_t, 6> Key{I->getOpcode(),
+                                  reinterpret_cast<uintptr_t>(I->getType())};
+    if (auto *Cmp = dyn_cast<CmpInst>(I))
+      Key.push_back(Cmp->getPredicate());
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      Key.push_back(II->getIntrinsicID());
+    unsigned NOps = isa<CallInst>(I) ? cast<CallInst>(I)->arg_size()
+                                     : I->getNumOperands();
+    for (unsigned N = 0; N < NOps; ++N) {
+      Value *L;
+      Value *Op = hoist(I->getOperand(N), L, Depth + 1);
+      Latest = L ? (Latest ? later(Latest, L) : L) : Latest;
+      Ops.push_back(Op);
+      Key.push_back(reinterpret_cast<uintptr_t>(Op));
+    }
+    if (I->getType()->isVectorTy()) {
+      Last = I;
+      return I;
+    }
+    Value *&E = Exprs[Key];
+    if (!E) {
+      Instruction *C = I->clone();
+      C->setName(I->getName() + ".div");
+      for (unsigned N = 0; N < NOps; ++N)
+        C->setOperand(N, Ops[N]);
+      C->dropPoisonGeneratingAnnotations();
+      C->insertBefore(after(Latest));
+      E = C;
+    }
+    Hoisted[I] = E;
+    Last = E;
+    return E;
+  }
+
+public:
+  DivisorCache(Function &F) : F(F), DT(F) {}
+
+  Divisor get(Value *Y, bool IsSigned, BinaryOperator &At) {
+    Value *Last = nullptr;
+    Value *H = ShareDivisors ? hoist(Y, Last) : Y;
+    auto [It, New] = Divisors.try_emplace({H, unsigned(IsSigned)});
+    if (!New)
+      return It->second;
+    IRBuilder<> B(ShareDivisors ? &*after(Last) : &At);
+    Value *YAbs = H, *Neg = nullptr;
+    if (IsSigned) {
+      Neg = B.CreateICmpSLT(H, B.getInt32(0));
+      YAbs = B.CreateSelect(Neg, B.CreateNeg(H), H);
+    }
+    Value *FY = B.CreateUIToFP(YAbs, B.getFloatTy());
+    Value *Rcp = B.CreateUnaryIntrinsic(Intrinsic::agx_rcp, FY);
+    Value *Scaled =
+        B.CreateFMul(Rcp, ConstantFP::get(B.getFloatTy(), 4294966784.0));
+    Value *Z = B.CreateFPToUI(Scaled, B.getInt32Ty());
+    Value *P = B.CreateMul(
+        B.CreateZExt(Z, B.getInt64Ty()),
+        B.CreateZExt(B.CreateMul(B.CreateNeg(YAbs), Z), B.getInt64Ty()));
+    Z = B.CreateAdd(Z, B.CreateTrunc(B.CreateLShr(P, 32), B.getInt32Ty()));
+    Divisor D{YAbs, Neg, Z};
+    if (ShareDivisors)
+      It->second = D;
+    else
+      Divisors.erase(It);
+    return D;
+  }
+};
+} // namespace
+
 /// A 32-bit division or remainder without a loop, as AMDGPU expands them
 /// (AMDGPUCodeGenPrepare::expandDivRem32): an estimate of 2^32 / y from the
 /// f32 reciprocal, one Newton-Raphson step in integers, then two corrections,
 /// which is exact when the reciprocal is within 1 ulp. The hardware's rcp is
 /// within 0.75 ulp for every mantissa (Apple-M2-Playground 2026-10-20-fdiv32).
-/// Division by zero gives all ones (remainder: x), as on NVIDIA GPUs.
-static Value *expandDivRem32(BinaryOperator &BO) {
+/// Division by zero gives all ones (remainder: x), as on NVIDIA GPUs. The
+/// divisor's part comes from Divisors, shared by divisions by the same value.
+static Value *expandDivRem32(BinaryOperator &BO, DivisorCache &Divisors) {
   IRBuilder<> B(&BO);
   Instruction::BinaryOps Op = BO.getOpcode();
   bool IsSigned = Op == Instruction::SDiv || Op == Instruction::SRem;
   bool IsRem = Op == Instruction::URem || Op == Instruction::SRem;
   Type *I32 = B.getInt32Ty();
-  Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
+  Value *X = BO.getOperand(0);
+  Divisor D = Divisors.get(BO.getOperand(1), IsSigned, BO);
+  Value *Y = D.Y, *Z = D.Z;
   Value *XNeg = nullptr, *Neg = nullptr;
   if (IsSigned) {
     XNeg = B.CreateICmpSLT(X, B.getInt32(0));
-    Value *YNeg = B.CreateICmpSLT(Y, B.getInt32(0));
-    Neg = IsRem ? XNeg : B.CreateXor(XNeg, YNeg);
+    Neg = IsRem ? XNeg : B.CreateXor(XNeg, D.Neg);
     X = B.CreateSelect(XNeg, B.CreateNeg(X), X);
-    Y = B.CreateSelect(YNeg, B.CreateNeg(Y), Y);
   }
-  Value *FY = B.CreateUIToFP(Y, B.getFloatTy());
-  Value *Rcp = B.CreateUnaryIntrinsic(Intrinsic::agx_rcp, FY);
-  Value *Scaled = B.CreateFMul(Rcp, ConstantFP::get(B.getFloatTy(), 4294966784.0));
-  Value *Z = B.CreateFPToUI(Scaled, I32);
   auto MulHi = [&](Value *A, Value *C) {
     Value *P = B.CreateMul(B.CreateZExt(A, B.getInt64Ty()), B.CreateZExt(C, B.getInt64Ty()));
     return B.CreateTrunc(B.CreateLShr(P, 32), I32);
   };
-  Z = B.CreateAdd(Z, MulHi(Z, B.CreateMul(B.CreateNeg(Y), Z)));
   Value *Q = MulHi(X, Z);
   Value *R = B.CreateSub(X, B.CreateMul(Q, Y));
   for (int I = 0; I < 2; ++I) {
@@ -430,17 +572,26 @@ bool AGXCodeGenPrepare::expandDivisions(Function &F) {
     }
   }
 
+  // The 32-bit expansions first: they keep the CFG (and the dominator tree
+  // of the divisor cache) as it is; the loops of the wider ones do not.
+  std::optional<DivisorCache> Divisors;
+  SmallVector<BinaryOperator *, 8> Wide;
   for (BinaryOperator *BO : Worklist) {
+    if (!BO->getType()->isIntegerTy(32)) {
+      Wide.push_back(BO);
+      continue;
+    }
+    if (!Divisors)
+      Divisors.emplace(F);
+    Value *R = expandDivRem32(*BO, *Divisors);
+    R->takeName(BO);
+    BO->replaceAllUsesWith(R);
+    BO->eraseFromParent();
+  }
+  for (BinaryOperator *BO : Wide) {
     bool IsRem = BO->getOpcode() == Instruction::URem ||
                  BO->getOpcode() == Instruction::SRem;
     bool Is64 = BO->getType()->getIntegerBitWidth() > 32;
-    if (BO->getType()->isIntegerTy(32)) {
-      Value *R = expandDivRem32(*BO);
-      R->takeName(BO);
-      BO->replaceAllUsesWith(R);
-      BO->eraseFromParent();
-      continue;
-    }
     if (IsRem)
       Is64 ? expandRemainderUpTo64Bits(BO) : expandRemainderUpTo32Bits(BO);
     else
