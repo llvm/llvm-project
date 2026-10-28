@@ -9,7 +9,7 @@ agx_conv2d_bwd_filter_f32 N_=1 C_=64 H_=56 W_=56 K_=64 R_=3 S_=3 P_=56 Q_=56 ph_
 # pointwise, softmax over channels, 2 x 2 max pooling, batch normalization on the same tensor
 agx_dnn_act_fwd total=200704 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 mode=1 --wg 64,1,1 --wg-id 100,0,0
 agx_dnn_pointwise total=200704 C=64 H=56 W=56 as0=200704 as1=3136 as2=56 as3=1 cs0=200704 cs1=3136 cs2=56 cs3=1 --wg 64,1,1 --wg-id 100,0,0
-agx_dnn_softmax_fwd rows=3136 K=64 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 instance=1 algo=1 --wg 64,1,1 --wg-id 100,0,0
+agx_dnn_softmax_fwd rows=3136 K=64 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 instance=0 algo=1 --wg 64,1,1 --wg-id 100,0,0
 agx_dnn_pool_fwd total=50176 C=64 H=56 W=56 P=28 Q=28 R=2 S=2 sh=2 sw=2 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=50176 ys1=784 ys2=28 ys3=1 --wg 64,1,1 --wg-id 100,0,0
 agx_dnn_bn_apply total=200704 C=64 H=56 W=56 xs0=200704 xs1=3136 xs2=56 xs3=1 ys0=200704 ys1=3136 ys2=56 ys3=1 spatial=1 eps=0.00001 --wg 64,1,1 --wg-id 100,0,0
 # cuBLAS: 256 x 256 x 256 products
