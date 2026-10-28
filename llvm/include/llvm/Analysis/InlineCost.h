@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -287,7 +288,8 @@ LLVM_ABI InlineCost getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+        nullptr,
+    MemorySSA *CalleeMSSA = nullptr, MemorySSA *CallerMMSA = nullptr);
 
 /// Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -302,7 +304,8 @@ LLVM_ABI InlineCost getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+        nullptr,
+    MemorySSA *CalleeMSSA = nullptr, MemorySSA *CallerMMSA = nullptr);
 
 /// Returns InlineResult::success() if the call site should be always inlined
 /// because of user directives, and the inlining is viable. Returns
