@@ -18,9 +18,10 @@ void prefix_increment(const std::vector<int> &V) {
   auto J = ++I;
   clang_analyzer_eval(clang_analyzer_iterator_container(I) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(J) == &V); // expected-warning{{TRUE}}
+  // expected-warning@+1{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_position(I) ==
-                      clang_analyzer_iterator_position(J)); // expected-warning@-1{{TRUE}}
-  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 2); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+                      clang_analyzer_iterator_position(J));
+  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 2); // expected-warning{{TRUE}} expected-warning{{FALSE}} FIXME: This should be only TRUE.
 }
 
 void postfix_increment(const std::vector<int> &V) {
@@ -32,7 +33,7 @@ void postfix_increment(const std::vector<int> &V) {
   clang_analyzer_eval(clang_analyzer_iterator_container(I) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(J) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_position(J) == 1); // expected-warning{{TRUE}}
-  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 2); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 2); // expected-warning{{TRUE}} expected-warning{{FALSE}} FIXME: This should be only TRUE.
 }
 
 void prefix_decrement(const std::vector<int> &V) {
@@ -43,9 +44,10 @@ void prefix_decrement(const std::vector<int> &V) {
   auto J = --I;
   clang_analyzer_eval(clang_analyzer_iterator_container(I) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(J) == &V); // expected-warning{{TRUE}}
+  // expected-warning@+1{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_position(I) ==
-                      clang_analyzer_iterator_position(J)); // expected-warning@-1{{TRUE}}
-  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+                      clang_analyzer_iterator_position(J));
+  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}} FIXME: This should be only TRUE.
 }
 
 void postfix_decrement(const std::vector<int> &V) {
@@ -57,7 +59,7 @@ void postfix_decrement(const std::vector<int> &V) {
   clang_analyzer_eval(clang_analyzer_iterator_container(I) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(J) == &V); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_position(J) == 1); // expected-warning{{TRUE}}
-  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}} FIXME: This should be only TRUE.
 }
 
 void compound_assignment(const std::vector<int> &V) {
@@ -67,5 +69,5 @@ void compound_assignment(const std::vector<int> &V) {
 
   I += 2;
   clang_analyzer_eval(clang_analyzer_iterator_container(I) == &V); // expected-warning{{TRUE}}
-  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 3); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_position(I) == 3); // expected-warning{{TRUE}} expected-warning{{FALSE}} FIXME: This should be only TRUE.
 }
