@@ -23,6 +23,13 @@ math_test(name = "acosf")
 
 math_test(name = "acoshf")
 
+math_test(
+    name = "acoshbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_test(name = "acosf16")
 
 math_test(name = "acoshf16")

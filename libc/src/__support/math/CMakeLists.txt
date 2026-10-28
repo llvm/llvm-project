@@ -96,6 +96,23 @@ add_header_library(
 )
 
 add_header_library(
+  acoshbf16
+  HDRS
+    acoshbf16.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acoshf16
   HDRS
     acoshf16.h
