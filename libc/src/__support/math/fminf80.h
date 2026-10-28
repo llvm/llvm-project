@@ -31,4 +31,3 @@ LIBC_INLINE constexpr Float80 fminf80(Float80 x, Float80 y) {
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_FMINF80_H
-

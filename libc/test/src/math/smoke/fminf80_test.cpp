@@ -18,4 +18,3 @@
 using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_FMIN_TESTS(Fminf80, Float80, LIBC_NAMESPACE::fminf80)
-

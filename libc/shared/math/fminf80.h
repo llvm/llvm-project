@@ -26,4 +26,3 @@ using math::fminf80;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_FMINF80_H
-

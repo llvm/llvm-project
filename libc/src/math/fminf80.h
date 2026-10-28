@@ -25,4 +25,3 @@ float80 fminf80(float80 x, float80 y);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FMINF80_H
-

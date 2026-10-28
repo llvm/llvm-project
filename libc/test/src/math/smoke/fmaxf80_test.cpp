@@ -18,4 +18,3 @@
 using LIBC_NAMESPACE::fputil::Float80;
 
 LIST_FMAX_TESTS(Fmaxf80, Float80, LIBC_NAMESPACE::fmaxf80)
-

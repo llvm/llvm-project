@@ -28,4 +28,3 @@ LLVM_LIBC_FUNCTION(float80, fmaxf80, (float80 x, float80 y)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-

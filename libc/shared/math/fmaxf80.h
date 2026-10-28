@@ -26,4 +26,3 @@ using math::fmaxf80;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_FMAXF80_H
-
