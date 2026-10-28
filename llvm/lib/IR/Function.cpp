@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -60,6 +61,33 @@ using namespace llvm;
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
+
+cl::opt<bool> FiberSafeTLS(
+    "fiber-safe-tls", cl::Hidden, cl::init(false),
+    cl::desc("Assume that execution may migrate to another thread across any "
+             "call (stackful coroutines), so do not reuse TLS addresses or the "
+             "thread pointer across calls"));
+
+/// With -fiber-safe-tls, returns true if the result of a call to \p F depends
+/// on the current thread. This includes libc functions declared `const`.
+bool isFiberThreadDependent(const Function &F) {
+  if (!FiberSafeTLS)
+    return false;
+  switch (F.getIntrinsicID()) {
+  case Intrinsic::threadlocal_address:
+  case Intrinsic::thread_pointer:
+    return true;
+  case Intrinsic::not_intrinsic:
+    return StringSwitch<bool>(F.getName())
+        .Cases({"__errno_location", "__h_errno_location", "__res_state",
+                "__ctype_b_loc", "__ctype_tolower_loc", "__ctype_toupper_loc",
+                "pthread_self", "thrd_current"},
+               true)
+        .Default(false);
+  default:
+    return false;
+  }
+}
 
 void Function::renumberBlocks() {
   validateBlockNumbers();
@@ -860,6 +888,10 @@ void Function::copyAttributesFrom(const Function *Src) {
 }
 
 MemoryEffects Function::getMemoryEffects() const {
+  // Model thread-dependent results as a read of inaccessible memory, so that
+  // any call that may switch threads clobbers them.
+  if (isFiberThreadDependent(*this))
+    return MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref);
   return getAttributes().getMemoryEffects();
 }
 void Function::setMemoryEffects(MemoryEffects ME) {

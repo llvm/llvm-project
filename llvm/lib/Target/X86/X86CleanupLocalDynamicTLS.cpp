@@ -25,6 +25,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-cleanup-local-dynamic-tls"
 
+extern cl::opt<bool> FiberSafeTLS;
+
 namespace {
 class X86CleanupLocalDynamicTLSLegacy : public MachineFunctionPass {
 public:
@@ -133,6 +135,9 @@ static bool cleanupLocalDynamicTLS(MachineDominatorTree &DT) {
 }
 
 static bool shouldSkipLocalDynamicTLS(MachineFunction &MF) {
+  // With -fiber-safe-tls, the module base must be recomputed after calls.
+  if (FiberSafeTLS)
+    return true;
   X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
   if (MFI->getNumLocalDynamicTLSAccesses() < 2) {
     // No point folding accesses if there isn't at least two.

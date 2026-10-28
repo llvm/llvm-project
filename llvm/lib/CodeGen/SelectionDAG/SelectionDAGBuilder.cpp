@@ -5621,7 +5621,9 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 std::pair<bool, bool>
 SelectionDAGBuilder::getTargetIntrinsicCallProperties(const CallBase &I) {
   const Function *F = I.getCalledFunction();
-  bool HasChain = !F->doesNotAccessMemory();
+  // -fiber-safe-tls makes llvm.thread.pointer read memory for IR passes only.
+  bool HasChain = !F->doesNotAccessMemory() &&
+                  F->getIntrinsicID() != Intrinsic::thread_pointer;
   bool OnlyLoad =
       HasChain && F->onlyReadsMemory() && F->willReturn() && F->doesNotThrow();
 

@@ -54,6 +54,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "stack-protector"
 
+extern cl::opt<bool> FiberSafeTLS;
+
 STATISTIC(NumFunProtected, "Number of functions protected");
 STATISTIC(NumAddrTaken, "Number of local variables that have their address"
                         " taken.");
@@ -116,21 +118,78 @@ SSPLayoutInfo SSPLayoutAnalysis::run(Function &F,
 
 AnalysisKey SSPLayoutAnalysis::Key;
 
+static bool usesTLS(const Value *V) {
+  auto *C = dyn_cast<Constant>(V);
+  if (auto *GV = dyn_cast_or_null<GlobalValue>(C))
+    return GV->isThreadLocal();
+  return C && any_of(C->operands(), usesTLS);
+}
+
+/// SelectionDAG computes a TLS address or the thread pointer once per block,
+/// no matter how many calls are in between. With -fiber-safe-tls, start a new
+/// block at every such use that follows a call, so that it is recomputed on
+/// the thread that runs after the call. This is the last IR pass, so nothing
+/// merges the blocks back.
+static bool splitBlocksForFiberSafeTLS(Function &F, DominatorTree *DT) {
+  bool MadeChange = false;
+  for (BasicBlock &BB : F) {
+    bool SeenCall = false;
+    for (Instruction &I : BB) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      bool IsTP = II && II->getIntrinsicID() == Intrinsic::thread_pointer;
+      if (SeenCall && (IsTP || any_of(I.operands(), usesTLS))) {
+        SplitBlock(&BB, &I, DT);
+        MadeChange = true;
+        break;
+      }
+      if (isa<CallBase>(I) && !II)
+        SeenCall = true;
+    }
+    // TLS addresses incoming to PHIs are computed at the end of the block, so
+    // move the terminator to a block of its own. If the terminator is the call
+    // itself, compute them in the successor or on a new edge block instead
+    // (not possible for EH pads).
+    if (SeenCall)
+      for (BasicBlock *Succ : successors(&BB))
+        if (!Succ->isEHPad() && any_of(Succ->phis(), [&](PHINode &PN) {
+              return usesTLS(PN.getIncomingValueForBlock(&BB));
+            })) {
+          MadeChange = true;
+          if (!isa<InvokeInst, CallBrInst>(BB.getTerminator())) {
+            SplitBlock(&BB, BB.getTerminator(), DT);
+            break;
+          }
+          if (Succ->getSinglePredecessor())
+            FoldSingleEntryPHINodes(Succ);
+          else
+            SplitEdge(&BB, Succ, DT);
+        }
+  }
+  return MadeChange;
+}
+
 PreservedAnalyses StackProtectorPass::run(Function &F,
                                           FunctionAnalysisManager &FAM) {
   auto &Info = FAM.getResult<SSPLayoutAnalysis>(F);
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  // The split keeps the allocas and updates the dominator tree.
+  PreservedAnalyses Unchanged = PreservedAnalyses::all();
+  if (FiberSafeTLS && splitBlocksForFiberSafeTLS(F, DT)) {
+    Unchanged = PreservedAnalyses::none();
+    Unchanged.preserve<SSPLayoutAnalysis>();
+    Unchanged.preserve<DominatorTreeAnalysis>();
+  }
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   if (!Info.RequireStackProtector)
-    return PreservedAnalyses::all();
+    return Unchanged;
 
   // TODO(etienneb): Functions with funclets are not correctly supported now.
   // Do nothing if this is funclet-based personality.
   if (F.hasPersonalityFn()) {
     EHPersonality Personality = classifyEHPersonality(F.getPersonalityFn());
     if (isFuncletEHPersonality(Personality))
-      return PreservedAnalyses::all();
+      return Unchanged;
   }
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -140,7 +199,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   if (!LibcallLowering) {
     F.getContext().emitError("'" + LibcallLoweringModuleAnalysis::name() +
                              "' analysis required");
-    return PreservedAnalyses::all();
+    return Unchanged;
   }
 
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
@@ -158,7 +217,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
 #endif
 
   if (!Changed)
-    return PreservedAnalyses::all();
+    return Unchanged;
   PreservedAnalyses PA;
   PA.preserve<SSPLayoutAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
@@ -190,6 +249,8 @@ bool StackProtector::runOnFunction(Function &Fn) {
   M = F->getParent();
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
+  bool Split = FiberSafeTLS && splitBlocksForFiberSafeTLS(
+                                   Fn, DTU ? &DTU->getDomTree() : nullptr);
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   LayoutInfo.HasPrologue = false;
   LayoutInfo.HasIRCheck = false;
@@ -197,14 +258,14 @@ bool StackProtector::runOnFunction(Function &Fn) {
   LayoutInfo.SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
       "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
   if (!requiresStackProtector(F, &LayoutInfo.Layout))
-    return false;
+    return Split;
 
   // TODO(etienneb): Functions with funclets are not correctly supported now.
   // Do nothing if this is funclet-based personality.
   if (Fn.hasPersonalityFn()) {
     EHPersonality Personality = classifyEHPersonality(Fn.getPersonalityFn());
     if (isFuncletEHPersonality(Personality))
-      return false;
+      return Split;
   }
 
   const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(Fn);
@@ -224,7 +285,7 @@ bool StackProtector::runOnFunction(Function &Fn) {
          "Failed to maintain validity of domtree!");
 #endif
   DTU.reset();
-  return Changed;
+  return Changed || Split;
 }
 
 /// \param [out] IsLarge is set to true if a protectable array is found and

@@ -67,6 +67,8 @@
 
 using namespace llvm;
 
+bool isFiberThreadDependent(const Function &F);
+
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
                                           cl::init(true));
@@ -878,6 +880,9 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 
   if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
     MemoryEffects FuncME = AAQI.AAR.getMemoryEffects(F);
+    // Ignore memory(none) that clang copies to the call from a `const` decl.
+    if (isFiberThreadDependent(*F))
+      Min = MemoryEffects::unknown();
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
     if (Call->hasReadingOperandBundles())

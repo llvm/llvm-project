@@ -1640,6 +1640,7 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
 
+  case AArch64::MOVbaseTLSFiberSafe:
   case AArch64::MOVbaseTLS: {
     Register DstReg = MI.getOperand(0).getReg();
     auto SysReg = AArch64SysReg::TPIDR_EL0;

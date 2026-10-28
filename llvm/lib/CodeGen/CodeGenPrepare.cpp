@@ -138,6 +138,8 @@ STATISTIC(NumDbgValueMoved, "Number of debug value instructions moved");
 STATISTIC(NumSelectsExpanded, "Number of selects turned into branches");
 STATISTIC(NumStoreExtractExposed, "Number of store(extractelement) exposed");
 
+extern cl::opt<bool> FiberSafeTLS;
+
 namespace {
 
 enum ExtType {
@@ -5286,7 +5288,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(AddrInst)) {
       if (II->getIntrinsicID() == Intrinsic::threadlocal_address) {
         GlobalValue &GV = cast<GlobalValue>(*II->getArgOperand(0));
-        if (TLI.addressingModeSupportsTLS(GV))
+        if (!FiberSafeTLS && TLI.addressingModeSupportsTLS(GV))
           return matchAddr(AddrInst->getOperand(0), Depth);
       }
     }
