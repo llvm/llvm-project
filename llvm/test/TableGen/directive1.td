@@ -462,7 +462,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:            {"clausec", {0, 2147483647}},
 // IMPL-NEXT:            {"ccccccc", {0, 2147483647}},
 // IMPL-NEXT:        };
-// IMPL-NEXT:        return llvm::directive::FindName(TDLC_clausec_spellings, static_cast<unsigned>(V));
+// IMPL-NEXT:        return llvm::directive::FindName(TDLC_clausec_spellings, V);
 // IMPL-NEXT:      }
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");

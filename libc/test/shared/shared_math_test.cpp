@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains unittests for shared math functions.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
 #include "shared/math.h"
@@ -655,6 +660,14 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), setpayloadsigf128_res);
 
   EXPECT_FP_EQ(Float128(1.0), LIBC_NAMESPACE::shared::sqrtf128(Float128(1.0)));
+  Float128 totalorderf128_x = Float128(0.0);
+  Float128 totalorderf128_y = Float128(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalorderf128(&totalorderf128_x,
+                                                      &totalorderf128_y));
+  Float128 totalordermagf128_x = Float128(0.0);
+  Float128 totalordermagf128_y = Float128(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf128(&totalordermagf128_x,
+                                                         &totalordermagf128_y));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
 }
 
@@ -741,14 +754,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
-  float128 totalorderf128_x = float128(0.0);
-  float128 totalorderf128_y = float128(0.0);
-  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalorderf128(&totalorderf128_x,
-                                                      &totalorderf128_y));
-  float128 totalordermagf128_x = float128(0.0);
-  float128 totalordermagf128_y = float128(0.0);
-  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf128(&totalordermagf128_x,
-                                                         &totalordermagf128_y));
   LIBC_NAMESPACE::shared::fmodf128(float128(1.0), float128(1.0));
   float128 modff128_iptr = float128(0.0);
   EXPECT_FP_EQ(float128(0.0),

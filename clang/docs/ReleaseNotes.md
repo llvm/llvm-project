@@ -1147,6 +1147,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
 
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
+
 #### Miscellaneous Bug Fixes
 
 - Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and

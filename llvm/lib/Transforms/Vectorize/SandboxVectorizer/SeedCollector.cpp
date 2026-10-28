@@ -110,10 +110,14 @@ void SeedContainer::insert(LoadOrStoreT *LSI, bool AllowDiffTypes) {
   // Fill this vector of bundles front to back so that only the last bundle in
   // the vector may have available space. This avoids iteration to find one with
   // space.
-  if (BundleVec.empty() || BundleVec.back()->size() == BundleSizeLimit)
+  if (BundleVec.empty() || BundleVec.back()->size() == BundleSizeLimit) {
     BundleVec.emplace_back(std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
-  else
-    BundleVec.back()->tryInsert(LSI, SE);
+  } else {
+    bool Inserted = BundleVec.back()->tryInsert(LSI, SE);
+    if (!Inserted)
+      BundleVec.emplace_back(
+          std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
+  }
 
   SeedLookupMap[LSI] = BundleVec.back().get();
 }
