@@ -495,14 +495,13 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return rewriter.notifyMatchFailure(
         contract, "LHS/RHS are not vector.transfer_read ops");
 
-  auto matchOperandRead = [&](vector::TransferReadOp transferOp,
-                              unsigned kVecDim) {
-    if (!isSimpleTransferOp(transferOp))
+  auto checkOperandRead = [&](vector::TransferReadOp read, unsigned kVecDim) {
+    if (!isSimpleTransferOp(read))
       return rewriter.notifyMatchFailure(
           contract, "operand read has non-identity permutation, mask, or "
                     "out-of-bounds check");
 
-    auto indices = transferOp.getIndices();
+    auto indices = read.getIndices();
     if (candidate.isInVnniLayout && !isZeroInteger(indices.back()))
       return rewriter.notifyMatchFailure(
           contract, "operand read VNNI dimension offset must be zero");
@@ -535,7 +534,7 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     //                                     v            v
     //  vector.transfer_read %A[%block_M, %IV, %c0, %offset_k] ...
     //                        : memref<?x?x?x?xi8>, vector<64x64xi8>
-    unsigned firstVecDimPos = transferOp.getLeadingShapedRank();
+    unsigned firstVecDimPos = read.getLeadingShapedRank();
     unsigned ivPos = std::distance(indices.begin(), ivIt);
     if (ivPos < firstVecDimPos &&
         candidate.contractK > candidate.contractNativeShape[2] &&
@@ -547,8 +546,8 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return success();
   };
 
-  if (failed(matchOperandRead(lhsRead, /*[m, k] -> kVecDim=*/1)) ||
-      failed(matchOperandRead(rhsRead, /*[k, n] -> kVecDim=*/0)))
+  if (failed(checkOperandRead(lhsRead, /*[m, k] -> kVecDim=*/1)) ||
+      failed(checkOperandRead(rhsRead, /*[k, n] -> kVecDim=*/0)))
     return failure();
 
   candidate.accLoop = accLoop;
