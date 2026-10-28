@@ -163,7 +163,7 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
   // (yrs % 4) * 512 corrects a 1/4-day-per-year drift introduced by
   // skipping the explicit day-of-year step. 512 = 2^16 / 32 / 4, i.e.
   // one quarter of a "fake 32-day month" in 16-bit space.
-  int64_t n_val = (yrs % 4) * 512 + shift - static_cast<int64_t>(ypt);
+  int64_t n_val = (yrs & 3) * 512 + shift - static_cast<int64_t>(ypt);
   int64_t d_val =
       static_cast<int64_t>((static_cast<UInt128>(n_val & 65535) * C3) >> 64);
 
