@@ -432,6 +432,28 @@ def AGXMaskWidth : SDNodeXForm<imm, [{
 }]>;
 def : Pat<(i32 (and AGXIntSrc32:$a, agx_low_mask32:$m)),
           (BFEIL_I32 0, (i32 0), 0, $a, 0, (i32 0), (AGXMaskWidth $m))>;
+// A field of x, (x >> s) & (2^k - 1), is one bfeil (offset s, width k)
+// instead of a shift and an and (AGXISelLowering turns (x & m) >> s into
+// this form).
+def agx_field_mask : PatLeaf<(imm), [{
+  uint64_t V = N->getZExtValue();
+  return V != 0 && isMask_64(V);
+}]>;
+def AGXFieldWidth : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(llvm::popcount(N->getZExtValue()),
+                                   SDLoc(N), MVT::i32);
+}]>;
+// Only for a shift with no other use: otherwise the shift stays and the and
+// (a cheaper instruction than bfeil) reads it.
+def agx_srl_oneuse : PatFrag<(ops node:$a, node:$s), (srl node:$a, node:$s), [{
+  return N->hasOneUse();
+}]>;
+def : Pat<(i32 (and (agx_srl_oneuse AGXIntSrc32:$a, (i32 imm:$s)),
+                    agx_field_mask:$m)),
+          (BFEIL_I32 0, (i32 0), 0, $a, 0, (i32 imm:$s), (AGXFieldWidth $m))>;
+def : Pat<(i16 (and (agx_srl_oneuse AGXIntSrc16:$a, (i16 imm:$s)),
+                    agx_field_mask:$m)),
+          (BFEIL_I16 0, (i16 0), 0, $a, 0, (i16 imm:$s), (AGXFieldWidth $m))>;
 def : Pat<(i32 (AGXbfi7 AGXIntSrc32:$a, AGXIntSrc32:$b, AGXIntSrc32:$s)),
           (BFI_I32 0, $a, 0, $b, 0, $s, 0)>;
 def : Pat<(i32 (AGXextr7 AGXIntSrc32:$lo, AGXIntSrc32:$hi, AGXIntSrc32:$s)),

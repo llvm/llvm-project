@@ -98,7 +98,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
-  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR});
+  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR, ISD::SRL});
   // Vectors are not legal types; 4-byte aligned loads and stores of 2 to 4
   // 32-bit elements still become one access (lowerVectorLoad/Store).
   for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
@@ -1142,6 +1142,25 @@ SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::BRCOND:
     return performBRCONDCombine(N, DCI);
+  case ISD::SRL: {
+    // (x & (m << s)) >> s = (x >> s) & m: one bfeil (a field extract).
+    SDValue A = N->getOperand(0);
+    auto *S = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    auto *M = A.getOpcode() == ISD::AND
+                  ? dyn_cast<ConstantSDNode>(A.getOperand(1))
+                  : nullptr;
+    if (!DCI.isAfterLegalizeDAG() || !S || !M || !A.hasOneUse())
+      return SDValue();
+    uint64_t Mask = M->getZExtValue(), Shift = S->getZExtValue();
+    if (!isShiftedMask_64(Mask) || llvm::countr_zero(Mask) != Shift)
+      return SDValue();
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    SDValue Shifted = DCI.DAG.getNode(ISD::SRL, DL, VT, A.getOperand(0),
+                                      N->getOperand(1));
+    return DCI.DAG.getNode(ISD::AND, DL, VT, Shifted,
+                           DCI.DAG.getConstant(Mask >> Shift, DL, VT));
+  }
   case ISD::TRUNCATE:
     // The low half of a pair.
     if (N->getOperand(0).getOpcode() == ISD::BUILD_PAIR) {
