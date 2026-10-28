@@ -5,6 +5,7 @@
 # generation.
 
 # CHECK: $r2 = C2_mux killed $p0, killed $r0, $r1
+# CHECK-NEXT: DBG_VALUE $r2, $noreg
 # CHECK: $r0 = A2_tfr killed $r1
 
 --- |

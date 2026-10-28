@@ -330,6 +330,16 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
                       .add(*MX.SrcT)
                       .add(*MX.SrcF);
     NewMux->clearKillInfo();
+    if (&*MX.At == MX.Def2) {
+      // Debug instructions for DR between the two transfers would now precede
+      // the mux that defines DR. Move them after the mux.
+      MachineInstr *Mux = NewMux.getInstr();
+      for (MachineInstr &MI : llvm::make_early_inc_range(llvm::make_range(
+               std::next(MX.Def1->getIterator()), Mux->getIterator()))) {
+        if (MI.isDebugInstr() && MI.readsRegister(MX.DefR, HRI))
+          MI.moveBefore(MX.Def2);
+      }
+    }
     B.remove(MX.Def1);
     B.remove(MX.Def2);
     Changed = true;
