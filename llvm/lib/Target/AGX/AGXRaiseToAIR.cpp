@@ -1762,6 +1762,14 @@ void RaiseToAIR::inlineEmulations() {
       if (!CI || CI->getCalledFunction() != &F)
         continue;
       Callers.insert(CI->getFunction());
+      if (CI->getFunctionType() != F.getFunctionType()) {
+        std::string S;
+        raw_string_ostream OS(S);
+        OS << "the emulation of " << Key << " is " << *F.getFunctionType()
+           << ", its call " << *CI->getFunctionType();
+        error(CI->getFunction(), OS.str());
+        continue;
+      }
       InlineFunctionInfo IFI;
       if (!InlineFunction(*CI, IFI).isSuccess())
         error(CI->getFunction(), "cannot inline the emulation of " + Key);
