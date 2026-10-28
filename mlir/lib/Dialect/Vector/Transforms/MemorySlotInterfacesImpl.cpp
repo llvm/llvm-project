@@ -16,8 +16,7 @@
 // a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
 // sub-vector from the parent, and writes insert it back into the parent.
-// Supported transfers through dynamic subviews use a vector type matching the
-// whole static parent, and the subview's slot holds that whole vector. Reads
+// Dynamic subview slots hold the whole static parent vector. Reads
 // pad lanes outside the runtime extent, and writes preserve the previous value
 // of those lanes. `arith.select` implements this behavior and also handles
 // lanes disabled by a transfer's mask operand.
@@ -91,9 +90,9 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   return true;
 }
 
-/// Return offsets for an unmasked, in-bounds read of a fixed-size sub-vector
-/// of the slot. Dynamic subview slots hold the entire parent vector, not the
-/// runtime extent of the view, so containment in that vector is insufficient.
+/// Return constant offsets for a fixed-size read contained in the slot vector.
+/// Static slots must cover their memref extent. Dynamic subview slots hold the
+/// whole parent vector; reads use an extent mask to pad lanes outside the view.
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
@@ -101,9 +100,7 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
           cast<VectorTransferOpInterface>(readOp.getOperation()), slot,
           blockingUses))
     return failure();
-  if (readOp.getMask() || readOp.isMasked() || readOp.hasOutOfBoundsDim() ||
-      !readOp.getPermutationMap().isIdentity() ||
-      memref::isDynamicSubViewSlot(slot.ptr))
+  if (readOp.isMasked() || !readOp.getPermutationMap().isIdentity())
     return failure();
 
   auto slotType = dyn_cast<VectorType>(slot.valueType);
@@ -112,6 +109,12 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
       readType.getRank() != slotType.getRank() ||
       readOp.getIndices().size() != static_cast<size_t>(readType.getRank()) ||
       readType.getElementType() != slotType.getElementType())
+    return failure();
+
+  auto memrefType = cast<MemRefType>(slot.ptr.getType());
+  if (!memref::isDynamicSubViewSlot(slot.ptr) &&
+      (!memrefType.hasStaticShape() ||
+       memrefType.getShape() != slotType.getShape()))
     return failure();
 
   SmallVector<int64_t> offsets;
@@ -169,28 +172,30 @@ struct TransferReadOpMemOpModel
                      const DataLayout &dataLayout) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
+    Value result = reachingDefinition;
+    Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
     if (readOp.getVectorType() != slot.valueType) {
       auto offsets = getPromotableReadSliceOffsets(readOp, slot, blockingUses);
       assert(succeeded(offsets) && "expected a promotable read slice");
       SmallVector<int64_t> strides(offsets->size(), 1);
-      Value result = vector::ExtractStridedSliceOp::create(
-          builder, loc, reachingDefinition, *offsets,
-          readOp.getVectorType().getShape(), strides);
-      readOp.getVector().replaceAllUsesWith(result);
-      return DeletionKind::Delete;
+      auto extractSlice = [&](Value value) -> Value {
+        return vector::ExtractStridedSliceOp::create(
+            builder, loc, value, *offsets, readOp.getVectorType().getShape(),
+            strides);
+      };
+      result = extractSlice(result);
+      if (mask)
+        mask = extractSlice(mask);
     }
-    Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
     if (Value opMask = readOp.getMask())
       mask = mask
                  ? arith::AndIOp::create(builder, loc, mask, opMask).getResult()
                  : opMask;
 
-    Value result = reachingDefinition;
     if (mask) {
       Value padSplat = vector::BroadcastOp::create(
           builder, loc, readOp.getVectorType(), readOp.getPadding());
-      result = arith::SelectOp::create(builder, loc, mask, reachingDefinition,
-                                       padSplat);
+      result = arith::SelectOp::create(builder, loc, mask, result, padSplat);
     }
     readOp.getVector().replaceAllUsesWith(result);
     return DeletionKind::Delete;
