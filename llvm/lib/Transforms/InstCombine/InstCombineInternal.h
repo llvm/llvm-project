@@ -679,6 +679,20 @@ public:
   ///   %rdx_combined = binop %phi_combined, constant_combined
   Instruction *foldBinopWithRecurrence(BinaryOperator &BO);
 
+  /// Try to fold binary operators whose operands are simple interleaved
+  /// recurrences of partial reductions to a single recurrence. This is a common
+  /// pattern in reduction operations.
+  /// Example:
+  ///   %phi1 = phi [init1, %BB1], [%op1, %BB2]
+  ///   %phi2 = phi [init2, %BB1], [%op2, %BB2]
+  ///   %op1 = partial.reduce.add(%phi1, constant1)
+  ///   %op2 = partial.reduce.add(%phi2, constant2)
+  ///   %rdx = binop %op1, %op2
+  /// -->
+  ///   %phi_combined = phi [init_combined, %BB1], [%op_combined, %BB2]
+  ///   %rdx_combined = partial.reduce.add(%phi_combined, constant_combined)
+  Instruction *foldBinopOfPartialReductionsWithRecurrence(BinaryOperator &BO);
+
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
   /// patterns where at least one set of phi operands simplifies.

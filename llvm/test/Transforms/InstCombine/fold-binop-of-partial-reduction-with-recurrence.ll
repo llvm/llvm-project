@@ -8,15 +8,12 @@ define i64 @binop_of_equal_size_prdx(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI0:%.*]] = phi <2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE0:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PARTIAL_REDUCE0]] = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI0]], <2 x i64> splat (i64 24))
-; CHECK-NEXT:    [[PARTIAL_REDUCE1]] = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI1]], <2 x i64> splat (i64 24))
+; CHECK-NEXT:    [[PRDX_COMBINED_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[BIN_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[PRDX_COMBINED_PHI]], <2 x i64> splat (i64 48))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[PARTIAL_REDUCE1]], [[PARTIAL_REDUCE0]]
 ; CHECK-NEXT:    [[FINAL_RDX:%.*]] = tail call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX]])
 ; CHECK-NEXT:    ret i64 [[FINAL_RDX]]
 ;
@@ -46,15 +43,12 @@ define double @fp_binop_of_equal_size_prdx(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE0:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PARTIAL_REDUCE0]] = tail call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI0]], <2 x double> splat (double 2.400000e+01))
-; CHECK-NEXT:    [[PARTIAL_REDUCE1]] = tail call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI1]], <2 x double> splat (double 2.400000e+01))
+; CHECK-NEXT:    [[PRDX_COMBINED_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[BIN_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[PRDX_COMBINED_PHI]], <2 x double> splat (double 4.800000e+01))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[PARTIAL_REDUCE1]], [[PARTIAL_REDUCE0]]
 ; CHECK-NEXT:    [[FINAL_RDX:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    ret double [[FINAL_RDX]]
 ;
@@ -84,15 +78,12 @@ define double @fmf_intersect(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE0:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PARTIAL_REDUCE0]] = tail call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI0]], <2 x double> splat (double 2.400000e+01))
-; CHECK-NEXT:    [[PARTIAL_REDUCE1]] = tail call reassoc nsz <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI1]], <2 x double> splat (double 2.400000e+01))
+; CHECK-NEXT:    [[PRDX_COMBINED_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[BIN_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX]] = call reassoc nsz <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[PRDX_COMBINED_PHI]], <2 x double> splat (double 4.800000e+01))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[PARTIAL_REDUCE1]], [[PARTIAL_REDUCE0]]
 ; CHECK-NEXT:    [[FINAL_RDX:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    ret double [[FINAL_RDX]]
 ;
@@ -122,15 +113,12 @@ define i64 @differing_start_and_step(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI0:%.*]] = phi <2 x i64> [ <i64 14, i64 0>, %[[ENTRY]] ], [ [[PARTIAL_REDUCE0:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ <i64 0, i64 23>, %[[ENTRY]] ], [ [[PARTIAL_REDUCE1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PARTIAL_REDUCE0]] = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI0]], <2 x i64> splat (i64 24))
-; CHECK-NEXT:    [[PARTIAL_REDUCE1]] = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI1]], <2 x i64> <i64 5, i64 17>)
+; CHECK-NEXT:    [[PRDX_COMBINED_PHI:%.*]] = phi <2 x i64> [ <i64 14, i64 23>, %[[ENTRY]] ], [ [[BIN_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[PRDX_COMBINED_PHI]], <2 x i64> <i64 29, i64 41>)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[PARTIAL_REDUCE1]], [[PARTIAL_REDUCE0]]
 ; CHECK-NEXT:    [[FINAL_RDX:%.*]] = tail call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX]])
 ; CHECK-NEXT:    ret i64 [[FINAL_RDX]]
 ;
