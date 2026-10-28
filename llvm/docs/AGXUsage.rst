@@ -829,6 +829,12 @@ which is correctly rounded for every significand (x below 2^-80 is scaled by
 Performance Simulator, ``testsuite/transcendental``). A division takes 19
 instructions (1 / x 9) and a square root 13, constants included.
 
+``frem`` on ``float`` and ``half`` is an exact ``fmod``
+(``AGXCodeGenPrepare.cpp``): a loop reduces |a| by |b| 2^j while the quotient
+could reach 2^24, then a last step by |b| truncates the correctly rounded
+quotient and keeps whichever of a - q |b| and a - (q - 1) |b| lies in
+[0, |b|).
+
 Two features, off by default, implement IEEE 754 and PTX behavior in software
 (``AGXStrictFP.cpp``):
 

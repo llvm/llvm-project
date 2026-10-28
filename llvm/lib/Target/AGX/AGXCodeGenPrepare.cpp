@@ -64,6 +64,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include <cmath>
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
@@ -1438,8 +1439,97 @@ static bool expandPowI(Function &F) {
   return !Calls.empty();
 }
 
+/// frem of float and half (in float): fmod, exact. A step reduces a by a
+/// divisor d with a / d < 2^24: q = trunc(a / d) is the integer part n or,
+/// rounded up, n + 1 (the quotient is correctly rounded and n representable),
+/// so the remainder is a - q d or a - (q - 1) d, whichever is in [0, d)
+/// (exact, or flushed). While a exceeds b 2^23 by more than an exponent
+/// step, a is first reduced by b 2^j, a multiple of b, with a / (b 2^j) <
+/// 2^24 (each step takes 23 bits off the exponent). A denormal b (IEEE float)
+/// is normalized by 2^24 for the loop, with a last step by b itself. The
+/// result has the sign of a; fmod(x, +-inf) is x (also a denormal x), and
+/// NaN for an infinite or NaN x, a NaN or zero y.
+static bool expandFRem(Function &F, const AGXSubtarget &ST) {
+  SmallVector<BinaryOperator *, 4> Rems;
+  for (Instruction &I : instructions(F))
+    if (I.getOpcode() == Instruction::FRem &&
+        (I.getType()->isFloatTy() || I.getType()->isHalfTy()))
+      Rems.push_back(cast<BinaryOperator>(&I));
+  bool DenormalB =
+      ST.hasIEEEFP32() &&
+      F.getDenormalMode(APFloat::IEEEsingle()).Input == DenormalMode::IEEE;
+  for (BinaryOperator *Rem : Rems) {
+    LLVMContext &Ctx = F.getContext();
+    BasicBlock *Before = Rem->getParent();
+    BasicBlock *After = Before->splitBasicBlock(Rem, "frem.done");
+    BasicBlock *Header = BasicBlock::Create(Ctx, "frem.loop", &F, After);
+    BasicBlock *Body = BasicBlock::Create(Ctx, "frem.reduce", &F, After);
+    Before->getTerminator()->eraseFromParent();
+
+    IRBuilder<> B(Before);
+    Type *F32 = B.getFloatTy(), *I32 = B.getInt32Ty();
+    auto K = [&](float V) { return ConstantFP::get(F32, V); };
+    auto Bits = [&](Value *V) { return B.CreateBitCast(V, I32); };
+    auto Exponent = [&](Value *V) { return B.CreateLShr(Bits(V), 23); };
+    // a mod d for a / d < 2^24 (a, d positive)
+    auto Step = [&](Value *A, Value *D) {
+      Value *Q = B.CreateUnaryIntrinsic(Intrinsic::trunc, B.CreateFDiv(A, D));
+      auto Rem = [&](Value *Q) {
+        return B.CreateIntrinsic(Intrinsic::fma, {F32},
+                                 {B.CreateFNeg(Q), D, A});
+      };
+      // With q one too large, a - (q - 1) d is the remainder (below d);
+      // with the right q it is at least d. (a - q d < 0 would not show an
+      // overestimate whose remainder is flushed.)
+      Value *Low = Rem(B.CreateFSub(Q, K(1.0f)));
+      return B.CreateSelect(B.CreateFCmpOLT(Low, D), Low, Rem(Q));
+    };
+
+    Value *X = B.CreateFPExt(Rem->getOperand(0), F32);
+    Value *Y = B.CreateFPExt(Rem->getOperand(1), F32);
+    Value *AX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *AY = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y);
+    Value *BN = AY;
+    if (DenormalB)
+      BN = B.CreateSelect(B.CreateFCmpOLT(AY, K(0x1p-126f)),
+                          B.CreateFMul(AY, K(0x1p24f)), AY);
+    // NaN, or x itself for an infinite y: no reduction.
+    Value *NaN = B.CreateOr(B.CreateFCmpUGE(AX, K(INFINITY)),
+                            B.CreateFCmpULE(BN, K(0.0f)));
+    Value *YInf = B.CreateFCmpOEQ(AY, K(INFINITY));
+    Value *Start = B.CreateSelect(B.CreateOr(NaN, YInf), K(0.0f), AX);
+    Value *EB = Exponent(BN);
+    B.CreateBr(Header);
+
+    B.SetInsertPoint(Header);
+    PHINode *A = B.CreatePHI(F32, 2);
+    A->addIncoming(Start, Before);
+    Value *J = B.CreateSub(B.CreateSub(Exponent(A), EB), B.getInt32(23));
+    B.CreateCondBr(B.CreateICmpSGT(J, B.getInt32(0)), Body, After);
+
+    B.SetInsertPoint(Body);
+    Value *BK = B.CreateBitCast(B.CreateAdd(Bits(BN), B.CreateShl(J, 23)), F32);
+    A->addIncoming(Step(A, BK), Body);
+    B.CreateBr(Header);
+
+    B.SetInsertPoint(Rem);
+    Value *R = Step(A, BN);
+    if (DenormalB)
+      R = Step(R, AY);
+    R = B.CreateCopySign(R, X);
+    R = B.CreateSelect(YInf, X, R);
+    R = B.CreateSelect(NaN, K(NAN), R);
+    R = B.CreateFPTrunc(R, Rem->getType());
+    R->takeName(Rem);
+    Rem->replaceAllUsesWith(R);
+    Rem->eraseFromParent();
+  }
+  return !Rems.empty();
+}
+
 bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
   bool Changed = expandPowI(F);
+  Changed |= expandFRem(F, ST);
   // An expansion may use functions that are expanded in turn (tan's sin).
   for (;;) {
     SmallVector<IntrinsicInst *, 8> Calls;
