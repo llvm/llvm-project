@@ -652,7 +652,7 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
     if (Hi == NoClass && ResType->isInteger()) {
       if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty))) {
         switch (getX86ABICompatInfo().SmallIntABICompat) {
-        case SmallIntABICompatKind::SysV:
+        case SmallIntABICompatKind::Platform:
           break;
         case SmallIntABICompatKind::Clang:
           return ArgInfo::getExtend(Ty);

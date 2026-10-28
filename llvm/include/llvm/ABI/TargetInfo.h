@@ -50,8 +50,8 @@ struct ABICompatInfo {
 /// How promotable integer arguments are passed on X86
 /// (-mextend-small-integers).
 enum class SmallIntABICompatKind {
-  /// Compat with SysV ABI (high bits unspecified).
-  SysV,
+  /// Compat with platform ABI (high bits unspecified).
+  Platform,
   /// Compat with old Clang ABI (high bits zero/sign-extended).
   Clang,
   /// Compat with both. Extend in caller, don't assume in callee.

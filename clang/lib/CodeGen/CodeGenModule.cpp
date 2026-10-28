@@ -411,8 +411,8 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
     CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
   } else {
     switch (CGOpts.getSmallIntABICompat()) {
-    case CodeGenOptions::SmallIntABICompatKind::SysV:
-      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::SysV;
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
       break;
     case CodeGenOptions::SmallIntABICompatKind::Clang:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;

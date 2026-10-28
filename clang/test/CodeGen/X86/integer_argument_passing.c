@@ -18,18 +18,18 @@
 
 // Test -msmall-int-abi-compat flag
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=sysv %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=platform %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-NO-ASSUME-EXTENDED
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=sysv -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=platform -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-NO-EXTEND,CALLEE-NO-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 //
 // Check that the flag has no effect on targets with different platform ABI.
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=both %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=sysv %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=platform %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=clang %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=both -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=sysv -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=platform -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -msmall-int-abi-compat=clang -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CALLER-EXTEND,CALLEE-ASSUME-EXTENDED
 
 // CALLEE-ASSUME-EXTENDED: define{{.*}} i32 @ZeroExtend(i8 noundef zeroext %a, i16 noundef zeroext %b)

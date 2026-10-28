@@ -1003,7 +1003,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   if (isPromotableIntegerTypeForABI(Ty)) {
     switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
                                           getTarget().getTriple())) {
-    case CodeGenOptions::SmallIntABICompatKind::SysV:
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
       break;
     case CodeGenOptions::SmallIntABICompatKind::Clang:
       return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))

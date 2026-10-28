@@ -284,9 +284,9 @@ public:
   };
 
   enum class SmallIntABICompatKind {
-    SysV,  // Compat with SysV ABI (high bits unspecified).
-    Clang, // Compat with old Clang ABI (high bits zero/sign-extended).
-    Both,  // Compat with both. Extend in caller, don't assume in callee.
+    Platform, // Compat with platform ABI (high bits unspecified).
+    Clang,    // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,     // Compat with both. Extend in caller, don't assume in callee.
   };
 
   /// The code model to use (-mcmodel).
