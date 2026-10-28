@@ -1218,7 +1218,7 @@ bool SIGfx6CacheControl::enableRMWCacheBypass(
 bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
-  // Only handle load and store, not atomic read-modify-write insructions. The
+  // Only handle load and store, not atomic read-modify-write instructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
   assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
@@ -1623,7 +1623,7 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
-  // Only handle load and store, not atomic read-modify-write insructions. The
+  // Only handle load and store, not atomic read-modify-write instructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
   assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));

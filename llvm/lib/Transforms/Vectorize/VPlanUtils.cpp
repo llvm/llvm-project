@@ -763,9 +763,9 @@ VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
   if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
     // The step of a sub induction is negated, so NUW cannot be preserved. NSW
     // can, if the step is not the signed minimum.
-    ConstantInt *Step = ID.getConstIntStepValue();
+    std::optional<APInt> Step = ID.getConstStepValue();
     bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
-               Step && !Step->isMinValue(/*IsSigned=*/true);
+               Step && !Step->isMinSignedValue();
     return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
   }
 

@@ -1047,8 +1047,9 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         // Truncate if type size exceeds index space.
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
-                          /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+                          /*implicitTrunc=*/true);
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 
