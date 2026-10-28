@@ -9,6 +9,7 @@
 
 // RUN: mkdir -p %t/bin
 // RUN: mkdir -p %t/include/c++/v1
+// RUN: touch %t/include/c++/v1/__config_site
 // RUN: %clangxx -print-cxx-stdlib-include-dirs -stdlib=libc++ \
 // RUN:   --target=x86_64-unknown-linux-gnu -ccc-install-dir %t/bin \
 // RUN:   | FileCheck %s --check-prefix=LIBCXX-INCLUDES
