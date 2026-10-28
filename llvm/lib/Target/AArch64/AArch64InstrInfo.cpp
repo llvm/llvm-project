@@ -11552,14 +11552,20 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                 .addImm(0);
       MBB.insertAfter(It, SetFP);
 
+      CFIInstBuilder SetupCFIBuilder(MBB, std::next(STPXpre->getIterator()),
+                                     MachineInstr::FrameSetup);
+      // CFA needs to be adjusted between the STP and MOV when async unwind info
+      // is needed.
+      if (FI->needsAsyncDwarfUnwindInfo(MF))
+        SetupCFIBuilder.buildDefCFAOffset(16);
+
       // Describe the frame record with FP as the CFA. The encoder needs all
       // three to pick FRAME. No need to check for unwind info here: we only
       // get here if the function has it.
-      CFIInstBuilder CFIBuilder(MBB, std::next(SetFP->getIterator()),
-                                MachineInstr::FrameSetup);
-      CFIBuilder.buildDefCFA(AArch64::FP, 16);
-      CFIBuilder.buildOffset(AArch64::LR, -8);
-      CFIBuilder.buildOffset(AArch64::FP, -16);
+      SetupCFIBuilder.setInsertPoint(std::next(SetFP->getIterator()));
+      SetupCFIBuilder.buildDefCFA(AArch64::FP, 16);
+      SetupCFIBuilder.buildOffset(AArch64::LR, -8);
+      SetupCFIBuilder.buildOffset(AArch64::FP, -16);
 
       // ldp x29, x30, [sp], #16
       MachineInstr *LDPXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDPXpost))
@@ -11569,6 +11575,16 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                    .addReg(AArch64::SP)
                                    .addImm(2);
       Et = MBB.insert(Et, LDPXpost);
+
+      // Add the necessary CFI instructions to the epilogue if they are needed.
+      if (FI->needsAsyncDwarfUnwindInfo(MF)) {
+        CFIInstBuilder DestroyCFIBuilder(MBB, Et, MachineInstr::FrameDestroy);
+        DestroyCFIBuilder.buildDefCFA(AArch64::SP, 16);
+        DestroyCFIBuilder.setInsertPoint(std::next(Et));
+        DestroyCFIBuilder.buildDefCFAOffset(0);
+        DestroyCFIBuilder.buildRestore(AArch64::LR);
+        DestroyCFIBuilder.buildRestore(AArch64::FP);
+      }
     } else {
       // Insert a save before the outlined region
       MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
@@ -11578,8 +11594,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                   .addImm(-16);
       It = MBB.insert(It, STRXpre);
 
-      if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-        CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+      if (FI->needsDwarfUnwindInfo(MF)) {
+        CFIInstBuilder CFIBuilder(MBB, std::next(It), MachineInstr::FrameSetup);
 
         // Add a CFI saying the stack was moved 16 B down.
         CFIBuilder.buildDefCFAOffset(16);
@@ -11596,6 +11612,14 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                    .addReg(AArch64::SP)
                                    .addImm(16);
       Et = MBB.insert(Et, LDRXpost);
+
+      // Add the necessary CFI instructions to the epilogue if they are needed.
+      if (FI->needsAsyncDwarfUnwindInfo(MF)) {
+        CFIInstBuilder CFIBuilder(MBB, std::next(Et),
+                                  MachineInstr::FrameDestroy);
+        CFIBuilder.buildDefCFAOffset(0);
+        CFIBuilder.buildRestore(AArch64::LR);
+      }
     }
   }
 

@@ -1,5 +1,8 @@
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:     -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -verify-machineinstrs -aarch64-enable-async-unwind-for-minsize %s -o - | \
+# RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ASYNC
 
 # Do not use the MachO compact-unwind frame-record form when the outlined
 # sequence itself reads or writes FP. Restoring FP in the outlined epilogue
@@ -77,13 +80,15 @@ body:             |
 # CHECK: name:            OUTLINED_FUNCTION_0
 # CHECK-NOT: STPXpre
 # CHECK-NOT: $fp = ADDXri $sp, 0, 0
-# CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK: early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
-# CHECK-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
 # CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
 # CHECK-NEXT: $x9 = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT: $fp = ORRXrs $xzr, $x9, 0
 # CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
 # CHECK-NEXT: $w17 = ORRWri $wzr, 1
 # CHECK: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-ASYNC-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-ASYNC-NEXT: frame-destroy CFI_INSTRUCTION restore $w30
 # CHECK-NEXT: RET $lr

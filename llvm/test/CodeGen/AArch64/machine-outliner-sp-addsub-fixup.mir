@@ -588,6 +588,8 @@ body:             |
 
 # CHECK:       name:            [[ADD_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION offset $w30, -16
 # CHECK-NEXT:  BL @callee
 # CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
 # CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
@@ -596,6 +598,8 @@ body:             |
 
 # CHECK:       name:            [[SUB_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION offset $w30, -16
 # CHECK-NEXT:  BL @callee
 # CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
 # CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
@@ -604,6 +608,8 @@ body:             |
 
 # CHECK:       name:            [[SHIFTED_SUB_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION offset $w30, -16
 # CHECK-NEXT:  BL @callee
 # CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
 # CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
@@ -612,6 +618,8 @@ body:             |
 
 # CHECK:       name:            [[SUB_TO_ADD_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT:  frame-setup CFI_INSTRUCTION offset $w30, -16
 # CHECK-NEXT:  BL @callee
 # CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
 # CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
