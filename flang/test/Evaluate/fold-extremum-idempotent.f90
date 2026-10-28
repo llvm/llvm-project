@@ -1,4 +1,6 @@
-! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -fdebug-unparse %t/integer.f90 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -funsigned %t/unsigned.f90 2>&1 | FileCheck %s --check-prefix=UNSIGNED
 ! max(c, max(c, x)) folds to max(c, x), and likewise for min, in any operand
 ! order, when the repeated operand c is a constant.  Besides being a valid
 ! simplification, this makes an extent written to a module file as
@@ -10,6 +12,7 @@
 ! procedure characteristics and treats two dummy arguments at the same position
 ! as equal, so a repeated variable is not reliably the same variable; and a
 ! repeated impure function reference or VOLATILE read must be evaluated twice.
+!--- integer.f90
 subroutine s(n, m)
   integer, intent(in) :: n, m
   ! All four orientations of a repeated constant.
@@ -53,6 +56,8 @@ contains
     integer, intent(in) :: b
     !CHECK: PRINT *, max(a,max(b,0_4))
     print *, max(a, max(b, 0))
+    !CHECK: PRINT *, max(max(b,0_4),a)
+    print *, max(max(b, 0), a)
     !CHECK: PRINT *, min(a,min(b,9_4))
     print *, min(a, min(b, 9))
   end subroutine
@@ -73,4 +78,21 @@ contains
     calls = calls + 1
     tick = calls
   end function
+end subroutine
+
+!--- unsigned.f90
+! The UNSIGNED arm of the fold: a repeated unsigned constant is absorbed in
+! either operand order; a repeated unsigned variable is not.
+subroutine s(n, m)
+  unsigned, intent(in) :: n, m
+  !UNSIGNED: PRINT *, max(5U_4,n)
+  print *, max(5u, max(5u, n))
+  !UNSIGNED: PRINT *, max(n,5U_4)
+  print *, max(max(n, 5u), 5u)
+  !UNSIGNED: PRINT *, min(5U_4,n)
+  print *, min(5u, min(5u, n))
+  !UNSIGNED: PRINT *, max(m,max(m,n))
+  print *, max(m, max(m, n))
+  !UNSIGNED: PRINT *, max(max(m,n),m)
+  print *, max(max(m, n), m)
 end subroutine
