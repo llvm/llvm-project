@@ -1165,6 +1165,12 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   F->insert(I, Copy0MBB);
   F->insert(I, Copy1MBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  Copy0MBB->setCallFrameSize(CallFrameSize);
+  Copy1MBB->setCallFrameSize(CallFrameSize);
+
   // Update machine-CFG edges by transferring all successors of the current
   // block to the new block which will contain the Phi node for the select.
   Copy1MBB->splice(Copy1MBB->begin(), BB,
