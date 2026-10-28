@@ -2584,6 +2584,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_pwait",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_signal_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_epoll_pwait2",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait2.h"],
     target_compatible_with = select({
@@ -19671,10 +19689,8 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_pwait",
         ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_epoll_macros",
         ":types_sigset_t",
         ":types_struct_epoll_event",
     ],
