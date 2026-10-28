@@ -16,11 +16,9 @@
 
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/MD5.h"
+#include "llvm/Support/AMDGPUPrintf.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -178,31 +176,6 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   return appendArg(Builder, Desc, Arg, IsLast);
 }
 
-// Scan the format string to locate all specifiers, and mark the ones that
-// specify a string, i.e, the "%s" specifier with optional '*' characters.
-void llvm::locateAMDGPUPrintfCStrings(SparseBitVector<8> &BV, StringRef Str) {
-  static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
-  // Skip the first argument, the format string.
-  unsigned ArgIdx = 1;
-
-  size_t SpecPos;
-  while ((SpecPos = Str.find('%')) != StringRef::npos) {
-    Str = Str.drop_front(SpecPos + 1);
-    // "%%" prints a '%' and takes no argument.
-    if (Str.consume_front("%"))
-      continue;
-    size_t SpecEnd = Str.find_first_of(ConvSpecifiers);
-    if (SpecEnd == StringRef::npos)
-      return;
-    // Each '*' in the specifier takes an argument of its own.
-    ArgIdx += Str.take_front(SpecEnd).count('*');
-    if (Str[SpecEnd] == 's')
-      BV.set(ArgIdx);
-    Str = Str.drop_front(SpecEnd + 1);
-    ++ArgIdx;
-  }
-}
-
 // helper struct to package the string related data
 struct StringData {
   StringRef Str;
@@ -302,57 +275,6 @@ static Value *callBufferedPrintfStart(
       M->getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
 
   return Builder.CreateCall(PrintfAllocFn, Alloc_args, "printf_alloc_fn");
-}
-
-uint64_t llvm::getAMDGPUPrintfFormatHash(StringRef Fmt) {
-  MD5 Hasher;
-  MD5::MD5Result Hash;
-  Hasher.update(Fmt);
-  Hasher.final(Hash);
-  return Hash.low();
-}
-
-std::string llvm::getAMDGPUPrintfFormatMetadata(StringRef Fmt) {
-  // Try sticking to llvm.printf.fmts format, although we are not going to
-  // use the ID and argument size fields while printing,
-  return "0:0:" +
-         llvm::utohexstr(getAMDGPUPrintfFormatHash(Fmt), /*LowerCase=*/true) +
-         "," + Fmt.str();
-}
-
-void llvm::packAMDGPUPrintfConstantString(StringRef S,
-                                          SmallVectorImpl<uint32_t> &Words) {
-  std::string Str(S.str() + '\0');
-
-  DataExtractor Extractor(Str, /*IsLittleEndian=*/true);
-  DataExtractor::Cursor Offset(0);
-  while (Offset && Offset.tell() < Str.size()) {
-    const uint64_t ReadSize = 4;
-    uint64_t ReadNow = std::min(ReadSize, Str.size() - Offset.tell());
-    uint64_t ReadBytes = 0;
-    switch (ReadNow) {
-    default:
-      llvm_unreachable("min(4, X) > 4?");
-    case 1:
-      ReadBytes = Extractor.getU8(Offset);
-      break;
-    case 2:
-      ReadBytes = Extractor.getU16(Offset);
-      break;
-    case 3:
-      ReadBytes = Extractor.getU24(Offset);
-      break;
-    case 4:
-      ReadBytes = Extractor.getU32(Offset);
-      break;
-    }
-    cantFail(Offset.takeError(), "failed to read bytes from constant array");
-    Words.push_back(static_cast<uint32_t>(ReadBytes));
-  }
-  // Additional padding for 8 byte alignment
-  int Rem = (Str.size() % 8);
-  if (Rem > 0 && Rem <= 4)
-    Words.push_back(0);
 }
 
 // Prepare constant string argument to push onto the buffer
