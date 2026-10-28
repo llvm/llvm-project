@@ -15,6 +15,12 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/Utils/Local.h"
+#include <optional>
+#include "llvm/IR/Operator.h"
+#include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -494,9 +500,262 @@ void stripDisjointFlags(Module &M) {
             BO->setIsDisjoint(false);
 }
 
-// Generic pointers (agx-raise-to-air's address-space hint, llvm/IR/AIR.h)
-// as device pointers: Metal has no generic address space. A generic pointer
-// to threadgroup memory is wrong this way (the hint's documented limit).
+// Generic pointers (agx-raise-to-air's address-space hint, llvm/IR/AIR.h),
+// emulated: Metal has no generic address space. A generic address is an
+// integer in ZLUDA's AGX encoding, which its isspacep already tests as bits:
+// threadgroup addresses with bit 63 set, private (thread) addresses with bits
+// 63-62 = 01, device and constant addresses as they are (below 2^62; Metal's
+// threadgroup and private addresses are small integers, an M2 Max's device
+// addresses about 2^36). Casts to and from generic add and strip the tag; an
+// access through a generic pointer goes to the address space its origin shows
+// (a cast from it, through GEPs, phis and selects) or, unknown, to the one its
+// tag names, tested at run time. When the module casts no threadgroup
+// (private) address to generic, no generic address is one, and that branch
+// is left out: code that never mixes address spaces pays nothing.
+namespace generic {
+constexpr uint64_t SharedTag = 1ull << 63, PrivateTag = 1ull << 62;
+enum Space { Device, Shared, Private, Unknown };
+
+Space spaceOf(Value *P, SmallPtrSetImpl<Value *> &Seen) {
+  if (!Seen.insert(P).second)
+    return Device; // a cycle adds no origin
+  if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(P)) {
+    switch (ASC->getSrcAddressSpace()) {
+    case 3:
+      return Shared;
+    case 0:
+      return Private;
+    case 1:
+    case 2:
+      return Device;
+    default:
+      return Unknown;
+    }
+  }
+  if (auto *GEP = dyn_cast<GEPOperator>(P))
+    return spaceOf(GEP->getPointerOperand(), Seen);
+  auto Merge = [&](ArrayRef<Value *> Vs) {
+    std::optional<Space> R;
+    for (Value *V : Vs) {
+      Space S = spaceOf(V, Seen);
+      if (R && *R != S)
+        return Unknown;
+      R = S;
+    }
+    return R.value_or(Unknown);
+  };
+  if (auto *PN = dyn_cast<PHINode>(P))
+    return Merge(SmallVector<Value *, 4>(PN->incoming_values()));
+  if (auto *SI = dyn_cast<SelectInst>(P))
+    return Merge({SI->getTrueValue(), SI->getFalseValue()});
+  if (isa<ConstantPointerNull>(P))
+    return Device;
+  return Unknown;
+}
+
+Value *pointerOperand(Instruction *I) {
+  if (auto *L = dyn_cast<LoadInst>(I))
+    return L->getPointerOperand();
+  if (auto *S = dyn_cast<StoreInst>(I))
+    return S->getPointerOperand();
+  if (auto *R = dyn_cast<AtomicRMWInst>(I))
+    return R->getPointerOperand();
+  if (auto *C = dyn_cast<AtomicCmpXchgInst>(I))
+    return C->getPointerOperand();
+  return nullptr;
+}
+
+// P, a generic pointer, as a pointer into address space AS (its tag cleared).
+Value *untag(IRBuilder<> &B, Value *P, unsigned AS) {
+  auto *PT = PointerType::get(B.getContext(), AS);
+  if (AS == 1)
+    return B.CreateAddrSpaceCast(P, PT);
+  Value *I = B.CreatePtrToInt(P, B.getInt64Ty());
+  I = B.CreateAnd(I, ~(AS == 3 ? SharedTag : PrivateTag));
+  return B.CreateIntToPtr(I, PT);
+}
+
+// I, a memory access, through Ptr instead.
+void retarget(Instruction *I, Value *Ptr) {
+  if (auto *S = dyn_cast<StoreInst>(I))
+    S->setOperand(1, Ptr);
+  else
+    I->setOperand(0, Ptr);
+}
+
+void emulate(Module &M) {
+  bool AnyShared = false, AnyPrivate = false;
+  SmallVector<AddrSpaceCastInst *, 8> Casts;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F))
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        unsigned From = ASC->getSrcAddressSpace(), To = ASC->getDestAddressSpace();
+        if (To == air::GenericHintAS) {
+          AnyShared |= From == 3;
+          AnyPrivate |= From == 0;
+        }
+        if (To == air::GenericHintAS || From == air::GenericHintAS)
+          Casts.push_back(ASC);
+      }
+
+  // The accesses, classified while the casts still show the origins.
+  SmallVector<std::pair<Instruction *, Space>, 16> Accesses;
+  SmallVector<MemIntrinsic *, 4> MemOps;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F)) {
+      if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+        if (any_of(MI->args(), [](Value *A) {
+              return A->getType()->isPointerTy() &&
+                     A->getType()->getPointerAddressSpace() == air::GenericHintAS;
+            }))
+          MemOps.push_back(MI);
+        continue;
+      }
+      Value *P = pointerOperand(&I);
+      if (!P || P->getType()->getPointerAddressSpace() != air::GenericHintAS)
+        continue;
+      SmallPtrSet<Value *, 8> Seen;
+      Space S = spaceOf(P, Seen);
+      if (S == Unknown && !AnyShared && !AnyPrivate)
+        S = Device;
+      Accesses.push_back({&I, S});
+    }
+  // Generic memcpy / memset / memmove: as loops of loads and stores, which
+  // are then dispatched like the others.
+  if (!MemOps.empty()) {
+    TargetTransformInfo TTI(M.getDataLayout());
+    for (MemIntrinsic *MI : MemOps) {
+      if (auto *MC = dyn_cast<MemCpyInst>(MI))
+        expandMemCpyAsLoop(MC, TTI);
+      else if (auto *MS = dyn_cast<MemSetInst>(MI))
+        expandMemSetAsLoop(MS);
+      else if (auto *MM = dyn_cast<MemMoveInst>(MI))
+        expandMemMoveAsLoop(MM, TTI);
+      else
+        continue;
+      MI->eraseFromParent();
+    }
+    // the loops' accesses, through the same pointers
+    if (!MemOps.empty()) {
+      Accesses.clear();
+      for (Function &F : M)
+        for (Instruction &I : instructions(F)) {
+          Value *P = pointerOperand(&I);
+          if (!P || P->getType()->getPointerAddressSpace() != air::GenericHintAS)
+            continue;
+          SmallPtrSet<Value *, 8> Seen;
+          Space S = spaceOf(P, Seen);
+          if (S == Unknown && !AnyShared && !AnyPrivate)
+            S = Device;
+          Accesses.push_back({&I, S});
+        }
+    }
+  }
+
+  for (auto [I, S] : Accesses) {
+    Value *P = pointerOperand(I);
+    IRBuilder<> B(I);
+    if (S != Unknown) {
+      retarget(I, untag(B, P, S == Device ? 1 : S == Shared ? 3 : 0));
+      continue;
+    }
+    // Unknown origin: by the tag, in a block per address space.
+    Value *Bits = B.CreatePtrToInt(P, B.getInt64Ty());
+    BasicBlock *Head = I->getParent();
+    BasicBlock *Tail = SplitBlock(Head, I);
+    Function *F = Head->getParent();
+    SmallVector<std::pair<unsigned, BasicBlock *>, 3> Arms;
+    Arms.push_back({1, BasicBlock::Create(M.getContext(), "generic.device", F, Tail)});
+    if (AnyShared)
+      Arms.push_back({3, BasicBlock::Create(M.getContext(), "generic.shared", F, Tail)});
+    if (AnyPrivate)
+      Arms.push_back({0, BasicBlock::Create(M.getContext(), "generic.private", F, Tail)});
+    Head->getTerminator()->eraseFromParent();
+    B.SetInsertPoint(Head);
+    if (Arms.size() == 2) {
+      Value *IsOther = Arms[1].first == 3
+                           ? B.CreateICmpSLT(Bits, B.getInt64(0))
+                           : B.CreateICmpEQ(B.CreateLShr(Bits, 62), B.getInt64(1));
+      B.CreateCondBr(IsOther, Arms[1].second, Arms[0].second);
+    } else {
+      // (no switch: the AIR writer has none, LowerSwitch has run)
+      BasicBlock *NotShared =
+          BasicBlock::Create(M.getContext(), "generic.notshared", F, Arms[0].second);
+      B.CreateCondBr(B.CreateICmpSLT(Bits, B.getInt64(0)), Arms[1].second, NotShared);
+      IRBuilder<> NB(NotShared);
+      NB.CreateCondBr(NB.CreateICmpEQ(NB.CreateLShr(Bits, 62), NB.getInt64(1)),
+                      Arms[2].second, Arms[0].second);
+    }
+    PHINode *Phi = nullptr;
+    if (!I->getType()->isVoidTy()) {
+      Phi = PHINode::Create(I->getType(), Arms.size(), "", Tail->begin());
+      I->replaceAllUsesWith(Phi);
+    }
+    for (auto [AS, BB] : Arms) {
+      IRBuilder<> AB(BB);
+      Value *Ptr = untag(AB, P, AS);
+      Value *Result = nullptr;
+      if (AS == 0 && isa<AtomicRMWInst, AtomicCmpXchgInst>(I)) {
+        // private memory belongs to one thread: its atomics are plain
+        // accesses
+        if (auto *R = dyn_cast<AtomicRMWInst>(I)) {
+          LoadInst *Old = AB.CreateAlignedLoad(R->getType(), Ptr, R->getAlign(), R->isVolatile());
+          Value *New = buildAtomicRMWValue(R->getOperation(), AB, Old, R->getValOperand());
+          AB.CreateAlignedStore(New, Ptr, R->getAlign(), R->isVolatile());
+          Result = Old;
+        } else {
+          auto *X = cast<AtomicCmpXchgInst>(I);
+          Type *T = X->getNewValOperand()->getType();
+          LoadInst *Old = AB.CreateAlignedLoad(T, Ptr, X->getAlign(), X->isVolatile());
+          Value *Eq = AB.CreateICmpEQ(Old, X->getCompareOperand());
+          AB.CreateAlignedStore(AB.CreateSelect(Eq, X->getNewValOperand(), Old), Ptr,
+                                X->getAlign(), X->isVolatile());
+          Result = AB.CreateInsertValue(
+              AB.CreateInsertValue(PoisonValue::get(X->getType()), Old, 0), Eq, 1);
+        }
+      } else {
+        Instruction *C = I->clone();
+        AB.Insert(C);
+        retarget(C, Ptr);
+        if (AS == 0) {
+          if (auto *L = dyn_cast<LoadInst>(C))
+            L->setAtomic(AtomicOrdering::NotAtomic);
+          else if (auto *St = dyn_cast<StoreInst>(C))
+            St->setAtomic(AtomicOrdering::NotAtomic);
+        }
+        Result = C;
+      }
+      AB.CreateBr(Tail);
+      if (Phi)
+        Phi->addIncoming(Result, BB);
+    }
+    I->eraseFromParent();
+  }
+
+  // Casts: into generic adds the tag, out of it strips it.
+  for (AddrSpaceCastInst *ASC : Casts) {
+    unsigned From = ASC->getSrcAddressSpace(), To = ASC->getDestAddressSpace();
+    IRBuilder<> B(ASC);
+    Value *R = nullptr;
+    if (To == air::GenericHintAS && (From == 3 || From == 0)) {
+      Value *I = B.CreatePtrToInt(ASC->getOperand(0), B.getInt64Ty());
+      R = B.CreateIntToPtr(B.CreateOr(I, From == 3 ? SharedTag : PrivateTag),
+                           ASC->getType());
+    } else if (From == air::GenericHintAS && (To == 3 || To == 0)) {
+      R = untag(B, ASC->getOperand(0), To);
+    }
+    if (R) {
+      R->takeName(ASC);
+      ASC->replaceAllUsesWith(R);
+      ASC->eraseFromParent();
+    }
+  }
+}
+} // namespace generic
+
+// Generic pointers (agx-raise-to-air's address-space hint) as device
+// pointers, after generic::emulate has made their accesses and casts
+// explicit.
 void genericToDevice(Module &M) {
   LLVMContext &Ctx = M.getContext();
   auto *Generic = PointerType::get(Ctx, air::GenericHintAS);
@@ -511,6 +770,7 @@ void genericToDevice(Module &M) {
       TGGlobals.push_back(&GV);
   if (!TGGlobals.empty())
     convertUsersOfConstantsToInstructions(TGGlobals);
+  generic::emulate(M);
   auto Map = [&](Type *T) -> Type * {
     if (T == Generic)
       return Device;
@@ -579,31 +839,6 @@ void genericToDevice(Module &M) {
         ASC->replaceAllUsesWith(ASC->getOperand(0));
         ASC->eraseFromParent();
       }
-    // A threadgroup address made generic (now device) only to be an integer
-    // is the threadgroup pointer's integer, which Metal has. Any other such
-    // pointer would address device memory: Metal has no generic pointer to
-    // threadgroup memory, and its compiler crashed on the cast.
-    SmallVector<AddrSpaceCastInst *, 4> TGCasts;
-    for (Instruction &I : instructions(F))
-      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I);
-          ASC && ASC->getSrcAddressSpace() == 3 &&
-          ASC->getDestAddressSpace() == 1)
-        TGCasts.push_back(ASC);
-    for (AddrSpaceCastInst *ASC : TGCasts) {
-      for (User *U : make_early_inc_range(ASC->users()))
-        if (auto *P2I = dyn_cast<PtrToIntInst>(U)) {
-          IRBuilder<> B(P2I);
-          P2I->replaceAllUsesWith(
-              B.CreatePtrToInt(ASC->getOperand(0), P2I->getType(), P2I->getName()));
-          P2I->eraseFromParent();
-        }
-      if (ASC->use_empty())
-        ASC->eraseFromParent();
-      else
-        F.getContext().diagnose(DiagnosticInfoUnsupported(
-            F, "a generic pointer to threadgroup memory used as a pointer "
-               "(Metal has no generic address space)"));
-    }
   }
 }
 
