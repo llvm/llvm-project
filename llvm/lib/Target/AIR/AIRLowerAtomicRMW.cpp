@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
 
 using namespace llvm;
@@ -162,23 +163,43 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
 
   // 32-bit read-modify-write operations without an AIR function (nand,
   // uinc_wrap / udec_wrap: CUDA's atomicInc / atomicDec, float min / max) as
-  // compare-exchange loops, which are lowered below. Only for Metal: the
-  // portable form keeps the operation for consumers that have it (AGX).
+  // compare-exchange loops, which are lowered below. So are float add and sub
+  // in threadgroup memory: an M2 Max rejects air.atomic.local.add.f32
+  // ("Unsupported local float atomic operation for given target"). Only for
+  // Metal: the portable form keeps the operation for consumers that have it
+  // (AGX).
   if (!OrderingHints) {
     SmallVector<AtomicRMWInst *, 4> Loops;
     for (Function &F : M)
       for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
+        for (Instruction &I : BB) {
+          Type *T = nullptr;
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+            T = RMW->getValOperand()->getType();
+          else if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I))
+            T = CX->getNewValOperand()->getType();
+          // Metal's atomics are 32-bit: there is no AIR function to lower a
+          // wider (or narrower) one to, and the AIR writer would abort.
+          if (T && !T->isIntegerTy(32) && !T->isFloatTy())
+            reportFatalUsageError(
+                ("Metal has no " + Twine(T->getPrimitiveSizeInBits()) +
+                 "-bit atomic operations (in " + F.getName() + ")")
+                    .str()
+                    .c_str());
           if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-            Type *T = RMW->getValOperand()->getType();
             unsigned AS =
                 RMW->getPointerOperand()->getType()->getPointerAddressSpace();
-            if ((T->isIntegerTy(32) || T->isFloatTy()) &&
+            bool LocalFloatArith =
+                T->isFloatTy() && AS == metal::AS::Threadgroup &&
+                (RMW->getOperation() == AtomicRMWInst::FAdd ||
+                 RMW->getOperation() == AtomicRMWInst::FSub);
+            if (LocalFloatArith ||
                 buildAtomicName(AS != metal::AS::Threadgroup,
                                 RMW->getOperation(), T->isFloatTy())
                     .empty())
               Loops.push_back(RMW);
           }
+        }
     for (AtomicRMWInst *RMW : Loops) {
       Type *T = RMW->getValOperand()->getType();
       Value *Ptr = RMW->getPointerOperand();
