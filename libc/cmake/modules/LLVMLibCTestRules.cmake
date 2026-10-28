@@ -506,6 +506,7 @@ function(_get_libc_test_dependencies output_var user_depends startup_target_dep 
         list(APPEND fq_deps_list
           libc.src.poll.poll
           libc.src.signal.kill
+          libc.src.signal.signal
           libc.src.stdio.fflush
           libc.src.stdio.stderr
           libc.src.stdio.stdout
