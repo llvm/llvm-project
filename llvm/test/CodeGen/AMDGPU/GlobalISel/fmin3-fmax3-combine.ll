@@ -626,9 +626,6 @@ define float @fmaximumnum3_f32(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max3_num_f32 v0, v0, v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call float @llvm.maximumnum.f32(float %a, float %b)
@@ -653,9 +650,6 @@ define float @fminimumnum3_f32(float %a, float %b, float %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min3_num_f32 v0, v0, v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call float @llvm.minimumnum.f32(float %a, float %b)
@@ -680,11 +674,7 @@ define half @fmaximumnum3_f16(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; GFX12-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; GFX12-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_max3_num_f16 v0.l, v0.l, v0.h, v1.l
+; GFX12-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call half @llvm.maximumnum.f16(half %a, half %b)
   %m2 = call half @llvm.maximumnum.f16(half %m1, half %c)
@@ -708,11 +698,7 @@ define half @fminimumnum3_f16(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; GFX12-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; GFX12-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min3_num_f16 v0.l, v0.l, v0.h, v1.l
+; GFX12-NEXT:    v_min3_num_f16 v0.l, v0.l, v1.l, v2.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call half @llvm.minimumnum.f16(half %a, half %b)
   %m2 = call half @llvm.minimumnum.f16(half %m1, half %c)
