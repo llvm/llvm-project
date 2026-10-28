@@ -2172,13 +2172,13 @@ public:
     return false;
   }
   void Unparse(const llvm::omp::Directive &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x, ompVersion).str());
   }
   void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAdjustArgsClause &x) {
-    Walk(std::get<OmpAdjustArgsClause::OmpAdjustOp>(x.t).v);
-    Put(":");
+    using Modifier = OmpAdjustArgsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<parser::OmpObjectList>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
@@ -2317,7 +2317,7 @@ public:
     Put(")");
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
   void Unparse(const OmpDirectiveSpecification &x) {
@@ -2807,7 +2807,7 @@ public:
   }
   void Unparse(const OpenMPInvalidDirective &x) {
     BeginOpenMP();
-    Word("!$OMP ");
+    Word(x.isExtensionSentinel ? "!$OMPX " : "!$OMP ");
     Put(parser::ToUpperCaseLetters(x.source.ToString()));
     Put("\n");
     EndOpenMP();
@@ -2910,6 +2910,12 @@ public:
   WALK_NESTED_ENUM(AccDataModifier, Modifier)
   WALK_NESTED_ENUM(AccessSpec, Kind) // R807
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
+  void Unparse(const CUDADataAttrSpec &x) { // CUDA
+    Walk(std::get<common::CUDADataAttr>(x.t));
+    if (std::get<std::optional<CUDADataAttrSpec::Implicit>>(x.t)) {
+      Word("(IMPLICIT)");
+    }
+  }
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)
@@ -2924,7 +2930,7 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
+  WALK_NESTED_ENUM(OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind

@@ -3,7 +3,7 @@
 // CHECK:      Name: .llvm_addrsig
 // CHECK-NEXT: VirtualSize: 0x0
 // CHECK-NEXT: VirtualAddress: 0x0
-// CHECK-NEXT: RawDataSize: 6
+// CHECK-NEXT: RawDataSize: 0x6
 // CHECK-NEXT: PointerToRawData:
 // CHECK-NEXT: PointerToRelocations: 0x0
 // CHECK-NEXT: PointerToLineNumbers: 0x0

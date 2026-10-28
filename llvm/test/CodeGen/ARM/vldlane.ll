@@ -548,19 +548,21 @@ define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; BASIC:       @ %bb.0:
 ; BASIC-NEXT:    .save {r11, lr}
 ; BASIC-NEXT:    push {r11, lr}
-; BASIC-NEXT:    vld1.64 {d18, d19}, [r1]
-; BASIC-NEXT:    mov r3, r0
+; BASIC-NEXT:    mov r3, r2
+; BASIC-NEXT:    mov r2, r1
+; BASIC-NEXT:    vld1.64 {d18, d19}, [r2]
+; BASIC-NEXT:    mov r1, r0
 ; BASIC-NEXT:    vorr q10, q9, q9
-; BASIC-NEXT:    lsl r1, r2, #1
+; BASIC-NEXT:    lsl r2, r3, #1
 ; BASIC-NEXT:    ldr r0, [r0]
 ; BASIC-NEXT:    vorr q11, q9, q9
-; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0], r1
+; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0], r2
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8
-; BASIC-NEXT:    str r0, [r3]
-; BASIC-NEXT:    vmov r1, lr, d16
+; BASIC-NEXT:    str r0, [r1]
+; BASIC-NEXT:    vmov r3, lr, d16
 ; BASIC-NEXT:    vmov r2, r12, d17
-; BASIC-NEXT:    mov r0, r1
+; BASIC-NEXT:    mov r0, r3
 ; BASIC-NEXT:    mov r1, lr
 ; BASIC-NEXT:    mov r3, r12
 ; BASIC-NEXT:    pop {r11, lr}

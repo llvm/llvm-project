@@ -1250,8 +1250,6 @@ void BlockFrequencyInfoImpl<BT>::solveIrreducibleMass(LoopData &Loop) {
   BlockMass TotalExit;
   for (auto [I, Succ, Pr] : Ex) {
     uint64_t M = (F[I] * Pr).scale(UINT64_MAX);
-    if (!M)
-      continue;
     Loop.Exits.emplace_back(Succ, BlockMass(M));
     TotalExit += BlockMass(M);
   }

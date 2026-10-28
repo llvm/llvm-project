@@ -71,17 +71,20 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
-  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                  unsigned Opcode1,
-                                  const SmallBitVector &OpcodeMask,
-                                  TTI::TargetCostKind CostKind) const override;
+      const Instruction *CtxI = nullptr) const override;
+  InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const override;
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
   InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
@@ -157,9 +160,7 @@ public:
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
-      std::optional<FastMathFlags> FMF) const override {
-    return InstructionCost::getInvalid();
-  }
+      std::optional<FastMathFlags> FMF) const override;
 
   InstructionCost getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                 TTI::TargetCostKind CostKind,
@@ -232,7 +233,8 @@ public:
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override;
   bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-                       const SmallBitVector &OpcodeMask) const override;
+                       const SmallBitVector &OpcodeMask,
+                       ArrayRef<const Value *> Scalars) const override;
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool isExpensiveToSpeculativelyExecute(const Instruction *I) const override;
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override;

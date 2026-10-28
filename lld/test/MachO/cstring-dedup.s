@@ -3,13 +3,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/more-foo.s -o %t/more-foo.o
 # RUN: %lld -dylib %t/test.o %t/more-foo.o -o %t/test
-# RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test | \
+# RUN: llvm-objdump --no-leading-headers --macho --section="__TEXT,__cstring" %t/test | \
 # RUN:   FileCheck %s --check-prefix=STR --implicit-check-not foo --implicit-check-not bar
 # RUN: llvm-objdump --macho --section="__DATA,ptrs" --syms %t/test | FileCheck %s
 # RUN: llvm-readobj --section-headers %t/test | FileCheck %s --check-prefix=HEADER
 
 ## Make sure we only have 3 deduplicated strings in __cstring.
-# STR: Contents of (__TEXT,__cstring) section
 # STR: {{[[:xdigit:]]+}} foo
 # STR: {{[[:xdigit:]]+}} barbaz
 # STR: {{[[:xdigit:]]+}} {{$}}

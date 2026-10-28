@@ -31,7 +31,7 @@ struct vec {
 // RDC-DAG: @x.managed = global i32 1
 // NORDC-DAG: @x = internal externally_initialized global ptr null
 // RDC-DAG: @x = externally_initialized global ptr null
-// HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
+// NORDC-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
 __managed__ int x = 1;
 
 // DEV-DAG: @v.managed = addrspace(1) externally_initialized global [100 x %struct.vec] zeroinitializer, align 4
@@ -55,11 +55,14 @@ extern __managed__ int ex;
 // HOST-DAG: @_ZL2sx.managed = internal global i32 1
 // HOST-DAG: @_ZL2sx = internal externally_initialized global ptr null
 // NORDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx\00"
-// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH:.*]]\00"
 
 // POSTFIX:  @_ZL2sx.static.[[HASH:.*]] = addrspace(1) externally_initialized global ptr addrspace(1) null
-// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH]]\00"
+// POSTFIX: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL2sx.static.[[HASH]]\00"
 static __managed__ int sx = 1;
+
+// With RDC the host emits offloading entries instead of runtime registration.
+// RDC-DAG: @.offloading.entry.x = {{.*}}ptr @x.managed{{.*}}ptr @x
+// RDC-DAG: @.offloading.entry._ZL2sx.static.{{.*}} = {{.*}}ptr @_ZL2sx.managed{{.*}}ptr @_ZL2sx
 
 // DEV-DAG: @llvm.compiler.used
 // DEV-SAME-DAG: @x.managed
@@ -161,7 +164,27 @@ __device__ __host__ int load4() {
   return ex;
 }
 
-// HOST-DAG: __hipRegisterManagedVar({{.*}}, ptr @x, ptr @x.managed, ptr @[[DEVNAMEX]], i64 4, i32 4)
-// HOST-DAG: __hipRegisterManagedVar({{.*}}, ptr @_ZL2sx, ptr @_ZL2sx.managed, ptr @[[DEVNAMESX]]
-// HOST-NOT: __hipRegisterManagedVar({{.*}}, ptr @ex, ptr @ex.managed
-// HOST-DAG: declare void @__hipRegisterManagedVar(ptr, ptr, ptr, ptr, i64, i32)
+
+namespace gh198079 {
+__managed__ int x = 0;
+
+struct S {
+  int *p;
+};
+
+__device__ __host__ void f() {
+  S s{&x};
+}
+// COMMON-LABEL: define {{.*}}@{{.*}}gh198079{{.*}}f{{.*}}()
+// DEV: %ld.managed = load ptr addrspace(1), ptr addrspace(1) @_ZN8gh1980791xE, align 4
+// DEV: %0 = addrspacecast ptr addrspace(1) %ld.managed to ptr
+// DEV: store ptr %0, ptr %p
+// HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE, align 4
+// HOST: store ptr %ld.managed, ptr %p
+}
+
+// Without RDC the host registers managed variables with the runtime.
+// NORDC-DAG: __hipRegisterManagedVar({{.*}}, ptr @x, ptr @x.managed, ptr @[[DEVNAMEX]], i64 4, i32 4)
+// NORDC-DAG: __hipRegisterManagedVar({{.*}}, ptr @_ZL2sx, ptr @_ZL2sx.managed, ptr @[[DEVNAMESX]]
+// NORDC-NOT: __hipRegisterManagedVar({{.*}}, ptr @ex, ptr @ex.managed
+// NORDC-DAG: declare void @__hipRegisterManagedVar(ptr, ptr, ptr, ptr, i64, i32)

@@ -23,11 +23,11 @@ entry:
 define void @cmp_2_doubles(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: cmp_2_doubles:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movapd %xmm0, %xmm3
+; CHECK-NEXT:    movaps %xmm0, %xmm3
 ; CHECK-NEXT:    cmpordpd %xmm2, %xmm2
-; CHECK-NEXT:    movapd %xmm2, %xmm0
+; CHECK-NEXT:    movaps %xmm2, %xmm0
 ; CHECK-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
-; CHECK-NEXT:    movapd %xmm1, (%rax)
+; CHECK-NEXT:    movaps %xmm1, (%rax)
 ; CHECK-NEXT:    retq
 entry:
   %0 = fcmp oeq <2 x double> %c, %c

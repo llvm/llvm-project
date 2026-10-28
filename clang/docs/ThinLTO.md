@@ -1,8 +1,5 @@
 # ThinLTO
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

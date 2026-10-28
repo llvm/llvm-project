@@ -794,6 +794,7 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   } else {
     auto &HMFI = *MF->getInfo<HexagonMachineFunctionInfo>();
     Register AR = HMFI.getStackAlignBaseReg();
+    assert(AR.isValid() && "Missing stack align base register");
     SDValue CH = CurDAG->getEntryNode();
     SDValue Ops[] = { CurDAG->getCopyFromReg(CH, DL, AR, MVT::i32), FI, Zero };
     R = CurDAG->getMachineNode(Hexagon::PS_fia, DL, MVT::i32, Ops);
@@ -1433,35 +1434,10 @@ void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   if (!HFI.needsAligna(*MF))
     return;
 
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineBasicBlock *EntryBB = &MF->front();
-  Align EntryMaxA = MFI.getMaxAlign();
-
-  // Reserve the first non-volatile register.
-  Register AP = 0;
   auto &HRI = *HST.getRegisterInfo();
-  BitVector Reserved = HRI.getReservedRegs(*MF);
-  for (const MCPhysReg *R = HRI.getCalleeSavedRegs(MF); *R; ++R) {
-    if (Reserved[*R])
-      continue;
-    AP = *R;
-    break;
-  }
+  Register AP = HRI.computeStackAlignBaseRegister(*MF);
   assert(AP.isValid() && "Couldn't reserve stack align register");
-  BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AP)
-      .addImm(EntryMaxA.value());
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseReg(AP);
-}
-
-void HexagonDAGToDAGISel::updateAligna() {
-  auto &HFI = *MF->getSubtarget<HexagonSubtarget>().getFrameLowering();
-  if (!HFI.needsAligna(*MF))
-    return;
-  auto *AlignaI = const_cast<MachineInstr*>(HFI.getAlignaInstr(*MF));
-  assert(AlignaI != nullptr);
-  unsigned MaxA = MF->getFrameInfo().getMaxAlign().value();
-  if (AlignaI->getOperand(1).getImm() < MaxA)
-    AlignaI->getOperand(1).setImm(MaxA);
 }
 
 // Match a frame index that can be used in an addressing mode.

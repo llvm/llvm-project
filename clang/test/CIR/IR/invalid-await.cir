@@ -1,21 +1,52 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
-cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
+cir.func coroutine @bad_task() { // expected-error {{coroutine function must have exactly one cir.coroutine op}}
   cir.return
 }
 
 // -----
 
 cir.func coroutine @missing_condition() {
-  cir.scope {
-    cir.await(user, ready : { // expected-error {{ready region must end with cir.condition}}
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : { // expected-error {{ready region must end with cir.condition}}
       cir.yield
     }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @missing_suspend_point(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : { // expected-error {{suspend region must end with cir.coro.suspend_point}}
+      cir.condition(%arg0)
+    }, suspend : { 
       cir.yield
     }, resume : {
       cir.yield
     },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
   }
-  cir.coro.body {
-  }
-  cir.return
+  cir.trap
 }

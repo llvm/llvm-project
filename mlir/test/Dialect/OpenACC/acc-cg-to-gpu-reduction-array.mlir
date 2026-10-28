@@ -57,7 +57,7 @@ func.func @array_reduction(%arg0: memref<2xi32>) {
         }
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%0 : memref<2xi32>) to varPtr(%arg0 : memref<2xi32>) dataClause(acc_reduction) implicit(true) name("r")
   return
@@ -80,7 +80,7 @@ func.func @array_reduction_small_shared() {
         par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2xi32>
     memref.dealloc %shared : memref<2xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -107,7 +107,7 @@ func.func @array_reduction_strided_extent() {
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : memref<8xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -130,7 +130,7 @@ func.func @array_reduction_dynamic_par_dims(%buf: memref<?xi32>, %n: index) {
     acc.reduction_accumulate_array %view bounds(%bounds) <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : memref<?xi32, strided<[1]>>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -159,7 +159,7 @@ func.func @rank_two_array_reduction() {
     %bounds = acc.bounds extent(%c6 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x3xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -191,7 +191,7 @@ func.func @rank_three_array_reduction() {
     %bounds = acc.bounds extent(%c8 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x2x2xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -219,7 +219,7 @@ func.func @dynamic_rank_two_array_reduction(
     %bounds = acc.bounds extent(%extent : index)
     acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x?xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -250,7 +250,7 @@ func.func @rank_two_partial_bounds_strided_layout() {
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : memref<3x4xi32, strided<[8, 2]>>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -272,15 +272,20 @@ func.func @partial_thread_x_reduction() {
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
-// CHECK-LABEL: func.func @thread_y_reduction_still_aligned
-// CHECK: %[[C32:.*]] = arith.constant 32 : index
+// A worker-only launch keeps its (1, N, 1) shape: every worker owns one thread,
+// so the workers are already the subgroup lanes. Padding ThreadX would fold the
+// workers into lanes and serialize them.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_single_thread_rows
+// CHECK: %[[C16_ROWS:.*]] = arith.constant 16 : index
+// CHECK-NOT: arith.constant 32 : index
 // CHECK: gpu.launch
-// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32]],
-func.func @thread_y_reduction_still_aligned() {
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %[[C16_ROWS]],
+func.func @thread_y_reduction_single_thread_rows() {
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
   %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
@@ -291,7 +296,83 @@ func.func @thread_y_reduction_still_aligned() {
     acc.reduction_accumulate %c0_i32 to %local <add>
         par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// A worker-only launch with several threads per worker keeps its shape too:
+// the partials are combined in the lowest ThreadY threads of the block.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_narrow_rows
+// CHECK: %[[C8_NARROW:.*]] = arith.constant 8 : index
+// CHECK: %[[C16_NARROW:.*]] = arith.constant 16 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C8_NARROW]], %{{.*}} = %[[C16_NARROW]],
+func.func @thread_y_reduction_narrow_rows() {
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c8 par_dim(#acc.par_dim<thread_x>)
+  %ty = acc.par_width %c16 par_dim(#acc.par_dim<thread_y>)
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// A ThreadX reduction in the same region shuffles within a row, so the rows
+// are aligned again and blockDim.y is divided by the same factor.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_with_thread_x_reduction
+// CHECK: %[[C32_BOTH:.*]] = arith.constant 32 : index
+// CHECK: %[[C4_BOTH:.*]] = arith.constant 4 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_BOTH]], %{{.*}} = %[[C4_BOTH]],
+func.func @thread_y_reduction_with_thread_x_reduction() {
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c8 par_dim(#acc.par_dim<thread_x>)
+  %ty = acc.par_width %c16 par_dim(#acc.par_dim<thread_y>)
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %worker = memref.alloca() : memref<i32>
+    %vector = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %worker <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
+    acc.reduction_accumulate %c0_i32 to %vector <add>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// More workers than a subgroup still get aligned: the worker-indexed shared
+// reduction buffer only holds subgroupSize entries.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_more_workers_than_subgroup
+// CHECK: %[[C32_WIDE:.*]] = arith.constant 32 : index
+// CHECK: %[[C2_WIDE:.*]] = arith.constant 2 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_WIDE]], %{{.*}} = %[[C2_WIDE]],
+func.func @thread_y_reduction_more_workers_than_subgroup() {
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c64 par_dim(#acc.par_dim<thread_y>)
+  acc.compute_region launch(%kbx = %bx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -315,7 +396,7 @@ func.func @thread_x_reduction_with_thread_y_width() {
     acc.reduction_accumulate %c0_i32 to %local <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -339,7 +420,7 @@ func.func @thread_x_reduction_with_thread_z_width() {
     acc.reduction_accumulate %c0_i32 to %local <add>
         par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -369,6 +450,87 @@ func.func @thread_only_array_reduction_single_block() {
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
         par_dims(#acc<par_dims[thread_x]>) : memref<8xi32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// A block dim launched one wide is one block, so a thread-only accumulate is
+// just as complete as it is with no block dim at all.
+//
+// CHECK-LABEL: func.func @thread_only_array_reduction_unit_block
+// CHECK: gpu.launch
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK: scf.for %[[UB_IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[UB_ELT:.*]] = memref.load %[[UB_ALLOCA:.*]][%[[UB_IV]]] : memref<8xi32>
+// CHECK:   %[[UB_RED:.*]] = gpu.all_reduce add %[[UB_ELT]]
+// CHECK:   memref.store %[[UB_RED]], %[[UB_ALLOCA]][%[[UB_IV]]] : memref<8xi32>
+// CHECK: }
+func.func @thread_only_array_reduction_unit_block() {
+  %c1_pw = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<8xi32>
+    scf.for %i = %c0 to %c8 step %c1 {
+      memref.store %c0_i32, %local[%i] : memref<8xi32>
+    }
+    %bounds = acc.bounds extent(%c8 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[thread_x]>) : memref<8xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// A dimension launched one wide partitions nothing, so an accumulate over
+// block_x and a one-wide thread_y reduces to the block-only case: the per-gang
+// copy already holds the result and no cross-thread merge is emitted.
+//
+// CHECK-LABEL: func.func @unit_thread_dim_array_reduction_is_block_only
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: memref.atomic_rmw
+func.func @unit_thread_dim_array_reduction_is_block_only() {
+  %c1_pw = arith.constant 1 : index
+  %c8_pw = arith.constant 8 : index
+  %bx = acc.par_width %c8_pw par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c1_pw par_dim(#acc.par_dim<thread_y>)
+  acc.compute_region launch(%kbx = %bx, %kty = %ty) {
+    %c2 = arith.constant 2 : index
+    %local = memref.alloca() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : memref<2xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}
+
+// When every dimension the accumulate names is launched one wide, nothing
+// partitions the reduction at all and the accumulator already holds the result.
+//
+// CHECK-LABEL: func.func @all_unit_dims_array_reduction_is_nop
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: memref.atomic_rmw
+func.func @all_unit_dims_array_reduction_is_nop() {
+  %c1_pw = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c1_pw par_dim(#acc.par_dim<thread_y>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  acc.compute_region launch(%kbx = %bx, %kty = %ty, %ktx = %tx) {
+    %c2 = arith.constant 2 : index
+    %local = memref.alloca() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : memref<2xi32>
+    acc.yield
+  } <{origin = "acc.parallel"}>
   return
 }

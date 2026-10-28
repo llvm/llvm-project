@@ -328,6 +328,13 @@ public:
   /// Return true if the loop body is safe to clone in practice.
   bool isSafeToClone() const;
 
+  /// Like `isSafeToClone`, but for transformations where the cloned loop
+  /// bodies may run conditionally. This additionally checks that we may form
+  /// phis for all values that are live-out from the loop (in particular that
+  /// no token-like values are live-out) and that there are no convergent calls
+  /// (which must not gain new control dependencies).
+  bool isSafeToCloneConditionally(const DominatorTree &DT) const;
+
   /// Returns true if the loop is annotated parallel.
   ///
   /// A parallel loop can be assumed to not contain any dependencies between
@@ -685,6 +692,16 @@ LLVM_ABI bool isMustProgress(const Loop *L);
 /// Return true if this loop can be assumed to run for a finite number of
 /// iterations.
 LLVM_ABI bool isFinite(const Loop *L);
+
+/// Return true if every cycle in the loop nest rooted at \p L is finite.
+/// This holds if \p L is finite by assumption, or if the nest has no
+/// irreducible cycles and every loop is either finite by assumption or
+/// has a computable constant max backedge-taken count.
+///
+/// This does not guarantee termination, as a call within the nest may
+/// never return.
+LLVM_ABI bool isLoopNestFinite(Loop *L, ScalarEvolution &SE,
+                               const LoopInfo &LI);
 
 /// Return whether an MDNode might represent an access group.
 ///

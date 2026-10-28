@@ -1210,16 +1210,42 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 // this table could be generated automatically from RegInfo.
 Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                                 const MachineFunction &MF) const {
-  Register Reg = StringSwitch<Register>(RegName)
-    .Case("i0", SP::I0).Case("i1", SP::I1).Case("i2", SP::I2).Case("i3", SP::I3)
-    .Case("i4", SP::I4).Case("i5", SP::I5).Case("i6", SP::I6).Case("i7", SP::I7)
-    .Case("o0", SP::O0).Case("o1", SP::O1).Case("o2", SP::O2).Case("o3", SP::O3)
-    .Case("o4", SP::O4).Case("o5", SP::O5).Case("o6", SP::O6).Case("o7", SP::O7)
-    .Case("l0", SP::L0).Case("l1", SP::L1).Case("l2", SP::L2).Case("l3", SP::L3)
-    .Case("l4", SP::L4).Case("l5", SP::L5).Case("l6", SP::L6).Case("l7", SP::L7)
-    .Case("g0", SP::G0).Case("g1", SP::G1).Case("g2", SP::G2).Case("g3", SP::G3)
-    .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
-    .Default(0);
+  StringRef Name(RegName);
+  Name.consume_front("%");
+  Register Reg = StringSwitch<Register>(Name)
+                     .Case("i0", SP::I0)
+                     .Case("i1", SP::I1)
+                     .Case("i2", SP::I2)
+                     .Case("i3", SP::I3)
+                     .Case("i4", SP::I4)
+                     .Case("i5", SP::I5)
+                     .Cases({"i6", "fp"}, SP::I6)
+                     .Case("i7", SP::I7)
+                     .Case("o0", SP::O0)
+                     .Case("o1", SP::O1)
+                     .Case("o2", SP::O2)
+                     .Case("o3", SP::O3)
+                     .Case("o4", SP::O4)
+                     .Case("o5", SP::O5)
+                     .Cases({"o6", "sp"}, SP::O6)
+                     .Case("o7", SP::O7)
+                     .Case("l0", SP::L0)
+                     .Case("l1", SP::L1)
+                     .Case("l2", SP::L2)
+                     .Case("l3", SP::L3)
+                     .Case("l4", SP::L4)
+                     .Case("l5", SP::L5)
+                     .Case("l6", SP::L6)
+                     .Case("l7", SP::L7)
+                     .Case("g0", SP::G0)
+                     .Case("g1", SP::G1)
+                     .Case("g2", SP::G2)
+                     .Case("g3", SP::G3)
+                     .Case("g4", SP::G4)
+                     .Case("g5", SP::G5)
+                     .Case("g6", SP::G6)
+                     .Case("g7", SP::G7)
+                     .Default(0);
 
   // If we're directly referencing register names
   // (e.g in GCC C extension `register int r asm("g1");`),
@@ -1642,7 +1668,7 @@ static SPCC::CondCodes FPCondCCodeToFCC(ISD::CondCode CC) {
 SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                                          const SparcSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = Subtarget->is64Bit() ? MVT::i64 : MVT::i32;
 
   // Instructions which use registers as conditionals examine all the
   // bits (as does the pseudo SELECT_CC expansion). I don't think it
@@ -1687,7 +1713,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // However, load and store *are* legal.
     setOperationAction(ISD::LOAD, MVT::v2i32, Legal);
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
 
     // And we need to promote i64 loads/stores into vector load/store
@@ -3169,6 +3195,26 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Idx = Op.getOperand(1);
+  assert(Vec.getSimpleValueType() == MVT::v2i32 && "Unexpected vector type");
+
+  // Constant indices are handled by the TableGen patterns.
+  if (isa<ConstantSDNode>(Idx))
+    return Op;
+
+  EVT VT = Op.getValueType();
+  EVT IdxVT = Idx.getValueType();
+  SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(0, DL, IdxVT));
+  SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(1, DL, IdxVT));
+  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, IdxVT), Elt0, Elt1,
+                         ISD::SETEQ);
+}
+
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -3239,6 +3285,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
@@ -3708,16 +3756,19 @@ bool SparcTargetLowering::isFNegFree(EVT VT) const {
   return false;
 }
 
-bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
-    return true;
+    return FPImmAction::Legal;
   if (Subtarget->isVIS3())
     return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-           Imm.getExactLog2Abs() == -1;
-  return false;
+                   Imm.getExactLog2Abs() == -1
+               ? FPImmAction::Legal
+               : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

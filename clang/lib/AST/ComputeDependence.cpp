@@ -905,9 +905,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
 
 ExprDependence clang::computeDependence(DependentTemplateIdExpr *E) {
   auto D = ExprDependence::TypeValueInstantiation;
-  if (E->getTemplateName().getDependence() &
-      TemplateNameDependence::UnexpandedPack)
-    D |= ExprDependence::UnexpandedPack;
+  D |= toExprDependence(E->getTemplateName().getDependence());
   D |= getDependenceInExpr(E->getNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());

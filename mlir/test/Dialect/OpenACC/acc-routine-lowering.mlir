@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-routine-lowering -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -acc-routine-lowering=device-type=nvidia -split-input-file | FileCheck %s --check-prefix=DEVICE-NVIDIA
 
 // Test seq routine: body is wrapped in acc.compute_region with one
 // acc.par_width (sequential).
@@ -86,7 +87,7 @@ acc.routine @routine_cf func(@host_cf) seq
 // CHECK: %[[EXE:[0-9]+]] = scf.execute_region
 // CHECK: scf.yield %{{.*}} : i32
 // CHECK: acc.yield %[[EXE]] : i32
-// CHECK: } {origin = "acc.routine"}
+// CHECK: } <{origin = "acc.routine"}>
 // CHECK: return %[[CR]] : i32
 func.func @host_cf(%cond: i1) -> i32 {
   cf.cond_br %cond, ^then, ^else
@@ -108,6 +109,19 @@ acc.routine @routine_bind func(@host_bind) seq bind("myname")
 func.func @host_bind() {
   return
 }
+
+// -----
+
+// Test routine with bind(name) under device_type(*): skipped because bind applies to device_type nvidia
+// which is not named on the acc.routine directive
+acc.routine @star_bind func(@star_bound) seq bind("myname" [#acc.device_type<star>])
+// DEVICE-NVIDIA: acc.routine @star_bind func(@star_bound)
+// DEVICE-NVIDIA-NOT: acc.specialized_routine
+// DEVICE-NVIDIA: func.func @star_bound()
+func.func @star_bound() {
+  return
+}
+
 
 // -----
 
@@ -134,3 +148,16 @@ acc.routine @routine_nohost func(@host_nohost) gang nohost
 func.func @host_nohost() {
   return
 }
+
+// -----
+
+// The device copy keeps the host's visibility, signature attributes and
+// function properties.
+acc.routine @routine_attrs func(@host_attrs) seq
+func.func private @host_attrs(%v: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext}) attributes {no_inline, test.marker = "keep"} {
+  return %v : i16
+}
+// CHECK-LABEL: func.func private @host_attrs(
+// CHECK:       func.func private @host_attrs_0(
+// CHECK-SAME:    %{{.*}}: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+// CHECK-SAME:    attributes {acc.specialized_routine = #acc.specialized_routine<@routine_attrs, <seq>, "host_attrs">, test.marker = "keep", no_inline}

@@ -75,6 +75,15 @@ public:
 
 FunctionPass *createX86FPStackifierLegacyPass();
 
+/// This pass aligns the code so that it conforms to the LFI sandboxing rules.
+class X86LFIRewritePass : public RequiredPassInfoMixin<X86LFIRewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LFIRewritePass();
+
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
 class X86InsertVZeroUpperPass
@@ -98,7 +107,14 @@ FunctionPass *createX86IndirectBranchTrackingLegacyPass();
 
 /// Return a pass that pads short functions with NOOPs.
 /// This will prevent a stall when returning on the Atom.
-FunctionPass *createX86PadShortFunctions();
+class X86PadShortFunctionsPass
+    : public OptionalPassInfoMixin<X86PadShortFunctionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PadShortFunctionsLegacyPass();
 
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA
@@ -124,7 +140,7 @@ FunctionPass *createX86FixupInstTuningLegacyPass();
 
 /// Return a pass that reduces the size of vector constant pool loads.
 class X86FixupVectorConstantsPass
-    : public OptionalPassInfoMixin<X86FixupInstTuningPass> {
+    : public OptionalPassInfoMixin<X86FixupVectorConstantsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -358,6 +374,21 @@ public:
 
 FunctionPass *createX86PartialReductionLegacyPass();
 
+/// Return a pass that inserts sfence intrinsics between non-temporal stores and
+/// potential synchronization points (or function returns).
+class X86FenceNonTemporalStoresPass
+    : public RequiredPassInfoMixin<X86FenceNonTemporalStoresPass> {
+private:
+  const X86TargetMachine *TM;
+
+public:
+  explicit X86FenceNonTemporalStoresPass(const X86TargetMachine *TM = nullptr)
+      : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createX86FenceNonTemporalStoresLegacyPass();
+
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
 class X86WinEHUnwindV2Pass
     : public OptionalPassInfoMixin<X86WinEHUnwindV2Pass> {
@@ -503,6 +534,7 @@ void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
+void initializeX86FenceNonTemporalStoresLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86IndirectBranchTrackingLegacyPass(PassRegistry &);

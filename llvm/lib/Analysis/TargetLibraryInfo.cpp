@@ -188,6 +188,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinpif);
     TLI.setUnavailable(LibFunc_cospi);
     TLI.setUnavailable(LibFunc_cospif);
+    TLI.setUnavailable(LibFunc_sincos_stret);
+    TLI.setUnavailable(LibFunc_sincosf_stret);
     TLI.setUnavailable(LibFunc_sincospi_stret);
     TLI.setUnavailable(LibFunc_sincospif_stret);
   }
@@ -896,8 +898,19 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   initializeLibCalls(TLI, T, StandardNames, VecLib);
 }
 
+static bool initializeIsErrnoFunctionCall(const Triple &T) {
+  // Assume errno is implemented as a function call on the following
+  // known environments.
+  // TODO: Could refine them.
+  return T.isOSDarwin() || T.isAndroid() || T.isGNUEnvironment() ||
+         T.isMusl() || T.getEnvironment() == Triple::LLVM ||
+         T.getEnvironment() == Triple::Mlibc ||
+         T.getEnvironment() == Triple::MSVC;
+}
+
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
-                                             VectorLibrary VecLib) {
+                                             VectorLibrary VecLib)
+    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
@@ -909,7 +922,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -921,7 +934,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -935,6 +948,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -946,6 +960,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -1072,9 +1087,13 @@ static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
 
   auto &Context = M.getContext();
   PointerType *PtrTy = PointerType::get(Context, 0);
-  StructType *SizedPtrTy = StructType::get(
-      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
-  return FTy.getReturnType() == SizedPtrTy;
+  Type *SizeTTy = Type::getIntNTy(Context, SizeTSizeBits);
+  Type *RetTy = FTy.getReturnType();
+  // Return type struct __sized_ptr_t { void*, size_t } is lowered to
+  // { ptr, iN } on some targets (e.g. x86_64) and [2 x iN] on others (e.g.
+  // AArch64).
+  return RetTy == StructType::get(Context, {PtrTy, SizeTTy}) ||
+         RetTy == ArrayType::get(SizeTTy, 2);
 }
 
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
@@ -1103,8 +1122,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-    // Special handling for the sincospi functions that return either
-    // a struct or vector:
+    // Special handling for the sincos and sincospi functions that return
+    // either a struct or vector:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
   case LibFunc_sincospi_stret:
   case LibFunc_sincospif_stret: {
     if (NumParams != 1)
@@ -1240,25 +1261,31 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-static const VecDesc VecFuncs_Accelerate[] = {
+// The VecDesc tables should be constant-initialized to avoid compilation
+// regression. Now VecDesc (see class definition) intentionally keeps trivially
+// constructable/destructable, so the tables land in .rdata and do not run
+// through CRT dynamic init (which can overflow small stack on MSVC Debug
+// DLL loads). When LLVM requires C++20 mark them constinit to enforce this
+// at compile time.
+static constexpr VecDesc VecFuncs_Accelerate[] = {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 };
 
-static const VecDesc VecFuncs_DarwinLibSystemM[] = {
+static constexpr VecDesc VecFuncs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 };
 
-static const VecDesc VecFuncs_LIBMVEC_X86[] = {
+static constexpr VecDesc VecFuncs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
-static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+static constexpr VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
@@ -1266,33 +1293,33 @@ static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 };
 
-static const VecDesc VecFuncs_MASSV[] = {
+static constexpr VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_MASSV_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SVML[] = {
+static constexpr VecDesc VecFuncs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SVML_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
-static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
@@ -1300,7 +1327,7 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
@@ -1308,7 +1335,7 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
 
-static const VecDesc VecFuncs_ArmPL[] = {
+static constexpr VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
@@ -1316,7 +1343,7 @@ static const VecDesc VecFuncs_ArmPL[] = {
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
 
-const VecDesc VecFuncs_AMDLIBM[] = {
+constexpr VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},

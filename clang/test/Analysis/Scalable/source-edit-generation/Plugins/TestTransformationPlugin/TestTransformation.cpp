@@ -89,15 +89,7 @@ private:
 
 } // namespace
 
-namespace clang::ssaf {
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFTestTransformationAnchorSource = 0;
-} // namespace clang::ssaf
-
-// This global causes issue in stage2 with ASan-instrumented clang so
-// adding the no-ASan attribute.
 static TransformationRegistry::Add<TestTransformation>
-    __attribute__((no_sanitize("address")))
     RegisterTestTransformation("test-transformation",
                                "Test transformation for the SSAF "
                                "source-edit-generation lit suite");

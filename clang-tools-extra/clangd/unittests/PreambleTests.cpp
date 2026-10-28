@@ -54,10 +54,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-MATCHER_P2(Distance, File, D, "") {
-  return arg.first() == File && arg.second == D;
-}
-
 // Builds a preamble for BaselineContents, patches it for ModifiedContents and
 // returns the includes in the patch.
 IncludeStructure

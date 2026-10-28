@@ -1,8 +1,14 @@
+// Verify that both historical and current builtin encodings are unchanged.
+// RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode -emit-bytecode-producer=fixed -emit-bytecode-dialect-version=builtin=0 %s -o %t.0
+// RUN: cmp -s %t.0 %p/builtin_fixed_0.mlirbc
+// RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode -emit-bytecode-producer=fixed -emit-bytecode-dialect-version=builtin=1 %s -o %t.1
+// RUN: cmp -s %t.1 %p/builtin_fixed_1.mlirbc
+// Verify that the default encoding is the current version.
 // RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode -emit-bytecode-producer=fixed %s -o %t
-// Verify unchanged.
-// RUN: cmp -s %t %p/builtin_fixed_0.mlirbc
-// Verify can read as expected.
-// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-local-scope %t | FileCheck %s
+// RUN: cmp -s %t %t.1
+// Verify that the checked-in fixtures can be read as expected.
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-local-scope %p/builtin_fixed_0.mlirbc | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-local-scope %p/builtin_fixed_1.mlirbc | FileCheck %s
 
 // Regression test for all builtin dialect bytecode attribute and
 // type encodings. Exercises every entry in BuiltinDialectAttributes and
@@ -125,8 +131,8 @@ module @TestFloatAttr attributes {
   // CHECK-DAG: bytecode.f16 = 1.500000e+00 : f16
   // CHECK-DAG: bytecode.f32 = 3.140000e+00 : f32
   // CHECK-DAG: bytecode.f64 = 1.000000e+01 : f64
-  // CHECK-DAG: bytecode.f80 = 0.1{{.*}} : f80
-  // CHECK-DAG: bytecode.f128 = 0.1{{.*}} : f128
+  // CHECK-DAG: bytecode.f80 = 1.000000e-01 : f80
+  // CHECK-DAG: bytecode.f128 = 1.000000e-01 : f128
   // CHECK-DAG: bytecode.tf32 = 1.000000e+00 : tf32
   // CHECK-DAG: bytecode.f8E5M2 = 1.000000e+00 : f8E5M2
   // CHECK-DAG: bytecode.f8E4M3 = 1.000000e+00 : f8E4M3

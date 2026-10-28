@@ -47,11 +47,31 @@ def TestEnum
   let cppNamespace = "test";
 }
 
+def TestStructEnum
+    : I32EnumAttr<"TestStructEnum", "an enum nested in a struct parameter", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+}
+
 def TestOtherEnum
     : I32Enum<"TestOtherEnum", "another test enum", [
         I32EnumCase<"Dog", 0, "dog">,
         I32EnumCase<"Cat", 1, "cat">,
         I32EnumCase<"Fish", 2, "fish">,
+      ]> {
+  let cppNamespace = "test";
+}
+
+def TestPrettyEnum
+    : I32Enum<"TestPrettyEnum", "an enum with bracketed attribute syntax", [
+        I32EnumCase<"First", 0, "first">,
+        I32EnumCase<"Second", 1, "second">,
+        I32EnumCase<"Third", 2, "third">,
+        I32EnumCase<"NonKeyword", 3, "non-keyword">,
       ]> {
   let cppNamespace = "test";
 }
@@ -87,12 +107,42 @@ def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
 }
 
 //===----------------------------------------------------------------------===//
+// Greedy CFG Rewrite Mode
+//===----------------------------------------------------------------------===//
+
+// The CFG change performed by `test.greedy_cfg_rewrite`. The cases are
+// documented on the op.
+def TestGreedyCfgRewriteMode
+    : I32Enum<"GreedyCfgRewriteMode", "a CFG change during a greedy rewrite", [
+        I32EnumCase<"Observe", 0, "observe">,
+        I32EnumCase<"AppendUnreachable", 1, "append_unreachable">,
+        I32EnumCase<"AppendReachable", 2, "append_reachable">,
+        I32EnumCase<"InsertEntry", 3, "insert_entry">,
+        I32EnumCase<"MoveEntry", 4, "move_entry">,
+        I32EnumCase<"MoveEntryAway", 5, "move_entry_away">,
+        I32EnumCase<"EraseEntry", 6, "erase_entry">,
+        I32EnumCase<"Redirect", 7, "redirect">,
+        I32EnumCase<"DoubleRedirect", 8, "double_redirect">,
+        I32EnumCase<"Reconnect", 9, "reconnect">,
+        I32EnumCase<"DisconnectParent", 10, "disconnect_parent">,
+        I32EnumCase<"MoveParent", 11, "move_parent">,
+        I32EnumCase<"MoveErase", 12, "move_erase">,
+        I32EnumCase<"Merge", 13, "merge">,
+        I32EnumCase<"MergeDisconnect", 14, "merge_disconnect">,
+        I32EnumCase<"RedirectRetarget", 15, "redirect_retarget">,
+      ]> {
+  let cppNamespace = "::test";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Bit Enum
 //===----------------------------------------------------------------------===//
 
 // Define the C++ enum.
+def TestBitEnumNone : I32BitEnumCaseNone<"None", "none">;
 def TestBitEnum
     : I32BitEnum<"TestBitEnum", "a test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"Read", 0, "read">,
         I32BitEnumCaseBit<"Write", 1, "write">,
         I32BitEnumCaseBit<"Execute", 2, "execute">,
@@ -104,12 +154,23 @@ def TestBitEnum
 // Define an enum with a different separator
 def TestBitEnumVerticalBar
     : I32BitEnum<"TestBitEnumVerticalBar", "another test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"User", 0, "user">,
         I32BitEnumCaseBit<"Group", 1, "group">,
         I32BitEnumCaseBit<"Other", 2, "other">,
       ]> {
   let cppNamespace = "test";
   let separator = " | ";
+}
+
+def TestStructBitEnum
+    : I32BitEnum<"TestStructBitEnum", "a bit enum nested in a struct", [
+        TestBitEnumNone,
+        I32BitEnumCaseBit<"Read", 0, "read">,
+        I32BitEnumCaseBit<"Write", 1, "write">,
+      ]> {
+  let cppNamespace = "test";
+  let separator = ", ";
 }
 
 //===----------------------------------------------------------------------===//

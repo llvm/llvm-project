@@ -12,6 +12,7 @@
 // CHECK-NEXT:   Magic: Magic64 (0xFEEDFACF)
 // CHECK-NEXT:   CpuType: X86-64 (0x1000007)
 // CHECK-NEXT:   CpuSubType: CPU_SUBTYPE_X86_64_ALL (0x3)
+// CHECK-NEXT:   CpuCapabilities: 0x0
 // CHECK-NEXT:   FileType: Relocatable (0x1)
 // CHECK-NEXT:   NumOfLoadCommands: 3
 // CHECK-NEXT:   SizeOfLoadCommands: 192

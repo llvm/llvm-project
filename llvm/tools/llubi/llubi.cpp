@@ -56,9 +56,9 @@ cl::OptionCategory InterpreterCategory("Interpreter Options");
 static cl::opt<unsigned> MaxMem(
     "max-mem",
     cl::desc("Max amount of memory (in bytes) that can be allocated by the"
-             " program, including stack, heap, and global variables."
-             " Set to 0 to disable the limit."),
-    cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
+             " program, including stack, heap, and global variables."),
+    cl::value_desc("N"), cl::init(std::numeric_limits<unsigned>::max()),
+    cl::cat(InterpreterCategory));
 
 static cl::opt<unsigned>
     MaxSteps("max-steps",
@@ -201,7 +201,9 @@ public:
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm ub-aware interpreter\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm ub-aware interpreter\n");
 
   if (EntryFunc.empty()) {
     WithColor::error() << "--entry-function name cannot be empty\n";
@@ -217,8 +219,6 @@ int main(int argc, char **argv) {
     WithColor::error() << "--vscale value must be a power of 2\n";
     return 1;
   }
-
-  LLVMContext Context;
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -275,6 +275,10 @@ int main(int argc, char **argv) {
   if (!EntryFn) {
     WithColor::error() << '\'' << EntryFunc
                        << "\' function not found in module.\n";
+    return 1;
+  }
+  if (EntryFn->isDeclaration()) {
+    WithColor::error() << '\'' << EntryFunc << "\' must be definition.\n";
     return 1;
   }
   TargetLibraryInfo TLI(Ctx.getTLIImpl());
