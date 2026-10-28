@@ -3583,14 +3583,11 @@ bool VPlanTransforms::handleUncountableEarlyExits(
               m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
     assert(Matched && "Terminator must be BranchOnCond");
 
-    // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
-    // the correct block mask.
     VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-    auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-        VPInstruction::MaskedCond,
+    VPValue *CondToEarlyExit =
         TrueSucc == ExitBlock
             ? CondOfEarlyExitingVPBB
-            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
+            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB);
     assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
             !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
             VPDT.properlyDominates(
@@ -3602,6 +3599,26 @@ bool VPlanTransforms::handleUncountableEarlyExits(
         ExitBlock,
         CondToEarlyExit,
     });
+  }
+
+  if (Style == UncountableExitStyle::ReadOnly) {
+    // Lanes past the exit can be poison that the scalar loop never branched on,
+    // so freeze them to prevent branching on poison.
+    for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
+      VPRecipeBase *Term = VPBB->getTerminator();
+      if (!Term || VPBB == LatchVPBB)
+        continue;
+      Term->setOperand(0, VPBuilder(Term).createFreeze(Term->getOperand(0)));
+    }
+
+    // An exit's condition is false on any path that didn't go through its
+    // exiting block.
+    for (EarlyExitInfo &Exit : Exits) {
+      DenseMap<VPBasicBlock *, VPValue *> Defs = {
+          {HeaderVPBB, Plan.getFalse()}};
+      Defs[Exit.EarlyExitingVPBB] = Exit.CondToExit;
+      Exit.CondToExit = vputils::reconstructSSA(LatchVPBB, Defs);
+    }
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
@@ -3738,6 +3755,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
           ExitIRI->getIncomingValueForBlock(EarlyExitingVPBB);
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
+        DenseMap<VPBasicBlock *, VPValue *> Defs = {
+            {HeaderVPBB, Plan.getPoison(IncomingVal->getScalarType())}};
+        Defs[EarlyExitingVPBB] = IncomingVal;
+        IncomingVal = vputils::reconstructSSA(LatchVPBB, Defs);
         VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
         NewIncoming = EarlyExitBuilder.createNaryOp(
             VPInstruction::ExtractLane, {FirstActiveLane, IncomingVal},
