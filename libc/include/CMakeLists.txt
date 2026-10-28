@@ -261,6 +261,22 @@ add_header(
 )
 
 add_header_macro(
+  paths
+  ../libc/include/paths.yaml
+  paths.h
+  DEPENDS
+)
+
+add_header_macro(
+  values
+  ../libc/include/values.yaml
+  values.h
+  DEPENDS
+    .float
+    .limits
+)
+
+add_header_macro(
   sysexits
   ../libc/include/sysexits.yaml
   sysexits.h
