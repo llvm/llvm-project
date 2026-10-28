@@ -126,51 +126,58 @@ static void specializeForLoopForUnrolling(ForOp op) {
 static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                  ForOp &partialIteration, Value &splitBound) {
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.getLowerBound());
-  auto ubInt = getConstantIntValue(forOp.getUpperBound());
-  auto stepInt = getConstantIntValue(forOp.getStep());
-
-  // No specialization necessary if step size is 1. Also bail out in case of an
-  // invalid zero or negative step which might have happened during folding.
-  if (stepInt && *stepInt <= 1)
-    return failure();
-
-  // No specialization necessary if step already divides upper bound evenly.
-  // Fast path: lb, ub and step are constants.
-  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
-    return failure();
-
-  // Only the dynamic path computes the peeling bound with affine.apply, which
-  // accepts only index operands.
-  if ((!lbInt || !ubInt || !stepInt) &&
-      !forOp.getInductionVar().getType().isIndex())
-    return failure();
-
-  // Slow path: Examine the ops that define lb, ub and step.
-  AffineExpr sym0, sym1, sym2;
-  bindSymbols(b.getContext(), sym0, sym1, sym2);
-  SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
-                              forOp.getStep()};
-  AffineMap map = AffineMap::get(0, 3, {(sym1 - sym0) % sym2});
-  affine::fullyComposeAffineMapAndOperands(&map, &operands);
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(map.getResult(0)))
-    if (constExpr.getValue() == 0)
-      return failure();
-
-  // New upper bound: max(%lb, %ub - (%ub - %lb) mod %step). Affine `mod` is
-  // non-negative, so without the clamp an empty loop (%lb >= %ub) gets a split
-  // bound below %lb and its partial iteration executes.
-  auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2), sym0},
-                               b.getContext());
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
   b.setInsertionPoint(forOp);
   auto loc = forOp.getLoc();
-  splitBound = b.createOrFold<AffineMaxOp>(loc, modMap,
-                                           ValueRange{forOp.getLowerBound(),
-                                                      forOp.getUpperBound(),
-                                                      forOp.getStep()});
-  if (splitBound.getType() != forOp.getLowerBound().getType())
-    splitBound = b.createOrFold<arith::IndexCastOp>(
-        loc, forOp.getLowerBound().getType(), splitBound);
+
+  bool isUnsigned = forOp.getUnsignedCmp();
+  IntegerAttr lbAttr, ubAttr, stepAttr;
+  if (matchPattern(stepVal, m_Constant(&stepAttr))) {
+    APInt step = stepAttr.getValue();
+    if (isUnsigned ? step.ule(1) : step.sle(1))
+      return failure();
+  }
+  if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
+      matchPattern(ubVal, m_Constant(&ubAttr))) {
+
+    APInt lb = lbAttr.getValue();
+    APInt ub = ubAttr.getValue();
+
+    if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
+      return failure();
+
+    // lb < ub here, so ub - lb as an unsigned value is the exact distance, even
+    // for signed loops whose range exceeds the signed max. hence urem for both.
+    if (stepAttr && (ub - lb).urem(stepAttr.getValue()).isZero())
+      return failure();
+  }
+
+  // affine reasoning is signed and index-only,
+  // so use it only for signed index loops.
+  if (!isUnsigned && forOp.getInductionVar().getType().isIndex()) {
+    AffineExpr sym0, sym1, sym2;
+    bindSymbols(b.getContext(), sym0, sym1, sym2);
+    SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
+                                forOp.getStep()};
+    AffineMap map = AffineMap::get(0, 3, {(sym1 - sym0) % sym2});
+    affine::fullyComposeAffineMapAndOperands(&map, &operands);
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(map.getResult(0)))
+      if (constExpr.getValue() == 0)
+        return failure();
+  }
+
+  // split = ub - ((ub - min(lb, ub)) remui step), with a signed or unsigned min
+  // to match the loop. For ub <= lb the min gives a zero remainder, so
+  // split = ub and both loops stay empty. For ub > lb the wrapping subtraction
+  // is the exact distance when read as unsigned, even beyond the signed range,
+  // which is why remui is used for signed loops as well.
+  Value lbEff = isUnsigned ? b.createOrFold<arith::MinUIOp>(loc, lbVal, ubVal)
+                           : b.createOrFold<arith::MinSIOp>(loc, lbVal, ubVal);
+  Value diff = b.createOrFold<arith::SubIOp>(loc, ubVal, lbEff);
+  Value rem = b.createOrFold<arith::RemUIOp>(loc, diff, stepVal);
+  splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
@@ -220,6 +227,11 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
     return failure();
 
+  // The affine.min/max simplification relies on signed reasoning, which does
+  // not hold for unsigned loops, so leave those ops untouched.
+  if (forOp.getUnsignedCmp())
+    return success();
+
   // Rewrite affine.min and affine.max ops.
   rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
 
@@ -245,9 +257,9 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   // Check whether we have a unsigned loop
   if (forOp.getUnsignedCmp()) {
     IntegerAttr lbAttr, ubAttr, stepAttr;
-    if (matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) &&
-        matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) &&
-        matchPattern(forOp.getStep(), m_Constant(&stepAttr))) {
+    if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
+        matchPattern(ubVal, m_Constant(&ubAttr)) &&
+        matchPattern(stepVal, m_Constant(&stepAttr))) {
 
       // Get the constants as APInt at the loop’s own bit width
       APInt lb = lbAttr.getValue();
@@ -314,9 +326,6 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    if (!peelFront && forOp.getUnsignedCmp())
-      return rewriter.notifyMatchFailure(forOp,
-                                         "unsigned loops are not supported");
 
     // Do not peel already peeled loops.
     if (forOp->hasDiscardableAttr(kPeeledLoopLabel))

@@ -487,44 +487,72 @@ template <class ELFT> void ICF<ELFT>::run() {
   //
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
-  uint32_t uniqueId = 0;
-  ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
-      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
+  uint32_t uniqueId = 1;
+  ctx.in.ehFrame->iterateFDEWithLSDA(
+      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = uniqueId++; });
 
-  // Collect sections to merge.
-  for (InputSectionBase *sec : ctx.inputSections) {
-    auto *s = dyn_cast<InputSection>(sec);
-    if (s && s->eqClass[0] == 0) {
-      if (isEligible(s))
-        sections.push_back(s);
-      else
-        // Ineligible sections are assigned unique IDs, i.e. each section
-        // belongs to an equivalence class of its own.
-        s->eqClass[0] = s->eqClass[1] = ++uniqueId;
+  // Assign a temporary class ID (eqClassBase) to eligible sections and assign
+  // unique IDs to ineligible sections. Use eqClassBase as the base for class
+  // IDs. Each ineligible section belongs to an equivalence class of its own.
+  constexpr size_t chunkSize = 1024;
+  ArrayRef<InputSectionBase *> inputs = ctx.inputSections;
+  size_t numInputChunks = divideCeil(inputs.size(), chunkSize);
+  auto chunkRange = [&](size_t c, size_t total) {
+    auto begin = c * chunkSize;
+    return std::make_pair(begin, std::min(begin + chunkSize, total));
+  };
+  uint32_t eqClassBase = uniqueId + inputs.size();
+  SmallVector<uint32_t, 0> firstIdx(numInputChunks);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    auto [begin, end] = chunkRange(c, inputs.size());
+    uint32_t n = 0;
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == 0) {
+        if (isEligible(s)) {
+          s->eqClass[0] = eqClassBase;
+          ++n;
+        } else {
+          s->eqClass[0] = s->eqClass[1] = uniqueId + i;
+        }
+      }
     }
-  }
+    // Temporarily store the number of sections per chunk.
+    firstIdx[c] = n;
+  });
 
-  // Number candidates above the unique IDs so that hashRelocs() can tell them
-  // apart. Use eqClassBase as the base for class IDs as well.
-  size_t numSections = sections.size();
-  uint32_t eqClassBase = ++uniqueId;
-  parallelFor(0, numSections,
-              [&](size_t i) { sections[i]->eqClass[0] = eqClassBase + i; });
+  // Compute the total number of eligible sections and each chunk's left index.
+  size_t numSections = 0;
+  for (size_t c = 0; c != numInputChunks; ++c) {
+    auto n = std::exchange(firstIdx[c], numSections);
+    numSections += n;
+  }
+  sections.resize_for_overwrite(numSections);
+  // Update temporary class ID above the unique IDs so that hashRelocs() can
+  // tell them apart.
+  assert(uint64_t(eqClassBase) + numSections <= UINT32_MAX);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    auto [begin, end] = chunkRange(c, inputs.size());
+    auto idx = firstIdx[c];
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == eqClassBase) {
+        s->eqClass[0] += idx;
+        sections[idx++] = s;
+      }
+    }
+  });
 
   // Hash sections in chunks. An edge is a relocation to a candidate, recorded
   // as the target's index. Each chunk appends its sections' edges to its own
   // buffer; edgeEnd[i] is where section i's edges end within that buffer.
-  constexpr size_t chunkSize = 1024;
   size_t numChunks = divideCeil(numSections, chunkSize);
-  SmallVector<uint64_t, 0> hashes;
-  SmallVector<uint32_t, 0> edgeEnd;
-  hashes.resize_for_overwrite(numSections);
-  edgeEnd.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> hashes(numSections, llvm::for_overwrite);
+  SmallVector<uint32_t, 0> edgeEnd(numSections, llvm::for_overwrite);
   SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numChunks);
   parallelFor(0, numChunks, [&](size_t c) {
     SmallVectorImpl<uint32_t> &edges = chunkEdges[c];
-    size_t begin = c * chunkSize,
-           end = std::min(begin + chunkSize, numSections);
+    auto [begin, end] = chunkRange(c, numSections);
     for (size_t i = begin; i != end; ++i) {
       InputSection *s = sections[i];
       uint64_t h = xxh3_64bits(s->content());
@@ -536,13 +564,11 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Propagate hashes over edges for 7 rounds. Each round saves up to one
   // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
-  SmallVector<uint64_t, 0> nextHashes;
-  nextHashes.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> nextHashes(numSections, llvm::for_overwrite);
   for (int round = 7; round--;) {
     parallelFor(0, numChunks, [&](size_t c) {
       ArrayRef<uint32_t> edges = chunkEdges[c];
-      size_t begin = c * chunkSize,
-             end = std::min(begin + chunkSize, numSections);
+      auto [begin, end] = chunkRange(c, numSections);
       size_t j = 0;
       for (size_t i = begin; i != end; ++i) {
         uint64_t h = hashes[i];
@@ -555,8 +581,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   }
 
   // Order sections so that those in the same equivalence class are consecutive.
-  SmallVector<uint64_t, 0> keys;
-  keys.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> keys(numSections, llvm::for_overwrite);
   parallelFor(0, numSections, [&](size_t i) {
     // mix()'s low bits depend only on the inputs' low bits. Fold the high half.
     uint32_t h = hashes[i] ^ hashes[i] >> 32;
@@ -564,8 +589,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     keys[i] = uint64_t(h) << 32 | i;
   });
   parallelSort(keys.begin(), keys.end());
-  SmallVector<InputSection *, 0> sorted;
-  sorted.resize_for_overwrite(numSections);
+  SmallVector<InputSection *, 0> sorted(numSections, llvm::for_overwrite);
   parallelFor(0, numSections,
               [&](size_t i) { sorted[i] = sections[uint32_t(keys[i])]; });
   sections = std::move(sorted);
@@ -588,7 +612,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
-  forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     for (size_t i = begin + 1; i < end; ++i) {
       sections[begin]->replace(sections[i]);
 
