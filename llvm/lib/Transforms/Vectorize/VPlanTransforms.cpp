@@ -6460,30 +6460,21 @@ bool VPlanTransforms::handleCompressingPatterns(
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (VPI && VPI->getUnderlyingValue() &&
-          is_contained({Instruction::Load, Instruction::Store},
-                       VPI->getOpcode()))
-        MemOps.push_back(VPI);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
+      if (isa_and_present<LoadInst, StoreInst>(VPI.getUnderlyingValue()))
+        MemOps.push_back(&VPI);
     }
   }
 
   VPBuilder Builder;
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *ConditionalInductionPhi =
-        dyn_cast<VPConditionalInductionPHIRecipe>(&R);
-    if (!ConditionalInductionPhi)
-      continue;
-
-    // Obtain the mask for the conditional induction update from the
-    // VPBlendRecipe.
-    auto *BlendR =
-        cast<VPBlendRecipe>(ConditionalInductionPhi->getBackedgeValue());
+  for (auto &CondIndPhi :
+       make_isa_range<VPConditionalInductionPHIRecipe>(HeaderVPBB->phis())) {
+    // Obtain the mask for the conditional update from the VPBlendRecipe.
     VPValue *Mask = nullptr;
+    auto *BlendR = cast<VPBlendRecipe>(CondIndPhi.getBackedgeValue());
     for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
       if (auto *IncomingVal = BlendR->getIncomingValue(I);
-          IncomingVal != ConditionalInductionPhi) {
+          IncomingVal != &CondIndPhi) {
         Mask = BlendR->getMask(I);
         break;
       }
@@ -6492,7 +6483,7 @@ bool VPlanTransforms::handleCompressingPatterns(
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
     for (VPInstruction *&VPI : MemOps) {
-      if (!RecipeBuilder.isCompressedLoadOrStore(VPI, ConditionalInductionPhi))
+      if (!RecipeBuilder.isCompressedLoadOrStore(VPI, &CondIndPhi))
         continue;
 
       // Bail out if the mask for the memory op does not match the condition
@@ -6515,24 +6506,24 @@ bool VPlanTransforms::handleCompressingPatterns(
 
     // Update the conditional induction to increment by the number of active
     // lanes in the mask.
-    auto *BackedgeVal = ConditionalInductionPhi->getBackedgeValue();
+    auto *BackedgeVal = CondIndPhi.getBackedgeValue();
     auto *InsertBlock = BackedgeVal->getDefiningRecipe()->getParent();
     Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
 
-    Type *UpdateType = ConditionalInductionPhi->getScalarType();
+    Type *UpdateType = CondIndPhi.getScalarType();
     assert(!UpdateType->isPointerTy() && "ptr types are not supported yet");
 
     auto *HandledLanes = Builder.createNaryOp(
         VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
         DebugLoc::getUnknown(), "handled.lanes", UpdateType);
 
-    auto &CondID = ConditionalInductionPhi->getConditionalInductionDescriptor();
+    auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
     VPValue *Offset =
         Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
-    VPValue *Update = Builder.createAdd(ConditionalInductionPhi, Offset, {},
-                                        "conditional.step");
+    VPValue *Update =
+        Builder.createAdd(&CondIndPhi, Offset, {}, "conditional.step");
 
     BackedgeVal->replaceAllUsesWith(Update);
   }
