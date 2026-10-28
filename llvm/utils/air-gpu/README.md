@@ -48,3 +48,16 @@ of each operation.
 The service sometimes fails with `XPC_ERROR_CONNECTION_INTERRUPTED`; requests
 are retried a few times. A kernel that fails that way on every retry has
 crashed the Metal compiler service, and is reported as `REJECTED`.
+
+## Comparing the device with AGX
+
+`--compare-backends --agx-run agx_run` runs every case both on the device and
+on the AGX simulator (portable AIR -> `llc -mtriple=agx`) and compares the two
+outputs bit for bit: `SAME`, or `DIFF-ftz` (equal once float32 subnormals are
+flushed), `DIFF-nan` (both NaNs), `DIFF-ulp` (a case with a tolerance, within
+16 ULPs) or `DIFF-real`; `NOT-COMPARED` when one side did not run the case.
+Each side's verdict against the reference is reported too.
+
+Requests are sent one at a time under `/scratch/air-device.lock`
+(`AIR_DEVICE_LOCK`) and named in `--progress` first. A request that times out
+is added to `air_gpu_suite_hangs.txt`, never sent again, and stops the run.

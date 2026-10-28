@@ -42,6 +42,18 @@ then also covers what agx-lower-air does not lower.
 
   air_gpu_suite.py --llc build/bin/llc --agx-run agx_run \
       --objcopy build/bin/llvm-objcopy --readelf build/bin/llvm-readelf
+
+With --compare-backends (and --agx-run), every case runs on both, and the two
+outputs are compared with each other bit for bit (the references are still
+computed, and each side's verdict reported). A case is SAME or DIFF-<class>,
+from the most severe differing thread: ftz (equal once float32 subnormals are
+flushed), nan (both NaNs), ulp (a case with a tolerance, within 16 ULPs; the
+distance is reported) or real; NOT-COMPARED when a side did not run it.
+
+Requests to the service are sent one at a time under the device lock
+(/scratch/air-device.lock, AIR_DEVICE_LOCK), named in --progress before they
+are sent. A request that times out is never resent: it is added to
+air_gpu_suite_hangs.txt (never sent again) and all device work stops.
 """
 
 import argparse
@@ -59,10 +71,41 @@ import tempfile
 
 
 
-def submit(job, queue, timeout):
+# Every tool sending requests to the AIR service takes this lock around each one, so that requests never overlap (a
+# request the Mac never finishes freezes its display; two at once make that worse and hide which one it was).
+DEVICE_LOCK = os.environ.get('AIR_DEVICE_LOCK', '/scratch/air-device.lock')
+# --progress: each request is named in this file before it is sent, so that a request that hangs is known.
+PROGRESS = None
+# Requests that hang the Mac ("GROUP CASE" lines, CASE * for a whole group library): never sent.
+HANGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'air_gpu_suite_hangs.txt')
+HANGS = set()
+HANG_ERRORS = ('did not reply', 'timed out', 'timeout', 'time out')
+
+
+class DeviceHang(Exception):
+    """A request did not finish on the device: all device work stops, and it is never resent."""
+
+
+def load_hangs():
+    if os.path.exists(HANGS_FILE):
+        for line in open(HANGS_FILE):
+            line = line.split('#')[0].split()
+            if len(line) == 2:
+                HANGS.add(tuple(line))
+
+
+def submit(job, queue, timeout, label='?'):
+    import fcntl
     sys.path.insert(0, os.environ.get('AIR_CLIENT', '/air/client'))
     from client import submit as service_submit
-    return service_submit(job, queue, timeout=timeout)
+    with open(DEVICE_LOCK, 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if PROGRESS:
+            with open(PROGRESS, 'a') as f:
+                f.write('%s %s\n' % (label, job.get('op')))
+                f.flush()
+                os.fsync(f.fileno())
+        return service_submit(job, queue, timeout=timeout)
 
 N = 64  # threads per case: two SIMD-groups
 
@@ -245,14 +288,22 @@ def compile_air(llc, ir, tmp, tag):
 TRANSIENT = ('XPC_ERROR_CONNECTION_INTERRUPTED', 'did not reply')
 
 
-def call(job, queue, tries=4):
-    """submit(), retrying the service's transient failures."""
+def call(job, queue, tries=4, label='?'):
+    """submit(), retrying the service's transient failures. A request that times out is not resent: it is added
+    to the hang list and DeviceHang stops all device work."""
+    if tuple(label.split()) in HANGS:
+        return {'ok': False, 'error': 'on the hang list (%s), not sent' % os.path.basename(HANGS_FILE)}
     for attempt in range(tries):
         try:
-            reply = submit(job, queue, timeout=120)
+            reply = submit(job, queue, timeout=120, label=label)
         except TimeoutError as e:
             reply = {'ok': False, 'error': str(e)}
-        if reply.get('ok') or not any(t in reply.get('error', '') for t in TRANSIENT):
+        err = reply.get('error', '')
+        if not reply.get('ok') and any(t in err.lower() for t in HANG_ERRORS):
+            with open(HANGS_FILE, 'a') as f:
+                f.write('# request timed out: %s\n%s\n' % (err[:120].replace('\n', ' '), label))
+            raise DeviceHang('%s: %s' % (label, err[:300]))
+        if reply.get('ok') or not any(t in err for t in TRANSIENT):
             return reply
     return reply
 
@@ -262,7 +313,7 @@ def dispatch(c):
     return list(c.grid or (N, 1, 1)), list(c.group or (c.tgsize, 1, 1))
 
 
-def run_case(c, air, inputs, queue):
+def run_case(c, air, inputs, queue, label='?'):
     if c.scalars is not None:
         out = {'size': N * TYPES[c.out][2]}
         packed = b''.join(struct.pack('<' + TYPES[t][1], v) for t, v in c.scalars)
@@ -272,7 +323,7 @@ def run_case(c, air, inputs, queue):
                              'bindings': [{'index': i, 'buffer': i} for i in range(2)],
                              'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
                'readback': [0]}
-        return call(job, queue)
+        return call(job, queue, label=label)
     buffers = [{'size': len(d), 'data': base64.b64encode(d).decode()} for d in inputs]
     out = {'size': N * TYPES[c.out][2]}
     if c.out_init is not None:
@@ -283,7 +334,7 @@ def run_case(c, air, inputs, queue):
                          'bindings': [{'index': i, 'buffer': i} for i in range(len(buffers))],
                          'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
            'readback': [len(buffers) - 1]}
-    return call(job, queue)
+    return call(job, queue, label=label)
 
 
 def check(c, values, got):
@@ -349,7 +400,9 @@ def run_case_agx(c, obj, inputs, agx):
     return r.buffers[index], None
 
 
-def run_group(cases, llc, queue, tmp, log, agx=None):
+def run_group(cases, llc, queue, tmp, log, agx=None, gname='?', compare=False):
+    """Results of the group's cases: on the device, on AGX (agx), or with compare on both, compared with each
+    other (compare_backends)."""
     rng = random.Random(1234)
     data = {}
     for c in cases:
@@ -364,29 +417,45 @@ def run_group(cases, llc, queue, tmp, log, agx=None):
             values.append(vals)
         data[c.name] = values
 
-    results = {}
+    if compare:
+        raw_air, raw_agx = {}, {}
+        air_res = run_group_air(cases, data, llc, queue, tmp, log, gname, raw_air)
+        agx_res = run_group_agx(cases, data, llc, tmp, agx, raw_agx)
+        return compare_backends(cases, data, air_res, agx_res, raw_air, raw_agx)
     if agx:
-        for c in cases:
-            if c.metal_only:
-                results[c.name] = {'status': 'SKIPPED', 'detail': c.metal_only}
-                continue
-            obj, err = compile_agx(llc, module_ir([c]), tmp, c.name, agx['mcpu'])
-            if obj is None:
-                results[c.name] = {'status': 'ABSENT' if c.absent else 'COMPILE', 'detail': err}
-                continue
-            values = data[c.name]
-            raw, err = run_case_agx(c, obj, [pack(t, v) for t, v in zip(c.ins, values)], agx)
-            if raw is None:
-                results[c.name] = {'status': 'REJECTED', 'detail': err}
-                continue
-            results[c.name] = verdict(c, values, unpack(c.out, raw, N))
-        return results
+        return run_group_agx(cases, data, llc, tmp, agx)
+    return run_group_air(cases, data, llc, queue, tmp, log, gname)
+
+
+def run_group_agx(cases, data, llc, tmp, agx, raw_out=None):
+    results = {}
+    for c in cases:
+        if c.metal_only:
+            results[c.name] = {'status': 'SKIPPED', 'detail': c.metal_only}
+            continue
+        obj, err = compile_agx(llc, module_ir([c]), tmp, c.name, agx['mcpu'])
+        if obj is None:
+            results[c.name] = {'status': 'ABSENT' if c.absent else 'COMPILE', 'detail': err}
+            continue
+        values = data[c.name]
+        raw, err = run_case_agx(c, obj, [pack(t, v) for t, v in zip(c.ins, values)], agx)
+        if raw is None:
+            results[c.name] = {'status': 'REJECTED', 'detail': err}
+            continue
+        if raw_out is not None:
+            raw_out[c.name] = raw
+        results[c.name] = verdict(c, values, unpack(c.out, raw, N))
+    return results
+
+
+def run_group_air(cases, data, llc, queue, tmp, log, gname='?', raw_out=None):
+    results = {}
     air, err = compile_air(llc, module_ir(cases), tmp, 'group')
     rejected_together = False
     if air is None:
         log('  group failed to compile, compiling cases alone')
     else:
-        reply = call({'op': 'inspect', 'air': base64.b64encode(air).decode()}, queue)
+        reply = call({'op': 'inspect', 'air': base64.b64encode(air).decode()}, queue, label='%s *' % gname)
         rejected_together = not reply.get('ok')
 
     for c in cases:
@@ -397,7 +466,7 @@ def run_group(cases, llc, queue, tmp, log, agx=None):
                 results[c.name] = {'status': 'COMPILE', 'detail': err}
                 continue
         values = data[c.name]
-        reply = run_case(c, mine, [pack(t, v) for t, v in zip(c.ins, values)], queue)
+        reply = run_case(c, mine, [pack(t, v) for t, v in zip(c.ins, values)], queue, label='%s %s' % (gname, c.name))
         if not reply.get('ok'):
             results[c.name] = {'status': 'ABSENT' if c.absent else
                                'HOST-LIMIT' if c.host_limit else 'REJECTED',
@@ -408,7 +477,82 @@ def run_group(cases, llc, queue, tmp, log, agx=None):
             results[c.name] = {'status': 'MISMATCH', 'detail': 'expected the device to reject it'}
             continue
         raw = base64.b64decode(reply['result']['buffers'][0]['data'])
+        if raw_out is not None:
+            raw_out[c.name] = raw
         results[c.name] = verdict(c, values, unpack(c.out, raw, N))
+    return results
+
+
+# --compare-backends: the class of a differing element, from the least to the most severe.
+SEVERITY = ['ftz', 'nan', 'ulp', 'real']
+FLOAT_BITS = {'f32': (32, 0x7f800000, 0x7fffff), 'f16': (16, 0x7c00, 0x3ff), 'bf16': (16, 0x7f80, 0x7f)}
+
+
+def classify_diff(c, a, b, max_ulps=16):
+    """(class, ULP distance or None) of two differing output encodings a (device) and b (AGX) of case c:
+    ftz   equal once float32 subnormals are flushed to zero (one side flushed)
+    nan   both NaNs (payload or sign only)
+    ulp   a case with a tolerance (an approximate function) and within max_ulps ULPs
+    real  anything else"""
+    if c.out not in FLOAT_BITS:
+        return 'real', None
+    n, exp, man = FLOAT_BITS[c.out]
+    nan = lambda x: (x & exp) == exp and x & man
+    if nan(a) and nan(b):
+        return 'nan', None
+    if c.out == 'f32':
+        ftz = lambda x: x & 0x80000000 if (x & exp) == 0 else x
+        if (ftz(a) != a or ftz(b) != b) and (ftz(a) == ftz(b) or (ftz(a) | ftz(b)) & 0x7fffffff == 0):
+            return 'ftz', None
+    if (c.ulps is not None or c.abstol is not None) and not nan(a) and not nan(b):
+        sign = 1 << (n - 1)
+        order = lambda x: -(x & (sign - 1)) if x & sign else x
+        d = abs(order(a) - order(b))
+        if d <= max_ulps:
+            return 'ulp', d
+    return 'real', None
+
+
+def compare_backends(cases, data, air_res, agx_res, raw_air, raw_agx, max_diffs=4):
+    """Each case's device output against its AGX output, bit for bit: SAME, or DIFF-<worst class> with the first
+    differing threads; 'air' and 'agx' are each side's verdict against the reference."""
+    results = {}
+    for c in cases:
+        ra, rg = air_res.get(c.name, {}), agx_res.get(c.name, {})
+        r = {'air': ra.get('status'), 'agx': rg.get('status')}
+        if c.name not in raw_air or c.name not in raw_agx:
+            missing = [side for side, raw in (('air', raw_air), ('agx', raw_agx)) if c.name not in raw]
+            r['status'] = 'NOT-COMPARED'
+            r['detail'] = '; '.join('%s %s: %s' % (side, (ra if side == 'air' else rg).get('status'),
+                                                   (ra if side == 'air' else rg).get('detail', '')[:200])
+                                    for side in missing)
+            results[c.name] = r
+            continue
+        size = TYPES[c.out][2]
+        a, g = raw_air[c.name][:N * size], raw_agx[c.name][:N * size]
+        classes, first, worst = {}, [], 0
+        for i in range(N):
+            x, y = int.from_bytes(a[i * size:(i + 1) * size], 'little'), int.from_bytes(g[i * size:(i + 1) * size],
+                                                                                        'little')
+            if x == y:
+                continue
+            cls, d = classify_diff(c, x, y)
+            classes[cls] = classes.get(cls, 0) + 1
+            if d is not None:
+                worst = max(worst, d)
+            if len(first) < max_diffs:
+                ref = c.ref(i, data[c.name])
+                first.append('thread %d: air=%#x agx=%#x %s%s (ref %r, inputs %r)' % (
+                    i, x, y, cls, ' %d ulp' % d if d is not None else '', ref, [v[i] for v in data[c.name]]))
+        if not classes:
+            r['status'] = 'SAME'
+        else:
+            r['status'] = 'DIFF-' + max(classes, key=SEVERITY.index)
+            r['classes'] = classes
+            r['detail'] = '; '.join(first)
+            if worst:
+                r['max_ulps'] = worst
+        results[c.name] = r
     return results
 
 
@@ -3570,7 +3714,16 @@ def main():
     ap.add_argument('--mcpu', default='agx-g14g', help='AGX processor (with --agx-run)')
     ap.add_argument('--objcopy', default='llvm-objcopy')
     ap.add_argument('--readelf', default='llvm-readelf')
+    ap.add_argument('--compare-backends', action='store_true',
+                    help='run each case on the device and on AGX (needs --agx-run) and compare the outputs with '
+                         'each other: SAME or DIFF-<ftz|nan|ulp|real>')
+    ap.add_argument('--progress', help='append the name of each request to this file before sending it')
     args = ap.parse_args()
+    global PROGRESS
+    PROGRESS = args.progress
+    load_hangs()
+    if args.compare_backends and not args.agx_run:
+        ap.error('--compare-backends needs --agx-run')
     agx = args.agx_run and {'run': args.agx_run, 'mcpu': args.mcpu, 'objcopy': args.objcopy,
                             'readelf': args.readelf}
 
@@ -3582,8 +3735,18 @@ def main():
         os.makedirs(tmp, exist_ok=True)
         for g in args.group or sorted(GROUPS):
             print('== %s' % g)
-            res = run_group(GROUPS[g](), args.llc, args.queue, tmp, print, agx)
+            try:
+                res = run_group(GROUPS[g](), args.llc, args.queue, tmp, print, agx, g, args.compare_backends)
+            except DeviceHang as e:
+                print('DEVICE WORK STOPPED: a request timed out (added to %s): %s' % (HANGS_FILE, e))
+                if args.json:
+                    json.dump(all_results, open(args.json, 'w'), indent=1)
+                return 2
             for name, r in res.items():
+                if args.compare_backends:
+                    print('%-12s %-28s air=%s agx=%s %s' % (r['status'], name, r['air'], r['agx'],
+                                                           r.get('detail', '')))
+                    continue
                 extra = (' max_ulps=%d' % r['max_ulps']) if 'max_ulps' in r else ''
                 print('%-9s %-28s%s %s' % (r['status'], name, extra, r.get('detail', '')))
             all_results[g] = res
@@ -3594,6 +3757,8 @@ def main():
     print('summary: ' + ', '.join('%s %d' % kv for kv in sorted(counts.items())))
     if args.json:
         json.dump(all_results, open(args.json, 'w'), indent=1)
+    if args.compare_backends:
+        return 1 if any(k == 'DIFF-real' for k in counts) else 0
     return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT', 'HW-FTZ', 'SKIPPED'} else 0
 
 
