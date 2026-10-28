@@ -61,9 +61,7 @@ static llvm::StringRef getUnsafeHeaderReason(llvm::StringRef header) {
 }
 
 void mlir::tblgen::emitIncludes(raw_ostream &os, ArrayRef<StringRef> headers) {
-  SmallVector<StringRef> sorted;
-  llvm::copy_if(headers, std::back_inserter(sorted),
-                [](StringRef header) { return !header.empty(); });
+  SmallVector<StringRef> sorted(headers);
   llvm::sort(sorted);
   sorted.erase(llvm::unique(sorted), sorted.end());
   for (StringRef header : sorted) {

@@ -27,7 +27,7 @@ void emitSummaryAndDescComments(llvm::raw_ostream &os, llvm::StringRef summary,
                                 llvm::StringRef description,
                                 bool terminateComment = true);
 
-// Emit an `#include` directive for every non-empty header in `headers`, sorted
+// Emit an `#include` directive for every header in `headers`, sorted
 // and without duplicates. Headers are emitted verbatim; a header that could
 // break out of the directive is a fatal error.
 void emitIncludes(llvm::raw_ostream &os,
