@@ -21,14 +21,17 @@
 using namespace llvm;
 
 static bool lowerLocalMemoryAtomics(Function &F) {
+  SmallVector<AtomicCmpXchgInst *> LocalCmpXchgs;
   SmallVector<AtomicRMWInst *> LocalRMWs;
-  // TODO: Handle cmpxchg
   // NOTE: AtomicRMW instructions are replaced with other instructions. This
   // cannot be done while iterating over instructions. Load/Store instructions
   // *can* be modified in-place.
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
-    if (auto *RMWI = dyn_cast<AtomicRMWInst>(&I);
+    if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(&I);
+        CXI && CXI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
+      LocalCmpXchgs.push_back(CXI);
+    } else if (auto *RMWI = dyn_cast<AtomicRMWInst>(&I);
         RMWI && RMWI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
       LocalRMWs.push_back(RMWI);
     } else if (auto *LI = dyn_cast<LoadInst>(&I);
@@ -43,7 +46,8 @@ static bool lowerLocalMemoryAtomics(Function &F) {
       Changed = true;
     }
   }
-
+  for (AtomicCmpXchgInst *CXI : LocalCmpXchgs)
+    Changed |= lowerAtomicCmpXchgInst(CXI);
   for (AtomicRMWInst *RMWI : LocalRMWs)
     Changed |= lowerAtomicRMWInst(RMWI);
   return Changed;
