@@ -2940,6 +2940,13 @@ private:
       assert(hasMergedInputOperands() && "Not a merged-inputs node.");
       return MergedInputColumns[Idx];
     }
+    /// \returns the per-lane values feeding input \p Idx. A merged-inputs
+    /// node has a single shared operand, so its inputs come from the
+    /// recorded columns rather than from one operand each.
+    ArrayRef<Value *> getInputColumn(unsigned Idx) const {
+      return hasMergedInputOperands() ? getMergedInputColumn(Idx)
+                                      : getOperand(Idx);
+    }
 
     /// Set this bundle's operands from \p Operands.
     void setOperands(ArrayRef<ValueList> Operands) {
@@ -2951,6 +2958,10 @@ private:
     void reorderOperands(ArrayRef<int> Mask) {
       for (ValueList &Operand : Operands)
         reorderScalars(Operand, Mask);
+      // The recorded input columns are indexed by lane, so they follow the
+      // reorder just like the operands they stand in for.
+      for (ValueList &Column : MergedInputColumns)
+        reorderScalars(Column, Mask);
     }
 
     /// \returns the \p OpIdx operand of this TreeEntry.
@@ -12391,11 +12402,12 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
 bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
                                         ArrayRef<Value *> Pool,
                                         ArrayRef<ValueList> Operands) const {
-  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  const TTI::TargetCostKind CostKind = getCostKind();
   Type *ScalarTy = Pool.front()->getType();
   // The costs below widen ScalarTy to a plain vector type, which rules out
-  // the aggregates that isValidElementType() otherwise accepts.
-  if (isa<StructType>(ScalarTy) ||
+  // the aggregates and the revec vector elements that isValidElementType()
+  // otherwise accepts.
+  if (isa<StructType, FixedVectorType>(ScalarTy) ||
       !isValidElementType(ScalarTy, Opts.slp_revec))
     return false;
   const unsigned NumLanes = Pool.size();
@@ -12482,7 +12494,7 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   // lanes carry per-lane operand data a single shared edge cannot express.
   if (any_of(VL, [&](Value *V) {
         auto *I = dyn_cast<Instruction>(V);
-        return !I || !isa<BinaryOperator>(I) || I->getOpcode() != S.getOpcode();
+        return !I || I->getOpcode() != S.getOpcode();
       }))
     return false;
   const unsigned NumLanes = VL.size();
@@ -18015,24 +18027,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // interchangeable instruction may be used. The order and the actual
       // operand might differ from what is retrieved from UniqueValues[Idx].
       unsigned Lane = UniqueIndexes[Idx];
-      Value *Op1;
+      Value *Op1 = E->getInputColumn(0)[Lane];
       Value *Op2;
-      SmallVector<const Value *, 2> Operands;
-      if (E->hasMergedInputOperands()) {
-        // Operand 0 is the shared node, so the per-lane operands come from
-        // the recorded input columns.
-        Op1 = E->getMergedInputColumn(0)[Lane];
-        Op2 = E->getMergedInputColumn(1)[Lane];
-        Operands.append({Op1, Op2});
+      SmallVector<const Value *, 2> Operands(1, Op1);
+      if (isa<UnaryOperator>(UniqueValues[Idx])) {
+        Op2 = Op1;
       } else {
-        Op1 = E->getOperand(0)[Lane];
-        Operands.push_back(Op1);
-        if (isa<UnaryOperator>(UniqueValues[Idx])) {
-          Op2 = Op1;
-        } else {
-          Op2 = E->getOperand(1)[Lane];
-          Operands.push_back(Op2);
-        }
+        Op2 = E->getInputColumn(1)[Lane];
+        Operands.push_back(Op2);
       }
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
@@ -18066,23 +18068,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
       }
       // Masked path ignores Op1Info/Op2Info like its codegen does; keep it
-      // out of the operand-aware cost comparison below.
+      // out of the operand-aware cost comparison below. It also returns
+      // early, so it cannot price the merged input shuffles added at the end.
       if (InstructionCost MaskedCost = getMaskedDivRemCost(
               *TTI, Opts.slp_revec, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
-          MaskedCost.isValid())
+          !E->hasMergedInputOperands() && MaskedCost.isValid())
         return MaskedCost + CommonCost;
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
-      TTI::OperandValueInfo Op1Info;
-      TTI::OperandValueInfo Op2Info;
-      if (E->hasMergedInputOperands()) {
-        // Operand 0 is the shared node, so the operand properties come from
-        // the recorded input columns.
-        Op1Info = TTI::getOperandInfo(E->getMergedInputColumn(0));
-        Op2Info = TTI::getOperandInfo(E->getMergedInputColumn(1));
-      } else {
-        Op1Info = TTI::getOperandInfo(E->getOperand(0));
-        Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
-      }
+      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getInputColumn(0));
+      TTI::OperandValueInfo Op2Info =
+          TTI::getOperandInfo(E->getInputColumn(OpIdx));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
           VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
@@ -29505,7 +29500,7 @@ bool BoUpSLP::collectValuesToDemote(
       // Check the node operands rather than the scalar instructions: lanes
       // converted from another opcode (e.g. mul by a power of 2) are emitted
       // with the converted shift amounts.
-      return all_of(E.getOperand(1), [&](Value *V) {
+      return all_of(E.getInputColumn(1), [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
         KnownBits AmtKnownBits = computeKnownBits(V, *DL);

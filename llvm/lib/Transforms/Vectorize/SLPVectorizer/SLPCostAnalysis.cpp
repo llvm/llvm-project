@@ -193,6 +193,10 @@ InstructionCost getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
   Instruction *MainOp = S.getMainOp();
   const unsigned Opcode = S.getOpcode();
   auto *VecTy = getWidenedType(ScalarTy, VL.size());
+  // A phi or a freeze emits no code of its own; the node is just the
+  // vectorized incoming value.
+  if (Opcode == Instruction::PHI || Opcode == Instruction::Freeze)
+    return TTI::TCC_Free;
   if (auto *LI = dyn_cast<LoadInst>(MainOp))
     return TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind,
