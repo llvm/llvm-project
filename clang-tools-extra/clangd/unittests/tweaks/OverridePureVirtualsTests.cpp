@@ -102,7 +102,7 @@ public:
     static_assert(false, "Method `F1` is not implemented.");
   }
 
-  void F2(int P1, const int & P2) override {
+  void F2(int P1, const int &P2) override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `F2` is not implemented.");
   }
@@ -747,6 +747,229 @@ public:
   foo::bar::S2 bar(int var = 0) override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `bar` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, NestedQualifiedNames) {
+  constexpr auto Before = R"cpp(
+namespace A {
+namespace B {
+class S {};
+class Base {
+public:
+  class T {};
+  virtual S bar(S &s) = 0;
+  virtual T foo(T &t) = 0;
+};
+}
+
+namespace C {
+class D^eriv : B::Base {};
+}
+}
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+namespace A {
+namespace B {
+class S {};
+class Base {
+public:
+  class T {};
+  virtual S bar(S &s) = 0;
+  virtual T foo(T &t) = 0;
+};
+}
+
+namespace C {
+class Deriv : B::Base {
+public:
+  B::S bar(B::S &s) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `bar` is not implemented.");
+  }
+
+  B::Base::T foo(B::Base::T &t) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+}
+}
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, NestedQualifiedNamesWithTrailingReturnTypes) {
+  constexpr auto Before = R"cpp(
+namespace A {
+namespace B {
+class S {};
+class Base {
+public:
+  class T {};
+  virtual auto bar(S &s) -> S = 0;
+  virtual auto foo(T &t) -> T = 0;
+};
+}
+
+namespace C {
+class D^eriv : B::Base {};
+}
+}
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+namespace A {
+namespace B {
+class S {};
+class Base {
+public:
+  class T {};
+  virtual auto bar(S &s) -> S = 0;
+  virtual auto foo(T &t) -> T = 0;
+};
+}
+
+namespace C {
+class Deriv : B::Base {
+public:
+  auto bar(B::S &s) -> B::S override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `bar` is not implemented.");
+  }
+
+  auto foo(B::Base::T &t) -> B::Base::T override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+}
+}
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, Operators) {
+  constexpr auto Before = R"cpp(
+class B {
+public:
+  virtual ~B() = default;
+  virtual float & operator()(int i) = 0;
+  virtual const float & operator()(int i) const = 0;
+  virtual float & operator[](int i) = 0;
+  virtual bool operator!() = 0;
+  virtual float operator-() = 0;
+  virtual B & operator++() = 0;
+  virtual B operator++(int) = 0;
+  virtual B operator+(const B &o) const = 0;
+  virtual B & operator=(const B &o) = 0;
+  virtual B & operator+=(const B &o) = 0;
+  virtual B & operator=(B &&o) noexcept = 0;
+  virtual bool operator==(const B &o) const = 0;
+  virtual B* operator->() const = 0;
+  virtual B & operator*() = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class B {
+public:
+  virtual ~B() = default;
+  virtual float & operator()(int i) = 0;
+  virtual const float & operator()(int i) const = 0;
+  virtual float & operator[](int i) = 0;
+  virtual bool operator!() = 0;
+  virtual float operator-() = 0;
+  virtual B & operator++() = 0;
+  virtual B operator++(int) = 0;
+  virtual B operator+(const B &o) const = 0;
+  virtual B & operator=(const B &o) = 0;
+  virtual B & operator+=(const B &o) = 0;
+  virtual B & operator=(B &&o) noexcept = 0;
+  virtual bool operator==(const B &o) const = 0;
+  virtual B* operator->() const = 0;
+  virtual B & operator*() = 0;
+};
+
+class D : public B {
+public:
+  float & operator()(int i) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator()` is not implemented.");
+  }
+
+  const float & operator()(int i) const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator()` is not implemented.");
+  }
+
+  float & operator[](int i) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator[]` is not implemented.");
+  }
+
+  bool operator!() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator!` is not implemented.");
+  }
+
+  float operator-() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator-` is not implemented.");
+  }
+
+  B & operator++() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator++` is not implemented.");
+  }
+
+  B operator++(int) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator++` is not implemented.");
+  }
+
+  B operator+(const B &o) const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator+` is not implemented.");
+  }
+
+  B & operator=(const B &o) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator=` is not implemented.");
+  }
+
+  B & operator+=(const B &o) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator+=` is not implemented.");
+  }
+
+  B & operator=(B &&o) noexcept override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator=` is not implemented.");
+  }
+
+  bool operator==(const B &o) const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator==` is not implemented.");
+  }
+
+  B * operator->() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator->` is not implemented.");
+  }
+
+  B & operator*() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator*` is not implemented.");
   }
 };
 )cpp";
