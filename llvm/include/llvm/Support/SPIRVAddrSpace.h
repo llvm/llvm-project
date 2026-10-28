@@ -23,16 +23,15 @@ namespace SPIRVAS {
 /// separate from SPIRV::StorageClass, which is tablegen'd inside the SPIR-V
 /// backend, so that it stays dependency-free and usable from clang and other
 /// non-backend code.
-///
-/// The SPIR-V backend lowers DeviceOnlyINTEL and HostOnlyINTEL to
-/// CrossWorkgroup when the SPV_INTEL_usm_storage_classes extension is
-/// unavailable. That is a lowering choice; the numbering itself is fixed.
 enum AddressSpace : unsigned {
   Function = 0,
   CrossWorkgroup = 1,
   UniformConstant = 2,
   Workgroup = 3,
   Generic = 4,
+  // TODO: DeviceOnlyINTEL and HostOnlyINTEL back Clang's global_device and
+  // global_host address spaces, which are deprecated (#203569). Remove these
+  // entries once those address spaces are removed.
   DeviceOnlyINTEL = 5,
   HostOnlyINTEL = 6,
   Input = 7,
