@@ -2723,6 +2723,14 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   cloneNoAliasScopes(NoAliasScopes, ClonedScopes, ClonedDomains, "thread",
                      Context);
 
+  // Both the duplicate and the remaining original execute on subsets of the
+  // old predecessor paths. Neither can inherit their aggregate uniformity
+  // classification. Clear it before cloning the terminator.
+  BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                   nullptr);
+  BB->getTerminator()->setMetadata(LLVMContext::MD_branch_uniformity_profile,
+                                   nullptr);
+
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
@@ -2793,8 +2801,13 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // that we nuked.
   BB->removePredecessor(PredBB, true);
 
-  // Remove the unconditional branch at the end of the PredBB block.
+  // The new terminator still describes PredBB's executions, so preserve its
+  // block hint rather than the classification of the duplicated block.
+  MDNode *PredUniformity =
+      OldPredBranch->getMetadata(LLVMContext::MD_block_uniformity_profile);
   OldPredBranch->eraseFromParent();
+  PredBB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                       PredUniformity);
   DTU->applyUpdatesPermissive(Updates);
 
   BasicBlock *ThreadBB = PredBB;
