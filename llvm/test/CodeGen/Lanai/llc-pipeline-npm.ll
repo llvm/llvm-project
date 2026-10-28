@@ -27,6 +27,7 @@
 ; CHECK:   scalarize-masked-mem-intrin
 ; CHECK:   expand-reductions
 ; CHECK:   codegenprepare
+; CHECK:   sjlj-eh-prepare
 ; CHECK:   dwarf-eh-prepare
 ; CHECK:   inline-asm-prepare
 ; CHECK:   safe-stack

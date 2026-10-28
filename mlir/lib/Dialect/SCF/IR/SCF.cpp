@@ -2364,8 +2364,35 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                  [&]() { use.set(constantFalse); });
         break;
       }
-      case Parent::None:
+      case Parent::None: {
+        auto selectOp = dyn_cast<arith::SelectOp>(use.getOwner());
+        if (!selectOp || use.getOperandNumber() != 0)
+          break;
+
+        // Refine captured select results only at uses in the matching branch.
+        // Uses outside the if must retain the select result.
+        rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getTrueValue(),
+            [&](OpOperand &selectUse) {
+              bool inThen =
+                  getParentType(selectUse.getOwner()->getParentRegion(), op,
+                                cache, op.getCondition().getParentRegion()) ==
+                  Parent::Then;
+              changed |= inThen;
+              return inThen;
+            });
+        rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getFalseValue(),
+            [&](OpOperand &selectUse) {
+              bool inElse =
+                  getParentType(selectUse.getOwner()->getParentRegion(), op,
+                                cache, op.getCondition().getParentRegion()) ==
+                  Parent::Else;
+              changed |= inElse;
+              return inElse;
+            });
         break;
+      }
       }
     }
 
@@ -3028,8 +3055,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations =
-          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
+      auto numIterations = constantTripCount(lb, ub, step, !op.getUnsignedCmp(),
+                                             computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -3077,9 +3104,9 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
       return success();
     }
     // Replace the parallel loop by lower-dimensional parallel loop.
-    auto newOp =
-        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
-                           newUpperBounds, newSteps, op.getInitVals(), nullptr);
+    auto newOp = ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
+                                    newUpperBounds, newSteps, op.getInitVals(),
+                                    nullptr, op.getUnsignedCmp());
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
@@ -3102,6 +3129,9 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
     auto innerOp = dyn_cast<ParallelOp>(outerBody.front());
     if (!innerOp)
+      return failure();
+
+    if (op.getUnsignedCmp() != innerOp.getUnsignedCmp())
       return failure();
 
     for (auto val : outerBody.getArguments())

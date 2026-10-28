@@ -24,11 +24,11 @@ body:             |
 ...
 # UNPROFITABLE-LABEL: name: f1_2s
 # UNPROFITABLE: [[R1:%[0-9]+]]:fpr64 = contract FNEGv2f32 %2
-# UNPROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1, implicit $fpcr
+# UNPROFITABLE-NEXT: FMLAv2f32 [[R1]], %0, %1, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_2s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr64 = contract FNEGv2f32 %2
-# PROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1, implicit $fpcr
+# PROFITABLE-NEXT: FMLAv2f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_4s
 registers:
@@ -54,7 +54,7 @@ body:             |
 #
 # PROFITABLE-LABEL: name: f1_4s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = contract FNEGv4f32 %2
-# PROFITABLE-NEXT: FMLAv4f32 killed [[R1]], %0, %1, implicit $fpcr
+# PROFITABLE-NEXT: FMLAv4f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_2d
 registers:
@@ -80,7 +80,7 @@ body:             |
 #
 # PROFITABLE-LABEL: name: f1_2d
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = contract FNEGv2f64 %2
-# PROFITABLE-NEXT: FMLAv2f64 killed [[R1]], %0, %1, implicit $fpcr
+# PROFITABLE-NEXT: FMLAv2f64 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_both_fmul_2s
 registers:
@@ -106,7 +106,7 @@ body:             |
 ...
 # ALL-LABEL: name: f1_both_fmul_2s
 # ALL: %4:fpr64 = contract FMULv2f32 %0, %1, implicit $fpcr
-# ALL-NEXT: FMLSv2f32 killed %4, %2, %3, implicit $fpcr
+# ALL-NEXT: FMLSv2f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_4s
 registers:
@@ -132,7 +132,7 @@ body:             |
 ...
 # ALL-LABEL: name: f1_both_fmul_4s
 # ALL: %4:fpr128 = contract FMULv4f32 %0, %1, implicit $fpcr
-# ALL-NEXT: FMLSv4f32 killed %4, %2, %3, implicit $fpcr
+# ALL-NEXT: FMLSv4f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_2d
 registers:
@@ -158,5 +158,5 @@ body:             |
 ...
 # ALL-LABEL: name: f1_both_fmul_2d
 # ALL: %4:fpr128 = contract FMULv2f64 %0, %1, implicit $fpcr
-# ALL-NEXT: FMLSv2f64 killed %4, %2, %3, implicit $fpcr
+# ALL-NEXT: FMLSv2f64 %4, %2, %3, implicit $fpcr
 

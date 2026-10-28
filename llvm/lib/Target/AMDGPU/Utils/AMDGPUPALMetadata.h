@@ -113,7 +113,7 @@ public:
   void setFunctionStackFrameSize(StringRef FnName, unsigned Val);
 
   // Set the backend stack size metadata, including the frames of its known
-  // calles. Recursion and indirect/external calls must be handled by the
+  // callees. Recursion and indirect/external calls must be handled by the
   // consumer.
   void setFunctionBackendStackSize(StringRef FnName, const MCExpr *Val);
 

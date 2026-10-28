@@ -2712,10 +2712,13 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def : Pat<(vt (loongarch_xvreplve0q LASX256:$xj)),
             (XVREPLVE0_Q LASX256:$xj)>;
 
-// VSTELM
+// XVSTELM
 defm : VstelmPat<truncstorei8, v32i8, XVSTELM_B, simm8, uimm5>;
 defm : VstelmPat<truncstorei16, v16i16, XVSTELM_H, simm8_lsl1, uimm4>;
 defm : VstelmPat<truncstorei32, v8i32, XVSTELM_W, simm8_lsl2, uimm3>;
+let Predicates = [IsLA32] in {
+  defm : VstelmPat<store, v8i32, XVSTELM_W, simm8_lsl2, uimm3>;
+} // Predicates = [IsLA32]
 defm : VstelmPat<store, v4i64, XVSTELM_D, simm8_lsl3, uimm2>;
 defm : VstelmPat<store, v8f32, XVSTELM_W, simm8_lsl2, uimm3, f32>;
 defm : VstelmPat<store, v4f64, XVSTELM_D, simm8_lsl3, uimm2, f64>;
@@ -2821,6 +2824,8 @@ def : Pat<(v8f32 (loongarch_vffint_s_l (v4i64 LASX256:$xj), (v4i64 LASX256:$xk))
 // XVFTINTRZ_{W_S/L_D}
 def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f64:$vj)), (XVFTINTRZ_L_D v4f64:$vj)>;
+def : Pat<(v8i32 (fp_to_sint_sat v8f32:$vj, i32)), (XVFTINTRZ_W_S v8f32:$vj)>;
+def : Pat<(v4i64 (fp_to_sint_sat v4f64:$vj, i64)), (XVFTINTRZ_L_D v4f64:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f32:$vj)),
           (XVFTINTRZL_L_S
               (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216))>;
@@ -3431,5 +3436,16 @@ def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
                           SETNE, bb:$imm21),
           (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
 }
+
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
+defm : PatVecCondBrCC<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
 
 } // Predicates = [HasExtLASX]

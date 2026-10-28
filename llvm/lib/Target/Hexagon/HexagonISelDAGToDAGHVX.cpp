@@ -3036,6 +3036,10 @@ bool HexagonDAGToDAGISel::isIEEEHVXIntrinsic(unsigned Opcode) {
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_uh_128B ||
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_b_128B ||
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_ub_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_h_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_b_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_ub_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_uh_hf_128B ||
          Opcode == Intrinsic::hexagon_V6_vdmpy_sf_hf_128B ||
          Opcode == Intrinsic::hexagon_V6_vdmpy_sf_hf_acc_128B;
 }
@@ -3652,6 +3656,14 @@ void HexagonDAGToDAGISel::translateIEEEIntrinsicToQFloat(SDNode *N,
 
     ReplaceUses(SDValue(N, 0), SDValue(RS, 0));
     CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
+  case Intrinsic::hexagon_V6_vcvt_h_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_b_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_ub_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
+    llvm_unreachable("This intrinsic should be lowered to a call");
     return;
   }
 

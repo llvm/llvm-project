@@ -45,6 +45,11 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
+namespace llvm::offload::tmp {
+GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
+} // namespace llvm::offload::tmp
+
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
@@ -65,10 +70,10 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+DeviceTy::DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
                    ol_device_handle_t DeviceHandle, PluginManager *PM)
-    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      DeviceHandle(DeviceHandle), PM(PM), MappingInfo(*this) {}
+    : DeviceID(DeviceID), Platform(Platform), DeviceHandle(DeviceHandle),
+      PM(PM), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -111,6 +116,13 @@ llvm::Error DeviceTy::initGeometryProps() {
   if (auto Err = Query(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE,
                        GeometryProps.MaxBlockSharedMemSize))
     return Err;
+  // Not every device reports its number of compute units; zero turns off the
+  // heuristics that need it.
+  GeometryProps.NumComputeUnits =
+      getInfo<uint32_t>(DeviceInfo::NUM_COMPUTE_UNITS);
+  // Some defaults depend on the backend. If it is unknown, the generic ones
+  // apply.
+  GeometryProps.Backend = Backend;
 
   return llvm::Error::success();
 }
@@ -130,6 +142,14 @@ llvm::Error DeviceTy::init() {
                        Res->Details);
   IsHostDevice =
       getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
+
+  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
+  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
+
+  // Needs to be initialized before the GeometryProps.
+  if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                        &Backend))
+    Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   getInfoString(DeviceInfo::UID, Uid);
   if (Uid.empty())
@@ -248,7 +268,6 @@ DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
 static llvm::Expected<std::pair<void *, uint64_t>>
 setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                        const ProgramTy &Program) {
-  AsyncInfoTy AsyncInfo(Device);
   llvm::ArrayRef<llvm::offloading::EntryTy> Entries(Image->EntriesBegin,
                                                     Image->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
@@ -273,12 +292,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Vtable = *VtableOrErr;
 
       // HstPtr = Entry.Address;
-      if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
+      if (Device.retrieveDataSync(&res, Vtable, PtrSize))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
-                           Entry.SymbolName);
-      if (Device.synchronize(AsyncInfo))
-        return createError(ErrorCode::InvalidBinary,
-                           "failed to synchronize after retrieving %s",
                            Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
@@ -300,14 +315,10 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Ptr = *PtrOrErr;
 
       HstPtr = Entry.Address;
-      if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
+      if (Device.retrieveDataSync(&DevPtr, Ptr, Entry.Size))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
                            Entry.SymbolName);
     }
-    if (Device.synchronize(AsyncInfo))
-      return createError(ErrorCode::InvalidBinary,
-                         "failed to synchronize after retrieving %s",
-                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -321,15 +332,13 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   uint64_t TableSize =
       IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
-  if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
-                        AsyncInfo, /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                        /*Loc=*/nullptr, /*Name=*/"IndirectCallTable"))
+  // The IndirectCallTable is on the stack, so the copy must be synchronous to
+  // ensure the data is copied before we return.
+  if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(), TableSize,
+                            /*Entry=*/nullptr,
+                            /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                            /*Name=*/"IndirectCallTable"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
-  // The IndirectCallTable is on the stack, so we must synchronize to ensure
-  // the data is copied before we return.
-  if (Device.synchronize(AsyncInfo))
-    return createError(ErrorCode::InvalidBinary,
-                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -386,11 +395,13 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   DeviceEnvironment.HardwareParallelism =
       getInfo<uint64_t>(DeviceInfo::HARDWARE_PARALLELISM);
 
-  AsyncInfoTy AsyncInfo(*this);
-  if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
-                 sizeof(DeviceEnvironment), AsyncInfo, /*Entry=*/nullptr,
-                 /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
-                 /*Name=*/"DeviceEnvironment"))
+  // DeviceEnvironment is on the stack, so the copy must be synchronous.
+  if (submitDataSync(DeviceEnvironmentPtr, &DeviceEnvironment,
+                     sizeof(DeviceEnvironment),
+                     /*Entry=*/nullptr,
+                     /*HDTTMapPtr=*/nullptr,
+                     /*Loc=*/nullptr,
+                     /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return Program;
@@ -441,6 +452,28 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                              const ident_t *Loc, const char *Name) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, Queue, Entry,
+                        HDTTMapPtr, Loc, Name);
+}
+
+// Submit data to device synchronously
+int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, /*Queue=*/nullptr,
+                        Entry, HDTTMapPtr, Loc, Name);
+}
+
+int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, ol_queue_handle_t Queue,
+                                 HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
                               Entry, HDTTMapPtr, Loc, Name);
@@ -452,8 +485,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                AsyncInfo);
+  if (auto Res = olMemcpy(Queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
+                          /*Src=*/nullptr, Size)) {
+    REPORT() << "Failure to copy data from host to device. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Retrieve data from device
@@ -462,6 +501,28 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                HostDataToTargetTy *Entry,
                                MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                                const ident_t *Loc) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, Queue, Entry,
+                          HDTTMapPtr, Loc);
+}
+
+// Retrieve data from device synchronously
+int32_t DeviceTy::retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, /*Queue=*/nullptr,
+                          Entry, HDTTMapPtr, Loc);
+}
+
+int32_t DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, ol_queue_handle_t Queue,
+                                   HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
                               Entry, HDTTMapPtr, Loc);
@@ -473,8 +534,14 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                  AsyncInfo);
+  if (auto Res = olMemcpy(Queue, HstPtrBegin, /*Dst=*/nullptr, TgtPtrBegin,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device to host. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Copy data from current device to destination device directly
@@ -491,16 +558,19 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
-  return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                  DstPtr, Size, AsyncInfo);
-}
 
-int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
-  return RTL->data_fence(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device (" << RTLDeviceID
+             << ") to device (" << DstDev.RTLDeviceID
+             << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
@@ -705,15 +775,12 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
-  if (auto Err = GenericDevice.dataSubmit(
-          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
-    return Err;
+  if (Device.submitData(*AllocOrErr, &LocalKLE,
+                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
+                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment");
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
@@ -746,6 +813,21 @@ static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
   return BlockLimit;
 }
 
+/// Get the default number of blocks for a kernel in Generic-SPMD mode.
+static uint32_t
+getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
+  // Envar to set the default number of blocks per compute unit for a kernel in
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
+  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+
+  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
+      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+    return Props.DefaultNumBlocks;
+  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
+}
+
 /// Get the effective number of blocks for the kernel based on the
 /// user-defined number of blocks and the loop trip count.
 /// The number of threads \p EffectiveNumThreads can be adjusted by this
@@ -772,7 +854,9 @@ static uint32_t getEffectiveNumBlocks(
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
                              : 1;
 
-  uint64_t DefaultNumBlocks = Props.DefaultNumBlocks;
+  uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
+                                  ? getDefaultNumBlocksGenericSPMD(Props)
+                                  : Props.DefaultNumBlocks;
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (KernelEnv.isSPMDMode()) {
@@ -848,6 +932,27 @@ static uint32_t getEffectiveNumBlocks(
       "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
   if (OMPX_ReuseBlocksForHighTripCount.get())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+
+  // In Generic-SPMD mode, the threads of a block run the iterations of the
+  // inner parallel loops, whose trip counts are unknown. If they are lower than
+  // the number of threads, most threads idle. So trade threads for blocks, down
+  // to one warp per block, as long as the distribute loop has an iteration for
+  // every block. This keeps the device as busy if the inner trip counts are
+  // high. The trade is not done if the user set the number of threads, and the
+  // number of blocks stays within the device's limit, which OMP_NUM_TEAMS may
+  // lower.
+  if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
+      !IsNumThreadsStrict) {
+    while (EffectiveNumThreads > Props.WarpSize) {
+      uint64_t MaxNumBlocks = std::min<uint64_t>(
+          LoopTripCount,
+          getDeviceBlockLimit(GenericDevice, EffectiveNumThreads / 2));
+      if (uint64_t(PreferredNumBlocks) * 2 > MaxNumBlocks)
+        break;
+      EffectiveNumThreads /= 2;
+      PreferredNumBlocks *= 2;
+    }
+  }
   return std::min(PreferredNumBlocks,
                   getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
 }
@@ -1108,16 +1213,6 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   return OFFLOAD_SUCCESS;
-}
-
-// Whether data can be copied to DstDevice directly
-bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL)
-    return false;
-
-  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return true;
-  return false;
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {

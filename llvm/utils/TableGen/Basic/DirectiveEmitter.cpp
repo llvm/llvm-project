@@ -43,6 +43,13 @@ static StringRef getVersionType(const DirectiveLanguage &DirLang) {
   return "unsigned";
 }
 
+static std::string getVersionValue(const DirectiveLanguage &DirLang,
+                                   StringRef V) {
+  if (DirLang.getName() == "OpenMP")
+    return V.str() + ".value()";
+  return V.str();
+}
+
 static StringRef getFESpelling(Frontend FE) {
   switch (FE) {
   case Frontend::LLVM:
@@ -429,8 +436,8 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
            << S.Versions.Max << "}},\n";
       }
       OS << "      };\n";
-      OS << "      return llvm::directive::FindName(" << SpellingsName
-         << ", static_cast<unsigned>(V));\n";
+      OS << "      return llvm::directive::FindName(" << SpellingsName << ", "
+         << getVersionValue(DirLang, "V") << ");\n";
       OS << "    }\n";
     }
   }
