@@ -509,4 +509,111 @@ leave:
   ret void
 }
 
+define void @select_recurrence(i16 %n) {
+; %t is not a multiple of 7 because we cannot make the assumption through truncation
+; CHECK-LABEL: 'select_recurrence'
+; CHECK-NEXT:  Classifying expressions for: @select_recurrence
+; CHECK-NEXT:    %max = phi i16 [ %n, %entry ], [ 1, %if ]
+; CHECK-NEXT:    --> (1 smax %n) U: [1,-32768) S: [1,-32768)
+; CHECK-NEXT:    %rec = phi i16 [ %max, %preheader ], [ %new, %latch ]
+; CHECK-NEXT:    --> %rec U: [1,-32768) S: [1,-32768) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %new = phi i16 [ %rec, %loop ], [ 5, %if2 ]
+; CHECK-NEXT:    --> %new U: [1,-32768) S: [1,-32768) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @select_recurrence
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %c1 = icmp slt i16 %n, 1
+  br i1 %c1, label %if, label %preheader
 
+if:
+  br label %preheader
+
+preheader:
+  %max = phi i16 [%n, %entry], [1, %if]
+  br label %loop
+
+loop:
+  %rec = phi i16 [ %max, %preheader ], [ %new, %latch]
+  %c = icmp eq i16 %rec, 22
+  br i1 %c, label %if2, label %latch
+
+if2:
+  br label %latch
+
+latch:
+  %new = phi i16 [ %rec, %loop], [5, %if2]
+  br label %loop
+}
+
+; Based on llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr68249.c
+define void @select_recurrence_2(i16 %n) {
+; %t is not a multiple of 7 because we cannot make the assumption through truncation
+; CHECK-LABEL: 'select_recurrence_2'
+; CHECK-NEXT:  Classifying expressions for: @select_recurrence_2
+; CHECK-NEXT:    %max = phi i16 [ %n, %entry ], [ 1, %if ]
+; CHECK-NEXT:    --> (1 smax %n) U: [1,-32768) S: [1,-32768)
+; CHECK-NEXT:    %rec = phi i16 [ %max, %preheader ], [ %new, %latch ]
+; CHECK-NEXT:    --> %rec U: [1,-32768) S: [1,-32768) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %new = phi i16 [ %rec, %loop ], [ 1, %if2 ]
+; CHECK-NEXT:    --> %rec U: [1,-32768) S: [1,-32768) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @select_recurrence_2
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %c1 = icmp slt i16 %n, 1
+  br i1 %c1, label %if, label %preheader
+
+if:
+  br label %preheader
+
+preheader:
+  %max = phi i16 [%n, %entry], [1, %if]
+  br label %loop
+
+loop:
+  %rec = phi i16 [ %max, %preheader ], [ %new, %latch]
+  %c = icmp slt i16 %rec, 1
+  br i1 %c, label %if2, label %latch
+
+if2:
+  br label %latch
+
+latch:
+  %new = phi i16 [ %rec, %loop], [1, %if2]
+  br label %loop
+}
+
+; Based on TSVC s291
+define void @loop_phi_based_on_addrec() {
+; CHECK-LABEL: 'loop_phi_based_on_addrec'
+; CHECK-NEXT:  Classifying expressions for: @loop_phi_based_on_addrec
+; CHECK-NEXT:    %addrec = phi i64 [ 0, %entry ], [ %inc, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,32000) S: [0,32000) Exits: 31999 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %derived = phi i64 [ 31999, %entry ], [ %addrec, %loop ]
+; CHECK-NEXT:    --> %derived U: [0,32000) S: [0,32000) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %inc = add nuw nsw i64 %addrec, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,32001) S: [1,32001) Exits: 32000 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @loop_phi_based_on_addrec
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 31999
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 31999
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 31999
+; CHECK-NEXT:  Loop %loop: Trip multiple is 32000
+;
+entry:
+  br label %loop
+
+loop:
+  %addrec = phi i64 [ 0, %entry ], [ %inc, %loop ]
+  %derived = phi i64 [ 31999, %entry ], [ %addrec, %loop ]
+  %inc = add nuw nsw i64 %addrec, 1
+  %c = icmp eq i64 %inc, 32000
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
