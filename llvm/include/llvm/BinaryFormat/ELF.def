@@ -1,0 +1,203 @@
+//===------------------------------------- --------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// Definitions for ELF files.
+///
+//===----------------------------------------------------------------------===//
+
+#ifdef ELF_MACHINE
+// ELF_MACHINE(EM_name, number, arch name, GNU name)
+// At the time of writing, the list of registered machine architectures is
+// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
+// Please refer to https://groups.google.com/g/generic-abi for any further
+// updates.
+ELF_MACHINE(EM_NONE,            0, "None", "None") // No machine
+ELF_MACHINE(EM_M32,             1, "m32", "WE32100") // AT&T WE 32100
+ELF_MACHINE(EM_SPARC,           2, "sparc", "Sparc")
+ELF_MACHINE(EM_386,             3, "386", "Intel 80386") // Intel 386
+ELF_MACHINE(EM_68K,             4, "68k", "MC68000") // Motorola 68000
+ELF_MACHINE(EM_88K,             5, "88k", "MC88000") // Motorola 88000
+ELF_MACHINE(EM_IAMCU,           6, "iamcu", "EM_IAMCU") // Intel MCU
+ELF_MACHINE(EM_860,             7, "860", "Intel 80860")
+ELF_MACHINE(EM_MIPS,            8, "mips", "MIPS R3000")
+ELF_MACHINE(EM_S370,            9, "s370", "IBM System/370")
+ELF_MACHINE(EM_MIPS_RS3_LE,    10, "mips_rs3_le", "MIPS R3000 little-endian") // MIPS RS3000 Little-endian
+ELF_MACHINE(EM_PARISC,         15, "parisc", "HPPA") // Hewlett-Packard PA-RISC
+ELF_MACHINE(EM_VPP500,         17, "vpp500", "Fujitsu VPP500")
+ELF_MACHINE(EM_SPARC32PLUS,    18, "sparc32plus", "Sparc v8+") // Enhanced instruction set SPARC
+ELF_MACHINE(EM_960,            19, "960", "Intel 80960")
+ELF_MACHINE(EM_PPC,            20, "ppc", "PowerPC")
+ELF_MACHINE(EM_PPC64,          21, "ppc64", "PowerPC64")
+ELF_MACHINE(EM_S390,           22, "s390", "IBM S/390") // IBM System/390
+ELF_MACHINE(EM_SPU,            23, "spu", "SPU") // IBM SPU/SPC
+ELF_MACHINE(EM_V800,           36, "v800", "NEC V800 series") // NEC V800
+ELF_MACHINE(EM_FR20,           37, "fr20", "Fujitsu FR20")
+ELF_MACHINE(EM_RH32,           38, "rh32", "TRW RH-32")
+ELF_MACHINE(EM_RCE,            39, "rce", "Motorola RCE")
+ELF_MACHINE(EM_ARM,            40, "arm", "ARM")
+ELF_MACHINE(EM_ALPHA,          41, "alpha", "EM_ALPHA") // DEC Alpha
+ELF_MACHINE(EM_SH,             42, "sh", "Hitachi SH")
+ELF_MACHINE(EM_SPARCV9,        43, "sparcv9", "Sparc v9")
+ELF_MACHINE(EM_TRICORE,        44, "tricore", "Siemens Tricore")
+ELF_MACHINE(EM_ARC,            45, "arc", "ARC") // Argonaut RISC Core
+ELF_MACHINE(EM_H8_300,         46, "h8_300", "Hitachi H8/300")
+ELF_MACHINE(EM_H8_300H,        47, "h8_300h", "Hitachi H8/300H")
+ELF_MACHINE(EM_H8S,            48, "h8s", "Hitachi H8S")
+ELF_MACHINE(EM_H8_500,         49, "h8_500", "Hitachi H8/500")
+ELF_MACHINE(EM_IA_64,          50, "ia_64", "Intel IA-64")
+ELF_MACHINE(EM_MIPS_X,         51, "mips_x", "Stanford MIPS-X")
+ELF_MACHINE(EM_COLDFIRE,       52, "coldfire", "Motorola Coldfire")
+ELF_MACHINE(EM_68HC12,         53, "68hc12", "Motorola MC68HC12 Microcontroller")
+ELF_MACHINE(EM_MMA,            54, "mma", "Fujitsu Multimedia Accelerator")
+ELF_MACHINE(EM_PCP,            55, "pcp", "Siemens PCP")
+ELF_MACHINE(EM_NCPU,           56, "ncpu", "Sony nCPU embedded RISC processor")
+ELF_MACHINE(EM_NDR1,           57, "ndr1", "Denso NDR1 microprocessor")
+ELF_MACHINE(EM_STARCORE,       58, "starcore", "Motorola Star*Core processor")
+ELF_MACHINE(EM_ME16,           59, "me16", "Toyota ME16 processor")
+ELF_MACHINE(EM_ST100,          60, "st100", "STMicroelectronics ST100 processor")
+ELF_MACHINE(EM_TINYJ,          61, "tinyj", "Advanced Logic Corp. TinyJ embedded processor")
+ELF_MACHINE(EM_X86_64,         62, "x86_64", "Advanced Micro Devices X86-64")
+ELF_MACHINE(EM_PDSP,           63, "pdsp", "Sony DSP processor")
+ELF_MACHINE(EM_PDP10,          64, "pdp10", "Digital Equipment Corp. PDP-10")
+ELF_MACHINE(EM_PDP11,          65, "pdp11", "Digital Equipment Corp. PDP-11")
+ELF_MACHINE(EM_FX66,           66, "fx66", "Siemens FX66 microcontroller")
+ELF_MACHINE(EM_ST9PLUS,        67, "st9plus", "STMicroelectronics ST9+ 8/16 bit microcontroller")
+ELF_MACHINE(EM_ST7,            68, "st7", "STMicroelectronics ST7 8-bit microcontroller")
+ELF_MACHINE(EM_68HC16,         69, "68hc16", "Motorola MC68HC16 Microcontroller")
+ELF_MACHINE(EM_68HC11,         70, "68hc11", "Motorola MC68HC11 Microcontroller")
+ELF_MACHINE(EM_68HC08,         71, "68hc08", "Motorola MC68HC08 Microcontroller")
+ELF_MACHINE(EM_68HC05,         72, "68hc05", "Motorola MC68HC05 Microcontroller")
+ELF_MACHINE(EM_SVX,            73, "svx", "Silicon Graphics SVx")
+ELF_MACHINE(EM_ST19,           74, "st19", "STMicroelectronics ST19 8-bit microcontroller")
+ELF_MACHINE(EM_VAX,            75, "vax", "Digital VAX")
+ELF_MACHINE(EM_CRIS,           76, "cris", "Axis Communications 32-bit embedded processor")
+ELF_MACHINE(EM_JAVELIN,        77, "javelin", "Infineon Technologies 32-bit embedded cpu")
+ELF_MACHINE(EM_FIREPATH,       78, "firepath", "Element 14 64-bit DSP processor")
+ELF_MACHINE(EM_ZSP,            79, "zsp", "LSI Logic's 16-bit DSP processor")
+ELF_MACHINE(EM_MMIX,           80, "mmix", "Donald Knuth's educational 64-bit processor")
+ELF_MACHINE(EM_HUANY,          81, "huany", "Harvard Universitys's machine-independent object format")
+ELF_MACHINE(EM_PRISM,          82, "prism", "Vitesse Prism") // SiTera Prism
+ELF_MACHINE(EM_AVR,            83, "avr", "Atmel AVR 8-bit microcontroller")
+ELF_MACHINE(EM_FR30,           84, "fr30", "Fujitsu FR30")
+ELF_MACHINE(EM_D10V,           85, "d10v", "Mitsubishi D10V")
+ELF_MACHINE(EM_D30V,           86, "d30v", "Mitsubishi D30V")
+ELF_MACHINE(EM_V850,           87, "v850", "NEC v850")
+ELF_MACHINE(EM_M32R,           88, "m32r", "Renesas M32R (formerly Mitsubishi M32r)") // Mitsubishi M32R
+ELF_MACHINE(EM_MN10300,        89, "mn10300", "Matsushita MN10300")
+ELF_MACHINE(EM_MN10200,        90, "mn10200", "Matsushita MN10200")
+ELF_MACHINE(EM_PJ,             91, "pj", "picoJava")
+ELF_MACHINE(EM_OPENRISC,       92, "openrisc", "OpenRISC 32-bit embedded processor")
+ELF_MACHINE(EM_ARC_COMPACT,    93, "arc_compact", "EM_ARC_COMPACT") // ARC International ARCompact processor (old spelling/synonym: EM_ARC_A5)
+ELF_MACHINE(EM_XTENSA,         94, "xtensa", "Tensilica Xtensa Processor") // Tensilica Xtensa Architecture
+ELF_MACHINE(EM_VIDEOCORE,      95, "videocore", "Alphamosaic VideoCore processor")
+ELF_MACHINE(EM_TMM_GPP,        96, "tmm_gpp", "Thompson Multimedia General Purpose Processor")
+ELF_MACHINE(EM_NS32K,          97, "ns32k", "National Semiconductor 32000 series")
+ELF_MACHINE(EM_TPC,            98, "tpc", "Tenor Network TPC processor")
+ELF_MACHINE(EM_SNP1K,          99, "snp1k", "EM_SNP1K") // Trebia SNP 1000 processor
+ELF_MACHINE(EM_ST200,         100, "st200", "STMicroelectronics ST200 microcontroller") // STMicroelectronics (www.st.com) ST200
+ELF_MACHINE(EM_IP2K,          101, "ip2k", "Ubicom IP2xxx 8-bit microcontrollers") // Ubicom IP2xxx microcontroller family
+ELF_MACHINE(EM_MAX,           102, "max", "MAX Processor")
+ELF_MACHINE(EM_CR,            103, "cr", "National Semiconductor CompactRISC")
+ELF_MACHINE(EM_F2MC16,        104, "f2mc16", "Fujitsu F2MC16")
+ELF_MACHINE(EM_MSP430,        105, "msp430", "Texas Instruments msp430 microcontroller") // Texas Instruments embedded microcontroller msp430
+ELF_MACHINE(EM_BLACKFIN,      106, "blackfin", "Analog Devices Blackfin")
+ELF_MACHINE(EM_SE_C33,        107, "se_c33", "S1C33 Family of Seiko Epson processors")
+ELF_MACHINE(EM_SEP,           108, "sep", "Sharp embedded microprocessor")
+ELF_MACHINE(EM_ARCA,          109, "arca", "Arca RISC microprocessor")
+ELF_MACHINE(EM_UNICORE,       110, "unicore", "Unicore") // Microprocessor series from PKU-Unity Ltd. and MPRC of Peking University
+ELF_MACHINE(EM_EXCESS,        111, "excess", "eXcess 16/32/64-bit configurable embedded CPU")
+ELF_MACHINE(EM_DXP,           112, "dxp", "Icera Semiconductor Inc. Deep Execution Processor")
+ELF_MACHINE(EM_ALTERA_NIOS2,  113, "altera_nios2", "Altera Nios")
+ELF_MACHINE(EM_CRX,           114, "crx", "National Semiconductor CRX microprocessor")
+ELF_MACHINE(EM_XGATE,         115, "xgate", "Motorola XGATE embedded processor")
+ELF_MACHINE(EM_C166,          116, "c166", "Infineon Technologies xc16x")
+ELF_MACHINE(EM_M16C,          117, "m16c", "Renesas M16C")
+ELF_MACHINE(EM_DSPIC30F,      118, "dspic30f", "Microchip Technology dsPIC30F Digital Signal Controller")
+ELF_MACHINE(EM_CE,            119, "ce", "Freescale Communication Engine RISC core")
+ELF_MACHINE(EM_M32C,          120, "m32c", "Renesas M32C")
+ELF_MACHINE(EM_TSK3000,       131, "tsk3000", "Altium TSK3000 core")
+ELF_MACHINE(EM_RS08,          132, "rs08", "Freescale RS08 embedded processor")
+ELF_MACHINE(EM_SHARC,         133, "sharc", "EM_SHARC") // Analog Devices SHARC family of 32-bit DSP
+ELF_MACHINE(EM_ECOG2,         134, "ecog2", "Cyan Technology eCOG2 microprocessor")
+ELF_MACHINE(EM_SCORE7,        135, "score7", "SUNPLUS S+Core")
+ELF_MACHINE(EM_DSP24,         136, "dsp24", "New Japan Radio (NJR) 24-bit DSP Processor")
+ELF_MACHINE(EM_VIDEOCORE3,    137, "videocore3", "Broadcom VideoCore III processor")
+ELF_MACHINE(EM_LATTICEMICO32, 138, "latticemico32", "Lattice Mico32") // RISC processor for Lattice FPGA architecture
+ELF_MACHINE(EM_SE_C17,        139, "se_c17", "Seiko Epson C17 family")
+ELF_MACHINE(EM_TI_C6000,      140, "ti_c6000", "Texas Instruments TMS320C6000 DSP family")
+ELF_MACHINE(EM_TI_C2000,      141, "ti_c2000", "Texas Instruments TMS320C2000 DSP family")
+ELF_MACHINE(EM_TI_C5500,      142, "ti_c5500", "Texas Instruments TMS320C55x DSP family")
+ELF_MACHINE(EM_MMDSP_PLUS,    160, "mmdsp_plus", "STMicroelectronics 64bit VLIW Data Signal Processor")
+ELF_MACHINE(EM_CYPRESS_M8C,   161, "cypress_m8c", "Cypress M8C microprocessor")
+ELF_MACHINE(EM_R32C,          162, "r32c", "Renesas R32C series microprocessors")
+ELF_MACHINE(EM_TRIMEDIA,      163, "trimedia", "NXP Semiconductors TriMedia architecture family")
+ELF_MACHINE(EM_HEXAGON,       164, "hexagon", "Qualcomm Hexagon")
+ELF_MACHINE(EM_8051,          165, "8051", "Intel 8051 and variants")
+ELF_MACHINE(EM_STXP7X,        166, "stxp7x", "STMicroelectronics STxP7x family")
+ELF_MACHINE(EM_NDS32,         167, "nds32", "Andes Technology compact code size embedded RISC processor family")
+// NOTE: EM_ECOG1X and EM_ECOG1 have the same number.
+ELF_MACHINE(EM_ECOG1X,        168, "ecog1x", "Cyan Technology eCOG1X family")
+ELF_MACHINE(EM_ECOG1,         168, "ecog1", "Cyan Technology eCOG1 microprocessor")
+ELF_MACHINE(EM_MAXQ30,        169, "maxq30", "Dallas Semiconductor MAXQ30 Core microcontrollers")
+ELF_MACHINE(EM_XIMO16,        170, "ximo16", "New Japan Radio (NJR) 16-bit DSP Processor")
+ELF_MACHINE(EM_MANIK,         171, "manik", "M2000 Reconfigurable RISC Microprocessor")
+ELF_MACHINE(EM_CRAYNV2,       172, "craynv2", "Cray Inc. NV2 vector architecture")
+ELF_MACHINE(EM_RX,            173, "rx", "Renesas RX")
+ELF_MACHINE(EM_METAG,         174, "metag", "Imagination Technologies Meta processor architecture")
+ELF_MACHINE(EM_MCST_ELBRUS,   175, "mcst_elbrus", "MCST Elbrus general purpose hardware architecture")
+ELF_MACHINE(EM_ECOG16,        176, "ecog16", "Cyan Technology eCOG16 family")
+ELF_MACHINE(EM_CR16,          177, "cr16", "National Semiconductor CompactRISC 16-bit processor")
+ELF_MACHINE(EM_ETPU,          178, "etpu", "Freescale Extended Time Processing Unit")
+ELF_MACHINE(EM_SLE9X,         179, "sle9x", "Infineon Technologies SLE9X core")
+ELF_MACHINE(EM_L10M,          180, "l10m", "EM_L10M") // Intel L10M
+ELF_MACHINE(EM_K10M,          181, "k10m", "EM_K10M") // Intel K10M
+ELF_MACHINE(EM_AARCH64,       183, "aarch64", "AArch64")
+ELF_MACHINE(EM_AVR32,         185, "avr32", "Atmel Corporation 32-bit microprocessor family")
+ELF_MACHINE(EM_STM8,          186, "stm8", "STMicroeletronics STM8 8-bit microcontroller")
+ELF_MACHINE(EM_TILE64,        187, "tile64", "Tilera TILE64 multicore architecture family")
+ELF_MACHINE(EM_TILEPRO,       188, "tilepro", "Tilera TILEPro multicore architecture family")
+ELF_MACHINE(EM_MICROBLAZE,    189, "microblaze", "Xilinx MicroBlaze 32-bit RISC soft processor core")
+ELF_MACHINE(EM_CUDA,          190, "cuda", "NVIDIA CUDA architecture")
+ELF_MACHINE(EM_TILEGX,        191, "tilegx", "Tilera TILE-Gx multicore architecture family")
+ELF_MACHINE(EM_CLOUDSHIELD,   192, "cloudshield", "EM_CLOUDSHIELD") // CloudShield architecture family
+ELF_MACHINE(EM_COREA_1ST,     193, "corea_1st", "EM_COREA_1ST") // KIPO-KAIST Core-A 1st generation processor family
+ELF_MACHINE(EM_COREA_2ND,     194, "corea_2nd", "EM_COREA_2ND") // KIPO-KAIST Core-A 2nd generation processor family
+ELF_MACHINE(EM_ARC_COMPACT2,  195, "arc_compact2", "EM_ARC_COMPACT2") // Synopsys ARCompact V2
+ELF_MACHINE(EM_OPEN8,         196, "open8", "EM_OPEN8") // Open8 8-bit RISC soft processor core
+ELF_MACHINE(EM_RL78,          197, "rl78", "Renesas RL78")
+ELF_MACHINE(EM_VIDEOCORE5,    198, "videocore5", "Broadcom VideoCore V processor")
+ELF_MACHINE(EM_78KOR,         199, "78kor", "EM_78KOR") // Renesas 78KOR family
+ELF_MACHINE(EM_56800EX,       200, "56800ex", "EM_56800EX") // Freescale 56800EX Digital Signal Controller (DSC)
+ELF_MACHINE(EM_AMDGPU,        224, "amdgpu", "EM_AMDGPU") // AMD GPU architecture
+ELF_MACHINE(EM_RISCV,         243, "riscv", "RISC-V")
+ELF_MACHINE(EM_LANAI,         244, "lanai", "EM_LANAI") // Lanai 32-bit processor
+ELF_MACHINE(EM_BPF,           247, "bpf", "EM_BPF") // Linux kernel bpf virtual machine
+ELF_MACHINE(EM_VE,            251, "ve", "NEC SX-Aurora Vector Engine") // NEC SX-Aurora VE
+ELF_MACHINE(EM_LOONGARCH,     258, "loongarch", "LoongArch")
+ELF_MACHINE(EM_BA1,           201, "ba1", "EM_BA1") // Beyond BA1 CPU architecture
+ELF_MACHINE(EM_BA2,           202, "ba2", "EM_BA2") // Beyond BA2 CPU architecture
+ELF_MACHINE(EM_XCORE,         203, "xcore", "EM_XCORE") // XMOS xCORE processor family
+ELF_MACHINE(EM_MCHP_PIC,      204, "mchp_pic", "EM_MCHP_PIC") // Microchip 8-bit PIC(r) family
+ELF_MACHINE(EM_INTELGT,       205, "intelgt", "Intel Graphics Technology")
+ELF_MACHINE(EM_INTEL206,      206, "intel206", "EM_INTEL206") // Reserved by Intel
+ELF_MACHINE(EM_INTEL207,      207, "intel207", "EM_INTEL207") // Reserved by Intel
+ELF_MACHINE(EM_INTEL208,      208, "intel208", "EM_INTEL208") // Reserved by Intel
+ELF_MACHINE(EM_INTEL209,      209, "intel209", "EM_INTEL209") // Reserved by Intel
+ELF_MACHINE(EM_KM32,          210, "km32", "EM_KM32") // KM211 KM32 32-bit processor
+ELF_MACHINE(EM_KMX32,         211, "kmx32", "EM_KMX32") // KM211 KMX32 32-bit processor
+ELF_MACHINE(EM_KMX16,         212, "kmx16", "EM_KMX16") // KM211 KMX16 16-bit processor
+ELF_MACHINE(EM_KMX8,          213, "kmx8", "EM_KMX8") // KM211 KMX8 8-bit processor
+ELF_MACHINE(EM_KVARC,         214, "kvarc", "EM_KVARC") // KM211 KVARC processor
+ELF_MACHINE(EM_CDP,           215, "cdp", "EM_CDP") // Paneve CDP architecture family
+ELF_MACHINE(EM_COGE,          216, "coge", "EM_COGE") // Cognitive Smart Memory Processor
+ELF_MACHINE(EM_COOL,          217, "cool", "EM_COOL") // iCelero CoolEngine
+ELF_MACHINE(EM_NORC,          218, "norc", "EM_NORC") // Nanoradio Optimized RISC
+ELF_MACHINE(EM_CSR_KALIMBA,   219, "csr_kalimba", "EM_CSR_KALIMBA") // CSR Kalimba architecture family
+ELF_MACHINE(EM_CSKY,          252, "csky", "EM_CSKY") // C-SKY 32-bit processor
+#undef ELF_MACHINE
+#endif
