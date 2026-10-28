@@ -44,7 +44,14 @@ public:
 
 FunctionPass *createAVRISelDagLegacyPass(AVRTargetMachine &TM,
                                          CodeGenOptLevel OptLevel);
-FunctionPass *createAVRExpandPseudoPass();
+
+class AVRExpandPseudoPass : public RequiredPassInfoMixin<AVRExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createAVRExpandPseudoLegacyPass();
 
 class AVRFrameAnalyzerPass
     : public RequiredPassInfoMixin<AVRFrameAnalyzerPass> {
@@ -57,7 +64,7 @@ FunctionPass *createAVRFrameAnalyzerLegacyPass();
 
 void initializeAVRAsmPrinterPass(PassRegistry &);
 void initializeAVRDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeAVRExpandPseudoPass(PassRegistry &);
+void initializeAVRExpandPseudoLegacyPass(PassRegistry &);
 void initializeAVRShiftExpandLegacyPass(PassRegistry &);
 
 /// Contains the AVR backend.

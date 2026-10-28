@@ -75,6 +75,7 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     avr-expand-pseudo
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement
 ; CHECK-NEXT:     fentry-insert

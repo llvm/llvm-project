@@ -59,7 +59,7 @@ Error AVRCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 }
 
 void AVRCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRExpandPseudos
+  addMachineFunctionPass(AVRExpandPseudoPass(), PMW);
 }
 
 void AVRCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
