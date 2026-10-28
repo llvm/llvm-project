@@ -19,7 +19,6 @@
 namespace llvm {
 
 class MCRegisterClass;
-using TargetRegisterClass = MCRegisterClass;
 
 namespace PISA {
 
@@ -65,15 +64,15 @@ public:
   static RegBank getRegBank(unsigned NumElts, unsigned EltSize);
   static const char *getPrefixFromBank(RegBank Bank);
   static bool isVirtualRegNo(unsigned RegNo);
-  static unsigned encodeVirtualRegister(unsigned Idx, RegBank Bank,
-                                        RegType Type);
+  static unsigned encodeVirtualRegisterIndex(unsigned Idx, RegBank Bank,
+                                             RegType Type);
   static std::pair<const char *, unsigned>
   decodeVirtualRegister(MCRegister Reg);
 
 protected:
   static RegEncoder::RegBank getRegBank(uint8_t TSFlags);
   static RegEncoder::RegType getRegType(uint8_t TSFlags);
-  static RegEncoder::RegType getRegType(const TargetRegisterClass *RC);
+  static RegEncoder::RegType getRegType(const MCRegisterClass *RC);
 };
 
 } // namespace PISA
