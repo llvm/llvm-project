@@ -123,16 +123,26 @@ bool isUnselectedRootStmtCandidate(const Node *N) {
 }
 
 // Whether Child is the condition (or condition-variable declaration) of a
-// control-flow Parent, the range-expression of a range-based for, or the
-// operand of a return. These are the only slots whose *value* is actually
-// consumed by the construct itself -- to decide whether to keep
-// looping/branching, to build the hidden begin/end iterators, or to be
-// returned to the caller -- so replacing them with a call to a
-// void-returning extracted function would not compile. Other slots, like a
-// loop's init-statement or increment expression, have their value discarded
-// just like an ordinary expression-statement (and any hazard from
-// extracting a declaration that's used later is already caught by
-// ExtractionZone::requiresHoisting), so they remain extractable.
+// control-flow Parent, the range-expression of a range-based for, the
+// operand of a return, or a case label's value (or, for a GNU case range
+// `case A ... B:`, either bound). These are the only slots whose *value* is
+// actually consumed by the construct itself -- to decide whether to keep
+// looping/branching, to build the hidden begin/end iterators, to be
+// returned to the caller, or to select a switch arm -- so replacing them
+// with a call to a void-returning extracted function would not compile.
+// Other slots, like a loop's init-statement or increment expression, have
+// their value discarded just like an ordinary expression-statement (and
+// any hazard from extracting a declaration that's used later is already
+// caught by ExtractionZone::requiresHoisting), so they remain extractable.
+//
+// A case label's value additionally has to be a constant expression, which
+// callers needing that check separately via isConstantExpressionContext.
+// In C++11 and later, Sema wraps it in an invisible ConstantExpr node that
+// -- being itself an Expr -- already accidentally makes getEnclosingStmt
+// reject it as a root statement without this function's help; but C and
+// C++03 don't get that wrapper (verified via -ast-dump: the CaseStmt's
+// child is a bare, unwrapped expression there), so this check is the only
+// thing catching it in those modes.
 //
 // For CXXForRangeStmt, only RangeInit is ever reachable here: clangd's
 // SelectionTree has a custom traversal for range-based for loops (see
@@ -159,6 +169,8 @@ bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
     return Child == ForRange->getRangeInit();
   if (const auto *Return = llvm::dyn_cast<ReturnStmt>(Parent))
     return Child == Return->getRetValue();
+  if (const auto *Case = llvm::dyn_cast<CaseStmt>(Parent))
+    return Child == Case->getLHS() || Child == Case->getRHS();
   return false;
 }
 

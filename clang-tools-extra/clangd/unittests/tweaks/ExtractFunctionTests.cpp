@@ -1796,6 +1796,23 @@ TEST_F(ExtractFunctionTest, CFileRejectConstantExpressionContext) {
               StartsWith("unavailable"));
 }
 
+TEST_F(ExtractFunctionTest, CFileRejectCaseRangeBound) {
+  // A GNU case range's bounds (`case A ... B:`) are both consumed by the
+  // switch just like a plain case value -- this covers the upper bound,
+  // which the plain-case-label tests above don't exercise.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case 1 ... [[1 + 4]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              StartsWith("unavailable"));
+}
+
 TEST_F(ExtractFunctionTest, PreCpp11RejectConstantExpressionContext) {
   // constexpr functions don't exist before C++11 either, same as C.
   Context = File;
