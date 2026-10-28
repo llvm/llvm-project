@@ -28,6 +28,7 @@
 #include "LLVMToAIRIntrinsics.h"
 #include "AIRLowerAtomicRMW.h"
 #include "AIRLowerFNeg.h"
+#include "AIRSimdDivergenceGuard.h"
 #include "AIRLegalizeUnsupportedIR.h"
 #include "AIRNaNMinMax.h"
 #include "AIRNormalizeAllocas.h"
@@ -81,6 +82,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
+  initializeAIRSimdDivergenceGuardLegacyPass(*PR);
   initializeAIRLegalizeUnsupportedIRLegacyPass(*PR);
   initializeAIRNaNMinMaxLegacyPass(*PR);
   initializeLLVMToAIRIntrinsicsLegacyPass(*PR);
@@ -176,6 +178,10 @@ public:
     // Emit Apple-style alias-scope MD + "air-buffer-no-alias" param attrs
     // after the IR shape is final but before final normalisations.
     addPass(createAIRAliasAnnotateLegacyPass());
+    // Keep blocks with SIMD-group calls under divergent control flow from
+    // being if-converted by Metal's compiler (they would run with every
+    // thread active). Late, after every pass that creates or moves them.
+    addPass(createAIRSimdDivergenceGuardLegacyPass());
     // Final pre-serialization normalizations.
     addPass(createAIRPrepareLegacyPass());
     // (AGX-1 cross-buffer store separation now runs early, after LowerSwitch.)

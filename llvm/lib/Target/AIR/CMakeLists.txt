@@ -31,6 +31,7 @@ add_llvm_target(AIRCodeGen
   AIRScalarArgsToConstantBuffers.cpp
   AIRScalarBufferPacking.cpp
   AIRScalarStoreGuard.cpp
+  AIRSimdDivergenceGuard.cpp
   AIRSplitI64Shuffle.cpp
   AIRTGBarrierInsert.cpp
   AIRTGGlobalCoalesce.cpp

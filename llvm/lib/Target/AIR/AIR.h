@@ -42,6 +42,13 @@ void initializeAIRDemoteF64LegacyPass(PassRegistry &);
 /// Pass to rewrite all `double` operations to `float` (AIR has no f64).
 ModulePass *createAIRDemoteF64LegacyPass();
 
+/// Initializer for the AIR SIMD-group divergence guard pass.
+void initializeAIRSimdDivergenceGuardLegacyPass(PassRegistry &);
+
+/// Pass to keep blocks with SIMD-group calls under divergent control flow from
+/// being speculated by Metal's compiler (llvm.sideeffect marker).
+ModulePass *createAIRSimdDivergenceGuardLegacyPass();
+
 /// Initializer for the AIR lower-fneg pass.
 void initializeAIRLowerFNegLegacyPass(PassRegistry &);
 

@@ -867,6 +867,119 @@ def group_simd():
     return cases
 
 
+def group_simd_divergent():
+    """SIMD-group and quad-group operations inside divergent control flow: each
+    sees only the threads of its SIMD-group that took the same path (Metal's
+    compiler must not if-convert the branch; see AIRSimdDivergenceGuard)."""
+    conds = {
+        'lo': ('%lc = icmp ult i32 %lane, 16', lambda i: i % 32 < 16),
+        'odd': ('%lo1 = and i32 %lane, 1\n%lc = icmp ne i32 %lo1, 0', lambda i: i % 2 == 1),
+    }
+
+    def active(i, cond):
+        """Lanes (0..31) of thread i's SIMD-group on thread i's side of cond."""
+        base = i // 32 * 32
+        return [k for k in range(32) if cond(base + k) == cond(i)]
+
+    def mask(lanes):
+        return sum(1 << k for k in lanes)
+
+    def diverge(name, ins, decls, a, b, cond, ref, gen=None):
+        """if (cond) { a: defines %ra } else { b: defines %rb }; %r = phi."""
+        pre, fn = conds[cond]
+        body = (pre + '\nbr i1 %lc, label %sa, label %sb\n'
+                'sa:\n' + a + '\nbr label %sj\n'
+                'sb:\n' + b + '\nbr label %sj\n'
+                'sj:\n%r = phi i32 [ %ra, %sa ], [ %rb, %sb ]')
+        return ir_case(name, ins, 'u32', body, lambda i, v: ref(i, v, fn), decls, gen,
+                       source='activemask-div.ptx (PTX-formalization)')
+
+    ballot = 'declare i64 @air.simd_ballot.i64(i1)'
+    lo = lambda i: i // 32 * 32
+    cases = []
+
+    def bt(v, p):
+        return '%%m%s = call i64 @air.simd_ballot.i64(i1 %s)\n%%r%s = trunc i64 %%m%s to i32' % (v, p, v, v)
+    cases.append(diverge('sdiv_ballot_true', ['u32'], [ballot], bt('a', 'true'), bt('b', 'true'), 'lo',
+                         lambda i, v, c: mask(active(i, c))))
+    pred = '%%od%s = trunc i32 %%a0 to i1\n'
+    cases.append(diverge('sdiv_ballot_pred', ['u32'], [ballot], pred % 'a' + bt('a', '%oda'),
+                         pred % 'b' + bt('b', '%odb'), 'odd',
+                         lambda i, v, c: mask(k for k in active(i, c) if v[0][lo(i) + k] & 1)))
+    cases.append(diverge('sdiv_ballot_one_sided', ['u32'], [ballot], bt('a', 'true'), '%rb = add i32 0, 0', 'lo',
+                         lambda i, v, c: mask(active(i, c)) if c(i) else 0))
+    cases.append(diverge('sdiv_active_threads_mask', ['u32'],
+                         ['declare i64 @air.simd_active_threads_mask.i64()'],
+                         '%ma = call i64 @air.simd_active_threads_mask.i64()\n%ra = trunc i64 %ma to i32',
+                         '%mb = call i64 @air.simd_active_threads_mask.i64()\n%rb = trunc i64 %mb to i32', 'lo',
+                         lambda i, v, c: mask(active(i, c))))
+
+    def first(v):
+        return '%%f%s = call i1 @air.simd_is_first()\n%%r%s = zext i1 %%f%s to i32' % (v, v, v)
+    cases.append(diverge('sdiv_is_first', ['u32'], ['declare i1 @air.simd_is_first()'], first('a'), first('b'),
+                         'lo', lambda i, v, c: int(i % 32 == active(i, c)[0])))
+    cases.append(diverge('sdiv_broadcast_first', ['u32'], ['declare i32 @air.simd_broadcast_first.u.i32(i32)'],
+                         '%ra = call i32 @air.simd_broadcast_first.u.i32(i32 %a0)',
+                         '%rb = call i32 @air.simd_broadcast_first.u.i32(i32 %a0)', 'odd',
+                         lambda i, v, c: v[0][lo(i) + active(i, c)[0]]))
+
+    def vote(v, fn):
+        return ('%%g%s = icmp ugt i32 %%a0, 3000000000\n%%m%s = call i64 @air.simd_ballot.i64(i1 %%g%s)\n'
+                '%%v%s = call i1 @air.simd_vote_%s.i64(i64 %%m%s)\n%%r%s = zext i1 %%v%s to i32'
+                % (v, v, v, v, fn, v, v, v))
+    cases.append(diverge('sdiv_vote_any', ['u32'], [ballot, 'declare i1 @air.simd_vote_any.i64(i64)'],
+                         vote('a', 'any'), vote('b', 'any'), 'lo',
+                         lambda i, v, c: int(any(v[0][lo(i) + k] > 3000000000 for k in active(i, c))),
+                         # only lane 20 votes: true on its side only
+                         [lambda i, r: 4000000000 if i % 32 == 20 else r.randrange(0, 1 << 30)]))
+
+    def red(v, fn, arg='%a0'):
+        return '%%r%s = call i32 @air.%s(i32 %s)' % (v, fn, arg)
+    cases.append(diverge('sdiv_sum', ['u32'], ['declare i32 @air.simd_sum.u.i32(i32)'],
+                         red('a', 'simd_sum.u.i32'), red('b', 'simd_sum.u.i32'), 'odd',
+                         lambda i, v, c: u32(sum(v[0][lo(i) + k] for k in active(i, c)))))
+    cases.append(diverge('sdiv_prefix_exclusive_sum', ['u32'],
+                         ['declare i32 @air.simd_prefix_exclusive_sum.u.i32(i32)'],
+                         red('a', 'simd_prefix_exclusive_sum.u.i32'), red('b', 'simd_prefix_exclusive_sum.u.i32'),
+                         'odd',
+                         lambda i, v, c: u32(sum(v[0][lo(i) + k] for k in active(i, c) if k < i % 32))))
+    cases.append(diverge('sdiv_min', ['u32'], ['declare i32 @air.simd_min.u.i32(i32)'],
+                         red('a', 'simd_min.u.i32'), red('b', 'simd_min.u.i32'), 'lo',
+                         lambda i, v, c: min(v[0][lo(i) + k] for k in active(i, c))))
+    cases.append(diverge('sdiv_quad_sum', ['u32'], ['declare i32 @air.quad_sum.u.i32(i32)'],
+                         red('a', 'quad_sum.u.i32'), red('b', 'quad_sum.u.i32'), 'odd',
+                         lambda i, v, c: u32(sum(v[0][k] for k in range(i // 4 * 4, i // 4 * 4 + 4)
+                                                 if c(k) == c(i)))))
+    # A shuffle reads only lanes of its own side (xor 1 and xor 2 stay within a half).
+    cases.append(diverge('sdiv_shuffle_xor', ['u32'], ['declare i32 @air.simd_shuffle_xor.u.i32(i32, i16)'],
+                         '%ra = call i32 @air.simd_shuffle_xor.u.i32(i32 %a0, i16 1)',
+                         '%rb = call i32 @air.simd_shuffle_xor.u.i32(i32 %a0, i16 2)', 'lo',
+                         lambda i, v, c: v[0][i ^ 1] if c(i) else v[0][i ^ 2]))
+
+    # A loop: thread i runs lane % 4 + 1 iterations; iteration k has the lanes with lane % 4 >= k active.
+    def loop_ref(i, v):
+        return u32(sum(mask(l for l in range(32) if l % 4 >= k) for k in range(i % 4 + 1)))
+    cases.append(ir_case(
+        'sdiv_loop_ballot', ['u32'], 'u32',
+        '%n = and i32 %lane, 3\nbr label %lp\n'
+        'lp:\n%k = phi i32 [ 0, %entry ], [ %k1, %lp ]\n%acc = phi i32 [ 0, %entry ], [ %acc1, %lp ]\n'
+        '%m = call i64 @air.simd_ballot.i64(i1 true)\n%m32 = trunc i64 %m to i32\n'
+        '%acc1 = add i32 %acc, %m32\n%k1 = add i32 %k, 1\n%more = icmp ule i32 %k1, %n\n'
+        'br i1 %more, label %lp, label %lx\n'
+        'lx:\n%r = add i32 %acc1, 0',
+        loop_ref, [ballot], source='LLVM IR'))
+    # After a divergent return: lane 31 of each SIMD-group has left.
+    c = ir_case(
+        'sdiv_after_return', ['u32'], 'u32',
+        '%gone = icmp eq i32 %lane, 31\nbr i1 %gone, label %ex, label %go\n'
+        'ex:\nret void\n'
+        'go:\n%m = call i64 @air.simd_ballot.i64(i1 true)\n%r = trunc i64 %m to i32',
+        lambda i, v: 0 if i % 32 == 31 else 0x7fffffff, [ballot], source='activemask-div.ptx (PTX-formalization)')
+    c.out_init = [0] * N
+    cases.append(c)
+    return cases
+
+
 SLOTS = 8
 
 
@@ -3684,6 +3797,7 @@ GROUPS = {
     'llvm-math-afn': group_llvm_math_afn,
     'llvm-int': group_llvm_int,
     'simd': group_simd,
+    'simd-divergent': group_simd_divergent,
     'atomics': group_atomics,
     'threadgroup': group_threadgroup,
     'sysvals': group_sysvals,
