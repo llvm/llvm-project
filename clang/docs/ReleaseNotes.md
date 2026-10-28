@@ -1516,6 +1516,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Recognize `.mts` and `.cts` files as TypeScript, including in
   `git-clang-format` and `clang-format-diff.py`. The latter also now includes
   `.mjs` and `.cjs` files by default.
+- Macro list options (`ForEachMacros`, `WhitespaceSensitiveMacros`, etc.)
+  now accept regular expressions such as `DEBUG_WRITE.*`.
 
 ### libclang
 

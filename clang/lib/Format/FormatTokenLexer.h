@@ -130,7 +130,9 @@ private:
   unsigned FirstInLineIndex;
   SmallVector<FormatToken *, 16> Tokens;
 
-  llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
+  llvm::SmallMapVector<const IdentifierInfo *, std::optional<TokenType>, 8>
+      Macros;
+  SmallVector<std::pair<llvm::Regex, TokenType>> MacroPatterns;
 
   llvm::SmallPtrSet<IdentifierInfo *, 8> MacrosSkippedByRemoveParentheses,
       TemplateNames, TypeNames, VariableTemplates;
