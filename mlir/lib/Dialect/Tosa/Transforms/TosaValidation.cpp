@@ -1347,7 +1347,6 @@ LogicalResult checkErrorIfRescale(Operation *op) {
 
   // ERROR_IF(zp != 0 && !is_same<in_t, i8_t>)
   // ERROR_IF(zp != 0 && zp != 32768 && is_same<in_t, u16_t>)
-  // Reuse the op's helpers so the ERROR_IF rules stay in a single place.
   if (FailureOr<int64_t> maybeIZp = rescale.getInputZeroPoint();
       succeeded(maybeIZp) && rescale.verifyInputZeroPoint(*maybeIZp).failed())
     return failure();

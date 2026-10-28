@@ -1837,8 +1837,7 @@ public:
     // generating incorrect arithmetic.
     FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
     if (succeeded(maybeIZp) && op.verifyInputZeroPoint(*maybeIZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "input zero point must be zero for non-int8 integer types");
+      return rewriter.notifyMatchFailure(op, "unsupported input zero point");
     FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
     if (succeeded(maybeOZp) && op.verifyOutputZeroPoint(*maybeOZp).failed())
       return rewriter.notifyMatchFailure(
