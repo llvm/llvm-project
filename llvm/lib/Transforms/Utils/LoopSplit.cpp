@@ -182,7 +182,7 @@ static std::optional<bool> computeSignedness(ScalarEvolution &SE, Loop *L,
 static bool isEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
                                  ICmpInst::Predicate Pred, const SCEV *LHS,
                                  const SCEV *RHS) {
-  auto Guards = ScalarEvolution::LoopGuards::collect(L, SE);
+  auto Guards = ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
   return SE.isLoopEntryGuardedByCond(L, Pred, SE.applyLoopGuards(LHS, Guards),
                                      SE.applyLoopGuards(RHS, Guards));
 }
@@ -546,7 +546,7 @@ void LoopSplit::chainPartitions(SplitState &S) {
   // Emit each guard, clamp each latch, and chain partitions; a skipped
   // partition falls through to the next guard.
   const unsigned N = getNumPartitions();
-  IRBuilder<> B(SE->getContext());
+  IRBuilder<> B(*L->getHeader()->getModule());
 
   for (unsigned I = 0; I < N; ++I) {
     PartitionInfo &P = Partitions[I];

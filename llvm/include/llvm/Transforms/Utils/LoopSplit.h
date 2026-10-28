@@ -50,7 +50,7 @@ public:
 
   /// The induction value on the last iteration, which the final partition must
   /// end at. Valid only on a legal LoopSplit.
-  LLVM_ABI const SCEV *getInductionEnd() const { return InductionEnd; }
+  const SCEV *getInductionEnd() const { return InductionEnd; }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
@@ -67,7 +67,7 @@ public:
   /// LoopSplit.cpp for the rationale.
   LLVM_ABI void addPartition(const SCEV *Start, const SCEV *End);
 
-  LLVM_ABI size_t getNumPartitions() const { return Partitions.size(); }
+  size_t getNumPartitions() const { return Partitions.size(); }
 
   /// Perform the split. Requires at least two partitions. Returns true if the
   /// loop was rewritten.
