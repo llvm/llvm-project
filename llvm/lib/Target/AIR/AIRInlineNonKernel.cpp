@@ -8,9 +8,12 @@
 
 #include "AIRInlineNonKernel.h"
 #include "AIR.h"
+#include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -22,6 +25,21 @@ using namespace llvm;
 static bool inlineNonKernel(Module &M) {
   bool Changed = false;
   SmallPtrSet<Function *, 4> WasCallee;
+
+  // A recursive function cannot be inlined away (the loop below would inline
+  // it forever, until memory runs out), and AIR has no call stack.
+  CallGraph CG(M);
+  for (scc_iterator<CallGraph *> I = scc_begin(&CG); !I.isAtEnd(); ++I) {
+    if (!I.hasCycle())
+      continue;
+    for (CallGraphNode *N : *I)
+      if (Function *F = N->getFunction(); F && !F->isDeclaration())
+        reportFatalUsageError(
+            ("AIR has no call stack: recursive function '" + F->getName() +
+             "' cannot be compiled")
+                .str()
+                .c_str());
+  }
 
   // Strip noinline so InlineFunction succeeds even on frontend-marked
   // functions.
