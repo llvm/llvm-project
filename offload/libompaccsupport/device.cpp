@@ -141,8 +141,6 @@ llvm::Error DeviceTy::init() {
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
-  IsHostDevice =
-      getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
 
   RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
   RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
@@ -816,13 +814,13 @@ static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
 static uint32_t
 getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
   // Envar to set the default number of blocks per compute unit for a kernel in
-  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
-  // default number of blocks of other kernels.
+  // Generic-SPMD mode. Zero uses the default number of blocks of other kernels.
   static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU",
+      llvm::omp::target::BackendConfig::get(Props.Backend)
+          .DefaultGenericSPMDTeamsPerCU);
 
-  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
-      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+  if (!OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
     return Props.DefaultNumBlocks;
   return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
 }
@@ -1141,8 +1139,9 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
   KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs);
 
-  // Host kernels are only supported for the latest ABI.
-  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
+  // Some backends (e.g. host) only support the latest ABI.
+  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION &&
+      getConfig().RequiresLatestKernelArgVersion) {
     REPORT() << "Incompatible kernel argument version for kernel "
              << reinterpret_cast<GenericKernelTy *>(TgtEntryPtr)->getName()
              << " on host device";
