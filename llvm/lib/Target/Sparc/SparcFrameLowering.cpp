@@ -132,9 +132,13 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (MF.needsFrameMoves()) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
-    CFIBuilder.buildDefCFARegister(SP::I6);
-    CFIBuilder.buildWindowSave();
-    CFIBuilder.buildRegister(SP::O7, SP::I7);
+    if (FuncInfo->isLeafProc()) {
+      CFIBuilder.buildDefCFAOffset(NumBytes + Subtarget.getStackPointerBias());
+    } else {
+      CFIBuilder.buildDefCFARegister(SP::I6);
+      CFIBuilder.buildWindowSave();
+      CFIBuilder.buildRegister(SP::O7, SP::I7);
+    }
   }
 }
 
