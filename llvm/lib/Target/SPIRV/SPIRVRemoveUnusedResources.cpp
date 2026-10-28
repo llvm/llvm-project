@@ -40,8 +40,9 @@ static bool isResourceHandleCreation(Intrinsic::ID ID) {
          ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
 }
 
-// Remove unused resource handle intrinsics, private global variables that only provide storage
-// for these handles, and corresponding stores of handle to global variable
+// Remove unused resource handle intrinsics, private global variables that only
+// provide storage for these handles, and corresponding stores of handle to
+// global variable
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
@@ -77,8 +78,9 @@ static bool removeUnusedResources(Module &M) {
 
   // Use reverse order so, in case of hidden counters that live in a buffer, the
   // counter handle is removed before the corresponding buffer handle. However,
-  // our traversal doesn't go in RPOT order, so may encounter insts before their users.
-  // Could either do RPOT or repeat below loop until fixed point. Ignore for now
+  // our traversal doesn't go in RPOT order, so may encounter insts before their
+  // users. Could either do RPOT or repeat below loop until fixed point. Ignore
+  // for now
   for (IntrinsicInst *II : reverse(Handles)) {
     if (II->use_empty()) {
       II->eraseFromParent();
