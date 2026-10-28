@@ -566,6 +566,19 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op cannot find symbol referenced by value operand: z}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, @z
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.func
 //===----------------------------------------------------------------------===//

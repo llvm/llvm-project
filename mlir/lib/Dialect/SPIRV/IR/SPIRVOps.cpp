@@ -1853,7 +1853,7 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
 
 LogicalResult
 spirv::ReferenceOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  auto *specConstSym =
+  Operation *specConstSym =
       symbolTable.lookupNearestSymbolFrom(*this, getSpecConstAttr());
   Type constType;
 
@@ -2047,7 +2047,7 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
 LogicalResult spirv::SpecConstantCompositeOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {
   auto cType = cast<spirv::CompositeType>(getType());
-  auto constituents = this->getConstituents().getValue();
+  ArrayRef<Attribute> constituents = getConstituents().getValue();
 
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
