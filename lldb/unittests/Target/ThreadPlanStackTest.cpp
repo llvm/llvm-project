@@ -90,13 +90,15 @@ protected:
     FileSystem::Terminate();
   }
   void SetUp() override {
-    debugger = Debugger::CreateInstance();
-    ASSERT_TRUE(debugger);
-    ArchSpec arch(HostInfo::GetTargetTriple());
+    // A standalone test shard may not have a native host platform installed.
+    Platform::SetHostPlatform(nullptr);
+    ArchSpec arch("x86_64-pc-linux");
     PlatformSP platform =
         platform_linux::PlatformLinux::CreateInstance(true, &arch);
     ASSERT_TRUE(platform);
     Platform::SetHostPlatform(platform);
+    debugger = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger);
     TargetSP target;
     ASSERT_TRUE(debugger->GetTargetList()
                     .CreateTarget(*debugger, "", arch, eLoadDependentsNo,
