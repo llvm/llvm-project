@@ -28,10 +28,13 @@ static void write_header(uint8_t *buffer, uint32_t count, uint32_t size) {
   header.magic = MH_MAGIC_64;
 #if defined(__x86_64__)
   header.cputype = CPU_TYPE_X86_64;
+  header.cpusubtype = CPU_SUBTYPE_X86_64_ALL;
 #else
   header.cputype = CPU_TYPE_ARM64;
+  header.cpusubtype = CPU_SUBTYPE_ARM64_ALL;
 #endif
-  header.cpusubtype = CPU_SUBTYPE_MASK | 5;
+  // Check that debugserver strips capability bits from the reported subtype.
+  header.cpusubtype |= CPU_SUBTYPE_MASK;
   header.filetype = MH_DYLIB;
   header.ncmds = count;
   header.sizeofcmds = size;
@@ -39,7 +42,7 @@ static void write_header(uint8_t *buffer, uint32_t count, uint32_t size) {
   memcpy(buffer, &header, sizeof(header));
 }
 
-static size_t write_prefixes(uint8_t *buffer, int legacy_version) {
+static size_t write_metadata_commands(uint8_t *buffer, int legacy_version) {
   uint8_t *cursor = buffer;
   struct uuid_command uuid = {0};
   uuid.cmd = LC_UUID;
@@ -91,17 +94,18 @@ static size_t write_prefixes(uint8_t *buffer, int legacy_version) {
   return cursor - buffer;
 }
 
-// Put an unknown command before UUID/segment/version prefixes. The UUID starts
-// eight bytes before a 16 KB boundary, and its payload crosses that boundary.
-static uint8_t *make_crossing_image(uint32_t unknown_size, int legacy) {
+// Prepend an unknown command, including its header, to the metadata commands.
+static uint8_t *make_padded_image(uint32_t unknown_size, int legacy) {
   uint8_t *buffer =
       calloc(1, sizeof(struct mach_header_64) + unknown_size + 256);
   assert(buffer);
   uint8_t *commands = buffer + sizeof(struct mach_header_64);
   struct load_command unknown = {unknown_command, unknown_size};
   memcpy(commands, &unknown, sizeof(unknown));
-  size_t prefix_size = write_prefixes(commands + unknown_size, legacy);
-  write_header(buffer, 5, unknown_size + prefix_size);
+  size_t metadata_size =
+      write_metadata_commands(commands + unknown_size, legacy);
+  // One unknown command followed by four metadata commands.
+  write_header(buffer, /*ncmds=*/5, unknown_size + metadata_size);
   return buffer;
 }
 
@@ -131,10 +135,13 @@ static uint8_t *make_bad_image(uint32_t count, uint32_t size, uint32_t command,
 }
 
 void prepare_load_command_images(void) {
-  crossing_image = make_crossing_image(16 * 1024 - 8, 0);
+  // The first 16 KB cache window starts after the Mach-O header. Put LC_UUID
+  // eight bytes before that window's end: its command header fits, but its
+  // UUID payload requires another read.
+  crossing_image = make_padded_image(16 * 1024 - 8, 0);
   breakpoint_address = crossing_image + sizeof(struct mach_header_64) +
                        (16 * 1024 - 8) + sizeof(struct load_command);
-  large_image = make_crossing_image(2 * 1024 * 1024, 1);
+  large_image = make_padded_image(2 * 1024 * 1024, 1);
 
   size_t page_size = getpagesize();
   uint8_t *mapping = mmap(NULL, 3 * page_size, PROT_READ | PROT_WRITE,
@@ -147,8 +154,10 @@ void prepare_load_command_images(void) {
   uint32_t unknown_size = page_size + sizeof(struct load_command);
   struct load_command unknown = {unknown_command, unknown_size};
   memcpy(commands, &unknown, sizeof(unknown));
-  size_t prefix_size = write_prefixes(commands + unknown_size, 0);
-  write_header(unreadable_unknown_image, 5, unknown_size + prefix_size);
+  size_t metadata_size = write_metadata_commands(commands + unknown_size, 0);
+  // One unknown command followed by four metadata commands.
+  write_header(unreadable_unknown_image, /*ncmds=*/5,
+               unknown_size + metadata_size);
   assert(mprotect(mapping + page_size, page_size, PROT_NONE) == 0);
 
   unreadable_uuid_image =

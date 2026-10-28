@@ -84,7 +84,9 @@ class TestUnregisteredMacho(TestBase):
         self.assertEqual(image["pathname"], "")
         self.assertEqual(image["uuid"], "12345678-1234-5678-ABCD-0123456789AB")
         self.assertEqual(image["mach_header"]["magic"], 0xFEEDFACF)
-        self.assertEqual(image["mach_header"]["cpusubtype"], 5)
+        # CPU_SUBTYPE_X86_64_ALL is 3; CPU_SUBTYPE_ARM64_ALL is 0.
+        subtype = 3 if "x86_64" in self.getArchitecture() else 0
+        self.assertEqual(image["mach_header"]["cpusubtype"], subtype)
         self.assertEqual(image["min_version_os_name"], "macosx")
         self.assertEqual(image["min_version_os_sdk"], version)
         self.assertEqual(
@@ -127,16 +129,16 @@ class TestUnregisteredMacho(TestBase):
         # MachProcess::ReadMemory must restore software breakpoint bytes in
         # cached command data, just as it does for an individual memory read.
         address = self.image_address(target, "breakpoint_address")
-        kind = 4 if "arm64" in self.getArchitecture() else 1
+        bpsize = 4 if "arm64" in self.getArchitecture() else 1
         self.assertEqual(
-            lldbutil.send_packet_get_reply(self, f"Z0,{address:x},{kind}"), "OK"
+            lldbutil.send_packet_get_reply(self, f"Z0,{address:x},{bpsize}"), "OK"
         )
         try:
             images = self.image_info(self.image_address(target, "crossing_image"))
             self.check_prefixes(images[0], "13.2.1")
         finally:
             self.assertEqual(
-                lldbutil.send_packet_get_reply(self, f"z0,{address:x},{kind}"), "OK"
+                lldbutil.send_packet_get_reply(self, f"z0,{address:x},{bpsize}"), "OK"
             )
 
     @no_debug_info_test
