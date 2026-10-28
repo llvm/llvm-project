@@ -3,6 +3,9 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -S -mtriple=aarch64--linux-gnu -mattr=+sve | FileCheck %s --check-prefix=CHECK-SVE
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -S -mtriple=aarch64--linux-gnu -mattr=+sve2 | FileCheck %s --check-prefix=CHECK-SVE2
 
+; HISTCNT is unsupported in streaming mode, so should behave similar to CHECK-SVE.
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -S -mtriple=aarch64--linux-gnu -mattr=+sve2,+sme -force-streaming | FileCheck %s --check-prefix=CHECK-SVE
+
 define void @histograms() {
 ; CHECK-NEON-LABEL: 'histograms'
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
