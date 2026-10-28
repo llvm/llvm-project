@@ -838,6 +838,75 @@ static Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
       F = B.CreateShl(B.CreateZExt(B.CreateBitCast(X, I16), I32), 16);
     return Lib("__air_f64_from_f32", I64, {F});
   };
+  // add, sub and mul of floats, by error-free transformations (Knuth's
+  // TwoSum, Dekker's product with an fma: Graillat, Lamotte, Nguyen Hong):
+  // the result rounded to nearest and the exact sign of its error, then one
+  // unit in the direction where the error says so. Exact while operands and
+  // result are zero or at least 2^-70 in magnitude and the result is finite
+  // (the error, at least about 2^-47 of the result, is then normal, not
+  // flushed by an ALU that flushes); the others take the double precision
+  // path below. An exact sum of zero is +0, -0 rounding downward, unless both
+  // operands are zeros of one sign (that sign).
+  BasicBlock *FastBB = nullptr, *Join = nullptr;
+  Value *Fast = nullptr;
+  if (ST->isFloatTy() && (Base == "fadd" || Base == "fsub" || Base == "fmul")) {
+    Value *X = A[0], *Y = Base == "fsub" ? B.CreateFNeg(A[1]) : A[1];
+    Value *S, *Err;
+    if (Base == "fmul") {
+      S = B.CreateFMul(X, Y);
+      Err = B.CreateIntrinsic(Intrinsic::fma, {ST}, {X, Y, B.CreateFNeg(S)});
+    } else {
+      S = B.CreateFAdd(X, Y);
+      Value *BV = B.CreateFSub(S, X);
+      Value *AV = B.CreateFSub(S, BV);
+      Err = B.CreateFAdd(B.CreateFSub(X, AV), B.CreateFSub(Y, BV));
+    }
+    auto Safe = [&](Value *V, bool Zero) {
+      Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, V);
+      Value *InRange =
+          B.CreateAnd(B.CreateFCmpOGE(Abs, ConstantFP::get(ST, 0x1p-70)),
+                      B.CreateFCmpOLT(Abs, ConstantFP::get(ST, 0x1p127)));
+      return Zero ? B.CreateOr(B.CreateFCmpOEQ(V, ConstantFP::get(ST, 0.0)),
+                               InRange)
+                  : InRange;
+    };
+    Value *Ok = B.CreateAnd(B.CreateAnd(Safe(X, true), Safe(Y, true)),
+                            Safe(S, true));
+    // The step: +1 or -1 on the bits (away from or toward zero), by the
+    // signs of the result and of the error.
+    Value *SBits = B.CreateBitCast(S, I32);
+    Value *Neg = B.CreateICmpSLT(SBits, B.getInt32(0));
+    Value *Above = B.CreateFCmpOGT(Err, ConstantFP::get(ST, 0.0)); // exact > S
+    Value *Below = B.CreateFCmpOLT(Err, ConstantFP::get(ST, 0.0));
+    Value *Toward = B.CreateSelect(Neg, Above, Below); // |exact| < |S|
+    // rz: toward zero when |exact| < |S|; ru: up when exact > S; rd: down.
+    Value *Dec = B.CreateSelect(Is(0), Toward,
+                                B.CreateSelect(Is(2), B.CreateAnd(Above, Neg),
+                                               B.CreateAnd(Below, B.CreateNot(Neg))));
+    Value *Inc = B.CreateSelect(Is(0), B.getFalse(),
+                                B.CreateSelect(Is(2), B.CreateAnd(Above, B.CreateNot(Neg)),
+                                               B.CreateAnd(Below, Neg)));
+    Value *Step = B.CreateSub(B.CreateZExt(Inc, I32), B.CreateZExt(Dec, I32));
+    Fast = B.CreateBitCast(B.CreateAdd(SBits, Step), ST);
+    if (Base != "fmul") {
+      Value *Zero = ConstantFP::get(ST, 0.0);
+      Value *SameZeros = B.CreateAnd(
+          B.CreateAnd(B.CreateFCmpOEQ(X, Zero), B.CreateFCmpOEQ(Y, Zero)),
+          B.CreateICmpEQ(B.CreateICmpSLT(B.CreateBitCast(X, I32), B.getInt32(0)),
+                         B.CreateICmpSLT(B.CreateBitCast(Y, I32), B.getInt32(0))));
+      Value *MinusZero = B.CreateAnd(
+          B.CreateAnd(B.CreateFCmpOEQ(S, Zero), Is(3)), B.CreateNot(SameZeros));
+      Fast = B.CreateSelect(MinusZero, ConstantFP::getNegativeZero(ST), Fast);
+    }
+    FastBB = B.GetInsertBlock();
+    Function *Fn = FastBB->getParent();
+    BasicBlock *Slow = BasicBlock::Create(B.getContext(), "directed.slow", Fn);
+    Join = BasicBlock::Create(B.getContext(), "directed.join", Fn);
+    // (Rounding to nearest takes the AIR operation instead, in the caller:
+    // the branch then folds away with the rest where the mode is known.)
+    B.CreateCondBr(B.CreateOr(Ok, Is(1)), Join, Slow);
+    B.SetInsertPoint(Slow);
+  }
   Value *D;
   if (FromInt) {
     bool Signed = Base == "sitofp";
@@ -871,6 +940,15 @@ static Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
     APFloat NaN(ST->getFltSemantics(),
                 APInt::getSignedMaxValue(ST->getPrimitiveSizeInBits()));
     R = B.CreateSelect(B.CreateFCmpUNO(R, R), ConstantFP::get(ST, NaN), R);
+  }
+  if (Join) {
+    BasicBlock *SlowEnd = B.GetInsertBlock();
+    B.CreateBr(Join);
+    B.SetInsertPoint(Join);
+    PHINode *P = B.CreatePHI(ST, 2);
+    P->addIncoming(Fast, FastBB);
+    P->addIncoming(R, SlowEnd);
+    R = P;
   }
   return R;
 }
