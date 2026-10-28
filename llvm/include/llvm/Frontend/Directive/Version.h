@@ -1,4 +1,4 @@
-//===-------------------------------------------------------------- C++ -*-===//
+//===------------------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 namespace llvm {
 namespace directive {
 struct Version {
-  using value_type = int;
+  using value_type = unsigned;
   constexpr explicit Version(value_type Ver = 0) : V(Ver) {}
   constexpr explicit operator bool() const { return V != 0; }
   constexpr value_type value() const { return V; }
@@ -25,7 +25,9 @@ struct Version {
   friend constexpr bool operator==(Version A, Version B);
 
   static constexpr Version Max() {
-    return Version(std::numeric_limits<value_type>::max());
+    // The version values in .td files are "int", and the max value that
+    // can be specified there is 0x7fffffff.
+    return Version(std::numeric_limits<int>::max());
   }
 
 private:
