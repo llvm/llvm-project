@@ -225,6 +225,61 @@ void foo() {
 )cpp");
 }
 
+TEST_F(ReplaceQualifiedWithAliasTest, RespectNamespaceScopeVisibility) {
+  EXPECT_UNAVAILABLE(R"cpp(
+namespace ns_a {
+int a;
+}
+
+namespace ns_c {
+using ns_a::a;
+
+struct S {
+  int foo() { return ns_a::a; }
+};
+}
+
+struct W {
+  int corge() { return ns_a::^a; }
+};
+)cpp");
+
+  EXPECT_EQ(apply(R"cpp(
+namespace ns_a {
+int a;
+}
+
+namespace ns_c {
+using ns_a::a;
+
+struct S {
+  int foo() { return ns_a::^a; }
+};
+}
+
+struct W {
+  int corge() { return ns_a::a; }
+};
+)cpp"),
+            R"cpp(
+namespace ns_a {
+int a;
+}
+
+namespace ns_c {
+using ns_a::a;
+
+struct S {
+  int foo() { return a; }
+};
+}
+
+struct W {
+  int corge() { return ns_a::a; }
+};
+)cpp");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

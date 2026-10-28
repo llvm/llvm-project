@@ -68,35 +68,6 @@ std::string AddUsingReplaceAll::title() const {
                                    SpelledName));
 }
 
-/// Collects all UsingDecls visible at the selection by walking the enclosing
-/// DeclContext chain directly, sorted by source location. This avoids a full
-/// AST traversal and only visits O(depth * declarations-per-scope) nodes.
-///
-/// A using-declaration declared in a scope S is visible at SelectionCtx if
-/// S is an ancestor of SelectionCtx, i.e., exactly the contexts we walk when
-/// ascending via getLexicalParent().
-static std::vector<const UsingDecl *>
-collectEnclosingUsings(const DeclContext *SelectionCtx,
-                       const SourceManager &SM) {
-  std::vector<const UsingDecl *> Result;
-  for (const DeclContext *Ctx = SelectionCtx; Ctx;
-       Ctx = Ctx->getLexicalParent()) {
-    for (const Decl *D : Ctx->decls()) {
-      const auto *UD = dyn_cast<UsingDecl>(D);
-      if (!UD)
-        continue;
-      if (SM.getFileID(UD->getUsingLoc()) != SM.getMainFileID())
-        continue;
-      Result.push_back(UD);
-    }
-  }
-  // Merge into a single sorted list so findInsertionPoint can break early.
-  llvm::sort(Result, [&](const UsingDecl *A, const UsingDecl *B) {
-    return SM.isBeforeInTranslationUnit(A->getUsingLoc(), B->getUsingLoc());
-  });
-  return Result;
-}
-
 struct InsertionPointData {
   SourceLocation Loc;
   std::string Suffix;
@@ -114,30 +85,64 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       getNamespaceFromQualifier(QualifierToRemove.getNestedNameSpecifier());
   if (!TargetNamespace)
     return error("Qualifier is not a valid namespace qualifier");
-
-  SourceLocation LastUsingLoc;
-  const std::vector<const UsingDecl *> Usings = collectEnclosingUsings(
-      &Inputs.ASTSelection.commonAncestor()->getDeclContext(), SM);
+  const auto *CanonicalTargetNS = TargetNamespace->getCanonicalDecl();
 
   auto IsValidPoint = [&](const SourceLocation Loc) {
     return MustInsertAfterLoc.isInvalid() ||
            SM.isBeforeInTranslationUnit(MustInsertAfterLoc, Loc);
   };
 
+  SourceLocation LastUsingLoc;
   bool AlwaysFullyQualify = true;
-  for (const auto *U : Usings) {
-    if (!U->getQualifier().isFullyQualified())
+  bool AlreadyExists = false;
+
+  auto ProcessDecl = [&](const Decl *D) {
+    const auto *UD = dyn_cast<UsingDecl>(D);
+    if (!UD)
+      return;
+    SourceLocation UsingLoc = UD->getUsingLoc();
+    if (SM.getFileID(UsingLoc) != SM.getMainFileID())
+      return;
+
+    if (!UD->getQualifier().isFullyQualified())
       AlwaysFullyQualify = false;
 
-    if (const auto *Namespace = getNamespaceFromQualifier(U->getQualifier())) {
-      if (Namespace->getCanonicalDecl() ==
-              TargetNamespace->getCanonicalDecl() &&
-          U->getName() == Name)
-        return InsertionPointData();
+    if (const auto *Namespace = getNamespaceFromQualifier(UD->getQualifier())) {
+      if (Namespace->getCanonicalDecl() == CanonicalTargetNS &&
+          UD->getName() == Name) {
+        AlreadyExists = true;
+        return;
+      }
     }
 
-    LastUsingLoc = U->getUsingLoc();
+    if (LastUsingLoc.isInvalid() ||
+        SM.isBeforeInTranslationUnit(LastUsingLoc, UsingLoc))
+      LastUsingLoc = UsingLoc;
+  };
+
+  // Walk enclosing file/namespace contexts (skipping functions and classes) and
+  // use getLocalTopLevelDecls() at translation-unit scope to avoid traversing
+  // declarations from included headers.
+  for (const DeclContext *Ctx =
+           &Inputs.ASTSelection.commonAncestor()->getDeclContext();
+       Ctx; Ctx = Ctx->getLexicalParent()) {
+    if (!Ctx->isFileContext())
+      continue;
+    if (isa<TranslationUnitDecl>(Ctx)) {
+      for (const Decl *D : Inputs.AST->getLocalTopLevelDecls()) {
+        ProcessDecl(D);
+        if (AlreadyExists)
+          return InsertionPointData();
+      }
+    } else {
+      for (const Decl *D : Ctx->decls()) {
+        ProcessDecl(D);
+        if (AlreadyExists)
+          return InsertionPointData();
+      }
+    }
   }
+
   if (LastUsingLoc.isValid() && IsValidPoint(LastUsingLoc)) {
     InsertionPointData Out;
     Out.Loc = LastUsingLoc;
