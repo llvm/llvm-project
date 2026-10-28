@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PISARegEncoder.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
 using namespace llvm;
@@ -157,7 +156,7 @@ RegEncoder::RegType RegEncoder::getRegType(uint8_t TSFlags) {
   return static_cast<RegEncoder::RegType>(TSFlags & TypeBitsMask);
 }
 
-RegEncoder::RegType RegEncoder::getRegType(const TargetRegisterClass *RC) {
+RegEncoder::RegType RegEncoder::getRegType(const MCRegisterClass *RC) {
   return getRegType(RC->TSFlags);
 }
 
@@ -166,15 +165,14 @@ RegEncoder::RegBank RegEncoder::getRegBank(uint8_t TSFlags) {
   return static_cast<RegEncoder::RegBank>(TSFlags & BankBitsMask);
 }
 
-unsigned RegEncoder::encodeVirtualRegister(unsigned Idx, RegBank Bank,
-                                           RegType Type) {
+unsigned RegEncoder::encodeVirtualRegisterIndex(unsigned Idx, RegBank Bank,
+                                                RegType Type) {
   // Check that NumRegBits is sufficient to encode the register Idx
   unsigned RegBank = static_cast<unsigned>(Bank);
   assert(Idx < (1U << NumRegBits) &&
          "Register index exceeds virtual register encoding limit");
-  return Register::index2VirtReg((Type << (NumRegBits + NumBankBits)) |
-                                 RegBank << (NumRegBits) |
-                                 (Idx & ((1U << NumRegBits) - 1)));
+  return (Type << (NumRegBits + NumBankBits)) | RegBank << NumRegBits |
+         (Idx & ((1U << NumRegBits) - 1));
 }
 
 std::pair<const char *, unsigned>

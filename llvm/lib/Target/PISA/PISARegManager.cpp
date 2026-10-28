@@ -15,6 +15,7 @@
 #include "PISAInstrInfo.h"
 #include "PISASubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 
 using namespace llvm;
 using namespace PISA;
@@ -58,7 +59,8 @@ unsigned RegManager::encodeVirtualRegister(RegBank Bank, Register Reg) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = getRegIdx(Reg);
   RegType Type = getRegType(MRI.getRegClass(Reg));
-  return RegEncoder::encodeVirtualRegister(Idx, Bank, Type);
+  return Register::index2VirtReg(
+      RegEncoder::encodeVirtualRegisterIndex(Idx, Bank, Type));
 }
 
 RegManager::RegManager(const MachineFunction &MF)
