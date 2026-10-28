@@ -791,6 +791,9 @@ bool DwarfExpression::addExpression(
       emitOp(dwarf::DW_OP_deref_size);
       emitData1(Op->getArg(0));
       break;
+    case dwarf::DW_OP_LLVM_user:
+      emitUserOp(Op->getArg(0));
+      break;
     case dwarf::DW_OP_LLVM_tag_offset:
       TagOffset = cast<DIExpression::TagOffsetOp>(*Op).getTagOffset();
       break;

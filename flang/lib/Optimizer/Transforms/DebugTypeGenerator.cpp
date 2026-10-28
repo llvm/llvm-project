@@ -49,7 +49,8 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        const mlir::DataLayout &dl,
                                        bool boundsInStackSlots_)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      boundsInStackSlots(boundsInStackSlots_), kindMapping(getKindMapping(m)),
+      boundsInStackSlots(boundsInStackSlots_),
+      isAMDGPU(getTargetTriple(m).isAMDGPU()), kindMapping(getKindMapping(m)),
       llvmTypeConverter(m, false, false, dl) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
@@ -71,6 +72,27 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
       getComponentOffset<kElemLenPosInBox>(*dataLayout, context, llvmLenType);
   rankOffset =
       getComponentOffset<kRankPosInBox>(*dataLayout, context, llvmRankType);
+}
+
+static void addDescriptorOffset(
+    mlir::MLIRContext *context, bool isAMDGPU,
+    llvm::SmallVectorImpl<mlir::LLVM::DIExpressionElemAttr> &ops,
+    std::optional<std::uint64_t> offset) {
+  auto addOp = [&](unsigned opc, llvm::ArrayRef<uint64_t> vals) {
+    ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(context, opc, vals));
+  };
+  // For AMDGPU, the descriptor can be in an address space other than the
+  // default one, where its location cannot be used as a value. Offset the
+  // location itself instead.
+  if (isAMDGPU) {
+    if (offset)
+      addOp(llvm::dwarf::DW_OP_constu, {*offset});
+    addOp(llvm::dwarf::DW_OP_LLVM_user, {llvm::dwarf::DW_OP_LLVM_offset});
+  } else if (offset) {
+    addOp(llvm::dwarf::DW_OP_plus_uconst, {*offset});
+  } else {
+    addOp(llvm::dwarf::DW_OP_plus, {});
+  }
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -204,7 +226,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   // Assumed-rank arrays
   if (seqTy.hasUnknownShape()) {
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst, {rankOffset});
+    addDescriptorOffset(context, isAMDGPU, ops, rankOffset);
     addOp(llvm::dwarf::DW_OP_deref_size, {rankSize});
     mlir::LLVM::DIExpressionAttr rank =
         mlir::LLVM::DIExpressionAttr::get(context, ops);
@@ -222,7 +244,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       addOp(llvm::dwarf::DW_OP_mul, {});
       addOp(llvm::dwarf::DW_OP_plus_uconst,
             {dimsOffset + ((dimsSize / 3) * field)});
-      addOp(llvm::dwarf::DW_OP_plus, {});
+      addDescriptorOffset(context, isAMDGPU, ops, std::nullopt);
       addOp(llvm::dwarf::DW_OP_deref, {});
       mlir::LLVM::DIExpressionAttr attr =
           mlir::LLVM::DIExpressionAttr::get(context, ops);
@@ -282,8 +304,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     // FIXME: If `indexSize` happens to be bigger than address size on the
     // system then we may have to change 'DW_OP_deref' here.
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst,
-          {offset + (indexSize * kDimExtentPos)});
+    addDescriptorOffset(context, isAMDGPU, ops,
+                        offset + (indexSize * kDimExtentPos));
     addOp(llvm::dwarf::DW_OP_deref, {});
     // count[i] = *(base_addr + offset + (indexSize * kDimExtentPos))
     // where 'offset' is dimsOffset + (i * dimsSize)
@@ -296,8 +318,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     // bound of 1 when this attribute is missing.
     if (!lowerAttr && (genAllocated || genAssociated)) {
       addOp(llvm::dwarf::DW_OP_push_object_address, {});
-      addOp(llvm::dwarf::DW_OP_plus_uconst,
-            {offset + (indexSize * kDimLowerBoundPos)});
+      addDescriptorOffset(context, isAMDGPU, ops,
+                          offset + (indexSize * kDimLowerBoundPos));
       addOp(llvm::dwarf::DW_OP_deref, {});
       // lower_bound[i] = *(base_addr + offset + (indexSize *
       // kDimLowerBoundPos))
@@ -306,8 +328,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     }
 
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst,
-          {offset + (indexSize * kDimStridePos)});
+    addDescriptorOffset(context, isAMDGPU, ops,
+                        offset + (indexSize * kDimStridePos));
     addOp(llvm::dwarf::DW_OP_deref, {});
     // stride[i] = *(base_addr + offset + (indexSize * kDimStridePos))
     mlir::LLVM::DIExpressionAttr strideAttr =
@@ -703,7 +725,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
       ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(context, opc, vals));
     };
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst, {lenOffset});
+    addDescriptorOffset(context, isAMDGPU, ops, lenOffset);
     uint64_t charBytes = kindMapping.getCharacterBitsize(charTy.getFKind()) / 8;
     if (charBytes != 1) {
       addOp(llvm::dwarf::DW_OP_deref, {});

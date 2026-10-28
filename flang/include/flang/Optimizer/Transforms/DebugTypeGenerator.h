@@ -160,6 +160,7 @@ private:
   mlir::SymbolTable *symbolTable;
   const mlir::DataLayout *dataLayout;
   bool boundsInStackSlots;
+  bool isAMDGPU;
   struct ArtificialVar {
     /// Null unless the value is held in a stack slot.
     fir::AllocaOp slot;
