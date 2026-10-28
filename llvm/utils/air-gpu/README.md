@@ -27,6 +27,14 @@ of each operation.
 
 * `PASS`: the device ran the kernel and every result matches.
 * `MISMATCH`: some result is wrong (beyond the case's ULP or absolute bound).
+* `HW-FTZ`: the device ran the kernel, and every wrong result is the
+  hardware flushing float32 subnormals to zero (Apple GPUs do; LLVM's default
+  is IEEE subnormals). Strict: each wrong thread must have a subnormal float32
+  input or a subnormal exact result, and its value must equal the reference
+  computed from inputs with float32 subnormals flushed, the result flushed too
+  (the device value is compared flushed). Anything else is `MISMATCH`. A case
+  can opt out with `ftz_ok = False`. Like `PASS`, `ABSENT` and `HOST-LIMIT`,
+  it does not fail the run. Half subnormals are not flushed.
 * `REJECTED`: the device refused the library. A group is first compiled as one
   library; when that is refused, each case is retried alone, so a rejection
   names the one kernel that causes it.
