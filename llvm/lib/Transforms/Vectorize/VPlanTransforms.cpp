@@ -6456,13 +6456,14 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
 bool VPlanTransforms::handleCompressingPatterns(
     VPlan &Plan, VPBasicBlock *HeaderVPBB, VPRecipeBuilder &RecipeBuilder) {
-  SmallVector<VPInstruction *> MemOps;
+  SmallDenseMap<PHINode *, SmallVector<VPInstruction *>> CondIndToMemOps;
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
     for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
-      if (isa_and_present<LoadInst, StoreInst>(VPI.getUnderlyingValue()))
-        MemOps.push_back(&VPI);
+      if (const CompressedPtrInfo *Info =
+              RecipeBuilder.getCompressedPtrInfo(&VPI))
+        CondIndToMemOps[Info->ConditionalInductionPHI].push_back(&VPI);
     }
   }
 
@@ -6482,10 +6483,7 @@ bool VPlanTransforms::handleCompressingPatterns(
 
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
-    for (VPInstruction *&VPI : MemOps) {
-      if (!RecipeBuilder.isCompressedLoadOrStore(VPI, &CondIndPhi))
-        continue;
-
+    for (VPInstruction *&VPI : CondIndToMemOps[CondIndPhi.getPHINode()]) {
       // Bail out if the mask for the memory op does not match the condition
       // used to update the conditional induction.
       if (!VPI->getMask() || VPI->getMask() != Mask)
@@ -6498,11 +6496,7 @@ bool VPlanTransforms::handleCompressingPatterns(
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(CompressedMemOp->getVPSingleValue());
       VPI->eraseFromParent();
-      VPI = nullptr; // Mark handled instructions with a nullptr.
     }
-
-    // Remove all memory operations we've handled.
-    MemOps.erase(remove_if(MemOps, equal_to(nullptr)), MemOps.end());
 
     // Update the conditional induction to increment by the number of active
     // lanes in the mask.

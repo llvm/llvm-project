@@ -2061,7 +2061,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::Store: {
     Type *ScalarTy = getLoadStoreType(I);
     Value *Ptr = getLoadStorePointerOperand(I);
-    bool IsCompressed = Legal->getCompressedPtrInfo(Ptr).has_value();
+    bool IsCompressed = Legal->isCompressedLoadOrStore(I);
     bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
     return !(IsConsecutive && !IsCompressed &&
              isLegalMaskedLoadOrStore(I, VF)) &&
@@ -5917,11 +5917,12 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
-bool VPRecipeBuilder::isCompressedLoadOrStore(
-    VPInstruction *VPI, VPConditionalInductionPHIRecipe *PhiR) {
+const CompressedPtrInfo *
+VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
+  if (!is_contained({Instruction::Load, Instruction::Store}, VPI->getOpcode()))
+    return nullptr;
   Instruction *I = VPI->getUnderlyingInstr();
-  std::optional<CompressedPtrInfo> Info = Legal->isCompressedLoadOrStore(I);
-  return Info && Info->ConditionalInductionPHI == PhiR->getPHINode();
+  return Legal->getCompressedPtrInfo(getLoadStorePointerOperand(I));
 }
 
 VPWidenMemIntrinsicRecipe *
