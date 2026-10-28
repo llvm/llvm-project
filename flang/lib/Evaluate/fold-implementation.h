@@ -2419,8 +2419,12 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   }
   if constexpr (T::category == TypeCategory::Complex) {
     if (auto exp{GetScalarConstantValue<T>(x.right())}) {
-      if (IsComplexUnity<T>(*exp)) {
-        return Fold(context, std::move(x.left()));
+      if (IsComplexUnity<T>(*exp) && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return Fold(context, std::move(x.left()));
+        }
       }
     }
   }
