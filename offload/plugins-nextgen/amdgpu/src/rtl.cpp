@@ -3029,13 +3029,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           getAgent(), (uint64_t)Size);
   }
 
-  /// Insert a data fence between previous data operations and the following
-  /// operations. This is a no-op for AMDGPU devices as operations inserted into
-  /// a queue are in-order.
-  Error dataFence(__tgt_async_info *Async) override {
-    return Plugin::success();
-  }
-
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -3105,6 +3098,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
                                           PatternSize, PinnedMemoryManager,
                                           Size / PatternSize);
+  }
+
+  Expected<void *> getNativeHandle() override {
+    return reinterpret_cast<void *>(Agent.handle);
   }
 
   interop_spec_t selectInteropPreference(int32_t InteropType,

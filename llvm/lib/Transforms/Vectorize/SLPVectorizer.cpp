@@ -16700,6 +16700,30 @@ getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   return VIC;
 }
 
+/// \returns the cast opcode, which gives the same result for the operand,
+/// demoted with the signedness \p IsSigned, as \p Opcode gives for the original
+/// operand, or std::nullopt if the operand must be extended back first.
+static std::optional<unsigned> getCastOpcodeForDemotedOperand(unsigned Opcode,
+                                                              bool IsSigned) {
+  switch (Opcode) {
+  case Instruction::SExt:
+  case Instruction::SIToFP:
+    // The zero extended operand is non-negative.
+    if (IsSigned)
+      return Opcode;
+    return Opcode == Instruction::SExt ? Instruction::ZExt
+                                       : Instruction::UIToFP;
+  case Instruction::ZExt:
+  case Instruction::UIToFP:
+    // Cannot absorb the sign extension of the operand.
+    if (IsSigned)
+      return std::nullopt;
+    return Opcode;
+  default:
+    return std::nullopt;
+  }
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -18195,23 +18219,39 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind, Op0Info,
             Op1Info, E->getAltOp());
       } else {
-        Type *SrcSclTy = E->getMainOp()->getOperand(0)->getType();
-        auto *SrcTy = getWidenedType(SrcSclTy, VL.size());
-        if (SrcSclTy->isIntegerTy() && ScalarTy->isIntegerTy()) {
-          auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
-          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
-          unsigned SrcBWSz =
-              DL->getTypeSizeInBits(E->getMainOp()->getOperand(0)->getType());
-          if (SrcIt != MinBWs.end()) {
-            SrcBWSz = SrcIt->second.first;
-            SrcSclTy = IntegerType::get(SrcSclTy->getContext(), SrcBWSz);
-            SrcTy = getWidenedType(SrcSclTy, VL.size());
+        Type *SrcTy =
+            getWidenedType(E->getMainOp()->getOperand(0)->getType(), VL.size());
+        TTI::CastContextHint CCH =
+            GetCastContextHint(E->getMainOp()->getOperand(0));
+        unsigned Opcode0 = E->getOpcode();
+        unsigned Opcode1 = E->getAltOpcode();
+        // The casts of the demoted operand must take its signedness into
+        // account. If any of them cannot do it, the operand is extended back
+        // first.
+        if (auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+            SrcIt != MinBWs.end()) {
+          Type *DemotedSrcTy = SrcTy->getWithNewBitWidth(SrcIt->second.first);
+          std::optional<unsigned> DemotedOpcode0 =
+              getCastOpcodeForDemotedOperand(Opcode0, SrcIt->second.second);
+          std::optional<unsigned> DemotedOpcode1 =
+              getCastOpcodeForDemotedOperand(Opcode1, SrcIt->second.second);
+          if (DemotedOpcode0 && DemotedOpcode1) {
+            Opcode0 = *DemotedOpcode0;
+            Opcode1 = *DemotedOpcode1;
+            SrcTy = DemotedSrcTy;
+          } else {
+            VecCost += TTIRef.getCastInstrCost(
+                SrcIt->second.second ? Instruction::SExt : Instruction::ZExt,
+                SrcTy, DemotedSrcTy, CCH, CostKind);
           }
+        }
+        if (SrcTy->isIntOrIntVectorTy() && ScalarTy->isIntegerTy()) {
+          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+          unsigned SrcBWSz = DL->getTypeSizeInBits(SrcTy->getScalarType());
           if (BWSz <= SrcBWSz) {
             if (BWSz < SrcBWSz)
-              VecCost = TTIRef.getCastInstrCost(
-                  Instruction::Trunc, VecTy, SrcTy,
-                  GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind);
+              VecCost += TTIRef.getCastInstrCost(Instruction::Trunc, VecTy,
+                                                 SrcTy, CCH, CostKind);
             LLVM_DEBUG({
               dbgs()
                   << "SLP: alternate extension, which should be truncated.\n";
@@ -18220,14 +18260,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return VecCost;
           }
         }
-        VecCost = TTIRef.getCastInstrCost(
-            E->getOpcode(), VecTy, SrcTy,
-            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
-            E->getMainOp());
-        VecCost += TTIRef.getCastInstrCost(
-            E->getAltOpcode(), VecTy, SrcTy,
-            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
-            E->getAltOp());
+        // Same casts of the demoted operand, no need to shuffle.
+        if (Opcode0 == Opcode1)
+          return VecCost +
+                 TTIRef.getCastInstrCost(Opcode0, VecTy, SrcTy, CCH, CostKind);
+        VecCost += TTIRef.getCastInstrCost(Opcode0, VecTy, SrcTy, CCH, CostKind,
+                                           E->getMainOp());
+        VecCost += TTIRef.getCastInstrCost(Opcode1, VecTy, SrcTy, CCH, CostKind,
+                                           E->getAltOp());
       }
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
@@ -24332,10 +24372,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     // a known-zero narrow sign bit), or a converted lane's adjusted constant
     // flips the sign.
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
+      // The bit tests compare and L, R, which sign-extends from the narrow
+      // type only if both L and R do.
+      bool IsSigned0 =
+          GetOperandSignedness(0) &&
+          (none_of(E->Scalars, IsaPred<TruncInst>) || GetOperandSignedness(1));
       bool SignChange =
           ICmp->getOperand(0)->getType()->getScalarType() !=
               VL0->getOperand(0)->getType()->getScalarType() &&
-          ((!GetOperandSignedness(0) &&
+          ((!IsSigned0 &&
             !isKnownNonNegative(ICmp->getOperand(0), SimplifyQuery(*DL))) ||
            (!GetOperandSignedness(1) &&
             !isKnownNonNegative(ICmp->getOperand(1), SimplifyQuery(*DL))));
@@ -25697,6 +25742,28 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           CmpInst::Predicate AltPred = AltCI->getPredicate();
           V1 = Builder.CreateCmp(AltPred, LHS, RHS);
         } else {
+          unsigned Opcode0 = E->getOpcode();
+          unsigned Opcode1 = E->getAltOpcode();
+          // The casts of the demoted operand must take its signedness into
+          // account. If any of them cannot do it, the operand is extended back
+          // first.
+          if (auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+              SrcIt != MinBWs.end()) {
+            std::optional<unsigned> DemotedOpcode0 =
+                getCastOpcodeForDemotedOperand(Opcode0, SrcIt->second.second);
+            std::optional<unsigned> DemotedOpcode1 =
+                getCastOpcodeForDemotedOperand(Opcode1, SrcIt->second.second);
+            if (DemotedOpcode0 && DemotedOpcode1) {
+              Opcode0 = *DemotedOpcode0;
+              Opcode1 = *DemotedOpcode1;
+            } else {
+              LHS = Builder.CreateIntCast(
+                  LHS,
+                  getWidenedType(E->getMainOp()->getOperand(0)->getType(),
+                                 E->Scalars.size()),
+                  SrcIt->second.second);
+            }
+          }
           if (LHS->getType()->isIntOrIntVectorTy() && ScalarTy->isIntegerTy()) {
             unsigned SrcBWSz = DL->getTypeSizeInBits(
                 cast<VectorType>(LHS->getType())->getElementType());
@@ -25713,10 +25780,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               return LHS;
             }
           }
-          V0 = Builder.CreateCast(
-              static_cast<Instruction::CastOps>(E->getOpcode()), LHS, VecTy);
-          V1 = Builder.CreateCast(
-              static_cast<Instruction::CastOps>(E->getAltOpcode()), LHS, VecTy);
+          // Same casts of the demoted operand, no need to shuffle.
+          if (Opcode0 == Opcode1) {
+            V = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode0),
+                                   LHS, VecTy);
+            V = FinalShuffle(V, E);
+            E->VectorizedValue = V;
+            ++NumVectorInstructions;
+            return V;
+          }
+          V0 = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode0),
+                                  LHS, VecTy);
+          V1 = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode1),
+                                  LHS, VecTy);
+          NumVectorInstructions += 2;
         }
         // Add V0 and V1 to later analysis to try to find and remove matching
         // instruction, if any.
@@ -34559,6 +34636,16 @@ private:
                  DT.dominates(Phi->getParent(),
                               cast<Instruction>(ReductionRoot)->getParent());
         });
+    // The root does not fold the accumulator phi itself: the scalar chain
+    // through the phi has more than one operation.
+    const bool IsLongLoopCarriedChain =
+        IsLoopCarriedRoot &&
+        none_of(cast<Instruction>(ReductionRoot)->operands(), [&](Value *Op) {
+          auto *Phi = dyn_cast<PHINode>(Op);
+          return Phi && (Phi->getNumIncomingValues() > MaxPHINumOperands ||
+                         is_contained(Phi->incoming_values(),
+                                      cast<Instruction>(ReductionRoot)));
+        });
     auto EvaluateScalarCost =
         [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
           InstructionCost Cost = 0;
@@ -34590,10 +34677,14 @@ private:
               // The loop-carried root is not removed: the horizontal form
               // folds the accumulator phi back through it, the accumulator
               // form replaces it with the lane-wise operation, costed by
-              // the accumulation cost.
+              // the accumulation cost. A longer scalar chain is bound by its
+              // latency, which the vector code cuts down to a single operation.
               if (RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
-                  IsLoopCarriedRoot)
+                  IsLoopCarriedRoot) {
+                if (IsLongLoopCarriedChain)
+                  ScalarCost += GenCostFn(RdxOp);
                 continue;
+              }
               // The reduction root is used outside of the reduction any
               // number of times, its fmul operand is still fused into it.
               if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||

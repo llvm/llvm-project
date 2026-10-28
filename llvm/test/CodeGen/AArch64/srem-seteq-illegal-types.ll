@@ -57,50 +57,49 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-LABEL: test_srem_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, #7282 // =0x1c72
-; CHECK-NEXT:    sbfx x8, x0, #0, #33
-; CHECK-NEXT:    sbfx x10, x1, #0, #33
-; CHECK-NEXT:    movk x9, #29127, lsl #16
-; CHECK-NEXT:    mov x13, #-7282 // =0xffffffffffffe38e
-; CHECK-NEXT:    sbfx x12, x2, #0, #33
-; CHECK-NEXT:    movk x9, #50972, lsl #32
-; CHECK-NEXT:    movk x13, #36408, lsl #16
-; CHECK-NEXT:    movk x9, #7281, lsl #48
-; CHECK-NEXT:    eon x13, x13, x13, lsl #33
-; CHECK-NEXT:    smulh x11, x8, x9
-; CHECK-NEXT:    smulh x9, x10, x9
-; CHECK-NEXT:    smulh x13, x12, x13
+; CHECK-NEXT:    mov x11, #7282 // =0x1c72
+; CHECK-NEXT:    mov x9, #-7282 // =0xffffffffffffe38e
+; CHECK-NEXT:    sbfx x10, x0, #0, #33
+; CHECK-NEXT:    movk x11, #29127, lsl #16
+; CHECK-NEXT:    movk x9, #36408, lsl #16
+; CHECK-NEXT:    sbfx x8, x2, #0, #33
+; CHECK-NEXT:    movk x11, #50972, lsl #32
+; CHECK-NEXT:    eon x9, x9, x9, lsl #33
+; CHECK-NEXT:    sbfx x12, x1, #0, #33
+; CHECK-NEXT:    movk x11, #7281, lsl #48
+; CHECK-NEXT:    smulh x13, x10, x11
+; CHECK-NEXT:    smulh x9, x8, x9
+; CHECK-NEXT:    smulh x11, x12, x11
+; CHECK-NEXT:    add x13, x13, x13, lsr #63
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    add x13, x13, x13, lsl #3
+; CHECK-NEXT:    asr x14, x9, #3
 ; CHECK-NEXT:    add x11, x11, x11, lsr #63
-; CHECK-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-NEXT:    sub x10, x10, x13
+; CHECK-NEXT:    add x9, x14, x9, lsr #63
+; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    add x11, x11, x11, lsl #3
 ; CHECK-NEXT:    add x9, x9, x9, lsl #3
-; CHECK-NEXT:    sub x8, x8, x11
-; CHECK-NEXT:    sub x11, x13, x12
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov x8, #8589934591 // =0x1ffffffff
-; CHECK-NEXT:    sub x9, x10, x9
-; CHECK-NEXT:    asr x10, x11, #3
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    mov v0.d[1], x9
-; CHECK-NEXT:    add x9, x10, x11, lsr #63
-; CHECK-NEXT:    add x8, x9, x9, lsl #3
-; CHECK-NEXT:    adrp x9, .LCPI3_0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI3_0]
-; CHECK-NEXT:    add x8, x12, x8
+; CHECK-NEXT:    sub x11, x12, x11
+; CHECK-NEXT:    mov x12, #8589934591 // =0x1ffffffff
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    dup v1.2d, x12
+; CHECK-NEXT:    fmov d2, x8
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    adrp x9, .LCPI3_1
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI3_1]
+; CHECK-NEXT:    and v2.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    fmov d3, x8
-; CHECK-NEXT:    adrp x8, .LCPI3_1
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
-; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    cmeq v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    cmeq v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    mov w1, v0.s[1]
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    fmov w2, s1
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    umov w1, v0.h[1]
+; CHECK-NEXT:    umov w2, v0.h[2]
 ; CHECK-NEXT:    ret
   %srem = srem <3 x i33> %X, <i33 9, i33 9, i33 -9>
   %cmp = icmp ne <3 x i33> %srem, <i33 3, i33 -3, i33 3>

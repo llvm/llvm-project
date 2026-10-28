@@ -416,14 +416,29 @@ define amdgpu_ps float @s_constained_fadd_f32_fpexcept_strict(float inreg %x, fl
 ; GFX9-NEXT:    v_add_f32_e32 v0, s2, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: s_constained_fadd_f32_fpexcept_strict:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_add_f32_e64 v0, s2, s3
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-SDAG-LABEL: s_constained_fadd_f32_fpexcept_strict:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    v_add_f32_e64 v0, s2, s3
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX10-GISEL-LABEL: s_constained_fadd_f32_fpexcept_strict:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    v_add_f32_e64 v0, s2, s3
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX11-SDAG-LABEL: s_constained_fadd_f32_fpexcept_strict:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    v_add_f32_e64 v0, s0, s1
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX11-GISEL-LABEL: s_constained_fadd_f32_fpexcept_strict:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_add_f32_e64 v0, s0, s1
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_constained_fadd_f32_fpexcept_strict:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_add_f32 s0, s2, s3
+; GFX12-NEXT:    s_add_f32 s0, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog

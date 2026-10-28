@@ -252,6 +252,10 @@ public:
 
   SlotIndexes *getSlotIndexes() const { return Indexes; }
 
+  /// Remove intervals for virtual registers no instruction refers to any
+  /// more. Their segments sit on erased indexes. Returns the number removed.
+  LLVM_ABI unsigned removeUnreferencedIntervals();
+
   /// Returns true if the specified machine instr has been removed or was
   /// never entered in the map.
   bool isNotInMIMap(const MachineInstr &Instr) const {

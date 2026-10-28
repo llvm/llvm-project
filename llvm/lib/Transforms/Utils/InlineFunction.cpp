@@ -1903,33 +1903,6 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   return NewAlloca;
 }
 
-// Check whether this Value is used by a lifetime intrinsic.
-static bool isUsedByLifetimeMarker(Value *V) {
-  for (User *U : V->users())
-    if (isa<LifetimeIntrinsic>(U))
-      return true;
-  return false;
-}
-
-// Check whether the given alloca already has
-// lifetime.start or lifetime.end intrinsics.
-static bool hasLifetimeMarkers(AllocaInst *AI) {
-  Type *Ty = AI->getType();
-  Type *Int8PtrTy =
-      PointerType::get(Ty->getContext(), Ty->getPointerAddressSpace());
-  if (Ty == Int8PtrTy)
-    return isUsedByLifetimeMarker(AI);
-
-  // Do a scan to find all the casts to i8*.
-  for (User *U : AI->users()) {
-    if (U->getType() != Int8PtrTy) continue;
-    if (U->stripPointerCasts() != AI) continue;
-    if (isUsedByLifetimeMarker(U))
-      return true;
-  }
-  return false;
-}
-
 /// Return the result of AI->isStaticAlloca() if AI were moved to the entry
 /// block. Allocas used in inalloca calls and allocas of dynamic array size
 /// cannot be static.
@@ -3171,7 +3144,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
       // If the alloca is already scoped to something smaller than the whole
       // function then there's no need to add redundant, less accurate markers.
-      if (hasLifetimeMarkers(AI))
+      if (any_of(AI->users(), IsaPred<LifetimeIntrinsic>))
         continue;
 
       std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
