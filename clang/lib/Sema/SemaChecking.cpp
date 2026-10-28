@@ -1007,7 +1007,7 @@ public:
 
     // Just a pointer in the form '0xddd'.
     case analyze_format_string::ConversionSpecifier::pArg:
-      // Linux kernel has its own extesion for `%p` specifier.
+      // Linux kernel has its own extension for `%p` specifier.
       // Kernel Document:
       // https://docs.kernel.org/core-api/printk-formats.html#pointer-types
       IsKernelCompatible = false;
@@ -4342,6 +4342,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (Context.BuiltinInfo.isAuxBuiltinID(BuiltinID)) {
       assert(Context.getAuxTargetInfo() &&
              "Aux Target Builtin, but not an aux target?");
+
+      // Host target builtins cannot be lowered for a SYCL device. Defer the
+      // diagnostic so that they are still accepted in code that is not
+      // reachable from device code.
+      if (getLangOpts().SYCLIsDevice && !isUnevaluatedContext())
+        SYCL().DiagIfDeviceCode(TheCall->getBeginLoc(),
+                                diag::err_builtin_target_unsupported)
+            << TheCall->getSourceRange();
 
       if (CheckTSBuiltinFunctionCall(
               *Context.getAuxTargetInfo(),
@@ -15688,7 +15696,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
   CheckImplicitConversions(E, CheckLoc);
   if (!E->isInstantiationDependent())
     CheckUnsequencedOperations(E);
-  if (!IsConstexpr && !E->isValueDependent())
+  if (!IsConstexpr && !E->isValueDependent() && !isa<ConstantExpr>(E))
     CheckForIntOverflow(E);
 }
 

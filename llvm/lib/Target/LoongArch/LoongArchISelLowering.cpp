@@ -11080,14 +11080,17 @@ bool LoongArchTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
   return FPVT == MVT::f64 && Subtarget.hasBasicD();
 }
 
-bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                           bool ForCodeSize) const {
+TargetLowering::FPImmAction
+LoongArchTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   // TODO: Maybe need more checks here after vector extension is supported.
   if (VT == MVT::f32 && !Subtarget.hasBasicF())
-    return false;
+    return FPImmAction::ConstantPool;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
-    return false;
-  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT));
+    return FPImmAction::ConstantPool;
+  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT))
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
@@ -11451,7 +11454,7 @@ Register LoongArchTargetLowering::getExceptionSelectorRegister(
 
 static int getEstimateRefinementSteps(EVT VT,
                                       const LoongArchSubtarget &Subtarget) {
-  // Feature FRECIPE instrucions relative accuracy is 2^-14.
+  // Feature FRECIPE instructions relative accuracy is 2^-14.
   // IEEE float has 23 digits and double has 52 digits.
   int RefinementSteps = VT.getScalarType() == MVT::f64 ? 2 : 1;
   return RefinementSteps;
