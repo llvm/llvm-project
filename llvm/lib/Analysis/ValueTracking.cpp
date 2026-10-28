@@ -5520,8 +5520,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const bool IsFMA = IID == Intrinsic::fma;
 
-      // FIXME: This should check isGuaranteedNotToBeUndef
-      if (A0 == A1 || NegSrc) {
+      if (A0 == A1 || (NegSrc && isGuaranteedNotToBeUndef(NegSrc, Q.AC, Q.CtxI,
+                                                          Q.DT, Depth + 1))) {
         const Value *Src = NegSrc ? NegSrc : A0;
 
         KnownFPClass KnownSrc, KnownAddend;
@@ -6200,8 +6200,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // after which this can be reverted to a simpler match.
     if (match(Op, m_c_FMul(m_Value(Src),
                            m_Instruction(Neg, m_FNeg(m_Deferred(Src))))) &&
-        Neg->getOpcode() == Instruction::FNeg) {
-
+        Neg->getOpcode() == Instruction::FNeg &&
+        isGuaranteedNotToBeUndef(Src, Q.AC, Q.CtxI, Q.DT, Depth + 1)) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(Src, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
