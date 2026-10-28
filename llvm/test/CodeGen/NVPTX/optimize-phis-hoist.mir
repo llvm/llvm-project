@@ -35,15 +35,10 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm
-# CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
 # CHECK: bb.4:
-# CHECK:   [[R3:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2, [[R2]], %bb.3
-# CHECK:   ST_i32 [[R3]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
 ...
 
 ---
@@ -87,17 +82,11 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_multiple
-# CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
-# CHECK: bb.4:
-# CHECK:   [[R3:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK: bb.0:
+# CHECK:   [[ONE:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[TWO:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
 # CHECK: bb.5:
-# CHECK:   [[R4:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2, [[R2]], %bb.3, [[R3]], %bb.4
-# CHECK:   ST_i32 [[R4]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[ONE]], %bb.1, [[ONE]], %bb.2, [[TWO]], %bb.3, [[TWO]], %bb.4
 ...
 
 ---
@@ -127,13 +116,14 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_imm_not_hoisted
+# CHECK: bb.0:
+# CHECK-NOT: MOV_B32_i
 # CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_B32_i 1
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_B32_i 1
 # CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_B32_i 2
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_B32_i 2
 # CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
 ...
 
 ---
@@ -163,13 +153,14 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_noduplicates
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
 # CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
 # CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
 # CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
 ...
 
 ---
@@ -201,13 +192,10 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_through_copy
-# CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI %2, %bb.1, %4, %bb.2
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK-NOT: PHI
+# CHECK: ST_i32 [[HOISTED]]
 ...
 
 ---
@@ -247,13 +235,14 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_no_dominating_pred
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
 # CHECK: bb.3:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
 # CHECK: bb.4:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
 # CHECK: bb.5:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.3, [[R1]], %bb.4
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[A]], %bb.3, [[B]], %bb.4
 ...
 
 ---
@@ -283,13 +272,11 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_implicit_def
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
 # CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00, implicit-def dead $vrframe32
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00, implicit-def dead $vrframe32
 # CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI
 ...
 
 ---
@@ -320,11 +307,10 @@ body:             |
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_same_def_block
 # CHECK: bb.0:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
 # CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
 ...
 
 ---
@@ -361,14 +347,10 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_f64
-# CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b64 = MOV_F64_i double 1.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b64 = MOV_F64_i double 1.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b64 = MOV_F64_i double 2.000000e+00
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b64 = MOV_F64_i double 1.000000e+00
 # CHECK: bb.4:
-# CHECK:   [[R3:%[0-9]+]]:b64 = PHI [[R0]], %bb.1, [[R1]], %bb.2, [[R2]], %bb.3
+# CHECK:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
 ...
 
 ---
@@ -404,14 +386,11 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_removes_phi_cycle
-# CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2, [[R2]], %bb.3
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK-NOT: PHI
 # CHECK: bb.4:
-# CHECK:   ST_i32 [[R2]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   ST_i32 [[HOISTED]]
 ...
 
 ---
@@ -476,23 +455,13 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_hoist_fpimm_multiple_noncontiguous
+# CHECK: bb.0:
+# CHECK:   [[TWO:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
 # CHECK: bb.1:
-# CHECK:   [[R0:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
-# CHECK: bb.2:
-# CHECK:   [[R1:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
-# CHECK: bb.3:
-# CHECK:   [[R2:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK:   MOV_F32_i float 2.000000e+00
+# CHECK:   [[THREE:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
 # CHECK: bb.4:
-# CHECK:   [[R3:%[0-9]+]]:b32 = MOV_F32_i float 4.000000e+00
-# CHECK: bb.5:
-# CHECK:   [[R4:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
-# CHECK: bb.6:
-# CHECK:   [[R5:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
-# CHECK: bb.7:
-# CHECK:   [[R6:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
-# CHECK: bb.8:
-# CHECK:   [[R7:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
+# CHECK:   [[FOUR:%[0-9]+]]:b32 = MOV_F32_i float 4.000000e+00
 # CHECK: bb.9:
-# CHECK:   [[R8:%[0-9]+]]:b32 = PHI [[R0]], %bb.1, [[R1]], %bb.2, [[R2]], %bb.3, [[R3]], %bb.4, [[R4]], %bb.5, [[R5]], %bb.6, [[R6]], %bb.7, [[R7]], %bb.8
-# CHECK:   ST_i32 [[R8]], 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+# CHECK:   PHI [[TWO]], %bb.1, [[THREE]], %bb.2, [[TWO]], %bb.3, [[FOUR]], %bb.4, [[THREE]], %bb.5, [[TWO]], %bb.6, [[THREE]], %bb.7, [[THREE]], %bb.8
 ...

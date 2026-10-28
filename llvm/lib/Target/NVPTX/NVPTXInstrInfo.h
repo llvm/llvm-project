@@ -71,6 +71,14 @@ public:
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
+
+  bool shouldHoistPHIConstant(const MachineInstr &MovImm) const override {
+    return MovImm.getOperand(1).isFPImm();
+  }
+
+  bool shouldFoldConstantPHI(const MachineInstr &MovImm) const override {
+    return true;
+  }
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;

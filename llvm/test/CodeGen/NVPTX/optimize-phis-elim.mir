@@ -28,7 +28,7 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_constant_same
-# CHECK: PHI
+# CHECK-NOT: PHI
 ...
 
 ---
@@ -156,7 +156,8 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_constant_same_b64
-# CHECK: PHI
+# CHECK-NOT: PHI
+# CHECK: MOV_B64_i 1
 ...
 
 ---
@@ -174,9 +175,8 @@ body:             |
     Return
 
 # CHECK-LABEL: name: test_phi_constant_single_input
-# CHECK: bb.0:
-# CHECK:   [[C:%[0-9]+]]:b32 = MOV_B32_i 1
 # CHECK: bb.1:
 # CHECK-NOT: PHI
+# CHECK:   [[C:%[0-9]+]]:b32 = MOV_B32_i 1
 # CHECK:   ST_i32 [[C]]
 ...
