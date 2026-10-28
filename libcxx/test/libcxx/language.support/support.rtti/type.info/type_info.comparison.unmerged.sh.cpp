@@ -6,50 +6,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that the non-unique (strcmp-based) type_info comparison considers two copies of the
-// RTTI for the same type to be equal. Two copies are created by giving a type hidden visibility
-// and using it from both a shared library and the executable that loads it.
+// Check that the strcmp-based type_info comparison treats two copies of the RTTI
+// for the same type as equal. A has hidden visibility, so the shared library and
+// the executable each get their own copy.
 
 // UNSUPPORTED: no-rtti
-
-// Windows needs explicit symbol exports
-// UNSUPPORTED: windows
-
-// Android executable looks for the library at its host path, which doesn't exist on the device
 // UNSUPPORTED: android
 
-// picolibc and LLVM libc only produce static executables
-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME, LLVM-LIBC-FIXME
+// XFAIL: target={{.+}}-zos{{.*}}
 
-// z/OS links against DLLs through a side deck.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// REQUIRES: can-build-shared-libraries
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fPIC -shared -o %t.lib.so -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %if darwin || target={{.+}}-aix{{.*}} %{ %{link_flags} %} %else %{ -nostdlib++ %}
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %t.main.o %t.lib.so %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{flags} %{compile_flags} -fPIC -c -o %t.lib.o -DLIB -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
+// RUN: %{cxx} %t.lib.o %{flags} %{link_flags} -shared -o %t.lib.so
+// RUN: %{build} -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %t.lib.so
 // RUN: %{exec} %t.exe
 
 #include <cassert>
 #include <typeindex>
 
-// Hidden visibility keeps each copy of the RTTI local to its own module.
-struct [[gnu::visibility("hidden")]] A {
-  int x;
-};
+struct __attribute__((visibility("hidden"))) A {};
 
-std::type_index registerA();
+std::type_index from_library();
 
-#if defined(TU1)
-std::type_index registerA() { return std::type_index(typeid(A)); }
+#if defined(LIB)
+std::type_index from_library() { return typeid(A); }
 #elif defined(MAIN)
 int main(int, char**) {
-  std::type_index executable = std::type_index(typeid(A));
-  std::type_index shared     = registerA();
-
-  assert(executable.name() != shared.name());
-  assert(executable == shared);
-  assert(!(executable < shared));
-  assert(!(shared < executable));
+  std::type_index from_executable = typeid(A);
+  assert(from_executable.name() != from_library().name());
+  assert(from_executable == from_library());
+  assert(!(from_executable < from_library()));
+  assert(!(from_library() < from_executable));
   return 0;
 }
 #else
