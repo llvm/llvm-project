@@ -599,6 +599,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64, VgprV2S64}}})
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64, VgprV2S64}}});
 
+  addRulesForGOpcs({G_AMDGPU_READANYLANE}, Standard)
+      .Uni(S32, {{Sgpr32}, {Vgpr32}});
+
   addRulesForGOpcs({G_UADDO, G_USUBO}, Standard)
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
