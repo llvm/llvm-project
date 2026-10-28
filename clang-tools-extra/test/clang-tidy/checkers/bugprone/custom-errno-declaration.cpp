@@ -43,3 +43,16 @@ namespace errno_test_5 { // all cases should be ignored in this namespace
         return errno;
     }
 } // namespace errno_test_5
+
+namespace errno_test_6 {
+    unsigned errno; // should be ignored
+} // namespace errno_test_6
+
+namespace errno_test_7 {
+    long errno; // should be ignored
+} // namespace errno_test_7
+
+namespace errno_test_8 {
+    typedef int myint;
+    myint errno; // should be ignored
+} // namespace errno_test_8
