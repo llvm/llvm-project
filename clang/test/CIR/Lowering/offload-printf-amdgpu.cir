@@ -42,6 +42,28 @@ module attributes {cir.amdgpu_printf_kind = "hostcall"} {
 !s32i = !cir.int<s, 32>
 !s8i = !cir.int<s, 8>
 
+module attributes {cir.amdgpu_printf_kind = "hostcall"} {
+  cir.func @hostcall_constant_as(%fmt: !cir.ptr<!s8i, target_address_space(4)>) -> !s32i {
+    %0 = cir.offload.printf(%fmt) : (!cir.ptr<!s8i, target_address_space(4)>) -> !s32i
+    cir.return %0 : !s32i
+  }
+}
+
+// The length of a string outside the generic address space is computed in its
+// own address space, but the string is passed to the device library as a
+// generic pointer, so the declaration matches the device library.
+// HOSTCALL: declare i64 @__ockl_printf_append_string_n(i64, ptr, i64, i32)
+// HOSTCALL-LABEL: define{{.*}} i32 @hostcall_constant_as(ptr addrspace(4) %0)
+// HOSTCALL: icmp eq ptr addrspace(4) %0, null
+// HOSTCALL: load i8, ptr addrspace(4) %{{.*}}, align 1
+// HOSTCALL: [[STR:%.*]] = addrspacecast ptr addrspace(4) %0 to ptr
+// HOSTCALL: call i64 @__ockl_printf_append_string_n(i64 %{{.*}}, ptr [[STR]], i64 %{{.*}}, i32 1)
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
 module attributes {cir.amdgpu_printf_kind = "buffered"} {
   cir.global "private" constant cir_private @".str" = #cir.const_array<"%d %s\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
   cir.func @buffered(%v: !s32i, %str: !cir.ptr<!s8i>) -> !s32i {

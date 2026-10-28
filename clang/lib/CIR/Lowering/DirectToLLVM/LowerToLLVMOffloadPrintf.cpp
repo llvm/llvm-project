@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVM.h"
+#include "TargetLoweringInfo.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -235,10 +236,11 @@ public:
   AMDGPUPrintfLowering(cir::OffloadPrintfOp op,
                        mlir::ConversionPatternRewriter &rewriter,
                        const mlir::DataLayout &dataLayout,
-                       mlir::SymbolTableCollection &symbolTables)
+                       mlir::SymbolTableCollection &symbolTables,
+                       unsigned genericAddrSpace)
       : op(op), rewriter(rewriter), dataLayout(dataLayout),
-        symbolTables(symbolTables), mod(op->getParentOfType<mlir::ModuleOp>()) {
-  }
+        symbolTables(symbolTables), mod(op->getParentOfType<mlir::ModuleOp>()),
+        genericAddrSpace(genericAddrSpace) {}
 
   mlir::LogicalResult lower(mlir::ValueRange args, bool isBuffered);
 
@@ -287,6 +289,7 @@ private:
   const mlir::DataLayout &dataLayout;
   mlir::SymbolTableCollection &symbolTables;
   mlir::ModuleOp mod;
+  unsigned genericAddrSpace;
 
   /// The rest of the op's block, which the expansion branches to.
   mlir::Block *cont = nullptr;
@@ -469,18 +472,14 @@ mlir::Value AMDGPUPrintfLowering::callAppendStringN(mlir::Value desc,
                                                     mlir::Value length,
                                                     bool isLast) {
   mlir::Value isLastInt32 = getI32(isLast);
-  auto name = mlir::StringAttr::get(rewriter.getContext(),
-                                    "__ockl_printf_append_string_n");
-  // A call must match its callee's type, which takes the pointer type of the
-  // first string it was declared for.
-  if (auto fn =
-          symbolTables.lookupSymbolIn<mlir::LLVM::LLVMFuncOp>(mod, name)) {
-    mlir::Type strTy = fn.getFunctionType().getParamType(1);
-    if (str.getType() != strTy)
-      str = mlir::LLVM::AddrSpaceCastOp::create(rewriter, op.getLoc(), strTy,
-                                                str);
-  }
-  return createCall(name, rewriter.getI64Type(),
+  // __ockl_printf_append_string_n takes a generic pointer, which can address a
+  // string in any address space.
+  auto ptrTy =
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext(), genericAddrSpace);
+  if (str.getType() != ptrTy)
+    str =
+        mlir::LLVM::AddrSpaceCastOp::create(rewriter, op.getLoc(), ptrTy, str);
+  return createCall("__ockl_printf_append_string_n", rewriter.getI64Type(),
                     {desc, str, length, isLastInt32});
 }
 
@@ -815,7 +814,13 @@ mlir::LogicalResult CIRToLLVMOffloadPrintfOpLowering::matchAndRewrite(
     if (auto kind = mod->getAttrOfType<mlir::StringAttr>(
             cir::CIRDialect::getAMDGPUPrintfKindAttrName()))
       isBuffered = kind.getValue() == "buffered";
-    return AMDGPUPrintfLowering(op, rewriter, dataLayout, symbolTables)
+    std::unique_ptr<cir::TargetLoweringInfo> targetInfo =
+        triple.isSPIRV() ? cir::createSPIRVTargetLoweringInfo()
+                         : cir::createAMDGPUTargetLoweringInfo();
+    unsigned genericAddrSpace = targetInfo->getTargetAddrSpaceFromCIRAddrSpace(
+        cir::LangAddressSpace::OffloadGeneric);
+    return AMDGPUPrintfLowering(op, rewriter, dataLayout, symbolTables,
+                                genericAddrSpace)
         .lower(adaptor.getOperands(), isBuffered);
   }
 
