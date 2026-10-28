@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVR.h"
+#include "AVRAsmPrinter.h"
 #include "AVRTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -68,15 +69,15 @@ void AVRCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinterBegin
+  addModulePass(AVRAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinter
+  addMachineFunctionPass(AVRAsmPrinterPass(), PMW);
 }
 
 void AVRCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add AVRAsmPrinterEnd
+  addModulePass(AVRAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
