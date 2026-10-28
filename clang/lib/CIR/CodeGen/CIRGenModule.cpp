@@ -498,7 +498,10 @@ void CIRGenModule::emitDeferred() {
   // emitted that then need those vtables.
   assert(deferredVTables.empty());
 
-  assert(!cir::MissingFeatures::cudaSupport());
+  // A host ODR-use requires a device definition even without device-side uses.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+    llvm::append_range(deferredDeclsToEmit,
+                       getASTContext().CUDADeviceVarODRUsedByHost);
 
   // Stop if we're out of both deferred vtables and deferred declarations.
   if (deferredDeclsToEmit.empty())
