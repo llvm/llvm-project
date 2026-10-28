@@ -501,6 +501,16 @@ void genericToDevice(Module &M) {
   LLVMContext &Ctx = M.getContext();
   auto *Generic = PointerType::get(Ctx, air::GenericHintAS);
   auto *Device = PointerType::get(Ctx, 1);
+  // Constant expressions on threadgroup variables (a generic address of one,
+  // PTX's cvta.shared, under a ptrtoint whose type maps to nothing) as
+  // instructions, which the mapping below reaches: left as constants, a
+  // generic cast inside them crashed Metal's compiler.
+  SmallVector<Constant *, 8> TGGlobals;
+  for (GlobalVariable &GV : M.globals())
+    if (GV.getAddressSpace() == 3)
+      TGGlobals.push_back(&GV);
+  if (!TGGlobals.empty())
+    convertUsersOfConstantsToInstructions(TGGlobals);
   auto Map = [&](Type *T) -> Type * {
     if (T == Generic)
       return Device;
@@ -569,6 +579,31 @@ void genericToDevice(Module &M) {
         ASC->replaceAllUsesWith(ASC->getOperand(0));
         ASC->eraseFromParent();
       }
+    // A threadgroup address made generic (now device) only to be an integer
+    // is the threadgroup pointer's integer, which Metal has. Any other such
+    // pointer would address device memory: Metal has no generic pointer to
+    // threadgroup memory, and its compiler crashed on the cast.
+    SmallVector<AddrSpaceCastInst *, 4> TGCasts;
+    for (Instruction &I : instructions(F))
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I);
+          ASC && ASC->getSrcAddressSpace() == 3 &&
+          ASC->getDestAddressSpace() == 1)
+        TGCasts.push_back(ASC);
+    for (AddrSpaceCastInst *ASC : TGCasts) {
+      for (User *U : make_early_inc_range(ASC->users()))
+        if (auto *P2I = dyn_cast<PtrToIntInst>(U)) {
+          IRBuilder<> B(P2I);
+          P2I->replaceAllUsesWith(
+              B.CreatePtrToInt(ASC->getOperand(0), P2I->getType(), P2I->getName()));
+          P2I->eraseFromParent();
+        }
+      if (ASC->use_empty())
+        ASC->eraseFromParent();
+      else
+        F.getContext().diagnose(DiagnosticInfoUnsupported(
+            F, "a generic pointer to threadgroup memory used as a pointer "
+               "(Metal has no generic address space)"));
+    }
   }
 }
 
