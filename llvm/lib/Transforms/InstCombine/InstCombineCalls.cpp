@@ -61,7 +61,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,12 +87,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
-
-static cl::opt<unsigned> GuardWideningWindow(
-    "instcombine-guard-widening-window",
-    cl::init(3),
-    cl::desc("How wide an instruction window to bypass looking for "
-             "another guard"));
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -888,7 +881,7 @@ removeTriviallyEmptyRange(IntrinsicInst &EndI, InstCombinerImpl &IC,
   BasicBlock::reverse_iterator BI(EndI), BE(EndI.getParent()->rend());
   for (; BI != BE; ++BI) {
     if (auto *I = dyn_cast<IntrinsicInst>(&*BI)) {
-      if (I->isDebugOrPseudoInst() ||
+      if (isa<PseudoProbeInst>(I) ||
           I->getIntrinsicID() == EndI.getIntrinsicID())
         continue;
       if (IsStart(*I)) {
@@ -1401,7 +1394,10 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   // max (min X, 42), 41 --> X > 41 ? 42 : 41
   // min (max X, 42), 43 --> X < 43 ? 42 : 43
   Value *Cmp = Builder.CreateICmp(Pred, X, I1);
-  return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  auto *SI = SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              II->getFunction());
+  return SI;
 }
 
 /// If this min/max has a constant operand and an operand that is a matching
@@ -1957,7 +1953,7 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
     B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
@@ -2536,10 +2532,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
       return replaceInstUsesWith(CI, V);
 
+    auto *Cmp = cast<CmpIntrinsic>(II);
+    Value *I0 = Cmp->getLHS(), *I1 = Cmp->getRHS();
+    Value *LHS, *RHS;
+    if (matchCommonBinOpOperands(I0, I1, Cmp->getLTPredicate(), LHS, RHS,
+                                 SQ.getWithInstruction(II)))
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntrinsic(II->getType(), IID, {LHS, RHS}));
+
     if (IID == Intrinsic::ucmp)
       break;
-
-    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
 
     // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
     if (match(I1, m_Zero())) {
@@ -2549,7 +2551,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(
             CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
     }
-    Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(
           CI,
@@ -2888,7 +2889,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // the pointer argument.
     if (NewAlignmentLog > Log2(CI.getRetAlign().valueOrOne())) {
       CI.addRetAttr(Attribute::getWithAlignment(
-          CI.getContext(), Align(uint64_t(1) << NewAlignmentLog)));
+          CI.getContext(), Align::fromLog2(NewAlignmentLog)));
       Changed = true;
     }
     if (Changed)
@@ -2902,7 +2903,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
 
     // Multiply by one.
-    if (match(Arg1, m_One()))
+    if (BitWidth > 1 && match(Arg1, m_One()))
       return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
   }
@@ -3374,7 +3375,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                            : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        // Given the condition is the same, we pull metadata (particularly
+        // profile metadata) from the original select instruction.
+        SelectInst *SI = SelectInst::Create(
+            Cond, AbsT, AbsF, "", nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Arg));
         SI->setFastMathFlags(II->getFastMathFlags() |
                              cast<SelectInst>(Arg)->getFastMathFlags());
         // Can't copy nsz to select, as even with the nsz flag the fabs result
@@ -3507,19 +3512,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
     // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    // For both of the cases below, we have no information on the distribution
+    // of x in the general case, so we mark the created selects as having
+    // unknown branch weights.
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 2.0),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 0.5),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
@@ -3528,17 +3536,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
+    Instruction *SelectInst = nullptr;
     if (match(II->getArgOperand(1),
-              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
-                                m_Value(SelectRHS))))) {
+              m_OneUse(m_Instruction(
+                  SelectInst, m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                       m_Value(SelectRHS)))))) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
-        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+        Select = Builder.CreateSelect(
+            SelectCond, NewLdexp, Src, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       } else if (match(SelectLHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
-        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+        Select = Builder.CreateSelect(
+            SelectCond, Src, NewLdexp, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       }
 
       if (NewLdexp) {
@@ -4004,6 +4018,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(Ptr1);
         MaybeSimplifyHint(Ptr2);
+        SimpleAAQueryInfo AAQI(*AA);
+        AAQI.AllowEphemerals = false;
+        if (AA->alias(MemoryLocation::getBeforeOrAfter(Ptr1),
+                      MemoryLocation::getBeforeOrAfter(Ptr2), AAQI,
+                      II) == AliasResult::NoAlias) {
+          return RemoveBundle();
+        }
       } break;
 
       // TODO: Drop these assumes when they are redundant
@@ -4016,10 +4037,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If the assume has operand bundles, the folds below will never work, so
-    // don't bother trying.
-    if (II->hasOperandBundles())
+    if (II->hasOperandBundles()) {
+      // Merge consecutive assumes to save some resources
+      if (auto *PrevAI = dyn_cast_or_null<AssumeInst>(II->getPrevNode());
+          PrevAI && PrevAI->hasOperandBundles()) {
+        SmallVector<OperandBundleDef, 4> Bundles;
+        Bundles.reserve(II->getNumOperandBundles() +
+                        PrevAI->getNumOperandBundles());
+        for (auto Bundle : PrevAI->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        for (auto Bundle : II->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        Builder.CreateAssumption(Bundles);
+        eraseInstFromFunction(*PrevAI);
+        return eraseInstFromFunction(*II);
+      }
+
+      // If the assume has operand bundles, the folds below will never work, so
+      // don't bother trying.
       break;
+    }
 
     Value *IIOperand = II->getArgOperand(0);
 
@@ -4092,7 +4129,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
     Instruction *NextInst = II->getNextNode();
-    for (unsigned i = 0; i < GuardWideningWindow; i++) {
+    for (unsigned i = 0; i < CLOpts.guard_widening_window; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
@@ -5283,9 +5320,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         auto *OpIntTy = GCR.getOperand(2)->getType();
         GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
       }
-
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
 
       // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
       LiveGcValues.insert(BasePtr);

@@ -133,7 +133,7 @@ using namespace LiveDebugValues;
 
 // SSAUpdaterImple sets DEBUG_TYPE, change it.
 #undef DEBUG_TYPE
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 // Act more like the VarLoc implementation, by propagating some locations too
 // far and ignoring some transfers.
@@ -154,6 +154,15 @@ static cl::opt<unsigned>
     StackWorkingSetLimit("livedebugvalues-max-stack-slots", cl::Hidden,
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
+
+// Limit for the maximum number of stack slot indexes, past which we stop
+// tracking spills altogether. MLocTracker reserves a location per subregister
+// index per tracked slot, so this cost grows sharply on targets with many
+// subregister indexes.
+static cl::opt<unsigned>
+    StackSlotIdxesLimit("livedebugvalues-max-stack-slot-idxes", cl::Hidden,
+                        cl::desc("livedebugvalues-max-stack-slot-idxes"),
+                        cl::init(128));
 
 DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
 
@@ -1134,6 +1143,10 @@ void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
 }
 
 std::optional<SpillLocationNo> MLocTracker::getOrTrackSpillLoc(SpillLoc L) {
+  // Don't track spills at all on targets with a large number of slot indexes.
+  if (NumSlotIdxes >= StackSlotIdxesLimit)
+    return std::nullopt;
+
   SpillLocationNo SpillID(SpillLocs.idFor(L));
 
   if (SpillID.id() == 0) {
@@ -1466,7 +1479,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         // debug values.
         if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm() || MO.isGlobal()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
         } else {
           llvm_unreachable("Unexpected debug operand type.");
@@ -3735,6 +3748,13 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
       new MLocTracker(MF, *TII, *TRI, *MF.getSubtarget().getTargetLowering());
   VTracker = nullptr;
   TTracker = nullptr;
+
+  LLVM_DEBUG(if (MTracker->NumSlotIdxes >= StackSlotIdxesLimit) {
+    dbgs() << "Disabling InstrRefBasedLDV spill tracking for " << MF.getName()
+           << " since target has too many potential stack slot indexes ("
+           << MTracker->NumSlotIdxes << ", limit is " << StackSlotIdxesLimit
+           << ")\n";
+  });
 
   SmallVector<MLocTransferMap, 32> MLocTransfer;
   SmallVector<VLocTracker, 8> vlocs;

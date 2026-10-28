@@ -38,6 +38,15 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         super().setUpClass()
         cls.run_as_server: bool = strtobool(os.getenv("LLDBDAP_RUN_AS_SERVER", "false"))
 
+    @property
+    def lldb_dap_exe(self) -> str:
+        exe = self.lldbDAPExec
+        self.assertTrue(
+            is_exe(exe),
+            f"lldb-dap must exist and be executable. path: {exe}",
+        )
+        return str(exe)
+
     def setUp(self):
         super().setUp()
         self.setUpBaseLogging()
@@ -52,6 +61,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.logger.setLevel(logging.DEBUG)
 
         log_path = f"{self.getLogBasenameForCurrentTest()}-testcase.log"
+        self.log_files.append(log_path)
         handler = logging.FileHandler(log_path, mode="w")
 
         # The Log name gets quite long and becomes noise. use the last log scope.
@@ -124,10 +134,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
     def __do_create_debug_adapter(
         self, adapter_options: DebugAdapterOptions
     ) -> DebugAdapter:
-        self.assertTrue(
-            is_exe(self.lldbDAPExec),
-            f"lldb-dap must exist and be executable. path: {self.lldbDAPExec}",
-        )
+        lldb_dap_exe = self.lldb_dap_exe
 
         if adapter_options.log_file:
             log_file = adapter_options.log_file
@@ -135,6 +142,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
             count = self._debug_adapter_count
             suffix = f"-{count}" if count else ""
             log_file = f"{self.getLogBasenameForCurrentTest()}-dap{suffix}.log"
+            self.log_files.append(log_file)
 
         self._debug_adapter_count += 1
         cwd = adapter_options.cwd or self.getBuildDir()
@@ -143,8 +151,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         adapter_options = adapter_options.clone(
             log_file=log_file, cwd=cwd, pre_init_commands=pre_init_commands
         )
-        lldb_dap_exec = self.expect_not_none(self.lldbDAPExec)
-        adapter = DebugAdapter(executable=lldb_dap_exec, opts=adapter_options)
+        adapter = DebugAdapter(executable=lldb_dap_exe, opts=adapter_options)
         self.assertTrue(adapter.is_alive, "adapter should be running after creation.")
 
         def cleanup_adapter():

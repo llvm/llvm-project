@@ -105,7 +105,13 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    // IsElementalProcedure() characterizes the whole procedure, including
+    // all of its dummy arguments, so evaluate it at most once per scope.
+    if (!innermostIsElemental_) {
+      innermostIsElemental_ =
+          innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    }
+    return *innermostIsElemental_;
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -184,6 +190,8 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cached result of InElemental() for innermostSymbol_
+  mutable std::optional<bool> innermostIsElemental_;
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
@@ -1179,14 +1187,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -2874,8 +2885,13 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
+  // InElemental() is cached per procedure: recompute it when entering a scope
+  // with its own symbol, and restore the enclosing procedure's value on exit.
+  common::Restorer<std::optional<bool>> elementalRestorer{
+      innermostIsElemental_, innermostIsElemental_};
   if (const Symbol *symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
+    innermostIsElemental_.reset();
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
     auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
@@ -3707,7 +3723,9 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
       if (derivedType->IsVectorType()) {
         messages_.Say(arg.name(),
             "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,

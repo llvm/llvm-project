@@ -668,6 +668,27 @@ namespace C {
   static_assert(M4->a == nullptr);
   static_assert(M4->g2[0] == 0);
 }
+
+namespace D {
+  struct A {
+    char a;
+  };
+
+  template <typename T>
+  struct B {
+    constexpr T &bar() { return *static_cast<T *>(this); } // expected-note {{cannot cast object of dynamic type 'C<VirtualCalls::BaseToDerived::D::D>' to type 'VirtualCalls::BaseToDerived::D::D'}} \
+                                                           // ref-note {{cannot cast object of dynamic type 'C<D>' to type 'VirtualCalls::BaseToDerived::D::D'}}
+  };
+
+  template <typename T>
+  struct C : A , B<T> {};
+
+  struct D : B<D> {};
+
+  constexpr auto L = C<D>().bar(); // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{in call to}}
+}
+
 }
 
 
@@ -1998,15 +2019,13 @@ namespace ErroneousVoidDecl {
 
   template <typename F, typename C, typename N1, typename N2>
   constexpr bool check(const C &c, N1 *n1, N2 *n2) {
-    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}} \
-                                   // ref-note {{destroying object 'chk' whose lifetime has already ended}}
+    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}}
     return true;
   }
 
   template <int N> constexpr M<N> *bar() { return nullptr; }
   static_assert(check<S>([](int n) constexpr {}, bar<1u>(), bar<1u>())); // both-note {{in instantiation}} \
-                                                                         // ref-error {{not an integral constant expression}} \
-                                                                         // ref-note {{in call to}}
+                                                                         // both-error {{not an integral constant expression}}
 #endif
 }
 

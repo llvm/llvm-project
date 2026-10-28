@@ -1190,13 +1190,13 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   bool isVTi1Type = false;
   if (auto *CV = dyn_cast<ConstantVector>(CPN->getConstVal())) {
     if (cast<VectorType>(CV->getType())->getElementType()->isIntegerTy(1)) {
-      IRBuilder<> IRB(CV->getContext());
       SmallVector<Constant*, 128> NewConst;
       unsigned VecLen = CV->getNumOperands();
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isNullValue()));
+        NewConst.push_back(ConstantInt::get(Type::getInt8Ty(CV->getContext()),
+                                            CV->getOperand(i)->isNullValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;
@@ -1939,7 +1939,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
+      Addr != 0 ? Align::fromLog2(llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -3709,12 +3709,11 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool ForCodeSize) const {
-  return true;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
+  return FPImmAction::Legal;
 }
 
 /// Returns true if it is beneficial to convert a load of a constant

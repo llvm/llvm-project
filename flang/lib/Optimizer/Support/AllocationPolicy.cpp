@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -55,17 +56,39 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
       loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
   if (!sizeAndAlignment)
     return false;
-  PendingAllocationInfo info{
-      /*isTemporary=*/true, /*isDynamic=*/false,
-      static_cast<std::int64_t>(sizeAndAlignment->first)};
+  PendingAllocationInfo info;
+  info.isTemporary = true;
+  info.isDynamic = false;
+  info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
   AllocationPolicy copyInPolicy = allocationPolicy;
   copyInPolicy.stackArrays = false;
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
 }
 
-bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
-                                const AllocationPolicy &policy,
-                                std::size_t stackBytesUsed) {
+std::optional<std::size_t>
+fir::stackBytesNeeded(const PendingAllocationInfo &info) {
+  if (!info.byteSize)
+    return std::nullopt;
+  auto bytes = static_cast<std::size_t>(*info.byteSize);
+  if (info.alignment && *info.alignment > 1)
+    bytes += static_cast<std::size_t>(*info.alignment - 1);
+  return bytes;
+}
+
+/// The policy in effect for \p info. Inside an offload region -fstack-arrays is
+/// not honored, since the device stack is far smaller than the host one.
+static fir::AllocationPolicy policyFor(const fir::PendingAllocationInfo &info,
+                                       const fir::AllocationPolicy &policy) {
+  fir::AllocationPolicy effective = policy;
+  if (effective.stackArrays && fir::isInOffloadRegion(info.context))
+    effective.stackArrays = false;
+  return effective;
+}
+
+/// shouldAllocateOnStack with the policy already narrowed by policyFor.
+static bool shouldAllocateOnStackImpl(const fir::PendingAllocationInfo &info,
+                                      const fir::AllocationPolicy &policy,
+                                      std::size_t stackBytesUsed) {
   // -fstack-arrays: put everything on the stack (best effort). For existing
   // allocations, the heap-to-stack conversion still only happens where it is
   // provably safe.
@@ -88,16 +111,27 @@ bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
 
   auto size = static_cast<std::size_t>(*info.byteSize);
   // Small array temporaries go on the stack while the per-function budget
-  // allows it; bigger ones go on the heap.
+  // allows it; bigger ones go on the heap. The size threshold looks at the
+  // object itself; the budget also charges the worst-case padding a requested
+  // alignment may need.
   return size <= policy.smallArrayThresholdBytes &&
-         stackBytesUsed + size <= policy.totalStackLimitBytes;
+         stackBytesUsed + *stackBytesNeeded(info) <=
+             policy.totalStackLimitBytes;
+}
+
+bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
+                                const AllocationPolicy &basePolicy,
+                                std::size_t stackBytesUsed) {
+  return shouldAllocateOnStackImpl(info, policyFor(info, basePolicy),
+                                   stackBytesUsed);
 }
 
 fir::AllocationPlacement
 fir::decideAllocationPlacement(const AllocationInfo &info,
-                               const AllocationPolicy &policy,
+                               const AllocationPolicy &basePolicy,
                                std::size_t stackBytesUsed) {
   using P = fir::AllocationPlacement;
+  AllocationPolicy policy = policyFor(info, basePolicy);
 
   // An allocation that is not known to be dynamic but whose size cannot be
   // determined cannot be reasoned about: leave it where it is instead of
@@ -107,7 +141,7 @@ fir::decideAllocationPlacement(const AllocationInfo &info,
 
   // Translate the "should this be on the stack" decision into a placement,
   // accounting for where the allocation currently lives.
-  bool wantStack = fir::shouldAllocateOnStack(info, policy, stackBytesUsed);
+  bool wantStack = shouldAllocateOnStackImpl(info, policy, stackBytesUsed);
   if (wantStack)
     return info.isCurrentlyOnStack ? P::Leave : P::Stack;
   return info.isCurrentlyOnStack ? P::Heap : P::Leave;

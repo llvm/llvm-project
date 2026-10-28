@@ -22,7 +22,7 @@
 ; CHECK: SU(3):   dead $wzr = SUBSWri %0:gpr32common, 13, 0, implicit-def $nzcv
 ; CHECK:   Successors:
 ; CHECK:     SU(4): Ord  Latency=0 Cluster
-; CHECK: SU(4):   %5:gpr32 = CSELWr %0:gpr32common, %3:gpr32common, 0, implicit killed $nzcv
+; CHECK: SU(4):   %5:gpr32 = CSELWr %0:gpr32common, %3:gpr32common, 0, implicit $nzcv
 ; CHECK:   Predecessors:
 ; CHECK:     SU(3): Ord  Latency=0 Cluster
 ; CHECK: SU(5):   $w0 = COPY %5:gpr32
@@ -33,7 +33,7 @@
 ; CHECK: SU(3):   dead $xzr = SUBSXri %0:gpr64common, 13, 0, implicit-def $nzcv
 ; CHECK:   Successors:
 ; CHECK:     SU(4): Ord  Latency=0 Cluster
-; CHECK: SU(4):   %5:gpr64 = CSELXr %0:gpr64common, %3:gpr64common, 0, implicit killed $nzcv
+; CHECK: SU(4):   %5:gpr64 = CSELXr %0:gpr64common, %3:gpr64common, 0, implicit $nzcv
 ; CHECK:   Predecessors:
 ; CHECK:     SU(3): Ord  Latency=0 Cluster
 ; CHECK: SU(5):   $x0 = COPY %5:gpr64

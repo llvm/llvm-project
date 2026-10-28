@@ -95,14 +95,19 @@ struct TSDRegistrySharedT {
     initThread(Instance);
   }
 
+  // Only the first NumberOfTSDs TSDs are ever handed out, so skip the rest to
+  // avoid dirtying their pages around fork(). setNumberOfTSDs() only grows the
+  // count under Mutex, which is held until enable(), so both loops match.
   void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
-    for (u32 I = 0; I < TSDsArraySize; I++)
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    for (u32 I = 0; I < TotalTSDs; I++)
       TSDs[I].lock();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
-    for (s32 I = static_cast<s32>(TSDsArraySize - 1); I >= 0; I--)
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    for (s32 I = static_cast<s32>(TotalTSDs - 1); I >= 0; I--)
       TSDs[I].unlock();
     Mutex.unlock();
   }
@@ -164,8 +169,8 @@ private:
   static_assert(alignof(TSD<Allocator>) >= 2, "");
 
   ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
-    *getTlsPtr() &= 1;
-    *getTlsPtr() |= reinterpret_cast<uptr>(CurrentTSD);
+    uptr *TlsPtr = getTlsPtr();
+    *TlsPtr = (*TlsPtr & 1ULL) | reinterpret_cast<uptr>(CurrentTSD);
   }
 
   ALWAYS_INLINE TSD<Allocator> *getCurrentTSD() {
@@ -217,8 +222,8 @@ private:
   }
 
   void setDisableMemInit(bool B) {
-    *getTlsPtr() &= ~1ULL;
-    *getTlsPtr() |= B;
+    uptr *TlsPtr = getTlsPtr();
+    *TlsPtr = (*TlsPtr & ~1ULL) | (B ? 1 : 0);
   }
 
   NOINLINE void initThread(Allocator *Instance) {
