@@ -128,16 +128,16 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   }
   // If there are no capabilities, or we can't satisfy the version or
   // capability requirements, use the list of extensions (if the subtarget
-  // can handle them all). Without an extension the version must hold.
-  if ((!ReqExts.empty() || (MinVerOK && MaxVerOK)) &&
+  // can handle them all). Without an extension the version must hold. An
+  // extension stands in for an unmet version.
+  bool VerOK = MinVerOK && MaxVerOK;
+  if ((!ReqExts.empty() || VerOK) &&
       llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true,
-            {},
-            std::move(ReqExts),
-            VersionTuple(),
-            VersionTuple()}; // TODO: add versions to extensions.
+    if (VerOK)
+      return {true, {}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+    return {true, {}, std::move(ReqExts), VersionTuple(), VersionTuple()};
   }
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
