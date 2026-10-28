@@ -1309,9 +1309,8 @@ public:
             : 0;
 
     Location loc = op.getLoc();
-    Value size = LLVM::ConstantOp::create(
-        rewriter, loc, rewriter.getI64Type(),
-        rewriter.getI64IntegerAttr(byteSize));
+    Value size = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          rewriter.getI64IntegerAttr(byteSize));
     auto memcpy = rewriter.replaceOpWithNewOp<LLVM::MemcpyOp>(
         op, adaptor.getTarget(), adaptor.getSource(), size, isVolatile);
 
