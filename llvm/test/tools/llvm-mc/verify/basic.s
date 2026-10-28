@@ -5,7 +5,8 @@
 
 #--- match.s
 ## Matching directives: a substring match, a '-re' regex match, '@+N' and
-## '@-N' offsets, '@above'/'@below', and directives in '#' and '//' comments.
+## '@-N' offsets, '@above'/'@below', ':<col>' columns, and directives in '#'
+## and '//' comments.
 # RUN: llvm-mc --triple=x86_64 --verify match.s
 ## Output files are not kept if assembling failed.
 # RUN: llvm-mc --triple=x86_64 --verify --filetype=obj -o match.o match.s
@@ -28,6 +29,7 @@
 
 .qux_directive # expected-error {{unknown directive}}
 .quux_directive // expected-error {{unknown directive}}
+.col_directive # expected-error:1 {{unknown directive}}
 
 ## A diagnostic that is reported twice on a line needs two directives or a count.
 .dup_directive; .dup_directive
@@ -43,7 +45,25 @@ movl $1, %eax, %ebx; movl $1, %eax, %ebx
 # expected-error@-2 {{invalid operand}}
 
 movl $1, %eax, %ebx
-# expected-error@-1 {{invalid operand for instruction}}
+# expected-error@-1:16 {{invalid operand for instruction}}
+
+#--- wrong-column.s
+## A directive with the wrong column fails.
+# RUN: not llvm-mc --triple=x86_64 --verify wrong-column.s 2>&1 \
+# RUN:   | FileCheck wrong-column.s
+.foo_directive # expected-error:2 {{unknown directive}}
+# CHECK: wrong-column.s:[[#@LINE-1]]:1: error: unexpected error: unknown directive
+# CHECK: error: expected error "unknown directive" was not produced
+
+#--- invalid-column.s
+## Invalid columns are rejected.
+# RUN: not llvm-mc --triple=x86_64 --verify invalid-column.s 2>&1 \
+# RUN:   | FileCheck invalid-column.s
+nop
+# expected-error@-1:0 {{never happens}}
+# expected-error@unknown:1 {{never happens}}
+# CHECK: error: invalid column ':0'
+# CHECK: error: cannot specify a column with '@unknown'
 
 #--- custom-prefix.s
 ## Custom prefixes are recognized instead of 'expected', but not as the suffix
