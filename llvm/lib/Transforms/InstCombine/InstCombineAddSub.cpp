@@ -2145,12 +2145,14 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
 
   // (-X) + Y --> Y - X
   Value *X, *Y;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(&I, m_c_FAdd(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))))
     return BinaryOperator::CreateFSubFMF(Y, X, &I);
 
   // Similar to above, but look through fmul/fdiv for the negated term.
   // (-X * Y) + Z --> Z - (X * Y) [4 commuted variants]
   Value *Z;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)),
                                            m_Value(Y))),
                          m_Value(Z)))) {
@@ -2159,6 +2161,7 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   }
   // (-X / Y) + Z --> Z - (X / Y) [2 commuted variants]
   // (X / -Y) + Z --> Z - (X / Y) [2 commuted variants]
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)),
                                          m_Value(Y))),
                          m_Value(Z))) ||
@@ -2216,6 +2219,7 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     }
 
     // (-X - Y) + (X + Z) --> Z - Y
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(&I, m_c_FAdd(m_FSub(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y)),
                            m_c_FAdd(m_Deferred(X), m_Value(Z)))))
       return BinaryOperator::CreateFSubFMF(Z, Y, &I);
@@ -3115,6 +3119,7 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // reassociation and cheaper in codegen than fmul/fdiv.
   // TODO: Should the m_OneUse restriction be removed?
   Instruction *FNegOp;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (!match(&I, m_FNegOrFSubNegZero(m_OneUse(m_Instruction(FNegOp)))))
     return nullptr;
 
@@ -3247,6 +3252,7 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     };
     // -(Cond ? -P : Y) --> Cond ? P : -Y
     Value *P;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(X, m_FNegOrFSubNegZero(m_Value(P)))) {
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
       SelectInst *NewSel = SelectInst::Create(
@@ -3256,6 +3262,7 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       return NewSel;
     }
     // -(Cond ? X : -P) --> Cond ? -X : P
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Y, m_FNegOrFSubNegZero(m_Value(P)))) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
       SelectInst *NewSel = SelectInst::Create(
@@ -3323,6 +3330,7 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // fsub -0.0, Denorm ==> +-0
   // fneg Denorm ==> -Denorm
   Value *Op;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(&I, m_FNegOrFSubNegZero(m_Value(Op))))
     return UnaryOperator::CreateFNegFMF(Op, &I);
 
@@ -3351,6 +3359,7 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   }
 
   // (-X) - Op1 --> -(X + Op1)
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (I.hasNoSignedZeros() && !isa<ConstantExpr>(Op0) &&
       match(Op0, m_OneUse(m_FNegOrFSubNegZero(m_Value(X))))) {
     Value *FAdd = Builder.CreateFAddFMF(X, Op1, &I);
@@ -3370,22 +3379,26 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
       return BinaryOperator::CreateFAddFMF(Op0, NegC, &I);
 
   // X - (-Y) --> X + Y
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
     return BinaryOperator::CreateFAddFMF(Op0, Y, &I);
 
   // Similar to above, but look through a cast of the negated value:
   // X - (fptrunc(-Y)) --> X + fptrunc(Y)
   Type *Ty = I.getType();
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op1, m_OneUse(m_FPTrunc(m_FNegOrFSubNegZero(m_Value(Y))))))
     return BinaryOperator::CreateFAddFMF(Op0, Builder.CreateFPTrunc(Y, Ty), &I);
 
   // X - (fpext(-Y)) --> X + fpext(Y)
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op1, m_OneUse(m_FPExt(m_FNegOrFSubNegZero(m_Value(Y))))))
     return BinaryOperator::CreateFAddFMF(Op0, Builder.CreateFPExt(Y, Ty), &I);
 
   // Similar to above, but look through fmul/fdiv of the negated value:
   // Op0 - (-X * Y) --> Op0 + (X * Y)
   // Op0 - (Y * -X) --> Op0 + (X * Y)
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op1,
             m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))))) {
     Value *FMul = Builder.CreateFMulFMF(X, Y, &I);
@@ -3393,6 +3406,7 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   }
   // Op0 - (-X / Y) --> Op0 + (X / Y)
   // Op0 - (X / -Y) --> Op0 + (X / Y)
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op1,
             m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y)))) ||
       match(Op1,

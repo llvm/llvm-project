@@ -2878,6 +2878,7 @@ bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
     return Sub->getOpcode() == Instruction::FSub && Sub->getOperand(1) == I;
   };
   auto IsFMS = [&](Instruction *I) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(I->getOperand(0), m_FNegOrFSubNegZero(m_Value())) ||
         match(I->getOperand(1), m_FNegOrFSubNegZero(m_Value())))
       return true;

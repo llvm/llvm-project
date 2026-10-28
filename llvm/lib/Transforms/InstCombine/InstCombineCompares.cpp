@@ -9127,12 +9127,14 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // Canonicalize fneg as Op1.
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op0, m_FNegOrFSubNegZero(m_Value())) &&
       !match(Op1, m_FNegOrFSubNegZero(m_Value()))) {
     std::swap(Op0, Op1);
     Pred = I.getSwappedPredicate();
   }
 
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (!match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
     return nullptr;
 
@@ -9459,6 +9461,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
 
   // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
   Value *X, *Y;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
       match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
     return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
@@ -9563,6 +9566,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     switch (LHSI->getOpcode()) {
     case Instruction::Select:
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (FCmpInst::isEquality(Pred) && match(RHSC, m_AnyZeroFP()) &&
           match(LHSI,
                 m_c_Select(m_FNegOrFSubNegZero(m_Value(X)), m_Deferred(X))))
@@ -9616,6 +9620,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldCmpSelectOfConstants(I))
     return R;
 
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op0, m_FNegOrFSubNegZero(m_Value(X)))) {
     // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
     Constant *C;

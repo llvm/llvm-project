@@ -2427,6 +2427,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
       FMF &= FPMO->getFastMathFlags();
 
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Op, m_FNegOrFSubNegZero(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTruncFMF(X, Ty, FMF);
       Value *Neg = Builder.CreateFNegFMF(InnerTrunc, FMF);

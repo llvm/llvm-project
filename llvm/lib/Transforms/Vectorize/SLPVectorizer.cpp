@@ -34620,6 +34620,7 @@ private:
         // For flattened fadd reductions the reduced value may be consumed by
         // an fsub/fneg chain link instead of an fadd. No reassoc/nsz gating
         // is needed: the result is only a cost context.
+        // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
         if (getRdxKind(U) == RdxKind ||
             (RdxKind == RecurKind::FAdd &&
              (match(U, m_FSub(m_Value(), m_Value())) ||

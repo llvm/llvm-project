@@ -742,6 +742,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // Note: This handles the canonical fneg instruction and "fsub -0.0, X".
   Value *SrcVec;
   Instruction *Extract;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (!match(FNeg, m_FNegOrFSubNegZero(m_CombineAnd(
                        m_Instruction(Extract),
                        m_ExtractElt(m_Value(SrcVec), m_ConstantInt(ExtIdx))))))

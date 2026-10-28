@@ -654,6 +654,7 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
 
   // -X * -Y --> X * Y
   // -X / -Y --> X / Y
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
       match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
     return BinaryOperator::CreateWithCopiedFlags(Opcode, X, Y, &I);
@@ -1046,6 +1047,7 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *C;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) && match(Op1, m_Constant(C)))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFMulFMF(X, NegC, &I);
@@ -2059,6 +2061,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
   // -X / C --> X / -C
   Value *X;
   const DataLayout &DL = I.getDataLayout();
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(I.getOperand(0), m_FNegOrFSubNegZero(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
@@ -2104,6 +2107,7 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
   // C / -X --> -C / X
   Value *X;
   const DataLayout &DL = I.getDataLayout();
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(I.getOperand(1), m_FNegOrFSubNegZero(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(NegC, X, &I);

@@ -7950,6 +7950,7 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
 }
 
 static bool isFNeg(Value *Op) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   return match(Op, m_FNegOrFSubNegZero(m_Value()));
 }
 

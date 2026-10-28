@@ -1074,6 +1074,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 
   Value *FNegSrc;
   // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Src0, m_FNegOrFSubNegZero(m_Value(FNegSrc))))
     return CallInst::Create(
         II.getCalledFunction(),
@@ -2667,6 +2668,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // powi(-x, p) -> powi(x, p)
         // powi(fabs(x), p) -> powi(x, p)
         // powi(copysign(x, y), p) -> powi(x, p)
+        // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
         if (match(II->getArgOperand(0), m_FNegOrFSubNegZero(m_Value(X))) ||
             match(II->getArgOperand(0), m_FAbs(m_Value(X))) ||
             match(II->getArgOperand(0),
@@ -3067,6 +3069,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     Value *X, *Y;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Arg0, m_FNegOrFSubNegZero(m_Value(X))) &&
         match(Arg1, m_FNegOrFSubNegZero(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse())) {
@@ -3171,6 +3174,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // it would be an extra instruction for min (fnabs), but
     // that is still likely better for analysis and codegen.
     auto IsMinMaxOrXNegX = [IID, &X](Value *Op0, Value *Op1) {
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
           match(Op1, m_Specific(X)))
         return Op0->hasOneUse() ||
@@ -3194,6 +3198,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // -A * -B -> A * B
     Value *A, *B;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(II->getArgOperand(0), m_FNegOrFSubNegZero(m_Value(A))) &&
         match(II->getArgOperand(1), m_FNegOrFSubNegZero(m_Value(B)))) {
       replaceOperand(*II, 0, A);
@@ -3205,6 +3210,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Op1 = II->getOperand(1);
     Value *OpNotNeg, *NegatedOp;
     unsigned NegatedOpArg, OtherOpArg;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Op0, m_FNegOrFSubNegZero(m_Value(OpNotNeg)))) {
       NegatedOp = Op0;
       NegatedOpArg = 0;
@@ -3261,6 +3267,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Src1 = II->getArgOperand(1);
     Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Src0, m_FNegOrFSubNegZero(m_Value(X))) &&
         match(Src1, m_FNegOrFSubNegZero(m_Value(Y))))
       return replaceInstUsesWith(
@@ -3331,6 +3338,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
     // copysign (fneg X), Sign --> copysign X, Sign
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Mag, m_FAbs(m_Value(X))) ||
         match(Mag, m_FNegOrFSubNegZero(m_Value(X))))
       return replaceInstUsesWith(*II, Builder.CreateCopySign(X, Sign, II));
@@ -3368,6 +3376,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *X;
     // fabs (-X) --> fabs (X)
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Arg, m_FNegOrFSubNegZero(m_Value(X)))) {
       Value *Fabs = Builder.CreateFAbs(X, II);
       return replaceInstUsesWith(CI, Fabs);
@@ -3392,9 +3401,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return SI;
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (match(TVal, m_FNegOrFSubNegZero(m_Specific(FVal))))
         return replaceInstUsesWith(*II, Builder.CreateFAbs(FVal, II));
       // fabs (select Cond, TVal, -TVal) --> fabs TVal
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (match(FVal, m_FNegOrFSubNegZero(m_Specific(TVal))))
         return replaceInstUsesWith(*II, Builder.CreateFAbs(TVal, II));
     }
@@ -3429,6 +3440,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::cosh: {
     Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Src, m_FNegOrFSubNegZero(m_Value(X))) ||
         match(Src, m_FAbs(m_Value(X))) ||
         match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
@@ -3450,6 +3462,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(II->getArgOperand(0),
               m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
         !mayFlushDenormalsToPositiveZero(II)) {

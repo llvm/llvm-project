@@ -599,6 +599,7 @@ static bool isDeinterleavingMask(ArrayRef<int> Mask) {
 }
 
 bool isNeg(Value *V) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   return match(V, m_FNegOrFSubNegZero(m_Value())) || match(V, m_Neg(m_Value()));
 }
 

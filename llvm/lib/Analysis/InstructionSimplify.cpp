@@ -6013,6 +6013,7 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
 
   Value *X;
   // fneg (fneg X) ==> X
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (match(Op, m_FNegOrFSubNegZero(m_Value(X))))
     return X;
 
@@ -6157,6 +6158,7 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
 
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
         match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
@@ -6204,6 +6206,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fneg X) ==> X
   Value *X;
   if (canIgnoreSNaN(ExBehavior, FMF))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(Op0, m_NegZeroFP()) &&
         match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
@@ -7320,18 +7323,16 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::ldexp:
     return simplifyLdexp(Op0, Op1, Q, false);
-  case Intrinsic::copysign: {
+  case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)
       return Op0;
-
     // copysign -X, X --> X
     // copysign X, -X --> -X
     if (match(Op0, m_FNeg(m_Specific(Op1))) ||
         match(Op1, m_FNeg(m_Specific(Op0))))
       return Op1;
     break;
-  }
   case Intrinsic::is_fpclass: {
     uint64_t Mask = cast<ConstantInt>(Op1)->getZExtValue();
     // If all tests are made, it doesn't matter what the value is.

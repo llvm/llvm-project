@@ -2313,6 +2313,7 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   // is expensive, this may eventually become a library call. Treat the cost
   // as such. Unless it's fneg which can be implemented with an xor.
   using namespace llvm::PatternMatch;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (I.getType()->isFloatingPointTy() &&
       TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive &&
       !match(&I, m_FNegOrFSubNegZero(m_Value())))

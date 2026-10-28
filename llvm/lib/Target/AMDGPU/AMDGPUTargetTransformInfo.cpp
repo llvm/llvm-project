@@ -1847,6 +1847,7 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
       continue;
 
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
     if (match(&Op, m_FAbs(m_Value())) ||
         match(&Op, m_FNegOrFSubNegZero(m_Value()))) {
       Ops.push_back(&Op);
