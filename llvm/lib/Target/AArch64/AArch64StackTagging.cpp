@@ -529,8 +529,9 @@ void AArch64StackTagging::untagDynamicAllocasBeforeInst(Instruction *InstBefore,
   Value *LastAlloca =
       IRB.CreateLoad(IntptrTy, DynamicAllocaLayout, "last.alloca");
   Value *Zero = Constant::getNullValue(IntptrTy);
-  Value *Cond = IRB.CreateAnd(IRB.CreateICmpNE(LastAlloca, Zero),
-                              IRB.CreateICmpULE(LastAlloca, End));
+  Value *NonZero = IRB.CreateICmpNE(LastAlloca, Zero);
+  Value *InRange = IRB.CreateICmpULE(LastAlloca, End);
+  Value *Cond = IRB.CreateAnd(NonZero, InRange);
   Value *Size = IRB.CreateSelect(Cond, IRB.CreateSub(End, LastAlloca), Zero,
                                  "untag.size");
   // Tag 0.
