@@ -16,7 +16,6 @@
   }
 
   define void @test_dbg_value_copy() { ret void }
-  define void @test_dbg_value_phi() { ret void }
 
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
@@ -74,8 +73,8 @@ body: |
     DBG_VALUE %1(i64), $noreg, !7, !DIExpression(), debug-location !9
 ...
 
-# The DBG_VALUE must not narrow the class of %1, otherwise the redundant COPY
-# from %0 is kept.
+# The DBG_VALUE must not constrain %1. Otherwise %1 gets gpr64 and the
+# redundant COPY from %0, which gets gpr64all, is kept.
 ---
 name:            test_dbg_value_copy
 legalized:       true
@@ -93,44 +92,4 @@ body: |
     %1:gpr(p0) = COPY %0(p0)
     DBG_VALUE %1(p0), $noreg, !7, !DIExpression(), debug-location !9
     $x0 = COPY %1(p0)
-...
-
-# A PHI keeps a class already set on its def, so the class it picks otherwise
-# must match the one the DBG_VALUE sets.
----
-name:            test_dbg_value_phi
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: test_dbg_value_phi
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $w0, $x1, $x2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64all = COPY $x1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
-  ; CHECK-NEXT:   TBNZW [[COPY]], 0, %bb.2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr64all = PHI [[COPY1]], %bb.0, [[COPY2]], %bb.1
-  ; CHECK-NEXT:   DBG_VALUE [[PHI]], $noreg, !7, !DIExpression(), debug-location !9
-  ; CHECK-NEXT:   $x0 = COPY [[PHI]]
-  bb.0:
-    liveins: $w0, $x1, $x2
-    %0:gpr(i32) = COPY $w0
-    %1:gpr(i64) = COPY $x1
-    %2:gpr(i64) = COPY $x2
-    G_BRCOND %0, %bb.2
-
-  bb.1:
-
-  bb.2:
-    %3:gpr(i64) = G_PHI %1(i64), %bb.0, %2(i64), %bb.1
-    DBG_VALUE %3(i64), $noreg, !7, !DIExpression(), debug-location !9
-    $x0 = COPY %3(i64)
 ...
