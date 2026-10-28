@@ -50,17 +50,17 @@ constexpr MessageMapper<ERR_ARRAY_SIZE, TOTAL_STR_LEN>
 constexpr MessageMapper<ERR_ARRAY_SIZE, TOTAL_STR_LEN>
     ERRNO_NAME_MAPPER(PLATFORM_ERRNO_NAMES);
 
+// Writes the text of an error that has no description of its own into the
+// buffer, without a terminator. The buffer is large enough for the text and a
+// terminator, which a caller that wants a C string adds.
 cpp::string_view build_error_string(int err_num, cpp::span<char> buffer) {
-  // if the buffer can't hold "Unknown error" + ' ' + num_str, then just
-  // return "Unknown error".
-  if (buffer.size() <
-      (sizeof("Unknown error") + 1 + IntegerToString<int>::buffer_size()))
-    return const_cast<char *>("Unknown error");
-
-  cpp::StringStream buffer_stream(
-      {const_cast<char *>(buffer.data()), buffer.size()});
-  buffer_stream << "Unknown error" << ' ' << err_num << '\0';
+  cpp::StringStream buffer_stream(buffer);
+  buffer_stream << "Unknown error" << ' ' << err_num;
   return buffer_stream.str();
+}
+
+bool can_build_error_string(cpp::span<char> buffer) {
+  return buffer.size() >= max_buff_size();
 }
 
 } // namespace
@@ -73,8 +73,27 @@ cpp::string_view get_error_string(int err_num, cpp::span<char> buffer) {
   auto opt_str = ERROR_MAPPER.get_str(err_num);
   if (opt_str)
     return *opt_str;
-  else
-    return build_error_string(err_num, buffer);
+  // If the buffer can't hold "Unknown error" + ' ' + num_str, then just
+  // return "Unknown error".
+  if (!can_build_error_string(buffer))
+    return "Unknown error";
+  return build_error_string(err_num, buffer);
+}
+
+const char *get_error_cstring(int err_num) {
+  return get_error_cstring(err_num, {error_buffer, ERR_BUFFER_SIZE});
+}
+
+const char *get_error_cstring(int err_num, cpp::span<char> buffer) {
+  // The descriptions of known errors are stored with their terminator.
+  auto opt_str = ERROR_MAPPER.get_str(err_num);
+  if (opt_str)
+    return opt_str->data();
+  if (!can_build_error_string(buffer))
+    return "Unknown error";
+  cpp::string_view text = build_error_string(err_num, buffer);
+  buffer[text.size()] = '\0';
+  return buffer.data();
 }
 
 cpp::optional<cpp::string_view> try_get_errno_name(int err_num) {
