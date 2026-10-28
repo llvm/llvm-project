@@ -2848,8 +2848,7 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
       if (const auto *ED = RetTy->getAsEnumDecl())
         RetTy = ED->getIntegerType();
 
-      if (RetTy->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(RetTy))
+      if (RetTy->isIntegralOrEnumerationType())
         return shouldExtendReturnType(*this, RetTy)
                    ? ABIArgInfo::getExtend(RetTy)
                    : ABIArgInfo::getDirect();

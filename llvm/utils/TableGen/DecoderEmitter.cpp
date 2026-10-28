@@ -1563,7 +1563,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   // template specialization to kick in).
   if (IsVarLenInst && SpecializeDecodersPerBitwidth)
     PrintFatalError(
-        "Cannot specialize decoders for variable length instuctions");
+        "Cannot specialize decoders for variable length instructions");
 
   DecoderContext Ctx;
   DecoderTreeBuilder TreeBuilder(Ctx, Target, Encodings);

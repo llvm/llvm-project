@@ -31,7 +31,7 @@
 namespace llvm {
 
 class raw_ostream;
-class KnownFPClass;
+struct KnownFPClass;
 
 /// This class represents a range of floating-point values.
 class [[nodiscard]] ConstantFPRange {
