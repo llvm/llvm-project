@@ -58,102 +58,35 @@ define void @divergent_index_large(ptr addrspace(1) %in, ptr %out) #0 {
 ; LLC-NEXT:    s_wait_bvhcnt 0x0
 ; LLC-NEXT:    s_wait_kmcnt 0x0
 ; LLC-NEXT:    s_clause 0x7
-; LLC-NEXT:    global_load_b128 v[4:7], v[0:1], off
-; LLC-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
-; LLC-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
-; LLC-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
-; LLC-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:64
-; LLC-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:80
-; LLC-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:96
-; LLC-NEXT:    global_load_b128 v[36:39], v[0:1], off offset:112
+; LLC-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:112
+; LLC-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:96
+; LLC-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
+; LLC-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:64
+; LLC-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; LLC-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:32
+; LLC-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
+; LLC-NEXT:    global_load_b128 v[36:39], v[0:1], off
 ; LLC-NEXT:    v_and_b32_e32 v28, 0x3ff, v31
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v28
 ; LLC-NEXT:    s_wait_loadcnt 0x7
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v7, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v28
+; LLC-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:112
 ; LLC-NEXT:    s_wait_loadcnt 0x6
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v8, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v9, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v10, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v11, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 8, v28
+; LLC-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:96
 ; LLC-NEXT:    s_wait_loadcnt 0x5
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v12, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 9, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v13, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 10, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v14, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 11, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v15, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 12, v28
+; LLC-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:80
 ; LLC-NEXT:    s_wait_loadcnt 0x4
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v16, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 13, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v17, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v18, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v19, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 16, v28
+; LLC-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:64
 ; LLC-NEXT:    s_wait_loadcnt 0x3
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v20, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 17, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v21, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 18, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v22, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 19, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v23, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 20, v28
+; LLC-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:48
 ; LLC-NEXT:    s_wait_loadcnt 0x2
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v24, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 21, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v25, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 22, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v26, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 23, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v27, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 24, v28
+; LLC-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:32
 ; LLC-NEXT:    s_wait_loadcnt 0x1
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v32, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 25, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v33, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 26, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v34, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 27, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v35, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 28, v28
+; LLC-NEXT:    scratch_store_b128 off, v[32:35], s32 offset:16
 ; LLC-NEXT:    s_wait_loadcnt 0x0
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v36, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 29, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v37, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 30, v28
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v38, vcc_lo
-; LLC-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 31, v28
-; LLC-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; LLC-NEXT:    v_cndmask_b32_e32 v4, v4, v39, vcc_lo
-; LLC-NEXT:    flat_store_b32 v[2:3], v4
+; LLC-NEXT:    s_clause 0x1
+; LLC-NEXT:    scratch_store_b128 off, v[36:39], s32
+; LLC-NEXT:    scratch_load_b32 v28, v28, s32 scale_offset
+; LLC-NEXT:    s_wait_loadcnt 0x0
+; LLC-NEXT:    flat_store_b32 v[2:3], v28
 ; LLC-NEXT:    s_wait_dscnt 0x0
 ; LLC-NEXT:    s_set_pc_i64 s[30:31]
 
@@ -161,9 +94,10 @@ define void @divergent_index_large(ptr addrspace(1) %in, ptr %out) #0 {
 ; OPT-SAME: ptr addrspace(1) [[IN:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; OPT-NEXT:    [[VEC:%.*]] = load <32 x i32>, ptr addrspace(1) [[IN]], align 128
-; OPT-NEXT:    [[ALLOCA:%.*]] = freeze <32 x i32> poison
-; OPT-NEXT:    [[TMP1:%.*]] = freeze <32 x i32> [[VEC]]
-; OPT-NEXT:    [[LOAD:%.*]] = extractelement <32 x i32> [[TMP1]], i32 [[ID]]
+; OPT-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i32], align 16, addrspace(5)
+; OPT-NEXT:    store <32 x i32> [[VEC]], ptr addrspace(5) [[ALLOCA]], align 128
+; OPT-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[ID]]
+; OPT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
 ; OPT-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; OPT-NEXT:    ret void
 ;
