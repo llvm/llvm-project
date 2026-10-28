@@ -42,13 +42,6 @@ static StringRef getVersionType(const DirectiveLanguage &DirLang,
   return FullQual ? "llvm::directive::Version" : "directive::Version";
 }
 
-static std::string getVersionValue(const DirectiveLanguage &DirLang,
-                                   StringRef V) {
-  if (DirLang.getName() == "OpenMP")
-    return V.str() + ".value()";
-  return V.str();
-}
-
 static StringRef getFESpelling(Frontend FE) {
   switch (FE) {
   case Frontend::LLVM:
