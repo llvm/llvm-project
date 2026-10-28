@@ -2489,11 +2489,22 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
+static bool interp__reflection_builtin_meta_is_type(InterpState &S, CodePtr OpPC,
                                          const CallExpr *) {
   const Reflect &R = S.Stk.pop<Reflect>();
   S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
   return true;
+}
+
+static bool interp__reflection_metafunction_builtin(InterpState &S, CodePtr OpPC,
+                                       const CallExpr *Call,
+                                       uint32_t BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__reflection_builtin_meta_is_type(S, OpPC, Call);
+  default:
+    llvm_unreachable("unknown metafunction builtin");
+  }
 }
 
 static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
@@ -4692,6 +4703,9 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
+  if (S.getASTContext().BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinID))
+    return interp__reflection_metafunction_builtin(S, OpPC, Call, BuiltinID);
+
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -5455,9 +5469,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_is_within_lifetime:
     return interp__builtin_is_within_lifetime(S, OpPC, Call);
-
-  case Builtin::BI__builtin_meta_is_type:
-    return interp__builtin_meta_is_type(S, OpPC, Call);
 
   case Builtin::BI__builtin_elementwise_add_sat:
     return interp__builtin_elementwise_int_binop(

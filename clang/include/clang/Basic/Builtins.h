@@ -468,6 +468,11 @@ public:
     return strchr(getAttributesString(ID), 'G') != nullptr;
   }
 
+  /// Returns true if this is a reflection metafunction builtin.
+  bool isReflectionMetafunctionBuiltin(unsigned ID) const {
+    return getInfo(ID).Langs & REFLECTION_LANG;
+  }
+
 private:
   std::pair<const InfosShard &, const Info &>
   getShardAndInfo(unsigned ID) const;
