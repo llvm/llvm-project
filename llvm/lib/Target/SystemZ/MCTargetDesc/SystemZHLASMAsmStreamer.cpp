@@ -521,7 +521,6 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 // Print the HLASM address constant type for a value of the given size:
 // A(...) is a fullword, AD(...) a doubleword, AL<n>(...) any other length.
 static void printAddrConstPrefix(raw_ostream &OS, unsigned Size) {
-	//Size=8;
   if (Size == 4)
     OS << "A(";
   else if (Size == 8)
