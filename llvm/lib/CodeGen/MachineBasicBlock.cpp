@@ -663,6 +663,22 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   return I != livein_end() && (I->LaneMask & LaneMask).any();
 }
 
+bool MachineBasicBlock::isLiveInOverlappedWith(
+    MCRegister Reg, const TargetRegisterInfo &TRI) const {
+  return any_of(LiveIns, [&](const RegisterMaskPair &LI) {
+    if (!TRI.regsOverlap(Reg, LI.PhysReg))
+      return false;
+    if (LI.LaneMask.all())
+      return true;
+    for (MCRegUnitMaskIterator U(LI.PhysReg, &TRI); U.isValid(); ++U) {
+      auto [Unit, UnitMask] = *U;
+      if ((UnitMask & LI.LaneMask).any() && TRI.hasRegUnit(Reg, Unit))
+        return true;
+    }
+    return false;
+  });
+}
+
 void MachineBasicBlock::sortUniqueLiveIns() {
   llvm::sort(LiveIns,
              [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
@@ -1281,8 +1297,20 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
-  // Fix PHI nodes in Succ so they refer to NMBB instead of this.
-  Succ->replacePhiUsesWith(this, NMBB);
+  // Fix PHI nodes in Succ so they refer to NMBB instead of this, and find the
+  // registers used from NMBB in them.
+  SmallSet<Register, 8> PHISrcRegs;
+  for (MachineInstr &MI : Succ->phis()) {
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      MachineOperand &MBBOp = MI.getOperand(I + 1);
+      if (MBBOp.getMBB() != this)
+        continue;
+      MBBOp.setMBB(NMBB);
+      const MachineOperand &MO = MI.getOperand(I);
+      if (LIS && !MO.isUndef())
+        PHISrcRegs.insert(MO.getReg());
+    }
+  }
 
   // Inherit live-ins from the successor
   for (const auto &LI : Succ->liveins())
@@ -1303,29 +1331,14 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
-    // Find the registers used from NMBB in PHIs in Succ.
-    SmallSet<Register, 8> PHISrcRegs;
-    for (MachineBasicBlock::instr_iterator
-         I = Succ->instr_begin(), E = Succ->instr_end();
-         I != E && I->isPHI(); ++I) {
-      for (unsigned ni = 1, ne = I->getNumOperands(); ni != ne; ni += 2) {
-        if (I->getOperand(ni+1).getMBB() == NMBB) {
-          MachineOperand &MO = I->getOperand(ni);
-          Register Reg = MO.getReg();
-          if (MO.isUndef())
-            continue;
-          PHISrcRegs.insert(Reg);
-
-          LiveInterval &LI = LIS->getInterval(Reg);
-          VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-          assert(VNI &&
-                 "PHI sources should be live out of their predecessors.");
-          LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges()) {
-            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
-              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
-          }
-        }
+    for (Register Reg : PHISrcRegs) {
+      LiveInterval &LI = LIS->getInterval(Reg);
+      VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
+      assert(VNI && "PHI sources should be live out of their predecessors.");
+      LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+      for (auto &SR : LI.subranges()) {
+        if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
+          SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
       }
     }
 
@@ -1827,10 +1840,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    // Prefer the "exception-model" module flag, else the TargetOptions default.
     ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-    if (EH == ExceptionHandling::Default)
-      EH = TLI.getTargetMachine().getExceptionModel();
     ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
     ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }

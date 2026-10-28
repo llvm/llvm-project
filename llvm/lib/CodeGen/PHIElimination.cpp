@@ -102,7 +102,6 @@ class PHIEliminationImpl {
 
   void computeLiveOutSets(const MachineFunction &MF);
 
-  bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
   bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
   using BBVRegPair = std::pair<unsigned, Register>;
@@ -482,10 +481,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       assert(DestVNI && "PHI destination should be live at its definition.");
       DestVNI->def = NewStart;
     }
-  }
 
-  // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  if (LIS) {
+    // Adjust the VRegPHIUseCount map to account for the removal of this PHI
+    // node.
     for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
       if (!MPhi->getOperand(i).isUndef()) {
         --VRegPHIUseCount[BBVRegPair(
@@ -714,7 +712,8 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       // is likely to be left after coalescing. If we are looking at a loop
       // exiting edge, split it so we won't insert code in the loop, otherwise
       // don't bother.
-      ShouldSplit = ShouldSplit && !isLiveIn(Reg, &MBB);
+      ShouldSplit =
+          ShouldSplit && !LIS->isLiveInToMBB(LIS->getInterval(Reg), &MBB);
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
@@ -770,20 +769,14 @@ void PHIEliminationImpl::computeLiveOutSets(const MachineFunction &MF) {
   }
 }
 
-bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveIn() requires LiveIntervals");
-  return LIS->isLiveInToMBB(LIS->getInterval(Reg), MBB);
-}
-
 bool PHIEliminationImpl::isLiveOutPastPHIs(Register Reg,
                                            const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveOutPastPHIs() requires LiveIntervals");
   // LiveIntervals considers uses in PHIs to be on the edge rather than in the
   // predecessor basic block, so that a register used only in a PHI is live out
   // of the block.
   const LiveInterval &LI = LIS->getInterval(Reg);
   for (const MachineBasicBlock *SI : MBB->successors())
-    if (LI.liveAt(LIS->getMBBStartIdx(SI)))
+    if (LIS->isLiveInToMBB(LI, SI))
       return true;
   return false;
 }

@@ -29,7 +29,12 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+#include <cstdint>
 #include <memory>
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "RISCVOptions.inc"
 
 #define GET_RISCV_MACRO_FUSION_PRED_DECL
 #include "RISCVGenMacroFusion.inc"
@@ -100,6 +105,8 @@ public:
   };
   // clang-format on
 private:
+  const RISCVOptions &CLOpts;
+
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
@@ -147,6 +154,7 @@ public:
   const RISCVFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
+  const RISCVOptions &getCLOpts() const { return CLOpts; }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();

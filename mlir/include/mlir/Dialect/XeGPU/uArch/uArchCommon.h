@@ -15,7 +15,7 @@
 #define MLIR_DIALECT_XEGPU_UARCH_UARCHCOMMON_H
 
 #include "IntelGpuXe2.h"
-#include "IntelGpuXe3.h"
+#include "IntelGpuXe3p.h"
 
 namespace mlir {
 namespace xegpu {

@@ -37,8 +37,6 @@
 #include <mutex>
 #include <string>
 
-#include "OpenMP/InteropAPI.h"
-
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
@@ -92,9 +90,6 @@ struct PluginManager {
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
 
-  /// Table of cached implicit interop objects
-  InteropTblTy InteropTbl;
-
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
   // vector until the plugins are all initialised and then register them.
@@ -141,17 +136,18 @@ struct PluginManager {
   void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
 
   /// Returns the number of plugins that are active.
-  int getNumActivePlugins() const {
-    int count = 0;
-    for (auto &R : plugins())
-      if (R.is_initialized())
-        ++count;
+  int getNumActivePlugins() const;
 
-    return count;
-  }
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
+
+  /// Return true if liboffload was initialized by init().
+  bool isLibOffloadInitialized() const { return LibOffloadInitialized; }
 
 private:
   bool RTLsLoaded = false;
+  // Whether init() called olInit, so deinit() must call olShutDown.
+  bool LibOffloadInitialized = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
@@ -181,6 +177,9 @@ private:
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 
+  /// Map global data and execute pending ctors.
+  int loadImagesOntoDevice(DeviceTy &Device);
+
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
   /// true if the image was registered.
@@ -189,16 +188,6 @@ private:
                         __tgt_device_image *Img,
                         llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices);
 };
-
-/// Initialize the plugin manager and OpenMP runtime.
-void initRuntime();
-
-/// Deinitialize the plugin and delete it.
-void deinitRuntime();
-
-extern PluginManager *PM;
-extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
-extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
 namespace llvm::omp::target::helpers {
 // Helper functions to iterate over different elements provided by liboffload.

@@ -101,7 +101,6 @@ public:
 
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
-  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
 
@@ -148,27 +147,10 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
     }
 
     Local.EnabledByDefault = this->LocalsAlwaysEnabled;
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
-  }
-
-  /// Force-initialize this scope. Usually, scopes are lazily initialized when
-  /// the first local variable is created, but in scenarios with conditonal
-  /// operators, we need to ensure scope is initialized just in case one of the
-  /// arms will create a local and the other won't. In such a case, the
-  /// InitScope() op would be part of the arm that created the local.
-  void forceInit() override {
-    if (!Idx) {
-      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
-      this->Ctx->Descriptors.emplace_back();
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
-    }
   }
 
   bool emitDestructors(const Expr *E = nullptr) override {
@@ -624,15 +606,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_BaseToDerived: {
     if (!this->delegate(SubExpr))
       return false;
-    unsigned DerivedOffset =
-        collectBaseOffset(SubExpr->getType(), E->getType());
 
-    const Type *TargetType = E->getType().getTypePtr();
-    if (TargetType->isPointerOrReferenceType())
-      TargetType = TargetType->getPointeeType().getTypePtr();
-    return this->emitGetPtrDerivedPop(DerivedOffset,
-                                      /*NullOK=*/E->getType()->isPointerType(),
-                                      TargetType, E);
+    auto unwrapPointerType = [](const Type *T) -> const Type * {
+      if (T->isPointerOrReferenceType())
+        return T->getPointeeType().getTypePtr();
+      return T;
+    };
+
+    bool NullOK = false;
+    const Type *FinalType = E->getType().getTypePtr();
+    if (FinalType->isPointerOrReferenceType()) {
+      NullOK = true;
+      FinalType = FinalType->getPointeeType().getTypePtr();
+    }
+
+    for (const CXXBaseSpecifier *B :
+         llvm::drop_begin(llvm::reverse(E->path()))) {
+      const Type *TargetType = unwrapPointerType(B->getType().getTypePtr());
+      if (!this->emitGetPtrDerivedPop(NullOK, TargetType, FinalType, E))
+        return false;
+    }
+
+    return this->emitGetPtrDerivedPop(NullOK, FinalType, FinalType, E);
   }
 
   case CK_FloatingCast: {
@@ -786,8 +781,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     }
     QualType SubExprTy = SubExpr->getType();
     OptPrimType FromT = classify(SubExprTy);
-    // Casts from integer/vector to vector.
-    if (E->getType()->isVectorType())
+    // Casts between vectors and integers of the same same size.
+    if (ETy->isVectorType() || SubExprTy->isVectorType())
       return this->emitBuiltinBitCast(E);
 
     OptPrimType ToT = classify(E->getType());
@@ -2773,17 +2768,25 @@ bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
   if (!E->hasAPValueResult())
     return this->delegate(E->getSubExpr());
 
+  // Emitting an APValue never has side effects.
+  if (DiscardResult)
+    return true;
+
   if (OptPrimType T = classify(E)) {
     // Try to emit the APValue directly, without visiting the subexpr.
     // This will only fail if we can't emit the APValue, so won't emit any
     // diagnostics or any double values.
-    if (DiscardResult)
-      return true;
     return this->visitAPValue(E->getAPValueResult(), *T, E);
   }
 
-  // Fall back to the subexpr for non-primitive APValues.
-  return this->delegate(E->getSubExpr());
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+  return this->visitAPValueInitializer(E->getAPValueResult(), E, E->getType());
 }
 
 template <class Emitter>
@@ -2792,11 +2795,8 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   return this->visit(*It);
 }
 
-static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+static CharUnits alignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
-  bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
-
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -2806,6 +2806,8 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
 
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
@@ -2888,7 +2890,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     if (E->isArgumentType()) {
       QualType ArgType = E->getTypeOfArgument();
 
-      Size = AlignOfType(ArgType, ASTCtx, Kind);
+      Size = alignOfType(ArgType, ASTCtx, Kind);
     } else {
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
@@ -2904,12 +2906,12 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // default to 1 in those cases.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
         Size = ASTCtx.getDeclAlign(DRE->getDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
         Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else
-        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
+        Size = alignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     if (DiscardResult)
@@ -3163,9 +3165,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return false;
   }
 
-  // Force-init the scope, which creates a InitScope op. This is necessary so
-  // the scope is not only initialized in one arm of the conditional operator.
-  this->VarScope->forceInit();
   // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
   // scope, which means the local variables created within them unconditionally
   // always exist. However, we need to later differentiate which branch was
@@ -6221,8 +6220,47 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     }
     return true;
   }
-  // TODO: Other types.
+  if (Val.isComplexFloat()) {
+    assert(T->isComplexType());
+    if (!this->emitFloat(Val.getComplexFloatReal(), Info))
+      return false;
+    if (!this->emitInitElemFloat(0, Info))
+      return false;
+    if (!this->emitFloat(Val.getComplexFloatImag(), Info))
+      return false;
+    if (!this->emitInitElemFloat(1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isComplexInt()) {
+    assert(T->isComplexIntegerType());
+    PrimType IntT = classifyPrim(T->castAs<ComplexType>()->getElementType());
+    if (!this->emitConst(Val.getComplexIntReal(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 0, Info))
+      return false;
+    if (!this->emitConst(Val.getComplexIntImag(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isVector()) {
+    assert(T->isVectorType());
+    PrimType ElemT = classifyPrim(T->castAs<VectorType>()->getElementType());
+    for (unsigned I = 0, N = Val.getVectorLength(); I != N; ++I) {
+      const APValue &Elem = Val.getVectorElt(I);
+      if (Elem.isIndeterminate())
+        continue;
+      if (!this->visitAPValue(Elem, ElemT, Info))
+        return false;
+      if (!this->emitInitElem(ElemT, I, Info))
+        return false;
+    }
+    return true;
+  }
 
+  // TODO: Other types.
   return false;
 }
 
@@ -6362,6 +6400,7 @@ static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
     return false;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return false;
+  assert(!MD->getParent()->isInvalidDecl());
   return MD->getParent()->isUnion() ||
          (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
 }
@@ -6396,6 +6435,11 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
              this->emitPopPtr(E);
     }
   }
+
+  // Don't generate code for method with invalid parent decls.
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
+      MD && MD->getParent()->isInvalidDecl())
+    return false;
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
   ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
@@ -7223,13 +7267,13 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7238,6 +7282,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7263,13 +7313,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7278,6 +7327,12 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;

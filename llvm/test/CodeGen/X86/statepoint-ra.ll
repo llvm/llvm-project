@@ -153,3 +153,4 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     RET 0
 ;CHECK:   bb.7.bb25:
 ;CHECK:     RET 0
+;CHECK: ...

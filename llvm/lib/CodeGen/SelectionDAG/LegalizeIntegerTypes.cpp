@@ -99,10 +99,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:       Res = PromoteIntRes_SETCC(N); break;
-  case ISD::SMIN:
-  case ISD::SMAX:        Res = PromoteIntRes_SExtIntBinOp(N); break;
-  case ISD::UMIN:
-  case ISD::UMAX:        Res = PromoteIntRes_UMINUMAX(N); break;
 
   case ISD::SHL:         Res = PromoteIntRes_SHL(N); break;
   case ISD::SIGN_EXTEND_INREG:
@@ -205,6 +201,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SUB:
   case ISD::MUL:          Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::SMIN:
+  case ISD::SMAX:
   case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
@@ -213,13 +211,16 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:      Res = PromoteIntRes_SExtIntBinOp(N); break;
 
-  case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::VP_UDIV:
   case ISD::VP_UREM:     Res = PromoteIntRes_ZExtIntBinOp(N); break;
+
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::ABDU:        Res = PromoteIntRes_SExtOrZExtIntBinOp(N); break;
 
   case ISD::MASKED_UDIV:
   case ISD::MASKED_UREM:
@@ -1506,7 +1507,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SExtMaskedIntBinOp(SDNode *N) {
                      Mask);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
@@ -1755,7 +1756,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
     ElementCount NumElts = InVT.getVectorElementCount();
     assert(NumElts == NVT.getVectorElementCount() &&
            "Dst and Src must have the same number of elements");
-    assert(isPowerOf2_32(NumElts.getKnownMinValue()) &&
+    assert(NumElts.isPowerOf2() &&
            "Promoted vector type must be a power of two");
 
     SDValue EOp1, EOp2;
@@ -4341,6 +4342,28 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
 
+  // If every finite input fits in the half-width type, convert to that type and
+  // extend. Soft-promoted inputs are left to the existing path below.
+  EVT SrcVT = Op.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  // Unsigned conversions may also use FP_TO_SINT, so require the signed width.
+  unsigned MinIntBits = APFloat::semanticsIntSizeInBits(SrcVT.getFltSemantics(),
+                                                        /*isSigned=*/true);
+  if (TLI.isTypeLegal(SrcVT) && MinIntBits <= NVT.getSizeInBits()) {
+    unsigned NewOpc = TLI.getPreferredFPToIntOpcode(N->getOpcode(), SrcVT, NVT);
+    if (IsStrict) {
+      Lo = DAG.getNode(NewOpc, dl, {NVT, MVT::Other}, {Chain, Op});
+      ReplaceValueWith(SDValue(N, 1), Lo.getValue(1));
+    } else {
+      Lo = DAG.getNode(NewOpc, dl, NVT, Op);
+    }
+    Hi = IsSigned ? DAG.getNode(ISD::SRA, dl, NVT, Lo,
+                                DAG.getShiftAmountConstant(
+                                    NVT.getSizeInBits() - 1, NVT, dl))
+                  : DAG.getConstant(0, dl, NVT);
+    return;
+  }
+
   // If the input is bf16 or needs to be soft promoted, extend to f32.
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf ||
       Op.getValueType() == MVT::bf16) {
@@ -4772,10 +4795,10 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
     } else if (Scale < VTSize) {
       // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
-      SDValue HLAdjusted =
-          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+      SDValue HHAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHH,
                       DAG.getShiftAmountConstant(Scale - NVTSize, NVT, dl));
-      SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
+      SatMax = DAG.getSetCC(dl, BoolNVT, HHAdjusted, NVTZero, ISD::SETNE);
     } else
       llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
                        "(and saturation can't happen with Scale==VTSize).");
@@ -6606,6 +6629,21 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   EVT ResVT = N->getValueType(0);
   unsigned NumElems = N->getNumOperands();
 
+  // New legal concat from promoted operands.
+  EVT PromotedOpTy = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                              N->getOperand(0).getValueType());
+  EVT WideVT = PromotedOpTy.changeVectorElementCount(
+      *DAG.getContext(), ResVT.getVectorElementCount());
+  if (isTypeLegal(WideVT)) {
+    SmallVector<SDValue> PromotedOps;
+    for (const SDValue &Op : N->ops())
+      PromotedOps.push_back(GetPromotedInteger(Op));
+
+    SDValue WideConcat =
+        DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, PromotedOps);
+    return DAG.getAnyExtOrTrunc(WideConcat, dl, ResVT);
+  }
+
   if (ResVT.isScalableVector()) {
     SDValue ResVec = DAG.getPOISON(ResVT);
 
@@ -6619,27 +6657,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
     return ResVec;
   }
 
-  EVT RetSclrTy = N->getValueType(0).getVectorElementType();
-
-  SmallVector<SDValue, 8> NewOps;
-  NewOps.reserve(NumElems);
-
-  // For each incoming vector
-  for (unsigned VecIdx = 0; VecIdx != NumElems; ++VecIdx) {
-    SDValue Incoming = GetPromotedInteger(N->getOperand(VecIdx));
-    EVT SclrTy = Incoming->getValueType(0).getVectorElementType();
-    unsigned NumElem = Incoming->getValueType(0).getVectorNumElements();
-
-    for (unsigned i=0; i<NumElem; ++i) {
-      // Extract element from incoming vector
-      SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SclrTy, Incoming,
-                               DAG.getVectorIdxConstant(i, dl));
-      SDValue Tr = DAG.getNode(ISD::TRUNCATE, dl, RetSclrTy, Ex);
-      NewOps.push_back(Tr);
-    }
-  }
-
-  return DAG.getBuildVector(N->getValueType(0), dl, NewOps);
+  SmallVector<SDValue> NewOps;
+  NewOps.reserve(ResVT.getVectorMinNumElements());
+  for (const SDValue &Op : N->ops())
+    DAG.ExtractVectorElements(GetPromotedInteger(Op), NewOps);
+  return DAG.getBuildVector(ResVT, dl, NewOps);
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo) {

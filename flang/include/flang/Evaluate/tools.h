@@ -1102,6 +1102,23 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Assignment &);
 
+// Collects the originating arrays named by the ubound()/lbound() provenance of
+// the RankOneBoundElements in an expression.  Traverse() visits only an
+// element's base, so CollectSymbols() never sees these; the module file writer
+// needs them so that a bound serialized as ubound(a,dim) also declares 'a'.
+// This is deliberately not part of Traverse(): an element's value depends only
+// on its base, and visiting the originating array there would make an element
+// whose array is an INTENT(OUT) or INTENT(INOUT) dummy fail
+// IsScopeInvariantExpr() and block folding that is valid today.
+template <typename A>
+semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SubscriptInteger> &);
+
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
 semantics::UnorderedSymbolSet CollectCudaSymbols(const A &);
@@ -1728,6 +1745,10 @@ std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 // __ordinal component.  Returns std::nullopt if the expression is not a
 // constant or structure constructor of an enumeration-type value.
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
+// Build INT(x), a default INTEGER reference to x's ordinal. The caller must
+// ensure x is of enumeration type.
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&);
 
 } // namespace Fortran::evaluate
 

@@ -56,7 +56,6 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyBlends
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] legalizeAndOptimizeInductions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] narrowToSingleScalarRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeRedundantExpandSCEVRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] reassociateHeaderMask@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] combineRecipes@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeBranchOnConst
@@ -65,6 +64,8 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] licm
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] cse
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes@3
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::narrowInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMask
@@ -72,7 +73,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMinimumIterationCheck
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceWideCanonicalIVWithWideIV
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::unrollByUF
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializePacksAndUnpacks
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeUnpacks
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeBroadcasts
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replicateByVF
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeConstantVectorTripCount

@@ -307,21 +307,24 @@ bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
-bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
+bool llvm::isKnownPositive(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
     return CI->getValue().isStrictlyPositive();
 
   // If `isKnownNonNegative` ever becomes more sophisticated, make sure to keep
   // this updated.
-  KnownBits Known = computeKnownBits(V, SQ, Depth);
+  KnownBits Known = Depth == 0 ? V.getKnownBits(SQ)
+                               : computeKnownBits(V.getValue(), SQ, Depth);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
+         (Known.isNonZero() || isKnownNonZero(V.getValue(), SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (Depth == 0)
+    return V.getKnownBits(SQ).isNegative();
+  return computeKnownBits(V.getValue(), SQ, Depth).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
@@ -889,6 +892,10 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
+
+    if (match(I->getArgOperand(0), m_Trunc(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q))
+      return true;
 
     Value *RHS;
     CmpPredicate Pred;
@@ -3116,15 +3123,18 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpPredicate Pred;
-    if (!match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
-      continue;
-
     bool NonNullIfTrue;
-    if (cmpExcludesZero(Pred, RHS))
+    if (match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS)))) {
+      if (cmpExcludesZero(Pred, RHS))
+        NonNullIfTrue = true;
+      else if (cmpExcludesZero(CmpInst::getInversePredicate(Pred), RHS))
+        NonNullIfTrue = false;
+      else
+        continue;
+    } else if (UI->getType()->isIntegerTy(1) &&
+               match(UI, m_Trunc(m_Specific(V)))) {
       NonNullIfTrue = true;
-    else if (cmpExcludesZero(CmpInst::getInversePredicate(Pred), RHS))
-      NonNullIfTrue = false;
-    else
+    } else
       continue;
 
     SmallVector<const User *, 4> WorkList;
@@ -3223,9 +3233,48 @@ static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
                                                 m_Specific(Op0), m_Zero())));
 }
 
+/// Return true if "addr(P) + Off" cannot be zero. The object P points to
+/// cannot cross the unsigned address space boundary, including the address one
+/// past its end, so an offset that stays within the object cannot wrap around
+/// to zero. This holds even if the object starts at the zero address, which is
+/// all that null_pointer_is_valid permits, so a non-zero offset is enough.
+static bool isNonZeroAddrPlusOffset(const SimplifyQuery &Q, Value *X,
+                                    Value *Y) {
+  const APInt *Off;
+  if (!match(Y, m_APInt(Off)) || Off->isZero())
+    return false;
+
+  // ptrtoaddr always produces the address. ptrtoint only does so when its
+  // result is at least as wide as the address: a narrower result is truncated
+  // and may wrap to zero, while bits above the address can only make the
+  // result more non-zero.
+  Value *P;
+  if (!match(X, m_PtrToAddr(m_Value(P))) &&
+      !(match(X, m_PtrToInt(m_Value(P))) &&
+        X->getType()->getScalarSizeInBits() >=
+            Q.DL.getAddressSizeInBits(P->getType())))
+    return false;
+
+  // A vector of pointers has no single object whose size can be taken, and
+  // getPointerDereferenceableBytes() requires a plain pointer.
+  if (!P->getType()->isPointerTy())
+    return false;
+
+  bool CanBeNull;
+  uint64_t DerefBytes = P->getPointerDereferenceableBytes(
+      Q.DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  if (CanBeNull || DerefBytes == 0 || !Off->ule(DerefBytes))
+    return false;
+
+  return true;
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
                          unsigned BitWidth, Value *X, Value *Y, bool NSW,
                          bool NUW, unsigned Depth) {
+  if (isNonZeroAddrPlusOffset(Q, X, Y) || isNonZeroAddrPlusOffset(Q, Y, X))
+    return true;
+
   // (X + (X != 0)) is non zero
   if (matchOpWithOpEqZero(X, Y))
     return true;
@@ -3896,12 +3945,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
     if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
       return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
-    // A global variable in address space 0 is non null unless extern weak
-    // or an absolute symbol reference. Other address spaces may have null as a
-    // valid address for a global, so we can't assume anything.
+    // A global variable is non null unless extern weak or an absolute symbol
+    // reference. An alias is also excluded, as it may resolve to a weak
+    // undefined symbol and thus to the null address. Where null is a valid
+    // address an allocation may start there, so nothing can be assumed; that
+    // covers both null_pointer_is_valid and address spaces other than zero.
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
-      if (!GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
-          GV->getType()->getAddressSpace() == 0)
+      if (!NullPointerIsDefined(Q.getFunction(),
+                                GV->getType()->getAddressSpace()) &&
+          !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
+          !isa<GlobalAlias>(GV))
         return true;
     }
 
@@ -5199,7 +5252,19 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstTy = Op->getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const auto *I = dyn_cast<Instruction>(Op);
+  const Function *F = I ? I->getFunction() : nullptr;
+  DenormalMode DstMode =
+      F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -5429,8 +5494,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
         break;
+
+      const bool IsFMA = IID == Intrinsic::fma;
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
@@ -5446,17 +5513,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         DenormalMode Mode =
             F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-        if (KnownNotFromFlags & fcNan) {
+        if ((KnownNotFromFlags & fcNan) == fcNan) {
           KnownSrc.knownNot(fcNan);
           KnownAddend.knownNot(fcNan);
         }
 
-        if (KnownNotFromFlags & fcInf) {
+        if ((KnownNotFromFlags & fcInf) == fcInf) {
           KnownSrc.knownNot(fcInf);
           KnownAddend.knownNot(fcInf);
         }
 
-        Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+        Known = IsFMA
+                    ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
         break;
       }
 
@@ -5467,9 +5536,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownSrc[I].isUnknown())
           return;
 
-        if (KnownNotFromFlags & fcNan)
+        if ((KnownNotFromFlags & fcNan) == fcNan)
           KnownSrc[I].knownNot(fcNan);
-        if (KnownNotFromFlags & fcInf)
+        if ((KnownNotFromFlags & fcInf) == fcInf)
           KnownSrc[I].knownNot(fcInf);
       }
 
@@ -5478,7 +5547,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
       break;
     }
     case Intrinsic::sqrt:
@@ -5686,9 +5758,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       const bool IsMultiUnitFPType =
           V->getType()->getScalarType()->isMultiUnitFPType();
 
-      const bool IsTrunc = IID == Intrinsic::trunc;
-      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
-                                            IsMultiUnitFPType, Mode);
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
       break;
     }
     case Intrinsic::exp:
@@ -5750,7 +5834,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           F ? F->getDenormalMode(
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
-      Known = KnownFPClass::log(KnownSrc, Mode);
+      const bool IsMultiUnitFPType =
+          V->getType()->getScalarType()->isMultiUnitFPType();
+      Known = KnownFPClass::log(KnownSrc, Mode, IsMultiUnitFPType);
       break;
     }
     case Intrinsic::pow: {
@@ -6066,8 +6152,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     Value *LHS = Op->getOperand(0);
     Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
-    // FIXME: Should check isGuaranteedNotToBeUndef
-    if (LHS == RHS) {
+    if (LHS == RHS &&
+        isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT, Depth + 1)) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
@@ -6218,7 +6304,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    const auto *I = dyn_cast<Instruction>(Op);
+    const Function *F = I ? I->getFunction() : nullptr;
+    DenormalMode DstMode =
+        F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+    DenormalMode SrcMode =
+        F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     break;
   }
   case Instruction::FPTrunc: {
@@ -6651,6 +6744,9 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   case Instruction::FPToSI:
   case Instruction::FPToUI:
     return true;
+  case Instruction::FRem:
+    // frem(x, +-0.0) == NaN, and more generally frem(x, y) == frem(x, -y).
+    return U.getOperandNo() == 1;
   case Instruction::FCmp:
     // fcmp treats both positive and negative zero as equal.
     return true;
@@ -6658,9 +6754,27 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
     if (auto *II = dyn_cast<IntrinsicInst>(User)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::fabs:
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::exp10:
+      case Intrinsic::log:
+      case Intrinsic::log2:
+      case Intrinsic::log10:
+      case Intrinsic::cos:
+      case Intrinsic::acos:
+      case Intrinsic::cosh:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::lround:
+      case Intrinsic::llround:
+      case Intrinsic::lrint:
+      case Intrinsic::llrint:
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
+      case Intrinsic::pow:
+        // pow(x, +-0.0) == +1.0 or NaN
+        return U.getOperandNo() == 1;
       case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
@@ -7591,33 +7705,6 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
   return Result;
 }
 
-static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-    const Value *V, bool AllowLifetime, bool AllowDroppable) {
-  for (const User *U : V->users()) {
-    const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II)
-      return false;
-
-    if (AllowLifetime && II->isLifetimeStartOrEnd())
-      continue;
-
-    if (AllowDroppable && II->isDroppable())
-      continue;
-
-    return false;
-  }
-  return true;
-}
-
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
-}
-bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
-}
-
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I))
     return isTriviallyVectorizable(II->getIntrinsicID());
@@ -8218,7 +8305,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       return !includesUndef(Kind);
 
     if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
-        isa<ConstantPointerNull>(C) || isa<Function>(C))
+        isa<ConstantPointerNull>(C) || isa<Function>(C) || isa<ConstantData>(C))
       return true;
 
     if (C->getType()->isVectorTy() || C->getType()->isAggregateType()) {
@@ -8227,12 +8314,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         if (Constant *SplatC = C->getSplatValue())
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
-      } else {
-        if (includesUndef(Kind) && C->containsUndefElement())
-          return false;
-        if (includesPoison(Kind) && C->containsPoisonElement())
-          return false;
-        return !C->containsConstantExpression();
+      } else if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+        return all_of(CA->operands(), [&](const Use &Op) {
+          return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
+                                                  Depth + 1, Kind);
+        });
       }
     }
   }
@@ -8584,6 +8670,7 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::fshr:
   case Intrinsic::frexp:
   case Intrinsic::get_active_lane_mask:
+  case Intrinsic::mask_beforefirst:
     return true;
   default:
     return false;
@@ -8938,101 +9025,6 @@ static SelectPatternResult matchClamp(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-/// Recognize variations of:
-///   a < c ? min(a,b) : min(b,c) ==> min(min(a,b),min(b,c))
-static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
-                                               Value *CmpLHS, Value *CmpRHS,
-                                               Value *TVal, Value *FVal,
-                                               unsigned Depth) {
-  // TODO: Allow FP min/max with nnan/nsz.
-  assert(CmpInst::isIntPredicate(Pred) && "Expected integer comparison");
-
-  Value *A = nullptr, *B = nullptr;
-  SelectPatternResult L = matchSelectPattern(TVal, A, B, nullptr, Depth + 1);
-  if (!SelectPatternResult::isMinOrMax(L.Flavor))
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  Value *C = nullptr, *D = nullptr;
-  SelectPatternResult R = matchSelectPattern(FVal, C, D, nullptr, Depth + 1);
-  if (L.Flavor != R.Flavor)
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  // We have something like: x Pred y ? min(a, b) : min(c, d).
-  // Try to match the compare to the min/max operations of the select operands.
-  // First, make sure we have the right compare predicate.
-  switch (L.Flavor) {
-  case SPF_SMIN:
-    if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_SMAX:
-    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_UMIN:
-    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  case SPF_UMAX:
-    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-      std::swap(CmpLHS, CmpRHS);
-    }
-    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE)
-      break;
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  default:
-    return {SPF_UNKNOWN, SPNB_NA, false};
-  }
-
-  // If there is a common operand in the already matched min/max and the other
-  // min/max operands match the compare operands (either directly or inverted),
-  // then this is min/max of the same flavor.
-
-  // a pred c ? m(a, b) : m(c, b) --> m(m(a, b), m(c, b))
-  // ~c pred ~a ? m(a, b) : m(c, b) --> m(m(a, b), m(c, b))
-  if (D == B) {
-    if ((CmpLHS == A && CmpRHS == C) || (match(C, m_Not(m_Specific(CmpLHS))) &&
-                                         match(A, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // a pred d ? m(a, b) : m(b, d) --> m(m(a, b), m(b, d))
-  // ~d pred ~a ? m(a, b) : m(b, d) --> m(m(a, b), m(b, d))
-  if (C == B) {
-    if ((CmpLHS == A && CmpRHS == D) || (match(D, m_Not(m_Specific(CmpLHS))) &&
-                                         match(A, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // b pred c ? m(a, b) : m(c, a) --> m(m(a, b), m(c, a))
-  // ~c pred ~b ? m(a, b) : m(c, a) --> m(m(a, b), m(c, a))
-  if (D == A) {
-    if ((CmpLHS == B && CmpRHS == C) || (match(C, m_Not(m_Specific(CmpLHS))) &&
-                                         match(B, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-  // b pred d ? m(a, b) : m(a, d) --> m(m(a, b), m(a, d))
-  // ~d pred ~b ? m(a, b) : m(a, d) --> m(m(a, b), m(a, d))
-  if (C == A) {
-    if ((CmpLHS == B && CmpRHS == D) || (match(D, m_Not(m_Specific(CmpLHS))) &&
-                                         match(B, m_Not(m_Specific(CmpRHS)))))
-      return {L.Flavor, SPNB_NA, false};
-  }
-
-  return {SPF_UNKNOWN, SPNB_NA, false};
-}
-
 /// If the input value is the result of a 'not' op, constant integer, or vector
 /// splat of a constant integer, return the bitwise-not source value.
 /// TODO: This could be extended to handle non-splat vector integer constants.
@@ -9049,20 +9041,15 @@ static Value *getNotValue(Value *V) {
 }
 
 /// Match non-obvious integer minimum and maximum sequences.
-static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
-                                       Value *CmpLHS, Value *CmpRHS,
-                                       Value *TrueVal, Value *FalseVal,
-                                       Value *&LHS, Value *&RHS,
-                                       unsigned Depth) {
+static SelectPatternResult matchMinMax(CmpInst::Predicate Pred, Value *CmpLHS,
+                                       Value *CmpRHS, Value *TrueVal,
+                                       Value *FalseVal, Value *&LHS,
+                                       Value *&RHS) {
   // Assume success. If there's no match, callers should not use these anyway.
   LHS = TrueVal;
   RHS = FalseVal;
 
   SelectPatternResult SPR = matchClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal);
-  if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
-    return SPR;
-
-  SPR = matchMinMaxOfMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, Depth);
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
 
@@ -9295,11 +9282,10 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
-                                              FastMathFlags FMF,
-                                              Value *CmpLHS, Value *CmpRHS,
-                                              Value *TrueVal, Value *FalseVal,
-                                              Value *&LHS, Value *&RHS,
-                                              unsigned Depth) {
+                                              FastMathFlags FMF, Value *CmpLHS,
+                                              Value *CmpRHS, Value *TrueVal,
+                                              Value *FalseVal, Value *&LHS,
+                                              Value *&RHS) {
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
     // 0.0 operand, set the compare's 0.0 operands to that same value for the
@@ -9445,7 +9431,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   }
 
   if (CmpInst::isIntPredicate(Pred))
-    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS, Depth);
+    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 
   // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
   // may return either -0.0 or 0.0, so fcmp/select pair has stricter
@@ -9595,11 +9581,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   return CastedTo;
 }
 SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
-                                             Instruction::CastOps *CastOp,
-                                             unsigned Depth) {
-  if (Depth >= MaxAnalysisRecursionDepth)
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
+                                             Instruction::CastOps *CastOp) {
   SelectInst *SI = dyn_cast<SelectInst>(V);
   if (!SI) return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -9609,14 +9591,13 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
-                                            SI->getFastMathFlagsOrNone(),
-                                            CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(
+      CmpI, TrueVal, FalseVal, LHS, RHS, SI->getFastMathFlagsOrNone(), CastOp);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    FastMathFlags FMF, Instruction::CastOps *CastOp, unsigned Depth) {
+    FastMathFlags FMF, Instruction::CastOps *CastOp) {
   CmpInst::Predicate Pred = CmpI->getPredicate();
   Value *CmpLHS = CmpI->getOperand(0);
   Value *CmpRHS = CmpI->getOperand(1);
@@ -9636,20 +9617,20 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
         FMF.setNoSignedZeros();
       return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
                                   cast<CastInst>(TrueVal)->getOperand(0), C,
-                                  LHS, RHS, Depth);
+                                  LHS, RHS);
     }
     if (Value *C = lookThroughCast(CmpI, FalseVal, TrueVal, CastOp)) {
       // If this is a potential fmin/fmax with a cast to integer, then ignore
       // -0.0 because there is no corresponding integer value.
       if (*CastOp == Instruction::FPToSI || *CastOp == Instruction::FPToUI)
         FMF.setNoSignedZeros();
-      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
-                                  C, cast<CastInst>(FalseVal)->getOperand(0),
-                                  LHS, RHS, Depth);
+      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, C,
+                                  cast<CastInst>(FalseVal)->getOperand(0), LHS,
+                                  RHS);
     }
   }
-  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal,
-                              LHS, RHS, Depth);
+  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS,
+                              RHS);
 }
 
 CmpInst::Predicate llvm::getMinMaxPred(SelectPatternFlavor SPF, bool Ordered) {
@@ -10106,12 +10087,10 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       return true;
   }
 
-  // a - b == NonZero -> a != b
-  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
-  const APInt *L1C;
+  // (a - b) pred C -> a != b, if 0 pred C is false
+  // (ptrtoint(a) - ptrtoint(b)) pred C -> a != b, if 0 pred C is false
   Value *A, *B;
-  if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
-      match(L1, m_APInt(L1C)) && !L1C->isZero() &&
+  if (ICmpInst::isEquality(RPred) && cmpExcludesZero(LPred, L1) &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
        (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
@@ -11033,13 +11012,18 @@ void llvm::findValuesAffectedByCondition(
       } else {
         AddCmpOperands(A, B);
         if (HasRHSC) {
+          Value *Y;
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          // X - Y pred C, which implies X != Y if 0 pred C is false.
+          else if (match(A, m_Sub(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
 
           if (ICmpInst::isUnsigned(Pred)) {
-            Value *Y;
             // X & Y u> C    -> X >u C && Y >u C
             // X | Y u< C    -> X u< C && Y u< C
             // X nuw+ Y u< C -> X u< C && Y u< C
@@ -11049,9 +11033,6 @@ void llvm::findValuesAffectedByCondition(
               AddAffected(X);
               AddAffected(Y);
             }
-            // X nuw- Y u> C -> X u> C
-            if (match(A, m_NUWSub(m_Value(X), m_Value())))
-              AddAffected(X);
           }
         }
 
@@ -11117,6 +11098,14 @@ const Value *llvm::stripNullTest(const Value *V) {
         return X;
     }
   }
+
+  // select(cond, X, -X)
+  {
+    const Value *X;
+    if (match(V, m_c_Select(m_Value(X), m_Neg(m_Deferred(X)))))
+      return X;
+  }
+
   return nullptr;
 }
 
