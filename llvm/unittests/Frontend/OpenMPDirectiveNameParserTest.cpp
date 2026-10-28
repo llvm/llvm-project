@@ -126,9 +126,8 @@ TEST_P(ParseValid, T) {
 static std::string
 getParamName2(const testing::TestParamInfo<ParseValid::ParamType> &Info) {
   auto [DirId, Version] = Info.param;
-  std::string Name =
-      omp::getOpenMPDirectiveName(DirId, Version).str() + "v" +
-      std::to_string(static_cast<omp::Version::value_type>(Version));
+  std::string Name = omp::getOpenMPDirectiveName(DirId, Version).str() + "v" +
+                     std::to_string(Version.value());
   return prepareParamName(Name);
 }
 
