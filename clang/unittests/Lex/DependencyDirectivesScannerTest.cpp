@@ -320,9 +320,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineNoWhitespace) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define AND\\\n"
                                                     "&\n",
                                                     Out));
-  EXPECT_STREQ("#define AND\\\n"
-               "&\n",
-               Out.data());
+  EXPECT_STREQ("#define AND&\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, MultilineComment) {
@@ -785,10 +783,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
                                                     "2 + \\\t\n"
                                                     "3\n",
                                                     Out));
-  EXPECT_STREQ("#define A 1+\\  \n"
-               "2+\\\t\n"
-               "3\n",
-               Out.data());
+  EXPECT_STREQ("#define A 1+2+3\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest,

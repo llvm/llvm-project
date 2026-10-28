@@ -540,6 +540,51 @@ TEST_F(LexerTest, IsNewLineEscapedValid) {
   EXPECT_FALSE(hasNewLineEscaped("\n\n"));
 }
 
+TEST_F(LexerTest, TokenWithLeadingEscapedNewLine) {
+  LangOpts.C99 = true;
+  LangOpts.Trigraphs = true;
+  StringRef Source = "\\\nB \\\r\n\\\n\\u00\\\nE9 \\\n123 "
+                     "\\\n\"te\\\nxt\" \\\n+ \?\?/\n\?\?/u00E9";
+  std::vector<Token> Toks = Lex(Source);
+  FileID FID = SourceMgr.getMainFileID();
+  struct {
+    StringRef RawSpelling;
+    StringRef Spelling;
+    bool NeedsCleaning;
+  } Expected[] = {{"B", "B", false},     {"\\u00\\\nE9", "\\u00E9", true},
+                  {"123", "123", false}, {"\"te\\\nxt\"", "\"text\"", true},
+                  {"+", "+", false},     {"\?\?/u00E9", "\\u00E9", true}};
+  ASSERT_EQ(std::size(Expected), Toks.size());
+  for (size_t I = 0; I != Toks.size(); ++I) {
+    SCOPED_TRACE(I);
+    const Token &Tok = Toks[I];
+    const auto &E = Expected[I];
+    EXPECT_EQ(Source.find(E.RawSpelling),
+              SourceMgr.getFileOffset(Tok.getLocation()));
+    EXPECT_EQ(E.RawSpelling.size(), Tok.getLength());
+    EXPECT_EQ(E.NeedsCleaning, Tok.needsCleaning());
+    SmallString<16> Spelling;
+    EXPECT_EQ(E.Spelling, PP->getSpelling(Tok, Spelling));
+  }
+  ASSERT_TRUE(Toks.back().is(tok::identifier));
+  EXPECT_EQ("é", Toks.back().getIdentifierInfo()->getName());
+
+  SourceLocation Start = SourceMgr.getLocForStartOfFile(FID);
+  SmallString<16> Spelling;
+  EXPECT_EQ("B", Lexer::getSpelling(Start, Spelling, SourceMgr, LangOpts));
+  EXPECT_EQ(Start.getLocWithOffset(3),
+            Lexer::getLocForEndOfToken(Start, 0, SourceMgr, LangOpts));
+}
+
+TEST_F(LexerTest, LeadingEscapedNewLineWithTrigraphsDisabled) {
+  LangOpts.Trigraphs = false;
+  auto Toks = Lex("\\\n\?\?/\nB");
+  ASSERT_EQ(4u, Toks.size());
+  EXPECT_TRUE(Toks[0].is(tok::question));
+  EXPECT_EQ(2u, SourceMgr.getFileOffset(Toks[0].getLocation()));
+  EXPECT_EQ(1u, Toks[0].getLength());
+}
+
 TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   // Each line should have the same length for
   // further offset calculation to be more straightforward.
@@ -680,18 +725,28 @@ TEST_F(LexerTest, FindNextTokenIncludingComments) {
 TEST_F(LexerTest, FindPreviousToken) {
   Lex("int abcd = 0;\n"
       "// A comment.\n"
-      "int xyz = abcd;\n");
+      "int \\\nxyz = abcd;\n");
   std::vector<std::string> GeneratedByPrevToken;
   SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
   while (true) {
     auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, false);
     if (!T.has_value())
       break;
+    ASSERT_LT(T->getLocation(), Loc);
     GeneratedByPrevToken.push_back(getSourceText(*T, *T));
     Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
   }
   EXPECT_THAT(GeneratedByPrevToken, ElementsAre(";", "abcd", "=", "xyz", "int",
                                                 ";", "0", "=", "abcd", "int"));
+}
+
+TEST_F(LexerTest, FindPreviousTokenInMacro) {
+  auto Toks = Lex("#define M a b\nM");
+  ASSERT_EQ(2u, Toks.size());
+  auto Tok = Lexer::findPreviousToken(Toks[1].getLocation(), SourceMgr,
+                                      LangOpts, false);
+  ASSERT_TRUE(Tok);
+  EXPECT_EQ("M", getSourceText(*Tok, *Tok));
 }
 
 TEST_F(LexerTest, FindPreviousTokenIncludingComments) {
