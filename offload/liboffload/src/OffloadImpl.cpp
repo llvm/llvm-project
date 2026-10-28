@@ -1632,6 +1632,11 @@ GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
+
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
+  return Device->Device->getRecordReplay();
+}
+
 } // namespace tmp
 
 } // namespace offload
