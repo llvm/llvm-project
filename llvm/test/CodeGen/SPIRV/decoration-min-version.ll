@@ -5,6 +5,7 @@
 ; RUN: not --crash llc -O0 -mtriple=spirv64v1.1-unknown-unknown %t/alignment-id.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 ; RUN: not --crash llc -O0 -mtriple=spirv64v1.1-unknown-unknown %t/max-byte-offset-id.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 ; RUN: llc -O0 -mtriple=spirv32v1.4-unknown-vulkan %t/uniform-id.ll -o - | FileCheck %t/uniform-id.ll
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.4-unknown-vulkan %t/uniform-id.ll -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 ; RUN: not --crash llc -O0 -mtriple=spirv32v1.3-unknown-vulkan %t/uniform-id.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 
 ; MaxByteOffset requires SPIR-V 1.1, AlignmentId and MaxByteOffsetId require
