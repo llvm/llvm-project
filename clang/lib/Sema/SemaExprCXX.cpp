@@ -8121,7 +8121,7 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =
