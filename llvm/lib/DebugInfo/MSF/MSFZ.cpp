@@ -440,18 +440,18 @@ private:
       uint64_t Remaining = Size;
       uint64_t OutputOffset = 0;
       while (Remaining != 0) {
-        F = findFragment(Offset);
-        assert(F && "validated MSFZ stream has a fragment for every byte");
-        FragmentOffset = Offset - F->StreamOffset;
         uint64_t Bytes =
             std::min<uint64_t>(Remaining, F->Size - FragmentOffset);
         ArrayRef<uint8_t> FragmentData;
         if (Error E = readFragment(*F, FragmentOffset, Bytes, FragmentData))
           return E;
         std::memcpy(Data + OutputOffset, FragmentData.data(), Bytes);
-        Offset += Bytes;
         OutputOffset += Bytes;
         Remaining -= Bytes;
+        if (Remaining != 0) {
+          ++F;
+          FragmentOffset = 0;
+        }
       }
       Buffer = ArrayRef<uint8_t>(Data, Size);
       return Error::success();

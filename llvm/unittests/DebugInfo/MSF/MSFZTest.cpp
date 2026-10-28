@@ -245,6 +245,49 @@ TEST(MSFZTest, SplitsFragmentsAtChunkBoundaries) {
   EXPECT_EQ(ReadData, ArrayRef(ExpectedData));
 }
 
+TEST(MSFZTest, ReadsAcrossManyFragments) {
+  constexpr uint32_t FragmentCount = 128;
+  constexpr uint32_t FragmentSize = 7;
+  constexpr uint32_t StreamSize = FragmentCount * FragmentSize;
+  constexpr uint32_t DirectorySize = FragmentCount * 12 + 4;
+  constexpr uint64_t PayloadOffset = sizeof(MSFZHeader) + DirectorySize;
+  SmallVector<uint8_t, 0> File(PayloadOffset + StreamSize);
+  MSFZHeader Header = {};
+  std::memcpy(Header.Magic, MSFZMagic, sizeof(MSFZMagic));
+  Header.NumStreams = 1;
+  Header.StreamDirectoryOffset = sizeof(Header);
+  Header.StreamDirectorySizeCompressed = DirectorySize;
+  Header.StreamDirectorySizeUncompressed = DirectorySize;
+  Header.ChunkTableOffset = File.size();
+  std::memcpy(File.data(), &Header, sizeof(Header));
+  for (uint32_t I = 0; I != FragmentCount; ++I) {
+    uint64_t DirectoryOffset = sizeof(Header) + I * 12;
+    writeU32(File, DirectoryOffset, FragmentSize);
+    writeU64(File, DirectoryOffset + 4,
+             PayloadOffset + (FragmentCount - I - 1) * FragmentSize);
+    for (uint32_t J = 0; J != FragmentSize; ++J)
+      File[PayloadOffset + (FragmentCount - I - 1) * FragmentSize + J] =
+          I * FragmentSize + J;
+  }
+
+  BumpPtrAllocator Allocator;
+  BinaryByteStream Input(File, llvm::endianness::little);
+  auto Reader = MSFZFile::create(Input, Allocator);
+  ASSERT_THAT_EXPECTED(Reader, Succeeded());
+  auto Stream = (*Reader)->createStream(0);
+  ASSERT_THAT_EXPECTED(Stream, Succeeded());
+  for (uint32_t Offset : {0u, 3u, FragmentSize, 10 * FragmentSize + 2}) {
+    for (uint32_t Size :
+         {FragmentSize, 3 * FragmentSize + 1, StreamSize - Offset}) {
+      ArrayRef<uint8_t> Data;
+      ASSERT_THAT_ERROR((*Stream)->readBytes(Offset, Size, Data), Succeeded());
+      ASSERT_EQ(Data.size(), Size);
+      for (uint32_t I = 0; I != Size; ++I)
+        EXPECT_EQ(Data[I], uint8_t(Offset + I));
+    }
+  }
+}
+
 TEST(MSFZTest, ParallelCompressionIsDeterministic) {
   ThreadPoolStrategy SavedStrategy = parallel::strategy;
   scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });
