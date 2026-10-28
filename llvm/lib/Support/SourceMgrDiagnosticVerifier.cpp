@@ -108,7 +108,10 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
   // If the buffer is invalid, return an empty list.
   if (!buf)
     return {};
-  auto &expectedDiags = expectedDiagsPerFile[buf->getBufferIdentifier()];
+  auto [It, Inserted] = expectedDiagsPerBuffer.try_emplace(buf);
+  if (!Inserted)
+    return It->second;
+  auto &expectedDiags = It->second;
 
   // The number of the last line that did not correlate to a designator.
   unsigned lastNonDesignatorLine = 0;
@@ -221,14 +224,6 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
   return expectedDiags;
 }
 
-std::optional<MutableArrayRef<SourceMgrDiagnosticVerifier::ExpectedDiag>>
-SourceMgrDiagnosticVerifier::getExpectedDiags(StringRef bufName) {
-  auto expectedDiags = expectedDiagsPerFile.find(bufName);
-  if (expectedDiags != expectedDiagsPerFile.end())
-    return MutableArrayRef<ExpectedDiag>(expectedDiags->second);
-  return std::nullopt;
-}
-
 SourceMgrDiagnosticVerifier::MatchResult
 SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
                                      SourceMgr::DiagKind kind, bool hasLoc,
@@ -238,12 +233,7 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
   if (hasLoc) {
     // If the buffer couldn't be resolved, `diags` stays empty: a diagnostic
     // with a location in an unknown file can never match anything.
-    if (buf) {
-      if (auto maybeDiags = getExpectedDiags(buf->getBufferIdentifier()))
-        diags = *maybeDiags;
-      else
-        diags = computeExpectedDiags(os, mgr, buf);
-    }
+    diags = computeExpectedDiags(os, mgr, buf);
   } else {
     diags = expectedUnknownLocDiags;
   }
@@ -328,12 +318,17 @@ bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
                          " of " + Twine(diag.numExpected) + " times");
     ok = false;
   };
-  for (auto &expectedDiagsPair : expectedDiagsPerFile)
-    for (auto &diag : expectedDiagsPair.second)
+  // Check buffers in registration order so that the output is deterministic.
+  for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i) {
+    auto it = expectedDiagsPerBuffer.find(mgr.getMemoryBuffer(i + 1));
+    if (it == expectedDiagsPerBuffer.end())
+      continue;
+    for (auto &diag : it->second)
       checkExpectedDiags(diag);
+  }
   for (auto &diag : expectedUnknownLocDiags)
     checkExpectedDiags(diag);
-  expectedDiagsPerFile.clear();
+  expectedDiagsPerBuffer.clear();
   expectedUnknownLocDiags.clear();
   return ok;
 }

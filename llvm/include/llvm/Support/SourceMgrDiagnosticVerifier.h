@@ -17,8 +17,8 @@
 #define LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
@@ -98,11 +98,6 @@ public:
                                                      SourceMgr &mgr,
                                                      const MemoryBuffer *buf);
 
-  /// Returns the cached expected diagnostics for the buffer named \p bufName,
-  /// or std::nullopt if \p computeExpectedDiags hasn't been called for it.
-  std::optional<MutableArrayRef<ExpectedDiag>>
-  getExpectedDiags(StringRef bufName);
-
   /// Returns the expected diagnostics with an '@unknown' location.
   MutableArrayRef<ExpectedDiag> getExpectedUnknownLocDiags() {
     return expectedUnknownLocDiags;
@@ -140,9 +135,9 @@ private:
   /// Regex used to recognize '<prefix>-<kind>' comments.
   Regex expected;
 
-  /// The expected diagnostics for each buffer that has been scanned so far,
-  /// keyed by buffer identifier (i.e. file name).
-  StringMap<SmallVector<ExpectedDiag, 2>> expectedDiagsPerFile;
+  /// The expected diagnostics for each buffer that has been scanned so far.
+  DenseMap<const MemoryBuffer *, SmallVector<ExpectedDiag, 2>>
+      expectedDiagsPerBuffer;
 
   /// The expected diagnostics with an '@unknown' location.
   SmallVector<ExpectedDiag, 2> expectedUnknownLocDiags;
