@@ -56,6 +56,14 @@ void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand `arith.extf` from the narrow float types in
+/// `narrowTypes` (at most 8 bits, with a zero and subnormals; others are
+/// ignored) into integer arith ops plus, for some pairs, an arith.extf or
+/// arith.truncf bridge. Results are APFloat::convert's, NaNs quieted. Dynamic
+/// shapes are left alone.
+void populateExpandNarrowFloatPatterns(RewritePatternSet &patterns,
+                                       ArrayRef<TypeID> narrowTypes);
+
 /// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
 void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
 
