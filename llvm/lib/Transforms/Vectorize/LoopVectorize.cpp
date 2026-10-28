@@ -7065,10 +7065,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
 
-  // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis and their bypass values in the scalar header of the main plan and
-  // return them so they can be used as resume values when vectorizing the
-  // epilogue.
+  // Replace the resume phis of the VPIRPhis in the scalar header of the main
+  // plan by ResumeForEpilogue instructions for their incoming values and return
+  // them so they can be used as resume values when vectorizing the epilogue.
+  // The epilogue plan creates the resume phis after the main plan executed.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
   MiddleBuilder.setInsertPoint(
       MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
@@ -7081,21 +7081,13 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  return {VectorTCMarker, std::move(ResumeValues)};
-}
-
-/// Replace the resume phis in \p MainPlan's scalar preheader by their bypass
-/// values. The epilogue plan creates them after \p MainPlan executed.
-static void removeScalarResumePhis(VPlan &MainPlan) {
   for (VPRecipeBase &R :
        make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
     auto *ResumePhi = cast<VPPhi>(&R);
-    assert(ResumePhi->getIncomingBlock(0) == MainPlan.getMiddleBlock() &&
-           all_equal(drop_begin(ResumePhi->operands())) &&
-           "expected resume phi merging middle block and bypass values");
     ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
     ResumePhi->eraseFromParent();
   }
+  return {VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -7798,7 +7790,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
-    removeScalarResumePhis(BestMainPlan);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
