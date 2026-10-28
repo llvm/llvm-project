@@ -42,7 +42,7 @@ defm int_agx_threadgroups_per_grid : AGXReadSRIntrinsic_xyz;
 // argument (operand 0), and puts in the uniforms (.agx.kernels extension 7):
 // for an unsigned divisor d, (2) 2^32 * (2^l - d) / d + 1, (3) min(l, 1) and
 // (4) max(l, 1) - 1, l = ceil(log2(d)); (5, 6, 7) the same of |d| for a
-// signed divisor. Operand 2 says which.
+// signed divisor, (8, 9, 10) of max(d, 1). Operand 2 says which.
 def int_agx_launch_value
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable,
