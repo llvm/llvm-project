@@ -16,8 +16,8 @@ body:             |
     ; CHECK-NEXT: %x:_(i32) = COPY $w0
     ; CHECK-NEXT: %sh:_(i64) = G_CONSTANT i64 16
     ; CHECK-NEXT: %ashr:_(i32) = G_ASHR %x, %sh(i64)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 31
-    ; CHECK-NEXT: %ubfx:_(i32) = G_LSHR %ashr, [[C]](i64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: %ubfx:_(i32) = G_LSHR %ashr, [[C]](i32)
     ; CHECK-NEXT: $w0 = COPY %ubfx(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(i32) = COPY $w0

@@ -439,24 +439,6 @@ def AArch64PostLegalizerLowering
                         unmerge_duplanes]> {
 }
 
-// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
-// of the sign bit into bit 0, which can fold into users such as G_ADD.
-def ubfx_sign_bit_to_lshr : GICombineRule<
-  (defs root:$root),
-  (match (G_CONSTANT $lsb, $lsbimm),
-         (G_UBFX $dst, $src, $lsb, 1):$root,
-         [{ LLT Ty = MRI.getType(${dst}.getReg());
-            unsigned BitWidth = Ty.getSizeInBits();
-            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
-            return Ty.isScalar() && Lsb.ult(BitWidth) &&
-                   VT->computeNumSignBits(${src}.getReg()) >=
-                       BitWidth - Lsb.getZExtValue(); }]),
-  (apply [{ B.setInstrAndDebugLoc(*${root});
-            unsigned BitWidth = MRI.getType(${dst}.getReg()).getSizeInBits();
-            auto Amt = B.buildConstant(LLT::integer(64), BitWidth - 1);
-            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
-            ${root}->eraseFromParent(); }])>;
-
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
