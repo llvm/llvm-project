@@ -1,5 +1,5 @@
 ! RUN: not %flang_fc1 %s 2>%t.stderr
-! RUN: FileCheck %s --input-file=%t.stderr --check-prefixes=PORTABILITY,WARNING,ERROR
+! RUN: FileCheck %s --input-file=%t.stderr --check-prefixes=PORTABILITY,WARNING,ERROR --implicit-check-not=underflow
 ! C716 If both kind-param and exponent-letter appear, exponent-letter
 ! shall be E. (As an extension we also allow an exponent-letter which matches
 ! the kind-param)
