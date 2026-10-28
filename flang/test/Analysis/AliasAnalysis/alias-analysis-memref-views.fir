@@ -54,3 +54,22 @@ func.func @_QPtarget(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a", 
   %rb = memref.reinterpret_cast %mb to offset: [0], sizes: [10], strides: [1] {test.ptr = "b"} : memref<10xf64> to memref<10xf64, strided<[1]>>
   return
 }
+
+// -----
+
+// Only memref.cast and memref.reinterpret_cast are looked through. Other views
+// stop the walk, so the result stays MayAlias.
+// CHECK-LABEL: Testing : "_QPnot_opted_in"
+// CHECK-DAG: a#0 <-> b#0: MayAlias
+func.func @_QPnot_opted_in(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "b"}) {
+  %c10 = arith.constant 10 : index
+  %scope = fir.dummy_scope : !fir.dscope
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %da = fir.declare %arg0(%shape) dummy_scope %scope arg 1 uniq_name("_QFnot_opted_inEa") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf64>>
+  %db = fir.declare %arg1(%shape) dummy_scope %scope arg 2 uniq_name("_QFnot_opted_inEb") : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf64>>
+  %ma = fir.convert %da : (!fir.ref<!fir.array<10xf64>>) -> memref<10xf64>
+  %mb = fir.convert %db : (!fir.ref<!fir.array<10xf64>>) -> memref<10xf64>
+  %sa = memref.subview %ma[0] [10] [1] {test.ptr = "a"} : memref<10xf64> to memref<10xf64, strided<[1]>>
+  %sb = memref.subview %mb[0] [10] [1] {test.ptr = "b"} : memref<10xf64> to memref<10xf64, strided<[1]>>
+  return
+}

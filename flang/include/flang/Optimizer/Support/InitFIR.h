@@ -76,6 +76,7 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
   if (addFIRInlinerInterface)
     addFIRInlinerExtension(registry);
   addFIRToLLVMIRExtension(registry);
+  registerMemRefFortranObjectViewExternalModels(registry);
   cuf::registerCUFDialectTranslation(registry);
   fir::acc::registerOpenACCExtensions(registry);
   fir::omp::registerOpenMPExtensions(registry);
