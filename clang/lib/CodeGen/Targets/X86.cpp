@@ -1004,6 +1004,14 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
                                           getTarget().getTriple())) {
     case CodeGenOptions::SmallIntABICompatKind::Platform:
+      if (Ty->isBooleanType()) {
+        // Bool should be extended to 8-bits. We can't express this right now,
+        // so use conservative extension.
+        return InReg
+                   ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+      }
       break;
     case CodeGenOptions::SmallIntABICompatKind::Clang:
       return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
@@ -3014,14 +3022,22 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
       // Treat an enum type as its underlying type.
       if (const auto *ED = Ty->getAsEnumDecl())
         Ty = ED->getIntegerType();
-      auto Kind = getEffectiveSmallIntABICompat(getCodeGenOpts(),
-                                                getTarget().getTriple());
       if (Ty->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty)) {
-      if (Kind == CodeGenOptions::SmallIntABICompatKind::Both)
-        return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
-      else if (Kind == CodeGenOptions::SmallIntABICompatKind::Clang)
-        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+        switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                              getTarget().getTriple())) {
+        case CodeGenOptions::SmallIntABICompatKind::Platform:
+          if (Ty->isBooleanType()) {
+            // Bool should be extended to 8-bits. We can't express this right
+            // now, so use conservative extension.
+            return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+          }
+          break;
+        case CodeGenOptions::SmallIntABICompatKind::Clang:
+          return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+        case CodeGenOptions::SmallIntABICompatKind::Both:
+          return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+        }
       }
     }
 
