@@ -2480,7 +2480,7 @@ private:
   /// \returns the cost of the shuffles producing both input operands of the
   /// merged-inputs node \p E from its shared operand vector.
   InstructionCost
-  getMergedInputOperandsCost(const TreeEntry &E, Type *ScalarTy,
+  getMergedInputOperandsCost(const TreeEntry &E,
                              TTI::TargetCostKind CostKind) const;
 
   /// Emits both input vectors of the merged-inputs node \p E as shuffles of
@@ -12468,14 +12468,23 @@ SmallVector<int> BoUpSLP::getMergedInputMask(const TreeEntry &E,
 }
 
 InstructionCost
-BoUpSLP::getMergedInputOperandsCost(const TreeEntry &E, Type *ScalarTy,
+BoUpSLP::getMergedInputOperandsCost(const TreeEntry &E,
                                     TTI::TargetCostKind CostKind) const {
-  auto *PoolVecTy = cast<VectorType>(
-      getWidenedType(ScalarTy, getOperandEntry(&E, 0)->getVectorFactor()));
+  const TreeEntry *PoolTE = getOperandEntry(&E, 0);
+  // The shuffles read the shared operand vector, before the node casts it to
+  // its own type, so they are costed in the pool's element type.
+  Type *PoolScalarTy = getValueType(PoolTE->Scalars.front(), Opts.slp_revec);
+  if (auto It = MinBWs.find(PoolTE); It != MinBWs.end())
+    PoolScalarTy = IntegerType::get(F->getContext(), It->second.first);
+  const unsigned PoolVF = PoolTE->getVectorFactor();
+  auto *PoolVecTy = cast<VectorType>(getWidenedType(PoolScalarTy, PoolVF));
   InstructionCost Cost = 0;
   for (unsigned Idx : seq<unsigned>(2)) {
     SmallVector<int> Mask = getMergedInputMask(E, Idx);
-    if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    // Same condition as vectorizeMergedInputOperands(): a mask shorter than
+    // the pool still extracts a subvector, so it is not free.
+    if (PoolVF == Mask.size() &&
+        ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
       continue;
     Cost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, PoolVecTy,
                              CostKind, Mask);
@@ -18100,7 +18109,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
       }
       if (E->hasMergedInputOperands())
-        Cost += getMergedInputOperandsCost(*E, ScalarTy, CostKind);
+        Cost += getMergedInputOperandsCost(*E, CostKind);
       return Cost + CommonCost;
     };
     return GetCostDiffWithPeeled(GetScalarCost, GetVectorCost);
