@@ -1,0 +1,88 @@
+# This file defines a workflow that builds Clang at the given commit and runs the LLVM test-suite with it,
+# producing a LNT report that is (optionally) submitted to LNT. This workflow is intended to be triggered
+# manually or via the Github API.
+#
+# The machines that can be used are defined in .ci/lnt/llvm-test-suite/machines.json.
+
+name: "[LLVM] Test-suite LNT pipeline"
+
+run-name: "[LLVM] Test-suite LNT pipeline: ${{ inputs.commit }} on ${{ inputs.lnt-machine }}${{ !inputs.submit-lnt && ' (dry run)' || '' }}"
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'The llvm-project commit to build Clang and LLVM from (a full SHA or a ref name)'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The LNT machine configuration to use and to report results as'
+        required: true
+        type: string
+      filter:
+        description: 'An optional filter to determine which tests to run (all the tests are still built)'
+        required: false
+        type: string
+      submit-lnt:
+        description: 'Whether to submit the results to LNT -- dry-run unless opted in'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  select-machine:
+    runs-on: ubuntu-26.04
+    outputs:
+      setup: ${{ steps.select.outputs.setup }}
+    steps:
+      - name: Checkout the machine definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: .ci/lnt/llvm-test-suite/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Select the machine setup
+        id: select
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          LNT_MACHINE: ${{ inputs.lnt-machine }}
+        with:
+          script: |
+            const config = JSON.parse(require('fs').readFileSync('.ci/lnt/llvm-test-suite/machines.json', 'utf8'));
+
+            const requested = process.env.LNT_MACHINE;
+            const selected = config.filter(cfg => cfg['lnt-machine'] === requested);
+            if (selected.length !== 1) {
+              const known = config.map(cfg => cfg['lnt-machine']).join(', ');
+              core.setFailed(`Expected exactly one LNT machine named '${requested}', found ${selected.length} `
+                             + `(known machines: ${known})`);
+              return;
+            }
+            core.setOutput('setup', JSON.stringify(selected[0].setup));
+
+  run:
+    needs:
+      - select-machine
+    uses: $/.github/workflows/llvm-test-suite-run.yml
+    with:
+      commit: ${{ inputs.commit }}
+      lnt-machine: ${{ inputs.lnt-machine }}
+      setup: ${{ needs.select-machine.outputs.setup }}
+      filter: ${{ inputs.filter }}
+      artifact-name: lnt-report
+
+  submit:
+    needs:
+      - run
+    if: ${{ inputs.submit-lnt }}
+    uses: $/.github/workflows/lnt-submit.yml
+    with:
+      artifact-name: lnt-report
+      test-suite: llvm_test_suite
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
