@@ -7006,7 +7006,8 @@ namespace {
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
-static VectorType trimTrailingUnitDims(VectorType oldType, bool allowRank0 = false) {
+static VectorType trimTrailingUnitDims(VectorType oldType, 
+                                       bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -7033,7 +7034,8 @@ static VectorType trimTrailingUnitDims(VectorType oldType, bool allowRank0 = fal
 ///
 ///   vector<1x1x4xi1> --> vector<4x1xi1>
 ///
-static VectorType trimLeadingUnitDims(VectorType oldType, bool allowRank0 = false) {
+static VectorType trimLeadingUnitDims(VectorType oldType, 
+                                      bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
