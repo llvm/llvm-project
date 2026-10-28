@@ -1582,7 +1582,9 @@ ParseResult spirv::INTELSubgroupBlockWriteOp::parse(OpAsmParser &parser,
 }
 
 void spirv::INTELSubgroupBlockWriteOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << ", " << getValue() << " : "
+  StringRef sc = stringifyStorageClass(
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+  printer << " \"" << sc << "\" " << getPtr() << ", " << getValue() << " : "
           << getValue().getType();
 }
 

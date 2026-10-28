@@ -5,12 +5,12 @@
 // Invalid immediate range
 
 mul z0.b, z0.b, #-129
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-128, 127].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 127].
 // CHECK-NEXT: mul z0.b, z0.b, #-129
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 mul z0.b, z0.b, #128
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-128, 127].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 127].
 // CHECK-NEXT: mul z0.b, z0.b, #128
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

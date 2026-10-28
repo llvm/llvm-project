@@ -297,7 +297,7 @@ entry:
   ret void
 }
 
-; TODO: Once the unnecessary zero extentions of the elements are removed;
+; TODO: Once the unnecessary zero extensions of the elements are removed;
 ; pattern recognizer will kick in.
 define amdgpu_kernel void @idot8_acc16(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc16:
