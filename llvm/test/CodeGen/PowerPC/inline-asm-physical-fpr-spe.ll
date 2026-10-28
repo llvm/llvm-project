@@ -8,8 +8,8 @@ define i32 @test_f32(float %x) {
 ; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    stw 3, 8(1)
 ; CHECK-NEXT:    stw 31, 12(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stw 3, 8(1)
 ; CHECK-NEXT:    lwz 3, 8(1)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    efsctsi 31, 3

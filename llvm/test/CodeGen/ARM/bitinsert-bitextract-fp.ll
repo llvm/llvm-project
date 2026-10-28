@@ -96,14 +96,14 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 ; ARM-NEXT:    sub sp, sp, #32
 ; ARM-NEXT:    mov r12, #0
 ; ARM-NEXT:    bfc r2, #23, #9
-; ARM-NEXT:    stm sp, {r0, r1, r2}
-; ARM-NEXT:    ubfx r0, r3, #5, #2
-; ARM-NEXT:    mov r1, sp
 ; ARM-NEXT:    str r12, [sp, #28]
 ; ARM-NEXT:    str r12, [sp, #24]
 ; ARM-NEXT:    str r12, [sp, #20]
 ; ARM-NEXT:    str r12, [sp, #16]
 ; ARM-NEXT:    str r12, [sp, #12]
+; ARM-NEXT:    stm sp, {r0, r1, r2}
+; ARM-NEXT:    ubfx r0, r3, #5, #2
+; ARM-NEXT:    mov r1, sp
 ; ARM-NEXT:    ldr r2, [r1, r0, lsl #2]
 ; ARM-NEXT:    add r0, r1, r0, lsl #2
 ; ARM-NEXT:    and r1, r3, #31
@@ -122,13 +122,13 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 ; THUMB-M-NEXT:    mov.w r12, #0
 ; THUMB-M-NEXT:    strd r0, r1, [sp]
 ; THUMB-M-NEXT:    ubfx r0, r3, #5, #2
-; THUMB-M-NEXT:    bfc r2, #23, #9
 ; THUMB-M-NEXT:    str.w r12, [sp, #28]
-; THUMB-M-NEXT:    mov r1, sp
 ; THUMB-M-NEXT:    strd r12, r12, [sp, #20]
-; THUMB-M-NEXT:    and r3, r3, #31
+; THUMB-M-NEXT:    bfc r2, #23, #9
 ; THUMB-M-NEXT:    strd r12, r12, [sp, #12]
+; THUMB-M-NEXT:    mov r1, sp
 ; THUMB-M-NEXT:    str r2, [sp, #8]
+; THUMB-M-NEXT:    and r3, r3, #31
 ; THUMB-M-NEXT:    ldr.w r2, [r1, r0, lsl #2]
 ; THUMB-M-NEXT:    add.w r0, r1, r0, lsl #2
 ; THUMB-M-NEXT:    eor r1, r3, #31
@@ -146,12 +146,12 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 ; THUMB-A-NEXT:    sub sp, #32
 ; THUMB-A-NEXT:    mov.w r12, #0
 ; THUMB-A-NEXT:    bfc r2, #23, #9
-; THUMB-A-NEXT:    stm.w sp, {r0, r1, r2}
-; THUMB-A-NEXT:    ubfx r0, r3, #5, #2
-; THUMB-A-NEXT:    mov r1, sp
 ; THUMB-A-NEXT:    str.w r12, [sp, #28]
 ; THUMB-A-NEXT:    strd r12, r12, [sp, #20]
 ; THUMB-A-NEXT:    strd r12, r12, [sp, #12]
+; THUMB-A-NEXT:    stm.w sp, {r0, r1, r2}
+; THUMB-A-NEXT:    ubfx r0, r3, #5, #2
+; THUMB-A-NEXT:    mov r1, sp
 ; THUMB-A-NEXT:    ldr.w r2, [r1, r0, lsl #2]
 ; THUMB-A-NEXT:    add.w r0, r1, r0, lsl #2
 ; THUMB-A-NEXT:    and r1, r3, #31
@@ -236,12 +236,12 @@ define double @test_bitextract_double_var(b128 %src, i32 %off) {
 ; ARM-NEXT:    sub sp, sp, #32
 ; ARM-NEXT:    ldr r12, [sp, #48]
 ; ARM-NEXT:    mov lr, #0
-; ARM-NEXT:    stm sp, {r0, r1, r2, r3, lr}
-; ARM-NEXT:    mov r1, sp
-; ARM-NEXT:    ubfx r0, r12, #5, #2
 ; ARM-NEXT:    str lr, [sp, #28]
 ; ARM-NEXT:    str lr, [sp, #24]
 ; ARM-NEXT:    str lr, [sp, #20]
+; ARM-NEXT:    stm sp, {r0, r1, r2, r3, lr}
+; ARM-NEXT:    ubfx r0, r12, #5, #2
+; ARM-NEXT:    mov r1, sp
 ; ARM-NEXT:    ldr r2, [r1, r0, lsl #2]
 ; ARM-NEXT:    add r0, r1, r0, lsl #2
 ; ARM-NEXT:    and r1, r12, #31
@@ -263,13 +263,13 @@ define double @test_bitextract_double_var(b128 %src, i32 %off) {
 ; THUMB-M-NEXT:    .pad #32
 ; THUMB-M-NEXT:    sub sp, #32
 ; THUMB-M-NEXT:    mov.w r12, #0
-; THUMB-M-NEXT:    stm.w sp, {r0, r1, r2, r3, r12}
-; THUMB-M-NEXT:    ldr r0, [sp, #40]
 ; THUMB-M-NEXT:    str.w r12, [sp, #28]
 ; THUMB-M-NEXT:    strd r12, r12, [sp, #20]
+; THUMB-M-NEXT:    stm.w sp, {r0, r1, r2, r3, r12}
 ; THUMB-M-NEXT:    mov r12, sp
-; THUMB-M-NEXT:    ubfx r1, r0, #5, #2
+; THUMB-M-NEXT:    ldr r0, [sp, #40]
 ; THUMB-M-NEXT:    and r2, r0, #31
+; THUMB-M-NEXT:    ubfx r1, r0, #5, #2
 ; THUMB-M-NEXT:    ldr.w r3, [r12, r1, lsl #2]
 ; THUMB-M-NEXT:    add.w r1, r12, r1, lsl #2
 ; THUMB-M-NEXT:    ldrd r1, r12, [r1, #4]
@@ -293,15 +293,15 @@ define double @test_bitextract_double_var(b128 %src, i32 %off) {
 ; THUMB-A-NEXT:    sub sp, #32
 ; THUMB-A-NEXT:    ldr.w r12, [sp, #40]
 ; THUMB-A-NEXT:    mov.w lr, #0
-; THUMB-A-NEXT:    stm.w sp, {r0, r1, r2, r3, lr}
-; THUMB-A-NEXT:    mov r1, sp
-; THUMB-A-NEXT:    and r3, r12, #31
-; THUMB-A-NEXT:    ubfx r0, r12, #5, #2
 ; THUMB-A-NEXT:    str.w lr, [sp, #28]
 ; THUMB-A-NEXT:    strd lr, lr, [sp, #20]
+; THUMB-A-NEXT:    stm.w sp, {r0, r1, r2, r3, lr}
+; THUMB-A-NEXT:    ubfx r0, r12, #5, #2
+; THUMB-A-NEXT:    mov r1, sp
 ; THUMB-A-NEXT:    ldr.w r2, [r1, r0, lsl #2]
 ; THUMB-A-NEXT:    add.w r0, r1, r0, lsl #2
 ; THUMB-A-NEXT:    ldrd r1, lr, [r0, #4]
+; THUMB-A-NEXT:    and r3, r12, #31
 ; THUMB-A-NEXT:    lsr.w r12, r2, r3
 ; THUMB-A-NEXT:    eor r2, r3, #31
 ; THUMB-A-NEXT:    lsls r0, r1, #1
@@ -326,14 +326,12 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; ARM-NEXT:    sub sp, sp, #64
 ; ARM-NEXT:    add lr, sp, #92
 ; ARM-NEXT:    ldr r4, [sp, #104]
-; ARM-NEXT:    ldr r12, [sp, #88]
 ; ARM-NEXT:    mov r7, #0
+; ARM-NEXT:    ldr r12, [sp, #88]
 ; ARM-NEXT:    ldm lr, {r5, r6, lr}
 ; ARM-NEXT:    stm sp, {r0, r1, r2, r3, r12}
 ; ARM-NEXT:    and r0, lr, #127
 ; ARM-NEXT:    mov r1, sp
-; ARM-NEXT:    str r0, [sp, #28]
-; ARM-NEXT:    ubfx r0, r4, #5, #3
 ; ARM-NEXT:    str r7, [sp, #60]
 ; ARM-NEXT:    str r7, [sp, #56]
 ; ARM-NEXT:    str r7, [sp, #52]
@@ -344,6 +342,8 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; ARM-NEXT:    str r7, [sp, #32]
 ; ARM-NEXT:    str r6, [sp, #24]
 ; ARM-NEXT:    str r5, [sp, #20]
+; ARM-NEXT:    str r0, [sp, #28]
+; ARM-NEXT:    ubfx r0, r4, #5, #3
 ; ARM-NEXT:    ldr r2, [r1, r0, lsl #2]
 ; ARM-NEXT:    add r0, r1, r0, lsl #2
 ; ARM-NEXT:    and r1, r4, #31
@@ -410,8 +410,6 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; THUMB-A-NEXT:    stm.w sp, {r0, r1, r2, r3, r12}
 ; THUMB-A-NEXT:    and r0, lr, #127
 ; THUMB-A-NEXT:    mov r1, sp
-; THUMB-A-NEXT:    str r0, [sp, #28]
-; THUMB-A-NEXT:    ubfx r0, r4, #5, #3
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #56]
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #48]
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #40]
@@ -419,6 +417,8 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; THUMB-A-NEXT:    and r7, r4, #31
 ; THUMB-A-NEXT:    strd r5, r6, [sp, #20]
 ; THUMB-A-NEXT:    eor r6, r7, #31
+; THUMB-A-NEXT:    str r0, [sp, #28]
+; THUMB-A-NEXT:    ubfx r0, r4, #5, #3
 ; THUMB-A-NEXT:    ldr.w r2, [r1, r0, lsl #2]
 ; THUMB-A-NEXT:    add.w r0, r1, r0, lsl #2
 ; THUMB-A-NEXT:    ldrd r1, r3, [r0, #4]
@@ -1011,12 +1011,12 @@ define b128 @test_bitinsert_double_var(b128 %base, double %val, i32 %off) {
 ; THUMB-A-NEXT:    ldr r3, [r4, #12]
 ; THUMB-A-NEXT:    mov.w r4, #-1
 ; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
+; THUMB-A-NEXT:    strd r4, r4, [sp, #64]
+; THUMB-A-NEXT:    lsrs r4, r0, #1
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #56]
 ; THUMB-A-NEXT:    lsl.w r7, r10, lr
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #48]
 ; THUMB-A-NEXT:    eor r6, lr, #31
-; THUMB-A-NEXT:    strd r4, r4, [sp, #64]
-; THUMB-A-NEXT:    lsrs r4, r0, #1
 ; THUMB-A-NEXT:    lsrs r4, r6
 ; THUMB-A-NEXT:    orr.w r11, r7, r4
 ; THUMB-A-NEXT:    add r7, sp, #48
@@ -1246,6 +1246,8 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #48]
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #40]
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #32]
+; THUMB-M-NEXT:    strd r3, r3, [sp, #128]
+; THUMB-M-NEXT:    movs r3, #28
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #152]
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #144]
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #136]
@@ -1254,8 +1256,6 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #104]
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #96]
 ; THUMB-M-NEXT:    ldr r1, [sp, #232]
-; THUMB-M-NEXT:    strd r3, r3, [sp, #128]
-; THUMB-M-NEXT:    movs r3, #28
 ; THUMB-M-NEXT:    and.w r3, r3, r1, lsr #3
 ; THUMB-M-NEXT:    and r1, r1, #31
 ; THUMB-M-NEXT:    subs r4, r7, r3

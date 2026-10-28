@@ -635,16 +635,16 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    buffer_store_b128 v[20:23], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[16:19], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[12:15], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[8:11], off, s[0:3], 0
+; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    buffer_store_b128 v[28:31], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[24:27], off, s[0:3], 0
-; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <32 x i32> %arg0, ptr addrspace(1) poison
@@ -892,16 +892,16 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    buffer_store_b128 v[20:23], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[16:19], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[12:15], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[8:11], off, s[0:3], 0
+; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    buffer_store_b128 v[28:31], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[24:27], off, s[0:3], 0
-; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <16 x i64> %arg0, ptr addrspace(1) poison
@@ -2052,16 +2052,16 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    buffer_store_b128 v[20:23], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[16:19], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[12:15], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[8:11], off, s[0:3], 0
+; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    buffer_store_b128 v[28:31], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[24:27], off, s[0:3], 0
-; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <16 x double> %arg0, ptr addrspace(1) poison

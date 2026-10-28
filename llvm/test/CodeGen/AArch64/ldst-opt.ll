@@ -2238,8 +2238,9 @@ define i64 @bug34674(ptr %p) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str xzr, [x0, #8]
 ; CHECK-NEXT:    add x0, x9, #1
-; CHECK-NEXT:    stp xzr, xzr, [x8]
+; CHECK-NEXT:    str xzr, [x8]
 ; CHECK-NEXT:    ret
 entry:
   store <2 x i64> zeroinitializer, ptr %p

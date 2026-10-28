@@ -280,12 +280,12 @@ define amdgpu_kernel void @add_v32_vs(ptr addrspace(1) %a, <32 x i64> %x) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[0:3], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[4:7], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[8:11], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[16:19], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[24:27], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[32:35], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[36:39], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[40:43], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -953,12 +953,12 @@ define amdgpu_kernel void @sub_v32_vs(ptr addrspace(1) %a, <32 x i64> %x) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[0:3], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[4:7], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[8:11], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[16:19], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[24:27], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[32:35], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[36:39], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[40:43], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

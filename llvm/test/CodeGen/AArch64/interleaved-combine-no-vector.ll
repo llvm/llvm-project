@@ -97,24 +97,25 @@ define void @deinterleave4(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2,
 define void @wide_deinterleave3(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2) {
 ; CHECK-LABEL: wide_deinterleave3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x9, x12, [x0, #8]
+; CHECK-NEXT:    ldp x10, x9, [x0]
 ; CHECK-NEXT:    ldr x11, [x0, #40]
-; CHECK-NEXT:    ldp x8, x10, [x0, #24]
-; CHECK-NEXT:    ldr x13, [x0]
-; CHECK-NEXT:    lsr x15, x9, #32
-; CHECK-NEXT:    str w13, [x1]
-; CHECK-NEXT:    lsr x13, x13, #32
-; CHECK-NEXT:    lsr x14, x10, #32
-; CHECK-NEXT:    stp w15, w8, [x1, #4]
+; CHECK-NEXT:    ldp x8, x12, [x0, #24]
+; CHECK-NEXT:    ldr x13, [x0, #16]
+; CHECK-NEXT:    lsr x14, x9, #32
+; CHECK-NEXT:    str w10, [x1]
+; CHECK-NEXT:    lsr x10, x10, #32
+; CHECK-NEXT:    lsr x15, x12, #32
+; CHECK-NEXT:    stp w14, w8, [x1, #4]
 ; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    str w14, [x1, #12]
-; CHECK-NEXT:    stp w12, w8, [x2, #4]
-; CHECK-NEXT:    lsr x8, x12, #32
-; CHECK-NEXT:    str w13, [x2]
+; CHECK-NEXT:    str w15, [x1, #12]
+; CHECK-NEXT:    stp w13, w8, [x2, #4]
+; CHECK-NEXT:    lsr x8, x13, #32
+; CHECK-NEXT:    str w10, [x2]
+; CHECK-NEXT:    lsr x10, x11, #32
 ; CHECK-NEXT:    str w11, [x2, #12]
-; CHECK-NEXT:    stp w9, w8, [x3]
-; CHECK-NEXT:    lsr x9, x11, #32
-; CHECK-NEXT:    stp w10, w9, [x3, #8]
+; CHECK-NEXT:    stp w8, w12, [x3, #4]
+; CHECK-NEXT:    str w9, [x3]
+; CHECK-NEXT:    str w10, [x3, #12]
 ; CHECK-NEXT:    ret
   %wide = load <12 x i32>, ptr %src
   %deinterleaved = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> %wide)
@@ -209,13 +210,13 @@ define void @wide_interleave2(ptr %dst, ptr %src0, ptr %src1) {
 define void @interleave3(ptr %dst, ptr %src0, ptr %src1, ptr %src2) {
 ; CHECK-LABEL: interleave3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w13, w8, [x2]
-; CHECK-NEXT:    ldp w10, w9, [x3]
-; CHECK-NEXT:    ldp w12, w11, [x1]
+; CHECK-NEXT:    ldp w8, w11, [x3]
+; CHECK-NEXT:    ldp w12, w9, [x1]
+; CHECK-NEXT:    ldp w13, w10, [x2]
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
 ; CHECK-NEXT:    orr x9, x10, x11, lsl #32
 ; CHECK-NEXT:    orr x10, x12, x13, lsl #32
-; CHECK-NEXT:    stp x9, x8, [x0, #8]
+; CHECK-NEXT:    stp x8, x9, [x0, #8]
 ; CHECK-NEXT:    str x10, [x0]
 ; CHECK-NEXT:    ret
   %v0 = load <2 x i32>, ptr %src0

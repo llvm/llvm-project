@@ -280,12 +280,12 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x double> %x) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[62:65], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[4:7], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[8:11], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[16:19], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[24:27], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[32:35], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[36:39], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[40:43], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1211,12 +1211,12 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x double> %x) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[62:65], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[4:7], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[8:11], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[16:19], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[24:27], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[20:23], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[32:35], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[28:31], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[36:39], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v48, v[40:43], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1773,12 +1773,12 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x double> %x) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[62:65], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[0:3], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[8:11], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[16:19], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[20:23], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[12:15], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[24:27], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[28:31], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[20:23], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[32:35], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[28:31], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[36:39], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v44, v[40:43], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -2393,12 +2393,12 @@ define amdgpu_kernel void @fneg_v32f64_vec(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[54:57], s[0:1] offset:48
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[32:35], s[0:1]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[36:39], s[0:1] offset:16
-; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[0:3], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[4:7], s[0:1] offset:240
-; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[16:19], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[0:3], s[0:1] offset:224
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[28:31], s[0:1] offset:208
-; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[12:15], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[16:19], s[0:1] offset:192
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[24:27], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[12:15], s[0:1] offset:160
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[8:11], s[0:1] offset:128
 ; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[20:23], s[0:1] offset:144
 ; GFX1251-SDAG-NEXT:    s_endpgm

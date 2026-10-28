@@ -2131,10 +2131,10 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-IZFH-NEXT:    lw a3, 8(a0)
 ; CHECK32-IZFH-NEXT:    lw a4, 12(a0)
 ; CHECK32-IZFH-NEXT:    addi a0, sp, 8
-; CHECK32-IZFH-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZFH-NEXT:    sw a2, 12(sp)
 ; CHECK32-IZFH-NEXT:    sw a3, 16(sp)
 ; CHECK32-IZFH-NEXT:    sw a4, 20(sp)
+; CHECK32-IZFH-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZFH-NEXT:    call __trunctfhf2
 ; CHECK32-IZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZFH-NEXT:    addi sp, sp, 32
@@ -2158,10 +2158,10 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-IZHINX-NEXT:    lw a3, 8(a0)
 ; CHECK32-IZHINX-NEXT:    lw a4, 12(a0)
 ; CHECK32-IZHINX-NEXT:    addi a0, sp, 8
-; CHECK32-IZHINX-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZHINX-NEXT:    sw a2, 12(sp)
 ; CHECK32-IZHINX-NEXT:    sw a3, 16(sp)
 ; CHECK32-IZHINX-NEXT:    sw a4, 20(sp)
+; CHECK32-IZHINX-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZHINX-NEXT:    call __trunctfhf2
 ; CHECK32-IZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINX-NEXT:    addi sp, sp, 32
@@ -2185,10 +2185,10 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-IZFHMIN-NEXT:    lw a3, 8(a0)
 ; CHECK32-IZFHMIN-NEXT:    lw a4, 12(a0)
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
-; CHECK32-IZFHMIN-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a2, 12(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a3, 16(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a4, 20(sp)
+; CHECK32-IZFHMIN-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZFHMIN-NEXT:    call __trunctfhf2
 ; CHECK32-IZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, 32
@@ -2212,10 +2212,10 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-IZHINXMIN-NEXT:    lw a3, 8(a0)
 ; CHECK32-IZHINXMIN-NEXT:    lw a4, 12(a0)
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
-; CHECK32-IZHINXMIN-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a2, 12(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a3, 16(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a4, 20(sp)
+; CHECK32-IZHINXMIN-NEXT:    sw a1, 8(sp)
 ; CHECK32-IZHINXMIN-NEXT:    call __trunctfhf2
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, 32
@@ -2239,10 +2239,10 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw a3, 8(a0)
 ; CHECK32-D-NEXT:    lw a4, 12(a0)
 ; CHECK32-D-NEXT:    addi a0, sp, 8
-; CHECK32-D-NEXT:    sw a1, 8(sp)
 ; CHECK32-D-NEXT:    sw a2, 12(sp)
 ; CHECK32-D-NEXT:    sw a3, 16(sp)
 ; CHECK32-D-NEXT:    sw a4, 20(sp)
+; CHECK32-D-NEXT:    sw a1, 8(sp)
 ; CHECK32-D-NEXT:    call __trunctfhf2
 ; CHECK32-D-NEXT:    fmv.x.w a0, fa0
 ; CHECK32-D-NEXT:    lui a1, 1048560
@@ -2279,13 +2279,13 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFH-NEXT:    call __extendsftf2
 ; CHECK32-IZFH-NEXT:    lw a0, 8(sp)
-; CHECK32-IZFH-NEXT:    lw a1, 12(sp)
-; CHECK32-IZFH-NEXT:    lw a2, 16(sp)
+; CHECK32-IZFH-NEXT:    lw a1, 16(sp)
+; CHECK32-IZFH-NEXT:    lw a2, 12(sp)
 ; CHECK32-IZFH-NEXT:    lw a3, 20(sp)
 ; CHECK32-IZFH-NEXT:    sw a0, 0(s0)
-; CHECK32-IZFH-NEXT:    sw a1, 4(s0)
-; CHECK32-IZFH-NEXT:    sw a2, 8(s0)
+; CHECK32-IZFH-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZFH-NEXT:    sw a3, 12(s0)
+; CHECK32-IZFH-NEXT:    sw a2, 4(s0)
 ; CHECK32-IZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZFH-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZFH-NEXT:    addi sp, sp, 32
@@ -2311,13 +2311,13 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINX-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINX-NEXT:    call __extendsftf2
 ; CHECK32-IZHINX-NEXT:    lw a0, 8(sp)
-; CHECK32-IZHINX-NEXT:    lw a1, 12(sp)
-; CHECK32-IZHINX-NEXT:    lw a2, 16(sp)
+; CHECK32-IZHINX-NEXT:    lw a1, 16(sp)
+; CHECK32-IZHINX-NEXT:    lw a2, 12(sp)
 ; CHECK32-IZHINX-NEXT:    lw a3, 20(sp)
 ; CHECK32-IZHINX-NEXT:    sw a0, 0(s0)
-; CHECK32-IZHINX-NEXT:    sw a1, 4(s0)
-; CHECK32-IZHINX-NEXT:    sw a2, 8(s0)
+; CHECK32-IZHINX-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZHINX-NEXT:    sw a3, 12(s0)
+; CHECK32-IZHINX-NEXT:    sw a2, 4(s0)
 ; CHECK32-IZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINX-NEXT:    addi sp, sp, 32
@@ -2343,13 +2343,13 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFHMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZFHMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZFHMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZFHMIN-NEXT:    lw a2, 16(sp)
+; CHECK32-IZFHMIN-NEXT:    lw a1, 16(sp)
+; CHECK32-IZFHMIN-NEXT:    lw a2, 12(sp)
 ; CHECK32-IZFHMIN-NEXT:    lw a3, 20(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a0, 0(s0)
-; CHECK32-IZFHMIN-NEXT:    sw a1, 4(s0)
-; CHECK32-IZFHMIN-NEXT:    sw a2, 8(s0)
+; CHECK32-IZFHMIN-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZFHMIN-NEXT:    sw a3, 12(s0)
+; CHECK32-IZFHMIN-NEXT:    sw a2, 4(s0)
 ; CHECK32-IZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZFHMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, 32
@@ -2375,13 +2375,13 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINXMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZHINXMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZHINXMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZHINXMIN-NEXT:    lw a2, 16(sp)
+; CHECK32-IZHINXMIN-NEXT:    lw a1, 16(sp)
+; CHECK32-IZHINXMIN-NEXT:    lw a2, 12(sp)
 ; CHECK32-IZHINXMIN-NEXT:    lw a3, 20(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a0, 0(s0)
-; CHECK32-IZHINXMIN-NEXT:    sw a1, 4(s0)
-; CHECK32-IZHINXMIN-NEXT:    sw a2, 8(s0)
+; CHECK32-IZHINXMIN-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZHINXMIN-NEXT:    sw a3, 12(s0)
+; CHECK32-IZHINXMIN-NEXT:    sw a2, 4(s0)
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, 32
@@ -2411,13 +2411,13 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi a0, sp, 8
 ; CHECK32-D-NEXT:    call __extendsftf2
 ; CHECK32-D-NEXT:    lw a0, 8(sp)
-; CHECK32-D-NEXT:    lw a1, 12(sp)
-; CHECK32-D-NEXT:    lw a2, 16(sp)
+; CHECK32-D-NEXT:    lw a1, 16(sp)
+; CHECK32-D-NEXT:    lw a2, 12(sp)
 ; CHECK32-D-NEXT:    lw a3, 20(sp)
 ; CHECK32-D-NEXT:    sw a0, 0(s0)
-; CHECK32-D-NEXT:    sw a1, 4(s0)
-; CHECK32-D-NEXT:    sw a2, 8(s0)
+; CHECK32-D-NEXT:    sw a1, 8(s0)
 ; CHECK32-D-NEXT:    sw a3, 12(s0)
+; CHECK32-D-NEXT:    sw a2, 4(s0)
 ; CHECK32-D-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 32

@@ -1043,9 +1043,9 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    ldrd r3, r4, [r10]
 ; CHECK-NEXT:    ldm.w lr, {r0, r5, r6, lr}
 ; CHECK-NEXT:    ldrd r11, r8, [r10, #24]
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    vstrb.8 q0, [r9], #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r7], #32
-; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    str.w r9, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q1, [r7, #-28]
 ; CHECK-NEXT:    vmul.f32 q0, q0, r3
@@ -1945,19 +1945,19 @@ define void @arm_biquad_cascade_df2T_f32(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrd r7, r4, [r1], #8
 ; CHECK-NEXT:    vfma.f32 q1, q3, r7
-; CHECK-NEXT:    vmov r7, s4
 ; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov r7, s4
 ; CHECK-NEXT:    vfma.f32 q1, q2, r7
 ; CHECK-NEXT:    vmov.f32 s7, s0
 ; CHECK-NEXT:    vfma.f32 q1, q4, r4
 ; CHECK-NEXT:    vmov r4, s5
+; CHECK-NEXT:    vstr s2, [r5]
 ; CHECK-NEXT:    vstr s5, [r5, #4]
 ; CHECK-NEXT:    vfma.f32 q1, q5, r4
 ; CHECK-NEXT:    vmov.f32 s4, s6
+; CHECK-NEXT:    adds r5, #8
 ; CHECK-NEXT:    vmov.f32 s5, s7
 ; CHECK-NEXT:    vmov.f32 s6, s0
-; CHECK-NEXT:    vstr s2, [r5]
-; CHECK-NEXT:    adds r5, #8
 ; CHECK-NEXT:    le lr, .LBB20_5
 ; CHECK-NEXT:  .LBB20_6: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB20_3 Depth=1

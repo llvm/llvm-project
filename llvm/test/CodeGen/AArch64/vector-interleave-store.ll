@@ -244,35 +244,36 @@ define void @wide_vector_interleave_st4_i64(ptr %output, ptr %input0, ptr %input
 define void @wide_vector_interleave_st3_i32_dreg(ptr %output, <6 x i32> %v0, <6 x i32> %v1, <6 x i32> %v2) {
 ; CHECK-LABEL: wide_vector_interleave_st3_i32_dreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w5
-; CHECK-NEXT:    fmov s3, w1
 ; CHECK-NEXT:    ldr s0, [sp, #56]
-; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    ldr s2, [sp]
-; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    fmov s3, w1
+; CHECK-NEXT:    fmov s2, w5
+; CHECK-NEXT:    ldr s1, [sp]
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    add x9, sp, #24
 ; CHECK-NEXT:    mov v0.s[1], w4
 ; CHECK-NEXT:    ldr s4, [sp, #32]
-; CHECK-NEXT:    ld1 { v1.s }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov v3.s[1], w7
-; CHECK-NEXT:    ld1 { v2.s }[1], [x8]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x8]
+; CHECK-NEXT:    ld1 { v2.s }[1], [x9]
+; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    add x8, sp, #72
-; CHECK-NEXT:    ld1 { v1.s }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #40
 ; CHECK-NEXT:    ld1 { v0.s }[2], [x9]
-; CHECK-NEXT:    mov v2.s[2], w3
-; CHECK-NEXT:    ld1 { v3.s }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #64
-; CHECK-NEXT:    add x9, sp, #80
-; CHECK-NEXT:    mov v1.s[3], w6
-; CHECK-NEXT:    ld1 { v0.s }[3], [x8]
+; CHECK-NEXT:    add x9, sp, #40
+; CHECK-NEXT:    mov v1.s[2], w3
+; CHECK-NEXT:    ld1 { v2.s }[2], [x8]
+; CHECK-NEXT:    ld1 { v3.s }[2], [x9]
+; CHECK-NEXT:    add x8, sp, #80
+; CHECK-NEXT:    add x9, sp, #64
+; CHECK-NEXT:    ld1 { v4.s }[1], [x8]
 ; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    ld1 { v0.s }[3], [x9]
+; CHECK-NEXT:    mov v2.s[3], w6
 ; CHECK-NEXT:    mov v3.s[3], w2
-; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
-; CHECK-NEXT:    ld1 { v2.s }[3], [x8]
+; CHECK-NEXT:    ld1 { v1.s }[3], [x8]
 ; CHECK-NEXT:    str d4, [x0, #64]
-; CHECK-NEXT:    stp q3, q2, [x0]
-; CHECK-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-NEXT:    stp q1, q0, [x0, #16]
+; CHECK-NEXT:    str q2, [x0, #48]
+; CHECK-NEXT:    str q3, [x0]
 ; CHECK-NEXT:    ret
   %interleave = call <18 x i32> @llvm.vector.interleave3.v18i32(<6 x i32> %v0, <6 x i32> %v1, <6 x i32> %v2)
   store <18 x i32> %interleave, ptr %output, align 4
@@ -348,7 +349,7 @@ define void @wide_vector_interleave_st3_i16_dreg(ptr %output, ptr %input0, ptr %
 ; CHECK-NEXT:    st3 { v0.8h, v1.8h, v2.8h }, [x8]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    st3 { v3.8h, v4.8h, v5.8h }, [x8]
-; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    ldp q0, q4, [sp, #32]
 ; CHECK-NEXT:    dup v1.2d, v0.d[1]
 ; CHECK-NEXT:    str d1, [sp, #144]
 ; CHECK-NEXT:    ldr q1, [sp, #64]
@@ -358,9 +359,8 @@ define void @wide_vector_interleave_st3_i16_dreg(ptr %output, ptr %input0, ptr %
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v3.16b, #8
-; CHECK-NEXT:    ldr q3, [sp, #48]
+; CHECK-NEXT:    stp q0, q4, [x0, #32]
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    stp q0, q3, [x0, #32]
 ; CHECK-NEXT:    ldr q0, [sp, #112]
 ; CHECK-NEXT:    str d0, [x0, #64]
 ; CHECK-NEXT:    add sp, sp, #192
@@ -399,20 +399,21 @@ define void @wide_vector_interleave_st4_i16_dreg(ptr %output, ptr %input0, ptr %
 ; CHECK-NEXT:    zip1 v0.8h, v4.8h, v0.8h
 ; CHECK-NEXT:    zip2 v3.8h, v5.8h, v3.8h
 ; CHECK-NEXT:    dup v2.2d, v6.d[1]
-; CHECK-NEXT:    dup v17.2d, v7.d[1]
-; CHECK-NEXT:    ext v7.16b, v16.16b, v7.16b, #8
+; CHECK-NEXT:    ext v6.16b, v1.16b, v6.16b, #8
+; CHECK-NEXT:    ext v17.16b, v16.16b, v7.16b, #8
+; CHECK-NEXT:    dup v7.2d, v7.d[1]
 ; CHECK-NEXT:    str d2, [sp, #16]
-; CHECK-NEXT:    ext v2.16b, v1.16b, v6.16b, #8
-; CHECK-NEXT:    str d17, [sp, #80]
-; CHECK-NEXT:    ldr q5, [sp, #16]
-; CHECK-NEXT:    mov v16.d[1], v7.d[0]
-; CHECK-NEXT:    ldr q4, [sp, #80]
-; CHECK-NEXT:    ext v4.16b, v7.16b, v4.16b, #8
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    str d7, [sp, #80]
+; CHECK-NEXT:    ldr q4, [sp, #16]
+; CHECK-NEXT:    mov v1.d[1], v6.d[0]
+; CHECK-NEXT:    mov v16.d[1], v17.d[0]
+; CHECK-NEXT:    ldr q2, [sp, #80]
+; CHECK-NEXT:    stp q3, q1, [x0, #48]
 ; CHECK-NEXT:    stp q0, q16, [x0]
-; CHECK-NEXT:    ext v0.16b, v2.16b, v5.16b, #8
-; CHECK-NEXT:    stp q4, q3, [x0, #32]
-; CHECK-NEXT:    stp q1, q0, [x0, #64]
+; CHECK-NEXT:    ext v0.16b, v17.16b, v2.16b, #8
+; CHECK-NEXT:    ext v2.16b, v6.16b, v4.16b, #8
+; CHECK-NEXT:    str q0, [x0, #32]
+; CHECK-NEXT:    str q2, [x0, #80]
 ; CHECK-NEXT:    add sp, sp, #128
 ; CHECK-NEXT:    ret
   %v0 = load <12 x i16>, ptr %input0, align 2
@@ -439,7 +440,7 @@ define void @wide_vector_interleave_st3_i8_dreg(ptr %output, ptr %input0, ptr %i
 ; CHECK-NEXT:    st3 { v0.16b, v1.16b, v2.16b }, [x8]
 ; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    st3 { v3.16b, v4.16b, v5.16b }, [x8]
-; CHECK-NEXT:    ldr q0, [sp, #32]
+; CHECK-NEXT:    ldp q0, q4, [sp, #32]
 ; CHECK-NEXT:    dup v1.2d, v0.d[1]
 ; CHECK-NEXT:    str d1, [sp, #144]
 ; CHECK-NEXT:    ldr q1, [sp, #64]
@@ -449,9 +450,8 @@ define void @wide_vector_interleave_st3_i8_dreg(ptr %output, ptr %input0, ptr %i
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v3.16b, #8
-; CHECK-NEXT:    ldr q3, [sp, #48]
+; CHECK-NEXT:    stp q0, q4, [x0, #32]
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    stp q0, q3, [x0, #32]
 ; CHECK-NEXT:    ldr q0, [sp, #112]
 ; CHECK-NEXT:    str d0, [x0, #64]
 ; CHECK-NEXT:    add sp, sp, #192
@@ -490,20 +490,21 @@ define void @wide_vector_interleave_st4_i8_dreg(ptr %output, ptr %input0, ptr %i
 ; CHECK-NEXT:    zip1 v0.16b, v4.16b, v0.16b
 ; CHECK-NEXT:    zip2 v3.16b, v5.16b, v3.16b
 ; CHECK-NEXT:    dup v2.2d, v6.d[1]
-; CHECK-NEXT:    dup v17.2d, v7.d[1]
-; CHECK-NEXT:    ext v7.16b, v16.16b, v7.16b, #8
+; CHECK-NEXT:    ext v6.16b, v1.16b, v6.16b, #8
+; CHECK-NEXT:    ext v17.16b, v16.16b, v7.16b, #8
+; CHECK-NEXT:    dup v7.2d, v7.d[1]
 ; CHECK-NEXT:    str d2, [sp, #16]
-; CHECK-NEXT:    ext v2.16b, v1.16b, v6.16b, #8
-; CHECK-NEXT:    str d17, [sp, #80]
-; CHECK-NEXT:    ldr q5, [sp, #16]
-; CHECK-NEXT:    mov v16.d[1], v7.d[0]
-; CHECK-NEXT:    ldr q4, [sp, #80]
-; CHECK-NEXT:    ext v4.16b, v7.16b, v4.16b, #8
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    str d7, [sp, #80]
+; CHECK-NEXT:    ldr q4, [sp, #16]
+; CHECK-NEXT:    mov v1.d[1], v6.d[0]
+; CHECK-NEXT:    mov v16.d[1], v17.d[0]
+; CHECK-NEXT:    ldr q2, [sp, #80]
+; CHECK-NEXT:    stp q3, q1, [x0, #48]
 ; CHECK-NEXT:    stp q0, q16, [x0]
-; CHECK-NEXT:    ext v0.16b, v2.16b, v5.16b, #8
-; CHECK-NEXT:    stp q4, q3, [x0, #32]
-; CHECK-NEXT:    stp q1, q0, [x0, #64]
+; CHECK-NEXT:    ext v0.16b, v17.16b, v2.16b, #8
+; CHECK-NEXT:    ext v2.16b, v6.16b, v4.16b, #8
+; CHECK-NEXT:    str q0, [x0, #32]
+; CHECK-NEXT:    str q2, [x0, #80]
 ; CHECK-NEXT:    add sp, sp, #128
 ; CHECK-NEXT:    ret
   %v0 = load <24 x i8>, ptr %input0, align 1

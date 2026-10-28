@@ -373,9 +373,9 @@ define void @test_masked_store_success_v16i32(<16 x i32> %x, ptr %ptr, <16 x i1>
 ; SVE-NEXT:    cmpne p3.s, p0/z, z5.s, #0
 ; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #12 // =0xc
-; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    st1w { z2.s }, p2, [x0, x9, lsl #2]
 ; SVE-NEXT:    st1w { z3.s }, p3, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    ret
   %load = load <16 x i32>, ptr %ptr, align 32
   %sel = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> %load
@@ -451,8 +451,8 @@ define void @test_masked_store_success_v32i8(<32 x i8> %x, ptr %ptr, <32 x i1> %
 ; SVE-NEXT:    shl v3.16b, v3.16b, #7
 ; SVE-NEXT:    cmpne p2.b, p0/z, z2.b, #0
 ; SVE-NEXT:    cmpne p1.b, p0/z, z3.b, #0
-; SVE-NEXT:    st1b { z0.b }, p2, [x0]
 ; SVE-NEXT:    st1b { z1.b }, p1, [x0, x8]
+; SVE-NEXT:    st1b { z0.b }, p2, [x0]
 ; SVE-NEXT:    ret
   %load = load <32 x i8>, ptr %ptr, align 32
   %sel = select <32 x i1> %mask, <32 x i8> %x, <32 x i8> %load
@@ -776,10 +776,10 @@ define void @test_masked_store_success_invert_mask_v16i32(<16 x i32> %x, ptr %pt
 ; SVE-NEXT:    cmpge p3.s, p0/z, z5.s, #0
 ; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #8 // =0x8
-; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    st1w { z2.s }, p2, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #12 // =0xc
 ; SVE-NEXT:    st1w { z3.s }, p3, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    ret
   %load = load <16 x i32>, ptr %ptr, align 32
   %sel = select <16 x i1> %mask, <16 x i32> %load, <16 x i32> %x
@@ -954,20 +954,20 @@ define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %p
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    mov b18, v16.b[0]
 ; SVE-NEXT:    mov b19, v16.b[4]
-; SVE-NEXT:    mov b20, v17.b[4]
+; SVE-NEXT:    mov b20, v17.b[0]
 ; SVE-NEXT:    mov b21, v16.b[6]
 ; SVE-NEXT:    mov b22, v16.b[2]
-; SVE-NEXT:    mov b23, v17.b[6]
+; SVE-NEXT:    mov b23, v17.b[4]
 ; SVE-NEXT:    mov b24, v17.b[2]
-; SVE-NEXT:    mov b25, v17.b[0]
+; SVE-NEXT:    mov b25, v17.b[6]
 ; SVE-NEXT:    mov v18.b[4], v16.b[1]
 ; SVE-NEXT:    mov v19.b[4], v16.b[5]
-; SVE-NEXT:    mov v20.b[4], v17.b[5]
+; SVE-NEXT:    mov v20.b[4], v17.b[1]
 ; SVE-NEXT:    mov v21.b[4], v16.b[7]
 ; SVE-NEXT:    mov v22.b[4], v16.b[3]
-; SVE-NEXT:    mov v23.b[4], v17.b[7]
+; SVE-NEXT:    mov v23.b[4], v17.b[5]
 ; SVE-NEXT:    mov v24.b[4], v17.b[3]
-; SVE-NEXT:    mov v25.b[4], v17.b[1]
+; SVE-NEXT:    mov v25.b[4], v17.b[7]
 ; SVE-NEXT:    ushll v18.2d, v18.2s, #0
 ; SVE-NEXT:    ushll v17.2d, v19.2s, #0
 ; SVE-NEXT:    ushll v19.2d, v21.2s, #0
@@ -988,13 +988,13 @@ define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %p
 ; SVE-NEXT:    shl v16.2d, v16.2d, #63
 ; SVE-NEXT:    cmlt v17.2d, v18.2d, #0
 ; SVE-NEXT:    shl v18.2d, v22.2d, #63
-; SVE-NEXT:    ldp q19, q22, [x1, #32]
+; SVE-NEXT:    ldp q19, q22, [x1]
 ; SVE-NEXT:    cmpne p4.d, p1/z, z16.d, #0
 ; SVE-NEXT:    cmlt v16.2d, v20.2d, #0
 ; SVE-NEXT:    cmlt v20.2d, v21.2d, #0
 ; SVE-NEXT:    cmlt v18.2d, v18.2d, #0
-; SVE-NEXT:    bif v6.16b, v19.16b, v17.16b
-; SVE-NEXT:    ldp q17, q19, [x1]
+; SVE-NEXT:    bif v4.16b, v19.16b, v17.16b
+; SVE-NEXT:    ldp q17, q19, [x1, #32]
 ; SVE-NEXT:    st1d { z2.d }, p2, [x0, x9, lsl #3]
 ; SVE-NEXT:    mov x9, #2 // =0x2
 ; SVE-NEXT:    st1d { z3.d }, p3, [x0, x8, lsl #3]
@@ -1003,11 +1003,11 @@ define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %p
 ; SVE-NEXT:    st1d { z1.d }, p4, [x0, x9, lsl #3]
 ; SVE-NEXT:    mov v1.16b, v18.16b
 ; SVE-NEXT:    st1d { z0.d }, p0, [x0]
-; SVE-NEXT:    bsl v2.16b, v7.16b, v22.16b
-; SVE-NEXT:    bsl v3.16b, v4.16b, v17.16b
-; SVE-NEXT:    bsl v1.16b, v5.16b, v19.16b
-; SVE-NEXT:    stp q6, q2, [x1, #32]
-; SVE-NEXT:    stp q3, q1, [x1]
+; SVE-NEXT:    bsl v2.16b, v6.16b, v17.16b
+; SVE-NEXT:    bsl v3.16b, v7.16b, v19.16b
+; SVE-NEXT:    bsl v1.16b, v5.16b, v22.16b
+; SVE-NEXT:    stp q4, q1, [x1]
+; SVE-NEXT:    stp q2, q3, [x1, #32]
 ; SVE-NEXT:    ret
   %load = load <8 x i64>, ptr %ptr1, align 32
   %load2 = load <8 x i64>, ptr %ptr2, align 32

@@ -26,26 +26,26 @@ define void @abc(ptr %arg, [5 x i64] %arg1, [5 x i64] %arg2, [5 x i64] %arg3, [5
 ; CHECK-P9-LE:       # %bb.0: # %bb
 ; CHECK-P9-LE-NEXT:    addi r6, r1, 120
 ; CHECK-P9-LE-NEXT:    addi r11, r1, 104
-; CHECK-P9-LE-NEXT:    ld r0, 136(r1)
 ; CHECK-P9-LE-NEXT:    ld r12, 144(r1)
+; CHECK-P9-LE-NEXT:    ld r0, 136(r1)
 ; CHECK-P9-LE-NEXT:    std r4, 0(r3)
 ; CHECK-P9-LE-NEXT:    addi r4, r1, -160
 ; CHECK-P9-LE-NEXT:    lxvx vs0, 0, r6
 ; CHECK-P9-LE-NEXT:    lxvx vs1, 0, r11
 ; CHECK-P9-LE-NEXT:    ld r6, 192(r1)
 ; CHECK-P9-LE-NEXT:    ld r11, 160(r1)
-; CHECK-P9-LE-NEXT:    std r8, 0(r3)
-; CHECK-P9-LE-NEXT:    std r10, 0(r3)
+; CHECK-P9-LE-NEXT:    std r5, 0(0)
+; CHECK-P9-LE-NEXT:    std r7, -136(r1)
 ; CHECK-P9-LE-NEXT:    stxv vs1, 64(r4)
+; CHECK-P9-LE-NEXT:    std r8, 0(r3)
+; CHECK-P9-LE-NEXT:    std r9, 0(0)
+; CHECK-P9-LE-NEXT:    std r10, 0(r3)
+; CHECK-P9-LE-NEXT:    stxv vs0, 80(r4)
 ; CHECK-P9-LE-NEXT:    std r0, 0(r3)
+; CHECK-P9-LE-NEXT:    std r12, 0(0)
 ; CHECK-P9-LE-NEXT:    std r11, 0(r3)
 ; CHECK-P9-LE-NEXT:    std r6, 0(r3)
 ; CHECK-P9-LE-NEXT:    addi r3, r3, 16
-; CHECK-P9-LE-NEXT:    std r5, 0(0)
-; CHECK-P9-LE-NEXT:    std r7, -136(r1)
-; CHECK-P9-LE-NEXT:    std r9, 0(0)
-; CHECK-P9-LE-NEXT:    stxv vs0, 80(r4)
-; CHECK-P9-LE-NEXT:    std r12, 0(0)
 ; CHECK-P9-LE-NEXT:    std r3, 0(r3)
 ; CHECK-P9-LE-NEXT:    blr
 ;
@@ -53,26 +53,26 @@ define void @abc(ptr %arg, [5 x i64] %arg1, [5 x i64] %arg2, [5 x i64] %arg3, [5
 ; CHECK-P9-BE:       # %bb.0: # %bb
 ; CHECK-P9-BE-NEXT:    addi r6, r1, 136
 ; CHECK-P9-BE-NEXT:    addi r11, r1, 120
-; CHECK-P9-BE-NEXT:    ld r0, 152(r1)
 ; CHECK-P9-BE-NEXT:    ld r12, 160(r1)
+; CHECK-P9-BE-NEXT:    ld r0, 152(r1)
 ; CHECK-P9-BE-NEXT:    std r4, 0(r3)
 ; CHECK-P9-BE-NEXT:    addi r4, r1, -160
 ; CHECK-P9-BE-NEXT:    lxvx vs0, 0, r6
 ; CHECK-P9-BE-NEXT:    lxvx vs1, 0, r11
 ; CHECK-P9-BE-NEXT:    ld r6, 208(r1)
 ; CHECK-P9-BE-NEXT:    ld r11, 176(r1)
-; CHECK-P9-BE-NEXT:    std r8, 0(r3)
-; CHECK-P9-BE-NEXT:    std r10, 0(r3)
+; CHECK-P9-BE-NEXT:    std r5, 0(0)
+; CHECK-P9-BE-NEXT:    std r7, -136(r1)
 ; CHECK-P9-BE-NEXT:    stxv vs1, 64(r4)
+; CHECK-P9-BE-NEXT:    std r8, 0(r3)
+; CHECK-P9-BE-NEXT:    std r9, 0(0)
+; CHECK-P9-BE-NEXT:    std r10, 0(r3)
+; CHECK-P9-BE-NEXT:    stxv vs0, 80(r4)
 ; CHECK-P9-BE-NEXT:    std r0, 0(r3)
+; CHECK-P9-BE-NEXT:    std r12, 0(0)
 ; CHECK-P9-BE-NEXT:    std r11, 0(r3)
 ; CHECK-P9-BE-NEXT:    std r6, 0(r3)
 ; CHECK-P9-BE-NEXT:    addi r3, r3, 16
-; CHECK-P9-BE-NEXT:    std r5, 0(0)
-; CHECK-P9-BE-NEXT:    std r7, -136(r1)
-; CHECK-P9-BE-NEXT:    std r9, 0(0)
-; CHECK-P9-BE-NEXT:    stxv vs0, 80(r4)
-; CHECK-P9-BE-NEXT:    std r12, 0(0)
 ; CHECK-P9-BE-NEXT:    std r3, 0(r3)
 ; CHECK-P9-BE-NEXT:    blr
 bb:

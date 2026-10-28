@@ -688,8 +688,8 @@ define <vscale x 1 x i64> @intrinsic_vmerge_vxm_nxv1i64_nxv1i64_i64(<vscale x 1 
 ; RV32-LABEL: intrinsic_vmerge_vxm_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
@@ -716,8 +716,8 @@ define <vscale x 2 x i64> @intrinsic_vmerge_vxm_nxv2i64_nxv2i64_i64(<vscale x 2 
 ; RV32-LABEL: intrinsic_vmerge_vxm_nxv2i64_nxv2i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t

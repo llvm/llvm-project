@@ -181,14 +181,14 @@ define i64 @load_i64(ptr %p) {
 define void @store_i64(ptr %p, i64 %v) {
 ; RV32LE-LABEL: store_i64:
 ; RV32LE:       # %bb.0:
-; RV32LE-NEXT:    sw a1, 0(a0)
 ; RV32LE-NEXT:    sw a2, 4(a0)
+; RV32LE-NEXT:    sw a1, 0(a0)
 ; RV32LE-NEXT:    ret
 ;
 ; RV32BE-LABEL: store_i64:
 ; RV32BE:       # %bb.0:
-; RV32BE-NEXT:    sw a1, 0(a0)
 ; RV32BE-NEXT:    sw a2, 4(a0)
+; RV32BE-NEXT:    sw a1, 0(a0)
 ; RV32BE-NEXT:    ret
 ;
 ; RV64LE-LABEL: store_i64:
@@ -284,14 +284,14 @@ define double @load_double(ptr %p) {
 define void @store_double(ptr %p, double %v) {
 ; RV32LE-LABEL: store_double:
 ; RV32LE:       # %bb.0:
-; RV32LE-NEXT:    sw a1, 0(a0)
 ; RV32LE-NEXT:    sw a2, 4(a0)
+; RV32LE-NEXT:    sw a1, 0(a0)
 ; RV32LE-NEXT:    ret
 ;
 ; RV32BE-LABEL: store_double:
 ; RV32BE:       # %bb.0:
-; RV32BE-NEXT:    sw a1, 0(a0)
 ; RV32BE-NEXT:    sw a2, 4(a0)
+; RV32BE-NEXT:    sw a1, 0(a0)
 ; RV32BE-NEXT:    ret
 ;
 ; RV64LE-LABEL: store_double:

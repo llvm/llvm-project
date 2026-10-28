@@ -280,168 +280,169 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-SD-LABEL: llrint_v32i64_v32f16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov d4, v1.d[1]
-; CHECK-SD-NEXT:    mov d5, v2.d[1]
+; CHECK-SD-NEXT:    mov d7, v2.d[1]
 ; CHECK-SD-NEXT:    mov d6, v3.d[1]
-; CHECK-SD-NEXT:    mov d7, v0.d[1]
-; CHECK-SD-NEXT:    mov h19, v0.h[1]
-; CHECK-SD-NEXT:    fcvt s21, h0
-; CHECK-SD-NEXT:    mov h23, v1.h[2]
-; CHECK-SD-NEXT:    fcvt s22, h1
-; CHECK-SD-NEXT:    fcvt s26, h2
-; CHECK-SD-NEXT:    mov h27, v2.h[1]
-; CHECK-SD-NEXT:    mov h28, v2.h[2]
-; CHECK-SD-NEXT:    mov h16, v4.h[2]
-; CHECK-SD-NEXT:    fcvt s17, h5
-; CHECK-SD-NEXT:    mov h18, v5.h[2]
-; CHECK-SD-NEXT:    mov h20, v6.h[2]
-; CHECK-SD-NEXT:    fcvt s24, h7
-; CHECK-SD-NEXT:    fcvt s25, h6
-; CHECK-SD-NEXT:    fcvt s19, h19
-; CHECK-SD-NEXT:    frintx s22, s22
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    frintx s17, s17
-; CHECK-SD-NEXT:    fcvt s18, h18
-; CHECK-SD-NEXT:    fcvt s20, h20
-; CHECK-SD-NEXT:    frintx s16, s16
-; CHECK-SD-NEXT:    fcvtzs x12, s17
-; CHECK-SD-NEXT:    frintx s17, s18
-; CHECK-SD-NEXT:    frintx s18, s21
-; CHECK-SD-NEXT:    fcvt s21, h23
-; CHECK-SD-NEXT:    frintx s23, s24
-; CHECK-SD-NEXT:    frintx s24, s25
-; CHECK-SD-NEXT:    frintx s25, s19
-; CHECK-SD-NEXT:    mov h19, v7.h[1]
-; CHECK-SD-NEXT:    fcvtzs x13, s16
-; CHECK-SD-NEXT:    frintx s16, s20
-; CHECK-SD-NEXT:    frintx s20, s26
-; CHECK-SD-NEXT:    fcvtzs x9, s23
-; CHECK-SD-NEXT:    mov h23, v3.h[2]
-; CHECK-SD-NEXT:    fcvt s26, h27
-; CHECK-SD-NEXT:    fcvtzs x15, s24
-; CHECK-SD-NEXT:    fcvtzs x10, s25
-; CHECK-SD-NEXT:    fcvt s24, h28
-; CHECK-SD-NEXT:    mov h25, v3.h[3]
-; CHECK-SD-NEXT:    fcvtzs x14, s17
-; CHECK-SD-NEXT:    frintx s21, s21
-; CHECK-SD-NEXT:    fmov d17, x12
-; CHECK-SD-NEXT:    fcvtzs x12, s16
-; CHECK-SD-NEXT:    fmov d16, x13
-; CHECK-SD-NEXT:    fcvtzs x13, s22
-; CHECK-SD-NEXT:    fcvt s22, h3
-; CHECK-SD-NEXT:    mov h3, v3.h[1]
-; CHECK-SD-NEXT:    mov h27, v0.h[2]
-; CHECK-SD-NEXT:    mov h28, v2.h[3]
-; CHECK-SD-NEXT:    fcvt s23, h23
-; CHECK-SD-NEXT:    frintx s26, s26
-; CHECK-SD-NEXT:    fcvtzs x16, s20
-; CHECK-SD-NEXT:    frintx s20, s24
-; CHECK-SD-NEXT:    fcvt s24, h25
-; CHECK-SD-NEXT:    fcvtzs x11, s18
-; CHECK-SD-NEXT:    fmov d18, x14
-; CHECK-SD-NEXT:    fcvtzs x14, s21
-; CHECK-SD-NEXT:    frintx s22, s22
-; CHECK-SD-NEXT:    fcvt s3, h3
-; CHECK-SD-NEXT:    fcvt s25, h27
-; CHECK-SD-NEXT:    fcvt s27, h28
-; CHECK-SD-NEXT:    frintx s23, s23
-; CHECK-SD-NEXT:    mov h21, v1.h[3]
-; CHECK-SD-NEXT:    fmov d2, x15
-; CHECK-SD-NEXT:    fcvtzs x15, s26
-; CHECK-SD-NEXT:    fmov d26, x13
-; CHECK-SD-NEXT:    mov h1, v1.h[1]
-; CHECK-SD-NEXT:    fcvtzs x13, s20
-; CHECK-SD-NEXT:    frintx s20, s24
-; CHECK-SD-NEXT:    fmov d24, x14
-; CHECK-SD-NEXT:    fcvtzs x14, s22
-; CHECK-SD-NEXT:    frintx s3, s3
-; CHECK-SD-NEXT:    fmov d22, x16
-; CHECK-SD-NEXT:    frintx s27, s27
-; CHECK-SD-NEXT:    fcvtzs x16, s23
-; CHECK-SD-NEXT:    fcvt s21, h21
-; CHECK-SD-NEXT:    frintx s25, s25
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    mov h0, v0.h[3]
-; CHECK-SD-NEXT:    mov h23, v7.h[2]
-; CHECK-SD-NEXT:    mov v22.d[1], x15
-; CHECK-SD-NEXT:    fcvtzs x15, s20
-; CHECK-SD-NEXT:    fmov d20, x13
-; CHECK-SD-NEXT:    fcvtzs x13, s3
-; CHECK-SD-NEXT:    fmov d3, x14
-; CHECK-SD-NEXT:    fcvtzs x14, s27
-; CHECK-SD-NEXT:    fmov d27, x16
-; CHECK-SD-NEXT:    frintx s21, s21
-; CHECK-SD-NEXT:    mov h7, v7.h[3]
-; CHECK-SD-NEXT:    frintx s1, s1
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    fcvt s23, h23
-; CHECK-SD-NEXT:    fcvt s19, h19
-; CHECK-SD-NEXT:    mov v27.d[1], x15
-; CHECK-SD-NEXT:    fcvtzs x15, s25
-; CHECK-SD-NEXT:    mov h25, v6.h[3]
-; CHECK-SD-NEXT:    mov h6, v6.h[1]
-; CHECK-SD-NEXT:    mov v3.d[1], x13
-; CHECK-SD-NEXT:    fcvtzs x13, s21
-; CHECK-SD-NEXT:    mov h21, v5.h[1]
-; CHECK-SD-NEXT:    mov h5, v5.h[3]
-; CHECK-SD-NEXT:    mov v20.d[1], x14
-; CHECK-SD-NEXT:    fcvtzs x14, s1
-; CHECK-SD-NEXT:    mov h1, v4.h[1]
-; CHECK-SD-NEXT:    frintx s0, s0
-; CHECK-SD-NEXT:    fcvt s25, h25
+; CHECK-SD-NEXT:    fcvt s16, h4
+; CHECK-SD-NEXT:    mov h5, v4.h[2]
+; CHECK-SD-NEXT:    mov h17, v4.h[3]
+; CHECK-SD-NEXT:    mov h20, v7.h[1]
+; CHECK-SD-NEXT:    mov h21, v7.h[2]
+; CHECK-SD-NEXT:    mov h19, v6.h[1]
+; CHECK-SD-NEXT:    mov h22, v6.h[2]
+; CHECK-SD-NEXT:    mov h4, v4.h[1]
+; CHECK-SD-NEXT:    frintx s23, s16
+; CHECK-SD-NEXT:    mov h16, v7.h[3]
+; CHECK-SD-NEXT:    fcvt s18, h5
+; CHECK-SD-NEXT:    fcvt s24, h17
+; CHECK-SD-NEXT:    fcvt s17, h6
 ; CHECK-SD-NEXT:    fcvt s7, h7
-; CHECK-SD-NEXT:    stp q3, q27, [x8, #192]
-; CHECK-SD-NEXT:    fcvt s6, h6
-; CHECK-SD-NEXT:    mov h3, v4.h[3]
-; CHECK-SD-NEXT:    stp q22, q20, [x8, #128]
+; CHECK-SD-NEXT:    fcvt s20, h20
 ; CHECK-SD-NEXT:    fcvt s21, h21
-; CHECK-SD-NEXT:    fcvt s5, h5
-; CHECK-SD-NEXT:    mov v24.d[1], x13
-; CHECK-SD-NEXT:    mov v26.d[1], x14
-; CHECK-SD-NEXT:    fcvt s4, h4
-; CHECK-SD-NEXT:    frintx s22, s25
-; CHECK-SD-NEXT:    fmov d20, x12
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    frintx s6, s6
-; CHECK-SD-NEXT:    fcvt s3, h3
-; CHECK-SD-NEXT:    fcvtzs x12, s0
-; CHECK-SD-NEXT:    frintx s5, s5
+; CHECK-SD-NEXT:    mov h6, v6.h[3]
+; CHECK-SD-NEXT:    fcvt s19, h19
+; CHECK-SD-NEXT:    fcvt s22, h22
+; CHECK-SD-NEXT:    mov d5, v0.d[1]
+; CHECK-SD-NEXT:    fcvt s16, h16
+; CHECK-SD-NEXT:    frintx s18, s18
+; CHECK-SD-NEXT:    fcvtzs x9, s23
+; CHECK-SD-NEXT:    frintx s23, s24
+; CHECK-SD-NEXT:    frintx s17, s17
+; CHECK-SD-NEXT:    frintx s7, s7
+; CHECK-SD-NEXT:    mov h24, v2.h[1]
+; CHECK-SD-NEXT:    frintx s20, s20
 ; CHECK-SD-NEXT:    frintx s21, s21
-; CHECK-SD-NEXT:    fmov d0, x11
-; CHECK-SD-NEXT:    stp q26, q24, [x8, #64]
-; CHECK-SD-NEXT:    fmov d24, x15
+; CHECK-SD-NEXT:    fcvt s25, h6
+; CHECK-SD-NEXT:    frintx s19, s19
+; CHECK-SD-NEXT:    fcvt s4, h4
+; CHECK-SD-NEXT:    frintx s16, s16
+; CHECK-SD-NEXT:    fcvtzs x10, s18
+; CHECK-SD-NEXT:    fcvt s18, h2
+; CHECK-SD-NEXT:    fcvtzs x12, s23
+; CHECK-SD-NEXT:    mov h23, v2.h[2]
+; CHECK-SD-NEXT:    fcvtzs x14, s17
+; CHECK-SD-NEXT:    frintx s17, s22
+; CHECK-SD-NEXT:    fcvtzs x13, s7
+; CHECK-SD-NEXT:    fcvt s24, h24
+; CHECK-SD-NEXT:    fmov d6, x9
+; CHECK-SD-NEXT:    fcvtzs x15, s20
+; CHECK-SD-NEXT:    fcvtzs x16, s21
+; CHECK-SD-NEXT:    fcvtzs x11, s16
+; CHECK-SD-NEXT:    mov h16, v3.h[1]
+; CHECK-SD-NEXT:    fmov d7, x10
+; CHECK-SD-NEXT:    fcvtzs x9, s19
+; CHECK-SD-NEXT:    frintx s19, s25
+; CHECK-SD-NEXT:    mov h20, v2.h[3]
+; CHECK-SD-NEXT:    fcvt s21, h3
+; CHECK-SD-NEXT:    frintx s18, s18
+; CHECK-SD-NEXT:    fcvt s23, h23
+; CHECK-SD-NEXT:    mov v7.d[1], x12
+; CHECK-SD-NEXT:    fcvtzs x12, s17
+; CHECK-SD-NEXT:    mov h17, v0.h[1]
+; CHECK-SD-NEXT:    fcvt s25, h16
+; CHECK-SD-NEXT:    mov h22, v0.h[2]
+; CHECK-SD-NEXT:    fmov d2, x13
+; CHECK-SD-NEXT:    frintx s24, s24
+; CHECK-SD-NEXT:    fcvtzs x10, s19
+; CHECK-SD-NEXT:    fcvt s19, h0
+; CHECK-SD-NEXT:    fcvt s20, h20
+; CHECK-SD-NEXT:    frintx s21, s21
+; CHECK-SD-NEXT:    fcvtzs x13, s18
+; CHECK-SD-NEXT:    frintx s18, s23
+; CHECK-SD-NEXT:    fcvt s26, h17
+; CHECK-SD-NEXT:    mov v2.d[1], x15
+; CHECK-SD-NEXT:    frintx s23, s25
+; CHECK-SD-NEXT:    fcvt s22, h22
+; CHECK-SD-NEXT:    fmov d16, x16
+; CHECK-SD-NEXT:    fcvtzs x15, s24
+; CHECK-SD-NEXT:    fmov d17, x14
+; CHECK-SD-NEXT:    frintx s19, s19
+; CHECK-SD-NEXT:    frintx s20, s20
+; CHECK-SD-NEXT:    fcvtzs x14, s21
+; CHECK-SD-NEXT:    mov h21, v1.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[3]
+; CHECK-SD-NEXT:    fcvtzs x16, s18
+; CHECK-SD-NEXT:    fmov d18, x13
+; CHECK-SD-NEXT:    fcvtzs x13, s23
+; CHECK-SD-NEXT:    mov h23, v3.h[2]
+; CHECK-SD-NEXT:    frintx s24, s26
+; CHECK-SD-NEXT:    frintx s22, s22
+; CHECK-SD-NEXT:    mov h3, v3.h[3]
+; CHECK-SD-NEXT:    mov v16.d[1], x11
+; CHECK-SD-NEXT:    fcvtzs x17, s20
+; CHECK-SD-NEXT:    mov v18.d[1], x15
+; CHECK-SD-NEXT:    fcvtzs x15, s19
+; CHECK-SD-NEXT:    fcvt s19, h21
+; CHECK-SD-NEXT:    fcvt s0, h0
+; CHECK-SD-NEXT:    mov h20, v1.h[3]
+; CHECK-SD-NEXT:    fcvt s23, h23
+; CHECK-SD-NEXT:    fmov d21, x14
+; CHECK-SD-NEXT:    fcvtzs x14, s24
+; CHECK-SD-NEXT:    stp q2, q16, [x8, #160]
+; CHECK-SD-NEXT:    fmov d24, x16
+; CHECK-SD-NEXT:    fcvt s3, h3
 ; CHECK-SD-NEXT:    frintx s4, s4
-; CHECK-SD-NEXT:    fcvtzs x11, s22
-; CHECK-SD-NEXT:    frintx s22, s23
+; CHECK-SD-NEXT:    mov v17.d[1], x9
+; CHECK-SD-NEXT:    mov v21.d[1], x13
+; CHECK-SD-NEXT:    fcvtzs x13, s22
+; CHECK-SD-NEXT:    frintx s19, s19
+; CHECK-SD-NEXT:    mov v24.d[1], x17
+; CHECK-SD-NEXT:    frintx s0, s0
+; CHECK-SD-NEXT:    frintx s23, s23
+; CHECK-SD-NEXT:    fcvt s20, h20
+; CHECK-SD-NEXT:    mov h22, v5.h[2]
+; CHECK-SD-NEXT:    fcvtzs x9, s4
+; CHECK-SD-NEXT:    str q21, [x8, #192]
+; CHECK-SD-NEXT:    fmov d21, x12
+; CHECK-SD-NEXT:    fcvtzs x11, s19
+; CHECK-SD-NEXT:    stp q18, q24, [x8, #128]
+; CHECK-SD-NEXT:    mov h18, v1.h[1]
+; CHECK-SD-NEXT:    mov h19, v5.h[3]
+; CHECK-SD-NEXT:    fcvtzs x12, s0
+; CHECK-SD-NEXT:    frintx s0, s3
+; CHECK-SD-NEXT:    fmov d3, x13
+; CHECK-SD-NEXT:    fcvtzs x13, s23
+; CHECK-SD-NEXT:    mov h23, v5.h[1]
+; CHECK-SD-NEXT:    frintx s20, s20
+; CHECK-SD-NEXT:    fcvt s1, h1
+; CHECK-SD-NEXT:    fcvt s22, h22
+; CHECK-SD-NEXT:    fcvt s5, h5
+; CHECK-SD-NEXT:    fcvt s18, h18
+; CHECK-SD-NEXT:    fcvt s19, h19
+; CHECK-SD-NEXT:    fmov d24, x15
+; CHECK-SD-NEXT:    mov v21.d[1], x10
+; CHECK-SD-NEXT:    mov v3.d[1], x12
+; CHECK-SD-NEXT:    mov v6.d[1], x9
+; CHECK-SD-NEXT:    fcvt s23, h23
+; CHECK-SD-NEXT:    fcvtzs x15, s20
+; CHECK-SD-NEXT:    fmov d20, x11
+; CHECK-SD-NEXT:    fcvtzs x11, s0
 ; CHECK-SD-NEXT:    frintx s1, s1
-; CHECK-SD-NEXT:    fcvtzs x13, s6
-; CHECK-SD-NEXT:    frintx s3, s3
-; CHECK-SD-NEXT:    frintx s6, s7
-; CHECK-SD-NEXT:    fcvtzs x14, s5
-; CHECK-SD-NEXT:    mov v24.d[1], x12
-; CHECK-SD-NEXT:    frintx s5, s19
-; CHECK-SD-NEXT:    fcvtzs x12, s21
-; CHECK-SD-NEXT:    mov v0.d[1], x10
-; CHECK-SD-NEXT:    fcvtzs x10, s4
-; CHECK-SD-NEXT:    mov v20.d[1], x11
+; CHECK-SD-NEXT:    frintx s22, s22
+; CHECK-SD-NEXT:    frintx s5, s5
+; CHECK-SD-NEXT:    fmov d0, x13
+; CHECK-SD-NEXT:    frintx s18, s18
+; CHECK-SD-NEXT:    stp q6, q7, [x8, #96]
+; CHECK-SD-NEXT:    frintx s19, s19
+; CHECK-SD-NEXT:    mov v24.d[1], x14
+; CHECK-SD-NEXT:    stp q17, q21, [x8, #224]
+; CHECK-SD-NEXT:    frintx s23, s23
+; CHECK-SD-NEXT:    mov v20.d[1], x15
+; CHECK-SD-NEXT:    mov v0.d[1], x11
+; CHECK-SD-NEXT:    fcvtzs x10, s1
 ; CHECK-SD-NEXT:    fcvtzs x11, s22
-; CHECK-SD-NEXT:    mov v2.d[1], x13
-; CHECK-SD-NEXT:    fcvtzs x15, s3
-; CHECK-SD-NEXT:    fcvtzs x13, s1
-; CHECK-SD-NEXT:    mov v18.d[1], x14
-; CHECK-SD-NEXT:    fcvtzs x14, s6
-; CHECK-SD-NEXT:    stp q0, q24, [x8]
-; CHECK-SD-NEXT:    mov v17.d[1], x12
-; CHECK-SD-NEXT:    fcvtzs x12, s5
+; CHECK-SD-NEXT:    fcvtzs x13, s5
+; CHECK-SD-NEXT:    fcvtzs x12, s18
+; CHECK-SD-NEXT:    stp q24, q3, [x8]
+; CHECK-SD-NEXT:    fcvtzs x14, s19
+; CHECK-SD-NEXT:    fcvtzs x15, s23
+; CHECK-SD-NEXT:    str q0, [x8, #208]
 ; CHECK-SD-NEXT:    fmov d0, x10
 ; CHECK-SD-NEXT:    fmov d1, x11
-; CHECK-SD-NEXT:    stp q2, q20, [x8, #224]
-; CHECK-SD-NEXT:    fmov d2, x9
-; CHECK-SD-NEXT:    mov v16.d[1], x15
-; CHECK-SD-NEXT:    stp q17, q18, [x8, #160]
-; CHECK-SD-NEXT:    mov v0.d[1], x13
+; CHECK-SD-NEXT:    fmov d2, x13
+; CHECK-SD-NEXT:    mov v0.d[1], x12
 ; CHECK-SD-NEXT:    mov v1.d[1], x14
-; CHECK-SD-NEXT:    mov v2.d[1], x12
-; CHECK-SD-NEXT:    stp q0, q16, [x8, #96]
+; CHECK-SD-NEXT:    mov v2.d[1], x15
+; CHECK-SD-NEXT:    stp q0, q20, [x8, #64]
 ; CHECK-SD-NEXT:    stp q2, q1, [x8, #32]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -687,66 +688,66 @@ define <32 x i64> @llrint_v32i64_v32f32(<32 x float> %x) nounwind {
 ; CHECK-SD-NEXT:    mov d17, v6.d[1]
 ; CHECK-SD-NEXT:    frintx v7.2s, v7.2s
 ; CHECK-SD-NEXT:    mov d18, v5.d[1]
+; CHECK-SD-NEXT:    mov d20, v4.d[1]
 ; CHECK-SD-NEXT:    frintx v6.2s, v6.2s
-; CHECK-SD-NEXT:    mov d19, v4.d[1]
-; CHECK-SD-NEXT:    mov d22, v3.d[1]
+; CHECK-SD-NEXT:    frintx v23.2s, v2.2s
 ; CHECK-SD-NEXT:    frintx v5.2s, v5.2s
-; CHECK-SD-NEXT:    mov d20, v0.d[1]
-; CHECK-SD-NEXT:    frintx v21.2s, v1.2s
-; CHECK-SD-NEXT:    mov d1, v1.d[1]
-; CHECK-SD-NEXT:    mov d23, v2.d[1]
+; CHECK-SD-NEXT:    mov d2, v2.d[1]
+; CHECK-SD-NEXT:    frintx v19.2s, v0.2s
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    mov d21, v3.d[1]
 ; CHECK-SD-NEXT:    frintx v16.2s, v16.2s
 ; CHECK-SD-NEXT:    frintx v17.2s, v17.2s
 ; CHECK-SD-NEXT:    fcvtl v7.2d, v7.2s
 ; CHECK-SD-NEXT:    frintx v18.2s, v18.2s
-; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
-; CHECK-SD-NEXT:    frintx v19.2s, v19.2s
+; CHECK-SD-NEXT:    mov d22, v1.d[1]
+; CHECK-SD-NEXT:    frintx v20.2s, v20.2s
 ; CHECK-SD-NEXT:    frintx v4.2s, v4.2s
-; CHECK-SD-NEXT:    frintx v22.2s, v22.2s
-; CHECK-SD-NEXT:    frintx v3.2s, v3.2s
+; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
 ; CHECK-SD-NEXT:    fcvtl v5.2d, v5.2s
 ; CHECK-SD-NEXT:    frintx v2.2s, v2.2s
-; CHECK-SD-NEXT:    frintx v23.2s, v23.2s
+; CHECK-SD-NEXT:    frintx v21.2s, v21.2s
+; CHECK-SD-NEXT:    frintx v3.2s, v3.2s
 ; CHECK-SD-NEXT:    fcvtl v16.2d, v16.2s
 ; CHECK-SD-NEXT:    fcvtl v17.2d, v17.2s
 ; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
 ; CHECK-SD-NEXT:    fcvtl v18.2d, v18.2s
-; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    fcvtl v19.2d, v19.2s
-; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
+; CHECK-SD-NEXT:    frintx v22.2s, v22.2s
+; CHECK-SD-NEXT:    fcvtl v20.2d, v20.2s
 ; CHECK-SD-NEXT:    fcvtl v4.2d, v4.2s
-; CHECK-SD-NEXT:    fcvtl v3.2d, v3.2s
+; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-SD-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fcvtl v2.2d, v2.2s
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
 ; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-SD-NEXT:    fcvtl v3.2d, v3.2s
 ; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
 ; CHECK-SD-NEXT:    fcvtl v1.2d, v1.2s
-; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
 ; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    stp q6, q17, [x8, #192]
-; CHECK-SD-NEXT:    frintx v6.2s, v20.2s
-; CHECK-SD-NEXT:    fcvtl v17.2d, v23.2s
+; CHECK-SD-NEXT:    fcvtzs v17.2d, v20.2d
+; CHECK-SD-NEXT:    fcvtl v6.2d, v22.2s
 ; CHECK-SD-NEXT:    stp q7, q16, [x8, #224]
-; CHECK-SD-NEXT:    fcvtl v7.2d, v22.2s
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtzs v18.2d, v19.2d
+; CHECK-SD-NEXT:    fcvtl v18.2d, v23.2s
+; CHECK-SD-NEXT:    fcvtl v7.2d, v21.2s
+; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtl v6.2d, v6.2s
-; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
-; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
-; CHECK-SD-NEXT:    fcvtl v5.2d, v21.2s
-; CHECK-SD-NEXT:    stp q4, q18, [x8, #128]
-; CHECK-SD-NEXT:    fcvtzs v16.2d, v17.2d
+; CHECK-SD-NEXT:    stp q4, q17, [x8, #128]
 ; CHECK-SD-NEXT:    fcvtzs v4.2d, v6.2d
+; CHECK-SD-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-SD-NEXT:    fcvtl v5.2d, v19.2s
+; CHECK-SD-NEXT:    fcvtzs v16.2d, v18.2d
+; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-SD-NEXT:    stp q1, q4, [x8, #32]
+; CHECK-SD-NEXT:    stp q16, q2, [x8, #64]
+; CHECK-SD-NEXT:    fcvtzs v2.2d, v5.2d
 ; CHECK-SD-NEXT:    stp q3, q7, [x8, #96]
-; CHECK-SD-NEXT:    fcvtzs v3.2d, v5.2d
-; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
-; CHECK-SD-NEXT:    stp q0, q4, [x8]
-; CHECK-SD-NEXT:    stp q3, q1, [x8, #32]
+; CHECK-SD-NEXT:    stp q2, q0, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: llrint_v32i64_v32f32:
@@ -926,9 +927,9 @@ define <32 x i64> @llrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-SD-NEXT:    stp q4, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q6, q7, [x8, #96]
 ; CHECK-SD-NEXT:    stp q2, q3, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-SD-NEXT:    stp q18, q17, [x8, #128]
 ; CHECK-SD-NEXT:    stp q16, q20, [x8, #160]
+; CHECK-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: llrint_v32f64:

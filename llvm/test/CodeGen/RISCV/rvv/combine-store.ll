@@ -212,8 +212,8 @@ define void @combine_zero_stores_2xi64(ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    sw zero, 0(a0)
 ; RV32-NEXT:    sw zero, 4(a0)
-; RV32-NEXT:    sw zero, 8(a0)
 ; RV32-NEXT:    sw zero, 12(a0)
+; RV32-NEXT:    sw zero, 8(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_2xi64:
@@ -302,8 +302,8 @@ define void @combine_allones_stores_2xi64(ptr %p) {
 ; RV32-NEXT:    li a1, -1
 ; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw a1, 4(a0)
-; RV32-NEXT:    sw a1, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
+; RV32-NEXT:    sw a1, 8(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_allones_stores_2xi64:

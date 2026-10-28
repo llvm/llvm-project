@@ -472,9 +472,9 @@ define fp128 @testUnion_01([1 x i128] %a.coerce) {
 ;
 ; CHECK-P8-LABEL: testUnion_01:
 ; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    std r4, -8(r1)
 ; CHECK-P8-NEXT:    std r3, -16(r1)
 ; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    std r4, -8(r1)
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    blr
@@ -499,9 +499,9 @@ define fp128 @testUnion_02([1 x i128] %a.coerce) {
 ;
 ; CHECK-P8-LABEL: testUnion_02:
 ; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    std r4, -8(r1)
 ; CHECK-P8-NEXT:    std r3, -16(r1)
 ; CHECK-P8-NEXT:    addi r3, r1, -16
-; CHECK-P8-NEXT:    std r4, -8(r1)
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    blr

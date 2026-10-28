@@ -15,12 +15,12 @@ define dso_local void @memset_unroll2(ptr nocapture %array, i64 %size) {
 ; DEFAULT-NEXT:    stur q0, [x8, #-64]
 ; DEFAULT-NEXT:    subs x1, x1, #4
 ; DEFAULT-NEXT:    stur q0, [x8, #-48]
+; DEFAULT-NEXT:    stur q0, [x8, #-32]
+; DEFAULT-NEXT:    stur q0, [x8, #-16]
 ; DEFAULT-NEXT:    str q0, [x8]
 ; DEFAULT-NEXT:    str q0, [x8, #16]
 ; DEFAULT-NEXT:    str q0, [x8, #32]
 ; DEFAULT-NEXT:    str q0, [x8, #48]
-; DEFAULT-NEXT:    stur q0, [x8, #-32]
-; DEFAULT-NEXT:    stur q0, [x8, #-16]
 ; DEFAULT-NEXT:    add x8, x8, #128
 ; DEFAULT-NEXT:    b.ne .LBB0_1
 ; DEFAULT-NEXT:  // %bb.2: // %cleanup

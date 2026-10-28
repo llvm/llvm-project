@@ -8633,10 +8633,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32IZFH-NEXT:    lw a5, 12(a0)
 ; RV32IZFH-NEXT:    mv s0, a1
 ; RV32IZFH-NEXT:    addi a0, sp, 8
-; RV32IZFH-NEXT:    sw a2, 8(sp)
 ; RV32IZFH-NEXT:    sw a3, 12(sp)
 ; RV32IZFH-NEXT:    sw a4, 16(sp)
 ; RV32IZFH-NEXT:    sw a5, 20(sp)
+; RV32IZFH-NEXT:    sw a2, 8(sp)
 ; RV32IZFH-NEXT:    call __trunctfhf2
 ; RV32IZFH-NEXT:    fsh fa0, 0(s0)
 ; RV32IZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8668,10 +8668,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32IDZFH-NEXT:    lw a5, 12(a0)
 ; RV32IDZFH-NEXT:    mv s0, a1
 ; RV32IDZFH-NEXT:    addi a0, sp, 8
-; RV32IDZFH-NEXT:    sw a2, 8(sp)
 ; RV32IDZFH-NEXT:    sw a3, 12(sp)
 ; RV32IDZFH-NEXT:    sw a4, 16(sp)
 ; RV32IDZFH-NEXT:    sw a5, 20(sp)
+; RV32IDZFH-NEXT:    sw a2, 8(sp)
 ; RV32IDZFH-NEXT:    call __trunctfhf2
 ; RV32IDZFH-NEXT:    fsh fa0, 0(s0)
 ; RV32IDZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8703,10 +8703,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32IZHINX-NEXT:    lw a5, 12(a0)
 ; RV32IZHINX-NEXT:    mv s0, a1
 ; RV32IZHINX-NEXT:    addi a0, sp, 8
-; RV32IZHINX-NEXT:    sw a2, 8(sp)
 ; RV32IZHINX-NEXT:    sw a3, 12(sp)
 ; RV32IZHINX-NEXT:    sw a4, 16(sp)
 ; RV32IZHINX-NEXT:    sw a5, 20(sp)
+; RV32IZHINX-NEXT:    sw a2, 8(sp)
 ; RV32IZHINX-NEXT:    call __trunctfhf2
 ; RV32IZHINX-NEXT:    sh a0, 0(s0)
 ; RV32IZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8738,10 +8738,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32IZDINXZHINX-NEXT:    lw a5, 12(a0)
 ; RV32IZDINXZHINX-NEXT:    mv s0, a1
 ; RV32IZDINXZHINX-NEXT:    addi a0, sp, 8
-; RV32IZDINXZHINX-NEXT:    sw a2, 8(sp)
 ; RV32IZDINXZHINX-NEXT:    sw a3, 12(sp)
 ; RV32IZDINXZHINX-NEXT:    sw a4, 16(sp)
 ; RV32IZDINXZHINX-NEXT:    sw a5, 20(sp)
+; RV32IZDINXZHINX-NEXT:    sw a2, 8(sp)
 ; RV32IZDINXZHINX-NEXT:    call __trunctfhf2
 ; RV32IZDINXZHINX-NEXT:    sh a0, 0(s0)
 ; RV32IZDINXZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8773,10 +8773,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32I-NEXT:    lw a5, 12(a0)
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    addi a0, sp, 8
-; RV32I-NEXT:    sw a2, 8(sp)
 ; RV32I-NEXT:    sw a3, 12(sp)
 ; RV32I-NEXT:    sw a4, 16(sp)
 ; RV32I-NEXT:    sw a5, 20(sp)
+; RV32I-NEXT:    sw a2, 8(sp)
 ; RV32I-NEXT:    call __trunctfhf2
 ; RV32I-NEXT:    sh a0, 0(s0)
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8808,10 +8808,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32ID-ILP32-NEXT:    lw a5, 12(a0)
 ; RV32ID-ILP32-NEXT:    mv s0, a1
 ; RV32ID-ILP32-NEXT:    addi a0, sp, 8
-; RV32ID-ILP32-NEXT:    sw a2, 8(sp)
 ; RV32ID-ILP32-NEXT:    sw a3, 12(sp)
 ; RV32ID-ILP32-NEXT:    sw a4, 16(sp)
 ; RV32ID-ILP32-NEXT:    sw a5, 20(sp)
+; RV32ID-ILP32-NEXT:    sw a2, 8(sp)
 ; RV32ID-ILP32-NEXT:    call __trunctfhf2
 ; RV32ID-ILP32-NEXT:    sh a0, 0(s0)
 ; RV32ID-ILP32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8843,10 +8843,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; RV32ID-NEXT:    lw a5, 12(a0)
 ; RV32ID-NEXT:    mv s0, a1
 ; RV32ID-NEXT:    addi a0, sp, 8
-; RV32ID-NEXT:    sw a2, 8(sp)
 ; RV32ID-NEXT:    sw a3, 12(sp)
 ; RV32ID-NEXT:    sw a4, 16(sp)
 ; RV32ID-NEXT:    sw a5, 20(sp)
+; RV32ID-NEXT:    sw a2, 8(sp)
 ; RV32ID-NEXT:    call __trunctfhf2
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    sh a0, 0(s0)
@@ -8880,10 +8880,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; CHECK32-IZFHMIN-NEXT:    lw a5, 12(a0)
 ; CHECK32-IZFHMIN-NEXT:    mv s0, a1
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
-; CHECK32-IZFHMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a3, 12(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a4, 16(sp)
 ; CHECK32-IZFHMIN-NEXT:    sw a5, 20(sp)
+; CHECK32-IZFHMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZFHMIN-NEXT:    call __trunctfhf2
 ; CHECK32-IZFHMIN-NEXT:    fsh fa0, 0(s0)
 ; CHECK32-IZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8915,10 +8915,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; CHECK32-IZHINXMIN-NEXT:    lw a5, 12(a0)
 ; CHECK32-IZHINXMIN-NEXT:    mv s0, a1
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
-; CHECK32-IZHINXMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a3, 12(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a4, 16(sp)
 ; CHECK32-IZHINXMIN-NEXT:    sw a5, 20(sp)
+; CHECK32-IZHINXMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZHINXMIN-NEXT:    call __trunctfhf2
 ; CHECK32-IZHINXMIN-NEXT:    sh a0, 0(s0)
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8950,10 +8950,10 @@ define void @fcvt_h_q(fp128 %x, ptr %y) nounwind {
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw a5, 12(a0)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    mv s0, a1
 ; CHECK32-IZDINXZHINXMIN-NEXT:    addi a0, sp, 8
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw a3, 12(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw a4, 16(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw a5, 20(sp)
+; CHECK32-IZDINXZHINXMIN-NEXT:    sw a2, 8(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    call __trunctfhf2
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sh a0, 0(s0)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -8993,14 +8993,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32IZFH-NEXT:    fcvt.s.h fa0, fa5
 ; RV32IZFH-NEXT:    addi a0, sp, 8
 ; RV32IZFH-NEXT:    call __extendsftf2
-; RV32IZFH-NEXT:    lw a0, 8(sp)
-; RV32IZFH-NEXT:    lw a1, 12(sp)
-; RV32IZFH-NEXT:    lw a2, 16(sp)
+; RV32IZFH-NEXT:    lw a0, 12(sp)
+; RV32IZFH-NEXT:    lw a1, 16(sp)
+; RV32IZFH-NEXT:    lw a2, 8(sp)
 ; RV32IZFH-NEXT:    lw a3, 20(sp)
-; RV32IZFH-NEXT:    sw a0, 0(s0)
-; RV32IZFH-NEXT:    sw a1, 4(s0)
-; RV32IZFH-NEXT:    sw a2, 8(s0)
+; RV32IZFH-NEXT:    sw a0, 4(s0)
+; RV32IZFH-NEXT:    sw a1, 8(s0)
 ; RV32IZFH-NEXT:    sw a3, 12(s0)
+; RV32IZFH-NEXT:    sw a2, 0(s0)
 ; RV32IZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    .cfi_restore ra
@@ -9037,14 +9037,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa5
 ; RV32IDZFH-NEXT:    addi a0, sp, 8
 ; RV32IDZFH-NEXT:    call __extendsftf2
-; RV32IDZFH-NEXT:    lw a0, 8(sp)
-; RV32IDZFH-NEXT:    lw a1, 12(sp)
-; RV32IDZFH-NEXT:    lw a2, 16(sp)
+; RV32IDZFH-NEXT:    lw a0, 12(sp)
+; RV32IDZFH-NEXT:    lw a1, 16(sp)
+; RV32IDZFH-NEXT:    lw a2, 8(sp)
 ; RV32IDZFH-NEXT:    lw a3, 20(sp)
-; RV32IDZFH-NEXT:    sw a0, 0(s0)
-; RV32IDZFH-NEXT:    sw a1, 4(s0)
-; RV32IDZFH-NEXT:    sw a2, 8(s0)
+; RV32IDZFH-NEXT:    sw a0, 4(s0)
+; RV32IDZFH-NEXT:    sw a1, 8(s0)
 ; RV32IDZFH-NEXT:    sw a3, 12(s0)
+; RV32IDZFH-NEXT:    sw a2, 0(s0)
 ; RV32IDZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IDZFH-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IDZFH-NEXT:    .cfi_restore ra
@@ -9081,14 +9081,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32IZHINX-NEXT:    fcvt.s.h a1, a0
 ; RV32IZHINX-NEXT:    addi a0, sp, 8
 ; RV32IZHINX-NEXT:    call __extendsftf2
-; RV32IZHINX-NEXT:    lw a0, 8(sp)
-; RV32IZHINX-NEXT:    lw a1, 12(sp)
-; RV32IZHINX-NEXT:    lw a2, 16(sp)
+; RV32IZHINX-NEXT:    lw a0, 12(sp)
+; RV32IZHINX-NEXT:    lw a1, 16(sp)
+; RV32IZHINX-NEXT:    lw a2, 8(sp)
 ; RV32IZHINX-NEXT:    lw a3, 20(sp)
-; RV32IZHINX-NEXT:    sw a0, 0(s0)
-; RV32IZHINX-NEXT:    sw a1, 4(s0)
-; RV32IZHINX-NEXT:    sw a2, 8(s0)
+; RV32IZHINX-NEXT:    sw a0, 4(s0)
+; RV32IZHINX-NEXT:    sw a1, 8(s0)
 ; RV32IZHINX-NEXT:    sw a3, 12(s0)
+; RV32IZHINX-NEXT:    sw a2, 0(s0)
 ; RV32IZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    .cfi_restore ra
@@ -9125,14 +9125,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32IZDINXZHINX-NEXT:    fcvt.s.h a1, a0
 ; RV32IZDINXZHINX-NEXT:    addi a0, sp, 8
 ; RV32IZDINXZHINX-NEXT:    call __extendsftf2
-; RV32IZDINXZHINX-NEXT:    lw a0, 8(sp)
-; RV32IZDINXZHINX-NEXT:    lw a1, 12(sp)
-; RV32IZDINXZHINX-NEXT:    lw a2, 16(sp)
+; RV32IZDINXZHINX-NEXT:    lw a0, 12(sp)
+; RV32IZDINXZHINX-NEXT:    lw a1, 16(sp)
+; RV32IZDINXZHINX-NEXT:    lw a2, 8(sp)
 ; RV32IZDINXZHINX-NEXT:    lw a3, 20(sp)
-; RV32IZDINXZHINX-NEXT:    sw a0, 0(s0)
-; RV32IZDINXZHINX-NEXT:    sw a1, 4(s0)
-; RV32IZDINXZHINX-NEXT:    sw a2, 8(s0)
+; RV32IZDINXZHINX-NEXT:    sw a0, 4(s0)
+; RV32IZDINXZHINX-NEXT:    sw a1, 8(s0)
 ; RV32IZDINXZHINX-NEXT:    sw a3, 12(s0)
+; RV32IZDINXZHINX-NEXT:    sw a2, 0(s0)
 ; RV32IZDINXZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZDINXZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZDINXZHINX-NEXT:    .cfi_restore ra
@@ -9170,14 +9170,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    addi a0, sp, 8
 ; RV32I-NEXT:    call __extendsftf2
-; RV32I-NEXT:    lw a0, 8(sp)
-; RV32I-NEXT:    lw a1, 12(sp)
-; RV32I-NEXT:    lw a2, 16(sp)
+; RV32I-NEXT:    lw a0, 12(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 8(sp)
 ; RV32I-NEXT:    lw a3, 20(sp)
-; RV32I-NEXT:    sw a0, 0(s0)
-; RV32I-NEXT:    sw a1, 4(s0)
-; RV32I-NEXT:    sw a2, 8(s0)
+; RV32I-NEXT:    sw a0, 4(s0)
+; RV32I-NEXT:    sw a1, 8(s0)
 ; RV32I-NEXT:    sw a3, 12(s0)
+; RV32I-NEXT:    sw a2, 0(s0)
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    .cfi_restore ra
@@ -9215,14 +9215,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32ID-ILP32-NEXT:    mv a1, a0
 ; RV32ID-ILP32-NEXT:    addi a0, sp, 8
 ; RV32ID-ILP32-NEXT:    call __extendsftf2
-; RV32ID-ILP32-NEXT:    lw a0, 8(sp)
-; RV32ID-ILP32-NEXT:    lw a1, 12(sp)
-; RV32ID-ILP32-NEXT:    lw a2, 16(sp)
+; RV32ID-ILP32-NEXT:    lw a0, 12(sp)
+; RV32ID-ILP32-NEXT:    lw a1, 16(sp)
+; RV32ID-ILP32-NEXT:    lw a2, 8(sp)
 ; RV32ID-ILP32-NEXT:    lw a3, 20(sp)
-; RV32ID-ILP32-NEXT:    sw a0, 0(s0)
-; RV32ID-ILP32-NEXT:    sw a1, 4(s0)
-; RV32ID-ILP32-NEXT:    sw a2, 8(s0)
+; RV32ID-ILP32-NEXT:    sw a0, 4(s0)
+; RV32ID-ILP32-NEXT:    sw a1, 8(s0)
 ; RV32ID-ILP32-NEXT:    sw a3, 12(s0)
+; RV32ID-ILP32-NEXT:    sw a2, 0(s0)
 ; RV32ID-ILP32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    .cfi_restore ra
@@ -9260,14 +9260,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; RV32ID-NEXT:    call __extendhfsf2
 ; RV32ID-NEXT:    addi a0, sp, 8
 ; RV32ID-NEXT:    call __extendsftf2
-; RV32ID-NEXT:    lw a0, 8(sp)
-; RV32ID-NEXT:    lw a1, 12(sp)
-; RV32ID-NEXT:    lw a2, 16(sp)
+; RV32ID-NEXT:    lw a0, 12(sp)
+; RV32ID-NEXT:    lw a1, 16(sp)
+; RV32ID-NEXT:    lw a2, 8(sp)
 ; RV32ID-NEXT:    lw a3, 20(sp)
-; RV32ID-NEXT:    sw a0, 0(s0)
-; RV32ID-NEXT:    sw a1, 4(s0)
-; RV32ID-NEXT:    sw a2, 8(s0)
+; RV32ID-NEXT:    sw a0, 4(s0)
+; RV32ID-NEXT:    sw a1, 8(s0)
 ; RV32ID-NEXT:    sw a3, 12(s0)
+; RV32ID-NEXT:    sw a2, 0(s0)
 ; RV32ID-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    .cfi_restore ra
@@ -9305,14 +9305,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa0, fa5
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFHMIN-NEXT:    call __extendsftf2
-; CHECK32-IZFHMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZFHMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZFHMIN-NEXT:    lw a2, 16(sp)
+; CHECK32-IZFHMIN-NEXT:    lw a0, 12(sp)
+; CHECK32-IZFHMIN-NEXT:    lw a1, 16(sp)
+; CHECK32-IZFHMIN-NEXT:    lw a2, 8(sp)
 ; CHECK32-IZFHMIN-NEXT:    lw a3, 20(sp)
-; CHECK32-IZFHMIN-NEXT:    sw a0, 0(s0)
-; CHECK32-IZFHMIN-NEXT:    sw a1, 4(s0)
-; CHECK32-IZFHMIN-NEXT:    sw a2, 8(s0)
+; CHECK32-IZFHMIN-NEXT:    sw a0, 4(s0)
+; CHECK32-IZFHMIN-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZFHMIN-NEXT:    sw a3, 12(s0)
+; CHECK32-IZFHMIN-NEXT:    sw a2, 0(s0)
 ; CHECK32-IZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZFHMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZFHMIN-NEXT:    .cfi_restore ra
@@ -9349,14 +9349,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a1, a0
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINXMIN-NEXT:    call __extendsftf2
-; CHECK32-IZHINXMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZHINXMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZHINXMIN-NEXT:    lw a2, 16(sp)
+; CHECK32-IZHINXMIN-NEXT:    lw a0, 12(sp)
+; CHECK32-IZHINXMIN-NEXT:    lw a1, 16(sp)
+; CHECK32-IZHINXMIN-NEXT:    lw a2, 8(sp)
 ; CHECK32-IZHINXMIN-NEXT:    lw a3, 20(sp)
-; CHECK32-IZHINXMIN-NEXT:    sw a0, 0(s0)
-; CHECK32-IZHINXMIN-NEXT:    sw a1, 4(s0)
-; CHECK32-IZHINXMIN-NEXT:    sw a2, 8(s0)
+; CHECK32-IZHINXMIN-NEXT:    sw a0, 4(s0)
+; CHECK32-IZHINXMIN-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZHINXMIN-NEXT:    sw a3, 12(s0)
+; CHECK32-IZHINXMIN-NEXT:    sw a2, 0(s0)
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    .cfi_restore ra
@@ -9393,14 +9393,14 @@ define fp128 @fcvt_q_h(ptr %x) {
 ; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a1, a0
 ; CHECK32-IZDINXZHINXMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZDINXZHINXMIN-NEXT:    call __extendsftf2
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a0, 8(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a1, 12(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    lw a2, 16(sp)
+; CHECK32-IZDINXZHINXMIN-NEXT:    lw a0, 12(sp)
+; CHECK32-IZDINXZHINXMIN-NEXT:    lw a1, 16(sp)
+; CHECK32-IZDINXZHINXMIN-NEXT:    lw a2, 8(sp)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw a3, 20(sp)
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a0, 0(s0)
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a1, 4(s0)
-; CHECK32-IZDINXZHINXMIN-NEXT:    sw a2, 8(s0)
+; CHECK32-IZDINXZHINXMIN-NEXT:    sw a0, 4(s0)
+; CHECK32-IZDINXZHINXMIN-NEXT:    sw a1, 8(s0)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw a3, 12(s0)
+; CHECK32-IZDINXZHINXMIN-NEXT:    sw a2, 0(s0)
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-IZDINXZHINXMIN-NEXT:    .cfi_restore ra

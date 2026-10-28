@@ -19,8 +19,8 @@ define dso_local void @comp_method(ptr noalias nocapture noundef readonly %0, pt
 ; CHECK-NEXT:    add 5, 5, 8
 ; CHECK-NEXT:    li 8, 2
 ; CHECK-NEXT:    li 3, 8
-; CHECK-NEXT:    addi 11, 7, 0
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 11, 7, 0
 ; CHECK-NEXT:    lbzu 9, 1(6)
 ; CHECK-NEXT:    add 12, 12, 10
 ; CHECK-NEXT:    extsb 9, 9

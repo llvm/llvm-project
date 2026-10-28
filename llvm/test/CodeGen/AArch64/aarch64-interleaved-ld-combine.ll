@@ -51,22 +51,23 @@ define void @aarch64_ilc_const(ptr %ptr) {
 ; AS-IADISABLED-LABEL: aarch64_ilc_const:
 ; AS-IADISABLED:       // %bb.0: // %entry
 ; AS-IADISABLED-NEXT:    ldp q1, q0, [x0, #64]
-; AS-IADISABLED-NEXT:    ldp q4, q3, [x0, #32]
-; AS-IADISABLED-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    trn1 v17.4s, v1.4s, v0.4s
+; AS-IADISABLED-NEXT:    ldp q3, q2, [x0, #32]
+; AS-IADISABLED-NEXT:    zip1 v4.4s, v1.4s, v0.4s
+; AS-IADISABLED-NEXT:    trn1 v6.4s, v1.4s, v0.4s
 ; AS-IADISABLED-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v5.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip1 v6.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    trn2 v16.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip2 v3.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    ext v7.16b, v1.16b, v2.16b, #8
-; AS-IADISABLED-NEXT:    uzp2 v1.4s, v5.4s, v4.4s
-; AS-IADISABLED-NEXT:    mov v16.d[1], v2.d[1]
-; AS-IADISABLED-NEXT:    mov v3.d[1], v17.d[1]
-; AS-IADISABLED-NEXT:    mov v6.d[1], v7.d[1]
+; AS-IADISABLED-NEXT:    uzp2 v5.4s, v3.4s, v2.4s
+; AS-IADISABLED-NEXT:    zip2 v7.4s, v3.4s, v2.4s
+; AS-IADISABLED-NEXT:    zip1 v16.4s, v3.4s, v2.4s
+; AS-IADISABLED-NEXT:    trn2 v2.4s, v3.4s, v2.4s
+; AS-IADISABLED-NEXT:    ext v17.16b, v1.16b, v4.16b, #8
+; AS-IADISABLED-NEXT:    uzp2 v1.4s, v5.4s, v3.4s
+; AS-IADISABLED-NEXT:    mov v7.d[1], v6.d[1]
+; AS-IADISABLED-NEXT:    mov v2.d[1], v4.d[1]
+; AS-IADISABLED-NEXT:    mov v16.d[1], v17.d[1]
 ; AS-IADISABLED-NEXT:    mov v1.d[1], v0.d[1]
-; AS-IADISABLED-NEXT:    stp q6, q16, [x0, #32]
-; AS-IADISABLED-NEXT:    stp q3, q1, [x0, #64]
+; AS-IADISABLED-NEXT:    stp q2, q7, [x0, #48]
+; AS-IADISABLED-NEXT:    str q16, [x0, #32]
+; AS-IADISABLED-NEXT:    str q1, [x0, #80]
 ; AS-IADISABLED-NEXT:    ret
 entry:
 

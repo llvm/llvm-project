@@ -149,15 +149,15 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    extsw r6, r28
 ; CHECK-NEXT:    li r5, 0
 ; CHECK-NEXT:    li r7, 0
-; CHECK-NEXT:    std r30, 104(r1)
-; CHECK-NEXT:    std r29, 96(r1)
+; CHECK-NEXT:    std r4, 152(r1)
+; CHECK-NEXT:    li r4, -1
 ; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    li r10, 0
 ; CHECK-NEXT:    xxlxor f1, f1, f1
-; CHECK-NEXT:    std r4, 152(r1)
-; CHECK-NEXT:    li r4, -1
 ; CHECK-NEXT:    std r4, 112(r1)
+; CHECK-NEXT:    std r30, 104(r1)
 ; CHECK-NEXT:    li r4, 1024
+; CHECK-NEXT:    std r29, 96(r1)
 ; CHECK-NEXT:    bl call_4@notoc
 ; CHECK-NEXT:  .LBB0_15: # %bb54
 ; CHECK-NEXT:    bc 12, 4*cr2+un, .LBB0_18
@@ -303,15 +303,15 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    extsw r6, r28
 ; CHECK-BE-NEXT:    li r5, 0
 ; CHECK-BE-NEXT:    li r7, 0
-; CHECK-BE-NEXT:    std r30, 120(r1)
-; CHECK-BE-NEXT:    std r29, 112(r1)
+; CHECK-BE-NEXT:    std r4, 168(r1)
+; CHECK-BE-NEXT:    li r4, -1
 ; CHECK-BE-NEXT:    li r8, 0
 ; CHECK-BE-NEXT:    li r10, 0
 ; CHECK-BE-NEXT:    xxlxor f1, f1, f1
-; CHECK-BE-NEXT:    std r4, 168(r1)
-; CHECK-BE-NEXT:    li r4, -1
 ; CHECK-BE-NEXT:    std r4, 128(r1)
+; CHECK-BE-NEXT:    std r30, 120(r1)
 ; CHECK-BE-NEXT:    li r4, 1024
+; CHECK-BE-NEXT:    std r29, 112(r1)
 ; CHECK-BE-NEXT:    bl call_4
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:  .LBB0_15: # %bb54

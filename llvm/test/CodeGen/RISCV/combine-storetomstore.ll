@@ -269,7 +269,7 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    vfirst.m t0, v10
 ; RISCV-NEXT:    bnez t0, .LBB11_16
 ; RISCV-NEXT:  .LBB11_13:
-; RISCV-NEXT:    addi t0, a0, 16
+; RISCV-NEXT:    addi t1, a0, 16
 ; RISCV-NEXT:    j .LBB11_17
 ; RISCV-NEXT:  .LBB11_14:
 ; RISCV-NEXT:    addi a6, a0, 40
@@ -280,21 +280,21 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    vfirst.m t0, v10
 ; RISCV-NEXT:    beqz t0, .LBB11_13
 ; RISCV-NEXT:  .LBB11_16:
-; RISCV-NEXT:    addi t0, a1, 4
+; RISCV-NEXT:    addi t1, a1, 4
 ; RISCV-NEXT:  .LBB11_17:
 ; RISCV-NEXT:    vmv1r.v v0, v8
 ; RISCV-NEXT:    vmerge.vim v8, v12, 1, v0
 ; RISCV-NEXT:    vslidedown.vi v8, v8, 1
 ; RISCV-NEXT:    vmv.x.s t2, v8
-; RISCV-NEXT:    lh t1, 0(a2)
+; RISCV-NEXT:    lh t0, 0(a2)
 ; RISCV-NEXT:    lh a2, 0(a3)
 ; RISCV-NEXT:    lh a3, 0(a4)
-; RISCV-NEXT:    lh a4, 0(a5)
-; RISCV-NEXT:    lh a5, 0(a6)
-; RISCV-NEXT:    lh a6, 0(a7)
-; RISCV-NEXT:    lh a7, 0(t0)
-; RISCV-NEXT:    andi t0, t2, 1
-; RISCV-NEXT:    bnez t0, .LBB11_19
+; RISCV-NEXT:    lh a5, 0(a5)
+; RISCV-NEXT:    lh a6, 0(a6)
+; RISCV-NEXT:    lh a7, 0(a7)
+; RISCV-NEXT:    lh a4, 0(t1)
+; RISCV-NEXT:    andi t1, t2, 1
+; RISCV-NEXT:    bnez t1, .LBB11_19
 ; RISCV-NEXT:  # %bb.18:
 ; RISCV-NEXT:    addi a0, a1, 2
 ; RISCV-NEXT:    j .LBB11_20
@@ -302,13 +302,13 @@ define void @test_masked_store_success_v8f16(<8 x half> %x, ptr %ptr, <8 x i1> %
 ; RISCV-NEXT:    addi a0, a0, 8
 ; RISCV-NEXT:  .LBB11_20:
 ; RISCV-NEXT:    lh a0, 0(a0)
-; RISCV-NEXT:    sh t1, 0(a1)
+; RISCV-NEXT:    sh a5, 8(a1)
+; RISCV-NEXT:    sh a6, 10(a1)
+; RISCV-NEXT:    sh a7, 12(a1)
+; RISCV-NEXT:    sh t0, 0(a1)
 ; RISCV-NEXT:    sh a0, 2(a1)
-; RISCV-NEXT:    sh a7, 4(a1)
+; RISCV-NEXT:    sh a4, 4(a1)
 ; RISCV-NEXT:    sh a3, 6(a1)
-; RISCV-NEXT:    sh a4, 8(a1)
-; RISCV-NEXT:    sh a5, 10(a1)
-; RISCV-NEXT:    sh a6, 12(a1)
 ; RISCV-NEXT:    sh a2, 14(a1)
 ; RISCV-NEXT:    ret
   %load = load <8 x half>, ptr %ptr, align 32

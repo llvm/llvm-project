@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefixes=CHECK,CHECK-A57
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m3 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -enable-store-sequencing=false -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefixes=CHECK,CHECK-A57
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m3 -verify-misched -enable-store-sequencing=false -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
 ; Test ldr clustering.
 ; CHECK: Current Schedule Region

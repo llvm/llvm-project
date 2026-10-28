@@ -25,19 +25,19 @@ define <4 x i32> @test(ptr %arg1, ptr %arg2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 144
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0, #32]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp q0, q3, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #60]
-; NONEON-NOSVE-NEXT:    str q2, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #40]
-; NONEON-NOSVE-NEXT:    add w9, w9, w9
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #60]
 ; NONEON-NOSVE-NEXT:    stp w8, w8, [sp, #8]
-; NONEON-NOSVE-NEXT:    str w9, [sp, #124]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    stp w8, w8, [sp]
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
-; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp]
+; NONEON-NOSVE-NEXT:    str q2, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp, #64]
+; NONEON-NOSVE-NEXT:    str w9, [sp, #124]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    str w9, [sp, #120]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #52]
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
@@ -80,8 +80,8 @@ define <4 x i32> @test(ptr %arg1, ptr %arg2) {
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #128]
 ; NONEON-NOSVE-NEXT:    ldp q3, q1, [sp, #112]
-; NONEON-NOSVE-NEXT:    stp q4, q3, [x0]
 ; NONEON-NOSVE-NEXT:    stp q1, q2, [x0, #32]
+; NONEON-NOSVE-NEXT:    stp q4, q3, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #144
 ; NONEON-NOSVE-NEXT:    ret
 entry:
@@ -115,16 +115,16 @@ define <2 x i32> @test2(ptr %arg1, ptr %arg2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 144
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0, #32]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp q0, q3, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #40]
-; NONEON-NOSVE-NEXT:    str q2, [sp, #16]
 ; NONEON-NOSVE-NEXT:    str d0, [sp]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w8, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #60]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    str q2, [sp, #16]
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
+; NONEON-NOSVE-NEXT:    str q1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #124]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #56]
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
@@ -173,8 +173,8 @@ define <2 x i32> @test2(ptr %arg1, ptr %arg2) {
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #128]
 ; NONEON-NOSVE-NEXT:    ldp q3, q1, [sp, #112]
-; NONEON-NOSVE-NEXT:    stp q4, q3, [x0]
 ; NONEON-NOSVE-NEXT:    stp q1, q2, [x0, #32]
+; NONEON-NOSVE-NEXT:    stp q4, q3, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #144
 ; NONEON-NOSVE-NEXT:    ret
 entry:

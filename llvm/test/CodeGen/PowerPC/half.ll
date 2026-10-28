@@ -1335,10 +1335,10 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; P9-NEXT:    xscvdphp f1, f1
 ; P9-NEXT:    sth r4, 4(r5)
 ; P9-NEXT:    mffprwz r4, f0
-; P9-NEXT:    sth r3, 0(r5)
 ; P9-NEXT:    sth r4, 2(r5)
 ; P9-NEXT:    mffprwz r6, f1
 ; P9-NEXT:    sth r6, 6(r5)
+; P9-NEXT:    sth r3, 0(r5)
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_trunc32_vec4:
@@ -1528,12 +1528,12 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P9-NEXT:    xscvdphp f1, vs34
 ; P9-NEXT:    mffprwz r4, f1
 ; P9-NEXT:    xscvdphp f1, vs35
-; P9-NEXT:    sth r3, 0(r7)
 ; P9-NEXT:    sth r4, 2(r7)
 ; P9-NEXT:    mffprwz r4, f0
 ; P9-NEXT:    sth r4, 4(r7)
 ; P9-NEXT:    mffprwz r5, f1
 ; P9-NEXT:    sth r5, 6(r7)
+; P9-NEXT:    sth r3, 0(r7)
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_trunc64_vec4:
@@ -1633,16 +1633,16 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; PPC32-NEXT:    mflr r0
 ; PPC32-NEXT:    stwu r1, -32(r1)
 ; PPC32-NEXT:    stw r0, 36(r1)
-; PPC32-NEXT:    lis r5, 17200
 ; PPC32-NEXT:    xoris r3, r3, 32768
 ; PPC32-NEXT:    stw r30, 16(r1) # 4-byte Folded Spill
 ; PPC32-NEXT:    lhz r30, 0(r4)
-; PPC32-NEXT:    stw r5, 8(r1)
+; PPC32-NEXT:    lis r4, 17200
+; PPC32-NEXT:    stfd f31, 24(r1) # 8-byte Folded Spill
+; PPC32-NEXT:    stw r4, 8(r1)
 ; PPC32-NEXT:    stw r3, 12(r1)
 ; PPC32-NEXT:    lis r3, .LCPI19_0@ha
 ; PPC32-NEXT:    lfd f0, 8(r1)
 ; PPC32-NEXT:    lfs f1, .LCPI19_0@l(r3)
-; PPC32-NEXT:    stfd f31, 24(r1) # 8-byte Folded Spill
 ; PPC32-NEXT:    fsub f0, f0, f1
 ; PPC32-NEXT:    frsp f1, f0
 ; PPC32-NEXT:    bl __truncsfhf2
@@ -1759,11 +1759,11 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; BE-NEXT:    std r0, 160(r1)
 ; BE-NEXT:    extsw r3, r3
 ; BE-NEXT:    std r30, 120(r1) # 8-byte Folded Spill
+; BE-NEXT:    stfd f31, 136(r1) # 8-byte Folded Spill
 ; BE-NEXT:    lhz r30, 0(r4)
 ; BE-NEXT:    std r3, 112(r1)
 ; BE-NEXT:    lfd f0, 112(r1)
 ; BE-NEXT:    fcfid f0, f0
-; BE-NEXT:    stfd f31, 136(r1) # 8-byte Folded Spill
 ; BE-NEXT:    frsp f1, f0
 ; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop

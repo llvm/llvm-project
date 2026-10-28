@@ -609,10 +609,10 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lui a1, 262128
 ; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    sw zero, 4(sp)
 ; CHECK-NEXT:    sw zero, 8(sp)
 ; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    call callee_indirect_args
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -625,10 +625,10 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK-CF-RV32-NEXT:    lui a1, 262128
 ; CHECK-CF-RV32-NEXT:    mv a0, sp
-; CHECK-CF-RV32-NEXT:    sw zero, 0(sp)
 ; CHECK-CF-RV32-NEXT:    sw zero, 4(sp)
 ; CHECK-CF-RV32-NEXT:    sw zero, 8(sp)
 ; CHECK-CF-RV32-NEXT:    sw a1, 12(sp)
+; CHECK-CF-RV32-NEXT:    sw zero, 0(sp)
 ; CHECK-CF-RV32-NEXT:    call callee_indirect_args
 ; CHECK-CF-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-CF-RV32-NEXT:    addi sp, sp, 32
@@ -652,10 +652,10 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV32-LARGE-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; CHECK-CF-RV32-LARGE-NEXT:    lui a1, 262128
 ; CHECK-CF-RV32-LARGE-NEXT:    mv a0, sp
-; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 0(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 4(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 8(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    sw a1, 12(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 0(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    jalr t2
 ; CHECK-CF-RV32-LARGE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, 32

@@ -138,17 +138,17 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v2.4s
-; CHECK-NEXT:    umull v5.2d, v0.2s, v2.2s
-; CHECK-NEXT:    umull2 v6.2d, v1.4s, v3.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v3.4s
+; CHECK-NEXT:    umull2 v5.2d, v0.4s, v2.4s
+; CHECK-NEXT:    umull v6.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    umull v7.2d, v1.2s, v3.2s
 ; CHECK-NEXT:    mul v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
-; CHECK-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
+; CHECK-NEXT:    uzp2 v5.4s, v6.4s, v5.4s
+; CHECK-NEXT:    uzp2 v6.4s, v7.4s, v4.4s
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    cmtst v4.4s, v4.4s, v4.4s
-; CHECK-NEXT:    cmtst v5.4s, v5.4s, v5.4s
+; CHECK-NEXT:    cmtst v4.4s, v5.4s, v5.4s
+; CHECK-NEXT:    cmtst v5.4s, v6.4s, v6.4s
 ; CHECK-NEXT:    mov v0.16b, v4.16b
 ; CHECK-NEXT:    mov v1.16b, v5.16b
 ; CHECK-NEXT:    ret
@@ -343,9 +343,9 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    mul x11, x2, x6
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    mul x8, x0, x4
-; CHECK-NEXT:    stp x11, x9, [x12, #16]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    stp x8, x10, [x12]
+; CHECK-NEXT:    stp x11, x9, [x12, #16]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)

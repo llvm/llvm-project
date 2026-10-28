@@ -52,8 +52,8 @@ define void @bzero_64_heap(ptr nocapture %c) {
 ; CHECK-LABEL: bzero_64_heap:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
+; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 8 %c, i8 0, i64 64, i1 false)
   ret void
@@ -313,7 +313,7 @@ define void @memset_4_stack() {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w8, #-1431655766
+; CHECK-NEXT:    mov w8, #-1431655766 // =0xaaaaaaaa
 ; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    str w8, [sp, #12]
 ; CHECK-NEXT:    bl something
@@ -330,8 +330,8 @@ define void @memset_8_stack() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, #-6148914691236517206
-; CHECK-NEXT:    stp x30, x8, [sp, #-16]!
+; CHECK-NEXT:    mov x8, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-NEXT:    stp x30, x8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    add x0, sp, #8
 ; CHECK-NEXT:    bl something
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -346,7 +346,7 @@ define void @memset_12_stack() {
 ; CHECK-LABEL: memset_12_stack:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte{{.*}}Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    movi v0.16b, #170
@@ -354,7 +354,7 @@ define void @memset_12_stack() {
 ; CHECK-NEXT:    str s0, [sp, #8]
 ; CHECK-NEXT:    str d0, [sp]
 ; CHECK-NEXT:    bl something
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte{{.*}}Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %buf = alloca [12 x i8], align 1
@@ -367,14 +367,14 @@ define void @memset_16_stack() {
 ; CHECK-LABEL: memset_16_stack:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte{{.*}}Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    movi v0.16b, #170
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bl something
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte{{.*}}Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %buf = alloca [16 x i8], align 1

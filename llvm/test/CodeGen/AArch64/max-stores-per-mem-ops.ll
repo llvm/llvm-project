@@ -24,10 +24,10 @@ define void @memset_128(ptr %dst) {
 ; DEFAULT-LABEL: memset_128:
 ; DEFAULT:       // %bb.0:
 ; DEFAULT-NEXT:    movi v0.2d, #0000000000000000
-; DEFAULT-NEXT:    stp q0, q0, [x0]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #32]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #64]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #96]
+; DEFAULT-NEXT:    stp q0, q0, [x0]
 ; DEFAULT-NEXT:    ret
 ;
 ; MEMSET-LIMIT-7-LABEL: memset_128:
@@ -44,46 +44,46 @@ define void @memset_128(ptr %dst) {
 ; MEMSET-LIMIT-8-LABEL: memset_128:
 ; MEMSET-LIMIT-8:       // %bb.0:
 ; MEMSET-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMSET-LIMIT-8-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-7-LABEL: memset_128:
 ; MEMCPY-LIMIT-7:       // %bb.0:
 ; MEMCPY-LIMIT-7-NEXT:    movi v0.2d, #0000000000000000
-; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #32]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #64]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #96]
+; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-8-LABEL: memset_128:
 ; MEMCPY-LIMIT-8:       // %bb.0:
 ; MEMCPY-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    ret
 ;
 ; MEMMOVE-LIMIT-7-LABEL: memset_128:
 ; MEMMOVE-LIMIT-7:       // %bb.0:
 ; MEMMOVE-LIMIT-7-NEXT:    movi v0.2d, #0000000000000000
-; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #32]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #64]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #96]
+; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-7-NEXT:    ret
 ;
 ; MEMMOVE-LIMIT-8-LABEL: memset_128:
 ; MEMMOVE-LIMIT-8:       // %bb.0:
 ; MEMMOVE-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 16 %dst, i8 0, i64 128, i1 false)
   ret void
@@ -95,10 +95,10 @@ define void @memset_128_optsize(ptr %dst) optsize {
 ; DEFAULT-LABEL: memset_128_optsize:
 ; DEFAULT:       // %bb.0:
 ; DEFAULT-NEXT:    movi v0.2d, #0000000000000000
-; DEFAULT-NEXT:    stp q0, q0, [x0]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #32]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #64]
 ; DEFAULT-NEXT:    stp q0, q0, [x0, #96]
+; DEFAULT-NEXT:    stp q0, q0, [x0]
 ; DEFAULT-NEXT:    ret
 ;
 ; MEMSET-LIMIT-7-LABEL: memset_128_optsize:
@@ -115,46 +115,46 @@ define void @memset_128_optsize(ptr %dst) optsize {
 ; MEMSET-LIMIT-8-LABEL: memset_128_optsize:
 ; MEMSET-LIMIT-8:       // %bb.0:
 ; MEMSET-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMSET-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMSET-LIMIT-8-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-7-LABEL: memset_128_optsize:
 ; MEMCPY-LIMIT-7:       // %bb.0:
 ; MEMCPY-LIMIT-7-NEXT:    movi v0.2d, #0000000000000000
-; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #32]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #64]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0, #96]
+; MEMCPY-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-8-LABEL: memset_128_optsize:
 ; MEMCPY-LIMIT-8:       // %bb.0:
 ; MEMCPY-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMCPY-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    ret
 ;
 ; MEMMOVE-LIMIT-7-LABEL: memset_128_optsize:
 ; MEMMOVE-LIMIT-7:       // %bb.0:
 ; MEMMOVE-LIMIT-7-NEXT:    movi v0.2d, #0000000000000000
-; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #32]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #64]
 ; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0, #96]
+; MEMMOVE-LIMIT-7-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-7-NEXT:    ret
 ;
 ; MEMMOVE-LIMIT-8-LABEL: memset_128_optsize:
 ; MEMMOVE-LIMIT-8:       // %bb.0:
 ; MEMMOVE-LIMIT-8-NEXT:    movi v0.2d, #0000000000000000
-; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #64]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0, #96]
+; MEMMOVE-LIMIT-8-NEXT:    stp q0, q0, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 16 %dst, i8 0, i64 128, i1 false)
   ret void
@@ -343,9 +343,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; DEFAULT-NEXT:    ldp q4, q5, [x1, #32]
 ; DEFAULT-NEXT:    ldp q6, q7, [x1, #64]
 ; DEFAULT-NEXT:    stp q0, q1, [x0, #96]
-; DEFAULT-NEXT:    stp q2, q3, [x0]
 ; DEFAULT-NEXT:    stp q4, q5, [x0, #32]
 ; DEFAULT-NEXT:    stp q6, q7, [x0, #64]
+; DEFAULT-NEXT:    stp q2, q3, [x0]
 ; DEFAULT-NEXT:    ret
 ;
 ; MEMSET-LIMIT-7-LABEL: memmove_128:
@@ -355,9 +355,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; MEMSET-LIMIT-7-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMSET-LIMIT-7-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMSET-LIMIT-7-NEXT:    stp q0, q1, [x0, #96]
-; MEMSET-LIMIT-7-NEXT:    stp q2, q3, [x0]
 ; MEMSET-LIMIT-7-NEXT:    stp q4, q5, [x0, #32]
 ; MEMSET-LIMIT-7-NEXT:    stp q6, q7, [x0, #64]
+; MEMSET-LIMIT-7-NEXT:    stp q2, q3, [x0]
 ; MEMSET-LIMIT-7-NEXT:    ret
 ;
 ; MEMSET-LIMIT-8-LABEL: memmove_128:
@@ -367,9 +367,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; MEMSET-LIMIT-8-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMSET-LIMIT-8-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMSET-LIMIT-8-NEXT:    stp q0, q1, [x0, #96]
-; MEMSET-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMSET-LIMIT-8-NEXT:    stp q4, q5, [x0, #32]
 ; MEMSET-LIMIT-8-NEXT:    stp q6, q7, [x0, #64]
+; MEMSET-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMSET-LIMIT-8-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-7-LABEL: memmove_128:
@@ -379,9 +379,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; MEMCPY-LIMIT-7-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMCPY-LIMIT-7-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMCPY-LIMIT-7-NEXT:    stp q0, q1, [x0, #96]
-; MEMCPY-LIMIT-7-NEXT:    stp q2, q3, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    stp q4, q5, [x0, #32]
 ; MEMCPY-LIMIT-7-NEXT:    stp q6, q7, [x0, #64]
+; MEMCPY-LIMIT-7-NEXT:    stp q2, q3, [x0]
 ; MEMCPY-LIMIT-7-NEXT:    ret
 ;
 ; MEMCPY-LIMIT-8-LABEL: memmove_128:
@@ -391,9 +391,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; MEMCPY-LIMIT-8-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMCPY-LIMIT-8-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMCPY-LIMIT-8-NEXT:    stp q0, q1, [x0, #96]
-; MEMCPY-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    stp q4, q5, [x0, #32]
 ; MEMCPY-LIMIT-8-NEXT:    stp q6, q7, [x0, #64]
+; MEMCPY-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMCPY-LIMIT-8-NEXT:    ret
 ;
 ; MEMMOVE-LIMIT-7-LABEL: memmove_128:
@@ -413,9 +413,9 @@ define void @memmove_128(ptr %dst, ptr %src) {
 ; MEMMOVE-LIMIT-8-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q1, [x0, #96]
-; MEMMOVE-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q4, q5, [x0, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q6, q7, [x0, #64]
+; MEMMOVE-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    ret
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 128, i1 false)
   ret void
@@ -492,9 +492,9 @@ define void @memmove_128_optsize(ptr %dst, ptr %src) optsize {
 ; MEMMOVE-LIMIT-8-NEXT:    ldp q4, q5, [x1, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    ldp q6, q7, [x1, #64]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q0, q1, [x0, #96]
-; MEMMOVE-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q4, q5, [x0, #32]
 ; MEMMOVE-LIMIT-8-NEXT:    stp q6, q7, [x0, #64]
+; MEMMOVE-LIMIT-8-NEXT:    stp q2, q3, [x0]
 ; MEMMOVE-LIMIT-8-NEXT:    ret
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 128, i1 false)
   ret void

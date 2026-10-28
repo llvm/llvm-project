@@ -188,10 +188,10 @@ define void @fcmp_oeq_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -395,8 +395,8 @@ define void @fcmp_oeq_v8f32(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    ldp s0, s2, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldp s1, s3, [sp, #40]
 ; NONEON-NOSVE-NEXT:    fcmp s3, s2
@@ -505,8 +505,8 @@ define void @fcmp_oeq_v4f64(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp d1, d3, [sp, #32]
 ; NONEON-NOSVE-NEXT:    fcmp d3, d2
@@ -560,10 +560,10 @@ define void @fcmp_ueq_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -729,10 +729,10 @@ define void @fcmp_one_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -894,10 +894,10 @@ define void @fcmp_une_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1043,10 +1043,10 @@ define void @fcmp_ogt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1194,10 +1194,10 @@ define void @fcmp_ugt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1343,10 +1343,10 @@ define void @fcmp_olt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1494,10 +1494,10 @@ define void @fcmp_ult_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1643,10 +1643,10 @@ define void @fcmp_oge_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1794,10 +1794,10 @@ define void @fcmp_uge_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -1943,10 +1943,10 @@ define void @fcmp_ole_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2094,10 +2094,10 @@ define void @fcmp_ule_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2243,10 +2243,10 @@ define void @fcmp_uno_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2394,10 +2394,10 @@ define void @fcmp_ord_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2543,10 +2543,10 @@ define void @fcmp_eq_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2692,10 +2692,10 @@ define void @fcmp_ne_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2841,10 +2841,10 @@ define void @fcmp_gt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -2990,10 +2990,10 @@ define void @fcmp_lt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -3139,10 +3139,10 @@ define void @fcmp_ge_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0
@@ -3288,10 +3288,10 @@ define void @fcmp_le_v16f16(ptr %a, ptr %b, ptr %c) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q3, q0, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q2, q1, [x0]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp, #46]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcmp s1, s0

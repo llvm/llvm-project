@@ -1578,8 +1578,8 @@ define ptr @strhi32_align1(ptr %y, ptr %x) {
 ; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    vstrh.32 q0, [r1]
 ; CHECK-NEXT:    ldrd r1, r2, [sp]
-; CHECK-NEXT:    str.w r1, [r0, #3]
 ; CHECK-NEXT:    str.w r2, [r0, #7]
+; CHECK-NEXT:    str.w r1, [r0, #3]
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:

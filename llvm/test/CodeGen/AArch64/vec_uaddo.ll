@@ -121,10 +121,10 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 define <8 x i32> @uaddo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    cmhi v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    stp q2, q3, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<8 x i32>, <8 x i1>} @llvm.uadd.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)

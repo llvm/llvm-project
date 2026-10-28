@@ -964,9 +964,9 @@ define i32 @extract_v8i32_vector_non_half_non_zero_insert(<8 x i32> %a, <2 x i32
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    and x8, x0, #0x7
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    and x8, x0, #0x7
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr w0, [x9, x8, lsl #2]
 ; CHECK-SD-NEXT:    add sp, sp, #32

@@ -13,8 +13,8 @@ define arm_aapcs_vfpcc void @reg(<8 x i16> %acc0, <8 x i16> %acc1, ptr nocapture
 ; CHECK-NEXT:    vaddve.s16 r2, q1
 ; CHECK-NEXT:    vaddvt.s16 r4, q0
 ; CHECK-NEXT:    vaddve.s16 r6, q0
-; CHECK-NEXT:    strd r2, r12, [r0, #8]
 ; CHECK-NEXT:    strd r6, r4, [r0]
+; CHECK-NEXT:    strd r2, r12, [r0, #8]
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
 entry:
   %0 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 13107)

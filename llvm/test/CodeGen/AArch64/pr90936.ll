@@ -3,7 +3,7 @@
 
 define void @f(i16 %arg, ptr %arg1) {
 ; CHECK-LABEL: f:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    ubfx w8, w0, #8, #6
 ; CHECK-NEXT:    strb w0, [x1]
 ; CHECK-NEXT:    strb w8, [x1, #1]
@@ -25,9 +25,9 @@ define void @g(i32 %arg, ptr %arg1) {
 ; CHECK-NEXT:    lsr w8, w0, #8
 ; CHECK-NEXT:    lsr w9, w0, #16
 ; CHECK-NEXT:    strb w0, [x1]
-; CHECK-NEXT:    strb wzr, [x1, #3]
 ; CHECK-NEXT:    strb w8, [x1, #1]
 ; CHECK-NEXT:    strb w9, [x1, #2]
+; CHECK-NEXT:    strb wzr, [x1, #3]
 ; CHECK-NEXT:    ret
 bb:
   %i = trunc i32 %arg to i8

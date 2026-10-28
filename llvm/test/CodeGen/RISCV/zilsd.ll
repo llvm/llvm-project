@@ -58,8 +58,8 @@ define void @store(ptr %a, i64 %b) nounwind {
 define void @store_align4(ptr %a, i64 %b) nounwind {
 ; SLOW-LABEL: store_align4:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    sw a1, 88(a0)
 ; SLOW-NEXT:    sw a2, 92(a0)
+; SLOW-NEXT:    sw a1, 88(a0)
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: store_align4:
@@ -140,20 +140,20 @@ define i64 @load_unaligned(ptr %p) {
 define void @store_unaligned(ptr %p, i64 %v) {
 ; SLOW-LABEL: store_unaligned:
 ; SLOW:       # %bb.0:
+; SLOW-NEXT:    srli a3, a1, 24
+; SLOW-NEXT:    srli a4, a1, 16
+; SLOW-NEXT:    sb a1, 0(a0)
+; SLOW-NEXT:    sb a4, 2(a0)
+; SLOW-NEXT:    sb a3, 3(a0)
+; SLOW-NEXT:    sb a2, 4(a0)
 ; SLOW-NEXT:    srli a3, a2, 24
 ; SLOW-NEXT:    srli a4, a2, 16
-; SLOW-NEXT:    srli a5, a2, 8
-; SLOW-NEXT:    sb a2, 4(a0)
-; SLOW-NEXT:    sb a5, 5(a0)
+; SLOW-NEXT:    srli a2, a2, 8
+; SLOW-NEXT:    srli a1, a1, 8
+; SLOW-NEXT:    sb a2, 5(a0)
 ; SLOW-NEXT:    sb a4, 6(a0)
 ; SLOW-NEXT:    sb a3, 7(a0)
-; SLOW-NEXT:    srli a2, a1, 24
-; SLOW-NEXT:    srli a3, a1, 16
-; SLOW-NEXT:    srli a4, a1, 8
-; SLOW-NEXT:    sb a1, 0(a0)
-; SLOW-NEXT:    sb a4, 1(a0)
-; SLOW-NEXT:    sb a3, 2(a0)
-; SLOW-NEXT:    sb a2, 3(a0)
+; SLOW-NEXT:    sb a1, 1(a0)
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: store_unaligned:
@@ -165,20 +165,20 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ;
 ; 4BYTEALIGN-LABEL: store_unaligned:
 ; 4BYTEALIGN:       # %bb.0:
+; 4BYTEALIGN-NEXT:    srli a3, a1, 24
+; 4BYTEALIGN-NEXT:    srli a4, a1, 16
+; 4BYTEALIGN-NEXT:    sb a1, 0(a0)
+; 4BYTEALIGN-NEXT:    sb a4, 2(a0)
+; 4BYTEALIGN-NEXT:    sb a3, 3(a0)
+; 4BYTEALIGN-NEXT:    sb a2, 4(a0)
 ; 4BYTEALIGN-NEXT:    srli a3, a2, 24
 ; 4BYTEALIGN-NEXT:    srli a4, a2, 16
-; 4BYTEALIGN-NEXT:    srli a5, a2, 8
-; 4BYTEALIGN-NEXT:    sb a2, 4(a0)
-; 4BYTEALIGN-NEXT:    sb a5, 5(a0)
+; 4BYTEALIGN-NEXT:    srli a2, a2, 8
+; 4BYTEALIGN-NEXT:    srli a1, a1, 8
+; 4BYTEALIGN-NEXT:    sb a2, 5(a0)
 ; 4BYTEALIGN-NEXT:    sb a4, 6(a0)
 ; 4BYTEALIGN-NEXT:    sb a3, 7(a0)
-; 4BYTEALIGN-NEXT:    srli a2, a1, 24
-; 4BYTEALIGN-NEXT:    srli a3, a1, 16
-; 4BYTEALIGN-NEXT:    srli a4, a1, 8
-; 4BYTEALIGN-NEXT:    sb a1, 0(a0)
-; 4BYTEALIGN-NEXT:    sb a4, 1(a0)
-; 4BYTEALIGN-NEXT:    sb a3, 2(a0)
-; 4BYTEALIGN-NEXT:    sb a2, 3(a0)
+; 4BYTEALIGN-NEXT:    sb a1, 1(a0)
 ; 4BYTEALIGN-NEXT:    ret
   store i64 %v, ptr %p, align 1
   ret void
@@ -299,8 +299,8 @@ define void @no_coalesce() #0 {
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    sd a0, 0(zero)
 ; CHECK-NEXT:    sw a1, 8(zero)
-; CHECK-NEXT:    sw a1, 0(zero)
 ; CHECK-NEXT:    sw a1, 4(zero)
+; CHECK-NEXT:    sw a1, 0(zero)
 ; CHECK-NEXT:  .LBB12_2: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bnez a1, .LBB12_1

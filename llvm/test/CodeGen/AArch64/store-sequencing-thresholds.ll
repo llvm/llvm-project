@@ -1,16 +1,13 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
-; RUN:   -store-sequencing-max-frontier-size=3 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,FRONTIER
+; RUN:   -store-sequencing-max-frontier-size=3 2>&1 | FileCheck %s --check-prefixes=CHECK,FRONTIER
 
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
-; RUN:   -store-sequencing-max-memops-in-flight=5 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,INFLIGHT
+; RUN:   -store-sequencing-max-memops-in-flight=5 2>&1 | FileCheck %s --check-prefixes=CHECK,INFLIGHT
 
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
 ; RUN:   -store-sequencing-max-frontier-size=3 \
-; RUN:   -store-sequencing-max-memops-in-flight=5 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN:   -store-sequencing-max-memops-in-flight=5 2>&1 | FileCheck %s --check-prefixes=CHECK,BOTH
 
 define void @test_oversize_unanalyzable_frontier_results_in_promotion(ptr %p) {
 ; CHECK-LABEL: test_oversize_unanalyzable_frontier_results_in_promotion:%bb.0

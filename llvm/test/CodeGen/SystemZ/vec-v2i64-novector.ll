@@ -376,13 +376,13 @@ define void @fcmp_v2f64(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-NEXT:    ld %f0, 8(%r2)
 ; CHECK-NEXT:    srag %r0, %r0, 63
 ; CHECK-NEXT:    cdb %f0, 8(%r3)
-; CHECK-NEXT:    stg %r0, 0(%r4)
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    xilf %r1, 268435456
 ; CHECK-NEXT:    afi %r1, -268435456
 ; CHECK-NEXT:    sllg %r1, %r1, 32
 ; CHECK-NEXT:    srag %r1, %r1, 63
 ; CHECK-NEXT:    stg %r1, 8(%r4)
+; CHECK-NEXT:    stg %r0, 0(%r4)
 ; CHECK-NEXT:    br %r14
   %va = load <2 x double>, ptr %a
   %vb = load <2 x double>, ptr %b

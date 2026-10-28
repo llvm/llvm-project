@@ -130,8 +130,8 @@ entry:
 ; COMMON-NEXT:   stfs 1, -24(1)
 ; COMMON-NEXT:   lfs 0, 0(4)
 ; COMMON-NEXT:   lwz 4, 56(1)
+; COMMON:        stw 9, -36(1)
 ; COMMON:        fsub 0, 2, 0
-; COMMON-NEXT:   stw 9, -36(1)
 ; COMMON-NEXT:   fadd 1, 1, 0
 ; COMMON-NEXT:   blr
 ; COMMON-NEXT: L.._Z10add_structifd1SP2SD1Di0:

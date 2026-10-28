@@ -309,22 +309,22 @@ define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 define b128 @test_bitinsert_b128_off64(b128 %base, i64 %val) {
 ; RV32-LABEL: test_bitinsert_b128_off64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    lw a1, 4(a1)
-; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a1, 4(a0)
+; RV32-NEXT:    lw a4, 4(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b128_off64:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lw a4, 0(a1)
-; RV32ZBB-NEXT:    lw a1, 4(a1)
-; RV32ZBB-NEXT:    sw a4, 0(a0)
-; RV32ZBB-NEXT:    sw a1, 4(a0)
+; RV32ZBB-NEXT:    lw a4, 4(a1)
+; RV32ZBB-NEXT:    lw a1, 0(a1)
+; RV32ZBB-NEXT:    sw a4, 4(a0)
 ; RV32ZBB-NEXT:    sw a2, 8(a0)
 ; RV32ZBB-NEXT:    sw a3, 12(a0)
+; RV32ZBB-NEXT:    sw a1, 0(a0)
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b128_off64:
