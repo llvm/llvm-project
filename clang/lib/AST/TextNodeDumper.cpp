@@ -1522,7 +1522,7 @@ void TextNodeDumper::dumpLinkageAndVisibility(const NamedDecl *ND) {
 }
 
 void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
-  if (!Node->hasLabelTarget())
+  if (!Node->isNamed())
     return;
 
   OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
