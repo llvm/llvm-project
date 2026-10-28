@@ -154,6 +154,10 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///     half (0), for llvm.agx.texture.sample.
 ///     6, N, then N pairs (half, value): the 32-bit constants the driver
 ///     preloads into the uniforms from half (-agx-uniform-constants).
+///     7, N, then N triples (half, source half, kind): 32-bit values the
+///     driver computes from the 32-bit argument word at source half and
+///     puts in the uniforms from half (llvm.agx.launch.value, whose last
+///     operand is the kind; -agx-launch-divisors).
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -256,6 +260,11 @@ void AGXAsmPrinter::recordKernel() {
     R.append({6, uint32_t(MFI->UniformConstants.size())});
     for (auto [Half, Value] : MFI->UniformConstants)
       R.append({Half, Value});
+  }
+  if (!MFI->LaunchValues.empty()) {
+    R.append({7, uint32_t(MFI->LaunchValues.size())});
+    for (const auto &V : MFI->LaunchValues)
+      R.append({V.Half, Half(V.Arg) + 2 * V.Word, V.Kind});
   }
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }

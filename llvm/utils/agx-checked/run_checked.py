@@ -30,6 +30,20 @@ class Kernel:
         self.checked = None  # (record half, tg bytes half, [(arg, offset, lo half, hi half)])
         self.table = None  # (table half, count half): extension 3
         self.constants = []  # [(half, value)]: extension 6, preloaded 32-bit constants
+        self.launch_values = []  # [(half, source half, kind)]: extension 7, computed from argument words
+
+
+def launch_value(d, kind):
+    """Value `kind` of .agx.kernels extension 7 for the 32-bit argument word d, a divisor (|d| of a signed one for
+    kinds 3 to 5): with l = ceil(log2(d)), the multiplier 2^32 (2^l - d) / d + 1 and the shifts min(l, 1) and
+    max(l, 1) - 1; all 0 for d = 0."""
+    d &= 0xFFFFFFFF
+    if kind >= 3 and d >> 31:
+        d = (1 << 32) - d
+    if d == 0:
+        return 0
+    l = (d - 1).bit_length()
+    return [((1 << 32) * ((1 << l) - d)) // d + 1, min(l, 1), max(l, 1) - 1][kind % 3] & 0xFFFFFFFF
 
 
 def kernels(obj_path, objcopy):
@@ -70,6 +84,10 @@ def kernels(obj_path, objcopy):
                 (n,) = struct.unpack_from("<I", d, q + 4)
                 k.constants = [struct.unpack_from("<2I", d, q + 8 + 8 * i) for i in range(n)]
                 q += 8 + 8 * n
+            elif tag == 7:
+                (n,) = struct.unpack_from("<I", d, q + 4)
+                k.launch_values = [struct.unpack_from("<3I", d, q + 8 + 12 * i) for i in range(n)]
+                q += 8 + 12 * n
             else:
                 break
         out[k.name] = k

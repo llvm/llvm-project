@@ -38,6 +38,17 @@ defm int_agx_thread_position_in_threadgroup : AGXReadSRIntrinsic_xyz;
 // this; the value is an implicit kernel argument (see AGXUsage.rst).
 defm int_agx_threadgroups_per_grid : AGXReadSRIntrinsic_xyz;
 
+// A 32-bit value the launch computes from 32-bit word (operand 1) of kernel
+// argument (operand 0), and puts in the uniforms (.agx.kernels extension 7):
+// for an unsigned divisor d, (2) 2^32 * (2^l - d) / d + 1, (3) min(l, 1) and
+// (4) max(l, 1) - 1, l = ceil(log2(d)); (5, 6, 7) the same of |d| for a
+// signed divisor. Operand 2 says which.
+def int_agx_launch_value
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable,
+                             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                             ImmArg<ArgIndex<2>>]>;
+
 def int_agx_thread_index_in_threadgroup : AGXReadSRIntrinsic;
 def int_agx_thread_index_in_simdgroup : AGXReadSRIntrinsic;
 def int_agx_simdgroup_index_in_threadgroup : AGXReadSRIntrinsic;

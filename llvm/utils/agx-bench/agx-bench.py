@@ -151,6 +151,26 @@ def constant_uniforms(obj, name, objcopy):
     return [x for half, v in (k.constants if k else []) for x in ("--uniform", "%d=%d" % (half // 2, v))]
 
 
+def launch_value_uniforms(obj, name, objcopy, given):
+    """agx_cost uniforms for the values a kernel has the launch compute from its arguments (.agx.kernels
+    extension 7, llc -agx-launch-divisors), from the argument uniforms in `given`."""
+    sys.path.insert(0, os.path.join(HERE, "..", "agx-checked"))
+    import run_checked
+    try:
+        k = run_checked.kernels(obj, objcopy).get(name)
+    except subprocess.CalledProcessError:
+        return []
+    if not k or not k.launch_values:
+        return []
+    u = {}
+    for flag, val in zip(given, list(given[1:]) + [""]):
+        if flag == "--uniform":
+            r, v = val.split("=")
+            u[int(r, 0)] = int(v, 0)
+    return [x for half, src, kind in k.launch_values
+            for x in ("--uniform", "%d=%d" % (half // 2, run_checked.launch_value(u.get(src // 2, 0), kind)))]
+
+
 def checked_uniforms(obj, name, objcopy, given=()):
     """agx_cost uniforms for the hidden arguments of a checked kernel: no error recorded, 64 KiB of threadgroup
     memory, and bounds covering all of memory, so that every check passes."""
@@ -253,6 +273,9 @@ def main():
                     consts = constant_uniforms(obj, name, objcopy)
                     if consts:
                         args = (args or []) + consts
+                    derived = launch_value_uniforms(obj, name, objcopy, args or [])
+                    if derived:
+                        args = (args or []) + derived
                     if a.agx_checked:
                         hidden = checked_uniforms(obj, name, objcopy, args or [])
                         args = (args or []) + hidden

@@ -60,6 +60,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -541,6 +542,90 @@ static Value *expandDivRem32(BinaryOperator &BO, DivisorCache &Divisors) {
   return B.CreateSelect(Zero, IsRem ? BO.getOperand(0) : B.getInt32(-1), Res);
 }
 
+static cl::opt<bool> AGXLaunchDivisors(
+    "agx-launch-divisors", cl::init(false), cl::Hidden,
+    cl::desc("Divide by a 32-bit kernel argument with a multiplier and "
+             "shifts the launch computes (.agx.kernels extension 7)"));
+
+/// At most this many divisors per kernel take their multipliers from the
+/// launch (three uniforms each).
+static constexpr unsigned MaxLaunchDivisors = 8;
+
+/// The kernel argument and 32-bit word of it that divisor Y is, if any: an
+/// i32 argument, or the low or high word of an i64 one (as the 32-bit fast
+/// path of a 64-bit division takes it).
+static std::optional<std::pair<unsigned, unsigned>>
+launchDivisorSource(Value *Y) {
+  using namespace PatternMatch;
+  auto Unfrozen = [](Value *V) {
+    auto *Fr = dyn_cast<FreezeInst>(V);
+    return Fr ? Fr->getOperand(0) : V;
+  };
+  Y = Unfrozen(Y);
+  if (auto *A = dyn_cast<Argument>(Y))
+    return A->getType()->isIntegerTy(32)
+               ? std::optional(std::pair(A->getArgNo(), 0u))
+               : std::nullopt;
+  auto *T = dyn_cast<TruncInst>(Y);
+  if (!T || !T->getType()->isIntegerTy(32))
+    return std::nullopt;
+  Value *V = Unfrozen(T->getOperand(0));
+  unsigned Word = 0;
+  const APInt *Sh;
+  if (match(V, m_LShr(m_Value(V), m_APInt(Sh)))) {
+    if (*Sh != 32)
+      return std::nullopt;
+    V = Unfrozen(V);
+    Word = 1;
+  }
+  if (auto *A = dyn_cast<Argument>(V); A && A->getType()->isIntegerTy(64))
+    return std::pair(A->getArgNo(), Word);
+  return std::nullopt;
+}
+
+/// A 32-bit division or remainder by a kernel argument, with the multiplier
+/// m and shifts s1, s2 of its divisor that the launch computes
+/// (llvm.agx.launch.value): t = mulhi(x, m), q = (t + ((x - t) >> s1)) >> s2,
+/// exact for every 32-bit x (Granlund and Montgomery, "Division by Invariant
+/// Integers using Multiplication", PLDI 1994, section 4). A zero divisor has
+/// m = s1 = s2 = 0: q = x, so the remainder is x; the quotient is all ones,
+/// as in expandDivRem32.
+static Value *expandLaunchDivRem32(BinaryOperator &BO, unsigned Arg,
+                                   unsigned Word) {
+  IRBuilder<> B(&BO);
+  Instruction::BinaryOps Op = BO.getOpcode();
+  bool IsSigned = Op == Instruction::SDiv || Op == Instruction::SRem;
+  bool IsRem = Op == Instruction::URem || Op == Instruction::SRem;
+  Type *I32 = B.getInt32Ty();
+  Function *LV = Intrinsic::getOrInsertDeclaration(
+      BO.getModule(), Intrinsic::agx_launch_value);
+  auto Launch = [&](unsigned Kind) {
+    return B.CreateCall(LV, {B.getInt32(Arg), B.getInt32(Word),
+                             B.getInt32(Kind + (IsSigned ? 3 : 0))});
+  };
+  Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
+  Value *Neg = nullptr;
+  if (IsSigned) {
+    Value *XNeg = B.CreateICmpSLT(X, B.getInt32(0));
+    Value *YNeg = B.CreateICmpSLT(Y, B.getInt32(0));
+    Neg = IsRem ? XNeg : B.CreateXor(XNeg, YNeg);
+    X = B.CreateSelect(XNeg, B.CreateNeg(X), X);
+    Y = B.CreateSelect(YNeg, B.CreateNeg(Y), Y);
+  }
+  Value *P = B.CreateMul(B.CreateZExt(X, B.getInt64Ty()),
+                         B.CreateZExt(Launch(0), B.getInt64Ty()));
+  Value *T = B.CreateTrunc(B.CreateLShr(P, 32), I32);
+  Value *Q = B.CreateLShr(
+      B.CreateAdd(T, B.CreateLShr(B.CreateSub(X, T), Launch(1))), Launch(2));
+  Value *Res = IsRem ? B.CreateSub(X, B.CreateMul(Q, Y)) : Q;
+  if (IsSigned)
+    Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
+  if (IsRem)
+    return Res;
+  Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
+  return B.CreateSelect(Zero, B.getInt32(-1), Res);
+}
+
 bool AGXCodeGenPrepare::expandDivisions(Function &F) {
   // 64-bit divisions whose operands fit in 32 bits (checked at run time, or
   // known) take the 32-bit expansion. Division and remainder of the same
@@ -576,10 +661,34 @@ bool AGXCodeGenPrepare::expandDivisions(Function &F) {
   // of the divisor cache) as it is; the loops of the wider ones do not.
   std::optional<DivisorCache> Divisors;
   SmallVector<BinaryOperator *, 8> Wide;
+  // Divisors whose multipliers the launch computes, while the uniforms have
+  // room for them (AGXPromoteKernelArgs fills at most 1024 bytes less 20).
+  SmallVector<std::pair<unsigned, unsigned>, 4> LaunchDivisors;
+  bool Kernel = AGXLaunchDivisors &&
+                F.getCallingConv() == CallingConv::AGX_KERNEL;
+  if (Kernel) {
+    uint64_t Bytes = 20 + 8;
+    for (const Argument &A : F.args())
+      Bytes += alignTo(F.getDataLayout().getTypeStoreSize(A.getType()), 4);
+    Kernel = Bytes + MaxLaunchDivisors * 2 * 12 <= 1024;
+  }
   for (BinaryOperator *BO : Worklist) {
     if (!BO->getType()->isIntegerTy(32)) {
       Wide.push_back(BO);
       continue;
+    }
+    if (auto Src = Kernel ? launchDivisorSource(BO->getOperand(1))
+                          : std::nullopt) {
+      bool Known = is_contained(LaunchDivisors, *Src);
+      if (Known || LaunchDivisors.size() < MaxLaunchDivisors) {
+        if (!Known)
+          LaunchDivisors.push_back(*Src);
+        Value *R = expandLaunchDivRem32(*BO, Src->first, Src->second);
+        R->takeName(BO);
+        BO->replaceAllUsesWith(R);
+        BO->eraseFromParent();
+        continue;
+      }
     }
     if (!Divisors)
       Divisors.emplace(F);

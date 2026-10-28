@@ -87,6 +87,22 @@ public:
   /// Constants the driver preloads into uniform registers (first half, value;
   /// AGXUniformConstants).
   SmallVector<std::pair<unsigned, uint32_t>, 8> UniformConstants;
+  /// Values the launch computes from 32-bit argument words
+  /// (llvm.agx.launch.value): IR argument, word, kind, the virtual register
+  /// and the first uniform half that hold it.
+  struct LaunchValue {
+    unsigned Arg, Word, Kind;
+    Register VReg;
+    unsigned Half;
+  };
+  SmallVector<LaunchValue, 4> LaunchValues;
+  Register getLaunchValueVReg(unsigned Arg, unsigned Word,
+                              unsigned Kind) const {
+    for (const LaunchValue &V : LaunchValues)
+      if (V.Arg == Arg && V.Word == Word && V.Kind == Kind)
+        return V.VReg;
+    return Register();
+  }
 
   void setUniformHalfCount(unsigned N) { UniformHalfCount = N; }
   unsigned getUniformHalfCount() const { return UniformHalfCount; }

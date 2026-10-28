@@ -35,7 +35,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/Support/MathExtras.h"
@@ -462,6 +464,23 @@ SDValue AGXTargetLowering::LowerFormalArguments(
     MCRegister PReg = Allocate(MVT::i64);
     if (PReg)
       MFI->setGlobalData(MF.addLiveIn(PReg, &AGX::GPR64RegClass), GlobalHalf);
+  }
+  // Values the launch computes from argument words (llvm.agx.launch.value).
+  for (const Instruction &I : instructions(MF.getFunction())) {
+    const auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || II->getIntrinsicID() != Intrinsic::agx_launch_value)
+      continue;
+    unsigned Arg = cast<ConstantInt>(II->getArgOperand(0))->getZExtValue();
+    unsigned Word = cast<ConstantInt>(II->getArgOperand(1))->getZExtValue();
+    unsigned Kind = cast<ConstantInt>(II->getArgOperand(2))->getZExtValue();
+    if (MFI->getLaunchValueVReg(Arg, Word, Kind))
+      continue;
+    Half = alignTo(Half, 2);
+    unsigned At = Half;
+    MCRegister PReg = Allocate(MVT::i32);
+    if (PReg)
+      MFI->LaunchValues.push_back(
+          {Arg, Word, Kind, MF.addLiveIn(PReg, &AGX::GPR32RegClass), At});
   }
   MFI->setUniformHalfCount(Half);
 
@@ -960,6 +979,15 @@ SDValue AGXTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     auto *MFI = DAG.getMachineFunction().getInfo<AGXMachineFunctionInfo>();
     Register VReg =
         MFI->getImplicitArgVReg(IID - Intrinsic::agx_threadgroups_per_grid_x);
+    if (!VReg)
+      return DAG.getUNDEF(MVT::i32);
+    return DAG.getCopyFromReg(DAG.getEntryNode(), DL, VReg, MVT::i32);
+  }
+  case Intrinsic::agx_launch_value: {
+    auto *MFI = DAG.getMachineFunction().getInfo<AGXMachineFunctionInfo>();
+    Register VReg = MFI->getLaunchValueVReg(Op.getConstantOperandVal(1),
+                                            Op.getConstantOperandVal(2),
+                                            Op.getConstantOperandVal(3));
     if (!VReg)
       return DAG.getUNDEF(MVT::i32);
     return DAG.getCopyFromReg(DAG.getEntryNode(), DL, VReg, MVT::i32);

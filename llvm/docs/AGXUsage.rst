@@ -502,6 +502,20 @@ The extensions are:
   arguments and ``threadgroups_per_grid``, within the uniform halves of the
   record. A driver that does not set them must not use the option, since a
   reader that skips the extension leaves the constants zero.
+* ``7, n``, then ``n`` triples ``half, source half, kind``: with
+  ``-agx-launch-divisors``, a 32-bit division or remainder by a kernel
+  argument (or a 32-bit word of one) reads the argument's multiplier and
+  shifts from uniforms, which the driver computes at launch from the 32-bit
+  value ``d`` at ``source half`` (an argument it has just set) and puts in
+  the 32-bit uniform from ``half``. With ``l = ceil(log2(d))``, kind 0 is
+  ``2^32 * (2^l - d) / d + 1`` (truncated to 32 bits), kind 1 is
+  ``min(l, 1)`` and kind 2 is ``max(l, 1) - 1``; kinds 3, 4 and 5 are the
+  same of ``|d|`` (a signed divisor). All are 0 for ``d = 0``. The kernel
+  divides as ``q = (t + ((x - t) >> s1)) >> s2``, ``t = mulhi(x, m)``,
+  exact for every 32-bit ``x`` (Granlund and Montgomery, "Division by
+  Invariant Integers using Multiplication", PLDI 1994), in place of a
+  reciprocal estimate and two corrections. As with extension 6, a driver
+  that does not set them must not use the option.
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
