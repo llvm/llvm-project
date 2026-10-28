@@ -47,8 +47,9 @@ module attributes {gpu.container_module} {
 
 // -----
 
-// The slots of one routine share a small byte budget; a private that does not
-// fit keeps the heap allocation broadcast through a pointer slot.
+// The slots of one routine share a small byte budget, padded to 16-byte
+// alignment; a private that does not fit keeps the heap allocation broadcast
+// through a pointer slot.
 
 module attributes {gpu.container_module} {
   acc.routine @routine_gang func(@gang_budget) gang
@@ -185,6 +186,147 @@ module attributes {gpu.container_module} {
             : (!acc.private_type<memref<64xf64>>) -> memref<64xf64>
         acc.predicate_region {
           func.call @use_large(%local) : (memref<64xf64>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// A gang routine that calls another gang routine keeps the heap allocation:
+// its callers reserve slot room only for the gang routines they call directly.
+
+module attributes {gpu.container_module} {
+  func.func private @gang_inner() attributes {acc.routine_info = #acc.routine_info<[@routine_inner]>}
+  acc.routine @routine_inner func(@gang_inner) gang
+  acc.routine @routine_gang func(@gang_outer) gang
+
+  gpu.module @cuda_device_mod {
+    func.func private @gang_inner()
+    func.func private @use(memref<f64>)
+
+    // CHECK-LABEL: gpu.func @gang_outer
+    // CHECK-SAME:    workgroup(%{{[^ ]+}} : memref<memref<f64>, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK:         memref.alloc() : memref<f64>
+    // CHECK:         call @gang_inner()
+    // CHECK:         memref.dealloc %{{.*}} : memref<f64>
+    gpu.func @gang_outer()
+        attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "gang_outer">} {
+      %c1 = arith.constant 1 : index
+      %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+      %tx = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
+      %priv = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<f64>>
+      acc.compute_region launch(%arg0 = %bx, %arg1 = %tx) ins(%arg2 = %priv)
+          : (!acc.private_type<memref<f64>>) {
+        %cst = arith.constant 2.0 : f64
+        %local = acc.private_local %arg2
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        acc.predicate_region {
+          memref.store %cst, %local[] : memref<f64>
+        }
+        func.call @gang_inner() : () -> ()
+        acc.predicate_region {
+          func.call @use(%local) : (memref<f64>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// Slots are padded to 16-byte alignment: 1 + 232 + 7 bytes fit in the budget
+// unpadded, but the slots start at offsets 0, 16 and 256, so the last does not.
+
+module attributes {gpu.container_module} {
+  acc.routine @routine_gang func(@gang_padding) gang
+
+  gpu.module @cuda_device_mod {
+    func.func private @use3(memref<i8>, memref<29xf64>, memref<7xi8>)
+
+    // CHECK-LABEL: gpu.func @gang_padding
+    // CHECK-SAME:    workgroup(%{{[^ ]+}} : memref<i8, #gpu.address_space<workgroup>> {llvm.align = 16 : i32}, %{{[^ ]+}} : memref<29xf64, #gpu.address_space<workgroup>> {llvm.align = 16 : i32}, %{{[^ ]+}} : memref<memref<7xi8>, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK:         memref.alloc() : memref<7xi8>
+    gpu.func @gang_padding()
+        attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "gang_padding">} {
+      %c1 = arith.constant 1 : index
+      %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+      %tx = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
+      %p0 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<i8>>
+      %p1 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<29xf64>>
+      %p2 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<7xi8>>
+      acc.compute_region launch(%arg0 = %bx, %arg1 = %tx) ins(%arg2 = %p0, %arg3 = %p1, %arg4 = %p2)
+          : (!acc.private_type<memref<i8>>, !acc.private_type<memref<29xf64>>, !acc.private_type<memref<7xi8>>) {
+        %l0 = acc.private_local %arg2
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<i8>>) -> memref<i8>
+        %l1 = acc.private_local %arg3
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<29xf64>>) -> memref<29xf64>
+        %l2 = acc.private_local %arg4
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<7xi8>>) -> memref<7xi8>
+        acc.predicate_region {
+          func.call @use3(%l0, %l1, %l2) : (memref<i8>, memref<29xf64>, memref<7xi8>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// The slots of every compute region of a routine share one budget.
+
+module attributes {gpu.container_module} {
+  acc.routine @routine_gang func(@gang_two_regions) gang
+
+  gpu.module @cuda_device_mod {
+    func.func private @use24(memref<24xf64>)
+
+    // CHECK-LABEL: gpu.func @gang_two_regions
+    // CHECK-SAME:    workgroup(%{{[^ ]+}} : memref<24xf64, #gpu.address_space<workgroup>> {llvm.align = 16 : i32}, %{{[^ ]+}} : memref<memref<24xf64>, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK:         memref.alloc() : memref<24xf64>
+    // CHECK-NOT:     memref.alloc() : memref<24xf64>
+    // CHECK:         gpu.return
+    gpu.func @gang_two_regions()
+        attributes {acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "gang_two_regions">} {
+      %c1 = arith.constant 1 : index
+      %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+      %tx = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
+      %p0 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<24xf64>>
+      acc.compute_region launch(%arg0 = %bx, %arg1 = %tx) ins(%arg2 = %p0)
+          : (!acc.private_type<memref<24xf64>>) {
+        %l0 = acc.private_local %arg2
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<24xf64>>) -> memref<24xf64>
+        acc.predicate_region {
+          func.call @use24(%l0) : (memref<24xf64>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      %p1 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+          : () -> !acc.private_type<memref<24xf64>>
+      acc.compute_region launch(%arg0 = %bx, %arg1 = %tx) ins(%arg2 = %p1)
+          : (!acc.private_type<memref<24xf64>>) {
+        %l1 = acc.private_local %arg2
+            {acc.active_par_dims = #acc<active_par_dims[block_x]>}
+            : (!acc.private_type<memref<24xf64>>) -> memref<24xf64>
+        acc.predicate_region {
+          func.call @use24(%l1) : (memref<24xf64>) -> ()
         }
         acc.yield
       } <{origin = "acc.routine"}>

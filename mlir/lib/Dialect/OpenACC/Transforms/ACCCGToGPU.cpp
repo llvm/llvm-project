@@ -462,7 +462,9 @@ public:
         accSupport(accSupport), options(options),
         sharedMemBudget(
             options.maxWorkgroupSharedMemory,
-            sumExistingSharedMemoryBytes(computeRegion.getRegion())) {}
+            sumExistingSharedMemoryBytes(computeRegion.getRegion())) {
+    reserveGangRoutineSlots();
+  }
 
   /// Main entry point: emit launch (if needed) and lower the region body.
   LogicalResult rewrite();
@@ -496,6 +498,9 @@ private:
   Value allocatePrivatizeHeapStorage(acc::PrivatizeOp privatize,
                                      MemRefType baseTy,
                                      ValueRange mappedDynamicSizes);
+  /// Reserve the slot cap of every distinct gang routine the region calls.
+  void reserveGangRoutineSlots();
+
   /// Place static privatize storage of a block routine in a workgroup
   /// attribution of its own; returns null if over the routine slot budget.
   Value allocateRoutineSharedSlot(acc::PrivatizeOp privatize, MemRefType baseTy,
@@ -725,10 +730,11 @@ private:
   // Reusable privatize broadcast slots per type; disabled for kernels.
   llvm::DenseMap<Type, Value> privatizeBroadcastCache;
 
-  // Routine workgroup slots add to the shared memory of every calling kernel,
-  // which is sized elsewhere, so keep them small.
+  // Each gang routine called from a kernel adds up to this many bytes of
+  // private data slots, reserved in the caller's shared memory budget.
   static constexpr int64_t kMaxRoutineSharedSlotBytes = 256;
-  int64_t routineSharedSlotBytes = 0;
+  std::optional<bool> routineCallsGangRoutine;
+  Block *routineSlotBarrierBlock = nullptr;
 
   int64_t staticBlockDimX = 1024;
   int64_t staticBlockDimY = 1024;
@@ -2764,6 +2770,26 @@ Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
   return mem;
 }
 
+void ACCCGToGPULowering::reserveGangRoutineSlots() {
+  DenseSet<StringAttr> seen;
+  int64_t numGangRoutines = 0;
+  computeRegion.walk([&](CallOpInterface call) {
+    auto callee =
+        dyn_cast_if_present<SymbolRefAttr>(call.getCallableForCallee());
+    if (!callee || !seen.insert(callee.getLeafReference()).second)
+      return;
+    GPUParallelDimAttr calleeDim = getAccRoutineCallParDim(call, defaultPolicy);
+    if (calleeDim && calleeDim.isAnyBlock())
+      ++numGangRoutines;
+  });
+  if (numGangRoutines == 0)
+    return;
+  // Over budget: leave no room for shared memory privates of this region.
+  if (!sharedMemBudget.tryAllocate(numGangRoutines *
+                                   kMaxRoutineSharedSlotBytes))
+    sharedMemBudget.setMaxTotalBytes(sharedMemBudget.bytesUsed());
+}
+
 Value ACCCGToGPULowering::allocateRoutineSharedSlot(acc::PrivatizeOp privatize,
                                                     MemRefType baseTy,
                                                     gpu::GPUFuncOp gpuFuncOp) {
@@ -2780,23 +2806,58 @@ Value ACCCGToGPULowering::allocateRoutineSharedSlot(acc::PrivatizeOp privatize,
     return {};
   int64_t bytes =
       sizeAndAlignment->first.getFixedValue() * baseTy.getNumElements();
-  if (bytes <= 0 || routineSharedSlotBytes + bytes > kMaxRoutineSharedSlotBytes)
+  int64_t alignment = sizeAndAlignment->second.getFixedValue();
+  if (bytes <= 0 || !llvm::isPowerOf2_64(alignment))
     return {};
-  // Activations of a recursive routine would share the slot.
-  StringRef funcName = gpuFuncOp.getName();
-  bool callsItself =
-      gpuFuncOp
-          .walk([&](CallOpInterface call) {
-            auto callee =
-                dyn_cast_if_present<SymbolRefAttr>(call.getCallableForCallee());
-            return callee && callee.getLeafReference() == funcName
-                       ? WalkResult::interrupt()
-                       : WalkResult::advance();
-          })
-          .wasInterrupted();
-  if (callsItself)
+  // At least 16, as for the broadcast slot: packed 16-byte stores misalign.
+  alignment = std::max(alignment, SharedMemoryBudget::kDefaultAlignmentBytes);
+  // The slot is reused by the next call: every thread must reach the barrier
+  // placed before this block's terminator on the way out.
+  Block *slotBlock = rewriter.getInsertionBlock();
+  if (!slotBlock->mightHaveTerminator() ||
+      slotBlock->getTerminator()->getNumSuccessors() != 0 ||
+      isInsideConditional(slotBlock))
     return {};
-  routineSharedSlotBytes += bytes;
+  // Activations of a recursive routine would share the slot, and callers
+  // reserve slot room only for the gang routines they call directly.
+  if (!routineCallsGangRoutine) {
+    StringRef funcName = gpuFuncOp.getName();
+    routineCallsGangRoutine =
+        gpuFuncOp
+            .walk([&](CallOpInterface call) {
+              auto callee = dyn_cast_if_present<SymbolRefAttr>(
+                  call.getCallableForCallee());
+              GPUParallelDimAttr calleeDim =
+                  getAccRoutineCallParDim(call, defaultPolicy);
+              return (callee && callee.getLeafReference() == funcName) ||
+                             (calleeDim && calleeDim.isAnyBlock())
+                         ? WalkResult::interrupt()
+                         : WalkResult::advance();
+            })
+            .wasInterrupted();
+  }
+  if (*routineCallsGangRoutine)
+    return {};
+  // Count the slots of earlier compute regions of this routine as well.
+  ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
+  SharedMemoryBudget slotBudget(kMaxRoutineSharedSlotBytes);
+  for (BlockArgument attribution : gpuFuncOp.getWorkgroupAttributionBBArgs()) {
+    auto attributionTy = cast<MemRefType>(attribution.getType());
+    if (isa<BaseMemRefType>(attributionTy.getElementType()))
+      continue;
+    std::optional<acc::TypeSizeAndAlignment> slotSizeAndAlignment =
+        accSupport.getTypeSizeAndAlignment(attributionTy.getElementType(),
+                                           module);
+    if (!slotSizeAndAlignment ||
+        !slotBudget.tryAllocate(
+            slotSizeAndAlignment->first.getFixedValue() *
+                attributionTy.getNumElements(),
+            std::max<int64_t>(slotSizeAndAlignment->second.getFixedValue(),
+                              SharedMemoryBudget::kDefaultAlignmentBytes)))
+      return {};
+  }
+  if (!slotBudget.tryAllocate(bytes, alignment))
+    return {};
 
   auto workgroupAS = gpu::AddressSpaceAttr::get(
       rewriter.getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
@@ -2806,11 +2867,11 @@ Value ACCCGToGPULowering::allocateRoutineSharedSlot(acc::PrivatizeOp privatize,
   Value slot = gpuFuncOp.addWorkgroupAttribution(slotTy, loc);
   gpuFuncOp.setWorkgroupAttributionAttr(
       gpuFuncOp.getNumWorkgroupAttributions() - 1,
-      LLVM::LLVMDialect::getAlignAttrName(), rewriter.getI32IntegerAttr(16));
+      LLVM::LLVMDialect::getAlignAttrName(),
+      rewriter.getI32IntegerAttr(alignment));
   Value mem = castPointerLikeTypeIfNeeded(rewriter, loc, slot, baseTy);
-  Block *slotBlock = rewriter.getInsertionBlock();
-  if (slotBlock->mightHaveTerminator()) {
-    // The next call of the routine rewrites the slot; wait for every reader.
+  if (routineSlotBarrierBlock != slotBlock) {
+    routineSlotBarrierBlock = slotBlock;
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(slotBlock->getTerminator());
     createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
