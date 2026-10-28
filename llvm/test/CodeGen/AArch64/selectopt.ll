@@ -996,3 +996,185 @@ latch:
 exit:
   ret void
 }
+
+; An unpredictable select in an inner-most loop should not be transformed to a branch.
+define double @loop_unpred(i32 %n, double %x, ptr nocapture %a) {
+; CHECKOO-LABEL: @loop_unpred(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKOO-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKOO:       for.cond.cleanup:
+; CHECKOO-NEXT:    ret double [[X:%.*]]
+; CHECKOO:       for.body.preheader:
+; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKOO:       for.body:
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[LOAD:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECKOO-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X_ADDR]], [[LOAD]]
+; CHECKOO-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[LOAD]], double 0.000000e+00, !unpredictable [[META:![0-9]+]]
+; CHECKOO-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL]]
+; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECKOO:       for.exit:
+; CHECKOO-NEXT:    ret double [[X_NEXT]]
+;
+; CHECKII-LABEL: @loop_unpred(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKII-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKII:       for.cond.cleanup:
+; CHECKII-NEXT:    ret double [[X:%.*]]
+; CHECKII:       for.body.preheader:
+; CHECKII-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECKII-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKII:       for.body:
+; CHECKII-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKII-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKII-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[LOAD:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECKII-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X_ADDR]], [[LOAD]]
+; CHECKII-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double [[LOAD]], double 0.000000e+00, !unpredictable [[META:![0-9]+]]
+; CHECKII-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL]]
+; CHECKII-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKII-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECKII:       for.exit:
+; CHECKII-NEXT:    ret double [[X_NEXT]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret double %x
+
+for.body.preheader:
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %x.addr = phi double [ %x, %for.body.preheader ], [ %x.next, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 %indvars.iv
+  %load = load double, ptr %arrayidx, align 8
+  %cmp = fcmp ogt double %x.addr, %load
+  %sel = select i1 %cmp, double %load, double 0.000000e+00, !unpredictable !0
+  %x.next = fsub double %x.addr, %sel
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret double %x.next
+}
+
+; A loop with two recurrences where only one is unpredictable. The unpredictable
+; select should remain a select, while the predictable one is transformed to a branch on OoO cores.
+define double @two_recurrences_one_unpred(i32 %n, double %x, double %y, ptr nocapture %a, ptr nocapture %b) {
+; CHECKOO-LABEL: @two_recurrences_one_unpred(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKOO-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKOO:       for.cond.cleanup:
+; CHECKOO-NEXT:    ret double 0.000000e+00
+; CHECKOO:       for.body.preheader:
+; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKOO:       for.body:
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECKOO-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X:%.*]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[SELECT_END]] ]
+; CHECKOO-NEXT:    [[Y_ADDR:%.*]] = phi double [ [[Y:%.*]], [[FOR_BODY_PREHEADER]] ], [ [[Y_NEXT:%.*]], [[SELECT_END]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[LOAD_A:%.*]] = load double, ptr [[ARRAYIDX_A]], align 8
+; CHECKOO-NEXT:    [[CMP_A:%.*]] = fcmp ogt double [[X_ADDR]], [[LOAD_A]]
+; CHECKOO-NEXT:    [[SEL_A:%.*]] = select i1 [[CMP_A]], double [[LOAD_A]], double 0.000000e+00, !unpredictable [[META:![0-9]+]]
+; CHECKOO-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL_A]]
+; CHECKOO-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[LOAD_B:%.*]] = load double, ptr [[ARRAYIDX_B]], align 8
+; CHECKOO-NEXT:    [[Y_DIV:%.*]] = fdiv double [[Y_ADDR]], 2.000000e+00
+; CHECKOO-NEXT:    [[CMP_B:%.*]] = fcmp ogt double [[Y_DIV]], [[LOAD_B]]
+; CHECKOO-NEXT:    [[CMP_B_FROZEN:%.*]] = freeze i1 [[CMP_B]]
+; CHECKOO-NEXT:    br i1 [[CMP_B_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
+; CHECKOO:       select.false:
+; CHECKOO-NEXT:    br label [[SELECT_END]]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[SEL_B:%.*]] = phi double [ [[LOAD_B]], [[FOR_BODY]] ], [ 0.000000e+00, [[SELECT_FALSE]] ]
+; CHECKOO-NEXT:    [[Y_NEXT]] = fsub double [[Y_ADDR]], [[SEL_B]]
+; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKOO-NEXT:    [[ADD5:%.*]] = fadd double [[X_NEXT]], [[Y_NEXT]]
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECKOO:       for.exit:
+; CHECKOO-NEXT:    ret double [[ADD5]]
+;
+; CHECKII-LABEL: @two_recurrences_one_unpred(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKII-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKII:       for.cond.cleanup:
+; CHECKII-NEXT:    ret double 0.000000e+00
+; CHECKII:       for.body.preheader:
+; CHECKII-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECKII-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKII:       for.body:
+; CHECKII-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKII-NEXT:    [[X_ADDR:%.*]] = phi double [ [[X:%.*]], [[FOR_BODY_PREHEADER]] ], [ [[X_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKII-NEXT:    [[Y_ADDR:%.*]] = phi double [ [[Y:%.*]], [[FOR_BODY_PREHEADER]] ], [ [[Y_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECKII-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[LOAD_A:%.*]] = load double, ptr [[ARRAYIDX_A]], align 8
+; CHECKII-NEXT:    [[CMP_A:%.*]] = fcmp ogt double [[X_ADDR]], [[LOAD_A]]
+; CHECKII-NEXT:    [[SEL_A:%.*]] = select i1 [[CMP_A]], double [[LOAD_A]], double 0.000000e+00, !unpredictable [[META:![0-9]+]]
+; CHECKII-NEXT:    [[X_NEXT]] = fsub double [[X_ADDR]], [[SEL_A]]
+; CHECKII-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[LOAD_B:%.*]] = load double, ptr [[ARRAYIDX_B]], align 8
+; CHECKII-NEXT:    [[Y_DIV:%.*]] = fdiv double [[Y_ADDR]], 2.000000e+00
+; CHECKII-NEXT:    [[CMP_B:%.*]] = fcmp ogt double [[Y_DIV]], [[LOAD_B]]
+; CHECKII-NEXT:    [[SEL_B:%.*]] = select i1 [[CMP_B]], double [[LOAD_B]], double 0.000000e+00
+; CHECKII-NEXT:    [[Y_NEXT]] = fsub double [[Y_ADDR]], [[SEL_B]]
+; CHECKII-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKII-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKII-NEXT:    [[ADD5:%.*]] = fadd double [[X_NEXT]], [[Y_NEXT]]
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECKII:       for.exit:
+; CHECKII-NEXT:    ret double [[ADD5]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret double 0.000000e+00
+
+for.body.preheader:
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %x.addr = phi double [ %x, %for.body.preheader ], [ %x.next, %for.body ]
+  %y.addr = phi double [ %y, %for.body.preheader ], [ %y.next, %for.body ]
+  %arrayidx.a = getelementptr inbounds double, ptr %a, i64 %indvars.iv
+  %load.a = load double, ptr %arrayidx.a, align 8
+  %cmp.a = fcmp ogt double %x.addr, %load.a
+  %sel.a = select i1 %cmp.a, double %load.a, double 0.000000e+00, !unpredictable !0
+  %x.next = fsub double %x.addr, %sel.a
+  %arrayidx.b = getelementptr inbounds double, ptr %b, i64 %indvars.iv
+  %load.b = load double, ptr %arrayidx.b, align 8
+  %y.div = fdiv double %y.addr, 2.000000e+00
+  %cmp.b = fcmp ogt double %y.div, %load.b
+  %sel.b = select i1 %cmp.b, double %load.b, double 0.000000e+00
+  %y.next = fsub double %y.addr, %sel.b
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  %add5 = fadd double %x.next, %y.next
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret double %add5
+}
+
+!0 = !{}

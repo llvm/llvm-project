@@ -566,6 +566,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     StackSizeType maxTrueSliceLen = 0, maxFalseSliceLen = 0;
     Instruction *SelectWithProfile = nullptr;
     bool SelectWithProfileIsInverted = false;
+    Instruction *SelectWithUnpredictable = nullptr;
     for (SelectLike &SI : ASI.Selects) {
       if (!isa<SelectInst>(SI.getI()))
         continue;
@@ -595,6 +596,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
         SelectWithProfile = SI.getI();
         SelectWithProfileIsInverted = true;
       }
+      if (SI.getI()->getMetadata(LLVMContext::MD_unpredictable))
+        SelectWithUnpredictable = SI.getI();
     }
     // In the case of multiple select instructions in the same group, the order
     // of non-dependent instructions (instructions of different dependence
@@ -773,6 +776,10 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     } else {
       setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
     }
+    if (SelectWithUnpredictable)
+      CondBr->setMetadata(
+          LLVMContext::MD_unpredictable,
+          SelectWithUnpredictable->getMetadata(LLVMContext::MD_unpredictable));
 
     // Remove the old select instructions, now that they are not longer used.
     for (SelectLike &SI : ASI.Selects)
@@ -990,15 +997,35 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
   //     of a select group is the cost of its most expensive select instruction
   //     (assuming infinite resources and thus fully leveraging available ILP).
 
+  // Filter out select groups with unpredictable conditions. Unpredictable
+  // branches in inner loops degrade loop performance and must not be formed.
+  SelectGroups FilteredSIGroups;
+  for (SelectGroup &ASI : SIGroups) {
+    if (any_of(ASI.Selects, [](const SelectLike &SI) {
+          return SI.getI()->getMetadata(LLVMContext::MD_unpredictable);
+        })) {
+      ++NumSelectUnPred;
+      OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti",
+                                      ASI.Selects.front().getI());
+      ORmiss << "Not converted to branch because of unpredictable branch. ";
+      EmitAndPrintRemark(ORE, ORmiss);
+      continue;
+    }
+    FilteredSIGroups.push_back(ASI);
+  }
+
+  if (FilteredSIGroups.empty())
+    return;
+
   DenseMap<const Instruction *, CostInfo> InstCostMap;
   CostInfo LoopCost[2] = {{Scaled64::getZero(), Scaled64::getZero()},
                           {Scaled64::getZero(), Scaled64::getZero()}};
-  if (!computeLoopCosts(L, SIGroups, InstCostMap, LoopCost) ||
+  if (!computeLoopCosts(L, FilteredSIGroups, InstCostMap, LoopCost) ||
       !checkLoopHeuristics(L, LoopCost)) {
     return;
   }
 
-  for (SelectGroup &ASI : SIGroups) {
+  for (SelectGroup &ASI : FilteredSIGroups) {
     // Assuming infinite resources, the cost of a group of instructions is the
     // cost of the most expensive instruction of the group.
     Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
