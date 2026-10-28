@@ -1293,6 +1293,19 @@ add_header_library(
 )
 
 add_header_library(
+  epoll_create
+  HDRS
+    epoll_create.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   epoll_create1
   HDRS
     epoll_create1.h
