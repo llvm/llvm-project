@@ -2245,10 +2245,6 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   desc.ptr_alloc = ptr;
   desc.ptr_align = (void *)addr_align;
   desc.allocator = al;
-
-  if (is_pinned && kmp_target_lock_mem)
-    kmp_target_lock_mem(desc.ptr_align, desc.size_a, default_device);
-
   *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
   KMP_MB();
 
@@ -2364,12 +2360,6 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   oal = (omp_allocator_handle_t)al; // cast to void* for comparisons
   KMP_DEBUG_ASSERT(al);
 
-  // if locked, we locked descriptor and user memory: unlock both
-  bool is_pinned = false;
-  if (allocator > kmp_max_mem_alloc)
-    is_pinned = al->pinned;
-  else if (allocator == ompx_pinned_mem_alloc)
-    is_pinned = true;
   if (allocator > kmp_max_mem_alloc && kmp_target_unlock_mem && al->pinned) {
     kmp_int32 device =
         __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
