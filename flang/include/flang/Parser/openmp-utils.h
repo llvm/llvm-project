@@ -88,8 +88,7 @@ llvm::directive::VersionRange GetVersionRangeForElement(
       maxVer = std::max(maxVer, v);
     }
   }
-  return llvm::directive::VersionRange{
-      static_cast<int>(minVer.value()), static_cast<int>(maxVer.value())};
+  return llvm::directive::VersionRange{minVer.value(), maxVer.value()};
 }
 
 llvm::directive::VersionRange GetVersionRangeForDirective(

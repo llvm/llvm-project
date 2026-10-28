@@ -105,15 +105,17 @@ private:
 
 class Versioned {
 public:
-  int getMinVersion(const Record *R) const {
+  unsigned getMinVersion(const Record *R) const {
     int64_t Min = R->getValueAsInt("minVersion");
-    assert(llvm::isInt<IntWidth>(Min) && "Value out of range of 'int'");
+    assert(Min >= 0 && llvm::isInt<IntWidth>(Min) &&
+           "Value out of range of non-negative 'int'");
     return Min;
   }
 
-  int getMaxVersion(const Record *R) const {
+  unsigned getMaxVersion(const Record *R) const {
     int64_t Max = R->getValueAsInt("maxVersion");
-    assert(llvm::isInt<IntWidth>(Max) && "Value out of range of 'int'");
+    assert(Max >= 0 && llvm::isInt<IntWidth>(Max) &&
+           "Value out of range of non-negative 'int'");
     return Max;
   }
 

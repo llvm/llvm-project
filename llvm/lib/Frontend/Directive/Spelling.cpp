@@ -15,15 +15,13 @@
 
 using namespace llvm;
 
-static bool Contains(directive::VersionRange V, int P) {
+static bool Contains(directive::VersionRange V, unsigned P) {
   return V.Min <= P && P <= V.Max;
 }
 
 llvm::StringRef llvm::directive::FindName(
     llvm::iterator_range<const directive::Spelling *> Range, unsigned Version) {
-  assert(llvm::isInt<8 * sizeof(int)>(Version) && "Version value out of range");
-
-  int V = Version;
+  unsigned V = Version;
   // Do a linear search to find the first Spelling that contains Version.
   // The condition "contains(S, Version)" does not partition the list of
   // spellings, so std::[lower|upper]_bound cannot be used.
