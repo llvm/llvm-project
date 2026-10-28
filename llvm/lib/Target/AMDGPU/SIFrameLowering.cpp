@@ -2673,9 +2673,8 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVCCHalfCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, MCRegister SGPR, MCRegister VCCHalf) const {
   const MachineFunction &MF = *MBB.getParent();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
-  assert(isWave64VCCHalf(ST, VCCHalf));
+  assert(isWave64VCCHalf(MF.getSubtarget<GCNSubtarget>(), VCCHalf));
 
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   int DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
