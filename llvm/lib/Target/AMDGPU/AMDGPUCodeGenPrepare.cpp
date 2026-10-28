@@ -1457,6 +1457,10 @@ bool AMDGPUCodeGenPrepareImpl::shouldKeepMulForMad64(
     return false;
   if (ST.getGeneration() < AMDGPUSubtarget::GFX9 || UA.isUniformAtDef(&I))
     return false;
+  // Only the SelectionDAG add combine fuses the mul into the mad.
+  if (getCGPassBuilderOption(TM).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE)
+    return false;
   return I.hasOneUse() && match(I.user_back(), m_Add(m_Value(), m_Value()));
 }
 
