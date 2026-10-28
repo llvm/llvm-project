@@ -32,7 +32,7 @@ static bool lowerLocalMemoryAtomics(Function &F) {
         CXI && CXI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
       LocalCmpXchgs.push_back(CXI);
     } else if (auto *RMWI = dyn_cast<AtomicRMWInst>(&I);
-        RMWI && RMWI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
+               RMWI && RMWI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
       LocalRMWs.push_back(RMWI);
     } else if (auto *LI = dyn_cast<LoadInst>(&I);
                LI && LI->isAtomic() &&
