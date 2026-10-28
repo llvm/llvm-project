@@ -707,6 +707,14 @@ math_test(
 )
 
 math_test(
+    name = "fdimf80",
+    hdrs = ["FDimTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fdimf16",
     hdrs = ["FDimTest.h"],
 )

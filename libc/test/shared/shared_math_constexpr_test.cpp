@@ -442,6 +442,8 @@ static_assert(Float80(0.0) ==
 static_assert(Float80(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_mag_numf80(Float80(0.0),
                                                           Float80(0.0)));
+static_assert(Float80(1.0) ==
+              LIBC_NAMESPACE::shared::fdimf80(Float80(1.0), Float80(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==

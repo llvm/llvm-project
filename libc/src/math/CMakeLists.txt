@@ -224,6 +224,7 @@ add_math_entrypoint_object(fdimf)
 add_math_entrypoint_object(fdiml)
 add_math_entrypoint_object(fdimf16)
 add_math_entrypoint_object(fdimf128)
+add_math_entrypoint_object(fdimf80)
 add_math_entrypoint_object(fdimbf16)
 
 add_math_entrypoint_object(fdiv)

@@ -699,6 +699,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
                                  Float80(0.0), Float80(0.0)));
   EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::fminimum_mag_numf80(
                                  Float80(0.0), Float80(0.0)));
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::fdimf80(Float80(0.0), Float80(0.0)));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
