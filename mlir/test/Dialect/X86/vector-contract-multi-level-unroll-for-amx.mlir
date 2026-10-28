@@ -2063,3 +2063,58 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// A blocked K loop cannot be tiled when either operand has a non-zero offset
+// in its vector K dimension.
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+func.func @negative_blocked_lhs_k_offset(%A: memref<?x?x32x96xbf16>, %B: memref<?x?x64x32xbf16>, %C: memref<?x?x32x32xf32>,
+                                         %m: index, %n: index, %k_start: index, %k_end: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %c = vector.transfer_read %C[%m, %n, %c0, %c0], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?x32x32xf32>, vector<32x32xf32>
+  %res = scf.for %k = %k_start to %k_end step %c1 iter_args(%acc = %c) -> (vector<32x32xf32>) {
+    %a = vector.transfer_read %A[%m, %k, %c0, %c32], %c0_0 {in_bounds = [true, true]} : memref<?x?x32x96xbf16>, vector<32x64xbf16>
+    %b = vector.transfer_read %B[%n, %k, %c0, %c0], %c0_0 {in_bounds = [true, true]} : memref<?x?x64x32xbf16>, vector<64x32xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<32x64xbf16>, vector<64x32xbf16> into vector<32x32xf32>
+    scf.yield %d : vector<32x32xf32>
+  }
+  vector.transfer_write %res, %C[%m, %n, %c0, %c0] {in_bounds = [true, true]} : vector<32x32xf32>, memref<?x?x32x32xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @negative_blocked_lhs_k_offset(
+// CHECK:         vector.contract {{.*}} : vector<32x64xbf16>, vector<64x32xbf16> into vector<32x32xf32>
+
+// NANO-LABEL: func.func @negative_blocked_lhs_k_offset(
+// NANO:         vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll_for_amx
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll_for_amx
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
