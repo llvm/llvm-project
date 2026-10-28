@@ -1751,12 +1751,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
     llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = Arg0->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt32Ty(this->getLLVMContext()), Arg0->getType());
     assert((Arg0->getType()->hasFloatingRepresentation() ||
             Arg0->getType()->hasIntegerRepresentation()) &&
            "sign operand must have a float or int representation");

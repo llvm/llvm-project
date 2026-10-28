@@ -1559,7 +1559,6 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the sine of the input value, Val.
