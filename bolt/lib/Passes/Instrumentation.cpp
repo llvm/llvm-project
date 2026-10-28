@@ -457,6 +457,16 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
     if (BBToSkip.find(&BB) != BBToSkip.end())
       continue;
 
+    // Instrument spanning tree leaves. This must come before any `continue`
+    // below, and it does not replace the edge and call instrumentation that
+    // follows: leaves can still have non-tree out-edges and calls.
+    if (!opts::ConservativeInstrumentation) {
+      auto STIt = STOutSet.find(&BB);
+      if (STIt == STOutSet.end() || STIt->second.empty())
+        instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
+                           BBToID[&BB]);
+    }
+
     bool HasUnconditionalBranch = false;
     bool HasJumpTable = false;
     bool IsInvokeBlock = InvokeBlocks.count(&BB) > 0;
@@ -573,17 +583,6 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
                           BBToID[FTBB]);
     }
   } // End of BBs loop
-
-  // Instrument spanning tree leaves
-  if (!opts::ConservativeInstrumentation) {
-    for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
-      BinaryBasicBlock &BB = *BBI;
-      auto STIt = STOutSet.find(&BB);
-      if (STIt == STOutSet.end() || STIt->second.empty())
-        instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
-                           BBToID[&BB]);
-    }
-  }
 
   // Consume list of critical edges: split them and add instrumentation to the
   // newly created BBs

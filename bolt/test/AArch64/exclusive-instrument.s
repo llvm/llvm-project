@@ -8,6 +8,15 @@
 // RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -nostdlib -Wl,-q -Wl,-fini=dummy
 // RUN: llvm-bolt %t.exe -o %t.bolt -instrument -v=2 | FileCheck %s
 
+// Counters are kept out of an exclusive region even when the block holding
+// the store is a spanning tree leaf, which gets a block counter instead of
+// edge counters.
+// RUN: llvm-bolt %t.exe -o %t.leaf.bolt -instrument --print-finalized \
+// RUN:   --print-only=case6 | FileCheck %s --check-prefix=CHECK-LEAF
+// CHECK-LEAF:     ldaxr
+// CHECK-LEAF-NOT: stadd
+// CHECK-LEAF:     stlxr
+
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
@@ -46,6 +55,7 @@ _start:
   bl case3
   bl case4
   bl case5
+  bl case6
 
   ret
 .size _start, .-_start
@@ -107,6 +117,21 @@ case5:
   ldxr x0, [x2]
   ret
 .size case5, .-case5
+
+# Case 6: the block holding the exclusive store is a spanning tree leaf
+.global case6
+.type case6, %function
+case6:
+  ldaxr w0, [x1]
+  cbz  w0, case6_store
+  clrex
+  b    case6_done
+case6_store:
+  stlxr w2, w3, [x1]
+  cbnz w2, case6
+case6_done:
+  ret
+.size case6, .-case6
 
 .global dummy
 .type dummy, %function
