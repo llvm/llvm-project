@@ -137,7 +137,7 @@ static void diagnoseInvalidFormatString(const CallBase *CI) {
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   Type *I32Ty = Type::getInt32Ty(Ctx);
 
   // Instead of creating global variables, the printf format strings are

@@ -3440,12 +3440,10 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "value of 128, 256, 512, 1024 or 2048">;
 def err_attribute_arm_sm_incompat_builtin : Error<
   "builtin can only be called from a %0 function">;
-def warn_attribute_arm_za_builtin_no_za_state : Warning<
-  "builtin call is not valid when calling from a function without active ZA state">,
-  InGroup<DiagGroup<"undefined-arm-za">>;
-def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
-  "builtin call is not valid when calling from a function without active ZT0 state">,
-  InGroup<DiagGroup<"undefined-arm-zt0">>;
+def err_attribute_arm_za_builtin_no_za_state : Error<
+  "builtin call is not valid when calling from a function without active ZA state">;
+def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
+  "builtin call is not valid when calling from a function without active ZT0 state">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -3470,6 +3468,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
@@ -3744,6 +3747,10 @@ def warn_nsdictionary_duplicate_key : Warning<
   InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
 def note_nsdictionary_duplicate_key_here : Note<
   "previous equal key is here">;
+def warn_objc_dictionary_ill_formed_utf8_key : Warning<
+  "dictionary key is ill-formed as UTF-8 and will be truncated in a static "
+  "constant dictionary, so it may not be found at runtime">,
+  InGroup<DiagGroup<"objc-dictionary-invalid-utf8-key">>;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall%select{ or swiftasynccall|}1 "
   "calling convention%select{|s}1">;
@@ -6420,7 +6427,7 @@ def warn_deprecated_builtin : Warning<
   InGroup<DeprecatedBuiltins>;
 def warn_hip_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
-  InGroup<HipDeprecatedBuiltins>, DefaultIgnore;
+  InGroup<HipDeprecatedBuiltins>;
 def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
@@ -7261,13 +7268,19 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its 'counted_by' attribute refers to bit-field %1">;
+def note_counted_by_counter_field : Note<
+  "bit-field %0 declared here">;
+
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -8802,7 +8815,7 @@ def warn_exception_caught_by_earlier_handler : Warning<
   InGroup<Exceptions>;
 def note_previous_exception_handler : Note<"for type %0">;
 def err_exceptions_disabled : Error<
-  "cannot use '%0' with exceptions disabled">;
+  "cannot use '%select{throw|try}0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
 def warn_throw_in_noexcept_func : Warning<
@@ -8910,7 +8923,9 @@ def warn_cdtor_function_try_handler_mem_expr : Warning<
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
 def err_throw_object_throwing_dtor : Error<
   "cannot throw object of type %0 with a potentially-throwing destructor">;
-
+def err_throw_or_catch_address_space_qualified_ptr : Error<
+  "cannot %select{throw|catch}0 %select{pointer|reference}1 with non-default address space "
+  "(type %2)">;
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
     "%0 can appear only once in a capture list">;
@@ -9627,7 +9642,7 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
-  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+  "%select{integral|integral or floating-point}1 type of 8, 16, 32, or 64 bits (%0 invalid)">;
 def err_atomic_hint_has_invalid_hint_type : Error<
    "invalid hint type argument to atomic hint operation (%0)">;
 
@@ -9700,7 +9715,7 @@ def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
 def err_atomic_op_hint_data_size : Error<
-  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+  "address argument to atomic %select{fetch|store}0 with hint must be of size 8, 16, 32 or 64 bits">;
 def err_atomic_hint_has_invalid_memory_order : Error<
    "invalid memory order argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_hint_has_invalid_hint_type : Warning<
@@ -9815,8 +9830,17 @@ def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
 def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
-  "cannot use '%0' in "
+  "cannot use '%select{throw|try}0' in "
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
+def err_cuda_device_rtti : Error<
+  "cannot use '%0' in "
+  "%select{__device__|__global__|__host__|__host__ __device__}1 function as "
+  "RTTI is not available in device code">;
+def err_cuda_device_rtti_var_init : Error<
+  "cannot use '%0' in the initializer of a device variable as RTTI is not "
+  "available in device code">;
+def note_cuda_device_rtti_default_used_here : Note<
+  "%select{default member initializer|default argument}0 used here">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
@@ -10141,6 +10165,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
+  def err_asm_invalid_local_var_reg : Error<"register '%0' unsuitable for "
+    "register variables">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
   def err_asm_unsupported_register_type : Error<
@@ -11143,6 +11169,14 @@ def warn_lifetime_safety_noescape_escapes
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
 
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
+
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
@@ -11365,6 +11399,11 @@ def warn_empty_defer_body : Warning<
   "defer statement has empty body">, InGroup<EmptyBody>;
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
+
+def warn_redundant_defer : Warning<
+  "redundant use of '%0'; the deferred statement is executed immediately">,
+  InGroup<DiagGroup<"redundant-defer">>;
+def note_redundant_defer_if : Note<"did you mean to use '%0 if'?">;
 
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
@@ -11881,8 +11920,10 @@ def err_opencl_global_invalid_addr_space : Error<
   "%select{program scope|static local|extern}0 variable must reside in %1 address space">;
 def err_missing_actual_pipe_type : Error<
   "missing actual type specifier for pipe">;
-def err_reference_pipe_type : Error <
-  "pipes packet types cannot be of reference type">;
+def err_invalid_pipe_packet_type : Error<
+  "%select{pointer|reference|block pointer|non-object|incomplete}0 type %1 "
+  "cannot be used as a pipe packet type">,
+  LegacyStableIds<["err_reference_pipe_type"]>;
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to an OpenCL kernel function">;
@@ -12110,6 +12151,8 @@ def warn_omp_minus_in_reduction_deprecated : Warning<
   InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_clause_modifier : Error<
+  "unexpected modifier in OpenMP clause '%0'">;
 def err_omp_unexpected_call_to_omp_runtime_api
     : Error<"calls to OpenMP runtime API are not allowed within a region that "
             "corresponds to a construct with an order clause that specifies "
@@ -12317,8 +12360,8 @@ def err_omp_collapse_stacked_tile : Error<
   "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
   "of a '#pragma omp tile' that is nested inside another loop-transforming "
   "directive; OpenMP permits this construct, but it is not yet supported">;
-def err_omp_simd_region_cannot_use_stmt : Error<
-  "'%0' statement cannot be used in OpenMP simd region">;
+def err_omp_simd_region_cannot_use_exceptions : Error<
+  "'%select{throw|try}0' cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
@@ -12358,7 +12401,8 @@ def err_omp_prohibited_region : Error<
   "; perhaps you forget to enclose 'omp %3' directive into a teams region?|"
   "; perhaps you forget to enclose 'omp %3' directive into a for, simd, for simd, parallel for, or parallel for simd region?}2">;
 def err_omp_prohibited_region_simd : Error<
-  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, or atomic directive}0">;
+  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, atomic, or loop directive"
+  "| except for ordered simd, simd, scan, atomic, loop, or loop-transforming directive}0">;
 def err_omp_prohibited_region_atomic : Error<
   "OpenMP constructs may not be nested inside an atomic region">;
 def err_omp_prohibited_region_order
@@ -12398,7 +12442,8 @@ def err_omp_atomic_not_expression_statement : Error<
 def note_omp_atomic_update: Note<
   "%select{expected an expression statement|expected built-in binary or unary operator|expected unary decrement/increment operation|"
   "expected expression of scalar type|expected assignment expression|expected built-in binary operator|"
-  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression}0">;
+  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression|"
+  "expected a valid expression}0">;
 def err_omp_atomic_capture_not_expression_statement : Error<
   "the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x',"
   " where x and v are both lvalue expressions with scalar type">;
@@ -12828,6 +12873,9 @@ def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
+def err_omp_adjust_args_invalid_item : Error<
+  "expected a parameter name, a parameter position, or a parameter range in "
+  "'adjust_args' clause">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
 def err_omp_append_args_with_varargs : Error<
@@ -13737,6 +13785,19 @@ def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
+def err_hlsl_interpolation_conflict : Error<
+  "'nointerpolation' cannot be combined with other interpolation modifiers">;
+def err_hlsl_interpolation_semantic : Error<
+  "'nointerpolation' cannot be used on %0">;
+def err_hlsl_interpolation_type : Error<
+  "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
+def warn_hlsl_duplicate_interpolation : Warning<
+  "duplicate interpolation modifier %0">,
+  InGroup<DuplicateDeclSpecifier>;
+def warn_hlsl_interpolation_override : Warning<
+  "interpolation modifier '%select{centroid|sample}0' overrides "
+  "'%select{center|centroid}1'">,
+  InGroup<IgnoredAttributes>;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -13744,11 +13805,26 @@ def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
+def err_hlsl_semantic_index_out_of_range
+    : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
+def err_hlsl_semantic_zero_sized_array
+    : Error<"semantic %0 cannot be applied to a zero-sized array">;
+def err_hlsl_semantic_64bit_type
+    : Error<"semantic %0 cannot use 64-bit component types in DXIL shader inputs "
+            "or outputs (was %1)">;
+def err_hlsl_semantic_invalid_type
+    : Error<"semantic %0 must be a "
+            "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
+            "%select{16 or 32 bit integer|32 bit integer|"
+            "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
+            "32 bit unsigned integer}3 type (was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
     : Error<"semantic %0 is not supported in %1 shader %2">;
+def err_hlsl_semantic_in_wrong_shader_model
+    : Error<"semantic %0 requires shader model %1 or greater">;
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
@@ -13860,6 +13936,25 @@ def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_dxil_only: Error<"%0 is only available for the DirectX target">;
+def err_hlsl_invalid_barrier_memory_flags: Error<
+  "invalid MemoryTypeFlags for Barrier operation; expected 0, ALL_MEMORY, or "
+  "some combination of UAV_MEMORY, GROUP_SHARED_MEMORY, NODE_INPUT_MEMORY, "
+  "NODE_OUTPUT_MEMORY flags">;
+def err_hlsl_invalid_barrier_semantic_flags: Error<
+  "invalid SemanticFlags for Barrier operation; expected 0 or some "
+  "combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags">;
+def err_hlsl_barrier_flag_requires_group: Error<
+  "%select{GROUP_SHARED_MEMORY|GROUP_SYNC|GROUP_SCOPE}0 specified for Barrier "
+  "operation when context has no visible group">;
+def err_hlsl_barrier_resource_requires_group: Error<
+  "resource Barrier operation requires a shader stage with a visible group">;
+def err_hlsl_barrier_node_memory_requires_node: Error<
+  "NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier "
+  "operation in a node shader">;
+def err_hlsl_barrier_scope_requires_memory: Error<
+  "%select{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument|"
+  "DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}0">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
@@ -13914,15 +14009,21 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_variable : Warning<
+defvar UnsafeBufferVariableMsg =
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
-  "does not perform bounds checks}1">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
-def warn_unsafe_buffer_operation : Warning<
+  "does not perform bounds checks}1";
+defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
-  "field %1 prone to unsafe buffer manipulation}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|"
+  "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;

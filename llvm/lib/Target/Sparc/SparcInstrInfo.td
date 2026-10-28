@@ -22,7 +22,7 @@ include "SparcInstrFormats.td"
 
 // True when generating 32-bit code.
 def Is32Bit : Predicate<"!Subtarget->is64Bit()">,
-              AssemblerPredicate<(all_of (not Feature64Bit))>;
+              AssemblerPredicate<(none_of Feature64Bit)>;
 
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">,
@@ -1022,6 +1022,17 @@ multiclass IPredBranch<string regstr, list<dag> CCPattern> {
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
 
+// This is for using the CALL instruction as a longer unconditional branch.
+let Defs = [O7], isBranch = 1, isCall = 0, isCodeGenOnly = 1,
+  isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
+  def CALL_LONGJUMP : InstSP<(outs), (ins calltarget:$disp, variable_ops),
+                  "call $disp", []> {
+    bits<30> disp;
+    let op = 1;
+    let Inst{29-0} = disp;
+  }
+}
+
 // Indirect branch instructions.
 let isTerminator = 1, isBarrier = 1,  hasDelaySlot = 1, isBranch =1,
      isIndirectBranch = 1, rd = 0, isCodeGenOnly = 1 in {
@@ -1770,7 +1781,7 @@ let hasSideEffects = 1 in {
                    Requires<[HasHardQuad]>;
 }
 
-// Floating point conditional move instrucitons with %fcc0-%fcc3.
+// Floating point conditional move instructions with %fcc0-%fcc3.
 let Predicates = [HasV9] in {
   let Constraints = "$f = $rd", intcc = 0 in {
     def V9MOVFCCrr

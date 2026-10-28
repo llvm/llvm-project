@@ -6,11 +6,11 @@
 define i1 @sel_i1(i1 %j, i1 %k, i1 %l) {
 ; CHECK-LABEL: sel_i1:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    move $2, $6
 ; CHECK-NEXT:    xor $1, $4, $zero
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn $6, $5, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    move $2, $6
+; CHECK-NEXT:    movn $2, $5, $1
 entry:
   %cond = xor i1 %j, false
   %res = select i1 %cond, i1 %k, i1 %l
@@ -21,14 +21,14 @@ entry:
 define i8 @sel_i8(i8 %j, i8 %k, i8 %l) {
 ; CHECK-LABEL: sel_i8:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    move $2, $6
 ; CHECK-NEXT:    seb $1, $4
-; CHECK-NEXT:    seb $2, $zero
-; CHECK-NEXT:    xor $1, $1, $2
+; CHECK-NEXT:    seb $3, $zero
+; CHECK-NEXT:    xor $1, $1, $3
 ; CHECK-NEXT:    sltu $1, $zero, $1
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn $6, $5, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    move $2, $6
+; CHECK-NEXT:    movn $2, $5, $1
 entry:
   %cond = icmp ne i8 %j, 0
   %res = select i1 %cond, i8 %k, i8 %l
@@ -39,14 +39,14 @@ entry:
 define i16 @sel_i16(i16 %j, i16 %k, i16 %l) {
 ; CHECK-LABEL: sel_i16:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    move $2, $6
 ; CHECK-NEXT:    seh $1, $4
-; CHECK-NEXT:    seh $2, $zero
-; CHECK-NEXT:    xor $1, $1, $2
+; CHECK-NEXT:    seh $3, $zero
+; CHECK-NEXT:    xor $1, $1, $3
 ; CHECK-NEXT:    sltu $1, $zero, $1
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn $6, $5, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    move $2, $6
+; CHECK-NEXT:    movn $2, $5, $1
 entry:
   %cond = icmp ne i16 %j, 0
   %res = select i1 %cond, i16 %k, i16 %l
@@ -57,12 +57,12 @@ entry:
 define i32 @sel_i32(i32 %j, i32 %k, i32 %l) {
 ; CHECK-LABEL: sel_i32:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    move $2, $6
 ; CHECK-NEXT:    xor $1, $4, $zero
 ; CHECK-NEXT:    sltu $1, $zero, $1
 ; CHECK-NEXT:    andi $1, $1, 1
-; CHECK-NEXT:    movn $6, $5, $1
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    move $2, $6
+; CHECK-NEXT:    movn $2, $5, $1
 entry:
   %cond = icmp ne i32 %j, 0
   %res = select i1 %cond, i32 %k, i32 %l

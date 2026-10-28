@@ -329,8 +329,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (store (i32))
     RET_ReallyLR
 
 ...
@@ -345,12 +345,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE [[DEF]](s32), [[COPY]](p0) :: (volatile store (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: G_STORE [[DEF]](i32), [[COPY]](p0) :: (volatile store (i32))
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (volatile store (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (volatile store (i32))
     RET_ReallyLR
 
 ...
@@ -366,8 +366,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store unordered (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (store unordered (i32))
     RET_ReallyLR
 
 ...
@@ -382,12 +382,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE [[DEF]](s32), [[COPY]](p0) :: (store monotonic (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: G_STORE [[DEF]](i32), [[COPY]](p0) :: (store monotonic (i32))
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store monotonic (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (store monotonic (i32))
     RET_ReallyLR
 
 ...
@@ -402,12 +402,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE [[DEF]](s32), [[COPY]](p0) :: (store release (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: G_STORE [[DEF]](i32), [[COPY]](p0) :: (store release (i32))
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store release (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (store release (i32))
     RET_ReallyLR
 
 ...
@@ -422,12 +422,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE [[DEF]](s32), [[COPY]](p0) :: (store seq_cst (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: G_STORE [[DEF]](i32), [[COPY]](p0) :: (store seq_cst (i32))
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store seq_cst (s32))
+    %1:_(i32) = G_IMPLICIT_DEF
+    G_STORE %1, %0 :: (store seq_cst (i32))
     RET_ReallyLR
 
 ...
