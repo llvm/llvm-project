@@ -295,7 +295,7 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
 
   const string_view bad_patterns[] = {
       // Unimplemented quantifiers.
-      "a+", "a?", "a{1}", "{",
+      "a{1}", "{",
       // Unimplemented word boundaries.
       "[[:<:]]", "[[:>:]]",
       // Unimplemented backreferences.
@@ -517,4 +517,28 @@ TEST(LlvmLibcRegexMatcherTest, AlternationAndGroupingStabilization) {
   ErrorOr<ExprId> multi_alt = parse_ere("a|b|c|d", REG_EXTENDED, alt_pool);
   ASSERT_TRUE(multi_alt.has_value());
   EXPECT_EQ(alt_pool.size(), size_t(9));
+}
+
+TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
+  ExprPool pool;
+  // r+ desugars to Concat(r, Star(r)) and r? desugars to Alt(EmptyStr, r),
+  // interning to identical ExprId handles.
+  ErrorOr<ExprId> plus_a = parse_ere("a+", REG_EXTENDED, pool);
+  ErrorOr<ExprId> concat_star_a = parse_ere("aa*", REG_EXTENDED, pool);
+  ASSERT_TRUE(plus_a.has_value());
+  ASSERT_TRUE(concat_star_a.has_value());
+  EXPECT_EQ(*plus_a, *concat_star_a);
+
+  ErrorOr<ExprId> qmark_a = parse_ere("a?", REG_EXTENDED, pool);
+  ErrorOr<ExprId> alt_empty_a = parse_ere("()|a", REG_EXTENDED, pool);
+  ASSERT_TRUE(qmark_a.has_value());
+  ASSERT_TRUE(alt_empty_a.has_value());
+  EXPECT_EQ(*qmark_a, *alt_empty_a);
+
+  ErrorOr<ExprId> ere = parse_ere("a+b?c", REG_EXTENDED, pool);
+  ASSERT_TRUE(ere.has_value());
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  size_t warm_nodes = pool.size();
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
 }
