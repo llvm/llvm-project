@@ -14,6 +14,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -98,7 +99,7 @@ namespace {
     LazyValueInfoCache *Parent;
     /// Numbers of the blocks with cache entries for this value, so that
     /// erasing it does not have to visit every block.
-    mutable SmallVector<unsigned, 2> Blocks;
+    mutable SmallSetVector<unsigned, 2> Blocks;
 
     LVIValueHandle(Value *V, LazyValueInfoCache *P = nullptr)
       : CallbackVH(V), Parent(P) { }
@@ -171,8 +172,7 @@ class LazyValueInfoCache {
     auto HandleIt = ValueHandles.find_as(Val);
     if (HandleIt == ValueHandles.end())
       HandleIt = ValueHandles.insert({Val, this}).first;
-    if (HandleIt->Blocks.empty() || HandleIt->Blocks.back() != BB->getNumber())
-      HandleIt->Blocks.push_back(BB->getNumber());
+    HandleIt->Blocks.insert(BB->getNumber());
   }
 
 public:
