@@ -79,7 +79,7 @@ llvm::StringRef PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
 }
 
 void PlatformOpenBSD::Initialize() {
-  Platform::Initialize();
+  PlatformPOSIX::Initialize();
 
   if (g_initialize_count++ == 0) {
 #if defined(__OpenBSD__)
@@ -145,9 +145,13 @@ void PlatformOpenBSD::GetStatus(Stream &strm) {
 #endif
 }
 
-// OpenBSD processes cannot yet be launched by spawning and attaching.
 bool PlatformOpenBSD::CanDebugProcess() {
-  return false;
+  if (IsHost()) {
+    return true;
+  } else {
+    // If we're connected, we can debug.
+    return IsConnected();
+  }
 }
 
 void PlatformOpenBSD::CalculateTrapHandlerSymbolNames() {
