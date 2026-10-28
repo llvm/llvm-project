@@ -18,9 +18,9 @@ using LIBC_NAMESPACE::operator""_u128;
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LIST_SQRT_TESTS(float128, LIBC_NAMESPACE::sqrtf128)
+LIST_SQRT_TESTS(Sqrtf128, float128, LIBC_NAMESPACE::sqrtf128)
 
-TEST_F(LlvmLibcSqrtTest, SpecialInputs) {
+TEST_F(LlvmLibcSqrtf128Test, SpecialInputs) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
 
   float128 INPUTS[] = {

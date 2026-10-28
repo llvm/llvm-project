@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncheckedCallArgsChecker -verify %s
 
+#include "mock-types.h"
+
 void WTFCrash(void);
 
 enum class Tag : bool { Value };
@@ -37,3 +39,24 @@ void doWorkWithObject(const CheckedObject&);
 void bar() {
   doWorkWithObject(CheckedObject());
 }
+
+namespace refptr_checked_ptr_capable {
+
+class CheckedRefCounted {
+public:
+  void ref() const;
+  void deref() const;
+  void incrementCheckedPtrCount() const;
+  void decrementCheckedPtrCount() const;
+};
+
+void receive(CheckedRefCounted&);
+struct Foo {
+  Ref<CheckedRefCounted> m_obj;
+
+  void foo() {
+    receive(m_obj.copyRef());
+  }
+};
+
+} // namespace refptr_checked_ptr_capable

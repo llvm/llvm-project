@@ -33,6 +33,7 @@ namespace lower {
 class AbstractConverter;
 } // namespace lower
 namespace semantics {
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 } // namespace Fortran
@@ -80,10 +81,9 @@ public:
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
   /// Map a clause-level intrinsic operator to the parser-level one, so callers
-  /// can build the operator's mangled reduction name
-  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
-  /// user-defined intrinsic-operator reduction under. Only the operators a user
-  /// reduction may use are handled.
+  /// can build the operator's mangled reduction name (MakeNameFromOperator)
+  /// that semantics stores a user-defined intrinsic-operator reduction under.
+  /// Only the operators a user reduction may use are handled.
   static parser::DefinedOperator::IntrinsicOperator
   toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
 
@@ -92,6 +92,14 @@ public:
 
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
+
+  /// Return the user-defined reduction that processReductionArguments would
+  /// bind instead of \p reductionIntrinsic for \p type in \p scope, or null if
+  /// it would bind the supported intrinsic.
+  static const semantics::Symbol *findUserDefinedReductionForIntrinsic(
+      const semantics::Scope &scope,
+      const omp::clause::ProcedureDesignator &reductionIntrinsic,
+      const semantics::DeclTypeSpec *type);
 
   static const semantics::SourceName
   getRealName(const semantics::Symbol *symbol);

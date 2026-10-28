@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/string_view.h"
@@ -46,7 +47,7 @@ TEST_F(LlvmLibcSendfileTest, CreateAndTransfer) {
   int out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(out_fd, 0);
   ASSERT_ERRNO_SUCCESS();
-  ssize_t size = LIBC_NAMESPACE::sendfile(in_fd, out_fd, nullptr, IN_SIZE);
+  ssize_t size = LIBC_NAMESPACE::sendfile(out_fd, in_fd, nullptr, IN_SIZE);
   ASSERT_EQ(size, IN_SIZE);
   ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
@@ -57,6 +58,81 @@ TEST_F(LlvmLibcSendfileTest, CreateAndTransfer) {
   char buf[IN_SIZE];
   ASSERT_EQ(IN_SIZE, LIBC_NAMESPACE::read(out_fd, buf, IN_SIZE));
   ASSERT_EQ(cpp::string_view(buf), cpp::string_view(IN_DATA));
+
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(IN_FILE), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(OUT_FILE), Succeeds(0));
+}
+
+TEST_F(LlvmLibcSendfileTest, WrongDirectionFails) {
+  constexpr const char *IN_FILE = "testdata/sendfile_wrong_in.test";
+  constexpr const char *OUT_FILE = "testdata/sendfile_wrong_out.test";
+  const char IN_DATA[] = "test data";
+  constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
+
+  int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GT(in_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+
+  // in_fd is read-only, out_fd is write-only.
+  in_fd = LIBC_NAMESPACE::open(IN_FILE, O_RDONLY);
+  ASSERT_GT(in_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  int out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GT(out_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  // Swapping the arguments (passing in_fd as out_fd and out_fd as in_fd) must
+  // fail with EBADF because in_fd cannot be written to and out_fd cannot be
+  // read from.
+  ASSERT_THAT(LIBC_NAMESPACE::sendfile(in_fd, out_fd, nullptr, IN_SIZE),
+              Fails<ssize_t>(EBADF));
+
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
+
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(IN_FILE), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(OUT_FILE), Succeeds(0));
+}
+
+TEST_F(LlvmLibcSendfileTest, OffsetTransfer) {
+  constexpr const char *IN_FILE = "testdata/sendfile_offset_in.test";
+  constexpr const char *OUT_FILE = "testdata/sendfile_offset_out.test";
+  const char IN_DATA[] = "sendfile offset test";
+  constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
+  constexpr off_t OFFSET = 9;
+  constexpr ssize_t TRANSFER_SIZE = IN_SIZE - OFFSET;
+
+  int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GT(in_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+
+  in_fd = LIBC_NAMESPACE::open(IN_FILE, O_RDONLY);
+  ASSERT_GT(in_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  int out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GT(out_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  off_t offset = OFFSET;
+  ssize_t size =
+      LIBC_NAMESPACE::sendfile(out_fd, in_fd, &offset, TRANSFER_SIZE);
+  ASSERT_EQ(size, TRANSFER_SIZE);
+  ASSERT_EQ(offset, off_t(OFFSET + TRANSFER_SIZE));
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
+
+  out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_RDONLY);
+  ASSERT_GT(out_fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  char buf[TRANSFER_SIZE];
+  ASSERT_EQ(TRANSFER_SIZE, LIBC_NAMESPACE::read(out_fd, buf, TRANSFER_SIZE));
+  ASSERT_EQ(cpp::string_view(buf, TRANSFER_SIZE),
+            cpp::string_view(IN_DATA + OFFSET, TRANSFER_SIZE));
+  ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::unlink(IN_FILE), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::unlink(OUT_FILE), Succeeds(0));

@@ -32,3 +32,31 @@ entry:
   %interleaved = shufflevector <2 x double> %real, <2 x double> %imag, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x double> %interleaved
 }
+
+define <4 x double> @complex_mul_negated_real_operand(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: complex_mul_negated_real_operand:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    mov v0.16b, v5.16b
+; CHECK-NEXT:    mov v1.16b, v4.16b
+; CHECK-NEXT:    ret
+entry:
+  %a.real = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %a.imag = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %b.real = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %b.imag = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %neg.a.imag = fneg contract <2 x double> %a.imag
+  %real.0 = fmul contract <2 x double> %neg.a.imag, %b.imag
+  %real.1 = fmul contract <2 x double> %a.real, %b.real
+  %real = fadd contract <2 x double> %real.0, %real.1
+  %imag.0 = fmul contract <2 x double> %a.real, %b.imag
+  %imag.1 = fmul contract <2 x double> %a.imag, %b.real
+  %imag = fadd contract <2 x double> %imag.0, %imag.1
+  %interleaved = shufflevector <2 x double> %real, <2 x double> %imag, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %interleaved
+}

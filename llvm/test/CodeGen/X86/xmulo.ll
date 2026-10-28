@@ -63,7 +63,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb %sil
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -73,7 +73,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    imulb %sil
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -83,7 +83,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    imulb %dl
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -93,7 +93,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -108,14 +108,14 @@ define zeroext i1 @smuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi16:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw %si, %di
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movw %di, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi16:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulw %si, %di
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movw %di, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -123,7 +123,7 @@ define zeroext i1 @smuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi16:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulw %dx, %cx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movw %cx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -132,7 +132,7 @@ define zeroext i1 @smuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    imulw {{[0-9]+}}(%esp), %dx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movw %dx, (%ecx)
 ; WIN32-NEXT:    retl
   %t = call {i16, i1} @llvm.smul.with.overflow.i16(i16 %v1, i16 %v2)
@@ -146,14 +146,14 @@ define zeroext i1 @smuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi32:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull %esi, %edi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movl %edi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi32:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imull %esi, %edi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -161,7 +161,7 @@ define zeroext i1 @smuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi32:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imull %edx, %ecx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movl %ecx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -170,7 +170,7 @@ define zeroext i1 @smuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    imull {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movl %edx, (%ecx)
 ; WIN32-NEXT:    retl
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -184,14 +184,14 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi64:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq %rsi, %rdi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movq %rdi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi64:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulq %rsi, %rdi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -199,7 +199,7 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi64:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulq %rdx, %rcx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movq %rcx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -276,7 +276,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb %sil
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -286,7 +286,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    mulb %sil
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -296,7 +296,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulb %dl
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -306,7 +306,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -324,7 +324,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw %si
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movw %ax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -335,7 +335,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FAST-NEXT:    mulw %si
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movw %ax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -345,7 +345,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulw %dx
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movw %ax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -356,7 +356,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulw {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movw %ax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -374,7 +374,7 @@ define zeroext i1 @umuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    mull %esi
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movl %eax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -384,7 +384,7 @@ define zeroext i1 @umuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    mull %esi
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movl %eax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -394,7 +394,7 @@ define zeroext i1 @umuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mull %edx
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movl %eax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -405,7 +405,7 @@ define zeroext i1 @umuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movl %eax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -423,7 +423,7 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movq %rdi, %rax
 ; SDAG-NEXT:    mulq %rsi
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movq %rax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -433,7 +433,7 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movq %rdi, %rax
 ; FAST-NEXT:    mulq %rsi
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movq %rax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -443,7 +443,7 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %rdx
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movq %rax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -464,10 +464,10 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    andb %dl, %cl
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto %bl
+; WIN32-NEXT:    setb %bl
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    mull %ebp
-; WIN32-NEXT:    seto %ch
+; WIN32-NEXT:    setb %ch
 ; WIN32-NEXT:    orb %bl, %ch
 ; WIN32-NEXT:    orb %cl, %ch
 ; WIN32-NEXT:    leal (%edi,%eax), %esi
@@ -501,7 +501,7 @@ define i32 @smuloselecti32(i32 %v1, i32 %v2) {
 ; LINUX-NEXT:    movl %esi, %eax
 ; LINUX-NEXT:    movl %edi, %ecx
 ; LINUX-NEXT:    imull %esi, %ecx
-; LINUX-NEXT:    cmovol %edi, %eax
+; LINUX-NEXT:    cmovbl %edi, %eax
 ; LINUX-NEXT:    retq
 ;
 ; WIN64-LABEL: smuloselecti32:
@@ -509,7 +509,7 @@ define i32 @smuloselecti32(i32 %v1, i32 %v2) {
 ; WIN64-NEXT:    movl %edx, %eax
 ; WIN64-NEXT:    movl %ecx, %edx
 ; WIN64-NEXT:    imull %eax, %edx
-; WIN64-NEXT:    cmovol %ecx, %eax
+; WIN64-NEXT:    cmovbl %ecx, %eax
 ; WIN64-NEXT:    retq
 ;
 ; WIN32-LABEL: smuloselecti32:
@@ -518,7 +518,7 @@ define i32 @smuloselecti32(i32 %v1, i32 %v2) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, %edx
 ; WIN32-NEXT:    imull %ecx, %edx
-; WIN32-NEXT:    jo LBB11_2
+; WIN32-NEXT:    jb LBB11_2
 ; WIN32-NEXT:  # %bb.1:
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:  LBB11_2:
@@ -535,7 +535,7 @@ define i64 @smuloselecti64(i64 %v1, i64 %v2) {
 ; LINUX-NEXT:    movq %rsi, %rax
 ; LINUX-NEXT:    movq %rdi, %rcx
 ; LINUX-NEXT:    imulq %rsi, %rcx
-; LINUX-NEXT:    cmovoq %rdi, %rax
+; LINUX-NEXT:    cmovbq %rdi, %rax
 ; LINUX-NEXT:    retq
 ;
 ; WIN64-LABEL: smuloselecti64:
@@ -543,7 +543,7 @@ define i64 @smuloselecti64(i64 %v1, i64 %v2) {
 ; WIN64-NEXT:    movq %rdx, %rax
 ; WIN64-NEXT:    movq %rcx, %rdx
 ; WIN64-NEXT:    imulq %rax, %rdx
-; WIN64-NEXT:    cmovoq %rcx, %rax
+; WIN64-NEXT:    cmovbq %rcx, %rax
 ; WIN64-NEXT:    retq
 ;
 ; WIN32-LABEL: smuloselecti64:
@@ -618,7 +618,7 @@ define i32 @umuloselecti32(i32 %v1, i32 %v2) {
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    movl %edi, %eax
 ; LINUX-NEXT:    mull %esi
-; LINUX-NEXT:    cmovol %edi, %esi
+; LINUX-NEXT:    cmovbl %edi, %esi
 ; LINUX-NEXT:    movl %esi, %eax
 ; LINUX-NEXT:    retq
 ;
@@ -627,7 +627,7 @@ define i32 @umuloselecti32(i32 %v1, i32 %v2) {
 ; WIN64-NEXT:    movl %edx, %r8d
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mull %edx
-; WIN64-NEXT:    cmovol %ecx, %r8d
+; WIN64-NEXT:    cmovbl %ecx, %r8d
 ; WIN64-NEXT:    movl %r8d, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -638,7 +638,7 @@ define i32 @umuloselecti32(i32 %v1, i32 %v2) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    mull %esi
-; WIN32-NEXT:    jo LBB13_2
+; WIN32-NEXT:    jb LBB13_2
 ; WIN32-NEXT:  # %bb.1:
 ; WIN32-NEXT:    movl %esi, %ecx
 ; WIN32-NEXT:  LBB13_2:
@@ -656,7 +656,7 @@ define i64 @umuloselecti64(i64 %v1, i64 %v2) {
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    movq %rdi, %rax
 ; LINUX-NEXT:    mulq %rsi
-; LINUX-NEXT:    cmovoq %rdi, %rsi
+; LINUX-NEXT:    cmovbq %rdi, %rsi
 ; LINUX-NEXT:    movq %rsi, %rax
 ; LINUX-NEXT:    retq
 ;
@@ -665,7 +665,7 @@ define i64 @umuloselecti64(i64 %v1, i64 %v2) {
 ; WIN64-NEXT:    movq %rdx, %r8
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %rdx
-; WIN64-NEXT:    cmovoq %rcx, %r8
+; WIN64-NEXT:    cmovbq %rcx, %r8
 ; WIN64-NEXT:    movq %r8, %rax
 ; WIN64-NEXT:    retq
 ;
@@ -689,11 +689,11 @@ define i64 @umuloselecti64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    mull %edi
 ; WIN32-NEXT:    movl %edi, %edx
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; WIN32-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; WIN32-NEXT:    movl %ebp, %eax
 ; WIN32-NEXT:    movl %edx, %ebp
 ; WIN32-NEXT:    mull %ecx
-; WIN32-NEXT:    seto %bh
+; WIN32-NEXT:    setb %bh
 ; WIN32-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
 ; WIN32-NEXT:    orb %bl, %bh
 ; WIN32-NEXT:    addl %eax, %edi
@@ -731,7 +731,7 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb %sil
-; SDAG-NEXT:    jo .LBB15_1
+; SDAG-NEXT:    jb .LBB15_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -744,7 +744,7 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    imulb %sil
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    testb $1, %al
 ; FAST-NEXT:    jne .LBB15_1
 ; FAST-NEXT:  # %bb.2: # %continue
@@ -761,7 +761,7 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    imulb %dl
-; WIN64-NEXT:    jo .LBB15_1
+; WIN64-NEXT:    jb .LBB15_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -773,7 +773,7 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB15_1
+; WIN32-NEXT:    jb LBB15_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -796,7 +796,7 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; SDAG-LABEL: smulobri16:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw %si, %di
-; SDAG-NEXT:    jo .LBB16_1
+; SDAG-NEXT:    jb .LBB16_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -807,7 +807,7 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; FAST-LABEL: smulobri16:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulw %si, %di
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    testb $1, %al
 ; FAST-NEXT:    jne .LBB16_1
 ; FAST-NEXT:  # %bb.2: # %continue
@@ -823,7 +823,7 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; WIN64-LABEL: smulobri16:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulw %dx, %cx
-; WIN64-NEXT:    jo .LBB16_1
+; WIN64-NEXT:    jb .LBB16_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -835,7 +835,7 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imulw {{[0-9]+}}(%esp), %ax
-; WIN32-NEXT:    jo LBB16_1
+; WIN32-NEXT:    jb LBB16_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -858,7 +858,7 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: smulobri32:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull %esi, %edi
-; SDAG-NEXT:    jo .LBB17_1
+; SDAG-NEXT:    jb .LBB17_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -869,7 +869,7 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; FAST-LABEL: smulobri32:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imull %esi, %edi
-; FAST-NEXT:    jo .LBB17_1
+; FAST-NEXT:    jb .LBB17_1
 ; FAST-NEXT:  # %bb.2: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
@@ -883,7 +883,7 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; WIN64-LABEL: smulobri32:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imull %edx, %ecx
-; WIN64-NEXT:    jo .LBB17_1
+; WIN64-NEXT:    jb .LBB17_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -895,7 +895,7 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imull {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    jo LBB17_1
+; WIN32-NEXT:    jb LBB17_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -918,7 +918,7 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: smulobri64:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq %rsi, %rdi
-; SDAG-NEXT:    jo .LBB18_1
+; SDAG-NEXT:    jb .LBB18_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -929,7 +929,7 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; FAST-LABEL: smulobri64:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulq %rsi, %rdi
-; FAST-NEXT:    jo .LBB18_1
+; FAST-NEXT:    jb .LBB18_1
 ; FAST-NEXT:  # %bb.2: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
@@ -943,7 +943,7 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; WIN64-LABEL: smulobri64:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulq %rdx, %rcx
-; WIN64-NEXT:    jo .LBB18_1
+; WIN64-NEXT:    jb .LBB18_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -1029,7 +1029,7 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb %sil
-; SDAG-NEXT:    jo .LBB19_1
+; SDAG-NEXT:    jb .LBB19_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -1042,7 +1042,7 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    mulb %sil
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    testb $1, %al
 ; FAST-NEXT:    jne .LBB19_1
 ; FAST-NEXT:  # %bb.2: # %continue
@@ -1059,7 +1059,7 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulb %dl
-; WIN64-NEXT:    jo .LBB19_1
+; WIN64-NEXT:    jb .LBB19_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -1071,7 +1071,7 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB19_1
+; WIN32-NEXT:    jb LBB19_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -1096,7 +1096,7 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw %si
-; SDAG-NEXT:    jo .LBB20_1
+; SDAG-NEXT:    jb .LBB20_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -1109,7 +1109,7 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FAST-NEXT:    mulw %si
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    testb $1, %al
 ; FAST-NEXT:    jne .LBB20_1
 ; FAST-NEXT:  # %bb.2: # %continue
@@ -1126,7 +1126,7 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulw %dx
-; WIN64-NEXT:    jo .LBB20_1
+; WIN64-NEXT:    jb .LBB20_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -1138,7 +1138,7 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulw {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB20_1
+; WIN32-NEXT:    jb LBB20_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -1162,7 +1162,7 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    mull %esi
-; SDAG-NEXT:    jo .LBB21_1
+; SDAG-NEXT:    jb .LBB21_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -1174,7 +1174,7 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    mull %esi
-; FAST-NEXT:    jo .LBB21_1
+; FAST-NEXT:    jb .LBB21_1
 ; FAST-NEXT:  # %bb.2: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
@@ -1189,7 +1189,7 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mull %edx
-; WIN64-NEXT:    jo .LBB21_1
+; WIN64-NEXT:    jb .LBB21_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -1201,7 +1201,7 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB21_1
+; WIN32-NEXT:    jb LBB21_1
 ; WIN32-NEXT:  # %bb.2: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
@@ -1225,7 +1225,7 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdi, %rax
 ; SDAG-NEXT:    mulq %rsi
-; SDAG-NEXT:    jo .LBB22_1
+; SDAG-NEXT:    jb .LBB22_1
 ; SDAG-NEXT:  # %bb.2: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
@@ -1237,7 +1237,7 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movq %rdi, %rax
 ; FAST-NEXT:    mulq %rsi
-; FAST-NEXT:    jo .LBB22_1
+; FAST-NEXT:    jb .LBB22_1
 ; FAST-NEXT:  # %bb.2: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
@@ -1252,7 +1252,7 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %rdx
-; WIN64-NEXT:    jo .LBB22_1
+; WIN64-NEXT:    jb .LBB22_1
 ; WIN64-NEXT:  # %bb.2: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
@@ -1276,10 +1276,10 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    andb %dl, %cl
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto %bl
+; WIN32-NEXT:    setb %bl
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    mull %ebp
-; WIN32-NEXT:    seto %ch
+; WIN32-NEXT:    setb %ch
 ; WIN32-NEXT:    orb %bl, %ch
 ; WIN32-NEXT:    orb %cl, %ch
 ; WIN32-NEXT:    leal (%edi,%eax), %esi
@@ -1319,7 +1319,7 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; LINUX-NEXT:    movq %rdi, %rax
 ; LINUX-NEXT:    movl $160, %ecx
 ; LINUX-NEXT:    mulq %rcx
-; LINUX-NEXT:    seto %al
+; LINUX-NEXT:    setb %al
 ; LINUX-NEXT:    orb %sil, %al
 ; LINUX-NEXT:    retq
 ;
@@ -1329,7 +1329,7 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    movl $160, %ecx
 ; WIN64-NEXT:    mulq %rcx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    orb %r8b, %al
 ; WIN64-NEXT:    retq
 ;
@@ -1339,7 +1339,7 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; WIN32-NEXT:    movl $160, %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl %eax, %ecx
-; WIN32-NEXT:    seto %bl
+; WIN32-NEXT:    setb %bl
 ; WIN32-NEXT:    movl $160, %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    addl %ecx, %edx
@@ -1360,7 +1360,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %esi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb (%rdi)
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -1369,7 +1369,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movzbl (%rdi), %eax
 ; FAST-NEXT:    imulb %sil
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -1379,7 +1379,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %edx, %eax
 ; WIN64-NEXT:    imulb (%rcx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1390,7 +1390,7 @@ define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movzbl (%eax), %eax
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -1408,7 +1408,7 @@ define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb (%rsi)
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -1418,7 +1418,7 @@ define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    imulb (%rsi)
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -1428,7 +1428,7 @@ define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    imulb (%rdx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1439,7 +1439,7 @@ define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    imulb (%ecx)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -1455,14 +1455,14 @@ define zeroext i1 @smuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi16_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw (%rdi), %si
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movw %si, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi16_load:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulw (%rdi), %si
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movw %si, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1470,7 +1470,7 @@ define zeroext i1 @smuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi16_load:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulw (%rcx), %dx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movw %dx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1480,7 +1480,7 @@ define zeroext i1 @smuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movzwl (%eax), %edx
 ; WIN32-NEXT:    imulw {{[0-9]+}}(%esp), %dx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movw %dx, (%ecx)
 ; WIN32-NEXT:    retl
   %v1 = load i16, ptr %ptr1
@@ -1495,14 +1495,14 @@ define zeroext i1 @smuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi16_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw (%rsi), %di
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movw %di, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi16_load2:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulw (%rsi), %di
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movw %di, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1510,7 +1510,7 @@ define zeroext i1 @smuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; WIN64-LABEL: smuloi16_load2:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulw (%rdx), %cx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movw %cx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1520,7 +1520,7 @@ define zeroext i1 @smuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    imulw (%eax), %dx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movw %dx, (%ecx)
 ; WIN32-NEXT:    retl
   %v2 = load i16, ptr %ptr2
@@ -1535,14 +1535,14 @@ define zeroext i1 @smuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi32_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull (%rdi), %esi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movl %esi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi32_load:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imull (%rdi), %esi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %esi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1550,7 +1550,7 @@ define zeroext i1 @smuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi32_load:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imull (%rcx), %edx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movl %edx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1560,7 +1560,7 @@ define zeroext i1 @smuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl (%eax), %edx
 ; WIN32-NEXT:    imull {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movl %edx, (%ecx)
 ; WIN32-NEXT:    retl
   %v1 = load i32, ptr %ptr1
@@ -1575,14 +1575,14 @@ define zeroext i1 @smuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi32_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull (%rsi), %edi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movl %edi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi32_load2:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imull (%rsi), %edi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1590,7 +1590,7 @@ define zeroext i1 @smuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; WIN64-LABEL: smuloi32_load2:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imull (%rdx), %ecx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movl %ecx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1600,7 +1600,7 @@ define zeroext i1 @smuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    imull (%eax), %edx
-; WIN32-NEXT:    seto %al
+; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    movl %edx, (%ecx)
 ; WIN32-NEXT:    retl
   %v2 = load i32, ptr %ptr2
@@ -1615,14 +1615,14 @@ define zeroext i1 @smuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi64_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq (%rdi), %rsi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movq %rsi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi64_load:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulq (%rdi), %rsi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rsi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1630,7 +1630,7 @@ define zeroext i1 @smuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; WIN64-LABEL: smuloi64_load:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulq (%rcx), %rdx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movq %rdx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1708,14 +1708,14 @@ define zeroext i1 @smuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi64_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq (%rsi), %rdi
-; SDAG-NEXT:    seto %al
+; SDAG-NEXT:    setb %al
 ; SDAG-NEXT:    movq %rdi, (%rdx)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloi64_load2:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulq (%rsi), %rdi
-; FAST-NEXT:    seto %al
+; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
@@ -1723,7 +1723,7 @@ define zeroext i1 @smuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; WIN64-LABEL: smuloi64_load2:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulq (%rdx), %rcx
-; WIN64-NEXT:    seto %al
+; WIN64-NEXT:    setb %al
 ; WIN64-NEXT:    movq %rcx, (%r8)
 ; WIN64-NEXT:    retq
 ;
@@ -1803,7 +1803,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %esi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb (%rdi)
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -1812,7 +1812,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movzbl (%rdi), %eax
 ; FAST-NEXT:    mulb %sil
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -1822,7 +1822,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %edx, %eax
 ; WIN64-NEXT:    mulb (%rcx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1833,7 +1833,7 @@ define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movzbl (%eax), %eax
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -1851,7 +1851,7 @@ define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb (%rsi)
-; SDAG-NEXT:    seto %cl
+; SDAG-NEXT:    setb %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
 ; SDAG-NEXT:    movl %ecx, %eax
 ; SDAG-NEXT:    retq
@@ -1861,7 +1861,7 @@ define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
 ; FAST-NEXT:    mulb (%rsi)
-; FAST-NEXT:    seto %cl
+; FAST-NEXT:    setb %cl
 ; FAST-NEXT:    movb %al, (%rdx)
 ; FAST-NEXT:    andb $1, %cl
 ; FAST-NEXT:    movl %ecx, %eax
@@ -1871,7 +1871,7 @@ define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulb (%rdx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movb %al, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1882,7 +1882,7 @@ define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    mulb (%ecx)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
@@ -1901,7 +1901,7 @@ define zeroext i1 @umuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; SDAG-NEXT:    movl %esi, %eax
 ; SDAG-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw (%rdi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movw %ax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -1911,7 +1911,7 @@ define zeroext i1 @umuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movzwl (%rdi), %eax
 ; FAST-NEXT:    mulw %si
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movw %ax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -1921,7 +1921,7 @@ define zeroext i1 @umuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %edx, %eax
 ; WIN64-NEXT:    mulw (%rcx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movw %ax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1933,7 +1933,7 @@ define zeroext i1 @umuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movzwl (%eax), %eax
 ; WIN32-NEXT:    mulw {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movw %ax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -1953,7 +1953,7 @@ define zeroext i1 @umuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw (%rsi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movw %ax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -1964,7 +1964,7 @@ define zeroext i1 @umuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; FAST-NEXT:    mulw (%rsi)
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movw %ax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -1974,7 +1974,7 @@ define zeroext i1 @umuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulw (%rdx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movw %ax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -1986,7 +1986,7 @@ define zeroext i1 @umuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    mulw (%ecx)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movw %ax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -2005,7 +2005,7 @@ define zeroext i1 @umuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movl %esi, %eax
 ; SDAG-NEXT:    mull (%rdi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movl %eax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -2015,7 +2015,7 @@ define zeroext i1 @umuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movl (%rdi), %eax
 ; FAST-NEXT:    mull %esi
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movl %eax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -2025,7 +2025,7 @@ define zeroext i1 @umuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %edx, %eax
 ; WIN64-NEXT:    mull (%rcx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movl %eax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -2037,7 +2037,7 @@ define zeroext i1 @umuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl (%eax), %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movl %eax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -2056,7 +2056,7 @@ define zeroext i1 @umuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    mull (%rsi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movl %eax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -2066,7 +2066,7 @@ define zeroext i1 @umuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    mull (%rsi)
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movl %eax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -2076,7 +2076,7 @@ define zeroext i1 @umuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mull (%rdx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movl %eax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -2088,7 +2088,7 @@ define zeroext i1 @umuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    mull (%ecx)
-; WIN32-NEXT:    seto %cl
+; WIN32-NEXT:    setb %cl
 ; WIN32-NEXT:    movl %eax, (%esi)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
@@ -2107,7 +2107,7 @@ define zeroext i1 @umuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movq %rsi, %rax
 ; SDAG-NEXT:    mulq (%rdi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movq %rax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -2117,7 +2117,7 @@ define zeroext i1 @umuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movq (%rdi), %rax
 ; FAST-NEXT:    mulq %rsi
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movq %rax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -2127,7 +2127,7 @@ define zeroext i1 @umuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movq %rdx, %rax
 ; WIN64-NEXT:    mulq (%rcx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movq %rax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -2149,10 +2149,10 @@ define zeroext i1 @umuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    andb %dl, %cl
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto %bl
+; WIN32-NEXT:    setb %bl
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    mull %ebp
-; WIN32-NEXT:    seto %ch
+; WIN32-NEXT:    setb %ch
 ; WIN32-NEXT:    orb %bl, %ch
 ; WIN32-NEXT:    orb %cl, %ch
 ; WIN32-NEXT:    leal (%edi,%eax), %esi
@@ -2184,7 +2184,7 @@ define zeroext i1 @umuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movq %rdi, %rax
 ; SDAG-NEXT:    mulq (%rsi)
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    setb %dl
 ; SDAG-NEXT:    movq %rax, (%rcx)
 ; SDAG-NEXT:    movl %edx, %eax
 ; SDAG-NEXT:    retq
@@ -2194,7 +2194,7 @@ define zeroext i1 @umuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movq %rdi, %rax
 ; FAST-NEXT:    mulq (%rsi)
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    setb %dl
 ; FAST-NEXT:    movq %rax, (%rcx)
 ; FAST-NEXT:    andb $1, %dl
 ; FAST-NEXT:    movl %edx, %eax
@@ -2204,7 +2204,7 @@ define zeroext i1 @umuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq (%rdx)
-; WIN64-NEXT:    seto %cl
+; WIN64-NEXT:    setb %cl
 ; WIN64-NEXT:    movq %rax, (%r8)
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    retq
@@ -2226,10 +2226,10 @@ define zeroext i1 @umuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    andb %dl, %cl
 ; WIN32-NEXT:    mull %ebp
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto %bl
+; WIN32-NEXT:    setb %bl
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
-; WIN32-NEXT:    seto %ch
+; WIN32-NEXT:    setb %ch
 ; WIN32-NEXT:    orb %bl, %ch
 ; WIN32-NEXT:    orb %cl, %ch
 ; WIN32-NEXT:    leal (%edi,%eax), %esi

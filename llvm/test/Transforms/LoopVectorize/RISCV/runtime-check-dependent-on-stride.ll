@@ -4,7 +4,7 @@
 
 ; TODO: Make sure that optimizations (unit-stride multiversioning) don't prohibit vectorization.
 
-define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) {
+define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) vscale_range(2, 1024) {
 ; UNIT-STRIDE-MV-LABEL: define void @foo(
 ; UNIT-STRIDE-MV-SAME: ptr [[P:%.*]], ptr [[P_STRIDED:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; UNIT-STRIDE-MV-NEXT:  [[ENTRY:.*]]:

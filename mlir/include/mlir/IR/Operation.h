@@ -467,6 +467,13 @@ public:
   /// to use Properties instead.
   std::optional<Attribute> getInherentAttr(StringRef name);
 
+  /// Access an inherent attribute by name and cast it to `AttrClass`.
+  template <typename AttrClass>
+  AttrClass getInherentAttrOfType(StringRef name) {
+    return llvm::dyn_cast_or_null<AttrClass>(
+        getInherentAttr(name).value_or(Attribute{}));
+  }
+
   /// Set an inherent attribute by name.
   ///
   /// This method is available as a transient facility in the migration process
@@ -680,16 +687,16 @@ public:
 
   /// Return a range corresponding to the dialect attributes for this operation.
   dialect_attr_range getDialectAttrs() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return {dialect_attr_iterator(attrs.begin(), attrs.end()),
             dialect_attr_iterator(attrs.end(), attrs.end())};
   }
   dialect_attr_iterator dialect_attr_begin() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.begin(), attrs.end());
   }
   dialect_attr_iterator dialect_attr_end() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.end(), attrs.end());
   }
 

@@ -251,6 +251,20 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 
 // -----
 
+func.func @outerproduct_zero_rank_lhs(%arg0: vector<f32>, %arg1: vector<4xf32>) {
+  // expected-error@+1 {{expected 1-d vector for operand #1}}
+  %1 = vector.outerproduct %arg0, %arg1 : vector<f32>, vector<4xf32>
+}
+
+// -----
+
+func.func @outerproduct_zero_rank_rhs(%arg0: vector<4xf32>, %arg1: vector<f32>) {
+  // expected-error@+1 {{expected 1-d vector for operand #2}}
+  %1 = vector.outerproduct %arg0, %arg1 : vector<4xf32>, vector<f32>
+}
+
+// -----
+
 func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
   // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
   %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>
@@ -1269,6 +1283,30 @@ func.func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
 func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf32>) -> f32 {
   // expected-error@+1 {{'vector.multi_reduction' op destination type 'vector<16xf32>' is incompatible with source type 'vector<4x16xf32>'}}
   %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<4x16xf32> to vector<16xf32>
+}
+
+// -----
+
+func.func @multi_reduce_dim_out_of_range(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: 2}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 2] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_negative_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: -1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, -1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_duplicate_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op duplicate reduction dimension: 1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
 }
 
 // -----

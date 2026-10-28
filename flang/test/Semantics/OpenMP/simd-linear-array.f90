@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp -fopenmp-version=52
 ! OpenMP Version 5.2
 ! Test that arrays in LINEAR clause are rejected on SIMD directive
 ! This test addresses issue #171007 - crash with array in LINEAR clause
@@ -73,8 +73,10 @@ end subroutine
 ! Valid case - declare simd with REF modifier allows arrays
 subroutine test_declare_simd_ref_array_valid(arr)
   implicit none
-  integer, intent(in) :: arr(:)
+  integer, intent(in) :: arr(10)
   
+  !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !$omp declare simd linear(ref(arr))
-  ! No error expected - REF modifier allows assumed-shape arrays
+  ! No error expected - REF modifier allows arrays
 end subroutine

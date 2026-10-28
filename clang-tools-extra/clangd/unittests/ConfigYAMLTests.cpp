@@ -320,6 +320,21 @@ Diagnostics:
               llvm::ValueIs(val(true)));
 }
 
+TEST(ParseYAML, ClangTidyExperimentalCustomChecks) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Diagnostics:
+  ClangTidy:
+    ExperimentalCustomChecks: true
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Diagnostics.ClangTidy.ExperimentalCustomChecks,
+              llvm::ValueIs(val(true)));
+}
+
 TEST(ParseYAML, Style) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(

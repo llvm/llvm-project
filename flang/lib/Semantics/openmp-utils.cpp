@@ -17,11 +17,13 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/match.h"
+#include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
@@ -42,6 +44,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <array>
 #include <cinttypes>
@@ -57,6 +60,35 @@
 
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
+
+static SemanticOverrides *GetSemanticOverridesOrNull(
+    SemanticsContext *semaCtx) {
+  if (semaCtx) {
+    return &semaCtx->GetOmpSemanticOverrides();
+  }
+  return nullptr;
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticOverrides *overrides) {
+  if (overrides) {
+    auto f{overrides->allowedClauses.find(clauseId)};
+    if (f != overrides->allowedClauses.end() && f->second.test(dirId)) {
+      return true;
+    }
+  }
+
+  const auto &desc{llvm::omp::getDescriptor(dirId)};
+  return descriptor::GetAllowedElements(desc, version).test(clauseId);
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx) {
+  return IsClauseAllowedOnDirective(
+      clauseId, dirId, version, GetSemanticOverridesOrNull(semaCtx));
+}
 
 const Scope &GetScopingUnit(const Scope &scope) {
   const Scope *iter{&scope};
@@ -116,14 +148,14 @@ SourcedActionStmt GetActionStmt(const parser::Block &block) {
   return SourcedActionStmt{};
 }
 
-std::string ThisVersion(unsigned version) {
-  std::string tv{
-      std::to_string(version / 10) + "." + std::to_string(version % 10)};
+std::string ThisVersion(llvm::omp::Version version) {
+  auto v{version.value()};
+  std::string tv{std::to_string(v / 10) + "." + std::to_string(v % 10)};
   return "OpenMP v" + tv;
 }
 
-std::string TryVersion(unsigned version) {
-  return "try -fopenmp-version=" + std::to_string(version);
+std::string TryVersion(llvm::omp::Version version) {
+  return "try -fopenmp-version=" + std::to_string(version.value());
 }
 
 static const Symbol *GetFunctionReferenceSymbol(
@@ -297,13 +329,23 @@ bool IsVariableListItem(
   return false;
 }
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  // Whole objects and other designators cannot be substrings. Analyzing them
+  // as expressions can reject otherwise valid OpenMP list items.
+  if (auto *desg{GetDesignatorFromObj(object)}; desg &&
+      (std::holds_alternative<parser::Substring>(desg->u) ||
+          GetArrayElementFromObj(object))) {
+    // This query also validates potential substrings, including in clauses
+    // where they are permitted. Expression analysis can mark symbols erroneous
+    // and rewrite the parse tree, so it is not free of side effects. Retain its
+    // diagnostics: discarding them leaves erroneous symbols without a reported
+    // error and can cause assertion failures when those symbols are used again.
     evaluate::ExpressionAnalyzer ea(*semaCtx);
-    auto restorer{ea.GetContextualMessages().DiscardMessages()};
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
       return ExtractSubstring(*expr).has_value();
     }
+    return std::nullopt;
   }
   return false;
 }
@@ -461,14 +503,6 @@ struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
 
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
-    return Visit(x.value());
-  }
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Reference<Contained> &x) {
-    return Visit(x.get());
-  }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
     return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
@@ -686,7 +720,7 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
 /// For clauses that take argument lists, return the type of the argument
 /// list item. For other clauses return std::nullopt.
 std::optional<ListItemKind> GetArgumentListItemKind(
-    llvm::omp::Clause clause, unsigned version) {
+    llvm::omp::Clause clause, llvm::omp::Version version) {
   switch (clause) {
   case llvm::omp::Clause::OMPC_absent:
     if (version >= 51) {
@@ -920,9 +954,10 @@ bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
   return false;
 }
 
-OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+OmpErrorArgs GetErrorDirectiveArgs(
+    const parser::OmpDirectiveSpecification &spec) {
   OmpErrorArgs args;
-  for (const parser::OmpClause &clause : errDir.v.Clauses().v) {
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
       args.at = at->v.v;
     } else if (const auto *sev{
@@ -934,6 +969,10 @@ OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
     }
   }
   return args;
+}
+
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+  return GetErrorDirectiveArgs(errDir.v);
 }
 
 static bool IsTransformableLoop(const parser::OmpDirectiveSpecification &spec) {
@@ -1039,7 +1078,7 @@ static SymbolVector SelectUsedSymbols(
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx) {
+    llvm::omp::Version version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
       if (auto value{GetIntValueFromExpr(*expr, semaCtx)}) {
@@ -1071,7 +1110,7 @@ static WithReason<int64_t> GetNumArgumentsWithReasonForType(
 
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx) {
+    llvm::omp::Version version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     std::string name{GetUpperName(clauseId, version)};
     // Try the types used for list items.
@@ -1092,7 +1131,7 @@ WithReason<int64_t> GetNumArgumentsWithReason(
 }
 
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   bool isFullUnroll{IsFullUnroll(spec)};
 
@@ -1275,8 +1314,7 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1285,8 +1323,7 @@ WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   return WithReason<T>();
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }
@@ -1294,15 +1331,28 @@ WithReason<T> operator+(T a, const WithReason<T> &b) {
 /// Return the depth of the affected nest(s):
 ///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
-  bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_collapse, version)};
-  bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_ordered, version)};
+  SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
+  bool allowsCollapse{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_collapse, dir, version, overrides)};
+  bool allowsOrdered{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
-  if (allowsCollapse || allowsOrdered) {
+  // KLUDGE:
+  // LOOP is the only non-loop-transforming loop-associated directive
+  // that is not present in 4.5. With version=45 both allowsCollapse and
+  // allowsOrdered will be false, and the function will return nullopt.
+  // This will be handled properly once version checks for directives
+  // are present: LOOP will be added to the semantic overrides if it
+  // ends up being allowed.
+  // Until then treat it as a special case.
+  bool hasLoopConstruct{
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(dir),
+          llvm::omp::Directive::OMPD_loop)};
+
+  if (allowsCollapse || allowsOrdered || hasLoopConstruct) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
@@ -1411,7 +1461,7 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 /// Return the depth of the generated nest(s)
 ///   {generated-depth, is-perfect-nest}
 std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
   if (!IsLoopTransforming(dir)) {
@@ -1451,7 +1501,7 @@ std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
 /// Return the range of the affected nests in the sequence:
 ///   {first, count}
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
 
@@ -1490,7 +1540,7 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
 }
 
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   auto [depth, _]{GetAffectedNestDepthWithReason(spec, version, semaCtx)};
   if (!depth) {
@@ -1526,8 +1576,9 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
   auto clauseAt{
       llvm::find_if(spec.Clauses().v, [&](const parser::OmpClause &c) {
         llvm::omp::Clause clauseId{c.Id()};
+        SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
         return llvm::is_contained(clauses, clauseId) &&
-            llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+            IsClauseAllowedOnDirective(clauseId, dirId, version, overrides);
       })};
   if (clauseAt != spec.Clauses().v.end()) {
     depth.reason.Say(clauseAt->source,
@@ -1637,7 +1688,7 @@ bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x) {
 /// For the top-level DO COLLAPSE(5) construct, the k loop is the only
 /// directly affected loop.
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
-    const parser::OpenMPLoopConstruct &x, unsigned version,
+    const parser::OpenMPLoopConstruct &x, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   std::vector<const parser::DoConstruct *> result;
   const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
@@ -1770,7 +1821,7 @@ static_assert(HasSourceT<parser::ExecutionPartConstruct>::value);
 #endif // EXPENSIVE_CHECKS
 
 LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
-    unsigned version, bool allowAllLoops, SemanticsContext *semaCtx)
+    llvm::omp::Version version, bool allowAllLoops, SemanticsContext *semaCtx)
     : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
   entry_ = createConstructEntry(root);
   assert(entry_ && "Expecting loop like code");
@@ -1779,8 +1830,8 @@ LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
   precalculate();
 }
 
-LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
-    bool allowAllLoops, SemanticsContext *semaCtx)
+LoopSequence::LoopSequence(std::unique_ptr<Construct> entry,
+    llvm::omp::Version version, bool allowAllLoops, SemanticsContext *semaCtx)
     : version_(version), allowAllLoops_(allowAllLoops),
       entry_(std::move(entry)), semaCtx_(semaCtx) {
   createChildrenFromRange(entry_->location);
@@ -2521,6 +2572,367 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   return dynamicCond;
 }
 
+std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
+    const parser::OmpClauseList &clauses, SemanticsContext &context,
+    const OmpVariantMatchContext &matchContext) {
+  MetadirectiveCandidateSet result;
+
+  auto getContextSelector = [](const parser::OmpClause::When &whenClause)
+      -> const parser::modifier::OmpContextSelector * {
+    const auto &modifiers{std::get<0>(whenClause.v.t)};
+    if (!modifiers || modifiers->size() != 1) {
+      return nullptr;
+    }
+    return std::get_if<parser::modifier::OmpContextSelector>(
+        &modifiers->front().u);
+  };
+
+  auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
+    // Keep NOTHING with clauses, e.g. APPLY, so they are not silently dropped.
+    return spec.DirId() == llvm::omp::Directive::OMPD_nothing &&
+            spec.Clauses().v.empty()
+        ? nullptr
+        : &spec;
+  };
+
+  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
+      -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
+    const auto &optionalSpec{std::get<1>(whenClause.v.t)};
+    if (!optionalSpec) {
+      return {nullptr, false};
+    }
+    return {getVariant(optionalSpec->value()), true};
+  };
+
+  for (const parser::OmpClause &clause : clauses.v) {
+    if (const auto *whenClause{
+            std::get_if<parser::OmpClause::When>(&clause.u)}) {
+      const auto *ctxSel{getContextSelector(*whenClause)};
+      if (!ctxSel ||
+          FindUnsupportedSelectorFeature(*ctxSel, context) !=
+              UnsupportedSelectorFeature::None) {
+        return std::nullopt;
+      }
+
+      auto [spec, isExplicit]{getDirectiveVariant(*whenClause)};
+      llvm::omp::VariantMatchInfo rawVMI;
+      std::optional<DynamicUserCondition> dynamicCondition{
+          MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
+      if (llvm::any_of(
+              rawVMI.ConstructTraits, [](llvm::omp::TraitProperty property) {
+                return llvm::omp::getOpenMPContextTraitSetForProperty(
+                           property) != llvm::omp::TraitSet::construct;
+              })) {
+        return std::nullopt;
+      }
+
+      if (dynamicCondition) {
+        constexpr llvm::omp::TraitProperty dynamicConditionTrait{
+            llvm::omp::TraitProperty::user_condition_unknown};
+        constexpr llvm::omp::TraitProperty matchAnyTrait{
+            llvm::omp::TraitProperty::implementation_extension_match_any};
+        constexpr llvm::omp::TraitProperty matchNoneTrait{
+            llvm::omp::TraitProperty::implementation_extension_match_none};
+
+        // Static applicability uses only traits known at compile time. Keep
+        // the condition's score so a true runtime condition is still ranked
+        // correctly.
+        llvm::omp::VariantMatchInfo staticVMI{rawVMI};
+        std::optional<llvm::APInt> conditionScore;
+        auto scoreIt{staticVMI.ScoreMap.find(dynamicConditionTrait)};
+        if (scoreIt != staticVMI.ScoreMap.end()) {
+          conditionScore = scoreIt->second;
+          staticVMI.ScoreMap.erase(scoreIt);
+        }
+        staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+        llvm::APInt *conditionScorePtr{
+            conditionScore ? &*conditionScore : nullptr};
+
+        bool hasMatchAny{rawVMI.RequiredTraits.test(unsigned(matchAnyTrait))};
+        bool hasMatchNone{rawVMI.RequiredTraits.test(unsigned(matchNoneTrait))};
+        bool isStaticVMIApplicable{
+            llvm::omp::isVariantApplicableInContext(staticVMI, matchContext)};
+        // Only match_any can remain applicable when the static traits do not
+        // match, because a true runtime condition may satisfy the selector.
+        if (!isStaticVMIApplicable) {
+          if (!hasMatchAny ||
+              staticVMI.RequiredTraits.test(
+                  unsigned(llvm::omp::TraitProperty::invalid))) {
+            continue;
+          }
+
+          llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
+          conditionTrueVMI.addTrait(
+              llvm::omp::TraitProperty::user_condition_true, "<condition>",
+              conditionScorePtr);
+          if (!llvm::omp::isVariantApplicableInContext(
+                  conditionTrueVMI, matchContext)) {
+            continue;
+          }
+        }
+
+        auto addConditionTraitForRanking =
+            [&](llvm::omp::VariantMatchInfo &rankingVMI) {
+              rankingVMI.addTrait(hasMatchNone
+                      ? dynamicConditionTrait
+                      : llvm::omp::TraitProperty::user_condition_true,
+                  "<condition>", conditionScorePtr);
+            };
+
+        if (hasMatchAny && isStaticVMIApplicable) {
+          // Represent both outcomes: a guarded candidate with the condition's
+          // score and an unguarded candidate with only the static traits. If
+          // the WHEN clause omits its directive, only add the unguarded
+          // candidate.
+          if (isExplicit) {
+            llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
+            addConditionTraitForRanking(conditionTrueVMI);
+            result.candidates.push_back({spec, std::move(conditionTrueVMI),
+                isExplicit, dynamicCondition});
+          }
+          result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
+          continue;
+        }
+
+        llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
+        // Preserve the existing lowering behavior for an omitted directive:
+        // do not let its runtime condition raise the implicit NOTHING rank.
+        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
+          rankingVMI = llvm::omp::VariantMatchInfo();
+        else if (isExplicit)
+          addConditionTraitForRanking(rankingVMI);
+        result.candidates.push_back({spec, std::move(rankingVMI), isExplicit,
+            dynamicCondition, /*conditionShouldBeTrue=*/!hasMatchNone});
+        continue;
+      }
+
+      if (!llvm::omp::isVariantApplicableInContext(rawVMI, matchContext)) {
+        continue;
+      }
+      result.candidates.push_back({spec, std::move(rawVMI), isExplicit});
+    } else if (const auto *otherwiseClause{
+                   std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
+      if (otherwiseClause->v && otherwiseClause->v->v) {
+        result.fallback = getVariant(otherwiseClause->v->v->value());
+      }
+    } else if (const auto *defaultVariantClause{
+                   std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)}) {
+      result.fallback = getVariant(defaultVariantClause->v.v.value());
+    }
+  }
+  return result;
+}
+
+std::optional<unsigned> SelectBestMetadirectiveCandidate(
+    llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext) {
+  if (candidateIndices.empty()) {
+    return std::nullopt;
+  }
+  if (candidateIndices.size() == 1) {
+    return candidateIndices.front();
+  }
+
+  // The context scorer preserves input order for ties. Explicit replacements
+  // take precedence over an omitted directive's implicit NOTHING.
+  llvm::SmallVector<unsigned, 4> candidateOrder;
+  candidateOrder.reserve(candidateIndices.size());
+  for (unsigned index : candidateIndices) {
+    if (candidates[index].isExplicit) {
+      candidateOrder.push_back(index);
+    }
+  }
+  for (unsigned index : candidateIndices) {
+    if (!candidates[index].isExplicit) {
+      candidateOrder.push_back(index);
+    }
+  }
+
+  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
+  orderedVMIs.reserve(candidateOrder.size());
+  for (unsigned index : candidateOrder) {
+    orderedVMIs.push_back(candidates[index].vmi);
+  }
+
+  int bestIndex{
+      llvm::omp::getBestVariantMatchForContext(orderedVMIs, matchContext)};
+  if (bestIndex < 0) {
+    return std::nullopt;
+  }
+  CHECK(static_cast<std::size_t>(bestIndex) < candidateOrder.size());
+  return candidateOrder[bestIndex];
+}
+
+namespace {
+struct ConditionSymbols : evaluate::Traverse<ConditionSymbols, bool, false> {
+  using Base = evaluate::Traverse<ConditionSymbols, bool, false>;
+  explicit ConditionSymbols(std::vector<const Symbol *> &symbols)
+      : Base{*this}, symbols{symbols} {}
+  using Base::operator();
+  bool Default() const { return true; }
+  template <typename... A> bool Combine(A...) const { return true; }
+  bool operator()(const Symbol &symbol) const {
+    symbols.push_back(&symbol);
+    return true;
+  }
+  std::vector<const Symbol *> &symbols;
+};
+
+// Expr equality matches dummy arguments by position, so compare symbols too.
+template <typename T>
+bool AreSameMetadirectiveCondition(const T &left, const T &right) {
+  if (!(left == right))
+    return false;
+  std::vector<const Symbol *> leftSymbols, rightSymbols;
+  ConditionSymbols{leftSymbols}(left);
+  ConditionSymbols{rightSymbols}(right);
+  return leftSymbols == rightSymbols;
+}
+
+struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
+  using evaluate::rewrite::Identity::operator();
+
+  template <typename T>
+  evaluate::Expr<T> operator()(
+      evaluate::Expr<T> &&, const evaluate::Parentheses<T> &parentheses) {
+    return common::Clone(parentheses.left());
+  }
+
+  template <int KIND>
+  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
+  operator()(evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
+                 &&expr,
+      const evaluate::LogicalOperation<KIND> &operation) {
+    if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
+            operation.logicalOperator == evaluate::LogicalOperator::Or) &&
+        AreSameMetadirectiveCondition(operation.left(), operation.right()))
+      return common::Clone(operation.left());
+    return std::move(expr);
+  }
+};
+
+bool isRepeatableMetadirectiveCondition(const SomeExpr &expr) {
+  // A procedure call can depend on state that is not represented in the
+  // expression tree, so conservatively do not correlate calls, even if the
+  // procedure is pure. This also rejects coarray references and other
+  // expression nodes that are unsafe to copy.
+  if (!evaluate::IsSafelyCopyable(expr))
+    return false;
+
+  for (const Symbol &symbol : evaluate::CollectSymbols(expr)) {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (ultimate.attrs().HasAny({Attr::ASYNCHRONOUS, Attr::VOLATILE}) ||
+        evaluate::IsCoarray(ultimate))
+      return false;
+  }
+  return true;
+}
+} // namespace
+
+bool IsRepeatableMetadirectiveCondition(
+    const parser::ScalarExpr &condition, SemanticsContext &context) {
+  const SomeExpr *expr{GetExpr(context, condition)};
+  return expr && isRepeatableMetadirectiveCondition(*expr);
+}
+
+bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
+    const parser::ScalarExpr &right, SemanticsContext &context) {
+  const SomeExpr *leftExpr{GetExpr(context, left)};
+  const SomeExpr *rightExpr{GetExpr(context, right)};
+  if (!leftExpr || !rightExpr ||
+      !isRepeatableMetadirectiveCondition(*leftExpr) ||
+      !isRepeatableMetadirectiveCondition(*rightExpr))
+    return false;
+
+  MetadirectiveConditionNormalizer normalizer;
+  evaluate::rewrite::Mutator normalize{normalizer};
+  return AreSameMetadirectiveCondition(
+      normalize(*leftExpr), normalize(*rightExpr));
+}
+
+llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
+    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context) {
+  CHECK(selectedIndex < candidates.size());
+  const MetadirectiveCandidate &selected{candidates[selectedIndex]};
+  CHECK(selected.dynamicCondition);
+
+  llvm::SmallVector<unsigned, 4> result;
+  result.reserve(candidateIndices.size());
+  for (unsigned index : candidateIndices)
+    if (index != selectedIndex)
+      result.push_back(index);
+
+  // Inspect candidates in the order in which selection would evaluate them.
+  // A distinct repeatable condition cannot modify the selected condition, so
+  // the failed value remains usable past it. Stop at the first non-repeatable
+  // condition because it can change state before a lower-ranked occurrence is
+  // evaluated.
+  llvm::SmallVector<unsigned, 4> candidatesToInspect{result};
+  while (std::optional<unsigned> next{SelectBestMetadirectiveCandidate(
+      candidatesToInspect, candidates, matchContext)}) {
+    const MetadirectiveCandidate &candidate{candidates[*next]};
+    if (!candidate.dynamicCondition ||
+        !IsRepeatableMetadirectiveCondition(
+            *candidate.dynamicCondition->expr, context))
+      break;
+
+    bool hasSameFailedCondition{
+        candidate.conditionShouldBeTrue == selected.conditionShouldBeTrue &&
+        AreSameRepeatableMetadirectiveCondition(
+            *selected.dynamicCondition->expr, *candidate.dynamicCondition->expr,
+            context)};
+    if (hasSameFailedCondition)
+      llvm::erase(result, *next);
+    llvm::erase(candidatesToInspect, *next);
+  }
+  return result;
+}
+
+llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
+GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context) {
+  llvm::SmallVector<unsigned, 4> candidates;
+  candidates.reserve(candidateSet.candidates.size());
+  for (unsigned index{0}; index < candidateSet.candidates.size(); ++index) {
+    candidates.push_back(index);
+  }
+
+  llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4> reachable;
+  while (true) {
+    std::optional<unsigned> selected{SelectBestMetadirectiveCandidate(
+        candidates, candidateSet.candidates, matchContext)};
+    if (!selected) {
+      reachable.push_back(candidateSet.fallback);
+      break;
+    }
+
+    const MetadirectiveCandidate &candidate{candidateSet.candidates[*selected]};
+    reachable.push_back(candidate.spec);
+    // An unguarded winner ends selection. A dynamic winner leaves the
+    // remaining candidates reachable through its false path.
+    if (!candidate.dynamicCondition) {
+      break;
+    }
+
+    candidates = GetMetadirectiveElsePathCandidates(
+        *selected, candidates, candidateSet.candidates, matchContext, context);
+
+    if (std::optional<unsigned> selectedInElse{SelectBestMetadirectiveCandidate(
+            candidates, candidateSet.candidates, matchContext)}) {
+      const MetadirectiveCandidate &elseCandidate{
+          candidateSet.candidates[*selectedInElse]};
+      if (!elseCandidate.dynamicCondition &&
+          elseCandidate.spec == candidate.spec) {
+        break;
+      }
+    }
+  }
+  return reachable;
+}
+
 bool MayVariantBeSelected(
     const parser::traits::OmpContextSelectorSpecification *selector,
     SemanticsContext &context, OmpVariantMatchContext &matchContext) {
@@ -2855,10 +3267,5 @@ const Symbol *FindOperatorUserReductionSymbol(
     const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
   return FindUserReductionSymbol(
       scope, MangleDefinedOperator(operatorSym.name()), type);
-}
-
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
-  return MakeNameFromOperator(op, context);
 }
 } // namespace Fortran::semantics::omp

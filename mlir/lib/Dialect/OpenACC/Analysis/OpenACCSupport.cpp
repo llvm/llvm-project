@@ -18,9 +18,10 @@
 namespace mlir {
 namespace acc {
 
-std::string OpenACCSupport::getVariableName(Value v) {
+std::string OpenACCSupport::getVariableName(Value v,
+                                            VariableNameConfig config) {
   if (impl)
-    return impl->getVariableName(v);
+    return impl->getVariableName(v, config);
   return acc::getVariableName(v);
 }
 
@@ -53,10 +54,11 @@ bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
   return acc::isValidSymbolUse(user, symbol, definingOpPtr);
 }
 
-bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
+bool OpenACCSupport::isValidValueUse(Value v, Region &region,
+                                     SymbolTableCollection *symbolTables) {
   if (impl)
-    return impl->isValidValueUse(v, region);
-  return acc::isValidValueUse(v, region);
+    return impl->isValidValueUse(v, region, symbolTables);
+  return acc::isValidValueUse(v, region, symbolTables);
 }
 
 std::optional<gpu::GPUModuleOp>

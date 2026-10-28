@@ -15,7 +15,10 @@
 #define LLVM_LIB_TARGET_RISCV_RISCV_H
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -37,16 +40,34 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();
-void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
+void initializeRISCVCodeGenPrepareLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVDeadRegisterDefinitionsPass();
-void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
+class RISCVDeadRegisterDefinitionsPass
+    : public OptionalPassInfoMixin<RISCVDeadRegisterDefinitionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVDeadRegisterDefinitionsLegacyPass();
+void initializeRISCVDeadRegisterDefinitionsLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVIndirectBranchTrackingPass();
-void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
+class RISCVIndirectBranchTrackingPass
+    : public RequiredPassInfoMixin<RISCVIndirectBranchTrackingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVIndirectBranchTrackingLegacyPass();
+void initializeRISCVIndirectBranchTrackingLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVLandingPadSetupPass();
-void initializeRISCVLandingPadSetupPass(PassRegistry &);
+class RISCVLandingPadSetupPass
+    : public RequiredPassInfoMixin<RISCVLandingPadSetupPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVLandingPadSetupLegacyPass();
+void initializeRISCVLandingPadSetupLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
                                            CodeGenOptLevel OptLevel);
@@ -56,11 +77,23 @@ public:
   RISCVISelDAGToDAGPass(RISCVTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
-FunctionPass *createRISCVLateBranchOptPass();
-void initializeRISCVLateBranchOptPass(PassRegistry &);
+class RISCVLateBranchOptPass
+    : public OptionalPassInfoMixin<RISCVLateBranchOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVLateBranchOptLegacyPass();
+void initializeRISCVLateBranchOptLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMakeCompressibleOptPass();
-void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
+class RISCVMakeCompressiblePass
+    : public OptionalPassInfoMixin<RISCVMakeCompressiblePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVMakeCompressibleLegacyPass();
+void initializeRISCVMakeCompressibleLegacyPass(PassRegistry &);
 
 class RISCVGatherScatterLoweringPass
     : public OptionalPassInfoMixin<RISCVGatherScatterLoweringPass> {
@@ -107,43 +140,141 @@ public:
 FunctionPass *createRISCVFoldMemOffsetLegacyPass();
 void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMergeBaseOffsetOptPass();
-void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
+class RISCVMergeBaseOffsetPass
+    : public OptionalPassInfoMixin<RISCVMergeBaseOffsetPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVExpandPseudoPass();
-void initializeRISCVExpandPseudoPass(PassRegistry &);
+FunctionPass *createRISCVMergeBaseOffsetLegacyPass();
+void initializeRISCVMergeBaseOffsetLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPreRAExpandPseudoPass();
-void initializeRISCVPreRAExpandPseudoPass(PassRegistry &);
+class RISCVExpandPseudoPreRAPass
+    : public RequiredPassInfoMixin<RISCVExpandPseudoPreRAPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
 
-FunctionPass *createRISCVExpandAtomicPseudoPass();
-void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
+FunctionPass *createRISCVExpandPseudoPreRALegacyPass();
+void initializeRISCVExpandPseudoPreRALegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVInsertVSETVLIPass();
-void initializeRISCVInsertVSETVLIPass(PassRegistry &);
-extern char &RISCVInsertVSETVLIID;
+class RISCVExpandPseudoPostRAPass
+    : public RequiredPassInfoMixin<RISCVExpandPseudoPostRAPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVPostRAExpandPseudoPass();
-void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
-FunctionPass *createRISCVInsertReadWriteCSRPass();
-void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
+FunctionPass *createRISCVExpandPseudoPostRALegacyPass();
+void initializeRISCVExpandPseudoPostRALegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVInsertWriteVXRMPass();
-void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
+class RISCVExpandPseudoPreEmitPass
+    : public RequiredPassInfoMixin<RISCVExpandPseudoPreEmitPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVRedundantCopyEliminationPass();
-void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
+FunctionPass *createRISCVExpandPseudoPreEmitLegacyPass();
+void initializeRISCVExpandPseudoPreEmitLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMoveMergePass();
-void initializeRISCVMoveMergePass(PassRegistry &);
+class RISCVExpandPseudoAtomicsPass
+    : public RequiredPassInfoMixin<RISCVExpandPseudoAtomicsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVPushPopOptimizationPass();
-void initializeRISCVPushPopOptPass(PassRegistry &);
-FunctionPass *createRISCVLoadStoreOptPass();
-void initializeRISCVLoadStoreOptPass(PassRegistry &);
+FunctionPass *createRISCVExpandPseudoAtomicsLegacyPass();
+void initializeRISCVExpandPseudoAtomicsLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPreAllocZilsdOptPass();
-void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
+class RISCVInsertVSETVLIPass
+    : public RequiredPassInfoMixin<RISCVInsertVSETVLIPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertVSETVLILegacyPass();
+void initializeRISCVInsertVSETVLILegacyPass(PassRegistry &);
+extern char &RISCVInsertVSETVLILegacyID;
+
+class RISCVInsertReadWriteCSRPass
+    : public RequiredPassInfoMixin<RISCVInsertReadWriteCSRPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertReadWriteCSRLegacyPass();
+void initializeRISCVInsertReadWriteCSRLegacyPass(PassRegistry &);
+
+class RISCVInsertWriteVXRMPass
+    : public RequiredPassInfoMixin<RISCVInsertWriteVXRMPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertWriteVXRMLegacyPass();
+void initializeRISCVInsertWriteVXRMLegacyPass(PassRegistry &);
+
+class RISCVRedundantCopyEliminationPass
+    : public OptionalPassInfoMixin<RISCVRedundantCopyEliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createRISCVRedundantCopyEliminationLegacyPass();
+void initializeRISCVRedundantCopyEliminationLegacyPass(PassRegistry &);
+
+class RISCVMoveMergePass : public OptionalPassInfoMixin<RISCVMoveMergePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVMoveMergeLegacyPass();
+void initializeRISCVMoveMergeLegacyPass(PassRegistry &);
+
+class RISCVPushPopOptPass : public OptionalPassInfoMixin<RISCVPushPopOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPushPopOptLegacyPass();
+void initializeRISCVPushPopOptLegacyPass(PassRegistry &);
+
+class RISCVLoadStoreOptPass
+    : public OptionalPassInfoMixin<RISCVLoadStoreOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVLoadStoreOptLegacyPass();
+void initializeRISCVLoadStoreOptLegacyPass(PassRegistry &);
+
+class RISCVPreAllocZilsdOptPass
+    : public OptionalPassInfoMixin<RISCVPreAllocZilsdOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPreAllocZilsdOptLegacyPass();
+void initializeRISCVPreAllocZilsdOptLegacyPass(PassRegistry &);
 
 class RISCVZacasABIFixPass
     : public RequiredPassInfoMixin<RISCVZacasABIFixPass> {
@@ -172,8 +303,18 @@ void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createRISCVPreLegalizerCombiner();
 void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 
-ModulePass *createRISCVPromoteConstantPass();
-void initializeRISCVPromoteConstantPass(PassRegistry &);
+class RISCVPromoteConstantPass
+    : public OptionalPassInfoMixin<RISCVPromoteConstantPass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVPromoteConstantPass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createRISCVPromoteConstantLegacyPass();
+void initializeRISCVPromoteConstantLegacyPass(PassRegistry &);
 
 class RISCVVLOptimizerPass
     : public OptionalPassInfoMixin<RISCVVLOptimizerPass> {
@@ -185,11 +326,29 @@ public:
 FunctionPass *createRISCVVLOptimizerLegacyPass();
 void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVVMV0EliminationPass();
-void initializeRISCVVMV0EliminationPass(PassRegistry &);
+class RISCVVMV0EliminationPass
+    : public RequiredPassInfoMixin<RISCVVMV0EliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 
-FunctionPass *createRISCVQCRelaxMarkingPass();
-void initializeRISCVQCRelaxMarkingPass(PassRegistry &);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createRISCVVMV0EliminationLegacyPass();
+void initializeRISCVVMV0EliminationLegacyPass(PassRegistry &);
+
+class RISCVQCRelaxMarkingPass
+    : public OptionalPassInfoMixin<RISCVQCRelaxMarkingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVQCRelaxMarkingLegacyPass();
+void initializeRISCVQCRelaxMarkingLegacyPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
 } // namespace llvm

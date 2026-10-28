@@ -1570,7 +1570,7 @@ static bool isOverflowArithmetic(unsigned Opcode) {
 
 static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
                                     SDValue &Result, SDValue &CCR,
-                                    unsigned &CC) {
+                                    M68k::CondCode &CC) {
   SDNode *N = Op.getNode();
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
@@ -1652,7 +1652,7 @@ SDValue M68kTargetLowering::LowerXALUO(SDValue Op, SelectionDAG &DAG) const {
   // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
   // a "setcc" instruction that checks the overflow flag.
   SDValue Result, CCR;
-  unsigned CC;
+  M68k::CondCode CC;
   lowerOverflowArithmetic(Op, DAG, Result, CCR, CC);
 
   SDValue Overflow;
@@ -1771,9 +1771,9 @@ static M68k::CondCode TranslateIntegerM68kCC(ISD::CondCode SetCCOpcode) {
 /// Do a one-to-one translation of a ISD::CondCode to the M68k-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
-static unsigned TranslateM68kCC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
-                                bool IsFP, SDValue &LHS, SDValue &RHS,
-                                SelectionDAG &DAG) {
+static M68k::CondCode TranslateM68kCC(ISD::CondCode SetCCOpcode,
+                                      const SDLoc &DL, bool IsFP, SDValue &LHS,
+                                      SDValue &RHS, SelectionDAG &DAG) {
   if (!IsFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
       if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnes()) {
@@ -2100,26 +2100,6 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   return SDValue(New.getNode(), 1);
 }
 
-/// \brief Return true if the condition is an unsigned comparison operation.
-static bool isM68kCCUnsigned(unsigned M68kCC) {
-  switch (M68kCC) {
-  default:
-    llvm_unreachable("Invalid integer condition!");
-  case M68k::COND_EQ:
-  case M68k::COND_NE:
-  case M68k::COND_CS:
-  case M68k::COND_HI:
-  case M68k::COND_LS:
-  case M68k::COND_CC:
-    return true;
-  case M68k::COND_GT:
-  case M68k::COND_GE:
-  case M68k::COND_LT:
-  case M68k::COND_LE:
-    return false;
-  }
-}
-
 SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   if (isNullConstant(Op1))
@@ -2128,24 +2108,7 @@ SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
   assert(!(isa<ConstantSDNode>(Op1) && Op0.getValueType() == MVT::i1) &&
          "Unexpected comparison operation for MVT::i1 operands");
 
-  if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
-       Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
-    // Only promote the compare up to I32 if it is a 16 bit operation
-    // with an immediate.  16 bit immediates are to be avoided.
-    if ((Op0.getValueType() == MVT::i16 &&
-         (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
-        !DAG.getMachineFunction().getFunction().hasMinSize()) {
-      unsigned ExtendOp =
-          isM68kCCUnsigned(M68kCC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-      Op0 = DAG.getNode(ExtendOp, DL, MVT::i32, Op0);
-      Op1 = DAG.getNode(ExtendOp, DL, MVT::i32, Op1);
-    }
-    // Use SUB instead of CMP to enable CSE between SUB and CMP.
-    SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i8);
-    SDValue Sub = DAG.getNode(M68kISD::SUB, DL, VTs, Op0, Op1);
-    return SDValue(Sub.getNode(), 1);
-  }
-  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op0, Op1);
+  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op1, Op0);
 }
 
 /// Result of 'and' or 'trunc to i1' is compared against zero.
@@ -2217,7 +2180,7 @@ SDValue M68kTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   bool IsFP = Op1.getSimpleValueType().isFloatingPoint();
-  unsigned M68kCC = TranslateM68kCC(CC, DL, IsFP, Op0, Op1, DAG);
+  M68k::CondCode M68kCC = TranslateM68kCC(CC, DL, IsFP, Op0, Op1, DAG);
   if (M68kCC == M68k::COND_INVALID)
     return SDValue();
 
@@ -2239,10 +2202,10 @@ SDValue M68kTargetLowering::LowerSETCCCARRY(SDValue Op,
 
   EVT CarryVT = Carry.getValueType();
   APInt NegOne = APInt::getAllOnes(CarryVT.getScalarSizeInBits());
-  Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32), Carry,
+  Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i8), Carry,
                       DAG.getConstant(NegOne, DL, CarryVT));
 
-  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
+  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i8);
   SDValue Cmp =
       DAG.getNode(M68kISD::SUBX, DL, VTs, LHS, RHS, Carry.getValue(1));
 
@@ -2300,7 +2263,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       isNullConstant(Cond.getOperand(1).getOperand(0))) {
     SDValue Cmp = Cond.getOperand(1);
 
-    unsigned CondCode = Cond.getConstantOperandVal(0);
+    M68k::CondCode CondCode = M68k::CondCode(Cond.getConstantOperandVal(0));
 
     if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
         (CondCode == M68k::COND_EQ || CondCode == M68k::COND_NE)) {
@@ -2313,7 +2276,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == M68k::COND_NE))) {
 
-        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
+        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i8);
 
         SDValue Neg =
             DAG.getNode(M68kISD::SUB, DL, VTs,
@@ -2365,7 +2328,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   } else if (isOverflowArithmetic(CondOpcode)) {
     // Result is unused here.
     SDValue Result;
-    unsigned CCode;
+    M68k::CondCode CCode;
     lowerOverflowArithmetic(Cond, DAG, Result, Cond, CCode);
     CC = DAG.getConstant(CCode, DL, MVT::i8);
     addTest = false;
@@ -2397,7 +2360,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == M68kISD::SUB) {
-    unsigned CondCode = CC->getAsZExtVal();
+    M68k::CondCode CondCode = M68k::CondCode(CC->getAsZExtVal());
 
     if ((CondCode == M68k::COND_CC || CondCode == M68k::COND_CS) &&
         (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
@@ -2528,11 +2491,11 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   CondOpcode = Cond.getOpcode();
   if (isOverflowArithmetic(CondOpcode)) {
     SDValue Result;
-    unsigned CCode;
+    M68k::CondCode CCode;
     lowerOverflowArithmetic(Cond, DAG, Result, Cond, CCode);
 
     if (Inverted)
-      CCode = M68k::GetOppositeBranchCondition((M68k::CondCode)CCode);
+      CCode = M68k::GetOppositeBranchCondition(CCode);
     CC = DAG.getConstant(CCode, DL, MVT::i8);
 
     AddTest = false;
@@ -3623,7 +3586,7 @@ static SDValue combineM68kBrCond(SDNode *N, SelectionDAG &DAG,
 static SDValue combineSUBX(SDNode *N, SelectionDAG &DAG) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::SUBX, SDLoc(N), VTs, N->getOperand(0),
                        N->getOperand(1), Flags);
   }
@@ -3636,7 +3599,7 @@ static SDValue combineADDX(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::ADDX, SDLoc(N), VTs, N->getOperand(0),
                        N->getOperand(1), Flags);
   }

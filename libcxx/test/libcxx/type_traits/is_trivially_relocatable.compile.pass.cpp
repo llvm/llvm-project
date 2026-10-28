@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__type_traits/is_trivially_relocatable.h>
+#include <__type_traits/is_relocatable.h>
 #include <array>
 #include <deque>
 #include <exception>

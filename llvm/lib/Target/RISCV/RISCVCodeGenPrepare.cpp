@@ -48,6 +48,7 @@ public:
   bool run();
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
+  bool visitMul(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
   bool expandMulReduction(IntrinsicInst &I);
@@ -57,11 +58,11 @@ public:
 } // namespace
 
 namespace {
-class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
+class RISCVCodeGenPrepareLegacy : public FunctionPass {
 public:
   static char ID;
 
-  RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
+  RISCVCodeGenPrepareLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return PASS_NAME; }
@@ -111,6 +112,79 @@ bool RISCVCodeGenPrepareImpl::visitAnd(BinaryOperator &BO) {
   // Sign extend the constant and replace the And operand.
   C = SignExtend64<32>(C);
   BO.setOperand(1, ConstantInt::get(RHS->getType(), C));
+
+  return true;
+}
+
+// Look for (mul (zext X), (splat Y)) where zext is doubling the
+// element size and Y is known to be zero extended. Replace with
+// (mul (zext X), (zext (splat (trunc Y)))) to encourage the use of
+// widening multiply. Only do this if the splat isn't already in the same
+// basic block as the mul. We put the zext with the mul and the new
+// splat and trunc in the basic block with the original splat.
+// We only need to do this when sinkSplatOperands() is false, otherwise
+// CodeGenPrepare will just sink the splat and SelectionDAG can sort it out.
+// TODO: Extend to sign extend or mismatched extends.
+bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
+  using namespace PatternMatch;
+
+  if (!ST->hasVInstructions() || ST->sinkSplatOperands())
+    return false;
+
+  Value *LHS = BO.getOperand(0);
+  Value *RHS = BO.getOperand(1);
+
+  // Canonicalize zext to the LHS.
+  if (isa<ZExtInst>(RHS))
+    std::swap(LHS, RHS);
+
+  // LHS should be a zext.
+  Value *ZExtSrc;
+  if (!match(LHS, m_ZExt(m_Value(ZExtSrc))))
+    return false;
+
+  // RHS should be a splat shuffle.
+  Value *SplatVal;
+  Instruction *RHSI;
+  if (!match(RHS, m_Instruction(RHSI, m_OneUse(m_Splat(m_Value(SplatVal))))))
+    return false;
+
+  // zext should be in the same basic block as the mul.
+  if (cast<Instruction>(LHS)->getParent() != BO.getParent())
+    return false;
+
+  // The extend should be doubling.
+  unsigned Size = BO.getType()->getScalarSizeInBits();
+  unsigned SrcSize = ZExtSrc->getType()->getScalarSizeInBits();
+  if (Size != SrcSize * 2)
+    return false;
+
+  // Types should be legal.
+  if (Size != 64 && Size != 32 && Size != 16)
+    return false;
+  if (Size == 64 && !ST->hasVInstructionsI64())
+    return false;
+
+  // Splat should be in another basic block.
+  if (RHSI->getParent() == BO.getParent())
+    return false;
+
+  // Make sure we can freely truncate the value.
+  KnownBits Known = computeKnownBits(SplatVal, *DL);
+  if (Known.countMaxActiveBits() > SrcSize)
+    return false;
+
+  VectorType *VecTy = cast<VectorType>(ZExtSrc->getType());
+  Type *ScalarTy = VecTy->getElementType();
+  IRBuilder<> Builder(RHSI);
+  Value *Splat = Builder.CreateVectorSplat(
+      VecTy->getElementCount(), Builder.CreateTrunc(SplatVal, ScalarTy));
+
+  Builder.SetInsertPoint(&BO);
+  Value *NewZExt = Builder.CreateZExt(Splat, BO.getType());
+
+  RHSI->replaceAllUsesWith(NewZExt);
+  RHSI->eraseFromParent();
 
   return true;
 }
@@ -420,7 +494,7 @@ bool RISCVCodeGenPrepareImpl::run() {
   return MadeChange;
 }
 
-bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+bool RISCVCodeGenPrepareLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
@@ -433,16 +507,16 @@ bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   return RVCGP.run();
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME,
-                      false, false)
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
+INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
                     false)
 
-char RISCVCodeGenPrepareLegacyPass::ID = 0;
+char RISCVCodeGenPrepareLegacy::ID = 0;
 
 FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
-  return new RISCVCodeGenPrepareLegacyPass();
+  return new RISCVCodeGenPrepareLegacy();
 }
 
 PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,

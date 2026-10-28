@@ -972,7 +972,7 @@ namespace {
 /// If the source/target of a GatherToLDSOp is a CastOp that only removes static
 /// information or changes layout, the cast can be skipped.
 struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
                                 PatternRewriter &rewriter) const override {
@@ -1332,7 +1332,7 @@ namespace {
 /// Check if the scales input is used in other scaled mfma's while they exist.
 /// If theyre unused then pack the scales.
 struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ScaledMFMAOp op,
                                 PatternRewriter &rewriter) const override {

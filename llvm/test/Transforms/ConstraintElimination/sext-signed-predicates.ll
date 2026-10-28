@@ -105,7 +105,7 @@ define i1 @cmp_zext_nneg(i32 %a, i32 %b){
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SA:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = zext nneg i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SA]], 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -136,7 +136,7 @@ define i1 @cmp_zext(i32 %a, i32 %b){
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SA:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SA]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       else:

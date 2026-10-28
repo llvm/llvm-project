@@ -11,7 +11,7 @@
 # The function foo is defined in libstub.so but depends on foodep1 and foodep2
 
 # foodep1 and foodep2 a defined libfoodeps.a(foodeps.o) but this function
-# depeds on baz which is also defined in libstub.so.
+# depends on baz which is also defined in libstub.so.
 
 .functype foo () -> ()
 .import_name foo, foo_import

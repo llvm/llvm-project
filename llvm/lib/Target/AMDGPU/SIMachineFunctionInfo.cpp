@@ -9,7 +9,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -23,7 +22,6 @@
 #include "llvm/IR/Function.h"
 #include <cassert>
 #include <optional>
-#include <vector>
 
 enum { MAX_LANES = 64 };
 
@@ -826,11 +824,4 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     ScavengeFI = std::nullopt;
   }
   return false;
-}
-
-bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  auto [MinNumAGPR, MaxNumAGPR] =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
-                                      /*OnlyFirstRequired=*/true);
-  return MinNumAGPR != 0u;
 }
