@@ -123,7 +123,7 @@ This document is a work in progress!
 **GEP**
 :   `GetElementPtr`. An LLVM IR instruction that is used to get the address
     of a subelement of an aggregate data structure. It is documented in detail
-    [here](https://llvm.org/docs/GetElementPtr.html).
+    [here](GetElementPtr.md).
 
 **GVN**
 :   Global Value Numbering. GVN is a pass that partitions values computed by a
@@ -161,6 +161,13 @@ This document is a work in progress!
 **IPO**
 :   Inter-Procedural Optimization. Refers to any variety of code optimization
     that occurs between procedures, functions or compilation units (modules).
+
+**IR**
+:   Intermediate Representation. LLVM IR is the common code representation
+    used throughout LLVM's compilation process. It is typed and based on
+    Static Single Assignment (SSA), with three equivalent forms: in-memory
+    IR, on-disk bitcode, and human-readable assembly. See the
+    {doc}`LLVM Language Reference Manual <LangRef>`.
 
 **ISel**
 :   Instruction Selection

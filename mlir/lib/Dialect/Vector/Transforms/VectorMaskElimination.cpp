@@ -8,18 +8,31 @@
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+
+namespace mlir {
+namespace vector {
+
+#define GEN_PASS_DEF_ELIMINATEVECTORMASKS
+#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
+
+} // namespace vector
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
 namespace {
 
-/// Attempts to resolve a (scalable) CreateMaskOp to an all-true constant mask.
-/// All-true masks can then be eliminated by simple folds.
-LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
-                                         vector::CreateMaskOp createMaskOp,
-                                         VscaleRange vscaleRange) {
+/// Attempts to resolve a CreateMaskOp to an all-true constant mask. All-true
+/// masks can then be eliminated by simple folds. `vscaleRange` is required to
+/// reason about scalable dimensions; without it only fixed-size dimensions can
+/// be proven all-true.
+LogicalResult
+resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
+                           vector::CreateMaskOp createMaskOp,
+                           std::optional<VscaleRange> vscaleRange) {
   auto maskType = createMaskOp.getVectorType();
   auto maskTypeDimScalableFlags = maskType.getScalableDims();
   auto maskTypeDimSizes = maskType.getShape();
@@ -54,9 +67,30 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   for (auto [i, dimSize] : unknownDims) {
     // Compute the lower bound for the unknown dimension (i.e. the smallest
     // value it could be).
+
+    // Fixed-width case: without a `vscale` range the bound is a plain constant,
+    // which can only prove a fixed-size dimension all-true.
+    if (!vscaleRange) {
+      // A constant bound cannot prove a scalable dim, whose runtime size is
+      // `vscale` times the size in the type. Checked first to skip the query.
+      if (maskTypeDimScalableFlags[i])
+        return failure();
+      FailureOr<int64_t> constantLowerBound =
+          ValueBoundsConstraintSet::computeConstantBound(
+              presburger::BoundType::LB, dimSize);
+      if (failed(constantLowerBound))
+        return failure();
+      // If LB < the mask dim size then this dim is not all-true.
+      if (*constantLowerBound < maskTypeDimSizes[i])
+        return failure();
+      continue;
+    }
+
+    // Scalable case: with a `vscale` range the bound has the form
+    // `base + n * vscale`, which can prove either kind of dimension all-true.
     FailureOr<ConstantOrScalableBound> dimLowerBound =
         vector::ScalableValueBoundsConstraintSet::computeScalableBound(
-            dimSize, {}, vscaleRange.vscaleMin, vscaleRange.vscaleMax,
+            dimSize, {}, vscaleRange->vscaleMin, vscaleRange->vscaleMax,
             presburger::BoundType::LB);
     if (failed(dimLowerBound))
       return failure();
@@ -94,11 +128,6 @@ namespace mlir::vector {
 
 void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
                           std::optional<VscaleRange> vscaleRange) {
-  // TODO: Support fixed-size case. This is less likely to be useful as for
-  // fixed-size code dimensions are all static so masks tend to fold away.
-  if (!vscaleRange)
-    return;
-
   // Early exit for functions without a body.
   if (function.isExternal())
     return;
@@ -114,7 +143,38 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
 
   rewriter.setInsertionPointToStart(&function.front());
   for (auto mask : worklist)
-    (void)resolveAllTrueCreateMaskOp(rewriter, mask, *vscaleRange);
+    (void)resolveAllTrueCreateMaskOp(rewriter, mask, vscaleRange);
 }
+
+namespace {
+struct EliminateVectorMasksPass
+    : public impl::EliminateVectorMasksBase<EliminateVectorMasksPass> {
+  using Base::Base;
+
+  // Checked here rather than in runOnOperation so that a bad range is reported
+  // once, not once per function.
+  LogicalResult initialize(MLIRContext *context) override {
+    bool unset = !vscaleMin && !vscaleMax;
+    bool valid = vscaleMin && vscaleMax && vscaleMin <= vscaleMax;
+    if (unset || valid)
+      return success();
+    return emitError(UnknownLoc::get(context))
+           << "invalid vscale range 'vscale-min="
+           << static_cast<unsigned>(vscaleMin)
+           << " vscale-max=" << static_cast<unsigned>(vscaleMax)
+           << "': expected both to be 0 (unknown), or both non-zero with "
+              "'vscale-min' <= 'vscale-max'";
+  }
+
+  void runOnOperation() override {
+    std::optional<VscaleRange> vscaleRange;
+    if (vscaleMin && vscaleMax)
+      vscaleRange = VscaleRange{vscaleMin, vscaleMax};
+
+    IRRewriter rewriter(&getContext());
+    eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
+  }
+};
+} // namespace
 
 } // namespace mlir::vector

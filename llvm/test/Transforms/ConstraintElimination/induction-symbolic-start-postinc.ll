@@ -589,8 +589,7 @@ define void @phi_compare_symbolic_start_header_is_latch(i32 %start, i32 %n) {
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i32 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sle i32 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1

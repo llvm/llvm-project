@@ -24,6 +24,9 @@
 #  include <wchar.h>
 #  include <wctype.h>
 #endif
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+#  include <langinfo.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,7 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   ~__locale_guard() {
     if (__old_loc_)
@@ -74,16 +77,32 @@ inline __lconv_t* __localeconv(__locale_t& __loc) {
   __locale_guard __current(__loc);
   return ::localeconv();
 }
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
 //
-inline float __strtof(const char* __nptr, char** __endptr, __locale_t) { return ::strtof(__nptr, __endptr); }
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 
-inline double __strtod(const char* __nptr, char** __endptr, __locale_t) { return ::strtod(__nptr, __endptr); }
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+  return ::strtof(__nptr, __endptr);
+}
 
-inline long double __strtold(const char* __nptr, char** __endptr, __locale_t) { return ::strtold(__nptr, __endptr); }
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return ::strtod(__nptr, __endptr);
+}
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return ::strtold(__nptr, __endptr);
+}
 
 //
 // Character manipulation functions
@@ -227,5 +246,7 @@ _LIBCPP_DIAGNOSTIC_POP
 _LIBCPP_END_NAMESPACE_STD
 
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
+
+#include <__locale_dir/support/default/get_c_locale.h>
 
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_OPENBSD_H
