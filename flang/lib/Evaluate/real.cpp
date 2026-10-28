@@ -674,7 +674,10 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
   auto converted{
       decimal::ConvertToBinary<P>(p, MapRoundingMode(rounding.mode))};
   // Building Word from lo/hi uint64_t halves via the Integer<> integer
-  // constructor is endian-portable
+  // constructor is endian-portable, especially when representation widths
+  // differ.
+  static_assert(decltype(converted.binary)::bits <= 128,
+      "Read() logic assumes a format width of at most 128 bits");
   auto raw{converted.binary.raw()};
   const std::uint64_t lo{static_cast<std::uint64_t>(raw)};
   Word word{lo};
