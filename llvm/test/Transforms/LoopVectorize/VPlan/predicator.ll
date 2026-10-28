@@ -780,7 +780,7 @@ define void @blend_poison_incoming(ptr noalias %a, ptr noalias %dst) {
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP6]]>
-; CHECK-NEXT:      BLEND ir<%phi> = ir<%mul>/vp<[[VP4]]> ir<poison>/vp<[[VP5]]> ir<%add>/vp<[[VP7]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%mul>/vp<[[VP4]]> ir<%add>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>

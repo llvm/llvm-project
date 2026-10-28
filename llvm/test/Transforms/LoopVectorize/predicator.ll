@@ -245,13 +245,10 @@ define void @blend_poison_incoming(ptr noalias %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[WIDE_LOAD]], splat (i32 3)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 100)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sge <4 x i32> [[WIDE_LOAD]], splat (i32 100)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[WIDE_LOAD]], splat (i32 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> poison, <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI1]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
