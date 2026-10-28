@@ -41,6 +41,7 @@ public:
     ResumeIndex,
     DestroyIndex,
     CleanupIndex,
+    CoroTypeIDIndex,
     IndexLast,
     IndexFirst = RestartTrigger
   };

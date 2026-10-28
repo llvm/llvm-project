@@ -1158,15 +1158,18 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   unsigned ResumeIndex = coro::Shape::SwitchFieldIndex::Resume;
   unsigned DestroyIndex = coro::Shape::SwitchFieldIndex::Destroy;
   unsigned IndexIndex = Shape.SwitchLowering.IndexField;
+  unsigned TypeIDIndex  = Shape.SwitchLowering.TypeIDField;
 
   DenseMap<unsigned, StringRef> NameCache;
   NameCache.insert({ResumeIndex, "__resume_fn"});
   NameCache.insert({DestroyIndex, "__destroy_fn"});
   NameCache.insert({IndexIndex, "__coro_index"});
+  NameCache.insert({TypeIDIndex,  "__coro_type_id"});
 
   Type *ResumeFnTy = FrameTy->getElementType(ResumeIndex),
        *DestroyFnTy = FrameTy->getElementType(DestroyIndex),
-       *IndexTy = FrameTy->getElementType(IndexIndex);
+       *IndexTy = FrameTy->getElementType(IndexIndex),
+       *TypeIDTy = FrameTy->getElementType(TypeIDIndex);
 
   DenseMap<unsigned, DIType *> TyCache;
   TyCache.insert(
@@ -1184,6 +1187,10 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                       ? 8
                                       : Layout.getTypeSizeInBits(IndexTy),
                                   dwarf::DW_ATE_unsigned_char)});
+
+  TyCache.insert({TypeIDIndex,
+      DBuilder.createBasicType("unsigned int", 32,
+          dwarf::DW_ATE_unsigned)});
 
   for (auto *V : FrameData.getAllDefs()) {
     if (!DIVarCache.contains(V))
@@ -1311,14 +1318,18 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
   AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
   std::optional<FieldIDType> SwitchIndexFieldId;
+  std::optional<FieldIDType> TypeIDFieldId;
 
   if (Shape.ABI == coro::ABI::Switch) {
     auto *FnPtrTy = PointerType::getUnqual(C);
 
     // Add header fields for the resume and destroy functions.
     // We can rely on these being perfectly packed.
-    (void)B.addField(FnPtrTy, std::nullopt, /*header*/ true);
-    (void)B.addField(FnPtrTy, std::nullopt, /*header*/ true);
+    (void)B.addField(FnPtrTy, std::nullopt, /*header*/ true); // offset 0
+    (void)B.addField(FnPtrTy, std::nullopt, /*header*/ true); // offset 8
+
+    TypeIDFieldId = B.addField(Type::getInt32Ty(C), std::nullopt,
+                               /*header*/ true); // offset 16
 
     // PromiseAlloca field needs to be explicitly added here because it's
     // a header field with a fixed offset based on its alignment. Hence it
@@ -1374,6 +1385,11 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     Shape.SwitchLowering.IndexField = IndexField.LayoutFieldIndex;
     Shape.SwitchLowering.IndexAlign = IndexField.Alignment.value();
     Shape.SwitchLowering.IndexOffset = IndexField.Offset;
+
+    if (TypeIDFieldId) {
+      auto TypeIDField = B.getLayoutField(*TypeIDFieldId);
+      Shape.SwitchLowering.TypeIDField = TypeIDField.LayoutFieldIndex;
+    }
 
     // Also round the frame size up to a multiple of its alignment, as is
     // generally expected in C/C++.
