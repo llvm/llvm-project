@@ -2327,8 +2327,9 @@ public:
 };
 
 /// Generates code to create an FP constant that defines a TempReg.
-/// \p Val is the IEEE bit pattern, truncated to the scalar width.
-/// It does not support values bigger than 64 bits.
+/// \p Val is the bit pattern of the TempReg's scalar FP type, truncated to
+/// that width. A non-zero \p Val is a fatal error at runtime if that type is
+/// wider than 64 bits, or is s16, which could be either half or bfloat.
 class BuildFConstantAction : public MatchAction {
   unsigned TempRegID;
   int64_t Val;

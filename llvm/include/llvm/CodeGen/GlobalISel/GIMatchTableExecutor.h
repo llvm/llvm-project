@@ -386,9 +386,9 @@ enum {
 
   /// Builds an FP constant and stores its result in a TempReg.
   /// - TempRegID(ULEB128) - Temp Register to define.
-  /// - Imm(8) - IEEE bit pattern of the TempReg's (scalar) type,
-  ///   truncated to that width. Any value bigger than 64 bits
-  ///   is not supported.
+  /// - Imm(8) - Bit pattern of the TempReg's scalar FP type, truncated to
+  ///   that width. A non-zero value is a fatal error if that type is wider
+  ///   than 64 bits, or is s16, which could be either half or bfloat.
   GIR_BuildFConstant,
 
   /// Copy an operand to the specified instruction

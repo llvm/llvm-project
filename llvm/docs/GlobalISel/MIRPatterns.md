@@ -247,7 +247,8 @@ Operands:
 ```{warning}
 `Imm` is the **IEEE bit pattern** of `$reg`'s (scalar) type, not a decimal fp
 value: f32 `0` is `+0.0`. Truncate to that width. Above 64 bits only `0` can
-be represented.
+be represented. For 16-bit types, a non-zero pattern needs `$reg` to have an FP
+type (`f16` or `bf16`), since a scalar `s16` does not say which one it is.
 ```
 
 Semantics:
