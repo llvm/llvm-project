@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXISelLowering.h"
+#include "AGXTargetTransformInfo.h"
 #include "AGX.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXRegisterInfo.h"
@@ -159,9 +160,10 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                         ISD::FMAXNUM, ISD::FEXP2, ISD::FLOG2},
                        VT, Legal);
     setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-    setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, VT, Custom);
-    setOperationAction({ISD::FSUB, ISD::SELECT_CC,
-                        ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM_IEEE,
+    setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,
+                        ISD::FMAXIMUM},
+                       VT, Custom);
+    setOperationAction({ISD::FSUB, ISD::SELECT_CC, ISD::FMINNUM_IEEE,
                         ISD::FMAXNUM_IEEE, ISD::FSINCOS},
                        VT, Expand);
     setOperationAction(ISD::FROUND, VT, Custom);
@@ -662,6 +664,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerFCOPYSIGN(Op, DAG);
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
     return lowerFMinMaxNum(Op, DAG);
   case ISD::FROUND:
     return lowerFROUND(Op, DAG);
@@ -712,6 +716,12 @@ static unsigned vectorNode(bool Load, unsigned N) {
   return (Load ? Loads : Stores)[N - 2];
 }
 
+static cl::opt<bool> AGXElementAlignedVectors(
+    "agx-element-aligned-vectors", cl::init(false), cl::Hidden,
+    cl::desc("Vector accesses of 8- and 16-bit elements need only the "
+             "element's alignment (not measured on hardware; 32-bit elements "
+             "at 4 bytes are: ptx-re-blockers B33)"));
+
 void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
                                            SmallVectorImpl<SDValue> &Results,
                                            SelectionDAG &DAG) const {
@@ -738,7 +748,8 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
       L && L->getExtensionType() == ISD::NON_EXTLOAD && !L->isIndexed() &&
       L->isSimple() && L->getAddressSpace() == AGX::DEVICE_ADDRESS &&
       (L->getValueType(0) == MVT::v2i8 || L->getValueType(0) == MVT::v4i8) &&
-      L->getAlign() >= Align(L->getValueType(0).getStoreSize())) {
+      (AGXElementAlignedVectors ||
+       L->getAlign() >= Align(L->getValueType(0).getStoreSize()))) {
     SDLoc DL(N);
     EVT VT = L->getValueType(0);
     unsigned NumElts = VT.getVectorNumElements();
@@ -751,6 +762,31 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
     SmallVector<SDValue, 4> Elts;
     for (unsigned I = 0; I < NumElts; ++I)
       Elts.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Load.getValue(I)));
+    Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+    Results.push_back(Load.getValue(NumElts));
+    return;
+  }
+  // 16-bit elements below 4-byte alignment (-agx-element-aligned-vectors):
+  // one device access of the i16 format into consecutive 16-bit halves.
+  if (auto *L = dyn_cast<LoadSDNode>(N);
+      AGXElementAlignedVectors && L &&
+      L->getExtensionType() == ISD::NON_EXTLOAD && !L->isIndexed() &&
+      L->isSimple() && L->getAlign() < Align(4) &&
+      L->getAddressSpace() == AGX::DEVICE_ADDRESS &&
+      (L->getValueType(0) == MVT::v2i16 || L->getValueType(0) == MVT::v4i16 ||
+       L->getValueType(0) == MVT::v2f16 || L->getValueType(0) == MVT::v4f16)) {
+    SDLoc DL(N);
+    EVT VT = L->getValueType(0);
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<EVT, 5> VTs(NumElts, MVT::i16);
+    VTs.push_back(MVT::Other);
+    SDValue Load = DAG.getMemIntrinsicNode(
+        NumElts == 2 ? AGXISD::LOAD_V2_I8 : AGXISD::LOAD_V4_I8, DL,
+        DAG.getVTList(VTs), {L->getChain(), L->getBasePtr()},
+        L->getMemoryVT(), L->getMemOperand());
+    SmallVector<SDValue, 4> Elts;
+    for (unsigned I = 0; I < NumElts; ++I)
+      Elts.push_back(DAG.getBitcast(VT.getScalarType(), Load.getValue(I)));
     Results.push_back(DAG.getBuildVector(VT, DL, Elts));
     Results.push_back(Load.getValue(NumElts));
     return;
@@ -810,11 +846,21 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
 /// alignment: xy / xyzw accesses at every byte offset 0, 4, 8, 12 mod 16, also
 /// across 64-byte lines and 4 KiB pages, match the byte-address model on the
 /// M2 Max (ptx-re-blockers B33).
+bool AGXTTIImpl::elementAlignedVectors() { return AGXElementAlignedVectors; }
+
 bool AGXTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AS, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
+  Align Need(4);
+  if (AGXElementAlignedVectors && VT.isVector() &&
+      VT.getScalarSizeInBits() < 32)
+    Need = Align(VT.getScalarSizeInBits() / 8);
+  // The load/store vectorizer asks for its chain as one integer: with the
+  // option, chains of 8- or 16-bit elements at their own alignment.
+  if (AGXElementAlignedVectors && VT.isScalarInteger())
+    Need = Align(1);
   bool OK = (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS) &&
-            Alignment >= Align(4) && VT.getStoreSize() <= 16;
+            Alignment >= Need && VT.getStoreSize() <= 16;
   if (Fast)
     *Fast = OK;
   return OK;
@@ -1483,25 +1529,35 @@ SDValue AGXTargetLowering::lowerFDIV(SDValue Op, SelectionDAG &DAG) const {
 /// fmaxnum, one fcmpsel with an "n" condition), except for operands that
 /// compare equal: there the bits of both ORed (min) or ANDed (max), which
 /// orders -0 below +0 and leaves equal nonzero values as they are.
+/// minimum / maximum: the same, and the default NaN for a NaN operand.
 SDValue AGXTargetLowering::lowerFMinMaxNum(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue A = Op.getOperand(0), B = Op.getOperand(1);
-  bool Max = Op.getOpcode() == ISD::FMAXIMUMNUM;
-  SDValue MinMax =
-      DAG.getNode(Max ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, A, B,
-                  Op->getFlags());
-  if (Op->getFlags().hasNoSignedZeros())
-    return MinMax;
-  EVT IntVT = VT.changeTypeToInteger();
-  SDValue Bits = DAG.getNode(Max ? ISD::AND : ISD::OR, DL, IntVT,
-                             DAG.getBitcast(IntVT, A),
-                             DAG.getBitcast(IntVT, B));
-  SDValue Equal = DAG.getSetCC(
-      DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), A, B,
-      ISD::SETOEQ);
-  return DAG.getSelect(DL, VT, Equal, DAG.getBitcast(VT, Bits), MinMax);
+  unsigned Opc = Op.getOpcode();
+  bool Max = Opc == ISD::FMAXIMUMNUM || Opc == ISD::FMAXIMUM;
+  bool PropagateNaN = Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM;
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue R = DAG.getNode(Max ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, A, B,
+                          Op->getFlags());
+  if (!Op->getFlags().hasNoSignedZeros()) {
+    EVT IntVT = VT.changeTypeToInteger();
+    SDValue Bits = DAG.getNode(Max ? ISD::AND : ISD::OR, DL, IntVT,
+                               DAG.getBitcast(IntVT, A),
+                               DAG.getBitcast(IntVT, B));
+    SDValue Equal = DAG.getSetCC(DL, CCVT, A, B, ISD::SETOEQ);
+    R = DAG.getSelect(DL, VT, Equal, DAG.getBitcast(VT, Bits), R);
+  }
+  if (!PropagateNaN || Op->getFlags().hasNoNaNs())
+    return R;
+  // minimum / maximum: the default NaN when either operand is a NaN.
+  SDValue NaN = DAG.getConstantFP(
+      APFloat::getQNaN(VT.getFltSemantics()), DL, VT);
+  for (SDValue X : {B, A})
+    R = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, X, X, ISD::SETOEQ), R,
+                      NaN);
+  return R;
 }
 
 SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,

@@ -235,9 +235,14 @@ void AGXDAGToDAGISel::selectByteVectorLoad(SDNode *N, unsigned NumElts) {
   auto *M = cast<MemSDNode>(N);
   SDValue Chain = N->getOperand(0), Addr = N->getOperand(1);
   SDValue Base, Index, Signed, Shift;
-  SelectDeviceAddr8(Addr, Base, Index, Signed, Shift);
+  // 16-bit elements (the i16 format; -agx-element-aligned-vectors) or bytes.
+  bool Halves = M->getMemoryVT().getScalarSizeInBits() == 16;
+  if (Halves)
+    SelectDeviceAddr16(Addr, Base, Index, Signed, Shift);
+  else
+    SelectDeviceAddr8(Addr, Base, Index, Signed, Shift);
   SDValue G = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  SDValue Fmt = CurDAG->getTargetConstant(0, DL, MVT::i32); // i8
+  SDValue Fmt = CurDAG->getTargetConstant(Halves ? 1 : 0, DL, MVT::i32);
   SDValue Mask = CurDAG->getTargetConstant(vectorMask(NumElts), DL, MVT::i32);
   MachineSDNode *Load = CurDAG->getMachineNode(
       NumElts == 2 ? AGX::DEVICE_LOAD_32_H16 : AGX::DEVICE_LOAD_64_H16, DL,

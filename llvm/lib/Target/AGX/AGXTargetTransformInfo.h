@@ -82,9 +82,15 @@ public:
   /// spills where the registers are nearly all live.
   unsigned maxStoreVectorBytes() const;
   static bool vectorizableChain(unsigned Bytes, Align Alignment, unsigned AS) {
-    return Alignment >= Align(4) && Bytes % 4 == 0 && Bytes <= 16 &&
+    // With -agx-element-aligned-vectors, chains of 8- and 16-bit elements
+    // below 4-byte alignment too (allowsMisalignedMemoryAccesses checks the
+    // element's alignment).
+    Align Need = elementAlignedVectors() ? Align(1) : Align(4);
+    return Alignment >= Need && Bytes % (Need.value() == 4 ? 4 : 2) == 0 &&
+           Bytes <= 16 &&
            (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
   }
+  static bool elementAlignedVectors();
 };
 
 } // namespace llvm

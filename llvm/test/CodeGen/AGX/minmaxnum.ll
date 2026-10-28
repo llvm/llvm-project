@@ -33,3 +33,17 @@ define agx_kernel void @max_nsz(ptr addrspace(1) %p, float %a, float %b) {
   store float %m, ptr addrspace(1) %p
   ret void
 }
+
+; minimum / maximum: the same, and the default NaN when either operand is one.
+; CHECK-LABEL: maximum:
+; CHECK:       fcmpsel gtn, [[M:r[0-9]+]], u2, u3, u2, u3
+; CHECK:       fcmpsel eq, [[R:r[0-9]+]], u2, u3, {{r[0-9]+}}, [[M]]
+; CHECK:       mov_imm [[N:r[0-9]+]], 2143289344
+; CHECK:       fcmpsel eq, [[R2:r[0-9]+]], u3, u3, [[R]], [[N]]
+; CHECK:       fcmpsel eq, [[R3:r[0-9]+]], u2, u2, [[R2]], [[N]]
+; CHECK-NEXT:  device_store 0, i32, x, [[R3]],
+define agx_kernel void @maximum(ptr addrspace(1) %p, float %a, float %b) {
+  %m = call float @llvm.maximum.f32(float %a, float %b)
+  store float %m, ptr addrspace(1) %p
+  ret void
+}
