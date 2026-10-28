@@ -64,6 +64,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXSinkAddressesPass(PR);
   initializeAGXThreadgroupAddressesPass(PR);
   initializeAGXHoistGuardedLoadsPass(PR);
+  initializeAGXNarrowInductionsPass(PR);
   initializeAGXVectorAccessesPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
@@ -286,6 +287,10 @@ void AGXPassConfig::addIRPasses() {
 }
 
 bool AGXPassConfig::addPreISel() {
+  // After loop strength reduction, which makes 64-bit counters of PTX's
+  // 64-bit address arithmetic.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAGXNarrowInductionsPass());
   // Bring the CFG into the structured form AGXAnnotateControlFlow expects.
   addPass(createLowerSwitchPass());
   addPass(createFixIrreduciblePass());

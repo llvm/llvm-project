@@ -43,6 +43,7 @@ FunctionPass *createAGXAnnotateControlFlowPass();
 FunctionPass *createAGXSinkAddressesPass();
 FunctionPass *createAGXThreadgroupAddressesPass();
 FunctionPass *createAGXHoistGuardedLoadsPass();
+FunctionPass *createAGXNarrowInductionsPass();
 FunctionPass *createAGXVectorAccessesPass(bool BeforeVectorizer);
 FunctionPass *createAGXLowerGenericAddressesPass();
 
@@ -79,6 +80,7 @@ void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXSinkAddressesPass(PassRegistry &);
 void initializeAGXThreadgroupAddressesPass(PassRegistry &);
 void initializeAGXHoistGuardedLoadsPass(PassRegistry &);
+void initializeAGXNarrowInductionsPass(PassRegistry &);
 void initializeAGXVectorAccessesPass(PassRegistry &);
 void initializeAGXLowerGenericAddressesPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
