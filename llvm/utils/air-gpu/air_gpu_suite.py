@@ -29,6 +29,10 @@ For each case the suite reports one of:
 
   air_gpu_suite.py --llc build/bin/llc [--group math-f32 ...] [--json out.json]
 
+A case runs N = 64 threads, by default as a 1D grid in threadgroups of
+tgsize; a case can set grid and group (x, y, z) for a 2D or 3D dispatch of
+the same 64 threads (dispatch-3d).
+
 With --agx-run, the suite runs the same kernels on AGX instead: each case is
 compiled by the AIR target's portable passes (llc -air-portable) and the AGX
 backend (llc -mtriple=agx, whose agx-lower-air pass reads that AIR), and run

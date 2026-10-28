@@ -14,6 +14,9 @@ python3 air_gpu_suite.py --llc build/bin/llc                 # every group
 python3 air_gpu_suite.py --llc build/bin/llc --group llvm-int --json out.json
 ```
 
+Each case runs 64 threads, normally as a 1D grid; a case may set `grid` and
+`group` (x, y, z) for a 2D or 3D dispatch (the `dispatch-3d` group).
+
 ## No Apple compiler output
 
 Every kernel is generated from the text of `air_gpu_suite.py` and compiled by
