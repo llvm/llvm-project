@@ -2550,14 +2550,21 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
   // If this aggregate extract feeds another insertvalue, the extracted
-  // composite is used as a SPIR-V value-id by llvm.spv.insertv. Keep the real
-  // aggregate type in metadata, but expose the value itself as i32 so the
-  // intrinsic signature remains valid.
-  if (NewI->getType()->isAggregateType() &&
-      any_of(I.users(), [](User *U) { return isa<InsertValueInst>(U); })) {
+  // composite is used as a SPIR-V value-id by llvm.spv.insertv. An aggregate
+  // PHI, select or freeze has already been mutated to an i32 value-id, so it
+  // needs the same. Keep the real aggregate type in metadata, but expose the
+  // value itself as i32 so the intrinsic signature and the user stay valid.
+  if (NewI->getType()->isAggregateType() && any_of(I.users(), [](User *U) {
+        return isa<InsertValueInst>(U) || isa<PHINode>(U) ||
+               isa<SelectInst>(U) || isa<FreezeInst>(U);
+      })) {
     AggrConstTypes[NewI] = I.getType();
     NewI->mutateType(B.getInt32Ty());
     replaceMemInstrUses(&I, NewI, B);
+    // The aggregate extractvalue only carried a name record; unlike a PHI, a
+    // select or freeze does not pass its type down to an untyped operand.
+    setInsertPointAfterDef(B, NewI);
+    GR->buildAssignType(B, I.getType(), NewI, CanUseAnyVectorRank);
     return NewI;
   }
   replaceAllUsesWithAndErase(B, &I, NewI);
