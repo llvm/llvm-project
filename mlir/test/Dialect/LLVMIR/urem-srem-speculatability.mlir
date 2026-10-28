@@ -1,10 +1,6 @@
 // RUN: mlir-opt %s -loop-invariant-code-motion -split-input-file \
 // RUN:   | FileCheck %s
 
-// -----
-// llvm.urem
-// -----
-
 // Unproven divisor => must NOT hoist.
 // CHECK-LABEL: func.func @urem_no_hoist
 // CHECK: scf.for
