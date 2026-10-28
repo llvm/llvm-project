@@ -1,6 +1,6 @@
-==========================================
-Upstream AIR as an AGX backend, with hints
-==========================================
+==============================
+Upstream AIR as an AGX backend
+==============================
 
 .. contents::
    :local:
@@ -47,66 +47,81 @@ What the raise writes as AIR
   exclusive scans are ``air.simd_*`` / ``air.quad_*``; the threadgroup barrier
   is ``air.wg.barrier`` (its fences stay LLVM fences).
 
-Hints
-=====
+Portable AIR, and the one hint
+==============================
+
+The AIR is meant to be as portable as possible: nothing in it should need an
+AGX (or a particular AGX generation) to make sense, so that the AIR side does
+not grow with every new GPU (M3, M4 ...). The operations AIR does not have are
+written as plain AIR that computes them, and the AGX backend recovers what
+it can from that AIR on its own (``recoverAGXOperations`` in
+``agx-lower-air``). A *hint* (below) is kept only where AGX has an operation
+worth much more than its AIR form and cannot recover it from that form.
+
+* Double precision arithmetic, compares, conversions, ``sqrt``, ``fma``,
+  min / max, rounding: ``soft_f64.c`` (``AGXAIRSoftF64.inc``), doubles as
+  ``i64``. AGX compiles the library (faster than its own software f64 on the
+  PTX tests, -0.25% geomean; ``ddot`` +11% cycles).
+* Constrained floating point (dynamic rounding, ``.rz``, ``.ftz``): to
+  nearest, the AIR operation; directed, ``soft_f64.c``'s ``_r`` functions;
+  flushes as selects. Folded at each use, where the mode is a constant almost
+  everywhere; AGX drops ``.ftz``'s explicit flushes where its f32 ALU flushes
+  anyway.
+* ``llvm.agx.get.fpmode`` / ``set.fpmode``: the tracked mode (a constant) /
+  nothing.
+* ``llvm.minimum`` / ``maximum`` (and ``*num``): AIR's (``fmin`` / ``fmax``
+  with NaN checks; through float for bfloat). AGX compiles that idiom as its
+  minimum / maximum, in the narrow type.
+* ``llvm.agx.rcp``, ``rsqrt``, ``rsqrt.special``: ``1 / x``,
+  ``1 / sqrt(x)`` (afn), 0 and infinity selected. AGX compiles afn ``1 / x``
+  and ``1 / sqrt(x)`` as rcp and rsqrt.
+* ``llvm.agx.exp2``, ``log2``: ``llvm.exp2`` / ``log2`` (afn), which AGX
+  compiles as its approximations already.
+* ``llvm.agx.sin``, ``cos`` (argument in quadrants): ``sin(x * pi / 2)``
+  (afn), which AGX compiles as the quadrant form.
+* Scalar system values (SIMD lane, SIMD-group, thread index): AIR's (kernel
+  parameters), read at the entry (+-0.01%).
+* ``llvm.agx.core.id``: 0.
+* Double ``atomicrmw``: a 64-bit ``cmpxchg`` loop with ``soft_f64.c`` (an
+  LLVM operation AGX has; Metal does not).
+* ``llvm.agx.simdgroup.matrix.fma``: **the hint** (below).
+
+The emulations are inlined at each use by ``agx-raise-to-air`` and simplified
+there (``agx-raise-hints`` selects the hints kept; ``-agx-raise-hints=all``
+keeps every one, as the experiment first did). AIR has no floating point
+environment, so the raise drops ``strictfp``.
+
+Why the hints went (agx-bench, emulating each kind against the hint, before
+the recovery above): system values +-0.01%; doubles -0.25% (the library is
+faster); approximations +0.9% rw (nbody +36% tput), minimum / maximum up to
++72%, FP mode +0.9% co (``add_ftz`` +310%) -- all recovered by the AGX side
+or by folding at the call. The matrix FMA as 24 shuffles and 16 FMAs costs
+G14's tile GEMMs +15% cycles (geomean, worst +102%); G13, which expands it
+anyway, is unchanged.
+
+The hint
+--------
 
 A hint is an operation AIR does not have, written so that every AIR consumer
-can still compile the module (``llvm/IR/AIR.h``).
+can still compile the module (``llvm/IR/AIR.h``): a call to an internal
+``noinline`` function named ``__air_hint.<operation>``, whose attribute
+``"air-hint"`` names the operation and whose body computes it in AIR (its
+*emulation*). ``agx-lower-air`` replaces each call with the AGX operation; a
+consumer that does not know the hint inlines the body (the Metal pipeline
+inlines every function).
 
-Function hints
---------------
+The only one kept is ``call:llvm.agx.simdgroup.matrix.fma.<type>|---|+lane``:
+an 8x8 multiply-accumulate on per-thread fragments in AGX's layout
+(AGXUsage.rst), whose emulation is 24 shuffles and 16 FMAs per thread and
+reads the lane from its trailing ``+lane`` operand. AIR's own SIMD-group
+matrices hold a whole 8x8 matrix as an opaque value; using them would need
+the fragments to go through threadgroup memory, which an AGX lowering would
+then have to remove again (future work).
 
-A call to an internal ``noinline`` function named ``__air_hint.<operation>``,
-whose attribute ``"air-hint"`` names the operation and whose body computes it
-in AIR (its *emulation*). ``agx-lower-air`` replaces each call with the AGX
-operation; a consumer that does not know the hint inlines the body (the
-Metal pipeline inlines every function). A hint whose operation has no AIR
-emulation has an ``unreachable`` body and ``"air-hint-no-emulation"``: only a
-consumer with the operation can run it.
-
-The operation is named by a key:
-
-* ``call:<intrinsic>|<doubles>[|<metadata string>...][|+lane][|+mode]``: an
-  LLVM intrinsic; constrained floating point intrinsics carry their rounding
-  and exception metadata strings. ``+lane`` and ``+mode`` are trailing
-  operands only the emulation reads, which ``agx-lower-air`` drops: the lane
-  of the thread (a system value that only a kernel can read), and the
-  floating point mode (below).
-* ``inst:<opcode>[:<predicate>]|<doubles>``: a double precision instruction.
-* ``atomic:<operation>|<doubles>|<ordering>|<sync scope>|<align>``: a double
-  precision ``atomicrmw``.
-
-``<doubles>`` has one character for the result and each operand, ``d`` where
-it is a double (``-`` otherwise): AIR has no double, so doubles are ``i64``
-bits in AIR and ``agx-lower-air`` bitcasts them back.
-
-=================================== ======================================= ==================================
-Operation                           AGX (``agx-lower-air``)                 AIR emulation
-=================================== ======================================= ==================================
-double precision arithmetic,        the double operation (AGXSoftF64)       arith-emulate-f64's ``soft_f64.c``
-compares, conversions, ``sqrt``,                                            (``AGXAIRSoftF64.inc``), in the
-``fma``, min/max, rounding                                                  operation's rounding direction
-                                                                            (the ``_r`` functions); canonical
-                                                                            NaNs with ``canonical-nan``
-constrained floating point          the constrained intrinsic               to nearest: the AIR operation;
-(dynamic rounding, ``.rz`` ...)                                             directed: in double precision
-                                                                            (``soft_f64.c``) in the direction,
-                                                                            rounded again in it; denormals
-                                                                            flushed as the mode says
-``llvm.agx.get.fpmode`` / ``set``   the FP mode registers                   the ``+mode`` operand / nothing
-``llvm.minimum`` / ``maximum`` /    the intrinsic                           exact, on the bits (AIR's fmin /
-``minimumnum`` / ``maximumnum``                                             fmax may flush denormals)
-``llvm.agx.rcp``, ``rsqrt``,        the hardware approximation              ``1 / x``, ``1 / sqrt(x)`` (afn)
-``rsqrt.special``
-``llvm.agx.exp2``, ``log2``         the hardware approximation              ``llvm.exp2`` / ``log2`` (afn)
-``llvm.agx.sin``, ``cos``           the hardware approximation              ``sin(x * pi / 2)`` (afn)
-(argument in quadrants)
-``llvm.agx.core.id``                the core number                         0
-scalar system values (``+value``)   the special register, read at the hint  the AIR value (a parameter)
-``llvm.agx.simdgroup.matrix.fma``   the matrix unit or AGX's expansion      24 shuffles and 16 FMAs per thread,
-                                                                            in the layout of AGXUsage.rst
-double ``atomicrmw``                the atomic                              none (no 64-bit AIR atomics)
-=================================== ======================================= ==================================
+Key formats (for ``-agx-raise-hints``): ``call:<intrinsic>|<doubles>[|<metadata
+string>...][|+lane][|+mode][|+value]``, ``inst:<opcode>[:<predicate>]|<doubles>``,
+``atomic:<operation>|<doubles>|<ordering>|<sync scope>|<align>``; ``<doubles>``
+has a ``d`` for the result and each operand that is a double.
 
 The floating point mode
 -----------------------
@@ -118,11 +133,8 @@ half's), which the constrained intrinsics with dynamic rounding read. AIR has
 no such state, so ``agx-raise-to-air`` keeps the mode as a value: the mode AGX
 starts a function with (``AGXLowerFPEnv``: rounding to nearest, the
 function's denormal modes) and then what each ``set.fpmode`` writes, promoted
-to SSA values. The hints that read it (``get.fpmode`` and the constrained
-intrinsics) take it as their trailing ``+mode`` operand, a constant wherever
-the mode is known. ``agx-lower-air`` drops the operand and deletes the mode's
-computation, which only the emulations used, so the AGX code is the direct
-path's.
+to SSA values, a constant wherever the mode is known; the emulations of the
+constrained intrinsics are folded with it.
 
 A directed rounding is computed in double precision: the operands of a half,
 bfloat or float operation are doubles exactly, the ``_r`` functions of
@@ -133,8 +145,11 @@ cross one). That holds for add, sub, mul, div, sqrt, fma and conversions from
 integers. A dynamic rounding selects between the AIR operation (to nearest)
 and the directed result.
 
-Address-space and type hints
-----------------------------
+Generic pointers and wide integers
+----------------------------------
+
+These are LLVM features AIR lacks rather than AGX operations, so they stay in
+the AIR as LLVM writes them and each consumer legalizes them:
 
 * Address space 4 (``air::GenericHintAS``): AGX's generic pointers.
   ``agx-lower-air`` maps it to AGX's generic address space and accepts casts
@@ -154,29 +169,27 @@ function for (``uinc_wrap`` / ``udec_wrap``: CUDA's ``atomicInc`` /
 ``atomicDec``, ``nand``, float min / max) into compare-exchange loops; the
 portable form keeps them for AGX.
 
-Testing the emulations
-----------------------
+Testing
+-------
 
 ``llc -agx-air-native-hints=false`` (``ZLUDA_AGX_LLVM_ARGS``) makes
-``agx-lower-air`` run every hint's emulation, as a consumer without the
-operations would, so the AIR emulations run on AGX (or the simulator).
+``agx-lower-air`` run the emulation of the hints left (the matrix FMA), as a
+consumer without the operation would; ``-agx-air-emulate-hints=<prefixes>``
+does it for some.
 
-Results (AGX Performance Simulator, 2026-10-27)
+Results (AGX Performance Simulator, 2026-10-28)
 ================================================
 
 * Correctness, PTX-formalization (413 programs) through ZLUDA with
-  ``ZLUDA_AGX_VIA_AIR=1``: every program has the direct path's result (408
-  pass; the failures are the direct path's own). With every hint emulated, 381
-  pass; the others need rounding modes (``cvt-*``, ``rounding-diff-*``,
-  ``testfloat-rm/rp/rz``), double precision atomics, or AGX's exact
-  minimum/maximum and conversions.
-* Speed, agx-bench (cycles of one SIMD-group, and throughput at the
-  occupancy of each kernel), against the direct path with the same ``llc``
-  flags: geomean -0.01% (CUDA suite), -0.00% (PTX tests), -0.01% (agx_libs);
-  no kernel more than 2% slower in cycles.
-* Metal: the Metal pipeline writes a ``.metallib`` for 241 of the 248 raised
-  modules of the benchmark sets; the others use the integer or atomic hints
-  above. None was run on Metal here.
+  ``ZLUDA_AGX_VIA_AIR=1``: 408 pass, the direct path's result (its own
+  failures), with the matrix hint compiled natively and with it emulated.
+* Speed, agx-bench against the direct path with the same ``llc`` flags:
+  cycles geomean +0.29% (CUDA suite: ``ddot`` +11%, its throughput -1.2%),
+  -0.01% (PTX tests: ``call_rnd``, directed rounding, +73%; ``cvt_f64_f32``
+  -36%), -0.01% (agx_libs).
+* The AIR: 2 of the 248 raised benchmark modules have a hint (the matrix
+  FMA); the Metal pipeline writes a ``.metallib`` for 246 (the others need a
+  128-bit atomic and a 64-bit compare-exchange). None was run on Metal here.
 
 Not done
 ========
@@ -184,7 +197,9 @@ Not done
 * Running the AIR on Metal (the Metal pipeline writes a ``.metallib`` for
   246 of the 248 raised benchmark modules; the others need a 128-bit atomic
   and a 64-bit compare-exchange, which AIR does not have).
-* Emulations of double precision atomics, and of the hardware approximations
-  (``rcp``, ``rsqrt``, ``sin`` ...) to AGX's bits.
+* The matrix FMA in AIR's own SIMD-group matrices, with an AGX lowering that
+  removes the threadgroup-memory round trip (the last hint).
+* Bit-exact AGX behaviour is not a goal: the approximations, minimum /
+  maximum of signed zeros and NaN payloads may differ between consumers.
 * The mode across calls: each function starts from the default mode, as on
   AGX.

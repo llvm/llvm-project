@@ -50,11 +50,26 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 using namespace llvm;
+
+// Hints are kept only where AGX has an operation that is worth much more
+// than its AIR emulation and that it cannot recover from the emulation: the
+// SIMD-group matrix FMA (G14's tile GEMMs are 15% faster with it). Everything
+// else is plain AIR (llvm/docs/AIR/AIRHints.rst).
+static cl::opt<std::string> KeepHints(
+    "agx-raise-hints", cl::init("call:llvm.agx.simdgroup.matrix"), cl::Hidden,
+    cl::desc("Comma-separated prefixes of the keys of the hints that stay "
+             "hints (the others become their AIR emulations, inlined); "
+             "\"all\" keeps every one, \"\" none"));
+
 
 #define DEBUG_TYPE "agx-raise-to-air"
 
@@ -176,6 +191,7 @@ private:
   void raiseFunction(Function &F);
   void emulate(Function &F, StringRef Key);
   bool linkSoftF64();
+  void inlineEmulations();
   Function *byValueToByRef(Function &K);
 };
 
@@ -610,9 +626,9 @@ void RaiseToAIR::raiseFunction(Function &F) {
       // Intrinsics whose AIR forms are less exact (air-nan-min-max makes
       // minimum and maximum Metal's fmin and fmax with NaN checks, which
       // differ in signed zeros and denormals).
-      bool Exact = is_contained({Intrinsic::minimum, Intrinsic::maximum,
-                                 Intrinsic::minimumnum, Intrinsic::maximumnum},
-                                II->getIntrinsicID());
+      // (minimum, maximum and the *num forms are AIR's intrinsics: AIR's
+      // fmin / fmax with NaN checks.)
+      bool Exact = false;
       if (!AGXOp && !Double && !Constrained && !Exact)
         continue;
       // "call:<intrinsic>|<double mask>[|<metadata operand>...]"
@@ -831,8 +847,52 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
   StringRef Op = Parts[0], Mask = Parts.size() > 1 ? Parts[1] : "";
-  if (Op.starts_with("atomic:"))
-    return NoEmulation();
+  if (StringRef RMW = Op; RMW.consume_front("atomic:")) {
+    // A double precision read-modify-write as a compare-exchange loop of its
+    // bits, with the operation in soft-f64 (LLVM's 64-bit cmpxchg: AGX has
+    // it, AIR does not).
+    unsigned Order = 0, Alignment = 8;
+    if (Parts.size() != 5 || Parts[2].getAsInteger(10, Order) ||
+        Parts[4].getAsInteger(10, Alignment) || A.size() != 2 ||
+        !is_contained({"fadd", "fsub", "fmax", "fmin", "xchg"}, RMW))
+      return NoEmulation();
+    Value *Ptr = A[0], *X = A[1];
+    auto Ordering = AtomicOrdering(Order);
+    SyncScope::ID Scope = Ctx.getOrInsertSyncScopeID(Parts[3]);
+    if (RMW == "xchg")
+      return Fin(B.CreateAtomicRMW(AtomicRMWInst::Xchg, Ptr, X,
+                                   Align(Alignment), Ordering, Scope));
+    Value *Init = B.CreateAlignedLoad(I64, Ptr, Align(Alignment), true);
+    BasicBlock *Loop = BasicBlock::Create(Ctx, "loop", &F);
+    BasicBlock *Done = BasicBlock::Create(Ctx, "done", &F);
+    B.CreateBr(Loop);
+    B.SetInsertPoint(Loop);
+    PHINode *Old = B.CreatePHI(I64, 2);
+    Old->addIncoming(Init, BB);
+    Value *New;
+    if (RMW == "fadd" || RMW == "fsub") {
+      New = Lib(RMW == "fadd" ? "__air_f64_add" : "__air_f64_sub", I64,
+                {Old, X});
+    } else {
+      // maxnum / minnum: the other operand of a NaN.
+      Value *Lt = B.CreateICmpNE(
+          Lib("__air_f64_lt", I32,
+              RMW == "fmin" ? ArrayRef<Value *>{X, Old}
+                            : ArrayRef<Value *>{Old, X}),
+          B.getInt32(0));
+      Value *OldNaN =
+          B.CreateICmpNE(Lib("__air_f64_unord", I32, {Old, Old}), B.getInt32(0));
+      New = B.CreateSelect(B.CreateOr(Lt, OldNaN), X, Old);
+    }
+    AtomicCmpXchgInst *CX = B.CreateAtomicCmpXchg(
+        Ptr, Old, New, Align(Alignment), Ordering, AtomicOrdering::Monotonic,
+        Scope);
+    Value *Loaded = B.CreateExtractValue(CX, 0);
+    Old->addIncoming(Loaded, Loop);
+    B.CreateCondBr(B.CreateExtractValue(CX, 1), Done, Loop);
+    B.SetInsertPoint(Done);
+    return Fin(Loaded);
+  }
   // A value AIR has (a scalar system value), placed where AGX reads it.
   if (Parts.back() == "+value")
     return Fin(A.back());
@@ -1504,7 +1564,84 @@ bool RaiseToAIR::run() {
       emulate(F, F.getFnAttribute(air::HintAttr).getValueAsString());
   if (NeedSoftF64)
     linkSoftF64();
+  inlineEmulations();
   return !Failed;
+}
+
+/// The hints that do not stay hints (agx-raise-hints) become their AIR
+/// emulations, inlined at each call and simplified there (the FP mode and
+/// the rounding are mostly constants at the call), so the AIR has only AIR
+/// operations and the soft-f64 library.
+void RaiseToAIR::inlineEmulations() {
+  SmallVector<StringRef, 4> Prefixes;
+  StringRef(KeepHints).split(Prefixes, ',', -1, false);
+  auto Keep = [&](StringRef Key) {
+    return any_of(Prefixes, [&](StringRef P) {
+      return P == "all" || Key.starts_with(P);
+    });
+  };
+  // AIR has no floating point environment: no strictfp (whose callers would
+  // turn the inlined emulations into constrained intrinsics).
+  for (Function &F : M) {
+    F.removeFnAttr(Attribute::StrictFP);
+    for (Instruction &I : instructions(F))
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        CB->removeFnAttr(Attribute::StrictFP);
+  }
+  SmallPtrSet<Function *, 8> Callers;
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.hasFnAttribute(air::HintAttr) || F.isDeclaration())
+      continue;
+    StringRef Key = F.getFnAttribute(air::HintAttr).getValueAsString();
+    if (Keep(Key) || F.hasFnAttribute("air-hint-no-emulation"))
+      continue;
+    F.setName(""); // (its name would be left in the inlined blocks')
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &F)
+        continue;
+      Callers.insert(CI->getFunction());
+      InlineFunctionInfo IFI;
+      if (!InlineFunction(*CI, IFI).isSuccess())
+        error(CI->getFunction(), "cannot inline the emulation of " + Key);
+    }
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+  // Fold what the constants at the calls decide (dead soft-f64 calls are
+  // memory(none), so they go too).
+  const DataLayout &DL = M.getDataLayout();
+  for (Function *F : Callers) {
+    for (bool Changed = true; Changed;) {
+      Changed = false;
+      for (BasicBlock &BB : *F)
+        for (Instruction &I : make_early_inc_range(BB)) {
+          if (Value *V = simplifyInstruction(&I, SimplifyQuery(DL, &I))) {
+            I.replaceAllUsesWith(V);
+            Changed = true;
+          }
+          if (isInstructionTriviallyDead(&I)) {
+            I.eraseFromParent();
+            Changed = true;
+          }
+        }
+      for (BasicBlock &BB : *F)
+        Changed |= ConstantFoldTerminator(&BB, true);
+      Changed |= removeUnreachableBlocks(*F);
+    }
+    for (BasicBlock &BB : make_early_inc_range(*F))
+      MergeBlockIntoPredecessor(&BB);
+  }
+  // Library functions nothing calls any more.
+  for (bool Erased = true; Erased;) {
+    Erased = false;
+    for (Function &F : make_early_inc_range(M))
+      if (F.hasLocalLinkage() && F.getName().starts_with("__air_f64_") &&
+          F.use_empty()) {
+        F.eraseFromParent();
+        Erased = true;
+      }
+  }
 }
 
 } // namespace

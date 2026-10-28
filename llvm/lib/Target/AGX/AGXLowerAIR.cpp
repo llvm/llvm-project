@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSubtarget.h"
 #include "AGXTargetMachine.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
@@ -49,9 +50,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,6 +71,11 @@ static cl::opt<bool> NativeHints(
     "agx-air-native-hints", cl::init(true), cl::Hidden,
     cl::desc("Compile AIR hints as the AGX operations they name; false runs "
              "their AIR emulation, as a consumer without them does"));
+
+static cl::list<std::string> EmulateHints(
+    "agx-air-emulate-hints", cl::CommaSeparated, cl::Hidden,
+    cl::desc("Run the AIR emulation of the hints whose keys start with one "
+             "of these prefixes (measuring what each kind of hint is worth)"));
 
 namespace {
 // Layout must match the struct emitted by -gen-searchable-tables for the
@@ -190,6 +198,7 @@ private:
   void lowerMatrices(Function &F);
   void foldOrderedAtomics(Function &F);
   void lowerHints();
+  void recoverAGXOperations(Function &F);
   void lowerCalls();
   void inlineCalls();
   Function *hiddenByValue(Function &K);
@@ -1552,7 +1561,10 @@ void LowerAIR::lowerHints() {
       if (!CI || CI->getCalledFunction() != &F)
         continue;
       IRBuilder<> B(CI);
-      if (Value *R = NativeHints ? nativeHint(B, *CI, Key) : nullptr) {
+      bool Emulate = !NativeHints || any_of(EmulateHints, [&](StringRef P) {
+                       return Key.starts_with(P);
+                     });
+      if (Value *R = !Emulate ? nativeHint(B, *CI, Key) : nullptr) {
         if (!CI->getType()->isVoidTy()) {
           R->takeName(CI);
           CI->replaceAllUsesWith(R);
@@ -1588,6 +1600,118 @@ void LowerAIR::lowerHints() {
         F.eraseFromParent();
         Erased = true;
       }
+  }
+}
+
+// AIR's portable forms of operations AGX has (as agx-raise-to-air writes
+// them, or any AIR producer): the hardware approximations from afn math
+// (1 / x, 1 / sqrt(x), sin and cos of x * pi / 2: AGX's take quadrants),
+// and the explicit flushes of PTX's .ftz where the f32 ALU flushes anyway.
+void LowerAIR::recoverAGXOperations(Function &F) {
+  if (F.isDeclaration())
+    return;
+  const AGXSubtarget &ST = TM.getSubtarget<AGXSubtarget>(F);
+  // The f32 ALU flushes denormal operands and results unless the function
+  // keeps denormals in software (ieee-fp32).
+  bool HardwareFlush =
+      !(ST.hasIEEEFP32() &&
+        F.getDenormalMode(APFloat::IEEEsingle()).Output == DenormalMode::IEEE);
+  using namespace PatternMatch;
+  auto IsOne = [](Value *V) {
+    auto *C = dyn_cast<ConstantFP>(V);
+    return C && C->isExactlyValue(1.0);
+  };
+  auto Afn = [](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    return I && isa<FPMathOperator>(I) && I->hasApproxFunc();
+  };
+  auto FlushingArith = [](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !I->getType()->isFloatTy())
+      return false;
+    if (isa<BinaryOperator>(I))
+      return I->getOpcode() == Instruction::FAdd ||
+             I->getOpcode() == Instruction::FSub ||
+             I->getOpcode() == Instruction::FMul;
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    return II && (II->getIntrinsicID() == Intrinsic::fma ||
+                  II->getIntrinsicID() == Intrinsic::fmuladd);
+  };
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    IRBuilder<> B(&I);
+    Type *Ty = I.getType();
+    bool Float = Ty->isFloatTy();
+    Value *X = nullptr, *R = nullptr;
+    if (Float && Afn(&I) && match(&I, m_FDiv(m_Value(X), m_Value(R))) &&
+        IsOne(X)) {
+      // 1 / sqrt(x) and 1 / x
+      Value *S;
+      if (match(R, m_Intrinsic<Intrinsic::sqrt>(m_Value(S))) && Afn(R))
+        R = B.CreateIntrinsic(Intrinsic::agx_rsqrt, {Ty}, {S});
+      else
+        R = B.CreateIntrinsic(Intrinsic::agx_rcp, {Ty}, {R});
+    } else if (auto *II = dyn_cast<IntrinsicInst>(&I);
+               Float && II && Afn(II) &&
+               (II->getIntrinsicID() == Intrinsic::sin ||
+                II->getIntrinsicID() == Intrinsic::cos) &&
+               match(II->getArgOperand(0),
+                     m_FMul(m_Value(X), m_SpecificFP(float(numbers::pi / 2))))) {
+      R = B.CreateIntrinsic(II->getIntrinsicID() == Intrinsic::sin
+                                ? Intrinsic::agx_sin
+                                : Intrinsic::agx_cos,
+                            {Ty}, {X});
+    } else if (auto *Sel = dyn_cast<SelectInst>(&I);
+               Sel && Ty->isFPOrFPVectorTy() &&
+               match(Sel->getTrueValue(), m_NaN())) {
+      // AIR's minimum / maximum (air-nan-min-max): fmin / fmax with a NaN
+      // check, AGX's minimum / maximum.
+      Value *A, *C;
+      auto *MM = dyn_cast<IntrinsicInst>(Sel->getFalseValue());
+      if (MM &&
+          (MM->getIntrinsicID() == Intrinsic::minnum ||
+           MM->getIntrinsicID() == Intrinsic::maxnum) &&
+          match(Sel->getCondition(),
+                m_SpecificFCmp(FCmpInst::FCMP_UNO, m_Value(A), m_Value(C))) &&
+          ((A == MM->getArgOperand(0) && C == MM->getArgOperand(1)) ||
+           (A == MM->getArgOperand(1) && C == MM->getArgOperand(0))))
+        R = B.CreateBinaryIntrinsic(MM->getIntrinsicID() == Intrinsic::minnum
+                                        ? Intrinsic::minimum
+                                        : Intrinsic::maximum,
+                                    MM->getArgOperand(0), MM->getArgOperand(1));
+    } else if (auto *Tr = dyn_cast<FPTruncInst>(&I)) {
+      // The same of half or bfloat values, computed in float: in their type
+      // (exact, and without the float ALU's flushing of their denormals).
+      auto *MM = dyn_cast<IntrinsicInst>(Tr->getOperand(0));
+      Value *A, *C;
+      if (MM && MM->hasOneUse() &&
+          (MM->getIntrinsicID() == Intrinsic::minimum ||
+           MM->getIntrinsicID() == Intrinsic::maximum) &&
+          match(MM->getArgOperand(0), m_FPExt(m_Value(A))) &&
+          match(MM->getArgOperand(1), m_FPExt(m_Value(C))) &&
+          A->getType() == Ty && C->getType() == Ty)
+        R = B.CreateBinaryIntrinsic(MM->getIntrinsicID(), A, C);
+    } else if (auto *Sel = dyn_cast<SelectInst>(&I); Float && Sel && HardwareFlush) {
+      // select(|x| < FLT_MIN, copysign(0, x), x): x, where the operation that
+      // makes x or every one that reads the flushed value flushes.
+      Value *A, *Z;
+      const APFloat *Min;
+      if (match(Sel->getCondition(),
+                m_SpecificFCmp(FCmpInst::FCMP_OLT,
+                               m_Intrinsic<Intrinsic::fabs>(m_Value(A)),
+                               m_APFloat(Min))) &&
+          Min->isSmallestNormalized() && !Min->isNegative() &&
+          match(Sel->getTrueValue(),
+                m_Intrinsic<Intrinsic::copysign>(m_Value(Z), m_Specific(A))) &&
+          match(Z, m_PosZeroFP()) && Sel->getFalseValue() == A &&
+          (FlushingArith(A) ||
+           (!Sel->use_empty() && all_of(Sel->users(), FlushingArith))))
+        R = A;
+    }
+    if (!R)
+      continue;
+    R->takeName(&I);
+    I.replaceAllUsesWith(R);
+    RecursivelyDeleteTriviallyDeadInstructions(&I);
   }
 }
 
@@ -1858,6 +1982,8 @@ bool LowerAIR::run() {
   }
   lowerHints();
   lowerCalls();
+  for (Function &F : M)
+    recoverAGXOperations(F);
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
   M.setDataLayout(TM.createDataLayout());
