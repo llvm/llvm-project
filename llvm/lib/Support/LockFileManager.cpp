@@ -28,6 +28,8 @@
 #include <tuple>
 
 #ifdef _WIN32
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/WindowsError.h"
 #include <windows.h>
 #endif
 #if LLVM_ON_UNIX
@@ -104,6 +106,19 @@ static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   StringRef HostNameRef(HostName);
   HostID.append(HostNameRef.begin(), HostNameRef.end());
 
+#elif defined(_WIN32)
+  // Use the computer name so that a lock file created by another machine, for
+  // example on a network drive, is not mistaken for one created by a process
+  // on this machine.
+  wchar_t HostName[256];
+  DWORD Size = static_cast<DWORD>(std::size(HostName));
+  if (!::GetComputerNameExW(ComputerNameDnsHostname, HostName, &Size))
+    return mapWindowsError(::GetLastError());
+  std::string HostNameUTF8;
+  if (!convertWideToUTF8(std::wstring_view(HostName, Size), HostNameUTF8))
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+  HostID.append(HostNameUTF8.begin(), HostNameUTF8.end());
+
 #else
   StringRef Dummy("localhost");
   HostID.append(Dummy.begin(), Dummy.end());
@@ -120,6 +135,33 @@ bool LockFileManager::processStillExecuting(StringRef HostID, int PID) {
 
   // Check whether the process is dead. If so, we're done.
   if (StoredHostID == HostID && getsid(PID) == -1 && errno == ESRCH)
+    return false;
+#elif defined(_WIN32)
+  SmallString<256> StoredHostID;
+  if (getHostID(StoredHostID))
+    return true; // Conservatively assume it's executing on error.
+  if (StoredHostID != HostID)
+    return true;
+
+  // Windows reuses process IDs, so a live process with this ID may be an
+  // unrelated process that started after the owner exited. Treating the lock
+  // as owned in that case only costs a wait for the lock to time out.
+  HANDLE Process =
+      ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,
+                    /*bInheritHandle=*/FALSE, static_cast<DWORD>(PID));
+  if (!Process) {
+    // ERROR_INVALID_PARAMETER means that there is no process with this ID. Any
+    // other error, such as ERROR_ACCESS_DENIED, means that the process exists.
+    return ::GetLastError() != ERROR_INVALID_PARAMETER;
+  }
+  // A process that has exited can still be opened while handles to it remain
+  // open, so check whether it is still running. A process that exited with the
+  // code STILL_ACTIVE is conservatively considered to be executing.
+  DWORD ExitCode = 0;
+  bool Exited =
+      ::GetExitCodeProcess(Process, &ExitCode) && ExitCode != STILL_ACTIVE;
+  ::CloseHandle(Process);
+  if (Exited)
     return false;
 #endif
 
