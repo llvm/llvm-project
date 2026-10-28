@@ -20,6 +20,9 @@
 /libc/ @llbm/reviewers-libc
 /bolt/ @llvm/reviewers-bolt
 /libc/ @llvm/reviewers-libc
+/libc/**/*math* @lntue
+/libc/**/FPUtil/ @lntue
+/libc/**/*complex* @lntue
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind

@@ -261,6 +261,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     default:
       break;
     case Intrinsic::dx_start_vertex_location:
+    case Intrinsic::dx_start_instance_location:
       CSF.ExtendedCommandInfo = true;
       break;
     case Intrinsic::dx_resource_handlefrombinding: {
