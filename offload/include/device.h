@@ -210,10 +210,6 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
-  // Insert a data fence between previous data operations and the following
-  // operations if necessary for the device.
-  int32_t dataFence(AsyncInfoTy &AsyncInfo);
-
   /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
   /// with \p Size bytes, returning the device-accessible pointer.
   llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
