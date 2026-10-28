@@ -48,6 +48,7 @@ using namespace llvm::omp::target::debug;
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -161,10 +162,9 @@ llvm::Error DeviceTy::init() {
   OMPT_IF_BUILT_AND_INITIALIZED({
     llvm::SmallString<32> ComputeUnitKind;
     getInfoString(DeviceInfo::COMPUTE_UNIT_KIND, ComputeUnitKind);
-    performOmptCallback(
-        device_initialize, DeviceID, ComputeUnitKind.c_str(),
-        reinterpret_cast<ompt_device_t *>(&RTL->getDevice(RTLDeviceID)),
-        lookupCallbackByName, /*documentation=*/nullptr);
+    performOmptCallback(device_initialize, DeviceID, ComputeUnitKind.c_str(),
+                        reinterpret_cast<ompt_device_t *>(this),
+                        lookupCallbackByName, /*documentation=*/nullptr);
   });
 
   // Envar that indicates whether mapped host buffers should be locked
@@ -253,8 +253,8 @@ DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
                        "(expected %zu, got %zu)",
                        Name, ExpectedSize, Size);
 
-  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   if (RecordReplay && RecordReplay->isRecording())
     RecordReplay->addGlobal(Name, Size, *AddrOrErr);
 
@@ -725,14 +725,13 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
                            const DynBlockMemConfTy &DynBlockMemConf,
                            uint32_t DynCGroupMem, void **DynPtrSlot,
                            AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
-  GenericDeviceTy &GenericDevice = Device.RTL->getDevice(Device.RTLDeviceID);
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(Device.DeviceHandle);
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment, and launches with no reserved dyn_ptr slot (e.g. older
   // compiler versions, or non-OpenMP launches) have nowhere to store one.
-  if ((GenericDevice.getRecordReplay() &&
-       GenericDevice.getRecordReplay()->isReplaying()) ||
-      !DynPtrSlot)
+  if ((RecordReplay && RecordReplay->isReplaying()) || !DynPtrSlot)
     return nullptr;
 
   const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
@@ -1169,7 +1168,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID,
        "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
        "%s mode\n",
        Kernel->getName(), LaunchArgs.UserNumBlocks[0],
@@ -1178,7 +1177,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
 
   // Record the kernel prologue data before the launch.
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   RecordReplayTy::HandleTy RRHandle;
   if (RecordReplay) {
     // Record replay requires synchronization of any previous operation.
