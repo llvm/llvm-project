@@ -59,8 +59,8 @@ llvm::Constant *getPadding(const CodeGenModule &CGM, CharUnits PadSize) {
 /// Emit a floating-point value as an IR constant.  ARM64EC keeps `long double`
 /// in the software x87 format, where a value is an integer image and not an FP
 /// value, so it must not be emitted as an llvm::ConstantFP.
-static llvm::Constant *emitFloatConstant(CodeGenModule &CGM,
-                                         const llvm::APFloat &Value) {
+llvm::Constant *emitFloatConstant(CodeGenModule &CGM,
+                                  const llvm::APFloat &Value) {
   if (CGM.getTarget().hasSoftX87LongDouble() &&
       &Value.getSemantics() == &llvm::APFloat::x87DoubleExtended())
     return CGM.EmitSoftX87LdConstant(Value);
