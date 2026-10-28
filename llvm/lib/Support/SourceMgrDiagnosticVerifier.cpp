@@ -166,13 +166,36 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
     if (!offsetMatch.empty()) {
       // Get the integer value without the @ and +/- prefix.
       if (offsetMatch[0] == '+' || offsetMatch[0] == '-') {
-        int offset;
-        offsetMatch.drop_front().getAsInteger(0, offset);
+        // Parse as decimal so that e.g. '@+08' is not treated as octal.
+        unsigned offset;
+        if (offsetMatch.drop_front().getAsInteger(10, offset)) {
+          record.emitError(os, mgr,
+                           "invalid line offset '" + offsetMatch + "'");
+          ok = false;
+          continue;
+        }
 
-        if (offsetMatch.front() == '+')
+        if (offsetMatch.front() == '+') {
+          if (offset > e - record.lineNo) {
+            record.emitError(os, mgr,
+                             "line offset '" + offsetMatch +
+                                 "' is past the end of the file");
+            ok = false;
+            continue;
+          }
           record.lineNo += offset;
-        else
+        } else {
+          // Line 0 is allowed since MLIR uses it for the implicit top-level
+          // module.
+          if (offset > record.lineNo) {
+            record.emitError(os, mgr,
+                             "line offset '" + offsetMatch +
+                                 "' is before the start of the file");
+            ok = false;
+            continue;
+          }
           record.lineNo -= offset;
+        }
       } else if (offsetMatch.consume_front("unknown")) {
         // This is matching unknown locations.
         record.fileLoc = SMLoc();
