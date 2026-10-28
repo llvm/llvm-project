@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
 
@@ -53,12 +54,12 @@ LIBC_INLINE constexpr float16 cospif16(float16 x) {
 
   // For signed zeros
   if (LIBC_UNLIKELY(x_abs == 0U))
-    return fputil::cast<float16>(1.0f);
+    return 1.0f16;
 
   // Numbers greater or equal to 2^10 are integers, or infinity, or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
     if (LIBC_UNLIKELY(x_abs <= 0x67FF))
-      return fputil::cast<float16>((x_abs & 0x1) ? -1.0f : 1.0f);
+      return (x_abs & 0x1) ? -1.0f16 : 1.0f16;
 
     // Check for NaN or infintiy values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
@@ -75,14 +76,18 @@ LIBC_INLINE constexpr float16 cospif16(float16 x) {
       return x + FPBits::quiet_nan().get_val();
     }
 
-    return fputil::cast<float16>(1.0f);
+    return 1.0f16;
   }
+
+  // Integers have exact results of +1 or -1.
+  if (LIBC_UNLIKELY(fputil::is_integer(x)))
+    return fputil::is_odd_integer(x) ? -1.0f16 : 1.0f16;
 
   float sin_k = 0, cos_k = 0, sin_y = 0, cosm1_y = 0;
   sincospif16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && cos_k == 0))
-    return fputil::cast<float16>(0.0f);
+    return 0.0f16;
 
   // Since, cosm1_y = cos_y - 1, therefore:
   //   cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
