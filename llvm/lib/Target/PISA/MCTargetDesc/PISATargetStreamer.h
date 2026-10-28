@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCStreamer.h"
 #include <tuple>
@@ -56,8 +55,8 @@ struct KernelAttribute {
 
 // PISA function and directive name
 struct FunctionDirectiveAndName {
-  // Calling convention.
-  CallingConv::ID CC;
+  // Whether to emit a kernel or function directive.
+  bool IsKernel = false;
   // External linkage.
   LinkageTy Linkage;
   // Function name.

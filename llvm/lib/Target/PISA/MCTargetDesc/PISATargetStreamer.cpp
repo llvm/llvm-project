@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
-#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -91,13 +90,8 @@ StringRef PISA::getLinkageTyName(PISA::LinkageTy Linkage) {
   llvm_unreachable("Invalid linkage type!");
 }
 
-static StringRef getCallingConvRepr(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::PISA_KERNEL:
-    return ".kernel";
-  default:
-    return ".function";
-  }
+static StringRef getFunctionDirectiveRepr(bool IsKernel) {
+  return IsKernel ? ".kernel" : ".function";
 }
 
 static std::string getKernelAttributeRepr(const KernelAttribute &Attr) {
@@ -255,7 +249,7 @@ public:
   }
 
   void emitFunctionSignature(const PISA::FunctionSignature &Sig) override {
-    if (Sig.DN.CC != CallingConv::PISA_KERNEL) {
+    if (!Sig.DN.IsKernel) {
       switch (Sig.DN.Linkage) {
       case PISA::LinkageTy::EXPORT:
         OS << ".export ";
@@ -268,13 +262,13 @@ public:
       }
     }
 
-    OS << getCallingConvRepr(Sig.DN.CC) << " ";
+    OS << getFunctionDirectiveRepr(Sig.DN.IsKernel) << " ";
 
     for (const PISA::KernelAttribute &KernelAttr : Sig.DN.KernelAttrs) {
       OS << getKernelAttributeRepr(KernelAttr) << " ";
     }
 
-    if (Sig.DN.CC != CallingConv::PISA_KERNEL) {
+    if (!Sig.DN.IsKernel) {
       if (Sig.DN.RetLLT.isValid())
         emitTypeString(Sig.DN.RetLLT, OS);
       else
@@ -286,7 +280,7 @@ public:
     printName(OS, Sig.DN.Name);
 
     OS << "(";
-    if (Sig.DN.CC != CallingConv::PISA_KERNEL) {
+    if (!Sig.DN.IsKernel) {
       const char *Sep = "";
       for (const PISA::FunctionParameter &Param : Sig.FunctionParams) {
         OS << Sep << ".reg ";
@@ -322,14 +316,14 @@ public:
   }
 
   void emitFunctionDeclaration(const PISA::FunctionDeclaration &Dcl) override {
-    assert(Dcl.DN.CC != CallingConv::PISA_KERNEL);
+    assert(!Dcl.DN.IsKernel);
 
     if (Dcl.DN.Linkage != PISA::LinkageTy::IMPORT) {
       return;
     }
 
     OS << ".import ";
-    OS << getCallingConvRepr(Dcl.DN.CC) << " ";
+    OS << getFunctionDirectiveRepr(Dcl.DN.IsKernel) << " ";
 
     if (Dcl.DN.RetLLT.isValid()) {
       emitTypeString(Dcl.DN.RetLLT, OS);
