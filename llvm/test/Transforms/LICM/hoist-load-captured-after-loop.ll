@@ -13,10 +13,10 @@ define void @captured_after_loop(i64 %n) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 3, ptr [[A]], align 4
 ; CHECK-NEXT:    [[Q:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[V]], ptr [[G]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -54,11 +54,11 @@ define void @captured_in_eh_cleanup(ptr noalias %obj, ptr %pp, i64 %n) personali
 ; CHECK-NEXT:    invoke void @may_throw()
 ; CHECK-NEXT:            to label %[[LOOP_PREHEADER:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[OBJ]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[PP]], align 8
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[OBJ]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[V]], ptr [[G]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
