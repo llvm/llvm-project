@@ -1,4 +1,4 @@
-//===-- PISAAsmPrinter.cpp - PISA LLVM assembly writer --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -520,7 +520,7 @@ void PISAAsmPrinter::collectRegDcls(PISA::RegDcls &Dcls) {
     const TargetRegisterClass *RC = MRI.getRegClass(CurReg);
     unsigned BitWidth = TRI->getBitSizeFromRegClass(RC);
     unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
-    TypeInfo &TI = DTs->emplaceInfo(NumElts, BitWidth, Info.Type);
+    PISA::TypeInfo &TI = DTs->emplaceInfo(NumElts, BitWidth, Info.Type);
     PISA::RegEncoder::RegBank Bank =
         RegMgr->getRegBank(NumElts, BitWidth);
     const char *Prefix =
@@ -700,7 +700,8 @@ void PISAAsmPrinter::collectFunctionParameters(PISA::FunctionSignature &Sig) {
     PISA::FunctionParameter Param;
     unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
     unsigned EltSize = TRI->getBitSizeFromRegClass(RC);
-    TypeInfo &TI = DTs->emplaceInfo(NumElts, EltSize, PISA::RegEncoder::REG);
+    PISA::TypeInfo &TI =
+        DTs->emplaceInfo(NumElts, EltSize, PISA::RegEncoder::REG);
     Param.Ty = TI.Ty;
     Param.Prefix = TI.Prefix;
     Param.Idx = TI.RegCounter++;
@@ -752,11 +753,11 @@ static std::string getNameFromType(Type *Ty, bool IsSigned) {
 void PISAAsmPrinter::collectFunctionDirectiveAndName(
     PISA::FunctionDirectiveAndName &DN, const Function &F) {
 
-  DN.CC = F.getCallingConv();
-  if (DN.CC != CallingConv::PISA_KERNEL)
+  DN.IsKernel = F.getCallingConv() == CallingConv::PISA_KERNEL;
+  if (!DN.IsKernel)
     DN.Linkage = collectLinkage(F);
   DN.Name = getSymbol(&F)->getName();
-  if (DN.CC != CallingConv::PISA_KERNEL) {
+  if (!DN.IsKernel) {
     Type *RetType = F.getReturnType();
     if (!RetType->isVoidTy()) {
       if (RetType->getScalarSizeInBits() == 1) {
@@ -812,7 +813,7 @@ void PISAAsmPrinter::collectFunctionDirectiveAndName(
 void PISAAsmPrinter::collectFunctionSignature(PISA::FunctionSignature &Sig) {
   Function &F = MF->getFunction();
   collectFunctionDirectiveAndName(Sig.DN, F);
-  if (Sig.DN.CC == CallingConv::PISA_KERNEL)
+  if (Sig.DN.IsKernel)
     collectKernelParameters(Sig);
   else
     collectFunctionParameters(Sig);
@@ -919,7 +920,7 @@ std::string PISAAsmPrinter::getVirtualRegisterName(Register R) const {
 
   unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
   unsigned EltSize = TRI->getBitSizeFromRegClass(RC);
-  RegEncoder::RegBank Bank = RegMgr->getRegBank(NumElts, EltSize);
+  PISA::RegEncoder::RegBank Bank = RegMgr->getRegBank(NumElts, EltSize);
   O << RegMgr->getPrefixFromBank(Bank) << RegMgr->getRegIdx(R);
   return Name;
 }
