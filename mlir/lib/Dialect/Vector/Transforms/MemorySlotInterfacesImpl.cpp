@@ -46,6 +46,15 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
+/// Return whether the transfer's only blocking use is its memref slot base.
+static bool
+isTransferSlotAccess(VectorTransferOpInterface xferOp, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  return blockingUses.size() == 1 &&
+         (*blockingUses.begin())->get() == slot.ptr &&
+         xferOp.getBase() == slot.ptr && isa<MemRefType>(slot.ptr.getType());
+}
+
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
 /// value. The transfer's memref base must be the slot pointer, its vector type
 /// must equal `slot.valueType`, its indices must be zero, and its permutation
@@ -57,15 +66,7 @@ using namespace mlir::vector;
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The transfer's memref base must be the slot pointer.
-  if (blockingUses.size() != 1)
-    return false;
-  Value blockingUse = (*blockingUses.begin())->get();
-  if (blockingUse != slot.ptr || xferOp.getBase() != slot.ptr)
-    return false;
-
-  // Reject the tensor form (already implied, since slot pointers are memrefs).
-  if (!isa<MemRefType>(xferOp.getBase().getType()))
+  if (!isTransferSlotAccess(xferOp, slot, blockingUses))
     return false;
 
   // Exact type match pins rank/extents/element type/scalable dims.
@@ -96,8 +97,9 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
-      readOp.getBase() != slot.ptr || !isa<MemRefType>(slot.ptr.getType()))
+  if (!isTransferSlotAccess(
+          cast<VectorTransferOpInterface>(readOp.getOperation()), slot,
+          blockingUses))
     return failure();
   if (readOp.getMask() || readOp.isMasked() || readOp.hasOutOfBoundsDim() ||
       !readOp.getPermutationMap().isIdentity() ||
