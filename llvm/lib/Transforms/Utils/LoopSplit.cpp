@@ -66,6 +66,7 @@
 
 #include "llvm/Transforms/Utils/LoopSplit.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -200,16 +201,18 @@ static ICmpInst::Predicate guardPredicate(bool Signed, bool Descending) {
   return ICmpInst::getNonStrictPredicate(continuePredicate(Signed, Descending));
 }
 
+namespace {
 struct LoopSplitAnalysis {
   const SCEV *InductionStart;
   const SCEV *InductionEnd;
   bool InductionIsSigned;
   bool Descending;
 };
+} // namespace
 
 // Check every structural precondition and record the induction analysis.
 static std::optional<LoopSplitAnalysis>
-analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
+analyzeLegality(Loop *L, ScalarEvolution *SE, DominatorTree *DT) {
   // Require a bottom-tested single-exit loop in LCSSA form. Simplify form gives
   // the preheader, single latch and dedicated exits; the rest pin the exit to
   // the latch, so the latch compare can be rewritten per partition.
@@ -308,7 +311,7 @@ analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
 
 std::optional<LoopSplit>
 LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
-  std::optional<LoopSplitAnalysis> Analysis = analyzeLegality(L, LI, SE, DT);
+  std::optional<LoopSplitAnalysis> Analysis = analyzeLegality(L, SE, DT);
   if (!Analysis)
     return std::nullopt;
   return LoopSplit(L, LI, SE, DT, Analysis->InductionStart,
@@ -321,7 +324,7 @@ LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
 //===----------------------------------------------------------------------===//
 
 static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
-                            DominatorTree *DT, LoopInfo *LI);
+                            DomTreeUpdater *DTU, LoopInfo *LI);
 
 const SCEV *LoopSplit::getClampedEndSCEV(const SCEV *EndExpr) const {
   if (Descending)
@@ -342,6 +345,14 @@ bool LoopSplit::arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
   return true;
 }
 
+bool LoopSplit::guardBranchesOnPoison() const {
+  for (const PartitionInfo &P : Partitions)
+    if (!SE->isGuaranteedNotToBePoison(P.StartExpr) ||
+        !SE->isGuaranteedNotToBePoison(getClampedEndSCEV(P.EndExpr)))
+      return true;
+  return false;
+}
+
 // Drive the whole transform: set up scratch state and run each phase in order.
 bool LoopSplit::split() {
   PHINode *Induction = L->getInductionVariable(*SE);
@@ -357,6 +368,13 @@ bool LoopSplit::split() {
                       << ": partition bounds not safe to expand\n");
     return false;
   }
+  // The entry guards branch on the expanded bounds before the loop body runs.
+  // If a loop may exit abnormally before its latch, this would introduce
+  // branch-on-poison UB that the original loop may not have had.
+  if (guardBranchesOnPoison() && !SE->loopHasNoAbnormalExits(L)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": entry guard may branch on poison\n");
+    return false;
+  }
 
   SplitState S;
   // Partition 0 reuses the original loop; record its preheader/exit/guard up
@@ -370,8 +388,11 @@ bool LoopSplit::split() {
   S.Induction = Induction;
   S.OrigLoopID = L->getLoopID();
 
-  splitFinalExit(S);
-  buildEntryGuard(P0.Preheader, P0.GuardBlock, DT, LI);
+  {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+    splitFinalExit(S, DTU);
+    buildEntryGuard(P0.Preheader, P0.GuardBlock, &DTU, LI);
+  }
 
   // Keep the expander and its cleaner alive for the whole transform: the bounds
   // it materializes are consumed by later phases. markResultUsed() below keeps
@@ -383,20 +404,20 @@ bool LoopSplit::split() {
   ExpanderCleaner.markResultUsed();
 
   // The iteration space and the surrounding block structure both changed.
-  SE->forgetLoop(L);
+  SE->forgetTopmostLoop(L);
   SE->forgetBlockAndLoopDispositions();
   return true;
 }
 
 // Split the final exit off the loop exit block, so the original exit can serve
 // as partition 0's dedicated exit and branch on into the guard chain.
-void LoopSplit::splitFinalExit(SplitState &S) {
+void LoopSplit::splitFinalExit(SplitState &S, DomTreeUpdater &DTU) {
   BasicBlock *OrigExit = Partitions[0].Exit;
 
   // Splitting at begin() moves everything into FinalExit; the exit block has no
   // PHIs because legality analysis rejects escaping values. SplitBlock also
   // re-parents the dominator-tree children of the exit onto FinalExit.
-  S.FinalExit = SplitBlock(OrigExit, OrigExit->begin(), DT, LI,
+  S.FinalExit = SplitBlock(OrigExit, OrigExit->begin(), &DTU, LI,
                            /*MSSAU=*/nullptr, "ls.final.exit");
 }
 
@@ -404,11 +425,11 @@ void LoopSplit::splitFinalExit(SplitState &S) {
 // dominator tree and loop info. On return \p Preheader is the clean preheader
 // and \p EntryGuard is the new guard block dominating the chain.
 static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
-                            DominatorTree *DT, LoopInfo *LI) {
+                            DomTreeUpdater *DTU, LoopInfo *LI) {
   // Split the preheader: the upper half becomes the guard dominating the chain,
   // the lower half a clean preheader.
   BasicBlock *NewPreheader =
-      SplitBlock(Preheader, Preheader->getTerminator(), DT, LI);
+      SplitBlock(Preheader, Preheader->getTerminator(), DTU, LI);
   EntryGuard = Preheader;
   Preheader = NewPreheader;
   // Move the original preheader's name onto the new preheader, then name the
@@ -461,7 +482,8 @@ void LoopSplit::clonePartitions(SplitState &S) {
       S.OuterLoop->addBasicBlockToLoop(Exiti, *LI);
       S.OuterLoop->addBasicBlockToLoop(Guardi, *LI);
     }
-    // Placeholder terminators; both are re-pointed at the merge in pass 2.
+    // Placeholder terminators. chainPartitions() replaces the guard branch and
+    // retargets the exit at the next guard, or the final exit for the last one.
     UncondBrInst::Create(S.FinalExit, Exiti);
     UncondBrInst::Create(S.FinalExit, Guardi);
 

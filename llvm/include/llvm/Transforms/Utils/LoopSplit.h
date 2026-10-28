@@ -22,6 +22,7 @@
 namespace llvm {
 
 class DominatorTree;
+class DomTreeUpdater;
 class SCEV;
 class SCEVExpander;
 class ScalarEvolution;
@@ -128,10 +129,12 @@ private:
   /// Return true if every partition bound is safe to expand at \p InsertPt.
   bool arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
                                       Instruction *InsertPt) const;
+  /// Return true if the entry guards would branch on a possibly-poison value.
+  bool guardBranchesOnPoison() const;
 
   // split() phase helpers, run in order; each is documented at its definition.
   /// Split the final exit off the loop exit block.
-  void splitFinalExit(SplitState &S);
+  void splitFinalExit(SplitState &S, DomTreeUpdater &DTU);
   /// Expand each partition's start and clamped end into the entry guard.
   void expandPartitionBounds(SplitState &S, SCEVExpander &Expander);
   /// Clone each later partition's sub-loop and create its guard/exit.

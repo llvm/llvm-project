@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/LoopSplit.h"
 
 using namespace llvm;
@@ -82,7 +83,7 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // would reorder them and the partitions would overlap.
   SmallVector<unsigned, 4> Offsets;
   for (unsigned Offset : SplitPoints)
-    if (BitWidth >= 32 || Offset < (1u << BitWidth))
+    if (isUIntN(BitWidth, Offset))
       Offsets.push_back(Offset);
   llvm::sort(Offsets);
   Offsets.erase(llvm::unique(Offsets), Offsets.end());
@@ -146,5 +147,6 @@ PreservedAnalyses LoopSplitPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
   return PA;
 }
