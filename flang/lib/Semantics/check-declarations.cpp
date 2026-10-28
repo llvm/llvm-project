@@ -21,9 +21,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include <algorithm>
-#include <iostream>
 #include <map>
-#include <ostream>
 #include <string>
 
 namespace Fortran::semantics {
@@ -3131,7 +3129,6 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
 
 // 19.2 p2
 void CheckHelper::CheckGlobalName(const Symbol &symbol) {
-  // std::cout << symbol.name().ToString() << " " << symbol.GetParentComponent()->name().ToString()<< "\n";
   if (auto global{DefinesGlobalName(symbol)}) {
     auto pair{globalNames_.emplace(std::move(*global), symbol)};
     if (!pair.second) {
@@ -3139,9 +3136,29 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
       if (context_.HasError(symbol) || context_.HasError(other)) {
         // don't pile on
       } else if (symbol.has<CommonBlockDetails>() &&
-          other.has<CommonBlockDetails>() && symbol.owner() != other.owner()) {
-        // Two common blocks can have the same global name so long as
-        // they're not in the same scope.
+          other.has<CommonBlockDetails>() && symbol.owner() != other.owner() &&
+          (symbol.name() == other.name() ||
+              (symbol.GetBindName() && other.GetBindName()))) {
+        // Two common blocks in different scoping units share one global
+        // identifier without conflicting (19.2 p2) only when they are
+        // actually the same object:
+        //  - They have the same Fortran name: storage association by name
+        //    (8.10.2.4) makes same-named common blocks in different
+        //    scoping units one entity, regardless of BIND(C) status.
+        //  - Or they are both explicitly bound (GetBindName() is only set
+        //    for a genuine, non-blank BIND(C) label -- 18.9.2 p2 treats a
+        //    blank NAME= as no binding label at all, same as unbound).
+        //    Differently-named common blocks sharing one binding label is
+        //    a nonstandard extension (common blocks are otherwise distinct
+        //    entities by name per 8.10.2.4, so NAG rejects this; gfortran
+        //    and ifx accept it), accepted here only when every one of them
+        //    actually carries that label, since only then do they all
+        //    genuinely name the same object. A bound common sharing its
+        //    key with an unbound one (whose global identifier is merely
+        //    its own local Fortran name coinciding with the other's label)
+        //    is not that case, and still conflicts; so does any pair in
+        //    the same scoping unit (C877 permits a BIND NAME= to name only
+        //    a single entity).
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
           (!IsExternalProcedureDefinition(symbol) ||
