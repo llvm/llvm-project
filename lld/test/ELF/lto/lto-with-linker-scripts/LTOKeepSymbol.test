@@ -1,0 +1,63 @@
+# REQUIRES: aarch64
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts %t/1.o -plugin-opt=-function-sections \
+# RUN:   -Map=%t/map.txt -T %t/script.t -o %t/out
+# RUN: FileCheck %s --check-prefix=KEEP < %t/map.txt
+
+# KEEP: .text.baz1
+# KEEP: .text.baz2
+# KEEP: .text.baz3
+# KEEP: .text.baz
+# KEEP: .rodata.sys_call_table
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+@sys_call_table = constant [2 x ptr] [ptr @baz, ptr @baz], section ".rodata.sys_call_table"
+
+define hidden i32 @foo() section ".text.foo" {
+  ret i32 0
+}
+
+define weak i32 @bar() section ".text.bar" {
+  ret i32 0
+}
+
+define void @baz1() section ".text.baz1" {
+  call void @baz2()
+  ret void
+}
+
+define void @baz2() section ".text.baz2" {
+  call void @baz3()
+  ret void
+}
+
+define void @baz3() section ".text.baz3" {
+  %a = call i32 @foo()
+  %b = call i32 @baz()
+  %c = add i32 %a, %b
+  %d = icmp eq i32 %c, -1
+  br i1 %d, label %hit, label %done
+
+hit:
+  call void asm sideeffect "", ""()
+  br label %done
+
+done:
+  ret void
+}
+
+define i32 @baz() section ".text.baz" {
+  ret i32 0
+}
+
+#--- script.t
+SECTIONS {
+  .baz : { KEEP(*(.text.baz*)) }
+  .keeprodata : { KEEP(*(.rodata*)) }
+  .mytext : { *(.text*) }
+}
