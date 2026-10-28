@@ -373,6 +373,27 @@ static bool countsAsInstruction(const MachineInstr &MI) {
   return !(MI.isDebugInstr() || MI.isCFIInstruction());
 }
 
+static bool isPseudoProbeSensitiveInstruction(const MachineInstr &MI) {
+  if (MI.isPseudoProbe())
+    return true;
+  if (!MI.isCall())
+    return false;
+  const DILocation *DL = MI.getDebugLoc();
+  return DL && DILocation::isPseudoProbeDiscriminator(DL->getDiscriminator());
+}
+
+static bool haveSamePseudoProbeContext(const MachineInstr &MI1,
+                                       const MachineInstr &MI2) {
+  bool IsSensitive1 = isPseudoProbeSensitiveInstruction(MI1);
+  bool IsSensitive2 = isPseudoProbeSensitiveInstruction(MI2);
+  if (!IsSensitive1 && !IsSensitive2)
+    return true;
+  if (IsSensitive1 != IsSensitive2)
+    return false;
+
+  return MI1.getDebugLoc().isSameSourceLocation(MI2.getDebugLoc());
+}
+
 /// Iterate backwards from the given iterator \p I, towards the beginning of the
 /// block. If a MI satisfying 'countsAsInstruction' is found, return an iterator
 /// pointing to that MI. If no such MI is found, return the end iterator.
@@ -407,6 +428,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
     if (!MBBI1->isIdenticalTo(*MBBI2) ||
+        !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler
@@ -979,13 +1001,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
-  // type, so we need std::sort instead.
-  std::sort(MergePotentials.begin(), MergePotentials.end());
-#else
-  array_pod_sort(MergePotentials.begin(), MergePotentials.end());
-#endif
+  llvm::sort(MergePotentials);
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -1564,7 +1580,8 @@ ReoptimizeBlock:
     // If we have a block that consists of a single conditional branch
     // instruction that is exactly identical to the terminator in the previous
     // block, we can remove this block.
-    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+    if (MBB->getFirstNonDebugInstr() == MBB->getLastNonDebugInstr() &&
+        PrevBB.canFallThrough() && CurTBB == PriorTBB &&
         areConditionalsEqual(CurCond, PriorCond)) {
       // We remove the branch from the previous basic block rather than this
       // one in case there are other blocks that specifically branch to this
@@ -2239,9 +2256,4 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
   ++NumHoist;
   return true;
-}
-
-FunctionPass *llvm::createBranchFolder(bool EnableCommonHoist,
-                                       bool EnableBasicBlockReordering) {
-  return new BranchFolderLegacy(EnableCommonHoist, EnableBasicBlockReordering);
 }

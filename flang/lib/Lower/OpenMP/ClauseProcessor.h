@@ -125,6 +125,7 @@ public:
   bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processThreadset(mlir::omp::ThreadsetClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
@@ -153,8 +154,10 @@ public:
   bool processIsDevicePtr(lower::StatementContext &stmtCtx,
                           mlir::omp::IsDevicePtrClauseOps &result,
                           llvm::SmallVectorImpl<Object> &isDeviceObjects) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result,
-                     bool isDeclareSimd = false) const;
+  bool
+  processLinear(mlir::omp::LinearClauseOps &result, bool isDeclareSimd = false,
+                llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms =
+                    nullptr) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 

@@ -1218,9 +1218,11 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      $_state.addAttribute("reassociation",
-          getReassociationIndicesAttribute($_builder, reassociation));
-      build($_builder, $_state, resultType, src, attrs);
+      buildPropertiesAndDiscardableAttributes($_state, attrs);
+      $_state.getOrAddProperties<Properties>().reassociation =
+          getReassociationIndicesAttribute($_builder, reassociation);
+      $_state.addOperands(src);
+      $_state.addTypes(resultType);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
@@ -1273,6 +1275,9 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     The result tensor dimensions are `low[i]` + `dim[i]` + `high[i]` for each
     dimension `i`. The number of elements of `low` and `high` must match the
     rank of the input tensor. They can be either a constant or a dynamic value.
+    The padding amounts must be non-negative. A negative constant is rejected
+    by the verifier. A negative dynamic value is undefined behavior: the
+    verifier does not look through the defining op of an SSA value.
 
     The region of the `tensor.pad` operation returns the value to use
     for the padding. The arguments of the region represent the index

@@ -13,8 +13,8 @@ func.func @load(%base : memref<200x100xf32>, %i : index, %j : index) -> vector<8
 
 // ALL-LABEL: func @load
 
-// VEC-ALIGN: llvm.load %{{.*}} {alignment = 32 : i64} : !llvm.ptr -> vector<8xf32>
-// MEMREF-ALIGN: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+// VEC-ALIGN: llvm.load %{{.*}} <alignment = 32> : !llvm.ptr -> vector<8xf32>
+// MEMREF-ALIGN: llvm.load %{{.*}} <alignment = 4> : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -25,8 +25,8 @@ func.func @load_with_alignment_attribute(%base : memref<200x100xf32>, %i : index
 
 // ALL-LABEL: func @load_with_alignment_attribute
 
-// VEC-ALIGN: llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
-// MEMREF-ALIGN: llvm.load %{{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
+// VEC-ALIGN: llvm.load %{{.*}} <alignment = 8> : !llvm.ptr -> vector<8xf32>
+// MEMREF-ALIGN: llvm.load %{{.*}} <alignment = 8> : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -42,8 +42,8 @@ func.func @store(%base : memref<200x100xf32>, %i : index, %j : index) {
 
 // ALL-LABEL: func @store
 
-// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} {alignment = 16 : i64} :  vector<4xf32>, !llvm.ptr
-// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} :  vector<4xf32>, !llvm.ptr
+// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 16> :  vector<4xf32>, !llvm.ptr
+// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 4> :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -55,8 +55,8 @@ func.func @store_with_alignment_attribute(%base : memref<200x100xf32>, %i : inde
 
 // ALL-LABEL: func @store_with_alignment_attribute
 
-// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
-// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
+// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 8> :  vector<4xf32>, !llvm.ptr
+// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 8> :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -72,8 +72,8 @@ func.func @masked_load(%base: memref<?xf32>, %mask: vector<16xi1>, %passthru: ve
 
 // ALL-LABEL: func @masked_load
 
-// VEC-ALIGN: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 64 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
-// MEMREF-ALIGN: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 4 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+// VEC-ALIGN: %[[L:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(64) : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+// MEMREF-ALIGN: %[[L:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(4) : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
 
 // -----
 
@@ -85,8 +85,8 @@ func.func @masked_load_with_alignment_attribute(%base: memref<?xf32>, %mask: vec
 
 // ALL-LABEL: func @masked_load_with_alignment_attribute
 
-// VEC-ALIGN: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
-// MEMREF-ALIGN: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+// VEC-ALIGN: %[[L:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+// MEMREF-ALIGN: %[[L:.*]] = llvm.intr.masked.load(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
 
 // -----
 
@@ -102,8 +102,8 @@ func.func @masked_store(%base: memref<?xf32>, %mask: vector<16xi1>, %passthru: v
 
 // ALL-LABEL: func @masked_store
 
-// VEC-ALIGN: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 64 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
-// MEMREF-ALIGN: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 4 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
+// VEC-ALIGN: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}), alignment(64) : vector<16xf32>, vector<16xi1> into !llvm.ptr
+// MEMREF-ALIGN: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}), alignment(4) : vector<16xf32>, vector<16xi1> into !llvm.ptr
 
 // -----
 
@@ -115,8 +115,8 @@ func.func @masked_store_with_alignment_attribute(%base: memref<?xf32>, %mask: ve
 
 // ALL-LABEL: func @masked_store_with_alignment_attribute
 
-// VEC-ALIGN: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
-// MEMREF-ALIGN: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
+// VEC-ALIGN: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : vector<16xf32>, vector<16xi1> into !llvm.ptr
+// MEMREF-ALIGN: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : vector<16xf32>, vector<16xi1> into !llvm.ptr
 
 // -----
 
@@ -132,8 +132,8 @@ func.func @scatter(%base: memref<?xf32>, %index: vector<3xi32>, %mask: vector<3x
 
 // ALL-LABEL: func @scatter
 
-// VEC-ALIGN: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 16 : i32} : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
-// MEMREF-ALIGN: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 4 : i32} : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
+// VEC-ALIGN: llvm.intr.masked.scatter(%{{.*}}, %{{.*}}, %{{.*}}), alignment(16) : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
+// MEMREF-ALIGN: llvm.intr.masked.scatter(%{{.*}}, %{{.*}}, %{{.*}}), alignment(4) : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
 
 // -----
 
@@ -145,8 +145,8 @@ func.func @scatter_with_alignment_attribute(%base: memref<?xf32>, %index: vector
 
 // ALL-LABEL: func @scatter_with_alignment_attribute
 
-// VEC-ALIGN: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
-// MEMREF-ALIGN: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
+// VEC-ALIGN: llvm.intr.masked.scatter(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
+// MEMREF-ALIGN: llvm.intr.masked.scatter(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
 
 // -----
 
@@ -162,8 +162,8 @@ func.func @gather(%base: memref<?xf32>, %index: vector<3xi32>, %mask: vector<3xi
 
 // ALL-LABEL: func @gather
 
-// VEC-ALIGN: %[[G:.*]] = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 16 : i32} : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
-// MEMREF-ALIGN: %[[G:.*]] = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 4 : i32} : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+// VEC-ALIGN: %[[G:.*]] = llvm.intr.masked.gather(%{{.*}}, %{{.*}}, %{{.*}}), alignment(16) : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+// MEMREF-ALIGN: %[[G:.*]] = llvm.intr.masked.gather(%{{.*}}, %{{.*}}, %{{.*}}), alignment(4) : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
 
 // -----
 
@@ -175,5 +175,5 @@ func.func @gather_with_alignment_attribute(%base: memref<?xf32>, %index: vector<
 
 // ALL-LABEL: func @gather_with_alignment_attribute
 
-// VEC-ALIGN: %[[G:.*]] = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
-// MEMREF-ALIGN: %[[G:.*]] = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+// VEC-ALIGN: %[[G:.*]] = llvm.intr.masked.gather(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+// MEMREF-ALIGN: %[[G:.*]] = llvm.intr.masked.gather(%{{.*}}, %{{.*}}, %{{.*}}), alignment(8) : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>

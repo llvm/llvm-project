@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s
 
 ; VF is scalable, as is TC. We can prove that TC > VF.
-define void @iv_no_overflow(ptr noalias %a, ptr noalias %b) #0 {
+define void @iv_no_overflow(ptr noalias %a, ptr noalias %b) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @iv_no_overflow(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -49,7 +49,7 @@ exit:
 }
 
 ; VF is scalable, as is TC. TC * MaxVScale overflows in i32, but not the i64 induction.
-define void @tc_maxvscale_overflow(ptr noalias %a, ptr noalias %b) #0 {
+define void @tc_maxvscale_overflow(ptr noalias %a, ptr noalias %b) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @tc_maxvscale_overflow(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -97,7 +97,7 @@ exit:
 
 ; VF is scalable, as is TC. TC * MaxVScale (8388609 * 1024) is not
 ; representable in the type of the i32 induction variable.
-define void @tc_maxvscale_exceeds_iv_type(ptr noalias %a, ptr noalias %b) #0 {
+define void @tc_maxvscale_exceeds_iv_type(ptr noalias %a, ptr noalias %b) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @tc_maxvscale_exceeds_iv_type(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

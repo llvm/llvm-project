@@ -36,6 +36,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
 #include <tuple>
@@ -244,15 +245,19 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
   WarningAsErrorFilter = std::make_unique<CachedGlobList>(
       StringRef(getOptions().WarningsAsErrors.value_or("")));
   static const std::vector<std::string> EmptyFileExtensions;
+  // The constructor calls this before a DiagnosticsEngine is attached, so only
+  // report configuration problems once one exists, i.e. for analyzed files.
   if (!parseFileExtensions(getOptions().HeaderFileExtensions
                                ? *getOptions().HeaderFileExtensions
                                : EmptyFileExtensions,
-                           HeaderFileExtensions))
+                           HeaderFileExtensions) &&
+      DiagEngine)
     this->configurationDiag("Invalid header file extensions");
   if (!parseFileExtensions(getOptions().ImplementationFileExtensions
                                ? *getOptions().ImplementationFileExtensions
                                : EmptyFileExtensions,
-                           ImplementationFileExtensions))
+                           ImplementationFileExtensions) &&
+      DiagEngine)
     this->configurationDiag("Invalid implementation file extensions");
 }
 
@@ -484,8 +489,10 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
                                                    unsigned LineNumber) const {
   if (Context.getGlobalOptions().LineFilter.empty())
     return true;
+  const std::string NormalizedFileName =
+      llvm::sys::path::convert_to_slash(FileName);
   for (const FileFilter &Filter : Context.getGlobalOptions().LineFilter) {
-    if (FileName.ends_with(Filter.Name)) {
+    if (StringRef(NormalizedFileName).ends_with(Filter.Name)) {
       if (Filter.LineRanges.empty())
         return true;
       return llvm::any_of(

@@ -54,3 +54,26 @@ struct PackSingle {
 
 PackSingle<int> p1;
 PackSingle<int, double, char> p3;
+
+// #endif before '}' is not a missing trailing comma.
+enum class color_t : unsigned {
+  RED = 0,
+  GREEN = 1,
+  BLUE = 2,
+  CYAN = 3,
+#ifdef USE_MAGENTA
+  LAST = CYAN,
+#else
+  LAST = BLUE,
+#endif
+};
+
+struct WithDefault { int foo = 1; };
+void takesTwo(WithDefault, int);
+
+void emptyInitListWithDefaultMember() {
+  takesTwo(WithDefault{}, 1);
+  int a[] = {1,};
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: int a[] = {1};
+}

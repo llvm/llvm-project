@@ -860,9 +860,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
-                            ? diag::warn_cxx17_compat_init_capture_pack
-                            : diag::ext_init_capture_pack);
+      DiagCompat(EllipsisLoc, diag_compat::init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
                                                 /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
@@ -1143,6 +1141,16 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   // Determine if we're within a context where we know that the lambda will
   // be dependent, because there are template parameters in scope.
+  //
+  // FIXME: A lambda in the noexcept specifier of an abbreviated function
+  // template (e.g. `auto&&`) is not marked dependent when it captures
+  // a dependent entity. See:
+  // * clang/unittests/AST/LambdaDependencyTest.cpp
+  // * https://github.com/llvm/llvm-project/issues/232874
+  // * https://github.com/llvm/llvm-project/issues/233102
+  // A temporary guard in PaddingChecker::shouldSkipDecl skips fields of
+  // dependent type as a workaround; remove it together with this FIXME
+  // once the bug is fixed.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
@@ -1196,9 +1204,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
        PrevCaptureLoc = C->Loc, ++C) {
     if (C->Kind == LCK_This || C->Kind == LCK_StarThis) {
       if (C->Kind == LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus17
-                         ? diag::ext_star_this_lambda_capture_cxx17
-                         : diag::warn_cxx14_compat_star_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::star_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p8:
       //   An identifier or this shall not appear more than once in a
@@ -1217,9 +1223,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus20
-                         ? diag::ext_equals_this_lambda_capture_cxx20
-                         : diag::warn_cxx17_compat_equals_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
       //   If this is captured by a local lambda expression, its nearest
@@ -1245,9 +1249,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
-      Diag(C->Loc, getLangOpts().CPlusPlus14
-                       ? diag::warn_cxx11_compat_init_capture
-                       : diag::ext_init_capture);
+      DiagCompat(C->Loc, diag_compat::init_capture);
 
       // If the initializer expression is usable, but the InitCaptureType
       // is not, then an error has occurred - so ignore the capture for now.
@@ -1496,7 +1498,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
     LSI->ExplicitParams = FTI.getLParenLoc().isValid();
     if (!FTIHasSingleVoidParameter(FTI)) {
-      Params.reserve(Params.size());
+      Params.reserve(FTI.NumParams);
       for (unsigned I = 0; I < FTI.NumParams; ++I) {
         auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
         Param->setScopeInfo(0, Params.size());
@@ -1996,9 +1998,21 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   } else {
     assert(Cap.isVariableCapture() && "unknown kind of capture");
     ValueDecl *Var = Cap.getVariable();
+    // For OpenMP structured bindings, capture the decomposed decl, not the
+    // binding.
+    auto *BD = dyn_cast<BindingDecl>(Var);
+    if (IsOpenMPMapping && BD)
+      // When capturing a BindingDecl in an OpenMP mapping context, we need to
+      // capture the DecompositionDecl instead. BindingDecls are references to
+      // storage owned by the DecompositionDecl.
+      // Example:
+      //   auto [a, b] = p;
+      //   auto lambda = [a]() { return a; };  // In OpenMP context.
+      // This is reached during lambda capture for OpenMP mappings.
+      Var = BD->getDecomposedDecl();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
-      CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+        CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
   }
 
   // In OpenMP, the capture kind doesn't actually describe how to capture:
@@ -2104,14 +2118,32 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
 
 /// Create a field within the lambda class or captured statement record for the
 /// given capture.
-FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
-                                   const sema::Capture &Capture) {
+FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                                   bool IsOpenMP) {
   SourceLocation Loc = Capture.getLocation();
   QualType FieldType = Capture.getCaptureType();
-
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
-    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
+    const VarDecl *Var = nullptr;
+    if (IsOpenMP) {
+      if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
+        Var = cast<VarDecl>(BD->getDecomposedDecl());
+        FieldType = Var->getType().getNonReferenceType();
+        if (Capture.isReferenceCapture())
+          FieldType = Context.getLValueReferenceType(FieldType);
+      } else if (auto *DD = dyn_cast_or_null<DecompositionDecl>(
+                     Capture.getVariable())) {
+        // OpenMP already transformed BindingDecl to DecompositionDecl
+        // before buildCapturedStmtCaptureList. Use the DecompositionDecl
+        // type.
+        Var = DD;
+        FieldType = DD->getType().getNonReferenceType();
+        if (Capture.isReferenceCapture())
+          FieldType = Context.getLValueReferenceType(DD->getType());
+      }
+    }
+    if (!Var)
+      Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
     if (Var && Var->isInitCapture())
       TSI = Var->getTypeSourceInfo();
   }

@@ -139,7 +139,7 @@ class C1PSMEStreamingSchedWrite<SchedWrite StreamingWrite,
                                 SchedWrite SMEWrite>
     : SchedWriteVariant<[
         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
-        SchedVar<SMESchedPred,            [SMEWrite]>,
+        SchedVar<NoSchedPred,             [SMEWrite]>,
       ]>;
 
 def C1PCPPRCTXPred : MCSchedPredicate<

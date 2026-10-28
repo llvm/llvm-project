@@ -113,6 +113,11 @@ bool isGslPointerType(QualType QT);
 bool isGslOwnerType(QualType QT);
 bool isGslOwnerType(const CXXRecordDecl *RD);
 
+// Tells whether the given constructor belongs to an Owner type and the
+// parameter is of pointer type. This is useful to disable inference on owning
+// pointers being captured by owners.
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD);
+
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives
 // when ownership is manually transferred.

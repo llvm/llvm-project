@@ -33,7 +33,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %7, %bb.2
   ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]], implicit $fpcr
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[FCVTHSr]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[FCVTHSr]], %subreg.hsub
+  ; CHECK-NEXT:   [[FMOVSWr:%[0-9]+]]:gpr32 = FMOVSWr [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (i16) into `ptr undef`)
   ; CHECK-NEXT:   B %bb.2
   bb.0:
@@ -92,7 +93,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[CSELWr]], %bb.1
   ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]], implicit $fpcr
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[FCVTHSr]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[FCVTHSr]], %subreg.hsub
+  ; CHECK-NEXT:   [[FMOVSWr:%[0-9]+]]:gpr32 = FMOVSWr [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   STRHui [[PHI]], [[DEF1]], 0 :: (store (i16) into `ptr undef`)
   ; CHECK-NEXT:   B %bb.2
   bb.0:

@@ -55,6 +55,8 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
+  c.PTO = PipelineTuningOptions(c.LibraryOptions);
 
   // LLD supports the new relocations and address-significance tables.
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -88,8 +90,8 @@ static lto::Config createConfig(Ctx &ctx) {
                        << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        c.Options.BBSections = BasicBlockSection::List;
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 
@@ -383,12 +385,6 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     check(
         pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
-  if (!ctx.arg.ltoObjPath.empty()) {
-    saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
-  }
-
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
   const char *ext = ctx.arg.ltoEmitAsm ? ".s" : ".o";
@@ -407,6 +403,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       objBuf = buf[i].second;
       bitcodeFilePath = buf[i].first;
     }
+    if (!ctx.arg.ltoObjPath.empty())
+      saveBuffer(objBuf, ctx.arg.ltoObjPath + (i == 0 ? "" : Twine(i)));
     if (objBuf.empty())
       continue;
 

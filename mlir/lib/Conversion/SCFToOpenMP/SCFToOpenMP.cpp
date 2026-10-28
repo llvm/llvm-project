@@ -413,6 +413,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
+    if (parallelOp.getUnsignedCmp())
+      return rewriter.notifyMatchFailure(
+          parallelOp, "unsigned loop bounds are not supported");
     // Bail out early if any reduction init value has a type that is not
     // compatible with LLVM (e.g. index), since we cannot allocate a reduction
     // variable for such types.
@@ -510,7 +513,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
-        /* private_needs_barrier = */ nullptr,
+        /* private_needs_barrier = */ false,
         /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
         /* reduction_mod = */ nullptr,
         /* reduction_vars = */ llvm::SmallVector<Value>{},

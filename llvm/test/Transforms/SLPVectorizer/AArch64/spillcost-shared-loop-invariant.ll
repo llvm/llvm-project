@@ -9,27 +9,20 @@ define void @shared_loop_invariant(ptr %params, i1 %cond, i64 %n) {
 ; CHECK-SAME: ptr [[PARAMS:%.*]], i1 [[COND:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[PARAMS]], i64 88
-; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[OFFSET]], align 8
-; CHECK-NEXT:    [[Y_PTR:%.*]] = getelementptr i8, ptr [[PARAMS]], i64 96
-; CHECK-NEXT:    [[Y:%.*]] = load double, ptr [[Y_PTR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[OFFSET]], align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[MERGE:.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[RIGHT:.*]], label %[[LEFT:.*]]
 ; CHECK:       [[LEFT]]:
-; CHECK-NEXT:    [[LEFT_X:%.*]] = fadd double 0.000000e+00, [[X]]
-; CHECK-NEXT:    [[LEFT_Y:%.*]] = fadd double 0.000000e+00, [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[RIGHT]]:
-; CHECK-NEXT:    [[RIGHT_X:%.*]] = fadd double 0.000000e+00, [[X]]
-; CHECK-NEXT:    [[RIGHT_Y:%.*]] = fadd double 0.000000e+00, [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[PHI_Y:%.*]] = phi double [ [[RIGHT_Y]], %[[RIGHT]] ], [ [[LEFT_Y]], %[[LEFT]] ]
-; CHECK-NEXT:    [[PHI_X:%.*]] = phi double [ [[RIGHT_X]], %[[RIGHT]] ], [ [[LEFT_X]], %[[LEFT]] ]
-; CHECK-NEXT:    store double [[PHI_X]], ptr [[PARAMS]], align 8
-; CHECK-NEXT:    [[OUT_Y:%.*]] = getelementptr i8, ptr [[PARAMS]], i64 8
-; CHECK-NEXT:    store double [[PHI_Y]], ptr [[OUT_Y]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ [[TMP2]], %[[RIGHT]] ], [ [[TMP1]], %[[LEFT]] ]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[PARAMS]], align 8
 ; CHECK-NEXT:    call void @external()
 ; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[NEXT]], [[N]]
@@ -78,33 +71,24 @@ define void @shared_coordinate_offsets(ptr %params, ptr %left.coords, ptr %right
 ; CHECK-SAME: ptr [[PARAMS:%.*]], ptr [[LEFT_COORDS:%.*]], ptr [[RIGHT_COORDS:%.*]], ptr [[OUT:%.*]], i1 [[COND:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[OFFSET_PTR:%.*]] = getelementptr i8, ptr [[PARAMS]], i64 88
-; CHECK-NEXT:    [[OFFSET_X:%.*]] = load double, ptr [[OFFSET_PTR]], align 8
-; CHECK-NEXT:    [[OFFSET_Y_PTR:%.*]] = getelementptr i8, ptr [[PARAMS]], i64 96
-; CHECK-NEXT:    [[OFFSET_Y:%.*]] = load double, ptr [[OFFSET_Y_PTR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[OFFSET_PTR]], align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[MERGE:.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[RIGHT:.*]], label %[[LEFT:.*]]
 ; CHECK:       [[LEFT]]:
-; CHECK-NEXT:    [[LEFT_X:%.*]] = load double, ptr [[LEFT_COORDS]], align 8
-; CHECK-NEXT:    [[LEFT_Y_PTR:%.*]] = getelementptr i8, ptr [[LEFT_COORDS]], i64 8
-; CHECK-NEXT:    [[LEFT_Y:%.*]] = load double, ptr [[LEFT_Y_PTR]], align 8
-; CHECK-NEXT:    [[LEFT_ADJUSTED_X:%.*]] = fadd fast double [[LEFT_X]], [[OFFSET_X]]
-; CHECK-NEXT:    [[LEFT_ADJUSTED_Y:%.*]] = fadd fast double [[LEFT_Y]], [[OFFSET_Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[LEFT_COORDS]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[RIGHT]]:
-; CHECK-NEXT:    [[RIGHT_X:%.*]] = load double, ptr [[RIGHT_COORDS]], align 8
-; CHECK-NEXT:    [[RIGHT_Y_PTR:%.*]] = getelementptr i8, ptr [[RIGHT_COORDS]], i64 8
-; CHECK-NEXT:    [[RIGHT_Y:%.*]] = load double, ptr [[RIGHT_Y_PTR]], align 8
-; CHECK-NEXT:    [[RIGHT_ADJUSTED_X:%.*]] = fadd fast double [[RIGHT_X]], [[OFFSET_X]]
-; CHECK-NEXT:    [[RIGHT_ADJUSTED_Y:%.*]] = fadd fast double [[RIGHT_Y]], [[OFFSET_Y]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[RIGHT_COORDS]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[ADJUSTED_X:%.*]] = phi double [ [[RIGHT_ADJUSTED_X]], %[[RIGHT]] ], [ [[LEFT_ADJUSTED_X]], %[[LEFT]] ]
-; CHECK-NEXT:    [[ADJUSTED_Y:%.*]] = phi double [ [[RIGHT_ADJUSTED_Y]], %[[RIGHT]] ], [ [[LEFT_ADJUSTED_Y]], %[[LEFT]] ]
-; CHECK-NEXT:    store double [[ADJUSTED_X]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_Y:%.*]] = getelementptr i8, ptr [[OUT]], i64 8
-; CHECK-NEXT:    store double [[ADJUSTED_Y]], ptr [[OUT_Y]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x double> [ [[TMP4]], %[[RIGHT]] ], [ [[TMP2]], %[[LEFT]] ]
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[ADJUSTED_X:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[ADJUSTED_Y:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
 ; CHECK-NEXT:    call void @use_coordinates(double [[ADJUSTED_X]], double [[ADJUSTED_Y]])
 ; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[NEXT]], [[N]]

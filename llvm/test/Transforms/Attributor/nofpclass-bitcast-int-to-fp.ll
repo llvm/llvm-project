@@ -300,6 +300,34 @@ define float @bitcast_to_float_inf(i32 %arg) {
   ret float %cast
 }
 
+; Should only permit psub or pzero results.
+define float @signbit_only_psub_pzero(i32 %x) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub norm) float @signbit_only_psub_pzero(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SIGN_BIT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[SIGN_BIT]] to float
+; CHECK-NEXT:    ret float [[CAST]]
+;
+  %sign.bit = lshr i32 %x, 31
+  %cast = bitcast i32 %sign.bit to float
+  ret float %cast
+}
+
+; Should only permit psub or pzero results.
+define float @xor_signbit_only_psub_pzero(i32 %a, i32 %b) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub norm) float @xor_signbit_only_psub_pzero(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SIGN_BIT:%.*]] = lshr i32 [[XOR]], 31
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[SIGN_BIT]] to float
+; CHECK-NEXT:    ret float [[CAST]]
+;
+  %xor = xor i32 %a, %b
+  %sign.bit = lshr i32 %xor, 31
+  %cast = bitcast i32 %sign.bit to float
+  ret float %cast
+}
+
 define double @bitcast_to_double_lshr_1(i64 %arg) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) double @bitcast_to_double_lshr_1(
 ; CHECK-SAME: i64 [[ARG:%.*]]) #[[ATTR0]] {

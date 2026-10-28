@@ -35,7 +35,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,11 +49,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
-
-static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
-                                   cl::desc("Expand double precision loads and "
-                                            "stores to their single precision "
-                                            "counterparts"));
 
 // Widen the v2 vectors to the register width, i.e. v2i16 -> v8i16,
 // v2i32 -> v4i32, etc, to ensure the correct rail size is used, i.e.
@@ -154,6 +148,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     addMSAFloatType(MVT::v4f32, &Mips::MSA128WRegClass);
     addMSAFloatType(MVT::v2f64, &Mips::MSA128DRegClass);
 
+    // Shuffle half vectors as integers to avoid expanding them through
+    // EXTRACT_VECTOR_ELT and BUILD_VECTOR with an illegal scalar f16 type.
+    setOperationPromotedToType(ISD::VECTOR_SHUFFLE, MVT::v8f16, MVT::v8i16);
+
     // We're using soft promotion for f16, but msa has some instructions for
     // conversion to/from f16. Mark those conversions as custom so we can take
     // advantage of these instructions.
@@ -168,6 +166,16 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
+
+    // RINT uses the current rounding mode and may raise inexact.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
+      if (!Subtarget.isSingleFloat()) {
+        setOperationAction(ISD::FRINT, MVT::f64, Legal);
+        setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+      }
+    }
 
     // When dealing with single precision only, use libcalls
     if (!Subtarget.isSingleFloat()) {
@@ -247,7 +255,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i64, Custom);
   }
 
-  if (NoDPLoadStore) {
+  if (Subtarget.getCLOpts().mno_ldc1_sdc1 ||
+      (Subtarget.hasMips1() && !Subtarget.hasMips2())) {
     setOperationAction(ISD::LOAD, MVT::f64, Custom);
     setOperationAction(ISD::STORE, MVT::f64, Custom);
   }
@@ -471,21 +480,6 @@ addMSAFloatType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   }
 }
 
-SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
-  if(!Subtarget.hasMips32r6())
-    return MipsTargetLowering::LowerOperation(Op, DAG);
-
-  EVT ResTy = Op->getValueType(0);
-  SDLoc DL(Op);
-
-  // Although MTC1_D64 takes an i32 and writes an f64, the upper 32 bits of the
-  // floating point register are undefined. Not really an issue as sel.d, which
-  // is produced from an FSELECT node, only looks at bit 0.
-  SDValue Tmp = DAG.getNode(MipsISD::MTC1_D64, DL, MVT::f64, Op->getOperand(0));
-  return DAG.getNode(MipsISD::FSELECT, DL, ResTy, Tmp, Op->getOperand(1),
-                     Op->getOperand(2));
-}
-
 // Lower FP16_TO_FP (the soft-promote-half representation of an f16 -> f32/f64
 // conversion).
 SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
@@ -606,9 +600,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::INTRINSIC_VOID:     return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
-  case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:
-    return lowerSELECT(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::FP16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
@@ -1342,43 +1335,49 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 
-void MipsSETargetLowering::
-getOpndList(SmallVectorImpl<SDValue> &Ops,
-            std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-            bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-            SDValue Chain) const {
+void MipsSETargetLowering::getOpndList(
+    SmallVectorImpl<SDValue> &Ops,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass, bool IsPICCall,
+    bool GlobalOrExternal, bool LocalLinkage, bool IsCallReloc,
+    CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
   Ops.push_back(Callee);
   MipsTargetLowering::getOpndList(Ops, RegsToPass, IsPICCall, GlobalOrExternal,
-                                  InternalLinkage, IsCallReloc, CLI, Callee,
+                                  LocalLinkage, IsCallReloc, CLI, Callee,
                                   Chain);
 }
 
 SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode &Nd = *cast<LoadSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || !NoDPLoadStore)
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerLOAD(Op, DAG);
 
   // Replace a double precision load with two i32 loads and a buildpair64.
   SDLoc DL(Op);
   SDValue Ptr = Nd.getBasePtr(), Chain = Nd.getChain();
   EVT PtrVT = Ptr.getValueType();
+  EVT VT = Subtarget.hasMips2() ? MVT::i32 : MVT::f32;
 
   // i32 load from lower address.
-  SDValue Lo = DAG.getLoad(MVT::i32, DL, Chain, Ptr, MachinePointerInfo(),
+  SDValue Lo = DAG.getLoad(VT, DL, Chain, Ptr, MachinePointerInfo(),
                            Nd.getAlign(), Nd.getMemOperand()->getFlags());
 
   // i32 load from higher address.
   Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, DAG.getConstant(4, DL, PtrVT));
-  SDValue Hi = DAG.getLoad(
-      MVT::i32, DL, Lo.getValue(1), Ptr, MachinePointerInfo(),
-      commonAlignment(Nd.getAlign(), 4), Nd.getMemOperand()->getFlags());
+  SDValue Hi = DAG.getLoad(VT, DL, Lo.getValue(1), Ptr, MachinePointerInfo(),
+                           commonAlignment(Nd.getAlign(), 4),
+                           Nd.getMemOperand()->getFlags());
 
   if (!Subtarget.isLittle())
     std::swap(Lo, Hi);
 
-  SDValue BP = DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+  SDValue BP;
+  if (Subtarget.hasMips2())
+    BP = DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+  else
+    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Hi, Lo);
+
   SDValue Ops[2] = {BP, Hi.getValue(1)};
   return DAG.getMergeValues(Ops, DL);
 }
@@ -1386,17 +1385,22 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode &Nd = *cast<StoreSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || !NoDPLoadStore)
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerSTORE(Op, DAG);
 
   // Replace a double precision store with two extractelement64s and i32 stores.
   SDLoc DL(Op);
   SDValue Val = Nd.getValue(), Ptr = Nd.getBasePtr(), Chain = Nd.getChain();
   EVT PtrVT = Ptr.getValueType();
-  SDValue Lo = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32,
-                           Val, DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32,
-                           Val, DAG.getConstant(1, DL, MVT::i32));
+  EVT VT = Subtarget.hasMips2() ? MVT::i32 : MVT::f32;
+
+  unsigned ExtractOp = Subtarget.hasMips2() ? MipsISD::ExtractElementF64
+                                            : MipsISD::ExtractElementF64_FPR;
+  SDValue Lo =
+      DAG.getNode(ExtractOp, DL, VT, Val, DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi =
+      DAG.getNode(ExtractOp, DL, VT, Val, DAG.getConstant(1, DL, MVT::i32));
 
   if (!Subtarget.isLittle())
     std::swap(Lo, Hi);
@@ -1545,7 +1549,9 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(Op);
   SDValue Vec = Op->getOperand(1);
-  SDValue Idx = Op->getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Idx = DAG.getZExtOrTrunc(Op->getOperand(2), DL,
+                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
   EVT ResTy = Op->getValueType(0);
   EVT EltTy = Vec->getValueType(0).getVectorElementType();
 
@@ -2001,9 +2007,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op->getOperand(2));
   case Intrinsic::mips_fadd_w:
   case Intrinsic::mips_fadd_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FADD, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   // Don't lower mips_fcaf_[wd] since LLVM folds SETFALSE condcodes away
   case Intrinsic::mips_fceq_w:
   case Intrinsic::mips_fceq_d:
@@ -2087,9 +2092,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   case Intrinsic::mips_fmsub_w:
   case Intrinsic::mips_fmsub_d: {
     // TODO: If intrinsics have fast-math-flags, propagate them.
@@ -2104,9 +2108,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::FSQRT, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fsub_w:
   case Intrinsic::mips_fsub_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FSUB, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   case Intrinsic::mips_ftrunc_u_w:
   case Intrinsic::mips_ftrunc_u_d:
     return DAG.getNode(ISD::FP_TO_UINT, DL, Op->getValueType(0),
@@ -3273,13 +3276,15 @@ MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
   // Fill $FBB.
   Register VR2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), VR2)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register VR1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), VR1)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3342,13 +3347,15 @@ MachineBasicBlock *MipsSETargetLowering::emitMSACBranchPseudo(
   // Fill $FBB.
   Register RD1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), RD1)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register RD2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), RD2)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3622,7 +3629,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   Register LaneTmp2 = RegInfo.createVirtualRegister(GPRRC);
   BuildMI(*BB, MI, DL, TII->get(Subtarget.isABI_N64() ? Mips::DSUB : Mips::SUB),
           LaneTmp2)
-      .addReg(Subtarget.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO)
+      .addReg(Subtarget.isABI_N64() ? Mips::R0_64 : Mips::R0)
       .addReg(LaneReg);
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)

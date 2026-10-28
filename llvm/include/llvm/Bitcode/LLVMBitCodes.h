@@ -401,6 +401,8 @@ enum MetadataCodes {
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
   METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
+  METADATA_LAYERLOC = 51, // [distinct, line, column, file, kind]
+  METADATA_LAYERLOCLIST = 52, // [distinct, n x layerloc]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -573,6 +575,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
 
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
+
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
 
@@ -709,6 +714,8 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
   FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
       66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_INST_BITINSERT = 67,  // BITINSERT: [opval, opval, opval]
+  FUNC_CODE_INST_BITEXTRACT = 68, // BITEXTRACT: [ty, opval, opval]
 };
 
 enum UseListCodes {

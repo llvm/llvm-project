@@ -78,7 +78,7 @@ void LoopVersioning::versionLoop(
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
   IRBuilder<InstSimplifyFolder> Builder(
-      RuntimeCheckBB->getContext(),
+      *RuntimeCheckBB->getModule(),
       InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
   if (MemRuntimeCheck && SCEVRuntimeCheck) {
     Builder.SetInsertPoint(RuntimeCheckBB->getTerminator());
@@ -353,5 +353,11 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
 
   if (MSSAAnalysis && VerifyMemorySSA)
     MSSAAnalysis->getMSSA().verifyMemorySSA();
-  return PreservedAnalyses::none();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  if (MSSAAnalysis)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }

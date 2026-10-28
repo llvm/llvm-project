@@ -1,13 +1,13 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s --check-prefix=MLIR
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
-  cir.func @opencl_kernel_with_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""], name = ["data", "count"]>} {
+  cir.func @opencl_kernel_with_names() attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir.lang_address_space<offload_global>, #cir.lang_address_space<default>], access_qual = ["none", "none"], type = ["uint*", "int"], base_type = ["uint*", "int"], type_qual = ["restrict", ""], name = ["data", "count"]>} {
     cir.return
   }
   cir.func @opencl_target() {
     cir.return
   }
-  cir.func @opencl_alias() alias(@opencl_target) attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global)>], access_qual = ["none"], type = ["uint*"], base_type = ["uint*"], type_qual = [""]>}
+  cir.func @opencl_alias() alias(@opencl_target) attributes {cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir.lang_address_space<offload_global>], access_qual = ["none"], type = ["uint*"], base_type = ["uint*"], type_qual = [""]>}
 }
 
 // MLIR-LABEL: llvm.func @opencl_kernel_with_names()

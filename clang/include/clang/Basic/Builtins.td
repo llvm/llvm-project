@@ -38,6 +38,14 @@ class MemReverse8Template : Template<
     ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
     ["u8",      "u16",      "u32",      "u64"]>;
 
+class Load8UnsignedTemplate : Template<
+    ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
+    ["8",             "16",             "32",             "64"]>;
+
+class Load8SignedTemplate : Template<
+    ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
+    ["8",            "16",            "32",            "64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -992,7 +1000,7 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
 
 def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
   let Spellings = ["stdc_memreverse8"];
-  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Attributes = [NoThrow, Constexpr, NonNull<NonOptimizing, [1]>];
   let Prototype = "void(size_t, unsigned char*)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -1001,6 +1009,43 @@ def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Templa
   let Spellings = ["stdc_memreverse8"];
   let Attributes = [NoThrow, Pure, Const, Constexpr];
   let Prototype = "T(T)";
+}
+
+class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
+  let Prototype = "T(unsigned char const*)";
+}
+
+def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_leu"];
+}
+
+def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_beu"];
+}
+
+def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_leu"];
+}
+
+def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_beu"];
+}
+
+def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_les"];
+}
+
+def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_bes"];
+}
+
+def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_les"];
+}
+
+def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_bes"];
 }
 
 
@@ -3570,6 +3615,11 @@ def Fwrite : LibBuiltin<"stdio.h"> {
   let Prototype = "size_t(void const*, size_t, size_t, FILE*)";
 }
 
+def Fgets : LibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets"];
+  let Prototype = "char*(char*, int, FILE*)";
+}
+
 // C99 ctype.h
 
 def IsAlNum : LibBuiltin<"ctype.h"> {
@@ -3868,6 +3918,42 @@ def Umask : LibBuiltin<"sys/stat.h"> {
   let Prototype = ""; // mode_t(mode_t); mode_t is target-specific
 }
 
+// POSIX sys/socket.h
+
+def Recv : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["recv"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, int); ssize_t is target-specific
+  let Prototype = "";
+}
+
+def RecvFrom : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["recvfrom"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*);
+  // types are target-specific
+  let Prototype = "";
+}
+
+// POSIX poll.h
+
+def Poll : LibBuiltin<"poll.h"> {
+  let Spellings = ["poll"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, int); struct pollfd and nfds_t are
+  // target-specific
+  let Prototype = "";
+}
+
+def PPoll : LibBuiltin<"poll.h"> {
+  let Spellings = ["ppoll", "ppoll64"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
+  // struct pollfd, nfds_t, struct timespec, and sigset_t/sigset64_t are
+  // target-specific
+  let Prototype = "";
+}
+
 // POSIX pthread.h
 
 def PthreadCreate : GNULibBuiltin<"pthread.h"> {
@@ -3912,11 +3998,13 @@ def SigLongJmp : GNULibBuiltin<"setjmp.h"> {
 def StrlCpy : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcpy"];
   let Prototype = "size_t(char*, char const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, char const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {
@@ -4773,7 +4861,7 @@ def Assume : Builtin {
 
 def AssumeSeparateStorage : Builtin {
   let Spellings = ["__builtin_assume_separate_storage"];
-  let Attributes = [NoThrow, Constexpr];
+  let Attributes = [NoThrow];
   let Prototype = "void(void const volatile*, void const volatile*)";
 }
 
@@ -5337,73 +5425,73 @@ def HLSLResourceLoadWithStatusTyped : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceLoadLevel : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_level"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceLoadMS : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_ms"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSample : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSampleBias : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample_bias"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSampleGrad : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample_grad"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSampleLevel : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample_level"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSampleCmp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample_cmp"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceSampleCmpLevelZero : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_sample_cmp_level_zero"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceCalculateLod : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_calculate_lod"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceCalculateLodUnclamped : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_calculate_lod_unclamped"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceGather : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_gather"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceGatherCmp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_gather_cmp"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
@@ -5429,6 +5517,18 @@ def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
   let Attributes = [NoThrow];
   let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t, uint32_t)";
+}
+
+def HLSLResourceHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefromheap"];
+  let Attributes = [NoThrow];
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t)";
+}
+
+def HLSLResourceCounterHandleFromHeap : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromheap"];
+  let Attributes = [NoThrow];
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t)";
 }
 
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
@@ -5551,6 +5651,48 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_and"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStoreFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_max"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
 def HLSLInterlockedMin : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_min"];
   let Attributes = [NoThrow];
@@ -5629,6 +5771,12 @@ def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveReadLaneFirst : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_first"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_count"];
   let Attributes = [NoThrow, Const];
@@ -5703,6 +5851,12 @@ def HLSLFirstBitLow : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLIsfinite : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isfinite"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -5819,6 +5973,12 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void()";
+}
+
+def HLSLBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_barrier"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 class HLSLScalarTemplate

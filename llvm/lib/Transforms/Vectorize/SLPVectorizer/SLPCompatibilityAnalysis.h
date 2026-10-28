@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
@@ -137,7 +136,9 @@ public:
 /// share a single predicate. InstCombine canonicalizes single-element and
 /// single-complement range comparisons to eq/ne at the type boundaries
 /// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
-/// rest of the list by adjusting the compared constant.
+/// rest of the list by adjusting the compared constant. InstCombine also
+/// canonicalizes icmp ne (and X, 1), 0 to trunc X to i1, such lanes are
+/// treated as the original comparison or as icmp eq (and X, 1), 1.
 class CmpSamePredicateHelper {
   using MaskType = std::uint16_t;
   /// Bit i represents predicate ICMP_EQ + i.
@@ -160,11 +161,15 @@ class CmpSamePredicateHelper {
   /// boundary family (IsComplement, K). Pred must be in the family mask.
   static APInt getFamilyConstant(bool IsComplement, const APInt &K,
                                  CmpInst::Predicate Pred);
+  /// Returns the mask of the predicates that can express the comparison
+  /// lane \p I, or 0 if \p I is not a comparison lane.
+  static MaskType getLaneMask(const Instruction *I);
 
 public:
-  /// Intersects the convertible predicate set of \p CI with the running
-  /// set. Returns false when the intersection becomes empty.
-  bool add(const ICmpInst *CI);
+  /// Intersects the convertible predicate set of the comparison lane \p I
+  /// (an icmp or a trunc to i1) with the running set. Returns false when the
+  /// intersection becomes empty.
+  bool add(const Instruction *I);
   /// Returns the shared predicate, preferring the predicate of
   /// \p Preferred when the whole list can use it, or BAD_ICMP_PREDICATE
   /// when the list cannot share a natively present predicate.
@@ -173,15 +178,22 @@ public:
   /// when it cannot share a natively present predicate.
   static CmpInst::Predicate getSharedPredicate(ArrayRef<Value *> VL,
                                                const ICmpInst *Preferred);
-  /// Checks if the comparison \p CI can be expressed with the predicate
+  /// Checks if the comparison lane \p I is the bit test of the single use
+  /// and A, B != 0 or and A, B == 0, or trunc X to i1, which is
+  /// and X, 1 != 0.
+  static bool isBitTest(const Instruction *I);
+  /// Checks if the comparison lane \p I can be expressed with the predicate
   /// \p Pred by adjusting its constant operand.
-  static bool canConvertTo(const CmpInst *CI, CmpInst::Predicate Pred);
-  /// Returns the adjusted constant operand expressing \p CI with the
-  /// predicate \p Pred, or nullptr if not convertible or if \p CI already
-  /// uses \p Pred.
-  static ConstantInt *getAdjustedConstant(const CmpInst *CI,
-                                          CmpInst::Predicate Pred);
+  static bool canConvertTo(const Instruction *I, CmpInst::Predicate Pred);
+  /// Returns the adjusted constant operand expressing the comparison lane
+  /// \p I with the predicate \p Pred, or nullptr if not convertible or if
+  /// \p I is a compare already using \p Pred.
+  static Constant *getAdjustedConstant(const Instruction *I,
+                                       CmpInst::Predicate Pred);
 };
+
+/// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
+bool isFMAOrFMulAdd(const Instruction *I);
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
@@ -212,7 +224,7 @@ class InstructionsState {
   /// Whether the instruction state represents copyable instructions.
   bool HasCopyables = false;
   /// Index of the operand modeling the copyable values: the addend for
-  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  /// fma/fmuladd (retried with a multiplicand), the first operand otherwise.
   unsigned CopyableOpIdx = 0;
   /// Whether copyable single-use fmuls/fadds are modeled as
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
@@ -267,6 +279,11 @@ public:
   /// Checks if main/alt instructions are add/sub/fadd/fsub operations.
   bool isAddSubLikeOp() const;
 
+  /// Checks for an add/sub-like operation or an fneg, which models a
+  /// flattened fadd reduction chain link: the link is dropped and its
+  /// operand joins a sign-flipped combine, which may form an fma as well.
+  bool isAddSubOrFNegLikeOp() const;
+
   /// Checks if main/alt instructions are cmp operations.
   bool isCmpOp() const {
     return (getOpcode() == Instruction::ICmp ||
@@ -283,9 +300,7 @@ public:
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
                     bool HasCopyables = false)
       : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
-        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
-                          ? 2
-                          : 0) {}
+        CopyableOpIdx(MainOp && isFMAOrFMulAdd(MainOp) ? 2 : 0) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.

@@ -38,6 +38,7 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 }
 
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
+  let cppNamespace = "::mlir::arm_sme";
   let description = [{
     An interface for operations that use Arm SME tiles. These operations need to
     be assigned a tile ID, an i32 attribute, which specifies which virtual tile
@@ -63,7 +64,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
         if (!tileId)
           return;
         ::mlir::Operation* op = this->getOperation();
-        op->setAttr("tile_id", tileId);
+        op->setDiscardableAttr("tile_id", tileId);
       }]
     >,
     InterfaceMethod<
@@ -77,7 +78,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       /*methodBody=*/[{}],
       /*defaultImpl=*/ [{
         ::mlir::Operation* op = this->getOperation();
-        return op->getAttrOfType<mlir::IntegerAttr>("tile_id");
+        return op->getDiscardableAttrOfType<mlir::IntegerAttr>("tile_id");
       }]
     >,
     InterfaceMethod<
@@ -173,7 +174,6 @@ def TileSliceLayout : I32EnumAttr<"TileSliceLayout", "Layout of a tile slice", [
 /// An attribute that specifies the layout of a tile slice in a tile.
 def ArmSME_TileSliceLayoutAttr : EnumAttr<ArmSME_Dialect, TileSliceLayout,
                                           "layout"> {
-  let assemblyFormat = "`<` $value `>`";
   let defaultValue = "TileSliceLayout::Horizontal";
 }
 
@@ -194,7 +194,6 @@ def CombiningKind : I32EnumAttr<"CombiningKind", "Kind of combining function", [
 /// FMOPS: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPS--non-widening---Floating-point-outer-product-and-subtract-
 def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
                                           "kind"> {
-  let assemblyFormat = "`<` $value `>`";
   let defaultValue = "CombiningKind::Add";
 }
 
@@ -209,9 +208,7 @@ def TypeSize : I32EnumAttr<"TypeSize", "Size of a vector element type", [
 }
 
 def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
-                                   "type_size"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+                                   "type_size">;
 
 //===----------------------------------------------------------------------===//
 // ArmSME op definitions

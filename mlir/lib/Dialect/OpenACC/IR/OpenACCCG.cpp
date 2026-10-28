@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -32,7 +33,6 @@ using namespace mlir;
 using namespace acc;
 
 namespace {
-
 /// Generic helper for single-region OpenACC ops that execute their body once
 /// and then continue after the operation with their results (if any).
 static void
@@ -78,20 +78,97 @@ struct RemoveEmptyKernelEnvironment
   }
 };
 
-static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
-                                                    PatternRewriter &rewriter,
-                                                    size_t numInput) {
+struct KernelEnvironmentDedupDataOperands
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  static bool isReductionDataOperand(Value operand) {
+    Operation *def = operand.getDefiningOp();
+    if (!def)
+      return false;
+    std::optional<DataClause> clause = getDataClause(def);
+    if (!clause || *clause != DataClause::acc_reduction)
+      return false;
+    assert(isa<CopyinOp>(def) && "reduction clause must be an acc.copyin");
+    return true;
+  }
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> operands(op.getDataClauseOperands());
+    const unsigned numOperands = operands.size();
+    if (numOperands < 2)
+      return failure();
+
+    SmallVector<Value> kept;
+    SmallVector<std::pair<Value, Value>> useRewrites;
+    SmallVector<SmallVector<Value>> boundsStorage;
+    boundsStorage.reserve(numOperands);
+    llvm::DenseMap<std::pair<Value, ArrayRef<Value>>, unsigned>
+        keptIndexByVarAndBounds;
+    for (Value operand : operands) {
+      Operation *def = operand.getDefiningOp();
+      // acc.map_info is a finalized mapping. Its order and semantics stand;
+      // matching only its variable and bounds would ignore flags and
+      // descriptors.
+      if (!def || isa<MapInfoOp>(def)) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      Value var = getVar(def);
+      if (!var) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      boundsStorage.push_back(getBounds(def));
+      auto [it, inserted] = keptIndexByVarAndBounds.try_emplace(
+          std::make_pair(var, ArrayRef<Value>(boundsStorage.back())),
+          kept.size());
+      if (inserted) {
+        kept.push_back(operand);
+        continue;
+      }
+
+      Value &survivor = kept[it->second];
+      // A reduction acc.copyin is that copyin plus the reduction. Keeping
+      // another clause would drop the reduction.
+      if (isReductionDataOperand(operand) && !isReductionDataOperand(survivor))
+        std::swap(survivor, operand);
+      useRewrites.emplace_back(operand, survivor);
+    }
+    if (kept.size() == numOperands)
+      return failure();
+
+    for (auto [from, to] : useRewrites) {
+      rewriter.replaceUsesWithIf(from, to, [&](OpOperand &use) {
+        return op->isProperAncestor(use.getOwner());
+      });
+    }
+    rewriter.modifyOpInPlace(
+        op, [&] { op.getDataClauseOperandsMutable().assign(kept); });
+    return success();
+  }
+};
+
+// Capture `hasStream` before erasing inputs because segment metadata is only
+// repaired at the end of the modification transaction.
+static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                 PatternRewriter &rewriter,
+                                                 size_t numInput,
+                                                 bool hasStream) {
   const size_t numLaunch = op.getLaunchArgs().size();
   op->setInherentAttr(
       rewriter.getStringAttr(ComputeRegionOp::getOperandSegmentSizeAttr()),
       rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
                                      static_cast<int32_t>(numInput),
-                                     op.getStream() ? 1 : 0}));
+                                     hasStream ? 1 : 0}));
 }
 
 struct ComputeRegionRemoveDuplicateArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -101,40 +178,49 @@ struct ComputeRegionRemoveDuplicateArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool mergedAny = false;
-    while (true) {
-      bool merged = false;
-      for (size_t j = 1; j < numInput && !merged; ++j) {
-        for (size_t i = 0; i < j; ++i) {
-          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
-              op->getOperand(static_cast<unsigned>(numLaunch + j)))
-            continue;
-          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
-          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
-          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
-                                      body->getArgument(keepIdx));
-          body->eraseArgument(dropIdx);
-          op->eraseOperand(dropIdx);
-          --numInput;
-          merged = true;
-          mergedAny = true;
+    bool hasDuplicate = false;
+    for (size_t j = 1; j < numInput && !hasDuplicate; ++j)
+      for (size_t i = 0; i < j; ++i)
+        if (op->getOperand(static_cast<unsigned>(numLaunch + i)) ==
+            op->getOperand(static_cast<unsigned>(numLaunch + j))) {
+          hasDuplicate = true;
           break;
         }
-      }
-      if (!merged)
-        break;
-    }
-
-    if (!mergedAny)
+    if (!hasDuplicate)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      while (true) {
+        bool merged = false;
+        for (size_t j = 1; j < numInput && !merged; ++j) {
+          for (size_t i = 0; i < j; ++i) {
+            if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+                op->getOperand(static_cast<unsigned>(numLaunch + j)))
+              continue;
+            unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+            unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+            rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                        body->getArgument(keepIdx));
+            body->eraseArgument(dropIdx);
+            op->eraseOperand(dropIdx);
+            --numInput;
+            merged = true;
+            break;
+          }
+        }
+        if (!merged)
+          break;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
 
 struct ComputeRegionRemoveUnusedArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -144,21 +230,28 @@ struct ComputeRegionRemoveUnusedArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool changed = false;
-    for (size_t k = numLaunch; k < numLaunch + numInput;) {
-      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
-        ++k;
-        continue;
+    bool hasUnused = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput; ++k)
+      if (body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        hasUnused = true;
+        break;
       }
-      body->eraseArgument(static_cast<unsigned>(k));
-      op->eraseOperand(static_cast<unsigned>(k));
-      --numInput;
-      changed = true;
-    }
-
-    if (!changed)
+    if (!hasUnused)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      for (size_t k = numLaunch; k < numLaunch + numInput;) {
+        if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+          ++k;
+          continue;
+        }
+        body->eraseArgument(static_cast<unsigned>(k));
+        op->eraseOperand(static_cast<unsigned>(k));
+        --numInput;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
@@ -277,7 +370,6 @@ static void printGPUParallelDimList(AsmPrinter &printer,
   });
   printer << "]";
 }
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -296,7 +388,8 @@ ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
 
 void KernelEnvironmentOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
+  results.add<RemoveEmptyKernelEnvironment, KernelEnvironmentDedupDataOperands>(
+      context);
 }
 
 /// Extract async for `clauseDeviceType`. Returns true if a clause was found.
@@ -399,6 +492,9 @@ LogicalResult KernelEnvironmentOp::verify() {
     return emitError("async-only cannot appear with async operand");
   if (getWaitOnly() && (!getWaitOperands().empty() || getWaitDevnum()))
     return emitError("wait-only cannot appear with wait operands or devnum");
+  if ((*this)->getParentOfType<KernelEnvironmentOp>())
+    return emitError(
+        "must not be nested within another acc.kernel_environment");
   return success();
 }
 
@@ -615,6 +711,15 @@ bool ComputeRegionOp::isEffectivelySerial() {
          checkDim(GPUParallelDimAttr::blockXDim(ctx)) &&
          checkDim(GPUParallelDimAttr::blockYDim(ctx)) &&
          checkDim(GPUParallelDimAttr::blockZDim(ctx));
+}
+
+bool ComputeRegionOp::launchesMultipleBlocks() {
+  return llvm::any_of(getLaunchParDims(), [&](GPUParallelDimAttr dim) {
+    if (!dim.isAnyBlock())
+      return false;
+    std::optional<uint64_t> width = getKnownConstantLaunchArg(dim);
+    return !width || *width != 1;
+  });
 }
 
 BlockArgument ComputeRegionOp::parDimToWidth(GPUParallelDimAttr parDim) {
@@ -878,8 +983,7 @@ LogicalResult GPUSharedMemoryOp::verify() {
   auto resultTy = cast<MemRefType>(getResult().getType());
   auto addrSpace =
       dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
-  if (!addrSpace ||
-      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+  if (!addrSpace || addrSpace.getValue() != gpu::AddressSpace::Workgroup)
     return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();
@@ -896,6 +1000,39 @@ LogicalResult PredicateRegionOp::verify() {
     return emitOpError("region cannot have any arguments");
   if (!getOperation()->getParentOfType<ComputeRegionOp>())
     return emitOpError("must be nested within an acc.compute_region operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  // A pointer-like var addresses the mapped object, so varType has to name that
+  // object rather than the address of it.
+  if (mlir::isa<acc::PointerLikeType>(getVar().getType()) &&
+      getVarType() == getVar().getType())
+    return emitOpError("varType must capture the element type of var");
+
+  // A descriptor operand is only meaningful together with the layout it
+  // follows. Without a kind, consumers have no way to interpret it.
+  if (getDesc() && getDescKind() == DataDescKind::none)
+    return emitOpError("desc requires a descKind other than none");
+
+  // Bounds count elements of the mapped object, which is the OpenACC
+  // descriptor layout, so it must be among the kinds named here.
+  if (!getBounds().empty() &&
+      !acc::bitEnumContainsAny(getDescKind(), DataDescKind::openacc))
+    return emitOpError("bounds require descKind openacc");
+
+  // Anything below -1 has no meaning: -1 states that the size is unknown at
+  // compile time and 0 defers it to bounds or to a descriptor.
+  if (getSize()) {
+    std::optional<int64_t> constantSize = getConstantIntValue(getSize());
+    if (constantSize && *constantSize < -1)
+      return emitOpError("size must be -1, 0, or a positive byte count");
+  }
+
   return success();
 }
 

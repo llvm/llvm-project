@@ -57,6 +57,24 @@ define <vscale x 2 x double> @test_compress_nxv2f64(<vscale x 2 x double> %vec, 
     ret <vscale x 2 x double> %out
 }
 
+define <vscale x 2 x bfloat> @test_compress_nxv2bf16(<vscale x 2 x bfloat> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+    %out = call <vscale x 2 x bfloat> @llvm.experimental.vector.compress(<vscale x 2 x bfloat> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x bfloat> poison)
+    ret <vscale x 2 x bfloat> %out
+}
+
+define <vscale x 2 x half> @test_compress_nxv2f16(<vscale x 2 x half> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+    %out = call <vscale x 2 x half> @llvm.experimental.vector.compress(<vscale x 2 x half> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x half> poison)
+    ret <vscale x 2 x half> %out
+}
+
 define <vscale x 4 x i8> @test_compress_nxv4i8(<vscale x 4 x i8> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_nxv4i8:
 ; CHECK:       // %bb.0:
@@ -91,6 +109,24 @@ define <vscale x 4 x float> @test_compress_nxv4f32(<vscale x 4 x float> %vec, <v
 ; CHECK-NEXT:    ret
     %out = call <vscale x 4 x float> @llvm.experimental.vector.compress(<vscale x 4 x float> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
     ret <vscale x 4 x float> %out
+}
+
+define <vscale x 4 x bfloat> @test_compress_nxv4bf16(<vscale x 4 x bfloat> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+    %out = call <vscale x 4 x bfloat> @llvm.experimental.vector.compress(<vscale x 4 x bfloat> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x bfloat> poison)
+    ret <vscale x 4 x bfloat> %out
+}
+
+define <vscale x 4 x half> @test_compress_nxv4f16(<vscale x 4 x half> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+    %out = call <vscale x 4 x half> @llvm.experimental.vector.compress(<vscale x 4 x half> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x half> poison)
+    ret <vscale x 4 x half> %out
 }
 
 define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask) {
@@ -146,16 +182,17 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
-; CHECK-SVE-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-SVE-NEXT:    punpkhi p0.h, p0.b
-; CHECK-SVE-NEXT:    inch x8
-; CHECK-SVE-NEXT:    cntp x9, p1, p1.s
+; CHECK-SVE-NEXT:    inch x9
+; CHECK-SVE-NEXT:    cntp x8, p1, p1.s
 ; CHECK-SVE-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-SVE-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    cmp x9, x8
+; CHECK-SVE-NEXT:    mov w8, w8
 ; CHECK-SVE-NEXT:    str z0, [sp]
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lo
+; CHECK-SVE-NEXT:    cmp x8, x9
+; CHECK-SVE-NEXT:    csel x8, x8, x9, lo
 ; CHECK-SVE-NEXT:    mov x9, sp
 ; CHECK-SVE-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SVE-NEXT:    ldr z0, [sp]
@@ -173,17 +210,18 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SME2p2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-SME2p2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SME2p2-NEXT:    punpklo p1.h, p0.b
-; CHECK-SME2p2-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-SME2p2-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-SME2p2-NEXT:    ptrue pn8.s
 ; CHECK-SME2p2-NEXT:    punpkhi p0.h, p0.b
-; CHECK-SME2p2-NEXT:    inch x8
-; CHECK-SME2p2-NEXT:    cntp x9, p1, p1.s
+; CHECK-SME2p2-NEXT:    inch x9
+; CHECK-SME2p2-NEXT:    cntp x8, p1, p1.s
 ; CHECK-SME2p2-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-SME2p2-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SME2p2-NEXT:    ptrue p0.s
-; CHECK-SME2p2-NEXT:    cmp x9, x8
+; CHECK-SME2p2-NEXT:    mov w8, w8
 ; CHECK-SME2p2-NEXT:    str z0, [sp]
-; CHECK-SME2p2-NEXT:    csel x8, x9, x8, lo
+; CHECK-SME2p2-NEXT:    cmp x8, x9
+; CHECK-SME2p2-NEXT:    csel x8, x8, x9, lo
 ; CHECK-SME2p2-NEXT:    mov x9, sp
 ; CHECK-SME2p2-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SME2p2-NEXT:    ld1w { z0.s, z1.s }, pn8/z, [sp]
