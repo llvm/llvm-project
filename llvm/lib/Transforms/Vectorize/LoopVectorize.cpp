@@ -5913,6 +5913,7 @@ VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
 
 VPWidenMemIntrinsicRecipe *
 VPRecipeBuilder::handleCompressedLoadOrStore(VPInstruction *VPI) {
+  assert(getCompressedPtrInfo(VPI) && "Expected a compressed load/store");
   Instruction *I = VPI->getUnderlyingInstr();
 
   VPBuilder::InsertPointGuard Guard(Builder);
