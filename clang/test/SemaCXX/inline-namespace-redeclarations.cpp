@@ -11,7 +11,8 @@ constexpr int value = 1;
 namespace ns {}
 } // namespace v1
 namespace ns {
-static_assert(value == 1, "lookup in the inline namespace");
+static_assert(value == 1,
+              "'value' should be found in the parent scope of 'ns', which is 'v1'");
 } // namespace ns
 } // namespace reopen
 
@@ -25,8 +26,9 @@ enum class E;
 } // namespace qualified
 namespace alias = qualified;
 struct alias::X {
-  static_assert(value == 1, "lookup in the inline namespace");
+  static_assert(value == 1,
+                "'value' should be found in the parent scope of 'X', which is 'v1'");
 };
 enum class alias::E { test = value };
 static_assert(static_cast<int>(alias::E::test) == 1,
-              "enum definitions retain their namespace too");
+              "'value' was supposed to be found in the parent scope of 'E', which is 'v1'");
