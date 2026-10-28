@@ -11,15 +11,31 @@ add_header_library(
 )
 
 add_header_library(
+  dynamic_buffer
+  HDRS
+    dynamic_buffer.h
+  DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   flat_file_db
   HDRS
     flat_file_db.h
   DEPENDS
-    .field_tokenizer
+    .dynamic_buffer
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.size_t
     libc.src.__support.CPP.functional
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.File.file
     libc.src.__support.error_or

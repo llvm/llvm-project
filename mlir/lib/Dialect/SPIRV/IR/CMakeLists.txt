@@ -44,7 +44,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   DEPENDS
-  MLIRGPUDialect
+  MLIRGPUCompilationAttrInterfacesIncGen
   MLIRSPIRVAttributeIncGen
   MLIRSPIRVAttrUtilsGen
   MLIRSPIRVAvailabilityIncGen
@@ -54,10 +54,14 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRSPIRVImageInterfacesIncGen
   MLIRSPIRVOpsIncGen
   MLIRSPIRVOpsShardGen
+  MLIRSPIRVSerializationGen
+  # SPIRVDialect.cpp includes llvm/IR/Attributes.h.
+  intrinsics_gen
 
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
+  MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces

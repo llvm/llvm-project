@@ -10,7 +10,7 @@
 ; Function Attrs: norecurse nounwind readonly
 define double @loadf64stk() {
 ; CHECK-LABEL: loadf64stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -22,7 +22,7 @@ define double @loadf64stk() {
 ; Function Attrs: norecurse nounwind readonly
 define float @loadf32stk() {
 ; CHECK-LABEL: loadf32stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldu %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -34,7 +34,7 @@ define float @loadf32stk() {
 ; Function Attrs: norecurse nounwind readonly
 define i64 @loadi64stk() {
 ; CHECK-LABEL: loadi64stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -46,7 +46,7 @@ define i64 @loadi64stk() {
 ; Function Attrs: norecurse nounwind readonly
 define i32 @loadi32stk() {
 ; CHECK-LABEL: loadi32stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ldl.sx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -58,7 +58,7 @@ define i32 @loadi32stk() {
 ; Function Attrs: norecurse nounwind readonly
 define i16 @loadi16stk() {
 ; CHECK-LABEL: loadi16stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld2b.zx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -70,7 +70,7 @@ define i16 @loadi16stk() {
 ; Function Attrs: norecurse nounwind readonly
 define i8 @loadi8stk() {
 ; CHECK-LABEL: loadi8stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.zx %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)

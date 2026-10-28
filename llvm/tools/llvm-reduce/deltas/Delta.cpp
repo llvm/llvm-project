@@ -60,6 +60,8 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
+unsigned llvm::getNumChunkProcessingJobs() { return NumJobs; }
+
 static StringLiteral SeparatorLine =
     "--------------------------------------------------------------------------"
     "------\n";

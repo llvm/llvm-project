@@ -1,0 +1,575 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple
+import argparse
+import common
+import concurrent.futures
+import functools
+import json
+import logging
+import math
+import numpy
+import os
+import pathlib
+import statistics
+import sys
+import tabulate
+
+
+# Statistics that only differ by this relative amount are considered equal. This tolerance
+# is used to ensure that we don't depend on implementation details such as the order in which
+# we perform arithmetic operations.
+RELATIVE_TOLERANCE = 1e-9
+
+# Ways to aggregate repeated measurements of one point into the single value taken into
+# account by the detection algorithm.
+AGGREGATORS = {
+    'median': statistics.median,
+    'mean': statistics.fmean,
+    'min': min,
+}
+
+
+class Point(NamedTuple):
+    """
+    One position of the series: a label, its place in the order, and every sample
+    measured there.
+
+    A point is normally a commit, and its samples are the individual benchmark runs
+    performed at that commit. The ordinal exists only to put the points in order while
+    the series is being read, and is implicit from the point's position in the series
+    afterwards.
+    """
+    label: str
+    ordinal: Optional[int]
+    samples: List[float]
+
+
+class Split(NamedTuple):
+    """A candidate division of a segment: where it falls, and how good it is."""
+    point: int
+    statistic: float
+
+
+class Segment(NamedTuple):
+    """What is needed to test the division of a segment, which only depends on its points."""
+    best: Optional[Split]  # the best way to divide it, if it can be divided
+    nulls: numpy.ndarray   # its `null_statistics`
+
+
+class Candidate(NamedTuple):
+    """A split that survived its permutation test."""
+    point: int
+    p_value: float
+
+
+class Changepoint(NamedTuple):
+    """A detected change, located between two consecutive points of the series."""
+    before_x: str    # last point before the change
+    after_x: str     # first point after the change
+    before_y: float  # representative value of the segment before the change
+    after_y: float   # representative value of the segment after the change
+    change: float    # relative change, as a fraction of the value before
+    p_value: float
+
+
+class Settings(NamedTuple):
+    """The parameters the detection runs with, fixed for the whole series."""
+    min_points: int
+    p_value: float
+    permutations: int
+    aggregate: str
+
+    def can_divide(self, series: Sequence[Point]) -> bool:
+        """Whether a series is long enough to be divided into two segments of `min_points`."""
+        return len(series) >= 2 * self.min_points
+
+    def description(self) -> str:
+        return (f'at p <= {self.p_value} using {self.permutations} permutations, with at least '
+                f'{self.min_points} points per segment')
+
+
+class InvalidRecord(ValueError):
+    """A record of the input that can't be part of its series."""
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+
+class SeriesBuilder:
+    """Gathers the records of one series into its points, validating them along the way."""
+
+    def __init__(self, x: str, y: str, order_by: str) -> None:
+        self.x, self.y, self.order_by = x, y, order_by
+        self.points: Dict[str, Point] = {} # in order of first appearance
+        self.has_order: Optional[bool] = None
+
+    def add(self, number: int, record: dict) -> None:
+        """Add the record found on line `number` of the input."""
+        (x, y, order_by) = (self.x, self.y, self.order_by)
+        if y not in record:
+            raise InvalidRecord(f'line {number} has no `{y}` field')
+        value = record[y]
+        if not isinstance(value, (int, float)) or isinstance(value, bool): # bool is a subclass of int
+            raise InvalidRecord(f'line {number}: `{y}` is not a number: {value!r}')
+        value = float(value)
+        if not math.isfinite(value):
+            raise InvalidRecord(f'line {number}: `{y}` is not finite: {record[y]!r}')
+        if value <= 0:
+            raise InvalidRecord(f'line {number}: `{y}` is not positive: {value!r}')
+
+        ordinal = record.get(order_by)
+        if self.has_order is None:
+            self.has_order = ordinal is not None
+        elif (ordinal is not None) != self.has_order:
+            raise InvalidRecord(f'line {number}: `{order_by}` must be given for every record or for none of them.')
+        if ordinal is not None and (isinstance(ordinal, bool) or not isinstance(ordinal, int)):
+            raise InvalidRecord(f'line {number}: `{order_by}` is not an integer: {ordinal!r}')
+
+        if record.get(x) is None:
+            raise InvalidRecord(f'line {number} has no `{x}` field')
+        label = str(record[x])
+        if label in self.points:
+            existing = self.points[label]
+            if existing.ordinal != ordinal:
+                raise InvalidRecord(f'line {number}: {label} appears with two different ordinals '
+                                 f'({existing.ordinal} and {ordinal})')
+            existing.samples.append(value)
+        else:
+            self.points[label] = Point(label=label, ordinal=ordinal, samples=[value])
+
+    def series(self) -> List[Point]:
+        """Return the points of the series, in order."""
+        series = list(self.points.values())
+        if self.has_order:
+            series.sort(key=lambda point: point.ordinal)
+        return series
+
+
+def read_series(stream, x: str, y: str, order_by: str, series_by: Optional[str] = None
+                ) -> Tuple[Dict[Optional[str], List[Point]], Dict[Optional[str], str]]:
+    """
+    Read the series in a JSONL stream, grouping the samples of each point together.
+
+    The `y` field holds the measurement, and the `x` field labels the points and gathers the
+    records that belong to the same one. Both are required. The optional `order_by` field
+    places the points in order; without it, the order of the records is the order of the
+    series.
+
+    With `series_by`, the records are split into one series per value of that field; without
+    it, they form a single series, under the key None. A series holding an invalid record is
+    left out, and returned along with the error instead.
+    """
+    builders: Dict[Optional[str], SeriesBuilder] = {}
+    errors: Dict[Optional[str], str] = {}
+    for (number, line) in enumerate(stream, start=1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f'line {number} is not valid JSON: {error}')
+        if not isinstance(record, dict):
+            raise ValueError(f'line {number} is not a JSON object, but a {type(record).__name__}')
+
+        key = None
+        if series_by is not None:
+            if record.get(series_by) is None:
+                raise ValueError(f'line {number} has no `{series_by}` field')
+            key = str(record[series_by])
+        if key in errors:
+            continue
+        if key not in builders:
+            builders[key] = SeriesBuilder(x, y, order_by)
+        try:
+            builders[key].add(number, record)
+        except InvalidRecord as error:
+            errors[key] = str(error)
+            del builders[key]
+    return ({key: builder.series() for (key, builder) in builders.items()}, errors)
+
+
+def distances(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+    """Return the distances between the points of `a` and `b`, which are broadcast together."""
+    # The energy statistic is consistent for any exponent in (0, 2) applied to the
+    # distances. One is the usual choice and the one this tool is calibrated against.
+    return numpy.abs(a - b)
+
+
+def scaled_energy(across, within_before, within_after, before, after):
+    """
+    Return the scaled energy statistic of splits, given the sum of the distances across the
+    two sides of each split, the sums of the distances within each side (counting every pair
+    twice, as a distance matrix does) and the number of points on each side.
+
+    This is the two-sample energy distance: how far apart the two sides are on average, minus
+    how spread out each of them is internally.
+
+    The result is scaled by `n * m / (n + m)` so that the statistic of an unbalanced split
+    is comparable to that of a balanced one. Without it, splits near the middle of a
+    segment would win on size alone.
+    """
+    # The two within-side sums count every unordered pair twice, so pairing them with
+    # the doubled pair count `n * (n - 1)` averages over each pair exactly once.
+    distance = (2.0 * across / (before * after)
+                - within_before / (before * (before - 1))
+                - within_after / (after * (after - 1)))
+    return distance * before * after / (before + after)
+
+
+def split_statistics(segment: numpy.ndarray, orders: numpy.ndarray, min_points: int) -> numpy.ndarray:
+    """
+    Return the statistic of every way of dividing the points of `segment` in two, for each of
+    `orders`: element [i, j] is the statistic of putting the first `min_points + j` points of
+    `segment[orders[i]]` on one side and the rest on the other.
+
+    Since `--min-points` is at least two, every split leaves at least two points on each
+    side. The statistic needs that in order to have a notion of within-side dispersion.
+    """
+    count = len(segment)
+    splits = numpy.arange(min_points, count - min_points + 1)
+
+    # Each point's distance to all the points, which doesn't depend on the order.
+    to_all = distances(segment[:, None], segment[None, :]).sum(axis=1)
+
+    # Each point's distance to the points before it, for every order.
+    ordered = segment[orders].T
+    to_earlier = numpy.zeros_like(ordered)
+    for k in range(1, count):
+        to_earlier[k] = distances(ordered[:k], ordered[k]).sum(axis=0)
+
+    # Sums within a side count every pair twice, like a distance matrix. Every pair is either
+    # before, across or after the split.
+    within_before = 2 * numpy.cumsum(to_earlier, axis=0)[splits - 1].T
+    across = numpy.cumsum(to_all[orders], axis=1)[:, splits - 1] - within_before
+    within_after = to_all.sum() - 2 * across - within_before
+    return scaled_energy(across, within_before, within_after, splits, count - splits)
+
+
+def best_split(values: numpy.ndarray, first: int, last: int, min_points: int) -> Optional[Split]:
+    """
+    Return the most likely changepoint in the points [first, last), or None when the
+    segment is too short to be divided.
+    """
+    if last - first < 2 * min_points:
+        return None
+    energies = split_statistics(values[first:last], numpy.arange(last - first)[None, :], min_points)[0]
+    best = int(numpy.argmax(energies))
+    return Split(point=first + min_points + best, statistic=float(energies[best]))
+
+
+def null_statistics(values: numpy.ndarray, first: int, last: int, min_points: int,
+                    permutations: int, rng: numpy.random.Generator) -> numpy.ndarray:
+    """
+    Return the statistic of the best split of the points [first, last) under as many random
+    reorderings of those points, as an array with one element per reordering.
+
+    Under the hypothesis that nothing changes within the segment, its points are exchangeable,
+    so reordering them at random is as likely to produce the data as the order we observed.
+    These statistics are therefore draws from the distribution of the best split of the
+    segment when nothing changed in it, which is what a candidate is tested against.
+
+    A segment too short to be divided can't produce a split at all, which is represented by
+    statistics of minus infinity.
+    """
+    count = last - first
+    if count < 2 * min_points:
+        return numpy.full(permutations, -numpy.inf)
+    orders = numpy.stack([rng.permutation(count) for _ in range(permutations)])
+    return split_statistics(values[first:last], orders, min_points).max(axis=1)
+
+
+def significance(nulls: Sequence[numpy.ndarray], observed: float) -> float:
+    """
+    Return the permutation p-value of a candidate changepoint with the given statistic,
+    given the `null_statistics` of every segment of the series.
+
+    Under the hypothesis that nothing changes within any of the segments, the segments are
+    reordered independently of each other, and the best split of a reordering of the whole
+    series is the best of the splits of its segments. Combining the i-th reordering of every
+    segment is one such reordering, since the reorderings of different segments are independent.
+    Counting how often chance alone explains a split at least as good as the observed one is
+    therefore a direct estimate of how surprising that split is.
+
+    The points are exchangeable, but not the measurements behind them, so `analyze`
+    combines each point down to one value before any of this runs.
+
+    The count is offset by one on both sides, which keeps the estimate unbiased and
+    avoids reporting a p-value of exactly zero, which no finite number of permutations
+    can justify.
+    """
+    best = numpy.max(numpy.stack(nulls), axis=0)
+    atypical = int(numpy.count_nonzero(best >= observed - RELATIVE_TOLERANCE * abs(observed)))
+    return (atypical + 1) / (len(best) + 1)
+
+
+def detect(values: numpy.ndarray, labels: Sequence[str],
+           settings: Settings, rng: numpy.random.Generator) -> List[Candidate]:
+    """
+    Return the points at which the series changes, oldest first.
+
+    Changepoints are found one at a time: the most likely one anywhere in the series is
+    tested, and if it survives, the segment containing it is divided in two and the search
+    continues inside both halves. This allows the method to find several changes without
+    knowing how many to look for in the first place.
+
+    The search stops as soon as the best remaining candidate fails its test. Because the
+    statistic is scaled to be comparable across segments, that candidate is the one most
+    likely to have survived, so the ones it was preferred over would not have survived either.
+
+    Neither the best split of a segment nor what it looks like when nothing changes in it
+    depend on anything but the segment's own points, so both are computed once, when the
+    segment is created, and reused by every test that follows. Only the two halves of a
+    divided segment need computing. This makes successive tests correlated, since they share
+    the reorderings of the segments they have in common, but each of them remains a valid test.
+    """
+    def segment(first: int, last: int) -> Segment:
+        return Segment(best_split(values, first, last, settings.min_points),
+                       null_statistics(values, first, last, settings.min_points, settings.permutations, rng))
+
+    segments = {(0, len(values)): segment(0, len(values))}
+    found: List[Candidate] = []
+    while True:
+        candidates = [(s.best, bounds) for (bounds, s) in segments.items() if s.best is not None]
+        if not candidates:
+            logging.debug('no segment is long enough to be divided further')
+            break
+
+        (split, (first, last)) = max(candidates, key=lambda candidate: candidate[0].statistic)
+        p_value = significance([s.nulls for s in segments.values()], split.statistic)
+        label = labels[split.point]
+        if p_value > settings.p_value:
+            logging.debug(f'stopping: the best remaining candidate ({label}, statistic '
+                          f'{split.statistic:.4g}) has p-value {p_value:.4g}')
+            break
+        logging.debug(f'accepted a changepoint at {label} (statistic {split.statistic:.4g}, '
+                      f'p-value {p_value:.4g}), dividing points [{first}, {last})')
+        found.append(Candidate(split.point, p_value))
+        del segments[(first, last)]
+        for (begin, end) in [(first, split.point), (split.point, last)]:
+            segments[(begin, end)] = segment(begin, end)
+
+    return sorted(found)
+
+
+def describe(series: Sequence[Point], values: numpy.ndarray,
+             found: Sequence[Candidate]) -> List[Changepoint]:
+    """
+    Turn the detected points into reportable changes.
+    """
+    boundaries = [0] + [candidate.point for candidate in found] + [len(series)]
+    changes: List[Changepoint] = []
+    for (start, candidate, stop) in zip(boundaries, found, boundaries[2:]):
+        before = float(numpy.median(values[start:candidate.point]))
+        after = float(numpy.median(values[candidate.point:stop]))
+        changes.append(Changepoint(before_x=series[candidate.point - 1].label,
+                                   after_x=series[candidate.point].label,
+                                   before_y=before,
+                                   after_y=after,
+                                   change=(after - before) / before,
+                                   p_value=candidate.p_value))
+    return changes
+
+
+def analyze(series: Sequence[Point], settings: Settings, seed: int) -> List[Changepoint]:
+    """
+    Find and describe the changes in a series that is long enough to be divided.
+
+    Every series gets a random number generator of its own, seeded the same way, so that its
+    changes are the same whatever other series are analyzed with it, and in whatever order.
+    """
+    aggregator = AGGREGATORS[settings.aggregate]
+    values: numpy.ndarray = numpy.array([aggregator(point.samples) for point in series], dtype=float)
+
+    labels = [point.label for point in series]
+    return describe(series, values, detect(values, labels, settings, numpy.random.default_rng(seed)))
+
+
+def analyze_all(all_series: Sequence[Sequence[Point]], settings: Settings, seed: int,
+                jobs: int) -> List[List[Changepoint]]:
+    """Analyze several series, `jobs` at a time."""
+    work = functools.partial(analyze, settings=settings, seed=seed)
+    if jobs == 1: # without worker processes, which is easier to debug
+        return list(map(work, all_series))
+    # The cost of a series varies a lot with the number of changes in it, so hand them out one by
+    # one rather than in chunks that may hold several expensive ones.
+    setup = functools.partial(setup_logging, logging.getLogger().level)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=jobs, initializer=setup) as pool:
+        return list(pool.map(work, all_series))
+
+
+def setup_logging(level: int) -> None:
+    """Set up logging, in this process or in a worker process (which doesn't inherit it)."""
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
+
+
+def serialize(changes: Sequence[Changepoint], fields: Optional[Dict[str, str]] = None) -> str:
+    """Render the changes as one JSON object per line, with `fields` added to each."""
+    return ''.join(json.dumps({**(fields or {}), **change._asdict()}, sort_keys=True) + '\n' for change in changes)
+
+
+def report(series: Sequence[Point], changes: Sequence[Changepoint],
+           settings: Settings) -> None:
+    """Print a human-readable summary of the series and of what was found in it."""
+    out = sys.stderr
+    samples = sum(len(point.samples) for point in series)
+    print(f'Series: {len(series)} points, {samples} samples '
+          f'({samples / len(series):.1f} per point)', file=out)
+    if samples > len(series):
+        print(f'Combining the measurements of each point with their '
+              f'{settings.aggregate}', file=out)
+    print(f'Detected {len(changes)} changepoint(s) {settings.description()}', file=out)
+    if not changes:
+        return
+
+    print('', file=out)
+    rows = [(f'{index}', change.before_x[:12], change.after_x[:12],
+             f'{change.before_y:.4g}', f'{change.after_y:.4g}',
+             f'{change.change:+.2%}', f'{change.p_value:.4g}')
+            for (index, change) in enumerate(changes, start=1)]
+    print(tabulate.tabulate(rows, headers=['#', 'BETWEEN', 'AND', 'BEFORE', 'AFTER',
+                                           'CHANGE', 'P-VALUE'],
+                            tablefmt='plain', disable_numparse=True,
+                            colalign=('right', 'left', 'left', 'right', 'right', 'right', 'right')),
+          file=out)
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='detect-changepoints',
+        description='Find the points at which a benchmark time series changed, using the '
+                    'E-Divisive method.\n'
+                    '\n'
+                    'The changepoints are written to standard output as one JSON object per line, '
+                    'including the two points the change falls between, the relative change and its '
+                    'p-value.\n'
+                    '\n'
+                    'With --series-by, the input can hold several series, such as every test of a machine '
+                    'as returned by LNT\'s `GET /series`, and each series is analyzed on its own.\n'
+                    '\n'
+                    'The method used by this script is described in "A Nonparametric Approach for '
+                    'Multiple Change Point Analysis of Multivariate Data" (Matteson & James, 2014, '
+                    'https://arxiv.org/abs/1306.4933).',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--input', type=argparse.FileType('r'), default='-', metavar='FILE',
+        help='The JSONL file holding the series, as one JSON object per measurement. Only the fields '
+             'denoted by `--x` and `--y` are required in the input objects. If the input contains '
+             'multiple samples for a point, --aggregate must be provided. Defaults to standard input.')
+    parser.add_argument('--x', default='commit', metavar='FIELD',
+        help='The field that labels each point.')
+    parser.add_argument('--y', default='value', metavar='FIELD',
+        help='The field holding the measurement (this must be a number).')
+    parser.add_argument('--order-by', default='ordinal', metavar='FIELD',
+        help='A field that establishes a total order between the points. If not provided, '
+             'the order of the points in the input is used.')
+    parser.add_argument('--aggregate', choices=sorted(AGGREGATORS), default=None,
+        help='How to combine repeated samples of the same point into the single value that '
+             'E-Divisive is run over. This must be provided explicitly when the input contains '
+             'multiple samples for at least one point.')
+    parser.add_argument('--p-value', type=float, default=0.05,
+        help='How unlikely a change must be, under the hypothesis that nothing changed, for it '
+             'to be reported. Lowering this causes the script to report fewer (and more certain) '
+             'changes.')
+    parser.add_argument('--permutations', type=common.at_least(1), default=200,
+        help='How many random reorderings to use when testing a candidate change. More permutations '
+             'refine the p-value, but is more expensive to run.')
+    parser.add_argument('--min-points', type=common.at_least(2), default=3,
+        help='The smallest number of points that must be contained in a segment in order to report '
+             'a change. This prevents e.g. a single outlying measurement from being reported.')
+    parser.add_argument('--seed', type=int, default=0,
+        help='The seed of the random number generator used to permute the points. The default is '
+             'fixed to make the output of this script reproducible.')
+    parser.add_argument('--series-by', default=None, metavar='FIELD',
+        help='A field to use to determine which series the line is a part of. For example, --series-by test '
+             'would create a distinct series for each distinct value of the "test" field in the inputs. If not '
+             'provided, the input is assumed to hold a single series.')
+    parser.add_argument('--jobs', type=common.at_least(1), default=os.cpu_count(),
+        help='How many series to analyze at the same time, when there are several.')
+    parser.add_argument('--output', type=pathlib.Path, default=None,
+        help='Where to write the changepoints. Defaults to standard output.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Print a human-readable summary to standard error. Pass it twice to enable debugging output.')
+    args = parser.parse_args(argv)
+
+    setup_logging(logging.DEBUG if args.verbose >= 2 else logging.WARNING)
+
+    if not 0 < args.p_value <= 1:
+        raise ValueError(f'--p-value must be in (0, 1], got {args.p_value}')
+
+    (all_series, errors) = read_series(args.input, x=args.x, y=args.y, order_by=args.order_by,
+                                       series_by=args.series_by)
+    if args.series_by is not None:
+        for (key, error) in sorted(errors.items())[:10]:
+            logging.warning(f'skipped {key}: {error}')
+        if len(errors) > 10:
+            logging.warning(f'skipped {len(errors) - 10} more series with invalid records')
+    if not all_series:
+        if not errors:
+            raise ValueError('the input contains no data')
+        if args.series_by is None:
+            raise ValueError(errors[None])
+        raise ValueError(f'every one of the {len(errors)} series holds invalid records')
+
+    repeated = sum(1 for series in all_series.values() for point in series if len(point.samples) > 1)
+    points = sum(map(len, all_series.values()))
+    if repeated and args.aggregate is None:
+        raise ValueError(f'{repeated} of the {points} points hold more than one measurement, --aggregate '
+                         f'must be used to say how to combine them.')
+    elif args.aggregate is None:
+        # default to median when there's nothing to aggregate -- it doesn't change anything anyway
+        args.aggregate = 'median'
+
+    settings = Settings(min_points=args.min_points, p_value=args.p_value,
+                        permutations=args.permutations, aggregate=args.aggregate)
+    keys = []
+    short = 0
+    for (key, series) in sorted(all_series.items(), key=lambda item: item[0] or ''):
+        if settings.can_divide(series):
+            keys.append(key)
+        elif args.series_by is None:
+            logging.warning(f'the series has {len(series)} points, which is fewer than the '
+                            f'{2 * settings.min_points} needed to divide it into two segments of '
+                            f'--min-points; not looking for changepoints')
+        else:
+            short += 1
+            logging.debug(f'skipped {key}: fewer than the {2 * settings.min_points} points needed to divide it')
+    results = analyze_all([all_series[key] for key in keys], settings, args.seed, args.jobs)
+    changes = dict(zip(keys, results))
+
+    if args.series_by is None:
+        contents = serialize(changes.get(None, []))
+        if args.verbose:
+            report(all_series[None], changes.get(None, []), settings)
+    else:
+        contents = ''.join(serialize(changes[key], {args.series_by: key}) for key in keys)
+        if args.verbose:
+            out = sys.stderr
+            print(f'Series: {len(all_series) + len(errors)} by `{args.series_by}`, {len(keys)} analyzed with '
+                  f'{args.jobs} jobs, {short} too short to divide, {len(errors)} with invalid records', file=out)
+            print(f'Detected {sum(map(len, results))} changepoint(s) in {sum(1 for c in results if c)} series '
+                  f'{settings.description()}', file=out)
+
+    # Write the output all at once at the end, to avoid partial output in case of failure.
+    if args.output is None:
+        sys.stdout.write(contents)
+    else:
+        args.output.write_text(contents)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError) as error:
+        sys.exit(f'error: {error}')

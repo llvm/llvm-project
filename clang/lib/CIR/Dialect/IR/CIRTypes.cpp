@@ -61,18 +61,6 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
   }
 }
 
-static bool isPureCIRType(mlir::Type ty) {
-  if (!ty)
-    return true;
-  return !ty.walk([](mlir::Type t) {
-              if (!t)
-                return mlir::WalkResult::advance();
-              return mlir::isa<cir::CIRDialect>(t.getDialect())
-                         ? mlir::WalkResult::advance()
-                         : mlir::WalkResult::interrupt();
-            }).wasInterrupted();
-}
-
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
@@ -173,6 +161,21 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
   if (memberKinds.size() != numMembers)
     return emitError() << "expected " << numMembers << " member kinds, got "
                        << memberKinds.size();
+  return mlir::success();
+}
+
+/// Members must be CIR types other than void, which has no layout.
+static mlir::LogicalResult
+verifyRecordMemberTypes(function_ref<mlir::InFlightDiagnostic()> emitError,
+                        llvm::ArrayRef<mlir::Type> members) {
+  for (auto [idx, memberTy] : llvm::enumerate(members)) {
+    if (!cir::isCIRType(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " must be a CIR type, got " << memberTy;
+    if (mlir::isa<cir::VoidType>(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " cannot be void";
+  }
   return mlir::success();
 }
 
@@ -326,9 +329,13 @@ Type StructType::parse(mlir::AsmParser &parser) {
                                   is_class, kindsRef);
     if (!type)
       return {};
-    if (auto structTy = mlir::dyn_cast<StructType>(type))
-      if (structTy.isIncomplete())
-        structTy.complete(membersRef, packed, kindsRef);
+    if (auto structTy = mlir::dyn_cast<StructType>(type)) {
+      if (failed(structTy.mutate(membersRef, packed, kindsRef))) {
+        parser.emitError(loc, "record '")
+            << name.getValue() << "' redefined with a different body";
+        return {};
+      }
+    }
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -350,6 +357,8 @@ mlir::LogicalResult StructType::verify(
     bool packed, llvm::ArrayRef<RecordMemberKind> member_kinds, bool is_class) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
   return verifyRecordMemberKinds(emitError, members.size(), member_kinds);
 }
 
@@ -392,6 +401,12 @@ void StructType::removeABIConversionNamePrefix() {
 void StructType::complete(ArrayRef<Type> members, bool packed,
                           ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(
+      succeeded(verifyInvariants(
+          mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+          getName(), /*incomplete=*/false, packed, memberKinds, isClass())) &&
+      "invalid struct completion");
   if (mutate(members, packed, memberKinds).failed())
     llvm_unreachable("failed to complete struct");
 }
@@ -491,9 +506,13 @@ Type UnionType::parse(mlir::AsmParser &parser) {
                                  padding, kindsRef);
     if (!type)
       return {};
-    if (auto unionTy = mlir::dyn_cast<UnionType>(type))
-      if (unionTy.isIncomplete())
-        unionTy.complete(membersRef, packed, padding, kindsRef);
+    if (auto unionTy = mlir::dyn_cast<UnionType>(type)) {
+      if (failed(unionTy.mutate(membersRef, packed, padding, kindsRef))) {
+        parser.emitError(loc, "record '")
+            << name.getValue() << "' redefined with a different body";
+        return {};
+      }
+    }
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -521,6 +540,19 @@ UnionType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
   // padding slot.
   if (llvm::is_contained(member_kinds, RecordMemberKind::Pad))
     return emitError() << "a union member cannot be marked pad";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
+  // CIRGen pads a union's tail with a char or an array of chars.
+  if (padding) {
+    mlir::Type charTy = padding;
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(padding))
+      charTy = arrTy.getElementType();
+    auto intTy = mlir::dyn_cast<cir::IntType>(charTy);
+    if (!intTy || intTy.getWidth() != 8 || intTy.isSigned() || intTy.isBitInt())
+      return emitError()
+             << "union padding must be !u8i or an array of !u8i, got "
+             << padding;
+  }
   // Every variant starts at offset zero, so a bit-field variant is an access
   // unit of its own.  There is no run for a zero-width bit-field to end, so a
   // variant always has storage.
@@ -568,6 +600,11 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding,
                          ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(succeeded(verifyInvariants(
+             mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+             getName(), /*incomplete=*/false, packed, padding, memberKinds)) &&
+         "invalid union completion");
   if (mutate(members, packed, padding, memberKinds).failed())
     llvm_unreachable("failed to complete union");
 }
@@ -587,7 +624,8 @@ mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
                     dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+                dataLayout.getTypeAllocSize(lhs) <
+                    dataLayout.getTypeAllocSize(rhs));
       });
   // A union's storage is bytes, and stands in for every variant rather than
   // for the one bit-field that happened to be widest, so a bit-field variant
@@ -837,7 +875,8 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return computeStructAlignment(dataLayout);
 }
 
-// Sums the storage member (if present) with the padding field (if present).
+// Sums the storage member's alloc size (if present) with the padding field's
+// size (if present).
 // A union whose member list came out empty has no storage type, so its whole
 // size lives in the padding, which lowerUnion sizes from the ASTRecordLayout.
 llvm::TypeSize
@@ -845,7 +884,7 @@ UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
   llvm::TypeSize size = llvm::TypeSize::getFixed(0);
   if (mlir::Type storage = getUnionStorageType(dataLayout))
-    size += dataLayout.getTypeSizeInBits(storage);
+    size += dataLayout.getTypeAllocSize(storage) * 8;
   if (mlir::Type pad = getPadding())
     size += dataLayout.getTypeSizeInBits(pad);
   return size;
@@ -879,9 +918,9 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 
     // Add padding to the struct size to align it to the abi alignment of the
-    // element type before adding the size of the element.
+    // element type before adding the element's alloc size.
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += dataLayout.getTypeSize(ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
 
     // The alignment requirement of a struct is equal to the strictest
     // alignment requirement of its elements.
@@ -916,7 +955,7 @@ StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += dataLayout.getTypeSize(ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
   }
   return recordSize;
 }
@@ -966,7 +1005,7 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     const llvm::Align tyAlign = llvm::Align(
         getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += dataLayout.getTypeSize(members[i]);
+    offset += dataLayout.getTypeAllocSize(members[i]);
   }
 
   const llvm::Align tyAlign = llvm::Align(
@@ -1306,13 +1345,10 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
            << "!cir.func cannot have an explicit 'void' return type";
 
   // The calling convention lowering pass expects all types in a function
-  // signature to be CIR types.
-  for (mlir::Type type : argTypes) {
-    if (!isPureCIRType(type))
-      return emitError()
-             << "expected all types in the function signature to be CIR types";
-  }
-  if (!isPureCIRType(returnType))
+  // signature to be CIR types. CIR types only nest CIR types, so checking the
+  // signature's own types covers everything reachable from them.
+  if (!llvm::all_of(argTypes, cir::isCIRType) ||
+      (returnType && !cir::isCIRType(returnType)))
     return emitError()
            << "expected all types in the function signature to be CIR types";
 
@@ -1420,7 +1456,7 @@ uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return getSize() * dataLayout.getTypeSizeInBits(getElementType());
+  return getSize() * dataLayout.getTypeAllocSize(getElementType()) * 8;
 }
 
 uint64_t
@@ -1448,6 +1484,11 @@ BitFieldType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                             "single zero-width bit-field";
     return mlir::success();
   }
+
+  if (!cir::isCIRType(storageType))
+    return emitError() << "bit-field access unit storage must be a CIR type, "
+                          "got "
+                       << storageType;
 
   if (mlir::isa<cir::BitFieldType>(storageType))
     return emitError() << "bit-field access unit storage cannot itself be a "
@@ -1494,22 +1535,36 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(
-      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+  // Clang packs a fixed-length bool vector one bit per element and rounds the
+  // vector's size up to a power of two of at least a byte.
+  if (mlir::isa<cir::BoolType>(getElementType()) && getSize().isFixed()) {
+    assert(!cir::MissingFeatures::hlsl());
+    return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
+  }
+
+  llvm::TypeSize elementSize = dataLayout.getTypeSizeInBits(getElementType());
+  return llvm::TypeSize::get(
+      getSize().getKnownMinValue() * elementSize.getFixedValue(), isScalable());
+}
+
+uint64_t cir::VectorType::getBoolStorageWidth() const {
+  assert(mlir::isa<cir::BoolType>(getElementType()) &&
+         "only a bool vector is stored as an integer");
+  return std::max<uint64_t>(getFixedSize(), 8);
 }
 
 uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   // This hook answers in bytes, not bits.
-  return llvm::PowerOf2Ceil(
-      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
+  return llvm::PowerOf2Ceil(llvm::divideCeil(
+      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
 }
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size, bool scalable) {
-  if (size == 0)
+    mlir::Type elementType, llvm::ElementCount size) {
+  if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
   return success();
 }
@@ -1520,7 +1575,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   mlir::Builder odsBuilder(odsParser.getContext());
   mlir::FailureOr<::mlir::Type> elementType;
   mlir::FailureOr<uint64_t> size;
-  bool isScalabe = false;
+  bool isScalable = false;
 
   // Parse literal '<'
   if (odsParser.parseLess())
@@ -1528,7 +1583,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal '[', if present, and set the scalability flag accordingly
   if (odsParser.parseOptionalLSquare().succeeded())
-    isScalabe = true;
+    isScalable = true;
 
   // Parse variable 'size'
   size = mlir::FieldParser<uint64_t>::parse(odsParser);
@@ -1541,7 +1596,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal ']', which is expected when dealing with scalable
   // dim sizes
-  if (isScalabe && odsParser.parseRSquare().failed()) {
+  if (isScalable && odsParser.parseRSquare().failed()) {
     odsParser.emitError(odsParser.getCurrentLocation(),
                         "missing closing `]` for scalable dim size");
     return {};
@@ -1563,24 +1618,52 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   // Parse literal '>'
   if (odsParser.parseGreater())
     return {};
-  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
-                                          mlir::Type((*elementType)),
-                                          uint64_t((*size)), isScalabe);
+  return odsParser.getChecked<VectorType>(
+      odsLoc, odsParser.getContext(), mlir::Type((*elementType)),
+      llvm::ElementCount::get(*size, isScalable));
 }
 
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   mlir::Builder odsBuilder(getContext());
   odsPrinter << "<";
-  if (this->getIsScalable())
+  if (isScalable())
     odsPrinter << "[";
 
-  odsPrinter.printStrippedAttrOrType(getSize());
-  if (this->getIsScalable())
+  odsPrinter.printStrippedAttrOrType(getSize().getKnownMinValue());
+  if (isScalable())
     odsPrinter << "]";
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
   odsPrinter.printStrippedAttrOrType(getElementType());
   odsPrinter << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getNumRows() * getNumColumns() *
+      dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+mlir::LogicalResult cir::MatrixType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t row, uint64_t column) {
+  if (row == 0)
+    return emitError() << "the number of matrix rows must be non-zero";
+  if (column == 0)
+    return emitError() << "the number of matrix columns must be non-zero";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1599,30 +1682,32 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::Default:
     return LangAddressSpace::Default;
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_local:
   case LangAS::cuda_shared:
-    // Local means local among the work-group (OpenCL) or block (CUDA).
+  case LangAS::sycl_local:
+    // Local means local among the work-group (OpenCL, SYCL) or block (CUDA).
     // All threads inside the kernel can access local memory.
     return LangAddressSpace::OffloadLocal;
   case LangAS::cuda_device:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_constant:
   case LangAS::cuda_constant:
+  case LangAS::sycl_constant:
     return LangAddressSpace::OffloadConstant;
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return LangAddressSpace::OffloadPrivate;
   case LangAS::opencl_generic:
+  case LangAS::sycl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+  case LangAS::sycl_global_device:
     return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
-    return LangAddressSpace::OffloadGlobalHost;
-  case LangAS::sycl_global:
-  case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:
-  case LangAS::sycl_local:
-  case LangAS::sycl_private:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::ptr32_sptr:
   case LangAS::ptr32_uptr:
   case LangAS::ptr64:

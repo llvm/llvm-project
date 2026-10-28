@@ -223,6 +223,26 @@ void setGPUBlockRedundantAttr(Operation *op) {
                          GPUBlockRedundantAttr::get(op->getContext()));
 }
 
+ChunkSizeAttr getChunkSizeAttr(Operation *op) {
+  return op->getDiscardableAttrOfType<ChunkSizeAttr>(ChunkSizeAttr::name);
+}
+
+bool hasChunkSizeAttr(Operation *op) { return getChunkSizeAttr(op) != nullptr; }
+
+void setChunkSizeAttr(Operation *op, ChunkSizeAttr attr) {
+  op->setDiscardableAttr(ChunkSizeAttr::name, attr);
+}
+
+void setChunkSizeAttr(Operation *op, int64_t chunkSize) {
+  setChunkSizeAttr(op, ChunkSizeAttr::get(op->getContext(), chunkSize));
+}
+
+std::optional<int64_t> getChunkSize(Operation *op) {
+  if (ChunkSizeAttr attr = getChunkSizeAttr(op))
+    return attr.getChunkSize();
+  return std::nullopt;
+}
+
 void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");
@@ -537,6 +557,22 @@ static Operation *findCorrespondingDataExit(Value entryResult) {
   return exitOps.empty() ? nullptr : exitOps.front();
 }
 
+static std::optional<Location> getMappingExitLoc(Value entryResult) {
+  if (auto mapInfo = entryResult.getDefiningOp<MapInfoOp>())
+    if (std::optional<Location> exitLoc = mapInfo.getExitLoc())
+      return exitLoc;
+  if (Operation *exitOp = findCorrespondingDataExit(entryResult))
+    return exitOp->getLoc();
+  return std::nullopt;
+}
+
+std::optional<Location> getMappingExitLoc(ValueRange dataClauseOperands) {
+  for (Value operand : dataClauseOperands)
+    if (std::optional<Location> exitLoc = getMappingExitLoc(operand))
+      return exitLoc;
+  return std::nullopt;
+}
+
 static std::optional<DataClause> getExitDataClause(Operation *exitOp) {
   return llvm::TypeSwitch<Operation *, std::optional<DataClause>>(exitOp)
       .Case<ACC_DATA_EXIT_OPS>([&](auto exit) { return exit.getDataClause(); })
@@ -595,13 +631,21 @@ MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
   if (!parDims)
     return flags;
 
-  for (GPUParallelDimAttr parDim : parDims.getArray()) {
-    if (policy.isGang(parDim))
-      flags = flags | MapFlags::gang_private;
-    else if (policy.isWorker(parDim))
-      flags = flags | MapFlags::worker_private;
-    else if (policy.isVector(parDim))
-      flags = flags | MapFlags::vector_private;
+  auto addLevelFlags = [&](ArrayRef<GPUParallelDimAttr> dims) {
+    for (GPUParallelDimAttr parDim : dims) {
+      if (policy.isGang(parDim))
+        flags = flags | MapFlags::gang_private;
+      else if (policy.isWorker(parDim))
+        flags = flags | MapFlags::worker_private;
+      else if (policy.isVector(parDim))
+        flags = flags | MapFlags::vector_private;
+    }
+  };
+  addLevelFlags(parDims.getArray());
+  // Ownership par_dims may be narrower than the dimensions the kernel indexes
+  // the storage by, so replicate across the active dimensions as well.
+  if (ActiveParDimsAttr activeParDims = getActiveParDimsAttr(privatizeOp)) {
+    addLevelFlags(activeParDims.getArray());
   }
   return flags;
 }
@@ -650,6 +694,10 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::no_create;
     break;
   case DataClause::acc_attach:
+    flags = flags | MapFlags::attach;
+    break;
+  case DataClause::acc_detach:
+    flags = flags | MapFlags::detach;
     break;
   default:
     break;
@@ -701,6 +749,8 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::ptr_and_obj;
   if (getImplicitFlag(entryOp))
     flags = flags | MapFlags::implicit;
+  if (entryOp->hasDiscardableAttr(getNoDeviceDescriptorAttrName()))
+    flags = flags | MapFlags::no_device_descriptor;
   if (bitEnumContainsAny(getEntryModifiers(entryOp), DataClauseModifier::zero))
     flags = flags | MapFlags::init_zero;
 
@@ -718,6 +768,16 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
   return flags;
 }
 
+/// Returns the module \p var lives in.
+static ModuleOp getEnclosingModule(Value var) {
+  if (Operation *def = var.getDefiningOp())
+    return def->getParentOfType<ModuleOp>();
+  if (Region *region = var.getParentRegion())
+    if (Operation *parent = region->getParentOp())
+      return parent->getParentOfType<ModuleOp>();
+  return {};
+}
+
 int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
                                 ValueRange bounds, const DataLayout &dataLayout,
                                 OpenACCSupport *support) {
@@ -726,12 +786,7 @@ int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
   if (!bounds.empty() || descKind != DataDescKind::none)
     return 0;
 
-  ModuleOp module;
-  if (Operation *def = var.getDefiningOp())
-    module = def->getParentOfType<ModuleOp>();
-  else if (Region *region = var.getParentRegion())
-    if (Operation *parent = region->getParentOp())
-      module = parent->getParentOfType<ModuleOp>();
+  ModuleOp module = getEnclosingModule(var);
   if (!module)
     return -1;
 
@@ -748,6 +803,18 @@ int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
     return *size;
 
   return -1;
+}
+
+int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
+                                ValueRange bounds, OpenACCSupport *support) {
+  ModuleOp module = getEnclosingModule(var);
+  if (!module)
+    return -1;
+  std::optional<DataLayout> dataLayout = getDataLayout(module);
+  if (!dataLayout)
+    return -1;
+  return computeMapInfoSizeBytes(var, varType, descKind, bounds, *dataLayout,
+                                 support);
 }
 
 void populateSourceExtents(ValueRange bounds, ArrayRef<int64_t> shape,

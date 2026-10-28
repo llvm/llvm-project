@@ -657,7 +657,7 @@ define void @call_first_arg(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
 ; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
-; CHECK-MSVC32-NEXT:    subl $64, %esp
+; CHECK-MSVC32-NEXT:    subl $48, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
@@ -793,7 +793,7 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
 ; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
-; CHECK-MSVC32-NEXT:    subl $96, %esp
+; CHECK-MSVC32-NEXT:    subl $80, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
@@ -960,7 +960,7 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
 ; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
-; CHECK-MSVC32-NEXT:    subl $112, %esp
+; CHECK-MSVC32-NEXT:    subl $96, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
@@ -1108,7 +1108,7 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
 ; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
-; CHECK-MSVC32-NEXT:    subl $96, %esp
+; CHECK-MSVC32-NEXT:    subl $80, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx

@@ -34,8 +34,17 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
-void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+
+void initializeAMDGPUPostLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPostLegalizeCombinerLegacy(bool IsOptNone);
+
+class AMDGPUPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
 void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
 
@@ -94,38 +103,21 @@ public:
 };
 
 // SI Passes
-FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
-FunctionPass *createSIFoldOperandsLegacyPass();
-FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
-FunctionPass *createSILoadStoreOptimizerLegacyPass();
-FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIOptimizeExecMaskingPreRAPass();
-FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
-FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
-FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
-FunctionPass *createSIFixSGPRCopiesLegacyPass();
-FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
-FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
-FunctionPass *createSIFormMemoryClausesLegacyPass();
 
-FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
-FunctionPass *createAMDGPUReserveWWMRegsPass();
-FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 ModulePass *createAMDGPULowerIntrinsicsLegacyPass();
 FunctionPass *createSIModeRegisterPass();
-FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
@@ -177,7 +169,6 @@ FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;
 
-FunctionPass *createAMDGPUPromoteKernelArgumentsPass();
 void initializeAMDGPUPromoteKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPUPromoteKernelArgumentsID;
 
@@ -186,7 +177,6 @@ struct AMDGPUPromoteKernelArgumentsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-ModulePass *createAMDGPULowerKernelAttributesPass();
 void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
 extern char &AMDGPULowerKernelAttributesID;
 
@@ -319,6 +309,9 @@ extern char &AMDGPUPreloadKernArgPrologLegacyID;
 void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
+void initializeSIPostRA16BitMovFoldingLegacyPass(PassRegistry &);
+extern char &SIPostRA16BitMovFoldingLegacyID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
@@ -359,7 +352,6 @@ struct AMDGPUInsertDelayAluPass
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
@@ -529,6 +521,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class SIPostRA16BitMovFoldingPass
+    : public OptionalPassInfoMixin<SIPostRA16BitMovFoldingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -616,8 +615,7 @@ void initializeAMDGPUUnifyDivergentExitNodesLegacyPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
-void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
-ImmutablePass *createAMDGPUExternalAAWrapperPass();
+void initializeAMDGPUAAWrapperPassPass(PassRegistry &);
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
@@ -677,17 +675,26 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
 
   // clang-format off
   static const bool ASAliasRules[][AMDGPUAS::MAX_AMDGPU_ADDRESS + 1] = {
-    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
-    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
-    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
-    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false},
-    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
-    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
-    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
-    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr Reserved Reserved Reserved VGPR Reserved Barrier */
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true, false, false, false, false, false, false},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    // A VGPR ("as memory") access only ever touches the wave's own registers,
+    // which no other address space can reach: a flat pointer obtained by casting
+    // one cannot be dereferenced.
+    /* VGPR     */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, true,  false, false},
+    /* Reserved  */          {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, false},
+    /* Barrier  */           {false,  false,  false, false, false,  false, false,  false,  false,  false, false, false, false, false, false, true},
   };
   // clang-format on
   static_assert(std::size(ASAliasRules) == AMDGPUAS::MAX_AMDGPU_ADDRESS + 1);

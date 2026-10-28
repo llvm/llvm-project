@@ -61,6 +61,21 @@ static std::error_code getLastSocketErrorCode() {
 #endif
 }
 
+#ifdef _WIN32
+using NativeSocket = SOCKET;
+#else
+using NativeSocket = int;
+#define INVALID_SOCKET -1
+#endif
+
+static int closeSocket(NativeSocket Socket) {
+#ifdef _WIN32
+  return ::closesocket(Socket);
+#else
+  return ::close(Socket);
+#endif
+}
+
 static Expected<sockaddr_un> setSocketAddr(StringRef SocketPath) {
   struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
@@ -76,13 +91,8 @@ static Expected<sockaddr_un> setSocketAddr(StringRef SocketPath) {
 }
 
 static Expected<int> getSocketFD(StringRef SocketPath) {
-#ifdef _WIN32
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET) {
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1) {
-#endif // _WIN32
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Create socket failed");
   }
@@ -97,13 +107,16 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
   Expected<struct sockaddr_un> Addr = setSocketAddr(SocketPath);
-  if (!Addr)
+  if (!Addr) {
+    closeSocket(Socket);
     return Addr.takeError();
+  }
 
   if (::connect(Socket, (struct sockaddr *)&*Addr, sizeof(*Addr)) == -1) {
-    ::close(Socket);
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Connect socket failed");
+    // Grab the error code before closing, which may overwrite it.
+    std::error_code EC = getLastSocketErrorCode();
+    closeSocket(Socket);
+    return llvm::make_error<StringError>(EC, "Connect socket failed");
   }
 
 #ifdef _WIN32
@@ -158,12 +171,9 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 
 #ifdef _WIN32
   WSABalancer _;
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == INVALID_SOCKET)
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1)
 #endif
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (Socket == INVALID_SOCKET)
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
 
@@ -177,13 +187,15 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
   Expected<struct sockaddr_un> Addr = setSocketAddr(SocketPath);
-  if (!Addr)
+  if (!Addr) {
+    closeSocket(Socket);
     return Addr.takeError();
+  }
 
   if (::bind(Socket, (struct sockaddr *)&*Addr, sizeof(*Addr)) == -1) {
-    // Grab error code from call to ::bind before calling ::close
+    // Grab error code from call to ::bind before closing the socket
     std::error_code EC = getLastSocketErrorCode();
-    ::close(Socket);
+    closeSocket(Socket);
     return llvm::make_error<StringError>(EC, "Bind error");
   }
 

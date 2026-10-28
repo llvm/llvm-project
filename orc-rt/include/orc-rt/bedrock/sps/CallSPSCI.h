@@ -14,6 +14,10 @@
 #define ORC_RT_BEDROCK_SPS_CALLSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
+
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_call_void_void)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_call_main)
 
 namespace orc_rt::sps_ci {
 

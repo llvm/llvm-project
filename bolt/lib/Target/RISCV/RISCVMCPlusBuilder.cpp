@@ -28,6 +28,14 @@ using namespace bolt;
 
 namespace {
 
+bool isValidCallJALR(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
+    return false;
+
+  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm();
+}
+
 class RISCVMCPlusBuilder : public MCPlusBuilder {
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
@@ -122,6 +130,17 @@ public:
     Regs &= ExclusionMask;
   }
 
+  void getLongJumpScratchRegs(BitVector &Regs) const override {
+    getGPRegs(Regs, /*IncludeAlias=*/false);
+    removeNonScavengeableRegs(Regs);
+    BitVector CalleeSaved(Regs.size());
+    getCalleeSavedRegs(CalleeSaved);
+    Regs.reset(CalleeSaved);
+    // JALR x0, x5 carries a return-address-stack pop hint. Avoid using the
+    // alternate link register for intra-function jumps even when it is dead.
+    Regs.reset(getAliases(RISCV::X5));
+  }
+
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
@@ -167,6 +186,7 @@ public:
     case RISCV::PseudoCALL:
     case RISCV::PseudoCALLReg:
     case RISCV::PseudoTAIL:
+    case RISCV::PseudoJump:
       return false;
     }
   }
@@ -313,6 +333,16 @@ public:
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
     Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
+  }
+
+  void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
+                              MCPhysReg ScratchReg,
+                              MCContext *Ctx) const override {
+    Inst = MCInstBuilder(RISCV::PseudoJump)
+               .addReg(ScratchReg)
+               .addExpr(MCSpecifierExpr::create(
+                   MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT,
+                   *Ctx));
   }
 
   StringRef getTrapFillValue() const override {
@@ -475,6 +505,7 @@ public:
       OpNum = 0;
       return true;
     case RISCV::PseudoCALLReg:
+    case RISCV::PseudoJump:
       OpNum = 1;
       return true;
     case RISCV::AUIPC:
@@ -613,7 +644,9 @@ public:
   }
 
   bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC)
+    if (Inst.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
+        Inst.getOperand(0).getReg() == RISCV::X0)
       return false;
 
     const auto &ImmOp = Inst.getOperand(1);
@@ -634,10 +667,9 @@ public:
   }
 
   bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First))
+    if (!isCallAuipc(First) || !isValidCallJALR(Second))
       return false;
 
-    assert(Second.getOpcode() == RISCV::JALR);
     return true;
   }
 
