@@ -20,3 +20,21 @@ define float @fpext_hi(ptr addrspace(4) inreg %p) {
   %e = fpext half %h to float
   ret float %e
 }
+
+define float @fpext_hi_divergent(ptr addrspace(4) %p) {
+; CHECK-LABEL: fpext_hi_divergent:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    global_load_b64 v[0:1], v[0:1], off nv
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_wait_xcnt 0x0
+; CHECK-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+  %x = load i64, ptr addrspace(4) %p
+  %s = lshr i64 %x, 16
+  %t = trunc i64 %s to i16
+  %h = bitcast i16 %t to half
+  %e = fpext half %h to float
+  ret float %e
+}
