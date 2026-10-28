@@ -6520,8 +6520,7 @@ bool VPlanTransforms::handleCompressingPatterns(
     Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
 
     Type *UpdateType = ConditionalInductionPhi->getScalarType();
-    if (UpdateType->isPointerTy())
-      UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
+    assert(!UpdateType->isPointerTy() && "ptr types are not supported yet");
 
     auto *HandledLanes = Builder.createNaryOp(
         VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
@@ -6532,12 +6531,8 @@ bool VPlanTransforms::handleCompressingPatterns(
         vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
     VPValue *Offset =
         Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
-    VPValue *Update;
-    if (ConditionalInductionPhi->getScalarType()->isPointerTy())
-      Update = Builder.createPtrAdd(ConditionalInductionPhi, Offset);
-    else
-      Update = Builder.createAdd(ConditionalInductionPhi, Offset, {},
-                                 "conditional.step");
+    VPValue *Update = Builder.createAdd(ConditionalInductionPhi, Offset, {},
+                                        "conditional.step");
 
     BackedgeVal->replaceAllUsesWith(Update);
   }
