@@ -263,11 +263,8 @@ define void @try_catch_shared_za_callee() "aarch64_new_za" personality ptr @__gx
 ; CHECK-NEXT:  .LBB2_6: // %catch
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    bl noexcept_shared_za_call
-; CHECK-NEXT:    sub x8, x29, #16
-; CHECK-NEXT:    msr TPIDR2_EL0, x8
-; CHECK-NEXT:    bl __cxa_end_catch
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    bl __cxa_end_catch
 ; CHECK-NEXT:    b .LBB2_3
   invoke void @shared_za_call() #4
           to label %exit unwind label %catch
