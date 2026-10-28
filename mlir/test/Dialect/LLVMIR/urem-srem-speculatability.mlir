@@ -56,10 +56,6 @@ func.func @urem_no_hoist_zero(%a: i32, %n: index) -> i32 {
 }
 
 // -----
-// llvm.srem
-// -----
-
-// -----
 
 // Unproven divisor => must NOT hoist.
 // CHECK-LABEL: func.func @srem_no_hoist
