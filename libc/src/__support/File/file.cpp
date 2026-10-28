@@ -546,27 +546,32 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     return EINVAL;
   }
 
-  if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
-    // We exclude the case of buffer_mode == _IONBF in this branch
-    // because we don't need to allocate buffer in such a case.
+  // A caller which names no buffer is asking for one to be provided, and a
+  // size of zero leaves that choice here too. _IONBF is excluded because a
+  // stream which is not buffered needs nothing.
+  if (buffer == nullptr && buffer_mode != _IONBF) {
+    size_t new_size = size != 0 ? size : DEFAULT_BUFFER_SIZE;
     if (own_buf) {
       // This is one of the places where a C allocation function is used
       // as C++ does not have an equivalent of realloc.
-      buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
-      if (buf == nullptr)
+      uint8_t *new_buf = reinterpret_cast<uint8_t *>(realloc(buf, new_size));
+      if (new_buf == nullptr)
         return ENOMEM;
+      buf = new_buf;
     } else {
       AllocChecker ac;
-      buf = new (ac) uint8_t[size];
+      uint8_t *new_buf = new (ac) uint8_t[new_size];
       if (!ac)
         return ENOMEM;
+      buf = new_buf;
       own_buf = true;
     }
-    bufsize = size;
-    // TODO: Handle allocation failures.
+    bufsize = new_size;
+    pos = 0;
+    read_limit = 0;
   } else {
     if (own_buf)
-      delete buf;
+      delete[] buf;
     if (buffer_mode != _IONBF) {
       buf = static_cast<uint8_t *>(buffer);
       bufsize = size;

@@ -1,12 +1,19 @@
-//===-- Unittests for setvbuf ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for setvbuf.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
+#include "src/stdio/fflush.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fwrite.h"
@@ -93,6 +100,39 @@ TEST_F(LlvmLibcSetvbufTest, SetLBFBuffer) {
   ASSERT_EQ(CONTENT_SIZE, LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
   ASSERT_STREQ(CONTENT, data);
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
+}
+
+TEST_F(LlvmLibcSetvbufTest, NullBufferAsksForOne) {
+  // A null buffer asks the library to provide one, so the stream stays
+  // buffered in the mode asked for whatever the size. Data written to a fully
+  // buffered stream is not readable through another handle until it is
+  // flushed.
+  constexpr char FILENAME[] = "testdata/setvbuf_null_buffer.test";
+  constexpr char CONTENT[] = "abcdef";
+  constexpr size_t CONTENT_SIZE = sizeof(CONTENT) - 1;
+  const size_t sizes[] = {0, 16};
+
+  for (size_t size : sizes) {
+    ::FILE *fw = LIBC_NAMESPACE::fopen(FILENAME, "w");
+    ASSERT_FALSE(fw == nullptr);
+    ASSERT_EQ(LIBC_NAMESPACE::setvbuf(fw, nullptr, _IOFBF, size), 0);
+
+    ::FILE *fr = LIBC_NAMESPACE::fopen(FILENAME, "r");
+    ASSERT_FALSE(fr == nullptr);
+
+    ASSERT_EQ(CONTENT_SIZE,
+              LIBC_NAMESPACE::fwrite(CONTENT, 1, CONTENT_SIZE, fw));
+    char data[CONTENT_SIZE + 1] = {};
+    ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
+
+    ASSERT_EQ(0, LIBC_NAMESPACE::fflush(fw));
+    LIBC_NAMESPACE::clearerr(fr);
+    ASSERT_EQ(CONTENT_SIZE, LIBC_NAMESPACE::fread(data, 1, CONTENT_SIZE, fr));
+    ASSERT_STREQ(CONTENT, data);
+
+    ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fw));
+    ASSERT_EQ(0, LIBC_NAMESPACE::fclose(fr));
+  }
 }
 
 TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
