@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ArithCommon/CeilFloorDivExpansion.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Arith/Utils/NarrowFloatExpansion.h"
 #include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Location.h"
@@ -64,6 +65,126 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
     return shapedTy.clone(cloneTo);
   }
   return cloneTo;
+}
+
+static bool isEmitterWideType(Type ty) {
+  return ty.isF16() || ty.isBF16() || ty.isF32() || ty.isF64();
+}
+
+/// A float the emitters take: at most 8 bits, with a zero and subnormals.
+static bool isNarrowFloat(Type ty) {
+  auto floatTy = dyn_cast<FloatType>(ty);
+  if (!floatTy || floatTy.getWidth() > 8)
+    return false;
+  const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+  return sem.hasZero && sem.hasDenormals;
+}
+
+/// Whether every finite `from` value is exact in `to` (or, if `allowOverflow`,
+/// above its range); given precision and sign, the extremes decide.
+static bool isExactIn(FloatType from, FloatType to,
+                      bool allowOverflow = false) {
+  const llvm::fltSemantics &fromSem = from.getFloatSemantics();
+  const llvm::fltSemantics &toSem = to.getFloatSemantics();
+  if (APFloat::semanticsPrecision(fromSem) >
+          APFloat::semanticsPrecision(toSem) ||
+      (APFloat::semanticsHasSignedRepr(fromSem) &&
+       !APFloat::semanticsHasSignedRepr(toSem)))
+    return false;
+  SmallVector<APFloat, 2> values = {APFloat::getSmallest(fromSem)};
+  if (!allowOverflow)
+    values.push_back(APFloat::getLargest(fromSem));
+  for (APFloat &value : values) {
+    bool losesInfo = false;
+    (void)value.convert(toSem, APFloat::rmNearestTiesToEven, &losesInfo);
+    if (losesInfo)
+      return false;
+  }
+  return true;
+}
+
+/// Returns the type emitNarrowFloatExt writes for `src` to `dst`, or null:
+/// `dst` if f16, bf16, f32 or f64; f32 (then a truncf) for a `dst` of at most
+/// 8 bits without a zero, subnormals or `src`'s sign; else the widest of f64,
+/// f32 and f16 holding `src`, exact in `dst`.
+static FloatType getExtResultType(FloatType src, FloatType dst) {
+  Builder builder(dst.getContext());
+  if (isEmitterWideType(dst))
+    return isExactIn(src, dst, /*allowOverflow=*/true) ? dst : FloatType();
+  if (dst.getWidth() <= 8) {
+    bool losesSign = APFloat::semanticsHasSignedRepr(src.getFloatSemantics()) &&
+                     !APFloat::semanticsHasSignedRepr(dst.getFloatSemantics());
+    FloatType f32 = builder.getF32Type();
+    return (!isNarrowFloat(dst) || losesSign) && isExactIn(src, f32)
+               ? f32
+               : FloatType();
+  }
+  for (FloatType wide :
+       {builder.getF64Type(), builder.getF32Type(), builder.getF16Type()})
+    if (wide.getWidth() < dst.getWidth() && isExactIn(wide, dst) &&
+        isExactIn(src, wide))
+      return wide;
+  return FloatType();
+}
+
+/// The gate shared by the converter and the pass legality: an extf from a
+/// listed type that getExtResultType handles. Dynamic shapes are left alone
+/// (no splat constants).
+static bool canExpandNarrowFloat(Type srcTy, Type dstTy, Type opTy,
+                                 ArrayRef<TypeID> narrowTypes) {
+  if (auto shapedTy = dyn_cast<ShapedType>(opTy);
+      shapedTy && !shapedTy.hasStaticShape())
+    return false;
+  auto src = dyn_cast<FloatType>(srcTy);
+  auto dst = dyn_cast<FloatType>(dstTy);
+  if (!src || !dst)
+    return false;
+  auto isListed = [&](FloatType ty) {
+    return isNarrowFloat(ty) && llvm::is_contained(narrowTypes, ty.getTypeID());
+  };
+  return isListed(src) && getExtResultType(src, dst);
+}
+
+/// i32, or i64 if a format needs more bits.
+static IntegerType getCarrierIntType(Builder &b,
+                                     const arith::FloatFormatSpec &src,
+                                     const arith::FloatFormatSpec &dst) {
+  bool needsI64 = src.sizeInBits > 32 || dst.sizeInBits > 32;
+  return b.getIntegerType(needsI64 ? 64 : 32);
+}
+
+/// Extends the narrow float `operand` to `resultTy` via getExtResultType.
+static Value emitNarrowFloatExtension(ImplicitLocOpBuilder &b, Value operand,
+                                      Type resultTy,
+                                      arith::FastMathFlagsAttr fastmath) {
+  Type operandTy = operand.getType();
+  auto srcETy = cast<FloatType>(getElementTypeOrSelf(operandTy));
+  auto dstETy = cast<FloatType>(getElementTypeOrSelf(resultTy));
+  FloatType wideETy = getExtResultType(srcETy, dstETy);
+  const arith::FloatFormatSpec src =
+      arith::floatFormatSpecFromFloatType(srcETy);
+  const arith::FloatFormatSpec wide =
+      arith::floatFormatSpecFromFloatType(wideETy);
+  Type carrierTy =
+      cloneToShapedType(operandTy, getCarrierIntType(b, src, wide));
+
+  Type srcBitsTy =
+      cloneToShapedType(operandTy, b.getIntegerType(src.sizeInBits));
+  Value code = arith::BitcastOp::create(b, srcBitsTy, operand);
+  Value carried = arith::ExtUIOp::create(b, carrierTy, code);
+  Value bits = arith::emitNarrowFloatExt(b, carried, src, wide);
+  Type wideBitsTy =
+      cloneToShapedType(operandTy, b.getIntegerType(wide.sizeInBits));
+  if (wideBitsTy != carrierTy)
+    bits = arith::TruncIOp::create(b, wideBitsTy, bits);
+  Value result =
+      arith::BitcastOp::create(b, cloneToShapedType(resultTy, wideETy), bits);
+  if (wideETy.getWidth() < dstETy.getWidth())
+    result = arith::ExtFOp::create(b, resultTy, result, fastmath);
+  else if (wideETy != dstETy)
+    result = arith::TruncFOp::create(b, resultTy, result,
+                                     /*roundingmode=*/nullptr, fastmath);
+  return result;
 }
 
 namespace {
@@ -819,6 +940,29 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   }
 };
 
+/// Expands an extf from a narrow float (see canExpandNarrowFloat).
+struct NarrowFloatExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  NarrowFloatExtFOpConverter(MLIRContext *ctx, ArrayRef<TypeID> narrowTypes)
+      : OpRewritePattern(ctx), narrowTypes(narrowTypes) {}
+
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    Value operand = op.getOperand();
+    Type operandETy = getElementTypeOrSelf(operand.getType());
+    Type resultTy = op.getType();
+    Type resultETy = getElementTypeOrSelf(resultTy);
+    if (!canExpandNarrowFloat(operandETy, resultETy, resultTy, narrowTypes))
+      return rewriter.notifyMatchFailure(op, "not a narrow-float extf");
+
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    rewriter.replaceOp(op, emitNarrowFloatExtension(b, operand, resultTy,
+                                                    op.getFastmathAttr()));
+    return success();
+  }
+
+  SmallVector<TypeID> narrowTypes;
+};
+
 struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
@@ -1035,6 +1179,19 @@ struct ArithExpandOpsPass
       arith::populateExpandF8E5M2Patterns(patterns);
     if (includeF8E4M3FN)
       arith::populateExpandF8E4M3FNPatterns(patterns);
+    const std::pair<bool, TypeID> narrowFloatOptions[] = {
+        {includeF8E4M3, TypeID::get<Float8E4M3Type>()},
+        {includeF8E4M3FNUZ, TypeID::get<Float8E4M3FNUZType>()},
+        {includeF8E4M3B11FNUZ, TypeID::get<Float8E4M3B11FNUZType>()},
+        {includeF8E5M2FNUZ, TypeID::get<Float8E5M2FNUZType>()},
+        {includeF8E3M4, TypeID::get<Float8E3M4Type>()},
+        {includeF6E2M3FN, TypeID::get<Float6E2M3FNType>()},
+        {includeF6E3M2FN, TypeID::get<Float6E3M2FNType>()}};
+    SmallVector<TypeID> narrowTypes;
+    for (auto [enabled, typeID] : narrowFloatOptions)
+      if (enabled)
+        narrowTypes.push_back(typeID);
+    arith::populateExpandNarrowFloatPatterns(patterns, narrowTypes);
     if (includeFlushDenormals) {
       arith::populateExpandFlushDenormalsPatterns(patterns);
       // Only IEEE-like floating-point types are expanded by the pattern;
@@ -1064,6 +1221,8 @@ struct ArithExpandOpsPass
         legalTypes &= !llvm::isa<Float8E5M2Type>(inETy);
       if (includeF8E4M3FN)
         legalTypes &= !llvm::isa<Float8E4M3FNType>(inETy);
+      legalTypes &=
+          !canExpandNarrowFloat(inETy, outETy, op.getType(), narrowTypes);
       return legalTypes;
     });
 
@@ -1096,6 +1255,13 @@ struct ArithExpandOpsPass
 void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
   patterns.add<BFloat16ExtFOpConverter, BFloat16TruncFOpConverter>(
       patterns.getContext());
+}
+
+void mlir::arith::populateExpandNarrowFloatPatterns(
+    RewritePatternSet &patterns, ArrayRef<TypeID> narrowTypes) {
+  if (narrowTypes.empty())
+    return;
+  patterns.add<NarrowFloatExtFOpConverter>(patterns.getContext(), narrowTypes);
 }
 
 void mlir::arith::populateExpandF4E2M1Patterns(RewritePatternSet &patterns) {
