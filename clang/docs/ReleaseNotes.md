@@ -1135,6 +1135,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)
 
+- Fixed incorrect evaluation of compound requirements when a return-type
+  requirement contains a lambda with constrained template parameters.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
