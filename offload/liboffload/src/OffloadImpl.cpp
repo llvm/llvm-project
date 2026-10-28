@@ -583,6 +583,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return HandleOrErr.takeError();
     return Info.write<void *>(*HandleOrErr);
   }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
 
   default:
     break;

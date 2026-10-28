@@ -378,6 +378,128 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
+// Selection with 64-bit selector switch (two-word case literals).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Linkage], []> {
+// CHECK-LABEL: @selection_switch_i64
+  spirv.func @selection_switch_i64(%selector: i64) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %three = spirv.Constant 3: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : i64, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: 0: ^[[CASE0:.+]],
+// CHECK-NEXT: 4294967296: ^[[CASE1:.+]],
+// CHECK-NEXT: 4294967297: ^[[CASE2:.+]]
+      spirv.Switch %selector : i64, [
+        default: ^default,
+        0: ^case0,
+        4294967296: ^case1,
+        4294967297: ^case2
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^case2:
+      spirv.Store "Function" %var, %three : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
+// Selection with signed 64-bit selector switch and negative case literals
+// (two-word literals, sign-extended across both words).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Linkage], []> {
+// CHECK-LABEL: @selection_switch_si64_negative
+  spirv.func @selection_switch_si64_negative(%selector: si64) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : si64, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: -1: ^[[CASE0:.+]],
+// CHECK-NEXT: -4294967296: ^[[CASE1:.+]]
+      spirv.Switch %selector : si64, [
+        default: ^default,
+        -1: ^case0,
+        -4294967296: ^case1
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
+// Selection with signed 16-bit selector switch and a negative case literal
+// (single-word literal, sign-extended within the word).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int16, Linkage], []> {
+// CHECK-LABEL: @selection_switch_si16_negative
+  spirv.func @selection_switch_si16_negative(%selector: si16) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : si16, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: -1: ^[[CASE0:.+]],
+// CHECK-NEXT: 32767: ^[[CASE1:.+]]
+      spirv.Switch %selector : si16, [
+        default: ^default,
+        -1: ^case0,
+        32767: ^case1
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
 // Two sibling selections nested in a loop, each with its own selection control
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
