@@ -172,6 +172,11 @@ cl::opt<bool>
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
 
+static cl::opt<bool> PGOInstrumentDenseWaveCounts(
+    "pgo-instrument-dense-wave-counts", cl::Hidden, cl::init(true),
+    cl::desc("Measure wave counts in all eligible AMDGPU blocks during IR PGO "
+             "instrumentation"));
+
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 // Command line option to turn on CFG dot dump after profile annotation.
@@ -284,6 +289,15 @@ static const char *ValueProfKindDescr[] = {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+static bool
+shouldInstrumentDenseWaves(const InstrumentationOptions &Opts, const Module &M,
+                           PGOInstrumentationType InstrumentationType) {
+  return PGOInstrumentDenseWaveCounts && M.getTargetTriple().isAMDGPU() &&
+         InstrumentationType == PGOInstrumentationType::FDO &&
+         !Opts.pgo_function_entry_coverage && !Opts.pgo_block_coverage &&
+         !Opts.pgo_temporal_instrumentation;
+}
+
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 static GlobalVariable *
@@ -299,6 +313,8 @@ createIRLevelProfileFlagVar(const InstrumentationOptions &Opts, Module &M,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (valueOr(Opts.pgo_instrument_loop_entries, false))
     ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
+  if (shouldInstrumentDenseWaves(Opts, M, InstrumentationType))
+    ProfileVersion |= VARIANT_MASK_DENSE_WAVE;
   if (Opts.profile_correlate == ProfCorrelatorKind::DebugInfo)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (Opts.pgo_function_entry_coverage)
@@ -772,6 +788,17 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
   }
 }
 
+static SmallVector<BasicBlock *>
+getExtraWaveBlocks(Function &F, ArrayRef<BasicBlock *> InstrumentBBs) {
+  SmallVector<BasicBlock *> Extra;
+  SmallPtrSet<BasicBlock *, 32> Measured(InstrumentBBs.begin(),
+                                         InstrumentBBs.end());
+  for (BasicBlock &BB : F)
+    if (!Measured.contains(&BB) && BB.getFirstNonPHIOrAlloca() != BB.end())
+      Extra.push_back(&BB);
+  return Extra;
+}
+
 // Visit all edge and instrument the edges not in MST, and do value profiling.
 // Critical edges will be split.
 void FunctionInstrumenter::instrument() {
@@ -808,8 +835,12 @@ void FunctionInstrumenter::instrument() {
 
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
-  unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  SmallVector<BasicBlock *> ExtraWaveBBs;
+  if (shouldInstrumentDenseWaves(Opts, M, InstrumentationType))
+    ExtraWaveBBs = getExtraWaveBlocks(F, InstrumentBBs);
+  unsigned NumCounters = InstrumentBBs.size() +
+                         FuncInfo.SIVisitor.getNumOfSelectInsts() +
+                         ExtraWaveBBs.size();
 
   if (IsCtxProf) {
     StringSet<> SkipCSInstr(llvm::from_range,
@@ -882,6 +913,15 @@ void FunctionInstrumenter::instrument() {
   // Now instrument select instructions:
   FuncInfo.SIVisitor.instrumentSelects(&I, NumCounters, Name,
                                        FuncInfo.FunctionHash);
+  // Preserve the sparse block/select prefix. A zero lane step still records
+  // one wave visit in the GPU runtime, without affecting lane-flow counts.
+  for (BasicBlock *BB : ExtraWaveBBs) {
+    IRBuilder<> Builder(BB, BB->getFirstNonPHIOrAlloca());
+    Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step,
+                            {NormalizedNamePtr, CFGHash,
+                             Builder.getInt32(NumCounters),
+                             Builder.getInt32(I++), Builder.getInt64(0)});
+  }
   assert(I == NumCounters);
 
   if (isValueProfilingDisabled())
@@ -1012,12 +1052,15 @@ public:
              BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFIin,
              LoopInfo *LI, ProfileSummaryInfo *PSI, bool IsCS,
              bool InstrumentFuncEntry, bool InstrumentLoopEntries,
-             bool HasSingleByteCoverage)
+             bool HasSingleByteCoverage, bool HasDenseWaveProfile)
       : Opts(Opts), F(Func), M(Modu), BFI(BFIin), PSI(PSI),
         FuncInfo(Opts, Func, TLI, ComdatMembers, false, BPI, BFIin, LI, IsCS,
                  InstrumentFuncEntry, InstrumentLoopEntries,
                  HasSingleByteCoverage),
-        FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
+        FreqAttr(FFA_Normal), IsCS(IsCS),
+        HasDenseWaveProfile(HasDenseWaveProfile && !IsCS &&
+                            Modu->getTargetTriple().isAMDGPU()),
+        VPC(Func, TLI) {}
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
@@ -1108,6 +1151,9 @@ private:
   // Is to use the context sensitive profile.
   bool IsCS;
 
+  // The input profile owns its counter layout, independently of gen options.
+  bool HasDenseWaveProfile;
+
   ValueProfileCollector VPC;
 
   // Find the Instrumented BB and set the value. Return false on error.
@@ -1161,12 +1207,16 @@ bool PGOUseFunc::setInstrumentedCounts(
   unsigned NumInstrumentedBBs = InstrumentBBs.size();
   unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
   unsigned NumCounters = NumInstrumentedBBs + NumSelects;
+  SmallVector<BasicBlock *> ExtraWaveBBs;
+  if (HasDenseWaveProfile)
+    ExtraWaveBBs = getExtraWaveBlocks(F, InstrumentBBs);
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
-  if (NumCounters != CountFromProfile.size()) {
+  if (NumCounters + ExtraWaveBBs.size() != CountFromProfile.size()) {
     LLVM_DEBUG({
       dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
-      dbgs() << "  Expected counters: " << NumCounters << "\n";
+      dbgs() << "  Expected counters: " << NumCounters + ExtraWaveBBs.size()
+             << "\n";
       dbgs() << "    - From instrumented edges: " << NumInstrumentedBBs << "\n";
       for (size_t i = 0; i < InstrumentBBs.size(); ++i) {
         dbgs() << "      " << i << ": ";
@@ -1193,7 +1243,9 @@ bool PGOUseFunc::setInstrumentedCounts(
       CountValue = 1;
     Info.setBBInfoCount(CountValue);
   }
-  ProfileCountSize = CountFromProfile.size();
+  // The appended zero-step slots do not participate in lane-flow or select
+  // reconstruction. Uniformity also retains its original sparse indices.
+  ProfileCountSize = NumCounters;
   CountPosition = I;
 
   // Set the edge count and update the count of unknown edges for BBs.
@@ -2166,7 +2218,7 @@ static bool annotateAllFunctions(
     }
     PGOUseFunc Func(Opts, F, &M, TLI, ComdatMembers, BPI, BFI, LI, PSI, IsCS,
                     InstrumentFuncEntry, InstrumentLoopEntries,
-                    HasSingleByteCoverage);
+                    HasSingleByteCoverage, PGOReader->hasDenseWaveProfile());
     if (!Func.getRecord(PGOReader.get()))
       continue;
     if (HasSingleByteCoverage) {
