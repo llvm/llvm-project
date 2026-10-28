@@ -621,6 +621,7 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
 static void **OffloadShadowVariables = nullptr;
 static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
+static bool CurrentShadowVariableRegistered = false;
 
 struct OffloadSectionShadow {
   void *Data;
@@ -630,6 +631,7 @@ struct OffloadSectionShadow {
 };
 
 struct OffloadSectionShadowGroup {
+  void *VersionShadow;
   OffloadSectionShadow *Shadows;
   int NumShadows;
   int CapShadows;
@@ -652,6 +654,8 @@ static int ensureSectionShadowCapacity(OffloadSectionShadowGroup *Group,
 }
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
+  // Dependent callbacks must not use the previous group if this attempt fails.
+  CurrentShadowVariableRegistered = false;
   if (growArray((void **)&OffloadShadowVariables, &CapShadowVariables,
                 NumShadowVariables + 1, 64, sizeof(*OffloadShadowVariables)))
     return;
@@ -661,11 +665,12 @@ extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
   OffloadShadowVariables[Index] = ptr;
   __builtin_memset(&OffloadSectionShadowGroups[Index], 0,
                    sizeof(OffloadSectionShadowGroups[Index]));
+  CurrentShadowVariableRegistered = true;
 }
 
 extern "C" void
 __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
-  if (NumShadowVariables == 0)
+  if (!CurrentShadowVariableRegistered)
     return;
 
   /* Match CGCUDANV.cpp: data, counters, uniform counters, then names for each
@@ -694,6 +699,13 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
     break;
   }
   ++Group->NumSections;
+}
+
+extern "C" void
+__llvm_profile_offload_register_version_shadow_variable(void *ptr) {
+  if (!CurrentShadowVariableRegistered)
+    return;
+  OffloadSectionShadowGroups[NumShadowVariables - 1].VersionShadow = ptr;
 }
 
 namespace {
@@ -829,9 +841,21 @@ int __prof_rocm::processDeviceOffloadPrf(
     return 0;
 
   // The host and device may use different instrumentation layouts.
+#ifdef _WIN32
+  // Use the host handle to make the version address known to HIP.
+  void *VersionVar = nullptr;
+  if (!Sections || !Sections->VersionShadow ||
+      hipGetSymbolAddress(&VersionVar, Sections->VersionShadow) != 0 ||
+      !VersionVar) {
+    PROF_ERR("%s\n", "failed to get profile version symbol address");
+    return -1;
+  }
+#else
+  const void *VersionVar = HostSections.VersionVar;
+#endif
   uint64_t Version;
-  if (!HostSections.VersionVar || hipMemcpy(&Version, HostSections.VersionVar,
-                                            sizeof(Version), 2 /*DToH*/) != 0) {
+  if (!VersionVar ||
+      hipMemcpy(&Version, VersionVar, sizeof(Version), 2 /*DToH*/) != 0) {
     PROF_ERR("%s\n", "failed to copy profile version from device");
     return -1;
   }
