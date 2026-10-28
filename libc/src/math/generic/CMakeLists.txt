@@ -2246,6 +2246,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaximumf80
+  SRCS
+    fmaximumf80.cpp
+  HDRS
+    ../fmaximumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximumf80
+)
+
+add_entrypoint_object(
   fmaximumbf16
   SRCS
     fmaximumbf16.cpp
@@ -2487,6 +2498,17 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.math.fminimumf128
+)
+
+add_entrypoint_object(
+  fminimumf80
+  SRCS
+    fminimumf80.cpp
+  HDRS
+    ../fminimumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimumf80
 )
 
 add_entrypoint_object(
