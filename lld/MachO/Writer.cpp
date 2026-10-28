@@ -45,7 +45,7 @@ class LCUuid;
 
 class Writer {
 public:
-  Writer() : buffer(errorHandler().outputBuffer) {}
+  Writer() : buffer(errorHandler().outputBuffer), addr(config->imageBase) {}
 
   void treatSpecialUndefineds();
   void scanRelocations();
@@ -828,12 +828,14 @@ template <class LP> void Writer::createLoadCommands() {
     seg->index = segIndex++;
   }
 
-  if (config->emitChainedFixups) {
-    in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
-    in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
-  } else {
-    in.header->addLoadCommand(make<LCDyldInfo>(
-        in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  if (!config->staticLink) {
+    if (config->emitChainedFixups) {
+      in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
+      in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
+    } else {
+      in.header->addLoadCommand(make<LCDyldInfo>(
+          in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+    }
   }
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
@@ -847,7 +849,8 @@ template <class LP> void Writer::createLoadCommands() {
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    in.header->addLoadCommand(make<LCLoadDylinker>());
+    if (!config->staticLink)
+      in.header->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
@@ -1173,9 +1176,19 @@ void Writer::finalizeAddresses() {
   // Note that at this point, __LINKEDIT sections are empty, but we need to
   // determine addresses of other segments/sections before generating its
   // contents.
+  uint64_t floatingAddr = addr;
   for (OutputSegment *seg : outputSegments) {
     if (seg == linkEditSegment)
       continue;
+    auto fixedAddr = config->segmentAddresses.find(seg->name);
+    bool isPageZero = seg->name == segment_names::pageZero;
+    bool hasFixedAddr = fixedAddr != config->segmentAddresses.end();
+    if (hasFixedAddr)
+      addr = fixedAddr->second;
+    else if (isPageZero && config->imageBase != 0)
+      addr = 0;
+    else
+      addr = floatingAddr;
     seg->addr = addr;
     assignAddresses(seg);
     // codesign / libstuff checks for segment ordering by verifying that
@@ -1188,7 +1201,14 @@ void Writer::finalizeAddresses() {
     seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
     seg->assignAddressesToStartEndSymbols();
+
+    // A fixed address below the normal layout does not move later segments
+    // backwards. A fixed address above it advances the layout to avoid
+    // overlapping a subsequent segment.
+    if (!isPageZero || config->imageBase == 0)
+      floatingAddr = std::max(floatingAddr, addr);
   }
+  addr = floatingAddr;
 }
 
 void Writer::finalizeLinkEditSegment() {

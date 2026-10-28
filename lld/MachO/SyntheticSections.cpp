@@ -124,10 +124,13 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   hdr->filetype = config->outputType;
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
-  hdr->flags = MH_DYLDLINK;
+  hdr->flags = config->staticLink ? 0 : MH_DYLDLINK;
 
-  if (config->namespaceKind == NamespaceKind::twolevel)
-    hdr->flags |= MH_NOUNDEFS | MH_TWOLEVEL;
+  if (config->namespaceKind == NamespaceKind::twolevel) {
+    hdr->flags |= MH_NOUNDEFS;
+    if (!config->staticLink)
+      hdr->flags |= MH_TWOLEVEL;
+  }
 
   if (config->outputType == MH_DYLIB && !config->hasReexports)
     hdr->flags |= MH_NO_REEXPORTED_DYLIBS;
