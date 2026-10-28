@@ -16,6 +16,12 @@ For each case the suite reports one of:
   REJECTED  the device refused the library (the case is then retried alone,
             so a rejection is attributed to the one kernel that causes it)
   HOST-LIMIT the device rejected a case that needs a newer OS than it runs
+  HW-FTZ    the device ran the kernel and every wrong result is explained by
+            the hardware flushing float32 subnormals to zero: each wrong thread
+            has a subnormal float32 input or a subnormal exact result, and its
+            value is the reference computed with float32 subnormals flushed
+            (inputs and result; the device value flushed too). Apple GPUs
+            flush float32 subnormals, a hardware limit, not a backend bug
   COMPILE   llc failed
   ABSENT    the device rejected a probe for a function AIR does not have, as
             expected (these record what the catalogue must not emit)
@@ -36,6 +42,7 @@ then also covers what agx-lower-air does not lower.
 
 import argparse
 import base64
+from fractions import Fraction
 import json
 import math
 import os
@@ -61,6 +68,7 @@ TYPES = {
     'i8': ('i8', 'b', 1), 'u8': ('i8', 'B', 1),
     'i64': ('i64', 'q', 8), 'u64': ('i64', 'Q', 8),
     'i1': ('i1', 'B', 1),
+    'bf16': ('bfloat', 'H', 2),  # values are the bit patterns
 }
 
 
@@ -81,6 +89,25 @@ def f16(x):
 
 def bits32(x):
     return struct.unpack('<i', struct.pack('<f', x))[0]
+
+
+def float_bits(ty, x):
+    """The encoding of x in the float type ty (f32 or f16)."""
+    return struct.pack('<f', f32(x)) if ty == 'f32' else struct.pack('<e', f16(x))
+
+
+def int_to_f32(x):
+    """The integer x rounded to float32, to nearest even, without the double
+    rounding of float(x) for integers wider than 53 bits."""
+    m = abs(x)
+    n = m.bit_length()
+    if n > 24:
+        sh = n - 24
+        q, rem, half = m >> sh, m & ((1 << sh) - 1), 1 << (sh - 1)
+        if rem > half or (rem == half and q & 1):
+            q += 1
+        m = q << sh
+    return -float(m) if x < 0 else float(m)
 
 
 def ulp_distance(a, b):
@@ -130,6 +157,15 @@ class Case:
         # Depends on a pass that only the Metal pipeline runs (a reason):
         # skipped on AGX.
         self.metal_only = metal_only
+        # Floats: compare encodings (the sign of zero), any NaN matching any NaN.
+        self.bitexact = False
+        # A mismatch explained by the hardware flushing float32 subnormals to
+        # zero is reported as HW-FTZ (see hw_ftz); False keeps it a MISMATCH.
+        self.ftz_ok = True
+        # Dispatch shape: threads per grid and per threadgroup (x, y, z). The
+        # default is a 1D grid of N threads in threadgroups of tgsize.
+        self.grid = None
+        self.group = None
 
 
 def kernel_ir(c):
@@ -214,6 +250,11 @@ def call(job, queue, tries=4):
     return reply
 
 
+def dispatch(c):
+    """The case's threads per grid and per threadgroup."""
+    return list(c.grid or (N, 1, 1)), list(c.group or (c.tgsize, 1, 1))
+
+
 def run_case(c, air, inputs, queue):
     if c.scalars is not None:
         out = {'size': N * TYPES[c.out][2]}
@@ -222,7 +263,7 @@ def run_case(c, air, inputs, queue):
         job = {'op': 'execute', 'air': base64.b64encode(air).decode(), 'buffers': buffers,
                'commands': [{'kernel': c.name,
                              'bindings': [{'index': i, 'buffer': i} for i in range(2)],
-                             'grid': [N, 1, 1], 'group': [c.tgsize, 1, 1]}],
+                             'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
                'readback': [0]}
         return call(job, queue)
     buffers = [{'size': len(d), 'data': base64.b64encode(d).decode()} for d in inputs]
@@ -233,7 +274,7 @@ def run_case(c, air, inputs, queue):
     job = {'op': 'execute', 'air': base64.b64encode(air).decode(), 'buffers': buffers,
            'commands': [{'kernel': c.name,
                          'bindings': [{'index': i, 'buffer': i} for i in range(len(buffers))],
-                         'grid': [N, 1, 1], 'group': [c.tgsize, 1, 1]}],
+                         'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
            'readback': [len(buffers) - 1]}
     return call(job, queue)
 
@@ -242,7 +283,10 @@ def check(c, values, got):
     want = [c.ref(i, values) for i in range(N)]
     worst, bad = 0, []
     for i, (g, w) in enumerate(zip(got, want)):
-        if c.ulps is None and c.abstol is not None:
+        if c.bitexact:
+            if not ((g != g and w != w) or float_bits(c.out, g) == float_bits(c.out, w)):
+                bad.append((i, g, w))
+        elif c.ulps is None and c.abstol is not None:
             if not (abs(g - w) <= c.abstol or (g != g and w != w)):
                 bad.append((i, g, w))
         elif c.ulps is None:
@@ -291,7 +335,7 @@ def run_case_agx(c, obj, inputs, agx):
         args = [('buf', d) for d in inputs] + [('buf', out)]
         index = len(inputs)
     try:
-        r = launch(obj, c.name, args, (N, 1, 1), (c.tgsize, 1, 1), agx['run'], agx['objcopy'],
+        r = launch(obj, c.name, args, tuple(dispatch(c)[0]), tuple(dispatch(c)[1]), agx['run'], agx['objcopy'],
                    agx['readelf'])
     except (RuntimeError, KeyError, subprocess.TimeoutExpired) as e:
         return None, str(e)[-400:]
@@ -361,9 +405,51 @@ def run_group(cases, llc, queue, tmp, log, agx=None):
     return results
 
 
+def is_sub32(x):
+    """x is a float32 subnormal (nonzero)."""
+    return isinstance(x, float) and x != 0 and abs(x) < FLT_MIN
+
+
+def ftz32(x):
+    return math.copysign(0.0, x) if is_sub32(x) else x
+
+
+def hw_ftz(c, values, bad):
+    """Whether every wrong result is explained by the hardware flushing
+    float32 subnormals to zero: the thread has a subnormal float32 input or
+    a subnormal exact result, and the device value, flushed, equals the
+    reference computed from flushed inputs and flushed to float32."""
+    f32_ins = [k for k, ty in enumerate(c.ins) if ty == 'f32']
+    if not c.ftz_ok or not bad or (not f32_ins and c.out != 'f32'):
+        return False
+    flushed = [[ftz32(x) for x in vals] if ty == 'f32' else vals
+               for ty, vals in zip(c.ins, values)]
+    for i, g, w in bad:
+        sub_in = any(is_sub32(values[k][i]) for k in f32_ins)
+        sub_out = c.out == 'f32' and is_sub32(f32(w))
+        if not (sub_in or sub_out):
+            return False
+        want = c.ref(i, flushed)
+        if c.out == 'f32':
+            g, want = ftz32(g), ftz32(f32(want))
+        if g != g and want != want:
+            continue
+        if c.bitexact or c.out != 'f32':
+            ok = float_bits(c.out, g) == float_bits(c.out, want) if c.out in ('f32', 'f16') else g == want
+        elif c.ulps is not None:
+            ok = ulp_distance(g, want) <= c.ulps or (c.abstol is not None and abs(g - want) <= c.abstol)
+        else:
+            ok = g == want or (c.abstol is not None and abs(g - want) <= c.abstol)
+        if not ok:
+            return False
+    return True
+
+
 def verdict(c, values, got):
     bad, worst = check(c, values, got)
     r = {'status': 'MISMATCH' if bad else 'PASS'}
+    if bad and hw_ftz(c, values, bad):
+        r['status'] = 'HW-FTZ'
     if c.ulps is not None:
         r['max_ulps'] = worst
     if bad:
@@ -944,7 +1030,7 @@ def group_types():
         ('cvt_sext8', 'i8', 'i32', 'sext i8 %a to i32', lambda x: x, None),
         ('cvt_zext16', 'u16', 'u32', 'zext i16 %a to i32', lambda x: x, None),
         ('cvt_trunc64', 'i64', 'i32', 'trunc i64 %a to i32', s32, None),
-        ('cvt_sitofp64', 'i64', 'f32', 'sitofp i64 %a to float', lambda x: float(x), None),
+        ('cvt_sitofp64', 'i64', 'f32', 'sitofp i64 %a to float', int_to_f32, None),
     ]
     for name, ti, to, inst, ref, gen in conv:
         c = full_case(name, [ti], to, lambda i, v, ref=ref: ref(v[0][i]),
@@ -1334,7 +1420,1042 @@ def group_extra():
     return cases
 
 
+# ---------------------------------------------------------------------------
+# LLVM IR semantics: special values, the integer and vector instructions,
+# control flow, conversions and memory intrinsics, as a front end writes them
+# ---------------------------------------------------------------------------
+
+FLT_MAX = f32(3.4028234663852886e38)
+FLT_MIN = 2.0 ** -126
+DENORM = 2.0 ** -140  # a float32 subnormal
+# Eight float32 values; their 64 ordered pairs are the 64 threads of a binary case.
+F32_EDGE = [0.0, -0.0, math.inf, -math.inf, math.nan, DENORM, 1.0, -3.0]
+# Values for unary cases, repeated over the threads.
+F32_EDGE1 = F32_EDGE + [-DENORM, FLT_MIN, -FLT_MIN, FLT_MAX, -FLT_MAX, 0.5, -0.5, 1.5, 2.5, -2.5,
+                        2.0 ** -149, 1e-30, 7.0, 8388609.0, -2.0 ** 31, 2.0 ** 32, 1e30, 0.75]
+F32_FINITE = [x for x in F32_EDGE1 if math.isfinite(x)]
+# Eight int32 values; their 64 ordered pairs are the threads of a compare case.
+I32_EDGE = [0, 1, -1, -(1 << 31), (1 << 31) - 1, 2, -2, 0x10000]
+
+
+def edge_a(i, rng):
+    return F32_EDGE[i % 8]
+
+
+def edge_b(i, rng):
+    return F32_EDGE[i // 8]
+
+
+def edge1(i, rng):
+    return F32_EDGE1[i % len(F32_EDGE1)]
+
+
+def finite1(i, rng):
+    return F32_FINITE[i % len(F32_FINITE)]
+
+
+def mag(i, rng):
+    """Signed 32-bit values of every magnitude."""
+    k = rng.randrange(1, 32)
+    return rng.randrange(-(1 << k), 1 << k)
+
+
+def umag(i, rng):
+    return rng.randrange(0, 1 << rng.randrange(1, 33))
+
+
+def umag64(i, rng):
+    return rng.randrange(0, 1 << rng.randrange(1, 65))
+
+
+def u64(x):
+    return x % (1 << 64)
+
+
+def tdiv(a, b):
+    """C's (and LLVM's) division, truncating toward zero, and its remainder."""
+    q = abs(a) // abs(b) * (1 if (a < 0) == (b < 0) else -1)
+    return q, a - b * q
+
+
+def ir_case(name, ins, out, body, ref, decls=(), gen=None, ulps=None, bitexact=False,
+            source='LLVM IR'):
+    """A Case over the template kernel: body defines %r from %a0, %a1, ..."""
+    c = Case(name, ins, out, body, set(decls), ref, gen, ulps, source)
+    c.bitexact = bitexact
+    return c
+
+
+def ieee_div(a, b):
+    if math.isnan(a) or math.isnan(b) or (a == 0 and b == 0) or (math.isinf(a) and math.isinf(b)):
+        return math.nan
+    if b == 0:
+        return math.copysign(math.inf, a) * math.copysign(1.0, b)
+    return a / b
+
+
+def minnum(a, b):
+    if math.isnan(a):
+        return b
+    if math.isnan(b):
+        return a
+    return min(a, b)
+
+
+def maxnum(a, b):
+    if math.isnan(a):
+        return b
+    if math.isnan(b):
+        return a
+    return max(a, b)
+
+
+def minimum(a, b):
+    if math.isnan(a) or math.isnan(b):
+        return math.nan
+    if a == b == 0:
+        return -0.0 if math.copysign(1, a) < 0 or math.copysign(1, b) < 0 else 0.0
+    return min(a, b)
+
+
+def maximum(a, b):
+    if math.isnan(a) or math.isnan(b):
+        return math.nan
+    if a == b == 0:
+        return 0.0 if math.copysign(1, a) > 0 or math.copysign(1, b) > 0 else -0.0
+    return max(a, b)
+
+
+def fround(fn):
+    """A rounding function with IEEE special cases: NaN and infinities pass,
+    a zero result has the sign of the operand."""
+    def r(x):
+        if math.isnan(x) or math.isinf(x):
+            return x
+        y = float(fn(x))
+        return math.copysign(y, x) if y == 0 else y
+    return r
+
+
+def fpclass(x):
+    """The llvm.is.fpclass bit of x (inputs are quiet NaNs)."""
+    neg = math.copysign(1, x) < 0
+    if math.isnan(x):
+        return 1 << 1
+    if math.isinf(x):
+        return 1 << (2 if neg else 9)
+    if x == 0:
+        return 1 << (5 if neg else 6)
+    if abs(x) < FLT_MIN:
+        return 1 << (4 if neg else 7)
+    return 1 << (3 if neg else 8)
+
+
+FCMP = {
+    'oeq': lambda a, b: a == b, 'ogt': lambda a, b: a > b, 'oge': lambda a, b: a >= b,
+    'olt': lambda a, b: a < b, 'ole': lambda a, b: a <= b,
+    'one': lambda a, b: a == a and b == b and a != b,
+    'ord': lambda a, b: a == a and b == b,
+}
+for _p, _f in list(FCMP.items()):
+    if _p not in ('one', 'ord'):
+        FCMP['u' + _p[1:]] = lambda a, b, f=_f: a != a or b != b or f(a, b)
+FCMP['une'] = lambda a, b: a != b
+FCMP['uno'] = lambda a, b: a != a or b != b
+
+
+def group_llvm_float_ieee():
+    """IEEE semantics of the float instructions on NaN, infinities, signed
+    zeros and subnormals, which LLVM IR without fast-math flags requires."""
+    cases = []
+    edge2 = [edge_a, edge_b]
+    for op, ref in (('fadd', lambda a, b: a + b), ('fsub', lambda a, b: a - b),
+                    ('fmul', lambda a, b: a * b), ('fdiv', ieee_div),
+                    ('frem', safe(math.fmod))):
+        cases.append(ir_case('ieee_' + op, ['f32', 'f32'], 'f32', '%%r = %s float %%a0, %%a1' % op,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]), gen=edge2, ulps=0,
+                             bitexact=True))
+    # Correct rounding of the plain instructions (no afn/arcp: 0 ULPs).
+    wide = lambda i, r: r.uniform(-1, 1) * 10.0 ** r.randrange(-6, 7)
+    for op, ref in (('fdiv', ieee_div), ('frem', safe(math.fmod))):
+        cases.append(ir_case('rand_' + op, ['f32', 'f32'], 'f32', '%%r = %s float %%a0, %%a1' % op,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]), gen=[wide, wide], ulps=0))
+    # Subnormal operands and results (LLVM's default denormal mode is IEEE).
+    sub = lambda i, r: r.uniform(-1, 1) * 2.0 ** -127
+    tiny = lambda i, r: r.uniform(1, 2) * 2.0 ** -70
+    cases.append(ir_case('denorm_fadd', ['f32', 'f32'], 'f32', '%r = fadd float %a0, %a1',
+                         lambda i, v: v[0][i] + v[1][i], gen=[sub, sub], ulps=0, bitexact=True))
+    cases.append(ir_case('denorm_fmul_result', ['f32', 'f32'], 'f32', '%r = fmul float %a0, %a1',
+                         lambda i, v: v[0][i] * v[1][i], gen=[tiny, tiny], ulps=0, bitexact=True))
+    cases.append(ir_case('denorm_fdiv_result', ['f32', 'f32'], 'f32', '%r = fdiv float %a0, %a1',
+                         lambda i, v: v[0][i] / v[1][i], gen=[tiny, lambda i, r: r.uniform(1, 2) * 2.0 ** 70],
+                         ulps=0, bitexact=True))
+    cases.append(ir_case('ieee_fneg', ['f32'], 'f32', '%r = fneg float %a0', lambda i, v: -v[0][i],
+                         gen=[edge1], ulps=0, bitexact=True))
+    cases.append(ir_case('ieee_fsub_zero', ['f32'], 'f32', '%r = fsub float 0.0, %a0',
+                         lambda i, v: 0.0 - v[0][i], gen=[edge1], ulps=0, bitexact=True,
+                         source='not fneg: 0 - (+0) is +0'))
+    for p, ref in sorted(FCMP.items()):
+        cases.append(ir_case('fcmp_' + p, ['f32', 'f32'], 'u32',
+                             '%%c = fcmp %s float %%a0, %%a1\n%%r = zext i1 %%c to i32' % p,
+                             lambda i, v, ref=ref: int(ref(v[0][i], v[1][i])), gen=edge2))
+    for name, ref, bitexact in (('minnum', minnum, False), ('maxnum', maxnum, False),
+                                ('minimum', minimum, True), ('maximum', maximum, True),
+                                ('copysign', math.copysign, True)):
+        cases.append(ir_case('edge_' + name, ['f32', 'f32'], 'f32',
+                             '%%r = call float @llvm.%s.f32(float %%a0, float %%a1)' % name,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]),
+                             {'declare float @llvm.%s.f32(float, float)' % name}, edge2, 0, bitexact))
+    rounding = (('fabs', abs), ('floor', math.floor), ('ceil', math.ceil), ('trunc', math.trunc),
+                ('round', lambda x: math.copysign(math.floor(abs(x) + 0.5), x)),
+                ('roundeven', round), ('rint', round), ('nearbyint', round),
+                ('sqrt', lambda x: math.nan if x < 0 else math.sqrt(x)))
+    for name, ref in rounding:
+        r = (lambda x: x if math.isnan(x) else abs(x)) if name == 'fabs' else \
+            (lambda x, ref=ref: x if x == 0 or math.isnan(x) or x == math.inf else ref(x)) \
+            if name == 'sqrt' else fround(ref)
+        cases.append(ir_case('edge_' + name, ['f32'], 'f32',
+                             '%%r = call float @llvm.%s.f32(float %%a0)' % name,
+                             lambda i, v, r=r: r(v[0][i]), {'declare float @llvm.%s.f32(float)' % name},
+                             [edge1], 0, True))
+    cases.append(ir_case('edge_ldexp', ['f32', 'i32'], 'f32',
+                         '%r = call float @llvm.ldexp.f32.i32(float %a0, i32 %a1)',
+                         lambda i, v: safe(math.ldexp)(v[0][i], v[1][i]) if math.isfinite(v[0][i])
+                         else v[0][i], {'declare float @llvm.ldexp.f32.i32(float, i32)'},
+                         [edge1, lambda i, r: r.randrange(-170, 170)], 0, True))
+    cases.append(ir_case('frexp_exponent', ['f32'], 'i32',
+                         '%fr = call { float, i32 } @llvm.frexp.f32.i32(float %a0)\n'
+                         '%r = extractvalue { float, i32 } %fr, 1',
+                         lambda i, v: math.frexp(v[0][i])[1],
+                         {'declare { float, i32 } @llvm.frexp.f32.i32(float)'}, [finite1]))
+    cases.append(ir_case('frexp_mantissa', ['f32'], 'f32',
+                         '%fr = call { float, i32 } @llvm.frexp.f32.i32(float %a0)\n'
+                         '%r = extractvalue { float, i32 } %fr, 0',
+                         lambda i, v: math.frexp(v[0][i])[0],
+                         {'declare { float, i32 } @llvm.frexp.f32.i32(float)'}, [edge1], 0, True))
+    for mask in (0x3, 0x204, 0x60, 0x90, 0x108, 0x1c):
+        cases.append(ir_case('is_fpclass_%#x' % mask, ['f32'], 'u32',
+                             '%%c = call i1 @llvm.is.fpclass.f32(float %%a0, i32 %d)\n'
+                             '%%r = zext i1 %%c to i32' % mask,
+                             lambda i, v, m=mask: int(bool(fpclass(v[0][i]) & m)),
+                             {'declare i1 @llvm.is.fpclass.f32(float, i32 immarg)'}, [edge1]))
+    cases.append(ir_case('fmuladd', ['f32', 'f32', 'f32'], 'f32',
+                         '%r = call float @llvm.fmuladd.f32(float %a0, float %a1, float %a2)',
+                         lambda i, v: v[0][i] * v[1][i] + v[2][i],
+                         {'declare float @llvm.fmuladd.f32(float, float, float)'}, ulps=1))
+    return cases
+
+
+def group_llvm_int_ops():
+    """Shifts, 64-bit arithmetic, division by constants, saturating and
+    overflow intrinsics, funnel shifts, byte swaps, integer compares."""
+    cases = []
+    sh32 = lambda i, r: r.randrange(0, 32)
+    sh64 = lambda i, r: r.randrange(0, 64)
+    for name, ty, inst, gen, ref in (
+            ('shl_i32', 'u32', 'shl i32', sh32, lambda a, b: u32(a << b)),
+            ('lshr_i32', 'u32', 'lshr i32', sh32, lambda a, b: a >> b),
+            ('ashr_i32', 'i32', 'ashr i32', sh32, lambda a, b: a >> b),
+            ('shl_i64', 'u64', 'shl i64', sh64, lambda a, b: u64(a << b)),
+            ('lshr_i64', 'u64', 'lshr i64', sh64, lambda a, b: a >> b),
+            ('ashr_i64', 'i64', 'ashr i64', sh64, lambda a, b: a >> b),
+            ('mul_i64', 'u64', 'mul i64', None, lambda a, b: u64(a * b)),
+            ('sdiv_i64', 'i64', 'sdiv i64', mag, lambda a, b: s64(tdiv(a, b)[0])),
+            ('srem_i64', 'i64', 'srem i64', mag, lambda a, b: tdiv(a, b)[1]),
+            ('urem_i64', 'u64', 'urem i64', umag64, lambda a, b: a % b),
+            ('xor_i64', 'u64', 'xor i64', None, lambda a, b: a ^ b)):
+        g2 = gen if gen else None
+        if name.startswith(('sdiv', 'srem', 'urem')):
+            g2 = lambda i, r, g=gen: g(i, r) or 1
+        cases.append(ir_case(name, [ty, ty], ty, '%%r = %s %%a0, %%a1' % inst,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]), gen=[None, g2]))
+    # Division by constants (strength-reduced to multiplies by the optimizer
+    # or the backend).
+    for name, ty, inst, ref in (
+            ('udiv_c7', 'u32', 'udiv i32 %a0, 7', lambda a: a // 7),
+            ('sdiv_cm3', 'i32', 'sdiv i32 %a0, -3', lambda a: tdiv(a, -3)[0]),
+            ('urem_c10', 'u32', 'urem i32 %a0, 10', lambda a: a % 10),
+            ('srem_c6', 'i32', 'srem i32 %a0, 6', lambda a: tdiv(a, 6)[1]),
+            ('udiv_i64_c1000', 'u64', 'udiv i64 %a0, 1000', lambda a: a // 1000),
+            ('sdiv_i32_pow2', 'i32', 'sdiv i32 %a0, 16', lambda a: tdiv(a, 16)[0])):
+        cases.append(ir_case(name, [ty], ty, '%r = ' + inst, lambda i, v, ref=ref: ref(v[0][i])))
+    clamp = lambda x, lo, hi: max(lo, min(hi, x))
+    for name, intr, ty, ref in (
+            ('sadd_sat_i32', 'llvm.sadd.sat.i32', 'i32', lambda a, b: clamp(a + b, -(1 << 31), (1 << 31) - 1)),
+            ('ssub_sat_i32', 'llvm.ssub.sat.i32', 'i32', lambda a, b: clamp(a - b, -(1 << 31), (1 << 31) - 1)),
+            ('uadd_sat_i32', 'llvm.uadd.sat.i32', 'u32', lambda a, b: min(a + b, (1 << 32) - 1)),
+            ('usub_sat_i32', 'llvm.usub.sat.i32', 'u32', lambda a, b: max(a - b, 0)),
+            ('uadd_sat_i8', 'llvm.uadd.sat.i8', 'u8', lambda a, b: min(a + b, 255)),
+            ('sadd_sat_i16', 'llvm.sadd.sat.i16', 'i16', lambda a, b: clamp(a + b, -32768, 32767)),
+            ('smin_i64', 'llvm.smin.i64', 'i64', min), ('umax_i64', 'llvm.umax.i64', 'u64', max)):
+        cases.append(int_case(name, intr, ty, 2, lambda i, v, ref=ref: ref(v[0][i], v[1][i])))
+    cases.append(int_case('abs_i64', 'llvm.abs.i64', 'i64', 1, lambda i, v: s64(abs(v[0][i])), ', i1 false'))
+    for op, ty, gen, ref in (
+            ('sadd', 'i32', mag, lambda a, b: (a + b, not -(1 << 31) <= a + b < 1 << 31)),
+            ('uadd', 'u32', umag, lambda a, b: (a + b, a + b >= 1 << 32)),
+            ('ssub', 'i32', mag, lambda a, b: (a - b, not -(1 << 31) <= a - b < 1 << 31)),
+            ('usub', 'u32', umag, lambda a, b: (a - b, a < b)),
+            ('smul', 'i32', mag, lambda a, b: (a * b, not -(1 << 31) <= a * b < 1 << 31)),
+            ('umul', 'u32', umag, lambda a, b: (a * b, a * b >= 1 << 32))):
+        def ref2(i, v, ref=ref):
+            val, ovf = ref(v[0][i], v[1][i])
+            return u32(val) << 1 | int(ovf)
+        cases.append(ir_case(
+            op + '_with_overflow', [ty, ty], 'u64',
+            '%%s = call { i32, i1 } @llvm.%s.with.overflow.i32(i32 %%a0, i32 %%a1)\n'
+            '%%v = extractvalue { i32, i1 } %%s, 0\n%%o = extractvalue { i32, i1 } %%s, 1\n'
+            '%%v64 = zext i32 %%v to i64\n%%sh = shl i64 %%v64, 1\n%%o64 = zext i1 %%o to i64\n'
+            '%%r = or i64 %%sh, %%o64' % op, ref2,
+            {'declare { i32, i1 } @llvm.%s.with.overflow.i32(i32, i32)' % op}, [gen, gen]))
+    M32 = (1 << 32) - 1
+    for name, ref in (('fshl', lambda a, b, c: ((a << 32 | b) << (c % 32) >> 32) & M32),
+                      ('fshr', lambda a, b, c: ((a << 32 | b) >> (c % 32)) & M32)):
+        cases.append(int_case(name + '_i32', 'llvm.%s.i32' % name, 'u32', 3,
+                              lambda i, v, ref=ref: ref(v[0][i], v[1][i], v[2][i])))
+    for ty, n in (('u16', 2), ('u32', 4), ('u64', 8)):
+        irty = TYPES[ty][0]
+        cases.append(int_case('bswap_' + irty, 'llvm.bswap.' + irty, ty, 1,
+                              lambda i, v, n=n: int.from_bytes(v[0][i].to_bytes(n, 'little'), 'big')))
+    cases.append(int_case('ctpop_i64', 'llvm.ctpop.i64', 'u64', 1, lambda i, v: bin(v[0][i]).count('1')))
+    cases.append(int_case('ctlz_i64', 'llvm.ctlz.i64', 'u64', 1, lambda i, v: 64 - v[0][i].bit_length(),
+                          ', i1 false', umag64))
+    cases.append(int_case('cttz_i64', 'llvm.cttz.i64', 'u64', 1,
+                          lambda i, v: 64 if v[0][i] == 0 else (v[0][i] & -v[0][i]).bit_length() - 1,
+                          ', i1 false', umag64))
+    ia = lambda i, r: I32_EDGE[i % 8]
+    ib = lambda i, r: I32_EDGE[i // 8]
+    for p, ref in (('eq', lambda a, b: a == b), ('ne', lambda a, b: a != b),
+                   ('sgt', lambda a, b: a > b), ('sge', lambda a, b: a >= b),
+                   ('slt', lambda a, b: a < b), ('sle', lambda a, b: a <= b),
+                   ('ugt', lambda a, b: u32(a) > u32(b)), ('uge', lambda a, b: u32(a) >= u32(b)),
+                   ('ult', lambda a, b: u32(a) < u32(b)), ('ule', lambda a, b: u32(a) <= u32(b))):
+        cases.append(ir_case('icmp_' + p, ['i32', 'i32'], 'u32',
+                             '%%c = icmp %s i32 %%a0, %%a1\n%%r = zext i1 %%c to i32' % p,
+                             lambda i, v, ref=ref: int(ref(v[0][i], v[1][i])), gen=[ia, ib]))
+    for p, ref in (('slt', lambda a, b: a < b), ('ult', lambda a, b: u64(a) < u64(b))):
+        cases.append(ir_case('icmp_i64_' + p, ['i64', 'i64'], 'u32',
+                             '%%c = icmp %s i64 %%a0, %%a1\n%%r = zext i1 %%c to i32' % p,
+                             lambda i, v, ref=ref: int(ref(v[0][i], v[1][i]))))
+    cases.append(ir_case('freeze_add', ['i32'], 'i32', '%f = freeze i32 %a0\n%r = add i32 %f, 5',
+                         lambda i, v: s32(v[0][i] + 5)))
+    cases.append(ir_case('select_i64', ['i64', 'i64'], 'i64',
+                         '%c = icmp sgt i64 %a0, %a1\n%r = select i1 %c, i64 %a1, i64 %a0',
+                         lambda i, v: min(v[0][i], v[1][i])))
+    return cases
+
+
+VEC4_I32 = ('%v0 = insertelement <4 x i32> poison, i32 %a0, i32 0\n'
+            '%v1 = insertelement <4 x i32> %v0, i32 %a1, i32 1\n'
+            '%v2 = insertelement <4 x i32> %v1, i32 %a2, i32 2\n'
+            '%v = insertelement <4 x i32> %v2, i32 %a3, i32 3\n'
+            '%k = and i32 %tid, 3\n')
+VEC4_F32 = VEC4_I32.replace('<4 x i32>', '<4 x float>').replace('i32 %a', 'float %a')
+
+
+def group_llvm_vector():
+    """insert/extractelement with dynamic indices, shufflevector, vector
+    compares and selects, reductions, bitcasts between vector types."""
+    U4 = ['u32'] * 4
+    el = lambda v, k, i: v[k][i]
+    cases = [
+        ir_case('vec_extract_dynamic', U4, 'u32', VEC4_I32 + '%r = extractelement <4 x i32> %v, i32 %k',
+                lambda i, v: el(v, i % 4, i)),
+        ir_case('vec_insert_dynamic', U4, 'u32', VEC4_I32 +
+                '%j0 = lshr i32 %tid, 2\n%j = and i32 %j0, 3\n'
+                '%w = insertelement <4 x i32> %v, i32 99, i32 %j\n'
+                '%r = extractelement <4 x i32> %w, i32 %k',
+                lambda i, v: 99 if i % 4 == (i >> 2) % 4 else el(v, i % 4, i)),
+        ir_case('vec_shuffle_reverse', U4, 'u32', VEC4_I32 +
+                '%w = shufflevector <4 x i32> %v, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>\n'
+                '%r = extractelement <4 x i32> %w, i32 %k', lambda i, v: el(v, 3 - i % 4, i)),
+        ir_case('vec_shuffle_two', U4, 'u32', VEC4_I32 +
+                '%w = add <4 x i32> %v, <i32 1000, i32 1000, i32 1000, i32 1000>\n'
+                '%x = shufflevector <4 x i32> %v, <4 x i32> %w, <4 x i32> <i32 0, i32 5, i32 2, i32 7>\n'
+                '%r = extractelement <4 x i32> %x, i32 %k',
+                lambda i, v: u32(el(v, i % 4, i) + (1000 if i % 2 else 0))),
+        ir_case('vec_icmp_select', U4, 'u32', VEC4_I32 +
+                '%m = icmp ult <4 x i32> %v, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>\n'
+                '%n = xor <4 x i32> %v, <i32 -1, i32 -1, i32 -1, i32 -1>\n'
+                '%s = select <4 x i1> %m, <4 x i32> %v, <4 x i32> %n\n'
+                '%r = extractelement <4 x i32> %s, i32 %k',
+                lambda i, v: el(v, i % 4, i) if el(v, i % 4, i) < 1 << 31 else el(v, i % 4, i) ^ 0xffffffff),
+        ir_case('vec_bitcast_v8i16_mul', U4, 'u32', VEC4_I32 +
+                '%h = bitcast <4 x i32> %v to <8 x i16>\n%h2 = mul <8 x i16> %h, %h\n'
+                '%w = bitcast <8 x i16> %h2 to <4 x i32>\n%r = extractelement <4 x i32> %w, i32 %k',
+                lambda i, v: ((el(v, i % 4, i) & 0xffff) ** 2 & 0xffff) |
+                ((el(v, i % 4, i) >> 16) ** 2 & 0xffff) << 16),
+    ]
+    for op, ref in (('add', lambda xs: u32(sum(xs))), ('umax', max), ('umin', min),
+                    ('xor', lambda xs: xs[0] ^ xs[1] ^ xs[2] ^ xs[3]),
+                    ('and', lambda xs: xs[0] & xs[1] & xs[2] & xs[3]),
+                    ('mul', lambda xs: u32(xs[0] * xs[1] * xs[2] * xs[3]))):
+        cases.append(ir_case('vec_reduce_' + op, U4, 'u32',
+                             VEC4_I32 + '%%r = call i32 @llvm.vector.reduce.%s.v4i32(<4 x i32> %%v)' % op,
+                             lambda i, v, ref=ref: ref([v[k][i] for k in range(4)]),
+                             {'declare i32 @llvm.vector.reduce.%s.v4i32(<4 x i32>)' % op}))
+    cases.append(ir_case('vec_reduce_smax', ['i32'] * 4, 'i32',
+                         VEC4_I32 + '%r = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %v)',
+                         lambda i, v: max(v[k][i] for k in range(4)),
+                         {'declare i32 @llvm.vector.reduce.smax.v4i32(<4 x i32>)'}))
+    spread = lambda i, r: r.uniform(-1, 1) * 10.0 ** r.randrange(-3, 8)
+
+    def ordered_sum(i, v):
+        acc = -0.0
+        for k in range(4):
+            acc = f32(acc + v[k][i])
+        return acc
+    cases.append(ir_case('vec_reduce_fadd_ordered', ['f32'] * 4, 'f32',
+                         VEC4_F32 + '%r = call float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %v)',
+                         ordered_sum, {'declare float @llvm.vector.reduce.fadd.v4f32(float, <4 x float>)'},
+                         [spread] * 4, 0, True, source='strict (ordered) reduction'))
+    cases.append(ir_case('vec_reduce_fmax', ['f32'] * 4, 'f32',
+                         VEC4_F32 + '%r = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %v)',
+                         lambda i, v: max(v[k][i] for k in range(4)),
+                         {'declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)'}, [spread] * 4, 0))
+    cases.append(ir_case('vec_v2i64_add', ['u64', 'u64'], 'u64',
+                         '%x0 = insertelement <2 x i64> poison, i64 %a0, i32 0\n'
+                         '%x = insertelement <2 x i64> %x0, i64 %a1, i32 1\n'
+                         '%y = shufflevector <2 x i64> %x, <2 x i64> poison, <2 x i32> <i32 1, i32 0>\n'
+                         '%z = add <2 x i64> %x, %y\n%k = and i32 %tid, 1\n'
+                         '%r = extractelement <2 x i64> %z, i32 %k',
+                         lambda i, v: u64(v[0][i] + v[1][i])))
+    cases.append(ir_case('vec_v4f16_fma', ['f16'] * 4, 'f16',
+                         VEC4_F32.replace('float', 'half') +
+                         '%w = call <4 x half> @llvm.fma.v4f16(<4 x half> %v, <4 x half> %v, <4 x half> %v)\n'
+                         '%r = extractelement <4 x half> %w, i32 %k',
+                         lambda i, v: f16(v[i % 4][i] * v[i % 4][i] + v[i % 4][i]),
+                         {'declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)'},
+                         [lambda i, r: r.uniform(-8, 8)] * 4, 0, True))
+    return cases
+
+
+CF_HELPER = '''define internal i32 @cf_helper(i32 %x, i32 %y) noinline {
+entry:
+  %c = icmp ugt i32 %x, %y
+  br i1 %c, label %a, label %b
+a:
+  %d = sub i32 %x, %y
+  ret i32 %d
+b:
+  %m = shl i32 %y, 1
+  %e = or i32 %m, 1
+  ret i32 %e
+}'''
+
+
+def group_llvm_control():
+    """switch, loops with data-dependent trip counts, break/continue,
+    divergent returns, calls to non-kernel functions."""
+    small10 = lambda i, r: r.randrange(0, 1 << 10)
+    cases = []
+
+    def switch_ref(i, v):
+        a = v[0][i]
+        return {0: 11, 1: u32(a * 3), 2: a >> 4, 5: 0x12345678}.get(a & 7, a ^ 85)
+    cases.append(ir_case(
+        'cf_switch', ['u32'], 'u32',
+        '%sel = and i32 %a0, 7\n'
+        'switch i32 %sel, label %sd [ i32 0, label %s0 i32 1, label %s1 i32 2, label %s2 i32 5, label %s5 ]\n'
+        's0:\nbr label %sj\n'
+        's1:\n%v1 = mul i32 %a0, 3\nbr label %sj\n'
+        's2:\n%v2 = lshr i32 %a0, 4\nbr label %sj\n'
+        's5:\nbr label %sj\n'
+        'sd:\n%vd = xor i32 %a0, 85\nbr label %sj\n'
+        'sj:\n%r = phi i32 [ 11, %s0 ], [ %v1, %s1 ], [ %v2, %s2 ], [ 305419896, %s5 ], [ %vd, %sd ]',
+        switch_ref))
+
+    def collatz(n):
+        c = 0
+        while n != 1:
+            n = 3 * n + 1 if n & 1 else n >> 1
+            c += 1
+        return c
+    cases.append(ir_case(
+        'cf_loop_collatz', ['u32'], 'u32',
+        '%n0 = and i32 %a0, 1023\n%n1 = add i32 %n0, 1\nbr label %loop\n'
+        'loop:\n%n = phi i32 [ %n1, %entry ], [ %next, %body ]\n'
+        '%c = phi i32 [ 0, %entry ], [ %c1, %body ]\n'
+        '%done = icmp eq i32 %n, 1\nbr i1 %done, label %exit, label %body\n'
+        'body:\n%odd = and i32 %n, 1\n%isodd = icmp ne i32 %odd, 0\n%h = lshr i32 %n, 1\n'
+        '%m3 = mul i32 %n, 3\n%t3 = add i32 %m3, 1\n%next = select i1 %isodd, i32 %t3, i32 %h\n'
+        '%c1 = add i32 %c, 1\nbr label %loop\n'
+        'exit:\n%r = add i32 %c, 0',
+        lambda i, v: collatz((v[0][i] & 1023) + 1)))
+    cases.append(ir_case(
+        'cf_nested_loop', ['u32', 'u32'], 'u32',
+        '%na = and i32 %a0, 15\n%nb = and i32 %a1, 15\nbr label %oh\n'
+        'oh:\n%i = phi i32 [ 0, %entry ], [ %i1, %ol ]\n%acc = phi i32 [ 0, %entry ], [ %acc1, %ol ]\n'
+        '%ci = icmp ult i32 %i, %na\nbr i1 %ci, label %ih, label %exit\n'
+        'ih:\n%j = phi i32 [ 0, %oh ], [ %j1, %ib ]\n%acc1 = phi i32 [ %acc, %oh ], [ %accn, %ib ]\n'
+        '%cj = icmp ult i32 %j, %nb\nbr i1 %cj, label %ib, label %ol\n'
+        'ib:\n%ij = mul i32 %i, %j\n%x = xor i32 %ij, %tid\n%accn = add i32 %acc1, %x\n'
+        '%j1 = add i32 %j, 1\nbr label %ih\n'
+        'ol:\n%i1 = add i32 %i, 1\nbr label %oh\n'
+        'exit:\n%r = add i32 %acc, 0',
+        lambda i, v: u32(sum((a * b) ^ i for a in range(v[0][i] & 15) for b in range(v[1][i] & 15)))))
+    cases.append(ir_case(
+        'cf_break_continue', ['u32', 'u32'], 'u32',
+        '%stop = and i32 %a1, 31\nbr label %h\n'
+        'h:\n%k = phi i32 [ 0, %entry ], [ %k1, %latch ]\n%s = phi i32 [ 0, %entry ], [ %s2, %latch ]\n'
+        '%atstop = icmp eq i32 %k, %stop\nbr i1 %atstop, label %exit, label %b\n'
+        'b:\n%bit = lshr i32 %a0, %k\n%bit1 = and i32 %bit, 1\n%skip = icmp ne i32 %bit1, 0\n'
+        'br i1 %skip, label %latch0, label %acc\n'
+        'acc:\n%sk = mul i32 %k, %k\n%s1 = add i32 %s, %sk\nbr label %latch\n'
+        'latch0:\nbr label %latch\n'
+        'latch:\n%s2 = phi i32 [ %s1, %acc ], [ %s, %latch0 ]\n%k1 = add i32 %k, 1\nbr label %h\n'
+        'exit:\n%r = add i32 %s, 0',
+        lambda i, v: sum(k * k for k in range(v[1][i] & 31) if not v[0][i] >> k & 1)))
+    cases.append(ir_case('cf_call_internal', ['u32', 'u32'], 'u32',
+                         '%r = call i32 @cf_helper(i32 %a0, i32 %a1)',
+                         lambda i, v: u32(v[0][i] - v[1][i]) if v[0][i] > v[1][i] else u32(v[1][i] * 2 + 1),
+                         {CF_HELPER}, [small10, small10]))
+    c = full_case('cf_divergent_return', ['u32'], 'u32',
+                  lambda i, v: 0xdeadbeef if v[0][i] & 1 else u32(v[0][i] + 1),
+                  '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n'
+                  '%a = load i32, ptr addrspace(1) %pa\n%odd = and i32 %a, 1\n'
+                  '%isodd = icmp ne i32 %odd, 0\nbr i1 %isodd, label %early, label %st\n'
+                  'early:\nret void\n'
+                  'st:\n%r = add i32 %a, 1\n'
+                  '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                  'store i32 %r, ptr addrspace(1) %po\nret void', source='LLVM IR')
+    c.out_init = [0xdeadbeef] * N
+    cases.append(c)
+    return cases
+
+
+def bf16_bits_to_f32(b):
+    return struct.unpack('<f', struct.pack('<I', b << 16))[0]
+
+
+def f32_to_bf16_bits(x):
+    """float32 to bfloat16, to nearest even (x is not a NaN)."""
+    u = struct.unpack('<I', struct.pack('<f', x))[0]
+    return ((u + 0x7fff + (u >> 16 & 1)) >> 16) & 0xffff
+
+
+def group_llvm_conv():
+    """Saturating conversions, float <-> 64-bit integers, half and bfloat."""
+    cases = []
+    i32_range = (-(1 << 31), (1 << 31) - 1)
+    u32_range = (0, (1 << 32) - 1)
+    for name, ty, rng_ in (('fptosi_sat', 'i32', i32_range), ('fptoui_sat', 'u32', u32_range)):
+        cases.append(ir_case(
+            name + '_i32', ['f32'], ty, '%%r = call i32 @llvm.%s.i32.f32(float %%a0)' % name.replace('_', '.'),
+            lambda i, v, lo_hi=rng_: 0 if math.isnan(v[0][i]) else
+            max(lo_hi[0], min(lo_hi[1], int(v[0][i]) if math.isfinite(v[0][i]) else
+                              (lo_hi[1] if v[0][i] > 0 else lo_hi[0]))),
+            {'declare i32 @llvm.%s.i32.f32(float)' % name.replace('_', '.')}, [edge1]))
+    cases.append(ir_case('fptosi_f32_i64', ['f32'], 'i64', '%r = fptosi float %a0 to i64',
+                         lambda i, v: int(v[0][i]), gen=[lambda i, r: r.uniform(-9e18, 9e18)]))
+    cases.append(ir_case('fptoui_f32_u64', ['f32'], 'u64', '%r = fptoui float %a0 to i64',
+                         lambda i, v: int(v[0][i]), gen=[lambda i, r: r.uniform(0, 1.8e19)]))
+
+    def ties64(i, r):
+        """Mostly 64-bit integers exactly halfway between two float32 values."""
+        if i % 4 == 3:
+            return r.randrange(0, 1 << 64)
+        return ((r.randrange(1 << 23, 1 << 24) << 1) | 1) << r.randrange(0, 39)
+    cases.append(ir_case('uitofp_u64_f32', ['u64'], 'f32', '%r = uitofp i64 %a0 to float',
+                         lambda i, v: int_to_f32(v[0][i]), gen=[ties64], ulps=0))
+    cases.append(ir_case('sitofp_i64_f32_ties', ['i64'], 'f32', '%r = sitofp i64 %a0 to float',
+                         lambda i, v: int_to_f32(v[0][i]),
+                         gen=[lambda i, r: s64(ties64(i, r) >> 1) * (-1 if i & 1 else 1)], ulps=0))
+    cases.append(ir_case('fptosi_f16_i32', ['f16'], 'i32', '%r = fptosi half %a0 to i32',
+                         lambda i, v: int(v[0][i]), gen=[lambda i, r: r.uniform(-2000, 2000)]))
+    c = ir_case('uitofp_u32_f16', ['u32'], 'f16', '%r = uitofp i32 %a0 to half',
+                lambda i, v: f16(float(v[0][i])), gen=[lambda i, r: r.randrange(0, 70000)], ulps=0,
+                bitexact=True)
+    cases.append(c)
+    half_edges = [65520.0, 65519.0, -65504.0, 2.0 ** -24, 2.0 ** -25, 1.5 * 2.0 ** -24, 2.0 ** -14,
+                  1.0 + 2.0 ** -11, 1.0 + 3 * 2.0 ** -11, -0.0, math.inf, math.nan]
+    cases.append(ir_case('fptrunc_f32_f16_edges', ['f32'], 'f16', '%r = fptrunc float %a0 to half',
+                         lambda i, v: f16(v[0][i]),
+                         gen=[lambda i, r: half_edges[i] if i < len(half_edges) else
+                              r.choice([r.uniform(-70000, 70000), r.uniform(-1e-4, 1e-4),
+                                        r.uniform(-1e-7, 1e-7)])], ulps=0, bitexact=True))
+    cases.append(ir_case('fpext_bf16_f32', ['bf16'], 'f32', '%r = fpext bfloat %a0 to float',
+                         lambda i, v: bf16_bits_to_f32(v[0][i]),
+                         gen=[lambda i, r: r.randrange(0, 1 << 16)], ulps=0, bitexact=True))
+
+    def bf16_src(i, r):
+        sign = 0x80000000 if r.randrange(2) else 0
+        low = r.choice([0x8000, 0x7fff, 0x8001, 0, r.randrange(0, 1 << 16)])
+        return struct.unpack('<f', struct.pack('<I', sign | r.randrange(0, 0x7f80) << 16 | low))[0]
+    cases.append(ir_case('fptrunc_f32_bf16', ['f32'], 'bf16', '%r = fptrunc float %a0 to bfloat',
+                         lambda i, v: f32_to_bf16_bits(v[0][i]), gen=[bf16_src]))
+    return cases
+
+
+def group_llvm_memory_ir():
+    """memset (constant and dynamic length), byte and halfword stores from
+    neighbouring threads, unaligned and packed accesses, ptrtoint/inttoptr."""
+    cases = [
+        ir_case('memset_private', ['u32'], 'u32',
+                '%arr = alloca [16 x i32], align 4\n%bv = trunc i32 %a0 to i8\n'
+                'call void @llvm.memset.p0.i32(ptr align 4 %arr, i8 %bv, i32 64, i1 false)\n'
+                '%k = and i32 %tid, 15\n%ep = getelementptr [16 x i32], ptr %arr, i32 0, i32 %k\n'
+                '%r = load i32, ptr %ep', lambda i, v: (v[0][i] & 0xff) * 0x01010101,
+                {'declare void @llvm.memset.p0.i32(ptr, i8, i32, i1 immarg)'}),
+        ir_case('store_bytes', ['u32'], 'u8', '%m = mul i32 %a0, 3\n%r = trunc i32 %m to i8',
+                lambda i, v: v[0][i] * 3 & 0xff, source='adjacent threads write one word'),
+        ir_case('store_halfwords', ['u32'], 'u16', '%m = xor i32 %a0, %tid\n%r = trunc i32 %m to i16',
+                lambda i, v: (v[0][i] ^ i) & 0xffff),
+    ]
+    c = full_case('memset_device_dynamic', ['u32', 'u32'], 'u32',
+                  lambda i, v: (v[0][i] & 0xff) * (0x01010101 & ((1 << 8 * ((v[1][i] & 3) + 1)) - 1)),
+                  '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+                  '%pb = getelementptr i32, ptr addrspace(1) %in1, i32 %tid\n%b = load i32, ptr addrspace(1) %pb\n'
+                  '%bv = trunc i32 %a to i8\n%n0 = and i32 %b, 3\n%n = add i32 %n0, 1\n'
+                  '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                  'call void @llvm.memset.p1.i32(ptr addrspace(1) align 4 %po, i8 %bv, i32 %n, i1 false)\n'
+                  'ret void', {'declare void @llvm.memset.p1.i32(ptr addrspace(1), i8, i32, i1 immarg)'},
+                  source='LLVM IR')
+    c.out_init = [0] * N
+    cases.append(c)
+    le = lambda bs: int.from_bytes(bytes(bs), 'little')
+    cases.append(full_case('load_unaligned_i32', ['u8'], 'u32', lambda i, v: le(v[0][i % 60:i % 60 + 4]),
+                           '%off = urem i32 %tid, 60\n%pb = getelementptr i8, ptr addrspace(1) %in0, i32 %off\n'
+                           '%r = load i32, ptr addrspace(1) %pb, align 1\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void', source='LLVM IR'))
+    cases.append(full_case('load_unaligned_i64', ['u8'], 'u64', lambda i, v: le(v[0][i % 56:i % 56 + 8]),
+                           '%off = urem i32 %tid, 56\n%pb = getelementptr i8, ptr addrspace(1) %in0, i32 %off\n'
+                           '%r = load i64, ptr addrspace(1) %pb, align 1\n'
+                           '%po = getelementptr i64, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i64 %r, ptr addrspace(1) %po\nret void', source='LLVM IR'))
+    cases.append(full_case('load_packed_struct', ['u8'], 'u32',
+                           lambda i, v: le(v[0][5 * (i % 12) + 1:5 * (i % 12) + 5]),
+                           '%e = urem i32 %tid, 12\n'
+                           '%pf = getelementptr <{ i8, i32 }>, ptr addrspace(1) %in0, i32 %e, i32 1\n'
+                           '%r = load i32, ptr addrspace(1) %pf, align 1\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void', source='LLVM IR'))
+    cases.append(full_case('ptrtoint_inttoptr', ['u32'], 'u32', lambda i, v: v[0][(i + 1) % N],
+                           '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n'
+                           '%ia = ptrtoint ptr addrspace(1) %pa to i64\n'
+                           '%n = add i32 %tid, 1\n%nm = and i32 %n, 63\n%d = sub i32 %nm, %tid\n'
+                           '%d64 = sext i32 %d to i64\n%d4 = mul i64 %d64, 4\n%ib = add i64 %ia, %d4\n'
+                           '%pb = inttoptr i64 %ib to ptr addrspace(1)\n'
+                           '%r = load i32, ptr addrspace(1) %pb\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void', source='LLVM IR'))
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Front-end IR, continued: half and bfloat, narrow and wide integers, more
+# vectors, math, control flow, memory, conversions, and 2D/3D dispatch
+# ---------------------------------------------------------------------------
+
+# (significand bits, exponent of the smallest normal, largest exponent)
+FORMATS = {'f32': (24, -126, 127), 'f16': (11, -14, 15), 'bf16': (8, -126, 127)}
+
+
+def round_to(ty, x):
+    """The exact value x (a Fraction, int or finite float) rounded to nearest
+    even in the format ty, subnormals and overflow included."""
+    p, emin, emax = FORMATS[ty]
+    x = Fraction(x)
+    if x == 0:
+        return 0.0
+    a = abs(x)
+    e = a.numerator.bit_length() - a.denominator.bit_length()
+    if Fraction(2) ** e > a:
+        e -= 1
+    q = Fraction(2) ** (max(e, emin) - p + 1)
+    r = round(a / q) * q
+    res = math.inf if r >= Fraction(2) ** (emax + 1) else float(r)
+    return -res if x < 0 else res
+
+
+def fp_op(ty, op, a, b):
+    """The IEEE result of a op b in the format ty (a, b values of ty)."""
+    if op == 'fdiv':
+        base = ieee_div(a, b)
+    else:
+        base = {'fadd': a + b, 'fsub': a - b, 'fmul': a * b}[op]
+    # Special operands, and zeros (which doubles compute exactly here).
+    if not (math.isfinite(a) and math.isfinite(b)) or not math.isfinite(base) or base == 0:
+        return base
+    fa, fb = Fraction(a), Fraction(b)
+    ops = {'fadd': lambda: fa + fb, 'fsub': lambda: fa - fb, 'fmul': lambda: fa * fb,
+           'fdiv': lambda: fa / fb}
+    return round_to(ty, ops[op]())
+
+
+def fma_ref(ty, a, b, c):
+    """llvm.fma: a * b + c rounded once."""
+    if not all(math.isfinite(x) for x in (a, b, c)):
+        return a * b + c if not (math.isinf(a) and b == 0 or math.isinf(b) and a == 0) else math.nan
+    exact = Fraction(a) * Fraction(b) + Fraction(c)
+    if exact == 0:
+        return (a * b) + c if (a == 0 or b == 0) and c == 0 else 0.0
+    return round_to(ty, exact)
+
+
+def cyc(vals, k=1):
+    """A generator: thread i gets vals[(i // k) % len(vals)]."""
+    return lambda i, r: vals[(i // k) % len(vals)]
+
+
+def bf16_bits(x):
+    """The bfloat16 encoding of x, which is a bfloat16 value or NaN."""
+    return 0x7fc0 if x != x else f32_to_bf16_bits(x)
+
+
+def f16_bits(x):
+    return struct.unpack('<H', struct.pack('<e', x))[0]
+
+
+def bits_f16(b):
+    return struct.unpack('<e', struct.pack('<H', b))[0]
+
+
+F16_MIN = 2.0 ** -14
+F16_SUB = 2.0 ** -20  # a half subnormal
+F16_EDGE = [0.0, -0.0, math.inf, -math.inf, math.nan, F16_SUB, 1.0, -3.0]
+F16_EDGE1 = F16_EDGE + [-F16_SUB, 2.0 ** -24, F16_MIN, -F16_MIN, 65504.0, -65504.0, 0.5, -0.5,
+                        1.5, 2.5, -2.5, 0.75, 1023.5, 3.0 * 2.0 ** -16, 7.0, 2050.0, -0.1, 0.1]
+
+
+def wide16(i, r):
+    """Halves of every magnitude: products and quotients overflow and underflow."""
+    return r.choice([-1, 1]) * r.uniform(1, 2) * 2.0 ** r.randrange(-14, 9)
+
+
+def bf16_gen(lo=-20, hi=20):
+    """Normal bfloat16 encodings with exponents in [lo, hi)."""
+    return lambda i, r: (r.randrange(2) << 15) | ((r.randrange(lo, hi) + 127) << 7) | r.randrange(128)
+
+
+def ieee_sqrt(ty):
+    return lambda x: x if x != x or x == 0 or x == math.inf else (
+        math.nan if x < 0 else round_to(ty, Fraction(math.sqrt(x))))
+
+
+def group_llvm_half():
+    """half and bfloat arithmetic on special values, half subnormals,
+    conversions between half, bfloat and integers."""
+    cases = []
+    pair = [cyc(F16_EDGE), cyc(F16_EDGE, 8)]
+    for op in ('fadd', 'fsub', 'fmul', 'fdiv'):
+        cases.append(ir_case('half_' + op, ['f16', 'f16'], 'f16', '%%r = %s half %%a0, %%a1' % op,
+                             lambda i, v, op=op: fp_op('f16', op, v[0][i], v[1][i]), gen=pair,
+                             bitexact=True))
+    for op in ('fadd', 'fmul', 'fdiv'):
+        cases.append(ir_case('half_rand_' + op, ['f16', 'f16'], 'f16', '%%r = %s half %%a0, %%a1' % op,
+                             lambda i, v, op=op: fp_op('f16', op, v[0][i], v[1][i]),
+                             gen=[wide16, wide16], bitexact=True))
+    # Half subnormals: operands, results, and their conversion to float.
+    hsub = lambda i, r: r.randrange(-1023, 1024) * 2.0 ** -24
+    hsm = lambda i, r: r.choice([-1, 1]) * r.uniform(1, 2) * 2.0 ** r.randrange(-9, -6)
+    cases.append(ir_case('half_denorm_fadd', ['f16', 'f16'], 'f16', '%r = fadd half %a0, %a1',
+                         lambda i, v: fp_op('f16', 'fadd', v[0][i], v[1][i]), gen=[hsub, hsub],
+                         bitexact=True))
+    cases.append(ir_case('half_denorm_fmul_result', ['f16', 'f16'], 'f16', '%r = fmul half %a0, %a1',
+                         lambda i, v: fp_op('f16', 'fmul', v[0][i], v[1][i]), gen=[hsm, hsm],
+                         bitexact=True))
+    cases.append(ir_case('half_denorm_fpext', ['f16'], 'f32', '%r = fpext half %a0 to float',
+                         lambda i, v: v[0][i], gen=[hsub], bitexact=True))
+    cases.append(ir_case('half_denorm_fcmp_oeq_zero', ['f16'], 'u32',
+                         '%c = fcmp oeq half %a0, 0.0\n%r = zext i1 %c to i32',
+                         lambda i, v: int(v[0][i] == 0), gen=[hsub]))
+    for p in ('oeq', 'one', 'olt', 'oge', 'ord', 'uno', 'ueq', 'ult', 'une'):
+        cases.append(ir_case('half_fcmp_' + p, ['f16', 'f16'], 'u32',
+                             '%%c = fcmp %s half %%a0, %%a1\n%%r = zext i1 %%c to i32' % p,
+                             lambda i, v, f=FCMP[p]: int(f(v[0][i], v[1][i])), gen=pair))
+    for name, ref, bitexact in (('minnum', minnum, False), ('maxnum', maxnum, False),
+                                ('copysign', math.copysign, True)):
+        cases.append(ir_case('half_' + name, ['f16', 'f16'], 'f16',
+                             '%%r = call half @llvm.%s.f16(half %%a0, half %%a1)' % name,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]),
+                             {'declare half @llvm.%s.f16(half, half)' % name}, pair, 0, bitexact))
+    cases.append(ir_case('half_fneg', ['f16'], 'f16', '%r = fneg half %a0', lambda i, v: -v[0][i],
+                         gen=[cyc(F16_EDGE1)], ulps=0, bitexact=True))
+    for name, ref in (('fabs', lambda x: x if x != x else abs(x)), ('floor', fround(math.floor)),
+                      ('ceil', fround(math.ceil)), ('trunc', fround(math.trunc)),
+                      ('rint', fround(round)), ('sqrt', ieee_sqrt('f16'))):
+        cases.append(ir_case('half_' + name, ['f16'], 'f16',
+                             '%%r = call half @llvm.%s.f16(half %%a0)' % name,
+                             lambda i, v, ref=ref: ref(v[0][i]), {'declare half @llvm.%s.f16(half)' % name},
+                             [cyc(F16_EDGE1)], 0, True))
+    fma_decl = {'declare half @llvm.fma.f16(half, half, half)'}
+    cases.append(ir_case('half_fma_edges', ['f16'] * 3, 'f16',
+                         '%r = call half @llvm.fma.f16(half %a0, half %a1, half %a2)',
+                         lambda i, v: fma_ref('f16', v[0][i], v[1][i], v[2][i]), fma_decl,
+                         pair + [lambda i, r: F16_EDGE1[i * 7 % len(F16_EDGE1)]], 0, True))
+    cases.append(ir_case('half_fma_rand', ['f16'] * 3, 'f16',
+                         '%r = call half @llvm.fma.f16(half %a0, half %a1, half %a2)',
+                         lambda i, v: fma_ref('f16', v[0][i], v[1][i], v[2][i]), fma_decl,
+                         [wide16] * 3, 0, True))
+    # Integer conversions (in range: out of range is poison).
+    for name, ti, to, inst, ref, gen in (
+            ('fptosi_f16_i16', 'f16', 'i16', 'fptosi half %a0 to i16', int,
+             lambda i, r: r.uniform(-32000, 32000)),
+            ('fptoui_f16_u16', 'f16', 'u16', 'fptoui half %a0 to i16', int,
+             lambda i, r: r.uniform(0, 65504)),
+            ('fptosi_f16_i8', 'f16', 'i8', 'fptosi half %a0 to i8', int,
+             lambda i, r: r.uniform(-128.9, 127.9)),
+            ('fptosi_f16_i64', 'f16', 'i64', 'fptosi half %a0 to i64', int,
+             lambda i, r: r.uniform(-65504, 65504)),
+            ('fptoui_f16_u8', 'f16', 'u8', 'fptoui half %a0 to i8', int,
+             lambda i, r: r.uniform(0, 255.9)),
+            ('sitofp_i16_f16', 'i16', 'f16', 'sitofp i16 %a0 to half', lambda x: round_to('f16', x), None),
+            ('uitofp_u16_f16', 'u16', 'f16', 'uitofp i16 %a0 to half', lambda x: round_to('f16', x), None),
+            ('sitofp_i8_f16', 'i8', 'f16', 'sitofp i8 %a0 to half', float, None),
+            ('sitofp_i32_f16', 'i32', 'f16', 'sitofp i32 %a0 to half', lambda x: round_to('f16', x),
+             lambda i, r: r.randrange(-100000, 100000)),
+            ('sitofp_i64_f16', 'i64', 'f16', 'sitofp i64 %a0 to half', lambda x: round_to('f16', x),
+             lambda i, r: r.choice([r.randrange(-70000, 70000), r.randrange(-(1 << 63), 1 << 63)]))):
+        c = ir_case(name, [ti], to, '%r = ' + inst, lambda i, v, ref=ref: ref(v[0][i]), gen=[gen],
+                    bitexact=to == 'f16')
+        cases.append(c)
+    # The sign operations on encodings, NaNs included: they only touch the sign bit.
+    any16 = lambda i, r: r.choice([r.randrange(0, 1 << 16), 0x7c01 + r.randrange(0x3ff),
+                                   0xfe00 + r.randrange(0x200), r.randrange(1, 0x400)])
+    for ty, irty in (('half', 'f16'), ('bfloat', 'bf16')):
+        sign = 0x8000
+        cases.append(ir_case('%s_fneg_bits' % irty, ['u16'], 'u16',
+                             '%%b = bitcast i16 %%a0 to %s\n%%n = fneg %s %%b\n%%r = bitcast %s %%n to i16'
+                             % (ty, ty, ty), lambda i, v: v[0][i] ^ sign, gen=[any16]))
+        cases.append(ir_case('%s_fabs_bits' % irty, ['u16'], 'u16',
+                             '%%b = bitcast i16 %%a0 to %s\n%%n = call %s @llvm.fabs.%s(%s %%b)\n'
+                             '%%r = bitcast %s %%n to i16' % (ty, ty, irty, ty, ty),
+                             lambda i, v: v[0][i] & 0x7fff, {'declare %s @llvm.fabs.%s(%s)' % (ty, irty, ty)},
+                             gen=[any16]))
+    cases.append(ir_case('half_copysign_bits', ['u16', 'u16'], 'u16',
+                         '%b = bitcast i16 %a0 to half\n%s = bitcast i16 %a1 to half\n'
+                         '%n = call half @llvm.copysign.f16(half %b, half %s)\n%r = bitcast half %n to i16',
+                         lambda i, v: v[0][i] & 0x7fff | v[1][i] & 0x8000,
+                         {'declare half @llvm.copysign.f16(half, half)'}, [any16, any16]))
+    # bfloat arithmetic.
+    bfv = bf16_bits_to_f32
+    for op in ('fadd', 'fsub', 'fmul', 'fdiv'):
+        cases.append(ir_case('bf16_' + op, ['bf16', 'bf16'], 'bf16', '%%r = %s bfloat %%a0, %%a1' % op,
+                             lambda i, v, op=op: bf16_bits(fp_op('bf16', op, bfv(v[0][i]), bfv(v[1][i]))),
+                             gen=[bf16_gen(), bf16_gen(-4, 4)]))
+    cases.append(ir_case('bf16_fma', ['bf16'] * 3, 'bf16',
+                         '%r = call bfloat @llvm.fma.bf16(bfloat %a0, bfloat %a1, bfloat %a2)',
+                         lambda i, v: bf16_bits(fma_ref('bf16', *(bfv(v[k][i]) for k in range(3)))),
+                         {'declare bfloat @llvm.fma.bf16(bfloat, bfloat, bfloat)'},
+                         [bf16_gen(-6, 6)] * 3))
+    cases.append(ir_case('bf16_fcmp_olt', ['bf16', 'bf16'], 'u32',
+                         '%c = fcmp olt bfloat %a0, %a1\n%r = zext i1 %c to i32',
+                         lambda i, v: int(bfv(v[0][i]) < bfv(v[1][i])),
+                         gen=[bf16_gen(-2, 2), lambda i, r: r.choice([r.randrange(1 << 16), 0x3f80, 0xbf80])]))
+    cases.append(ir_case('sitofp_i32_bf16', ['i32'], 'bf16', '%r = sitofp i32 %a0 to bfloat',
+                         lambda i, v: bf16_bits(round_to('bf16', v[0][i])), gen=[mag]))
+    cases.append(ir_case('fptosi_bf16_i32', ['bf16'], 'i32', '%r = fptosi bfloat %a0 to i32',
+                         lambda i, v: int(bfv(v[0][i])), gen=[bf16_gen(-3, 30)]))
+    cases.append(ir_case('bf16_to_half', ['bf16'], 'f16',
+                         '%f = fpext bfloat %a0 to float\n%r = fptrunc float %f to half',
+                         lambda i, v: f16(bfv(v[0][i])), gen=[bf16_gen(-30, 20)], ulps=0, bitexact=True))
+    return cases
+
+
+I8_EDGE = [0, 1, -1, -128, 127, 2, -2, 64]
+I16_EDGE = [0, 1, -1, -32768, 32767, 2, -2, 256]
+
+
+def wrap(bits, signed):
+    m = 1 << bits
+    return (lambda x: (x + m // 2) % m - m // 2) if signed else (lambda x: x % m)
+
+
+def group_llvm_int_narrow():
+    """i8 and i16 arithmetic, division and compares; 64-bit division and
+    overflow; the multiply-high idioms; i128; zero-poison counts; scmp/ucmp."""
+    cases = []
+    for bits, edge in ((8, I8_EDGE), (16, I16_EDGE)):
+        it, sty, uty = 'i%d' % bits, 'i%d' % bits, 'u%d' % bits
+        ws, wu = wrap(bits, True), wrap(bits, False)
+        half = 1 << (bits - 1)
+        amt = lambda i, r, b=bits: r.randrange(0, b)
+        nz = lambda i, r, b=bits: r.randrange(1, 1 << b)
+        snz = lambda i, r, h=half: r.choice([r.randrange(1, h), -r.randrange(1, h + 1),
+                                             r.randrange(1, 10), -r.randrange(1, 10)])
+        no_min = lambda i, r, h=half: r.randrange(-h + 1, h)
+        for name, ty, inst, gens, ref in (
+                ('add', sty, 'add', None, lambda a, b, w=ws: w(a + b)),
+                ('sub', sty, 'sub', None, lambda a, b, w=ws: w(a - b)),
+                ('mul', sty, 'mul', None, lambda a, b, w=ws: w(a * b)),
+                ('shl', uty, 'shl', [None, amt], lambda a, b, w=wu: w(a << b)),
+                ('lshr', uty, 'lshr', [None, amt], lambda a, b: a >> b),
+                ('ashr', sty, 'ashr', [None, amt], lambda a, b: a >> b),
+                ('udiv', uty, 'udiv', [None, nz], lambda a, b: a // b),
+                ('urem', uty, 'urem', [None, nz], lambda a, b: a % b),
+                ('sdiv', sty, 'sdiv', [no_min, snz], lambda a, b, w=ws: w(tdiv(a, b)[0])),
+                ('srem', sty, 'srem', [no_min, snz], lambda a, b: tdiv(a, b)[1])):
+            cases.append(ir_case('%s_%s' % (name, it), [ty, ty], ty, '%%r = %s %s %%a0, %%a1' % (inst, it),
+                                 lambda i, v, ref=ref: ref(v[0][i], v[1][i]), gen=gens))
+        m = (1 << bits) - 1
+        for p, ref in (('slt', lambda a, b: a < b), ('sge', lambda a, b: a >= b),
+                       ('ult', lambda a, b, m=m: a & m < b & m), ('ugt', lambda a, b, m=m: a & m > b & m),
+                       ('eq', lambda a, b: a == b)):
+            cases.append(ir_case('icmp_%s_%s' % (it, p), [sty, sty], 'u32',
+                                 '%%c = icmp %s %s %%a0, %%a1\n%%r = zext i1 %%c to i32' % (p, it),
+                                 lambda i, v, ref=ref: int(ref(v[0][i], v[1][i])),
+                                 gen=[cyc(edge), cyc(edge, 8)]))
+        for intr, ty, ref in (('smin', sty, min), ('smax', sty, max), ('umin', uty, min), ('umax', uty, max)):
+            cases.append(int_case('%s_%s' % (intr, it), 'llvm.%s.%s' % (intr, it), ty, 2,
+                                  lambda i, v, ref=ref: ref(v[0][i], v[1][i])))
+        cases.append(int_case('abs_%s_min' % it, 'llvm.abs.' + it, sty, 1,
+                              lambda i, v, w=ws: w(abs(v[0][i])), ', i1 false', cyc(edge)))
+        cases.append(int_case('ctpop_' + it, 'llvm.ctpop.' + it, uty, 1, lambda i, v: bin(v[0][i]).count('1')))
+        cases.append(int_case('ctlz_' + it, 'llvm.ctlz.' + it, uty, 1,
+                              lambda i, v, b=bits: b - v[0][i].bit_length(), ', i1 false',
+                              lambda i, r, b=bits: r.randrange(0, 1 << r.randrange(0, b + 1))))
+        cases.append(int_case('cttz_' + it, 'llvm.cttz.' + it, uty, 1,
+                              lambda i, v, b=bits: b if v[0][i] == 0 else (v[0][i] & -v[0][i]).bit_length() - 1,
+                              ', i1 false', lambda i, r, b=bits: r.randrange(0, 1 << b) << r.randrange(0, b) & ((1 << b) - 1)))
+        cases.append(int_case('bitreverse_' + it, 'llvm.bitreverse.' + it, uty, 1,
+                              lambda i, v, b=bits: int(format(v[0][i], '0%db' % b)[::-1], 2)))
+    # Zero-poison counts on nonzero inputs.
+    for bits, ty in ((32, 'u32'), (64, 'u64')):
+        nzg = lambda i, r, b=bits: r.randrange(1, 1 << r.randrange(1, b + 1)) << r.randrange(0, 4) & ((1 << b) - 1) or 1
+        cases.append(int_case('ctlz_i%d_zero_poison' % bits, 'llvm.ctlz.i%d' % bits, ty, 1,
+                              lambda i, v, b=bits: b - v[0][i].bit_length(), ', i1 true', nzg))
+        cases.append(int_case('cttz_i%d_zero_poison' % bits, 'llvm.cttz.i%d' % bits, ty, 1,
+                              lambda i, v: (v[0][i] & -v[0][i]).bit_length() - 1, ', i1 true', nzg))
+    cases.append(int_case('abs_i32_min', 'llvm.abs.i32', 'i32', 1, lambda i, v: s32(abs(v[0][i])),
+                          ', i1 false', cyc(I32_EDGE)))
+    # Compares of extended narrow values.
+    cases.append(ir_case('icmp_sext_i8_i32', ['i8', 'i32'], 'u32',
+                         '%x = sext i8 %a0 to i32\n%c = icmp slt i32 %x, %a1\n%r = zext i1 %c to i32',
+                         lambda i, v: int(v[0][i] < v[1][i]), gen=[None, lambda i, r: r.randrange(-200, 200)]))
+    cases.append(ir_case('icmp_zext_i16_i32', ['u16', 'i32'], 'u32',
+                         '%x = zext i16 %a0 to i32\n%c = icmp sgt i32 %x, %a1\n%r = zext i1 %c to i32',
+                         lambda i, v: int(v[0][i] > v[1][i]), gen=[None, lambda i, r: r.randrange(-1000, 70000)]))
+    # 64-bit division with full-width operands.
+    s64g = lambda i, r: r.choice([-1, 1]) * r.randrange(1, 1 << r.randrange(1, 64))
+    no_min64 = lambda i, r: r.randrange(-(1 << 63) + 1, 1 << 63)
+    nz64 = lambda i, r: r.randrange(1, 1 << r.randrange(1, 65))
+    for name, ty, inst, gens, ref in (
+            ('sdiv_i64_full', 'i64', 'sdiv', [no_min64, s64g], lambda a, b: tdiv(a, b)[0]),
+            ('srem_i64_full', 'i64', 'srem', [no_min64, s64g], lambda a, b: tdiv(a, b)[1]),
+            ('udiv_i64_full', 'u64', 'udiv', [None, nz64], lambda a, b: a // b),
+            ('urem_i64_full', 'u64', 'urem', [None, nz64], lambda a, b: a % b)):
+        cases.append(ir_case(name, [ty, ty], ty, '%%r = %s i64 %%a0, %%a1' % inst,
+                             lambda i, v, ref=ref: ref(v[0][i], v[1][i]), gen=gens))
+    cases.append(ir_case('srem_i32_pow2', ['i32'], 'i32', '%r = srem i32 %a0, 8',
+                         lambda i, v: tdiv(v[0][i], 8)[1], gen=[mag]))
+    cases.append(ir_case('sdiv_exact_i32', ['i32'], 'i32', '%m = mul i32 %a0, 12\n%r = sdiv exact i32 %m, 12',
+                         lambda i, v: v[0][i], gen=[lambda i, r: r.randrange(-(1 << 27), 1 << 27)]))
+    cases.append(ir_case('udiv_i64_c10', ['u64'], 'u64', '%r = udiv i64 %a0, 10', lambda i, v: v[0][i] // 10))
+    # Multiply-high idioms.
+    cases.append(ir_case('umulhi32_idiom', ['u32', 'u32'], 'u32',
+                         '%x = zext i32 %a0 to i64\n%y = zext i32 %a1 to i64\n%m = mul i64 %x, %y\n'
+                         '%h = lshr i64 %m, 32\n%r = trunc i64 %h to i32',
+                         lambda i, v: v[0][i] * v[1][i] >> 32))
+    cases.append(ir_case('smulhi32_idiom', ['i32', 'i32'], 'i32',
+                         '%x = sext i32 %a0 to i64\n%y = sext i32 %a1 to i64\n%m = mul i64 %x, %y\n'
+                         '%h = ashr i64 %m, 32\n%r = trunc i64 %h to i32',
+                         lambda i, v: v[0][i] * v[1][i] >> 32))
+    cases.append(ir_case('umulhi64_i128', ['u64', 'u64'], 'u64',
+                         '%x = zext i64 %a0 to i128\n%y = zext i64 %a1 to i128\n%m = mul i128 %x, %y\n'
+                         '%h = lshr i128 %m, 64\n%r = trunc i128 %h to i64',
+                         lambda i, v: v[0][i] * v[1][i] >> 64))
+    cases.append(ir_case('smulhi64_i128', ['i64', 'i64'], 'i64',
+                         '%x = sext i64 %a0 to i128\n%y = sext i64 %a1 to i128\n%m = mul i128 %x, %y\n'
+                         '%h = ashr i128 %m, 64\n%r = trunc i128 %h to i64',
+                         lambda i, v: v[0][i] * v[1][i] >> 64))
+    # i128: A = a1:a0 and B = a3:a2; even threads store the low half, odd the high.
+    build = ('%xl = zext i64 %a0 to i128\n%xh0 = zext i64 %a1 to i128\n%xh = shl i128 %xh0, 64\n'
+             '%A = or i128 %xh, %xl\n'
+             '%yl = zext i64 %a2 to i128\n%yh0 = zext i64 %a3 to i128\n%yh = shl i128 %yh0, 64\n'
+             '%B = or i128 %yh, %yl\n%sh = and i128 %B, 127\n')
+    split = ('%lo = trunc i128 %R to i64\n%hs = lshr i128 %R, 64\n%hi = trunc i128 %hs to i64\n'
+             '%odd = trunc i32 %tid to i1\n%r = select i1 %odd, i64 %hi, i64 %lo')
+    M128 = (1 << 128) - 1
+
+    def s128(x):
+        x &= M128
+        return x - (1 << 128) if x >> 127 else x
+    for name, inst, ref, decl in (
+            ('add', 'add i128 %A, %B', lambda a, b: a + b, None),
+            ('sub', 'sub i128 %A, %B', lambda a, b: a - b, None),
+            ('mul', 'mul i128 %A, %B', lambda a, b: a * b, None),
+            ('xor', 'xor i128 %A, %B', lambda a, b: a ^ b, None),
+            ('shl', 'shl i128 %A, %sh', lambda a, b: a << (b & 127), None),
+            ('lshr', 'lshr i128 %A, %sh', lambda a, b: a >> (b & 127), None),
+            ('ashr', 'ashr i128 %A, %sh', lambda a, b: s128(a) >> (b & 127), None),
+            ('umin', 'call i128 @llvm.umin.i128(i128 %A, i128 %B)', min,
+             'declare i128 @llvm.umin.i128(i128, i128)'),
+            ('smax', 'call i128 @llvm.smax.i128(i128 %A, i128 %B)', lambda a, b: max(s128(a), s128(b)),
+             'declare i128 @llvm.smax.i128(i128, i128)'),
+            ('ctlz', 'call i128 @llvm.ctlz.i128(i128 %A, i1 false)', lambda a, b: 128 - a.bit_length(),
+             'declare i128 @llvm.ctlz.i128(i128, i1)'),
+            ('ult', 'icmp ult i128 %A, %B\n%R = zext i1 %Rc to i128', lambda a, b: int(a < b), None),
+            ('slt', 'icmp slt i128 %A, %B\n%R = zext i1 %Rc to i128', lambda a, b: int(s128(a) < s128(b)),
+             None)):
+        body = build + ('%Rc = ' + inst if inst.startswith('icmp') else '%R = ' + inst) + '\n' + split
+
+        def ref128(i, v, ref=ref):
+            a = v[1][i] << 64 | v[0][i]
+            b = v[3][i] << 64 | v[2][i]
+            res = ref(a, b) & M128
+            return res >> 64 if i & 1 else res & ((1 << 64) - 1)
+        g = umag64 if name in ('mul', 'ctlz') else None
+        cases.append(ir_case('i128_' + name, ['u64'] * 4, 'u64', body, ref128,
+                             [decl] if decl else (), [g, g, g, g] if g else None))
+    # Overflow intrinsics on i64: even threads store the value, odd the flag.
+    for op, ty, ref in (('uadd', 'u64', lambda a, b: (a + b, a + b >= 1 << 64)),
+                        ('usub', 'u64', lambda a, b: (a - b, a < b)),
+                        ('umul', 'u64', lambda a, b: (a * b, a * b >= 1 << 64)),
+                        ('smul', 'i64', lambda a, b: (a * b, not -(1 << 63) <= a * b < 1 << 63))):
+        def ref_ovf(i, v, ref=ref):
+            val, ovf = ref(v[0][i], v[1][i])
+            return int(ovf) if i & 1 else u64(val)
+        g = umag64 if ty == 'u64' else s64g
+        cases.append(ir_case(op + '_with_overflow_i64', [ty, ty], 'u64',
+                             '%%s = call { i64, i1 } @llvm.%s.with.overflow.i64(i64 %%a0, i64 %%a1)\n'
+                             '%%v = extractvalue { i64, i1 } %%s, 0\n%%o = extractvalue { i64, i1 } %%s, 1\n'
+                             '%%o64 = zext i1 %%o to i64\n%%odd = trunc i32 %%tid to i1\n'
+                             '%%r = select i1 %%odd, i64 %%o64, i64 %%v' % op, ref_ovf,
+                             {'declare { i64, i1 } @llvm.%s.with.overflow.i64(i64, i64)' % op}, [g, g]))
+    for name, intr, ty, ref in (
+            ('usub_sat_i64', 'llvm.usub.sat.i64', 'u64', lambda a, b: max(a - b, 0)),
+            ('uadd_sat_i64', 'llvm.uadd.sat.i64', 'u64', lambda a, b: min(a + b, (1 << 64) - 1)),
+            ('ssub_sat_i8', 'llvm.ssub.sat.i8', 'i8', lambda a, b: max(-128, min(127, a - b)))):
+        cases.append(int_case(name, intr, ty, 2, lambda i, v, ref=ref: ref(v[0][i], v[1][i]),
+                              gen=umag64 if ty == 'u64' else None))
+    cases.append(int_case('rotl_i64_fshl', 'llvm.fshl.i64', 'u64', 3,
+                          lambda i, v: u64(v[0][i] << v[2][i] % 64 | v[0][i] >> (64 - v[2][i] % 64)),
+                          gen=None))
+    cases[-1].body = '%r = call i64 @llvm.fshl.i64(i64 %a0, i64 %a0, i64 %a2)'
+    # Three-way compares (Rust's Ord::cmp) and compare/select chains.
+    for name, ty in (('scmp', 'i32'), ('ucmp', 'u32')):
+        cases.append(ir_case(name + '_i32', [ty, ty], 'i32',
+                             '%%c = call i8 @llvm.%s.i8.i32(i32 %%a0, i32 %%a1)\n%%r = sext i8 %%c to i32' % name,
+                             lambda i, v: (v[0][i] > v[1][i]) - (v[0][i] < v[1][i]),
+                             {'declare i8 @llvm.%s.i8.i32(i32, i32)' % name},
+                             gen=[cyc([u32(x) if ty == 'u32' else x for x in I32_EDGE]),
+                                  cyc([u32(x) if ty == 'u32' else x for x in I32_EDGE], 8)]))
+    cases.append(ir_case('clamp_select_chain', ['i32'], 'i32',
+                         '%lt = icmp slt i32 %a0, -1000\n%x = select i1 %lt, i32 -1000, i32 %a0\n'
+                         '%gt = icmp sgt i32 %x, 1000\n%r = select i1 %gt, i32 1000, i32 %x',
+                         lambda i, v: max(-1000, min(1000, v[0][i])), gen=[mag]))
+    cases.append(ir_case('sign_idiom', ['i32'], 'i32',
+                         '%p = icmp sgt i32 %a0, 0\n%n = icmp slt i32 %a0, 0\n%pz = zext i1 %p to i32\n'
+                         '%nz = zext i1 %n to i32\n%r = sub i32 %pz, %nz',
+                         lambda i, v: (v[0][i] > 0) - (v[0][i] < 0), gen=[cyc(I32_EDGE)]))
+    cases.append(ir_case('logical_and_or_i1', ['u32', 'u32'], 'u32',
+                         '%x = icmp ugt i32 %a0, 2147483648\n%y = icmp ult i32 %a1, 1073741824\n'
+                         '%and = select i1 %x, i1 %y, i1 false\n%or = select i1 %x, i1 true, i1 %y\n'
+                         '%az = zext i1 %and to i32\n%oz = zext i1 %or to i32\n%o2 = shl i32 %oz, 1\n'
+                         '%r = or i32 %az, %o2',
+                         lambda i, v: int(v[0][i] > 1 << 31 and v[1][i] < 1 << 30) |
+                         int(v[0][i] > 1 << 31 or v[1][i] < 1 << 30) << 1))
+    return cases
+
+
 GROUPS = {
+    'llvm-float-ieee': group_llvm_float_ieee,
+    'llvm-int-ops': group_llvm_int_ops,
+    'llvm-vector': group_llvm_vector,
+    'llvm-control': group_llvm_control,
+    'llvm-conv': group_llvm_conv,
+    'llvm-memory-ir': group_llvm_memory_ir,
     'llvm-math-f32': group_llvm_math_f32,
     'air-math-f32': group_air_math_f32,
     'llvm-math-afn': group_llvm_math_afn,
@@ -1348,6 +2469,8 @@ GROUPS = {
     'matrix': group_matrix,
     'misc': group_misc,
     'extra': group_extra,
+    'llvm-half': group_llvm_half,
+    'llvm-int-narrow': group_llvm_int_narrow,
 }
 
 
@@ -1388,7 +2511,7 @@ def main():
     print('summary: ' + ', '.join('%s %d' % kv for kv in sorted(counts.items())))
     if args.json:
         json.dump(all_results, open(args.json, 'w'), indent=1)
-    return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT', 'SKIPPED'} else 0
+    return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT', 'HW-FTZ', 'SKIPPED'} else 0
 
 
 if __name__ == '__main__':
