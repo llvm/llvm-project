@@ -25,7 +25,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
-#include "mlir/Target/SPIRV/Serialization.h"
 #include "gmock/gmock.h"
 
 #include <memory>
@@ -75,17 +74,6 @@ protected:
       ++numConstants;
     });
     EXPECT_EQ(numConstants, 1u);
-  }
-
-  void expectConstantRoundTrip(spirv::ModuleOp module, Type type,
-                               Attribute value) {
-    expectConstant(module, type, value);
-    SmallVector<uint32_t> serialized;
-    ASSERT_TRUE(succeeded(spirv::serialize(module, serialized)));
-    OwningOpRef<spirv::ModuleOp> roundTripped =
-        spirv::deserialize(serialized, &context);
-    ASSERT_TRUE(roundTripped);
-    expectConstant(roundTripped.get(), type, value);
   }
 
   //===--------------------------------------------------------------------===//
@@ -591,9 +579,10 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
 //===----------------------------------------------------------------------===//
 
 // The serializer emits OpConstantComposite for zero-valued arrays and structs,
-// so OpConstantNull of these types is only reachable from a SPIR-V binary.
+// so OpConstantNull of these types is only reachable from a SPIR-V binary and
+// cannot be covered by round-trip tests.
 
-TEST_F(DeserializationTest, ConstantNullArrayRoundTrip) {
+TEST_F(DeserializationTest, ConstantNullArray) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -608,11 +597,11 @@ TEST_F(DeserializationTest, ConstantNullArrayRoundTrip) {
   Builder builder(&context);
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
-  expectConstantRoundTrip(module.get(), spirv::ArrayType::get(si32, 2),
-                          builder.getArrayAttr({zero, zero}));
+  expectConstant(module.get(), spirv::ArrayType::get(si32, 2),
+                 builder.getArrayAttr({zero, zero}));
 }
 
-TEST_F(DeserializationTest, ConstantNullNestedArrayRoundTrip) {
+TEST_F(DeserializationTest, ConstantNullNestedArray) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -630,12 +619,12 @@ TEST_F(DeserializationTest, ConstantNullNestedArrayRoundTrip) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
   Attribute inner = builder.getArrayAttr({zero, zero, zero});
-  expectConstantRoundTrip(
-      module.get(), spirv::ArrayType::get(spirv::ArrayType::get(si32, 3), 2),
-      builder.getArrayAttr({inner, inner}));
+  expectConstant(module.get(),
+                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 3), 2),
+                 builder.getArrayAttr({inner, inner}));
 }
 
-TEST_F(DeserializationTest, ConstantNullArrayOfVectorsRoundTrip) {
+TEST_F(DeserializationTest, ConstantNullArrayOfVectors) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -652,11 +641,11 @@ TEST_F(DeserializationTest, ConstantNullArrayOfVectorsRoundTrip) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   VectorType vector = VectorType::get({4}, si32);
   Attribute zero = builder.getZeroAttr(vector);
-  expectConstantRoundTrip(module.get(), spirv::ArrayType::get(vector, 2),
-                          builder.getArrayAttr({zero, zero}));
+  expectConstant(module.get(), spirv::ArrayType::get(vector, 2),
+                 builder.getArrayAttr({zero, zero}));
 }
 
-TEST_F(DeserializationTest, ConstantNullStructRoundTrip) {
+TEST_F(DeserializationTest, ConstantNullStruct) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -673,13 +662,12 @@ TEST_F(DeserializationTest, ConstantNullStructRoundTrip) {
   Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
   Attribute zero = builder.getIntegerAttr(si32, 0);
   Attribute array = builder.getArrayAttr({zero, zero});
-  expectConstantRoundTrip(
-      module.get(),
-      spirv::StructType::get({si32, spirv::ArrayType::get(si32, 2)}),
-      builder.getArrayAttr({zero, array}));
+  expectConstant(module.get(),
+                 spirv::StructType::get({si32, spirv::ArrayType::get(si32, 2)}),
+                 builder.getArrayAttr({zero, array}));
 }
 
-TEST_F(DeserializationTest, ConstantNullEmptyStructRoundTrip) {
+TEST_F(DeserializationTest, ConstantNullEmptyStruct) {
   addHeader();
   addMemoryModel();
   auto structType = addStructType({});
@@ -690,8 +678,8 @@ TEST_F(DeserializationTest, ConstantNullEmptyStructRoundTrip) {
   ASSERT_TRUE(module);
 
   Builder builder(&context);
-  expectConstantRoundTrip(module.get(), spirv::StructType::getEmpty(&context),
-                          builder.getArrayAttr({}));
+  expectConstant(module.get(), spirv::StructType::getEmpty(&context),
+                 builder.getArrayAttr({}));
 }
 
 TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
@@ -715,7 +703,7 @@ TEST_F(DeserializationTest, ConstantCompositeVectorMissingConstituentsFailure) {
   expectDiagnostic("OpConstantComposite must have at least 1 parameter");
 }
 
-TEST_F(DeserializationTest, ConstantCompositeNullConstituentRoundTrip) {
+TEST_F(DeserializationTest, ConstantCompositeNullConstituent) {
   addHeader();
   addMemoryModel();
   auto int32Type = addIntType(32);
@@ -737,9 +725,9 @@ TEST_F(DeserializationTest, ConstantCompositeNullConstituentRoundTrip) {
   Attribute zeros = builder.getArrayAttr({zero, zero});
   Attribute oneTwo = builder.getArrayAttr(
       {builder.getIntegerAttr(si32, 1), builder.getIntegerAttr(si32, 2)});
-  expectConstantRoundTrip(
-      module.get(), spirv::ArrayType::get(spirv::ArrayType::get(si32, 2), 2),
-      builder.getArrayAttr({zeros, oneTwo}));
+  expectConstant(module.get(),
+                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 2), 2),
+                 builder.getArrayAttr({zeros, oneTwo}));
 }
 
 TEST_F(DeserializationTest, ConstantNullPointerFailure) {
@@ -763,8 +751,7 @@ TEST_F(DeserializationTest, ConstantNullArrayOfPointersFailure) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("unsupported OpConstantNull type: "
-                   "'!spirv.array<2 x !spirv.ptr<si32, Function>>' with "
-                   "unsupported constituent type '!spirv.ptr<si32, Function>'");
+                   "'!spirv.array<2 x !spirv.ptr<si32, Function>>'");
 }
 
 TEST_F(DeserializationTest, ConstantNullIdentifiedStructFailure) {

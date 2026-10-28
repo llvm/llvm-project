@@ -1929,7 +1929,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
   for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
-    auto elementInfo = getConstant(id);
+    std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
       // spirv.Constant cannot represent undefined constituents.
       if (getUndefType(id)) {
@@ -2176,21 +2176,21 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   return specConstOperationOp.getResult();
 }
 
-/// Returns the attribute for a null constant, or null on failure, setting
-/// unsupportedType to the type that could not be represented.
-static Attribute getNullConstantAttr(Builder &builder, Type type,
-                                     Type &unsupportedType) {
-  if (type.isIntOrFloat() || isa<VectorType>(type)) {
-    if (TypedAttr attr = builder.getZeroAttr(type))
-      return attr;
-  }
+/// Returns the `spirv.Constant` attribute for the null value of `type`, or a
+/// null attribute if `type` (or one of its constituents) has no such
+/// representation. Null arrays and literal structs are array attributes of
+/// null constituents, like deserialized OpConstantComposite instructions.
+static Attribute getNullConstantAttr(Builder &builder, Type type) {
+  if (type.isIntOrFloat() || isa<VectorType>(type))
+    return builder.getZeroAttr(type);
   if (auto tensorType = dyn_cast<spirv::TensorArmType>(type)) {
     if (TypedAttr element = builder.getZeroAttr(tensorType.getElementType()))
       return DenseElementsAttr::get(tensorType, element);
+    return {};
   }
   if (auto arrayType = dyn_cast<spirv::ArrayType>(type)) {
-    Attribute element = getNullConstantAttr(builder, arrayType.getElementType(),
-                                            unsupportedType);
+    Attribute element =
+        getNullConstantAttr(builder, arrayType.getElementType());
     if (!element)
       return {};
     SmallVector<Attribute> elements(arrayType.getNumElements(), element);
@@ -2202,16 +2202,13 @@ static Attribute getNullConstantAttr(Builder &builder, Type type,
     SmallVector<Attribute> elements;
     elements.reserve(structType.getNumElements());
     for (Type memberType : structType.getElementTypes()) {
-      Attribute element =
-          getNullConstantAttr(builder, memberType, unsupportedType);
+      Attribute element = getNullConstantAttr(builder, memberType);
       if (!element)
         return {};
       elements.push_back(element);
     }
     return builder.getArrayAttr(elements);
   }
-
-  unsupportedType = type;
   return {};
 }
 
@@ -2229,20 +2226,15 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  Type unsupportedType;
-  if (Attribute attr =
-          getNullConstantAttr(opBuilder, resultType, unsupportedType)) {
+  if (Attribute attr = getNullConstantAttr(opBuilder, resultType)) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
     return success();
   }
 
-  InFlightDiagnostic diag =
-      emitError(unknownLoc, "unsupported OpConstantNull type: ") << resultType;
-  if (unsupportedType != resultType)
-    diag << " with unsupported constituent type " << unsupportedType;
-  return diag;
+  return emitError(unknownLoc, "unsupported OpConstantNull type: ")
+         << resultType;
 }
 
 LogicalResult
