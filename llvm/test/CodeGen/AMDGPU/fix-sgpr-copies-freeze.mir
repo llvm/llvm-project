@@ -13,9 +13,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:sreg_32 = FREEZE [[COPY]]
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[FREEZE]], [[FREEZE]], implicit-def dead $scc
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr_32 = FREEZE [[COPY]]
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[FREEZE]], [[FREEZE]], 0, implicit $exec
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORD [[COPY1]], [[COPY2]], 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY $vgpr0
@@ -40,9 +40,9 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY2]], 0, implicit $exec
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:sreg_32 = FREEZE [[V_ADD_U32_e64_]]
-    ; CHECK-NEXT: [[S_MUL_I32_:%[0-9]+]]:sreg_32 = S_MUL_I32 [[FREEZE]], [[FREEZE]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_MUL_I32_]]
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr_32 = FREEZE [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[FREEZE]], [[FREEZE]], implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_MUL_LO_U32_e64_]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORD [[COPY1]], [[COPY3]], 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY $vgpr0
