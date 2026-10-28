@@ -71,6 +71,12 @@ struct FIRToLLVMPassOptions {
   // CUFAllocDescriptor. Empty defaults to CUFAllocDescriptor.
   std::string cudaDescriptorAllocFunction;
 
+  // Name of the function to call when freeing CUDA Fortran descriptors
+  // allocated with cudaDescriptorAllocFunction during FIR-to-LLVM lowering.
+  // Must have the same signature as CUFFreeDescriptor. Empty defaults to
+  // CUFFreeDescriptor.
+  std::string cudaDescriptorFreeFunction;
+
   // Specify the calculation method for complex number division used by the
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =

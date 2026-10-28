@@ -691,6 +691,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     if (EmitCovNotes) {
       CmdArgs.push_back(
           Args.MakeArgString("-coverage-notes-file=" + CoverageFilename));
+
+      bool UseAbsolutePathsInNotes =
+          Args.hasFlag(options::OPT_fprofile_abs_path,
+                       options::OPT_fno_profile_abs_path, false);
+      if (UseAbsolutePathsInNotes)
+        CmdArgs.push_back(Args.MakeArgString("-coverage-notes-abs-paths"));
     }
 
     if (EmitCovData) {
@@ -4052,6 +4058,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-pdb-in-private");
   }
+  CmdArgs.push_back("-load-bool-from-mem=nonzero");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,

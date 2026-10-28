@@ -995,7 +995,8 @@ public:
 } // namespace clang
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service)
+    DependencyScanningService &Service,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -1013,7 +1014,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service, std::move(BaseFS));
+      Service, std::move(BaseFS), std::move(LocalFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;

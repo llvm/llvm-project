@@ -105,7 +105,13 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    // IsElementalProcedure() characterizes the whole procedure, including
+    // all of its dummy arguments, so evaluate it at most once per scope.
+    if (!innermostIsElemental_) {
+      innermostIsElemental_ =
+          innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    }
+    return *innermostIsElemental_;
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -184,6 +190,8 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cached result of InElemental() for innermostSymbol_
+  mutable std::optional<bool> innermostIsElemental_;
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
@@ -2877,8 +2885,13 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
+  // InElemental() is cached per procedure: recompute it when entering a scope
+  // with its own symbol, and restore the enclosing procedure's value on exit.
+  common::Restorer<std::optional<bool>> elementalRestorer{
+      innermostIsElemental_, innermostIsElemental_};
   if (const Symbol *symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
+    innermostIsElemental_.reset();
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
     auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
