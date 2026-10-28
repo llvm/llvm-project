@@ -28404,11 +28404,16 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // Multiple ordinary stores can each fold the interleave if no other user
     // needs the wide value.
     if (!WideValue.hasOneUse()) {
-      if (!llvm::all_of(WideValue->users(), [&](SDNode *User) {
-            auto *Store = dyn_cast<StoreSDNode>(User);
-            return Store && ISD::isNormalStore(Store) && Store->isSimple() &&
-                   Store->getValue() == WideValue;
-          }))
+      // Single Zip pair + multiple stp is often preferable to multiple st2
+      if (!llvm::all_of(WideValue->users(),
+                        [&](SDNode *User) {
+                          auto *Store = dyn_cast<StoreSDNode>(User);
+                          return Store && ISD::isNormalStore(Store) &&
+                                 Store->isSimple() &&
+                                 Store->getValue() == WideValue;
+                        }) ||
+          (WideValue.getValueType().isFixedLengthVector() &&
+           ValueInterleaveOps.size() == 2))
         return SDValue();
 
       // Reusing the wide vector is cheaper than duplicating structured stores
