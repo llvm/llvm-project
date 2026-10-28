@@ -89,10 +89,16 @@ class AGXToAIRTypes : public ValueMapTypeRemapper {
   DenseMap<Type *, Type *> Cache;
 
 public:
-  static unsigned addrSpace(unsigned AS) {
+  /// Where AGX's generic pointers go: AIR's device address space when
+  /// nothing in the module makes a generic pointer to threadgroup or
+  /// private memory (then they are device pointers, as AGX treats them), the
+  /// address-space hint otherwise.
+  unsigned GenericAS = air::GenericHintAS;
+
+  unsigned addrSpace(unsigned AS) const {
     switch (AS) {
     case AGX::GENERIC_ADDRESS:
-      return air::GenericHintAS;
+      return GenericAS;
     case AGX::PRIVATE_ADDRESS:
       return air::AS::Default;
     case AGX::CONSTANT_ADDRESS:
@@ -142,17 +148,77 @@ public:
 /// Constants with doubles, wherever the value mapper meets them (operands of
 /// constant expressions, metadata): their bits.
 class DoubleMaterializer final : public ValueMaterializer {
+  ValueToValueMapTy &VMap;
+  AGXToAIRTypes &Types;
+
 public:
+  DoubleMaterializer(ValueToValueMapTy &VMap, AGXToAIRTypes &Types)
+      : VMap(VMap), Types(Types) {}
+
   Value *materialize(Value *V) override {
     auto *C = dyn_cast<Constant>(V);
     if (!C || isa<GlobalValue>(C))
       return nullptr;
+    // A cast between generic and device pointers, the same address space in
+    // AIR when generic pointers are device pointers there.
+    if (auto *CE = dyn_cast<ConstantExpr>(C);
+        CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+        Types.remapType(CE->getType()) ==
+            Types.remapType(CE->getOperand(0)->getType()))
+      return MapValue(CE->getOperand(0), VMap, RF_None, &Types, this);
     Constant *Bits = doubleBits(C);
     LLVM_DEBUG(if (!Bits && C->getType()->getScalarType()->isDoubleTy())
                    dbgs() << "agx-raise-to-air: unmapped " << *C << "\n");
     return Bits;
   }
 };
+
+/// Whether M makes generic pointers to memory other than device memory, or
+/// reads such memory through generic ones (PTX's cvta.shared / .local /
+/// .param), or calls through pointers (function addresses are generic):
+/// AGX tags those generic pointers (AGXLowerGenericAddresses); all others are
+/// device pointers.
+static bool makesLocalGeneric(Module &M) {
+  // Any memory but device memory (threadgroup, private, the constant
+  // memory of kernel parameters: cvta.param).
+  auto Local = [](unsigned AS) { return AS != AGX::DEVICE_ADDRESS; };
+  auto Cast = [&](unsigned Src, unsigned Dst) {
+    return (Dst == AGX::GENERIC_ADDRESS && Local(Src)) ||
+           (Src == AGX::GENERIC_ADDRESS && Local(Dst));
+  };
+  SmallPtrSet<const Constant *, 16> Seen;
+  std::function<bool(const Constant *)> InConstant = [&](const Constant *C) {
+    if (!Seen.insert(C).second)
+      return false;
+    if (auto *CE = dyn_cast<ConstantExpr>(C);
+        CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+        Cast(CE->getOperand(0)->getType()->getPointerAddressSpace(),
+             CE->getType()->getPointerAddressSpace()))
+      return true;
+    return any_of(C->operands(), [&](const Use &U) {
+      auto *Op = dyn_cast<Constant>(U.get());
+      return Op && !isa<GlobalValue>(Op) && InConstant(Op);
+    });
+  };
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasInitializer() && InConstant(GV.getInitializer()))
+      return true;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F)) {
+      if (auto *C = dyn_cast<AddrSpaceCastInst>(&I);
+          C && Cast(C->getSrcAddressSpace(), C->getDestAddressSpace()))
+        return true;
+      // Calls through pointers: functions are generic (code) addresses.
+      if (auto *CB = dyn_cast<CallBase>(&I);
+          CB && !CB->getCalledFunction() && !CB->isInlineAsm())
+        return true;
+      for (const Use &U : I.operands())
+        if (auto *C = dyn_cast<Constant>(U.get());
+            C && !isa<GlobalValue>(C) && InConstant(C))
+          return true;
+    }
+  return false;
+}
 
 class RaiseToAIR {
   Module &M;
@@ -1420,8 +1486,16 @@ bool RaiseToAIR::run() {
     if (F.isIntrinsic() && F.use_empty())
       F.eraseFromParent();
 
+  // llvm.used and llvm.compiler.used mean nothing in AIR (the globals they
+  // list are external, which keeps them), and a list of device pointers is
+  // not what they hold.
+  for (StringRef Name : {"llvm.used", "llvm.compiler.used"})
+    if (GlobalVariable *GV = M.getGlobalVariable(Name))
+      GV->eraseFromParent();
   // Every global value takes AIR's types, as in agx-lower-air.
   AGXToAIRTypes Types;
+  if (!makesLocalGeneric(M))
+    Types.GenericAS = air::AS::Device;
   ValueToValueMapTy VMap;
   // Double constants map to their bits (the value map comes before the type
   // change).
@@ -1443,7 +1517,7 @@ bool RaiseToAIR::run() {
   for (GlobalVariable *GVP : OldGlobals) {
     GlobalVariable &GV = *GVP;
     Type *T = Types.remapType(GV.getValueType());
-    unsigned AS = AGXToAIRTypes::addrSpace(GV.getAddressSpace());
+    unsigned AS = Types.addrSpace(GV.getAddressSpace());
     if (T == GV.getValueType() && AS == GV.getAddressSpace())
       continue;
     auto *NewGV = new GlobalVariable(
@@ -1493,7 +1567,8 @@ bool RaiseToAIR::run() {
         return ConstantStruct::get(ST, Ops);
       return ConstantVector::get(Ops);
     }
-    return MapValue(C, VMap, RF_None, &Types);
+    DoubleMaterializer Materializer(VMap, Types);
+    return MapValue(C, VMap, RF_None, &Types, &Materializer);
   };
   for (auto [Old, New] : Globals)
     if (Old->hasInitializer())
@@ -1512,10 +1587,18 @@ bool RaiseToAIR::run() {
       VMap[&A] = &*NewArg++;
     }
     SmallVector<ReturnInst *, 4> Returns;
-    DoubleMaterializer Materializer;
+    DoubleMaterializer Materializer(VMap, Types);
     CloneFunctionInto(New, Old, VMap, CloneFunctionChangeType::LocalChangesOnly,
                       Returns, "", nullptr, &Types, &Materializer);
   }
+  // Casts between generic and device pointers, the same address space now.
+  for (auto [Old, New] : Functions)
+    for (Instruction &I : make_early_inc_range(instructions(*New)))
+      if (auto *C = dyn_cast<AddrSpaceCastInst>(&I);
+          C && C->getSrcTy() == C->getDestTy()) {
+        C->replaceAllUsesWith(C->getOperand(0));
+        C->eraseFromParent();
+      }
   SmallVector<GlobalVariable *, 8> Order;
   for (GlobalVariable *GV : OldGlobals) {
     auto It = find_if(Globals, [&](auto &P) { return P.first == GV; });

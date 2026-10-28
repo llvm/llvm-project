@@ -13,7 +13,8 @@
 ; AIR: target triple = "air"
 ; AIR-NOT: __air_hint
 ; AIR-LABEL: define void @k(ptr addrspace(2) byref(i64) %pp, ptr addrspace(2) byref(double) %pd)
-; AIR: inttoptr i64 %p to ptr addrspace(4)
+; Nothing makes a generic pointer to other memory: it is a device pointer.
+; AIR: inttoptr i64 %p to ptr addrspace(1)
 ; AIR: load i64, ptr addrspace(2) %pd
 ; AIR: call <3 x i32> @air.thread_position_in_grid.v3i32()
 ; AIR: call float @air.simd_shuffle_xor.f32(float %v, i16 1)

@@ -21,6 +21,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "agxtti"
 
+static cl::opt<unsigned> MaxStoreVectorBytes(
+    "agx-max-store-vector-bytes", cl::init(16), cl::Hidden,
+    cl::desc("The widest store the load/store vectorizer makes (bytes)"));
+
+unsigned AGXTTIImpl::maxStoreVectorBytes() { return MaxStoreVectorBytes; }
+
 static cl::opt<unsigned> AGXThreadgroupUnroll(
     "agx-threadgroup-unroll", cl::init(0), cl::Hidden,
     cl::desc("Most iterations a loop that loads threadgroup memory is "

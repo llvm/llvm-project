@@ -72,8 +72,10 @@ public:
   }
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AS) const override {
-    return vectorizableChain(ChainSizeInBytes, Alignment, AS);
+    return vectorizableChain(ChainSizeInBytes, Alignment, AS) &&
+           ChainSizeInBytes <= maxStoreVectorBytes();
   }
+  static unsigned maxStoreVectorBytes();
   static bool vectorizableChain(unsigned Bytes, Align Alignment, unsigned AS) {
     return Alignment >= Align(4) && Bytes % 4 == 0 && Bytes <= 16 &&
            (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
