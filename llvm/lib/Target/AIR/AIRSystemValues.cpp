@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRSystemValues.h"
+#include "AIRLowerAtomicRMW.h"
 #include "AIRWriter/AIRVersion.h"
 #include "AIRWriter/PointeeTypeMap.h"
 #include "AIR.h"
@@ -457,13 +458,17 @@ static bool airSystemValues(Module &M) {
           ArgName = NameBuf;
         }
         unsigned &LocIdx = (AS == 3) ? TGIdx : ArgIdx;
+        // The lock table of emulated atomics (AIRLowerAtomicRMW) has a
+        // location index of its own.
+        bool LockTable = AS == 1 && ArgName == kAtomicLockTableName;
         StringRef AccessMode = (AS == 2) ? kMDRead : kMDReadWrite;
         ParamNodes.push_back(MDNode::get(
             Ctx,
             {ConstantAsMetadata::get(ConstantInt::get(I32, I)),
              MDString::get(Ctx, kMDBuffer),
              MDString::get(Ctx, kMDLocationIndex),
-             ConstantAsMetadata::get(ConstantInt::get(I32, LocIdx)),
+             ConstantAsMetadata::get(ConstantInt::get(
+                 I32, LockTable ? kAtomicLockTableIndex : LocIdx)),
              ConstantAsMetadata::get(ConstantInt::get(I32, 1)),
              MDString::get(Ctx, AccessMode),
              MDString::get(Ctx, kMDAddressSpace),
@@ -474,7 +479,8 @@ static bool airSystemValues(Module &M) {
              ConstantAsMetadata::get(ConstantInt::get(I32, BT.Align)),
              MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, BT.Name),
              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, ArgName)}));
-        LocIdx++;
+        if (!LockTable)
+          LocIdx++;
       }
 
       // System-value params, in parameter order.

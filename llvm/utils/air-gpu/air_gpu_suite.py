@@ -58,6 +58,7 @@ air_gpu_suite_hangs.txt (never sent again) and all device work stops.
 
 import argparse
 import base64
+import hashlib
 import functools
 from fractions import Fraction
 import json
@@ -282,7 +283,30 @@ def compile_air(llc, ir, tmp, tag):
         err = r.stderr.strip()
         lines = [l for l in err.splitlines() if 'error' in l.lower()]
         return None, (lines[0] if lines else err)[-400:] or 'llc exited with %d' % r.returncode
-    return open(air, 'rb').read(), None
+    data = open(air, 'rb').read()
+    # Kernels with emulated atomics (AIRLowerAtomicRMW) take a lock table at a location index of its own.
+    dis = subprocess.run([os.path.join(os.path.dirname(llc), 'llvm-dis'), air, '-o', '-'],
+                         capture_output=True, text=True).stdout
+    if '!"air_atomic_locks"' in dis:
+        LOCK_TABLE_AIRS.add(hashlib.sha1(data).hexdigest())
+    return data, None
+
+
+# The lock table of emulated atomics (llvm/lib/Target/AIR/AIRLowerAtomicRMW.h): location index and size of the
+# zeroed buffer bound for the compiled modules (sha1 of their AIR) that have one.
+LOCK_TABLE_INDEX, LOCK_TABLE_BYTES = 30, 4096
+LOCK_TABLE_AIRS = set()
+
+
+def lock_table(job, air):
+    """Bind a zeroed lock table to every command of job when the module air has one."""
+    if hashlib.sha1(air).hexdigest() not in LOCK_TABLE_AIRS:
+        return job
+    b = len(job['buffers'])
+    job['buffers'].append({'size': LOCK_TABLE_BYTES, 'data': base64.b64encode(bytes(LOCK_TABLE_BYTES)).decode()})
+    for cmd in job['commands']:
+        cmd['bindings'].append({'index': LOCK_TABLE_INDEX, 'buffer': b})
+    return job
 
 
 TRANSIENT = ('XPC_ERROR_CONNECTION_INTERRUPTED', 'did not reply')
@@ -323,7 +347,7 @@ def run_case(c, air, inputs, queue, label='?'):
                              'bindings': [{'index': i, 'buffer': i} for i in range(2)],
                              'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
                'readback': [0]}
-        return call(job, queue, label=label)
+        return call(lock_table(job, air), queue, label=label)
     buffers = [{'size': len(d), 'data': base64.b64encode(d).decode()} for d in inputs]
     out = {'size': N * TYPES[c.out][2]}
     if c.out_init is not None:
@@ -334,7 +358,7 @@ def run_case(c, air, inputs, queue, label='?'):
                          'bindings': [{'index': i, 'buffer': i} for i in range(len(buffers))],
                          'grid': dispatch(c)[0], 'group': dispatch(c)[1]}],
            'readback': [len(buffers) - 1]}
-    return call(job, queue, label=label)
+    return call(lock_table(job, air), queue, label=label)
 
 
 def check(c, values, got):
