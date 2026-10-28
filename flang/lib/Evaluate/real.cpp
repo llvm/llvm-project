@@ -683,9 +683,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
   Word word{lo};
   if constexpr (decltype(converted.binary)::bits > 64) {
     const std::uint64_t hi{static_cast<std::uint64_t>(raw >> 64)};
-    if (hi) {
-      word = word.IOR(Word{hi}.SHIFTL(64));
-    }
+    word = word.IOR(Word{hi}.SHIFTL(64));
   }
   return {Real<W, P>{word}, MapFlags(converted.flags)};
 }
