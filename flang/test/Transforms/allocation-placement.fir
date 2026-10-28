@@ -63,6 +63,30 @@ func.func @big_temp_alloca() {
   return
 }
 
+// A requested alignment survives heap-to-stack ...
+// CHECK-LABEL: func.func @small_temp_aligned
+// CHECK: fir.alloca !fir.array<10xi32> <{alignment = 64 : i64}>
+// CHECK-NOT: fir.allocmem
+func.func @small_temp_aligned() {
+  %0 = fir.allocmem !fir.array<10xi32> {alignment = 64 : i64}
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  %r = fir.convert %0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+  %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+  fir.store %v to %e : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<10xi32>>
+  return
+}
+
+// ... and stack-to-heap.
+// CHECK-LABEL: func.func @big_temp_alloca_aligned
+// CHECK: fir.allocmem !fir.array<100xi32> <{alignment = 64 : i64
+// CHECK: fir.freemem
+func.func @big_temp_alloca_aligned() {
+  %0 = fir.alloca !fir.array<100xi32> {alignment = 64 : i64}
+  return
+}
+
 // Runtime-sized user variable (automatic array) -> heap.
 // CHECK-LABEL: func.func @dyn_user
 // CHECK: fir.allocmem !fir.array<?xi32>

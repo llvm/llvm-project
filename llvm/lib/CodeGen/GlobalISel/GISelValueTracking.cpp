@@ -1324,7 +1324,15 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   KnownFPClass KnownSrc;
   computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                       Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstSem = getFltSemanticForLLT(
+      MRI.getType(MI.getOperand(0).getReg()).getScalarType());
+  const fltSemantics &SrcSem =
+      getFltSemanticForLLT(MRI.getType(Val).getScalarType());
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+                                MF.getDenormalMode(DstSem),
+                                MF.getDenormalMode(SrcSem));
 }
 
 void GISelValueTracking::computeKnownFPClass(Register R,
@@ -1485,6 +1493,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD: {
+    const bool IsFMA = Opcode == TargetOpcode::G_FMA;
+
     Register A = MI.getOperand(1).getReg();
     Register B = MI.getOperand(2).getReg();
     Register C = MI.getOperand(3).getReg();
@@ -1503,7 +1513,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     // For x * x, result is positive or NaN.
-    if (!NegSrc.isValid() && (InterestedClasses & fcNegative) == fcNone) {
+    if (!NegSrc.isValid() && (InterestedClasses & (fcNegative | fcNan)) == fcNone) {
       break;
     }
 
@@ -1526,9 +1536,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         KnownAddend.knownNot(KnownNotFromFlags);
       }
 
-      Known = NegSrc.isValid()
-                  ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
-                  : KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+      if (NegSrc.isValid()) {
+        Known = IsFMA ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
+          : KnownFPClass::fmuladd_neg_square(KnownSrc, KnownAddend, Mode);
+      } else {
+        Known = IsFMA ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+          : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
+      }
+
       break;
     }
 
@@ -1549,7 +1564,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       for (KnownFPClass &K : KnownSrc)
         K.knownNot(KnownNotFromFlags);
     }
-    Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+    Known = IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+      : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
     break;
   }
   case TargetOpcode::G_FSQRT:
@@ -2179,7 +2195,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT SrcTy = MRI.getType(Src).getScalarType();
     const fltSemantics &SrcSem = getFltSemanticForLLT(SrcTy);
 
-    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem);
+    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem,
+                                MF->getDenormalMode(DstSem),
+                                MF->getDenormalMode(SrcSem));
     break;
   }
   case TargetOpcode::G_FPTRUNC:

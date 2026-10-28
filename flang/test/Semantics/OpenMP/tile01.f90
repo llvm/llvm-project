@@ -6,7 +6,7 @@ subroutine missing_sizes
   implicit none
   integer i
 
-  !ERROR: At least one of SIZES clause must appear on TILE directive
+  !ERROR: SIZES clause is required on TILE directive
   !$omp tile
   do i = 1, 42
     print *, i

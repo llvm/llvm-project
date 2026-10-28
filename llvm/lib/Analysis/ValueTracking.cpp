@@ -307,21 +307,24 @@ bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
-bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
+bool llvm::isKnownPositive(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
     return CI->getValue().isStrictlyPositive();
 
   // If `isKnownNonNegative` ever becomes more sophisticated, make sure to keep
   // this updated.
-  KnownBits Known = computeKnownBits(V, SQ, Depth);
+  KnownBits Known = Depth == 0 ? V.getKnownBits(SQ)
+                               : computeKnownBits(V.getValue(), SQ, Depth);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
+         (Known.isNonZero() || isKnownNonZero(V.getValue(), SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (Depth == 0)
+    return V.getKnownBits(SQ).isNegative();
+  return computeKnownBits(V.getValue(), SQ, Depth).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
@@ -3230,9 +3233,48 @@ static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
                                                 m_Specific(Op0), m_Zero())));
 }
 
+/// Return true if "addr(P) + Off" cannot be zero. The object P points to
+/// cannot cross the unsigned address space boundary, including the address one
+/// past its end, so an offset that stays within the object cannot wrap around
+/// to zero. This holds even if the object starts at the zero address, which is
+/// all that null_pointer_is_valid permits, so a non-zero offset is enough.
+static bool isNonZeroAddrPlusOffset(const SimplifyQuery &Q, Value *X,
+                                    Value *Y) {
+  const APInt *Off;
+  if (!match(Y, m_APInt(Off)) || Off->isZero())
+    return false;
+
+  // ptrtoaddr always produces the address. ptrtoint only does so when its
+  // result is at least as wide as the address: a narrower result is truncated
+  // and may wrap to zero, while bits above the address can only make the
+  // result more non-zero.
+  Value *P;
+  if (!match(X, m_PtrToAddr(m_Value(P))) &&
+      !(match(X, m_PtrToInt(m_Value(P))) &&
+        X->getType()->getScalarSizeInBits() >=
+            Q.DL.getAddressSizeInBits(P->getType())))
+    return false;
+
+  // A vector of pointers has no single object whose size can be taken, and
+  // getPointerDereferenceableBytes() requires a plain pointer.
+  if (!P->getType()->isPointerTy())
+    return false;
+
+  bool CanBeNull;
+  uint64_t DerefBytes = P->getPointerDereferenceableBytes(
+      Q.DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  if (CanBeNull || DerefBytes == 0 || !Off->ule(DerefBytes))
+    return false;
+
+  return true;
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
                          unsigned BitWidth, Value *X, Value *Y, bool NSW,
                          bool NUW, unsigned Depth) {
+  if (isNonZeroAddrPlusOffset(Q, X, Y) || isNonZeroAddrPlusOffset(Q, Y, X))
+    return true;
+
   // (X + (X != 0)) is non zero
   if (matchOpWithOpEqZero(X, Y))
     return true;
@@ -3903,12 +3945,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
     if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
       return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
-    // A global variable in address space 0 is non null unless extern weak
-    // or an absolute symbol reference. Other address spaces may have null as a
-    // valid address for a global, so we can't assume anything.
+    // A global variable is non null unless extern weak or an absolute symbol
+    // reference. An alias is also excluded, as it may resolve to a weak
+    // undefined symbol and thus to the null address. Where null is a valid
+    // address an allocation may start there, so nothing can be assumed; that
+    // covers both null_pointer_is_valid and address spaces other than zero.
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
-      if (!GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
-          GV->getType()->getAddressSpace() == 0)
+      if (!NullPointerIsDefined(Q.getFunction(),
+                                GV->getType()->getAddressSpace()) &&
+          !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
+          !isa<GlobalAlias>(GV))
         return true;
     }
 
@@ -5206,7 +5252,19 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstTy = Op->getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const auto *I = dyn_cast<Instruction>(Op);
+  const Function *F = I ? I->getFunction() : nullptr;
+  DenormalMode DstMode =
+      F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -5456,9 +5514,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
 
       // For x * x, result is positive or NaN.
-      if (!NegSrc && (InterestedClasses & fcNegative) == fcNone) {
+      if (!NegSrc && (InterestedClasses & (fcNegative | fcNan)) == fcNone) {
         break;
       }
+
+      const bool IsFMA = IID == Intrinsic::fma;
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (A0 == A1 || NegSrc) {
@@ -5486,9 +5546,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           KnownAddend.knownNot(fcInf);
         }
 
-        Known = NegSrc
-                    ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
-                    : KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+        if (NegSrc)
+          Known = IsFMA ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend,
+                                                       Mode)
+                        : KnownFPClass::fmuladd_neg_square(KnownSrc,
+                                                           KnownAddend, Mode);
+        else
+          Known = IsFMA
+                      ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                      : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend,
+                                                     Mode);
         break;
       }
 
@@ -5510,7 +5577,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
       break;
     }
     case Intrinsic::sqrt:
@@ -6282,7 +6352,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    const auto *I = dyn_cast<Instruction>(Op);
+    const Function *F = I ? I->getFunction() : nullptr;
+    DenormalMode DstMode =
+        F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+    DenormalMode SrcMode =
+        F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     break;
   }
   case Instruction::FPTrunc: {
@@ -6715,6 +6792,9 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   case Instruction::FPToSI:
   case Instruction::FPToUI:
     return true;
+  case Instruction::FRem:
+    // frem(x, +-0.0) == NaN, and more generally frem(x, y) == frem(x, -y).
+    return U.getOperandNo() == 1;
   case Instruction::FCmp:
     // fcmp treats both positive and negative zero as equal.
     return true;
@@ -6722,9 +6802,27 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
     if (auto *II = dyn_cast<IntrinsicInst>(User)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::fabs:
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::exp10:
+      case Intrinsic::log:
+      case Intrinsic::log2:
+      case Intrinsic::log10:
+      case Intrinsic::cos:
+      case Intrinsic::acos:
+      case Intrinsic::cosh:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::lround:
+      case Intrinsic::llround:
+      case Intrinsic::lrint:
+      case Intrinsic::llrint:
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
+      case Intrinsic::pow:
+        // pow(x, +-0.0) == +1.0 or NaN
+        return U.getOperandNo() == 1;
       case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
@@ -7655,33 +7753,6 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
   return Result;
 }
 
-static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-    const Value *V, bool AllowLifetime, bool AllowDroppable) {
-  for (const User *U : V->users()) {
-    const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II)
-      return false;
-
-    if (AllowLifetime && II->isLifetimeStartOrEnd())
-      continue;
-
-    if (AllowDroppable && II->isDroppable())
-      continue;
-
-    return false;
-  }
-  return true;
-}
-
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
-}
-bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
-}
-
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I))
     return isTriviallyVectorizable(II->getIntrinsicID());
@@ -8282,7 +8353,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       return !includesUndef(Kind);
 
     if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
-        isa<ConstantPointerNull>(C) || isa<Function>(C))
+        isa<ConstantPointerNull>(C) || isa<Function>(C) || isa<ConstantData>(C))
       return true;
 
     if (C->getType()->isVectorTy() || C->getType()->isAggregateType()) {
@@ -8291,12 +8362,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         if (Constant *SplatC = C->getSplatValue())
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
-      } else {
-        if (includesUndef(Kind) && C->containsUndefElement())
-          return false;
-        if (includesPoison(Kind) && C->containsPoisonElement())
-          return false;
-        return !C->containsConstantExpression();
+      } else if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+        return all_of(CA->operands(), [&](const Use &Op) {
+          return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
+                                                  Depth + 1, Kind);
+        });
       }
     }
   }
@@ -8648,6 +8718,7 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::fshr:
   case Intrinsic::frexp:
   case Intrinsic::get_active_lane_mask:
+  case Intrinsic::mask_beforefirst:
     return true;
   default:
     return false;

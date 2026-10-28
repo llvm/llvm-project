@@ -69,6 +69,16 @@ public:
       : mlir::OpBuilder(&mlirContext) {}
   CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
 
+  // mlir::Builder's float getters return builtin types, which CIR types don't
+  // accept as elements. Use CIR float types, such as cir::SingleType.
+  mlir::FloatType getBF16Type() = delete;
+  mlir::FloatType getF16Type() = delete;
+  mlir::FloatType getTF32Type() = delete;
+  mlir::FloatType getF32Type() = delete;
+  mlir::FloatType getF64Type() = delete;
+  mlir::FloatType getF80Type() = delete;
+  mlir::FloatType getF128Type() = delete;
+
   bool isFPConstrained = false;
   clang::LangOptions::FPExceptionModeKind defaultConstrainedExcept =
       clang::LangOptions::FPE_Ignore;

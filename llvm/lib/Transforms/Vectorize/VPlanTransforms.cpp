@@ -49,24 +49,21 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
 bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -176,6 +173,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                               /*Mask=*/nullptr, *VPI, *VPI,
                                               Ingredient.getDebugLoc());
           } else {
+            assert(!CI->hasOperandBundles() &&
+                   "calls with operand bundles must not be widened");
             NewRecipe = new VPWidenIntrinsicRecipe(
                 *CI, VectorID, drop_end(Ingredient.operands()), CI->getType(),
                 VPIRFlags(*CI), *VPI, CI->getDebugLoc());
@@ -189,7 +188,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                         *VPI, Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPWidenIntOrFpInductionRecipe>(&Ingredient) &&
+        assert(isa<VPWidenInductionRecipe>(&Ingredient) &&
                "inductions must be created earlier");
         continue;
       }
@@ -306,9 +305,9 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Get the value type of the replicate load or store. \p IsLoad indicates
-/// whether it is a load.
-static Type *getLoadStoreValueType(VPReplicateRecipe *R, bool IsLoad) {
+/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
+static Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
+  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
   return (IsLoad ? R : R->getOperand(0))->getScalarType();
 }
 
@@ -334,7 +333,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR.getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = getLoadStoreValueType(&RepR, IsLoad);
+      const Type *LoadStoreTy = getLoadStoreValueType(&RepR);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(&RepR);
@@ -2216,6 +2215,29 @@ static bool replaceMaskWithCompareForScalarPlan(VPlan &Plan,
   return MadeChange;
 }
 
+/// Return true if the branch \p Term with condition \p Cond (null if \p Term
+/// has no condition operand) is the vector loop's latch check.
+static bool isVectorLatchCheck(VPRecipeBase *Term, VPValue *Cond, VPlan &Plan) {
+  // BranchOnCount compares the canonical IV increment against the vector trip
+  // count, plus an offset for epilogue loops.
+  VPValue *Offset = nullptr;
+  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  if (match(Term,
+            m_BranchOnCount(
+                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
+                m_VPValue())))
+    return !Offset || Offset->isDefinedOutsideLoopRegions();
+
+  if (!Cond)
+    return false;
+
+  // The active-lane-mask form used when the tail is folded by masking.
+  return match(Cond,
+               m_Not(m_ExtractVectorForPart(
+                   m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
+                   m_ZeroInt())));
+}
+
 /// Try to simplify the branch condition of \p Plan. This may restrict the
 /// resulting plan to \p BestVF and \p BestUF.
 static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -2224,22 +2246,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
-  VPValue *Cond;
-  VPValue *Offset = nullptr;
-  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
-  // Check if the branch condition compares the canonical IV increment (for main
-  // loop), or the canonical IV increment plus an offset (for epilog loop).
-  bool MatchedCanIVInc =
-      match(Term,
-            m_BranchOnCount(
-                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
-                m_VPValue())) &&
-      (!Offset || Offset->isDefinedOutsideLoopRegions());
-  if (MatchedCanIVInc ||
-      match(Term,
-            m_BranchOnCond(m_Not(m_ExtractVectorForPart(
-                m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
-                m_ZeroInt()))))) {
+
+  // Find the branch condition, if there is one.
+  VPValue *Cond = nullptr;
+  if (!match(Term, m_BranchOnCond(m_VPValue(Cond))))
+    match(Term, m_BranchOnTwoConds(m_VPValue(), m_VPValue(Cond)));
+
+  if (isVectorLatchCheck(Term, Cond, Plan)) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
     // latch terminator is BranchOnCount or
     // BranchOnCond(Not(ExtractVectorForPart(WideActiveLaneMask), 0))
@@ -2255,13 +2268,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
     if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;
-  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond))) ||
-             match(Term, m_BranchOnTwoConds(m_VPValue(), m_VPValue(Cond)))) {
-    // For BranchOnCond, check if we can prove the condition to be true using VF
-    // and UF.
-    if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, PSE))
-      return false;
-  } else {
+  } else if (!Cond ||
+             !isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, PSE)) {
     return false;
   }
 
@@ -2312,6 +2320,12 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
+static Align getLoadAlign(const VPSingleDefRecipe *R) {
+  if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(R))
+    return MemR->getAlign();
+  return cast<LoadInst>(R->getUnderlyingInstr())->getAlign();
+}
+
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
@@ -2341,13 +2355,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
-    // Widened loads (including the EVL variant) are handled, as cse() only
-    // reuses them within a block with no intervening memory write. Any other
-    // memory access is rejected.
+    // Loads are handled as cse() only reuses them within a block with no
+    // intervening memory write. Any other memory access is rejected.
     if (Def->mayWriteToMemory())
       return false;
     return !Def->mayReadFromMemory() ||
-           isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
+           (!C->first && C->second == Instruction::Load);
   }
 
   /// Hash the underlying data of \p Def.
@@ -2416,8 +2429,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 /// Plan.
 void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
-  // CSE map for widened loads. Must be cleared on recipes that may write to
-  // memory, and at the end of each VPBB.
+  // CSE map for loads. Must be cleared on recipes that may write to memory, and
+  // at the end of each VPBB.
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo>
       LoadCSEMap;
 
@@ -2430,7 +2443,7 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
-      bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
+      bool IsLoad = vputils::getOpcode(Def) == Instruction::Load;
       auto [It, Inserted] =
           (IsLoad ? LoadCSEMap : CSEMap).try_emplace(Def, Def);
       if (Inserted)
@@ -2440,20 +2453,21 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       if (!VPDT.dominates(V->getParent(), VPBB))
         continue;
       if (IsLoad) {
-        auto *EarlierLoad = cast<VPWidenMemoryRecipe>(V);
-        auto *Load = cast<VPWidenMemoryRecipe>(Def);
-        if (EarlierLoad->getAlign() < Load->getAlign()) {
-          // Record Load as the candidate for subsequent loads, as it may be
-          // reusable where EarlierLoad is not.
+        if (getLoadAlign(V) < getLoadAlign(Def)) {
+          // Record Def as the candidate for subsequent loads, as it may be
+          // reusable where V is not.
           It->second = Def;
           continue;
         }
         // Keep only metadata common to both loads on the survivor.
-        EarlierLoad->intersect(*Load);
+        cast<VPIRMetadata>(V)->intersect(*cast<VPIRMetadata>(Def));
       }
       // Only keep flags present on both V and Def.
       if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
         RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
+      // Only keep call attributes valid for both V and Def.
+      if (auto *Call = dyn_cast<VPWidenCallRecipe>(V))
+        Call->intersectAttrs(*cast<VPWidenCallRecipe>(Def), Plan.getContext());
       Def->replaceAllUsesWith(V);
     }
     LoadCSEMap.clear();
@@ -3562,6 +3576,25 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   SmallVector<EarlyExitInfo> Exits;
   for (auto [EarlyExitingVPBB, ExitBlock] :
        vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // The final value of a reduction is computed in the middle block, which is
+    // only reached when leaving the vector loop via the latch.
+    // TODO: Support reductions used on early exits.
+    for (VPRecipeBase &R : ExitBlock->phis()) {
+      VPValue *ExitV =
+          cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
+      for (VPReductionPHIRecipe &PhiR :
+           make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+        if (ExitV != PhiR.getBackedgeValue())
+          continue;
+        reportVectorizationFailure(
+            "Found reduction used on an early exit",
+            "Cannot vectorize early exit loop with reduction used on an "
+            "early exit",
+            "ReductionUsedOnEarlyExit", ORE, TheLoop);
+        return false;
+      }
+    }
+
     // Collect condition for this early exit.
     VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
     VPValue *CondOfEarlyExitingVPBB;
@@ -4007,13 +4040,14 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
     // The inner extends must either have the same opcode as the outer extend or
     // be the same sext, in which case the multiply cannot result in a negative
-    // value and the outer extend can be folded away by doing wider
-    // extends for the operands of the mul.
+    // value without wrapping. If the narrow mul cannot wrap, the outer extend
+    // can be folded away by doing wider extends for the operands of the mul.
     if (Ext0 && Ext1 &&
         (Ext->getOpcode() == Ext0->getOpcode() ||
          (Ext0 == Ext1 && Ext0->getOpcode() == Instruction::SExt)) &&
-        Ext0->getOpcode() == Ext1->getOpcode() &&
-        IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
+        Ext0->getOpcode() == Ext1->getOpcode() && Mul->hasOneUse() &&
+        canFoldOuterExtendIntoMul(Mul) &&
+        IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getScalarType(), nullptr,
           *Ext0, *Ext0, Ext0->getDebugLoc());
@@ -4091,7 +4125,6 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
                                      const Loop *L) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
-  [[maybe_unused]] constexpr bool IsLoad = (Opcode == Instruction::Load);
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
@@ -4102,8 +4135,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
-    assert(all_equal(
-               map_range(Recipes, bind_back<getLoadStoreValueType>(IsLoad))) &&
+    assert(all_equal(map_range(Recipes, getLoadStoreValueType)) &&
            "Expected all recipes in group to have the same load-store type");
 
     // Collect groups with the same or complementary masks.
@@ -6063,12 +6095,6 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (VPI.isMasked() && !VPI.isSafeToSpeculativelyExecute())
         continue;
 
-      // Avoid rewriting IV increment as that interferes with
-      // `removeRedundantCanonicalIVs`.
-      if (VPI.getOpcode() == Instruction::Add &&
-          any_of(VPI.operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
-        continue;
-
       // Other lanes are needed - can't drop them.
       if (!vputils::onlyFirstLaneUsed(&VPI))
         continue;
@@ -6216,6 +6242,9 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           },
           Range);
 
+      assert((Decision.Kind == CallWideningDecision::KindTy::Scalarize ||
+              !CI->hasOperandBundles()) &&
+             "calls with operand bundles must not be widened");
       VPSingleDefRecipe *Replacement = nullptr;
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
@@ -6234,8 +6263,10 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
+        VPIRAttributes Attrs(*CI, Decision.Variant->getFunctionType(),
+                             VPI.isMasked());
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
-                                            VPI.getDebugLoc());
+                                            Attrs, VPI.getDebugLoc());
         Widened = true;
         break;
       }
@@ -6266,11 +6297,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
-      // A truncate that is not widened is left to the scalarization decisions
-      // made earlier.
-      if (vputils::onlyFirstLaneUsed(&VPI))
-        continue;
-
       VPValue *Op = VPI.getOperand(0);
       auto *WideIV = getOptimizableIVOf(Op, PSE);
       if (!WideIV)
@@ -6280,6 +6306,11 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // is not handled here.
       // TODO: Also narrow truncates of the incremented IV.
       if (Op != WideIV)
+        continue;
+
+      // A truncate that is not widened is left to the scalarization decisions
+      // made earlier.
+      if (vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
       // Replacing a free truncate would add an induction update instruction to

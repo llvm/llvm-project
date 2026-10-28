@@ -664,79 +664,6 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       GV.IntVal = GV.IntVal.trunc(BitWidth);
       return GV;
     }
-    case Instruction::ZExt: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      GV.IntVal = GV.IntVal.zext(BitWidth);
-      return GV;
-    }
-    case Instruction::SExt: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      GV.IntVal = GV.IntVal.sext(BitWidth);
-      return GV;
-    }
-    case Instruction::FPTrunc: {
-      // FIXME long double
-      GenericValue GV = getConstantValue(Op0);
-      GV.FloatVal = float(GV.DoubleVal);
-      return GV;
-    }
-    case Instruction::FPExt:{
-      // FIXME long double
-      GenericValue GV = getConstantValue(Op0);
-      GV.DoubleVal = double(GV.FloatVal);
-      return GV;
-    }
-    case Instruction::UIToFP: {
-      GenericValue GV = getConstantValue(Op0);
-      if (CE->getType()->isFloatTy())
-        GV.FloatVal = float(GV.IntVal.roundToDouble());
-      else if (CE->getType()->isDoubleTy())
-        GV.DoubleVal = GV.IntVal.roundToDouble();
-      else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
-        (void)apf.convertFromAPInt(GV.IntVal,
-                                   false,
-                                   APFloat::rmNearestTiesToEven);
-        GV.IntVal = apf.bitcastToAPInt();
-      }
-      return GV;
-    }
-    case Instruction::SIToFP: {
-      GenericValue GV = getConstantValue(Op0);
-      if (CE->getType()->isFloatTy())
-        GV.FloatVal = float(GV.IntVal.signedRoundToDouble());
-      else if (CE->getType()->isDoubleTy())
-        GV.DoubleVal = GV.IntVal.signedRoundToDouble();
-      else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
-        (void)apf.convertFromAPInt(GV.IntVal,
-                                   true,
-                                   APFloat::rmNearestTiesToEven);
-        GV.IntVal = apf.bitcastToAPInt();
-      }
-      return GV;
-    }
-    case Instruction::FPToUI: // double->APInt conversion handles sign
-    case Instruction::FPToSI: {
-      GenericValue GV = getConstantValue(Op0);
-      uint32_t BitWidth = cast<IntegerType>(CE->getType())->getBitWidth();
-      if (Op0->getType()->isFloatTy())
-        GV.IntVal = APIntOps::RoundFloatToAPInt(GV.FloatVal, BitWidth);
-      else if (Op0->getType()->isDoubleTy())
-        GV.IntVal = APIntOps::RoundDoubleToAPInt(GV.DoubleVal, BitWidth);
-      else if (Op0->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
-        uint64_t v;
-        bool ignored;
-        (void)apf.convertToInteger(MutableArrayRef(v), BitWidth,
-                                   CE->getOpcode()==Instruction::FPToSI,
-                                   APFloat::rmTowardZero, &ignored);
-        GV.IntVal = v; // endian?
-      }
-      return GV;
-    }
     case Instruction::PtrToInt: {
       GenericValue GV = getConstantValue(Op0);
       uint32_t PtrWidth = DL.getTypeSizeInBits(Op0->getType());
@@ -781,103 +708,19 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       return GV;
     }
     case Instruction::Add:
-    case Instruction::FAdd:
     case Instruction::Sub:
-    case Instruction::FSub:
-    case Instruction::Mul:
-    case Instruction::FMul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::And:
-    case Instruction::Or:
     case Instruction::Xor: {
+      assert(Op0->getType()->isIntegerTy() && "Bad binop type!");
       GenericValue LHS = getConstantValue(Op0);
       GenericValue RHS = getConstantValue(CE->getOperand(1));
       GenericValue GV;
-      switch (CE->getOperand(0)->getType()->getTypeID()) {
-      default: llvm_unreachable("Bad add type!");
-      case Type::IntegerTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid integer opcode");
-          case Instruction::Add: GV.IntVal = LHS.IntVal + RHS.IntVal; break;
-          case Instruction::Sub: GV.IntVal = LHS.IntVal - RHS.IntVal; break;
-          case Instruction::Mul: GV.IntVal = LHS.IntVal * RHS.IntVal; break;
-          case Instruction::UDiv:GV.IntVal = LHS.IntVal.udiv(RHS.IntVal); break;
-          case Instruction::SDiv:GV.IntVal = LHS.IntVal.sdiv(RHS.IntVal); break;
-          case Instruction::URem:GV.IntVal = LHS.IntVal.urem(RHS.IntVal); break;
-          case Instruction::SRem:GV.IntVal = LHS.IntVal.srem(RHS.IntVal); break;
-          case Instruction::And: GV.IntVal = LHS.IntVal & RHS.IntVal; break;
-          case Instruction::Or:  GV.IntVal = LHS.IntVal | RHS.IntVal; break;
-          case Instruction::Xor: GV.IntVal = LHS.IntVal ^ RHS.IntVal; break;
-        }
-        break;
-      case Type::FloatTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid float opcode");
-          case Instruction::FAdd:
-            GV.FloatVal = LHS.FloatVal + RHS.FloatVal; break;
-          case Instruction::FSub:
-            GV.FloatVal = LHS.FloatVal - RHS.FloatVal; break;
-          case Instruction::FMul:
-            GV.FloatVal = LHS.FloatVal * RHS.FloatVal; break;
-          case Instruction::FDiv:
-            GV.FloatVal = LHS.FloatVal / RHS.FloatVal; break;
-          case Instruction::FRem:
-            GV.FloatVal = std::fmod(LHS.FloatVal,RHS.FloatVal); break;
-        }
-        break;
-      case Type::DoubleTyID:
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid double opcode");
-          case Instruction::FAdd:
-            GV.DoubleVal = LHS.DoubleVal + RHS.DoubleVal; break;
-          case Instruction::FSub:
-            GV.DoubleVal = LHS.DoubleVal - RHS.DoubleVal; break;
-          case Instruction::FMul:
-            GV.DoubleVal = LHS.DoubleVal * RHS.DoubleVal; break;
-          case Instruction::FDiv:
-            GV.DoubleVal = LHS.DoubleVal / RHS.DoubleVal; break;
-          case Instruction::FRem:
-            GV.DoubleVal = std::fmod(LHS.DoubleVal,RHS.DoubleVal); break;
-        }
-        break;
-      case Type::X86_FP80TyID:
-      case Type::PPC_FP128TyID:
-      case Type::FP128TyID: {
-        const fltSemantics &Sem = CE->getOperand(0)->getType()->getFltSemantics();
-        APFloat apfLHS = APFloat(Sem, LHS.IntVal);
-        switch (CE->getOpcode()) {
-          default: llvm_unreachable("Invalid long double opcode");
-          case Instruction::FAdd:
-            apfLHS.add(APFloat(Sem, RHS.IntVal), APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FSub:
-            apfLHS.subtract(APFloat(Sem, RHS.IntVal),
-                            APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FMul:
-            apfLHS.multiply(APFloat(Sem, RHS.IntVal),
-                            APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FDiv:
-            apfLHS.divide(APFloat(Sem, RHS.IntVal),
-                          APFloat::rmNearestTiesToEven);
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          case Instruction::FRem:
-            apfLHS.mod(APFloat(Sem, RHS.IntVal));
-            GV.IntVal = apfLHS.bitcastToAPInt();
-            break;
-          }
-        }
-        break;
+      switch (CE->getOpcode()) {
+        default: llvm_unreachable("Invalid integer opcode");
+        case Instruction::Add: GV.IntVal = LHS.IntVal + RHS.IntVal; break;
+        case Instruction::Sub: GV.IntVal = LHS.IntVal - RHS.IntVal; break;
+        case Instruction::Xor: GV.IntVal = LHS.IntVal ^ RHS.IntVal; break;
       }
-      return GV;
+      break;
     }
     default:
       break;
