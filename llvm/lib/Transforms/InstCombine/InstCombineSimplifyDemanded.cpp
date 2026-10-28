@@ -2396,7 +2396,17 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                  Depth + 1))
     return &I;
 
-  Known = KnownFPClass::fptrunc(KnownSrc);
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const Function *Fn = I.getFunction();
+  DenormalMode DstMode =
+      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
 
   return simplifyDemandedFPClassResult(&I, FMF, DemandedMask, Known,
@@ -2894,6 +2904,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if ((DemandedMask & fcPosNormal) != fcNone)
       SrcDemandedMask |= fcPosSubnormal;
 
+    // TODO: Properly handle ppcf128 = fpext(f80) (since f80 has a larger
+    // exponent range than ppcf128).
+
     KnownFPClass KnownSrc;
     if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ, Depth + 1))
       return I;
@@ -2902,7 +2915,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     const fltSemantics &SrcTy =
         I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    Known =
+        KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, F.getDenormalMode(DstTy),
+                            F.getDenormalMode(SrcTy));
     Known.knownNot(~DemandedMask);
 
     return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,

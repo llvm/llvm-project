@@ -132,6 +132,7 @@ expand_template(
     name = "ConfigHeader",
     out = "include/lldb/Host/Config.h",
     substitutions = {
+        "#cmakedefine01 HAVE_GETEXECPATH": "#define HAVE_GETEXECPATH 0",
         "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
         "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
 

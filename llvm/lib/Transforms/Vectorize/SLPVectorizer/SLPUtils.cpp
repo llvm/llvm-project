@@ -481,11 +481,11 @@ bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-         all_of(make_isa_range<Instruction>(I->operands()),
+  return all_of(make_isa_range<Instruction>(I->operands()),
                 [I](Instruction *IO) {
                   return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-                });
+                }) &&
+         !mayHaveNonDefUseDependency(*I);
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -493,13 +493,12 @@ bool isUsedOutsideBlock(Value *V) {
   if (!I)
     return true;
   // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
+  return !I->hasNUsesOrMore(UsesLimit) && all_of(I->users(), [I](User *U) {
+    auto *IU = dyn_cast<Instruction>(U);
+    if (!IU)
+      return true;
+    return IU->getParent() != I->getParent() || isa<PHINode>(IU);
+  }) && !I->mayReadOrWriteMemory();
 }
 
 bool doesNotNeedToBeScheduled(Value *V) {

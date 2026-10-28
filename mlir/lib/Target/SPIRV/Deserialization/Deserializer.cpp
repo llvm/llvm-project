@@ -314,6 +314,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   }
   case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
   case spirv::Decoration::Location:
