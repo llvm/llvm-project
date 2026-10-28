@@ -21257,7 +21257,8 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
 
       bool IsDependentObjectParam = [&]() {
         const ParmVarDecl *ObjectParamDecl = MD->getParamDecl(0);
-        assert(ObjectParamDecl && "Shall explicit object parameter exist here.");
+        assert(ObjectParamDecl &&
+               "Shall explicit object parameter exist here.");
 
         QualType ObjectParamType = ObjectParamDecl->getType();
         if (!ObjectParamType->isDependentType())
