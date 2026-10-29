@@ -2138,6 +2138,22 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
     break;
+  case SPIRV::OpGroupNonUniformQuadAllKHR:
+    if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+      report_fatal_error("OpGroupNonUniformQuadAllKHR requires SPIR-V 1.3",
+                         false);
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+      report_fatal_error("OpGroupNonUniformQuadAllKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_quad_control",
+                         false);
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+      report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                         "extension: SPV_KHR_maximal_reconvergence",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+    Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
+    break;
   case SPIRV::OpGroupNonUniformRotateKHR:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
       report_fatal_error("OpGroupNonUniformRotateKHR instruction requires the "

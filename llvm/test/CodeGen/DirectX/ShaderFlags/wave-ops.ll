@@ -49,6 +49,13 @@ entry:
   ret i1 %ret
 }
 
+define noundef i1 @quad_all(i1 %x) {
+entry:
+  ; CHECK: Function quad_all : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.quad.all(i1 %x)
+  ret i1 %ret
+}
+
 define noundef i32 @wave_bit_or(i32 %x) {
 entry:
   ; CHECK: Function wave_bit_or : [[WAVE_FLAG]]

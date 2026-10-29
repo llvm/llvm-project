@@ -231,6 +231,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
+   * - ``SPV_KHR_quad_control``
+     - Adds the quad vote instruction for HLSL `QuadAll`.
+       This instruction also requires `SPV_KHR_maximal_reconvergence`.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``

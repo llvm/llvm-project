@@ -329,6 +329,8 @@ defvar QuadOpKind_ReadAcrossX = 0;
 defvar QuadOpKind_ReadAcrossY = 1;
 defvar QuadOpKind_ReadAcrossDiagonal = 2;
 
+defvar QuadVoteOpKind_All = 1;
+
 // Intrinsic arg selection
 class IntrinArgSelectType;
 def IntrinArgSelect_Index : IntrinArgSelectType;
@@ -1560,6 +1562,20 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def QuadVote : DXILOp<222, quadVote> {
+  let Doc = "compares a boolean condition across a quad";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_all,
+                 [IntrinArgIndex<0>, IntrinArgI8<QuadVoteOpKind_All>]>
+  ];
+  let arguments = [Int1Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_7, [Int1Ty]>];
+  let stages = [
+    Stages<DXIL1_7, [library, compute, amplification, mesh, pixel, node]>
+  ];
 }
 
 def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {

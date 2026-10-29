@@ -488,6 +488,10 @@ let TargetPrefix = "dx" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  def int_dx_quad_all
+      : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty],
+                              [IntrConvergent, IntrNoMem]>;
+
   def int_dx_quad_read_across_x
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,
