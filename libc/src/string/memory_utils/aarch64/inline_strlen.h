@@ -12,6 +12,7 @@
 
 #if defined(__ARM_NEON)
 #include "src/__support/CPP/bit.h" // countr_zero
+#include "src/string/memory_utils/utils.h"
 #include <arm_neon.h>
 #include <stddef.h> // size_t
 namespace LIBC_NAMESPACE_DECL {
@@ -21,8 +22,7 @@ string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
 
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
-  const Vector *block_ptr =
-      reinterpret_cast<const Vector *>(src - misalign_bytes);
+  const Vector *block_ptr = align_down_for_overread<Vector>(src);
   Vector v = *block_ptr;
   Vector vcmp = vceqz_u8(v);
   uint64x1_t cmp_mask = vreinterpret_u64_u8(vcmp);
