@@ -57,7 +57,7 @@ Error XCoreCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 }
 
 void XCoreCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreFrameToArgsOffsetEliminationPass
+  addMachineFunctionPass(XCoreFrameToArgsOffsetEliminationPass(), PMW);
 }
 
 void XCoreCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
