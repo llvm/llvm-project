@@ -171,7 +171,7 @@ subroutine do_simd_first_lastprivate_collapse(a)
   ! CHECK: %[[COLLAPSE_ORIGINAL_A:.*]]:2 = hlfir.declare %arg0
   ! CHECK: omp.parallel {
   ! CHECK: omp.wsloop private(@{{.*}}firstprivate{{.*}} %[[COLLAPSE_ORIGINAL_A]]#0 -> %[[COLLAPSE_A:.*]] : !fir.ref<i32>)
-  ! CHECK-SAME private_barrier
+  ! CHECK-SAME: private_barrier
   ! CHECK-NEXT: omp.simd private(
   ! CHECK-SAME: -> %[[COLLAPSE_B:[^, ]+]],
   ! CHECK-NEXT: omp.loop_nest (%{{.*}}, %{{.*}}) : i32
