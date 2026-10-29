@@ -371,6 +371,25 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
 /// Get co-execution info for a gfx950 MFMA instruction.
 CoExecInfo getMFMACoExecInfo(unsigned Opcode);
 
+/// Get the first cycle, counted from \p MFMA issuing at cycle 0, at which a
+/// VALU can issue on gfx942 (MI300X, or MI308X with the peak TOPS limiter
+/// enabled) or on gfx950. With the limiter disabled, MI308X holds VALU until
+/// an XDL's passes end. A scaled MFMA is assumed to issue behind another MFMA;
+/// issued into an idle MFMA pipe, it takes one more cycle.
+unsigned getVALUIssueCycle(const MachineInstr &MFMA, const SIInstrInfo &TII);
+
+/// Same as getVALUIssueCycle, for a packed VALU or a DOT with opcode
+/// \p PackedVALUOpc.
+unsigned getPackedVALUIssueCycle(const MachineInstr &MFMA,
+                                 unsigned PackedVALUOpc,
+                                 const SIInstrInfo &TII);
+
+/// Same as getVALUIssueCycle, for a packed VALU that is FMA-like
+/// (V_PK_{ADD,FMA,MUL}_F32 or V_PK_MOV_B32) if \p IsFMALike, or for a DOT if
+/// \p IsDOTLike.
+unsigned getPackedVALUIssueCycle(const MachineInstr &MFMA, bool IsFMALike,
+                                 bool IsDOTLike, const SIInstrInfo &TII);
+
 /// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
 /// pattern from the opcode (and operand formats for the F8F6F4 variants).
 inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
