@@ -2933,6 +2933,8 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
       O << " nuw";
     if (WrapFlags.HasNSW)
       O << " nsw";
+    if (WrapFlags.HasSpeculativeNSW)
+      O << " snsw";
     break;
   case OperationType::Trunc:
     if (TruncFlags.HasNUW)

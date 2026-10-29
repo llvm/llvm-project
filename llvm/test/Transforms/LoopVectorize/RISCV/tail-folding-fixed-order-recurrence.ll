@@ -505,9 +505,9 @@ for.end:
   ret i32 %for1
 }
 
-define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
+define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @first_order_recurrence_indvar(
-; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[TC:%.*]]) #[[ATTR0]] {
+; IF-EVL-SAME: ptr noalias [[A:%.*]], i64 [[TC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
@@ -545,7 +545,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    ret void
 ;
 ; NO-VP-LABEL: define void @first_order_recurrence_indvar(
-; NO-VP-SAME: ptr noalias [[A:%.*]], i64 [[TC:%.*]]) #[[ATTR0]] {
+; NO-VP-SAME: ptr noalias [[A:%.*]], i64 [[TC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
