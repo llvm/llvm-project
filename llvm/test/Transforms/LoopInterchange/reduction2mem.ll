@@ -88,3 +88,80 @@ outerloop_latch:
 exit:
   ret void
 }
+
+; The store address is formed next to the store, in the outer loop latch, as
+; optimized Fortran IR tends to leave it. It is hoisted into the inner loop
+; preheader so that the load and store placed inside the inner loop can use it.
+;
+; for (int i = 0; i < 100; i++) {
+;   r = 0;
+;   for (int j = 0; j < 100; j++)
+;     r = r + a[j][i] * b[j][i];
+;   s[i] = r;
+; }
+
+define void @addr_in_latch(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
+; CHECK-LABEL: define void @addr_in_latch(
+; CHECK-SAME: ptr noalias readonly [[A:%.*]], ptr noalias readonly [[B:%.*]], ptr noalias writeonly [[S:%.*]]) {
+; CHECK-NEXT:  [[OUTERLOOP_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER:.*]]
+; CHECK:       [[OUTERLOOP_HEADER]]:
+; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ 0, %[[OUTERLOOP_HEADER_PREHEADER]] ], [ [[INDEX_I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[INVARIANT_GEP_US:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX_I]]
+; CHECK-NEXT:    [[INVARIANT_GEP32_US:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[INDEX_I]]
+; CHECK-NEXT:    br label %[[INNERLOOP_SPLIT1:.*]]
+; CHECK:       [[INNERLOOP_SPLIT1]]:
+; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ 0, %[[OUTERLOOP_HEADER]] ], [ [[TMP3:%.*]], %[[INNERLOOP_SPLIT1]] ]
+; CHECK-NEXT:    [[REDUCTION:%.*]] = phi double [ 0.000000e+00, %[[OUTERLOOP_HEADER]] ], [ [[ADD:%.*]], %[[INNERLOOP_SPLIT1]] ]
+; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[INVARIANT_GEP_US]], i64 [[INDEX_J]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
+; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[INVARIANT_GEP32_US]], i64 [[INDEX_J]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADDR_B_J_I]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[ADD]] = fadd fast double [[MUL]], [[REDUCTION]]
+; CHECK-NEXT:    [[TMP3]] = add nuw nsw i64 [[INDEX_J]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 100
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[OUTERLOOP_LATCH]], label %[[INNERLOOP_SPLIT1]]
+; CHECK:       [[OUTERLOOP_LATCH]]:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[INNERLOOP_SPLIT1]] ]
+; CHECK-NEXT:    [[ADDR_S:%.*]] = getelementptr inbounds nuw double, ptr [[S]], i64 [[INDEX_I]]
+; CHECK-NEXT:    store double [[LCSSA]], ptr [[ADDR_S]], align 8
+; CHECK-NEXT:    [[INDEX_I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[INDEX_I_NEXT]], 100
+; CHECK-NEXT:    br i1 [[COND2]], label %[[INNERLOOP_SPLIT:.*]], label %[[OUTERLOOP_HEADER]]
+; CHECK:       [[INNERLOOP_SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outerloop_header
+
+outerloop_header:
+  %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
+  %invariant.gep.us = getelementptr inbounds nuw double, ptr %a, i64 %index_i
+  %invariant.gep32.us = getelementptr inbounds nuw double, ptr %b, i64 %index_i
+  br label %innerloop
+
+innerloop:
+  %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
+  %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
+  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %0 = load double, ptr %addr_a_j_i, align 8
+  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %1 = load double, ptr %addr_b_j_i, align 8
+  %mul = fmul fast double %1, %0
+  %add = fadd fast double %mul, %reduction
+  %index_j.next = add nuw nsw i64 %index_j, 1
+  %cond1 = icmp eq i64 %index_j.next, 100
+  br i1 %cond1, label %outerloop_latch, label %innerloop
+
+outerloop_latch:
+  %lcssa = phi double [ %add, %innerloop ]
+  %addr_s = getelementptr inbounds nuw double, ptr %s, i64 %index_i
+  store double %lcssa, ptr %addr_s, align 8
+  %index_i.next = add nuw nsw i64 %index_i, 1
+  %cond2 = icmp eq i64 %index_i.next, 100
+  br i1 %cond2, label %exit, label %outerloop_header
+
+exit:
+  ret void
+}
