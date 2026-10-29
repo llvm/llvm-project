@@ -36,6 +36,42 @@ class Instruction;
 class Type;
 class Constant;
 
+/// Reinterprets the bits of a value as another type of the same size, e.g.,
+/// float to i32, ptr to i64, or double to <2 x i32>.
+class Reinterpret {
+  /// A single cast in the chain built by getCastChain().
+  using CastStep = std::pair<Instruction::Opcode, Type *>;
+
+  /// \returns an integer type with the same layout as \p Ty: iN for scalars,
+  /// <N x iM> for vectors.
+  static Type *getIntTypeFor(Type *Ty, const DataLayout &DL);
+
+  /// \returns the casts that reinterpret \p SrcTy as \p DestTy, empty if the
+  /// types match, or nullopt if a non-integral pointer is involved.
+  LLVM_ABI static std::optional<SmallVector<CastStep, 3>>
+  getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL);
+
+public:
+  /// \returns true if \p SrcTy can be reinterpreted as \p DestTy.
+  static bool canReinterpret(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
+    return getCastChain(SrcTy, DestTy, DL).has_value();
+  }
+
+  /// Reinterprets \p V as \p DestTy, which must have the same size in \p DL,
+  /// inserting casts before \p WhereIt. Casts of constants fold, so nothing is
+  /// inserted for those. \returns nullptr if a non-integral pointer is
+  /// involved.
+  LLVM_ABI static Value *reinterpretValue(Value *V, Type *DestTy,
+                                          BasicBlock::iterator WhereIt,
+                                          Context &Ctx, const DataLayout &DL);
+
+  /// Reinterprets \p C as \p DestTy, e.g., float 1.0 to i32 0x3f800000, or a
+  /// null pointer to i64 0. \returns nullptr if a non-integral pointer is
+  /// involved.
+  LLVM_ABI static Constant *reinterpretConstant(Constant *C, Type *DestTy,
+                                                const DataLayout &DL);
+};
+
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
   /// The region saved by saveIR(), used by acceptOrRevert().
@@ -63,19 +99,13 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// or nullptr if \p Loads are not a vectorizable.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
-  /// Reinterprets \p C as type \p DestTy without changing its bits, e.g.,
-  /// float 1.0 to i32 0x3f800000, or a null pointer to i64 0.
-  ///
-  /// \p DestTy must not be a pointer whose size is unknown.
-  Constant *getEquivalentConstantWithType(Constant *C, Type *DestTy);
-
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
   /// \returns the packed constant vector, or nullptr if some constant cannot
-  /// be converted, e.g., a vector constant that is not yet flattened, or a
-  /// wide constant without a known bit pattern such as a ConstantExpr or a
-  /// global's address.
+  /// be converted, e.g., a vector constant that is not yet flattened, a
+  /// non-integral pointer, or a wide constant without a known bit pattern such
+  /// as a ConstantExpr or a global's address.
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive

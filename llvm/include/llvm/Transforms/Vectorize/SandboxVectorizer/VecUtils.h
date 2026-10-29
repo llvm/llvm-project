@@ -162,6 +162,15 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+
+  /// \returns true if \p Ty is a pointer, or a vector of pointers, in a
+  /// non-integral address space, which has no stable integer representation.
+  static bool isNonIntegralPtr(Type *Ty, const DataLayout &DL) {
+    Type *ScalarTy = Ty->getScalarType();
+    return ScalarTy->isPointerTy() &&
+           DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
+  }
+
   /// Classifies whether all bundle elements are integers, halves, floats,
   /// doubles, or pointers.
   class BndlTypeClassifier {
