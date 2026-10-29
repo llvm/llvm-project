@@ -48,6 +48,18 @@ enum STATIC_ROUNDING {
   NO_EXC = 8
 };
 
+/// VFPCLASS instruction immediate encoding bits.
+enum VFPClassBits {
+  VFPClassQNaN = 1 << 0,      // Bit 0: QNaN
+  VFPClassPosZero = 1 << 1,   // Bit 1: Positive Zero
+  VFPClassNegZero = 1 << 2,   // Bit 2: Negative Zero
+  VFPClassPosInf = 1 << 3,    // Bit 3: Positive Infinity
+  VFPClassNegInf = 1 << 4,    // Bit 4: Negative Infinity
+  VFPClassDenormal = 1 << 5,  // Bit 5: Denormal
+  VFPClassNegFinite = 1 << 6, // Bit 6: Negative Finite
+  VFPClassSNaN = 1 << 7,      // Bit 7: SNaN
+};
+
 /// The constants to describe instr prefixes if there are
 enum IPREFIXES {
   IP_NO_PREFIX = 0,
