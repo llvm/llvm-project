@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [],
+      "columnKind": "unicodeCodePoints",
+      "results": [],
+      "tool": {
+        "driver": {
+          "fullName": "clang ScalableStaticAnalysisFramework source transformation (cpp-bounded-buffers)",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang-ssaf",
+          "rules": [],
+          "version": "24.0.0git"
+        }
+      }
+    },
+    {
+      "artifacts": [],
+      "columnKind": "unicodeCodePoints",
+      "results": [],
+      "tool": {
+        "driver": {
+          "fullName": "clang ScalableStaticAnalysisFramework source transformation (cpp-bounded-buffers)",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang-ssaf",
+          "rules": [],
+          "version": "24.0.0git"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
