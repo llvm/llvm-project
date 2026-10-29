@@ -9,76 +9,210 @@
 
 declare void @use(ptr)
 
-define void @store(double %x) {
-; CHECK-LABEL: store:
+define void @store_in_range(double %x) {
+; CHECK-LABEL: store_in_range:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    lis 0, -1
-; CHECK-NEXT:    ori 0, 0, 32496
-; CHECK-NEXT:    stwux 1, 1, 0
-; CHECK-NEXT:    sub 0, 1, 0
-; CHECK-NEXT:    .cfi_def_cfa_offset 33040
+; CHECK-NEXT:    stwu 1, -256(1)
+; CHECK-NEXT:    stw 0, 260(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 256
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    lis 4, 0
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    ori 4, 4, 32776
-; CHECK-NEXT:    stbx 5, 1, 4
-; CHECK-NEXT:    lis 4, 0
-; CHECK-NEXT:    ori 4, 4, 33032
-; CHECK-NEXT:    evstddx 3, 1, 4
+; CHECK-NEXT:    evstdd 3, 248(1)
 ; CHECK-NEXT:    addi 3, 1, 8
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    mr 0, 31
-; CHECK-NEXT:    lwz 31, 0(1)
-; CHECK-NEXT:    mr 1, 31
-; CHECK-NEXT:    mr 31, 0
-; CHECK-NEXT:    lwz 0, 4(1)
+; CHECK-NEXT:    lwz 0, 260(1)
+; CHECK-NEXT:    addi 1, 1, 256
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %d = alloca double, align 8
-  %a = alloca [256 x i8], align 8
-  %big = alloca [32768 x i8], align 8
-  store i8 0, ptr %a, align 8
+  %large = alloca [240 x i8], align 8
   store double %x, ptr %d, align 8
-  call void @use(ptr %big)
+  call void @use(ptr %large)
   ret void
 }
 
-define double @load() {
-; CHECK-LABEL: load:
+define void @store_unaligned_in_range(double %x) {
+; CHECK-LABEL: store_unaligned_in_range:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    lis 0, -1
-; CHECK-NEXT:    ori 0, 0, 32496
-; CHECK-NEXT:    stwux 1, 1, 0
-; CHECK-NEXT:    sub 0, 1, 0
-; CHECK-NEXT:    .cfi_def_cfa_offset 33040
+; CHECK-NEXT:    stwu 1, -32(1)
+; CHECK-NEXT:    stw 0, 36(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 4
-; CHECK-NEXT:    lis 4, 0
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    ori 4, 4, 32776
-; CHECK-NEXT:    stbx 3, 1, 4
-; CHECK-NEXT:    addi 3, 1, 8
+; CHECK-NEXT:    evmergelo 3, 3, 4
+; CHECK-NEXT:    evstdd 3, 8(1)
+; CHECK-NEXT:    lwz 3, 8(1)
+; CHECK-NEXT:    stw 3, 17(1)
+; CHECK-NEXT:    lwz 3, 12(1)
+; CHECK-NEXT:    stw 3, 21(1)
+; CHECK-NEXT:    addi 3, 1, 16
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    lis 3, 0
-; CHECK-NEXT:    ori 3, 3, 33032
-; CHECK-NEXT:    evlddx 4, 1, 3
-; CHECK-NEXT:    mr 0, 31
-; CHECK-NEXT:    evmergehi 3, 4, 4
-; CHECK-NEXT:    lwz 31, 0(1)
-; CHECK-NEXT:    mr 1, 31
-; CHECK-NEXT:    mr 31, 0
-; CHECK-NEXT:    lwz 0, 4(1)
+; CHECK-NEXT:    lwz 0, 36(1)
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %buf = alloca [16 x i8], align 8
+  %p = getelementptr i8, ptr %buf, i32 1
+  store double %x, ptr %p, align 1
+  call void @use(ptr %buf)
+  ret void
+}
+
+define void @store_unaligned_offset_248(double %x) {
+; CHECK-LABEL: store_unaligned_offset_248:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -288(1)
+; CHECK-NEXT:    stw 0, 292(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 288
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    evmergelo 3, 3, 4
+; CHECK-NEXT:    evstdd 3, 16(1)
+; CHECK-NEXT:    lwz 3, 16(1)
+; CHECK-NEXT:    stw 3, 273(1)
+; CHECK-NEXT:    lwz 3, 20(1)
+; CHECK-NEXT:    stw 3, 277(1)
+; CHECK-NEXT:    addi 3, 1, 24
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    lwz 0, 292(1)
+; CHECK-NEXT:    addi 1, 1, 288
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %buf = alloca [264 x i8], align 8
+  %p = getelementptr i8, ptr %buf, i32 249
+  store double %x, ptr %p, align 1
+  call void @use(ptr %buf)
+  ret void
+}
+
+define void @store_out_of_range(double %x) {
+; CHECK-LABEL: store_out_of_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -272(1)
+; CHECK-NEXT:    stw 0, 276(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 272
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    evmergelo 3, 3, 4
+; CHECK-NEXT:    li 4, 264
+; CHECK-NEXT:    evstddx 3, 1, 4
+; CHECK-NEXT:    addi 3, 1, 16
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    lwz 0, 276(1)
+; CHECK-NEXT:    addi 1, 1, 272
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %d = alloca double, align 8
-  %a = alloca [256 x i8], align 8
-  %big = alloca [32768 x i8], align 8
-  store i8 0, ptr %a, align 8
-  call void @use(ptr %big)
+  %large = alloca [248 x i8], align 8
+  store double %x, ptr %d, align 8
+  call void @use(ptr %large)
+  ret void
+}
+
+define double @load_in_range() {
+; CHECK-LABEL: load_in_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -256(1)
+; CHECK-NEXT:    stw 0, 260(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 256
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    addi 3, 1, 248
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    addi 3, 1, 8
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    evldd 4, 248(1)
+; CHECK-NEXT:    evmergehi 3, 4, 4
+; CHECK-NEXT:    lwz 0, 260(1)
+; CHECK-NEXT:    addi 1, 1, 256
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %d = alloca double, align 8
+  %large = alloca [240 x i8], align 8
+  call void @use(ptr %d)
+  call void @use(ptr %large)
+  %v = load double, ptr %d, align 8
+  ret double %v
+}
+
+define double @load_unaligned_in_range() {
+; CHECK-LABEL: load_unaligned_in_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -32(1)
+; CHECK-NEXT:    stw 0, 36(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    addi 3, 1, 16
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    lwz 3, 17(1)
+; CHECK-NEXT:    stw 3, 8(1)
+; CHECK-NEXT:    lwz 3, 21(1)
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    evldd 4, 8(1)
+; CHECK-NEXT:    evmergehi 3, 4, 4
+; CHECK-NEXT:    lwz 0, 36(1)
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %buf = alloca [16 x i8], align 8
+  %p = getelementptr i8, ptr %buf, i32 1
+  call void @use(ptr %buf)
+  %v = load double, ptr %p, align 1
+  ret double %v
+}
+
+define double @load_unaligned_offset_248() {
+; CHECK-LABEL: load_unaligned_offset_248:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -272(1)
+; CHECK-NEXT:    stw 0, 276(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 272
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    addi 3, 1, 16
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    lwz 3, 265(1)
+; CHECK-NEXT:    stw 3, 8(1)
+; CHECK-NEXT:    lwz 3, 269(1)
+; CHECK-NEXT:    stw 3, 12(1)
+; CHECK-NEXT:    evldd 4, 8(1)
+; CHECK-NEXT:    evmergehi 3, 4, 4
+; CHECK-NEXT:    lwz 0, 276(1)
+; CHECK-NEXT:    addi 1, 1, 272
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %buf = alloca [256 x i8], align 8
+  %p = getelementptr i8, ptr %buf, i32 249
+  call void @use(ptr %buf)
+  %v = load double, ptr %p, align 1
+  ret double %v
+}
+
+define double @load_out_of_range() {
+; CHECK-LABEL: load_out_of_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -272(1)
+; CHECK-NEXT:    stw 0, 276(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 272
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    addi 3, 1, 264
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    addi 3, 1, 16
+; CHECK-NEXT:    bl use
+; CHECK-NEXT:    li 3, 264
+; CHECK-NEXT:    evlddx 4, 1, 3
+; CHECK-NEXT:    evmergehi 3, 4, 4
+; CHECK-NEXT:    lwz 0, 276(1)
+; CHECK-NEXT:    addi 1, 1, 272
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+  %d = alloca double, align 8
+  %large = alloca [248 x i8], align 8
+  call void @use(ptr %d)
+  call void @use(ptr %large)
   %v = load double, ptr %d, align 8
   ret double %v
 }
