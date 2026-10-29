@@ -1985,9 +1985,6 @@ struct MDFieldPrinter {
   void printNameTableKind(StringRef Name,
                           DICompileUnit::DebugNameTableKind NTK);
   void printFixedPointKind(StringRef Name, DIFixedPointType::FixedPointKind V);
-  template <class IndexTy>
-  void printFLIndex(StringRef Name, FLIndex<IndexTy> Index,
-                    bool ShouldSkipNull = true);
 };
 
 } // end anonymous namespace
@@ -2144,17 +2141,6 @@ void MDFieldPrinter::printFixedPointKind(StringRef Name,
   Out << FS << Name << ": " << DIFixedPointType::fixedPointKindString(V);
 }
 
-template <class IndexTy>
-void MDFieldPrinter::printFLIndex(StringRef Name, FLIndex<IndexTy> Index,
-                                  bool ShouldSkipNull) {
-  if (ShouldSkipNull && !Index)
-    return;
-  if (!Index)
-    Out << FS << Name << ": null";
-  else
-    Out << FS << Name << ": " << Index.get();
-}
-
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
@@ -2225,7 +2211,7 @@ static void writeMDFunctionLocalContext(raw_ostream &Out,
   // Write the entries for each FLMD array type.
   auto WriteEntries = [&](StringRef Name, auto Nodes) {
     Out << LS << Name << ": [";
-    if (PrintSingleFLMDLine) {
+    if (getIROptions(WriterCtx.Context->getContext()).print_single_flmd_line) {
       ListSeparator NodeLS;
       for (auto [Index, Node] : enumerate(Nodes)) {
         Out << NodeLS;
