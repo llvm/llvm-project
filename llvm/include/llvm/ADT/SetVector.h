@@ -158,13 +158,14 @@ public:
   std::pair<iterator, bool> insert(const value_type &X) {
     if constexpr (canBeSmall())
       if (isSmall()) {
-        if (!llvm::is_contained(vector_, X)) {
+        auto It = find(vector_, X);
+        if (It == end()) {
           vector_.push_back(X);
           if (vector_.size() > N)
             makeBig();
           return {std::prev(vector_.end()), true};
         }
-        return {find(vector_, X), false};
+        return {It, false};
       }
 
     bool result = set_.insert(X).second;

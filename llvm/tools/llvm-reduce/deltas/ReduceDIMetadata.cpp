@@ -37,7 +37,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     MDNode *MD = ToLook.back();
     ToLook.pop_back();
 
-    if (!Visited.insert(MD))
+    if (!Visited.insert(MD).second)
       continue;
 
     // Determine if the current MDNode is DebugInfo

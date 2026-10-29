@@ -252,7 +252,7 @@ cuf::DeviceCodeSet cuf::collectDeviceCode(mlir::ModuleOp mod,
     if (!callee || mlir::acc::isAccRoutine(callee) ||
         code.deviceFuncs.count(callee))
       return;
-    if (code.calledFromDevice.insert(callee) && !callee.isDeclaration())
+    if (code.calledFromDevice.insert(callee).second && !callee.isDeclaration())
       worklist.push_back(callee);
   };
   auto scan = [&](mlir::Operation *root) {

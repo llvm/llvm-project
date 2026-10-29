@@ -46,7 +46,7 @@ static CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
   const CallGraphNode::CallRecord *Node = &EntryNode;
   while (true) {
     // Did we see this node before?
-    if (!CallStackSet.insert(*Node))
+    if (!CallStackSet.insert(*Node).second)
       break; // Cycle completed! Note that didn't insert the node into stack!
     // Else, perform depth-first traversal: out of all callees, pick first one
     // that is part of this SCC. This is not guaranteed to yield shortest cycle.

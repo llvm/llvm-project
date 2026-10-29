@@ -30,7 +30,7 @@ static SetVector<Value *> collectReferencedValues(Value *Root) {
   while (!Worklist.empty()) {
     Value *Val = Worklist.front();
     Worklist.pop_front();
-    if (!Refs.insert(Val))
+    if (!Refs.insert(Val).second)
       continue;
 
     if (auto *O = dyn_cast<Operator>(Val)) {
