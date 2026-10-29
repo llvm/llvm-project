@@ -206,7 +206,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -347,12 +347,6 @@ void OpenBSD::AddClangSystemIncludeArgs(
 
   addExternCSystemInclude(DriverArgs, CC1Args,
                           concat(D.SysRoot, "/usr/include"));
-}
-
-void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                    llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
 }
 
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,

@@ -257,8 +257,8 @@ HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
     // specialization, as the ClassTemplateSpecializationDecl's
     // DeclContext/LexicalDeclContext will be for the primary template.
     if (auto *InstFromPartialTempl =
-            ClassTemplSpec->getSpecializedTemplateOrPartial()
-                .dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(
+                ClassTemplSpec->getSpecializedTemplateOrPartial()))
       return Response::ChangeDecl(
           InstFromPartialTempl->getLexicalDeclContext());
   }
@@ -1995,27 +1995,8 @@ bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *D) {
     return false;
 
   auto *Current = SemaRef.CurrentInstantiationScope;
-  if (!Current)
+  if (!Current || Current->getInstantiationOfIfExists(D))
     return false;
-  if (Current->getInstantiationOfIfExists(D))
-    return false;
-
-  for (auto *Outer = Current->getOuterScope(); Outer;
-       Outer = Outer->getOuterScope()) {
-    auto *Pair = Outer->getInstantiationOfIfExists(D);
-    if (!Pair)
-      continue;
-
-    if (auto *InstD = dyn_cast<Decl *>(*Pair)) {
-      Current->InstantiatedLocal(D, InstD);
-    } else {
-      Current->MakeInstantiatedLocalArgPack(D);
-      auto *Pack = cast<LocalInstantiationScope::DeclArgumentPack *>(*Pair);
-      for (auto *VD : *Pack)
-        Current->InstantiatedLocal(D, VD);
-    }
-    return false;
-  }
 
   // CWG2770: Function parameters should be instantiated when they are
   // needed by a satisfaction check of an atomic constraint or
@@ -2838,7 +2819,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     }
   }
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
-  if (Expr *E = TransExpr.dyn_cast<Expr *>())
+  if (Expr *E = dyn_cast<Expr *>(TransExpr))
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
                                   std::move(*TransRetReq));
   return RebuildExprRequirement(
@@ -3171,8 +3152,13 @@ bool Sema::SubstTypeConstraint(
   if (TemplArgInfo) {
     InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
     InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
-    if (SubstTemplateArguments(TemplArgInfo->arguments(), TemplateArgs,
-                               InstArgs))
+    // Constraints on lambda arguments can depend on the substituted parameters.
+    TemplateInstantiator Instantiator(
+        TemplateInstantiator::ForConstraintSubstitution, *this, TemplateArgs,
+        TC->getConceptNameLoc(), DeclarationName());
+    if (Instantiator.TransformTemplateArguments(
+            TemplArgInfo->arguments().begin(), TemplArgInfo->arguments().end(),
+            InstArgs))
       return true;
   }
   return AttachTypeConstraint(
@@ -3425,7 +3411,7 @@ PreparePackForExpansion(Sema &S, const CXXBaseSpecifier &Base,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;
@@ -4148,7 +4134,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *PartialSpec =
-          Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+          dyn_cast<ClassTemplatePartialSpecializationDecl *>(Specialized)) {
     // Instantiate using the best class template partial specialization.
     while (PartialSpec->getInstantiatedFromMember()) {
       // If we've found an explicit specialization of this class template,

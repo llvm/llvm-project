@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -986,6 +987,11 @@ void CastOperation::CheckDynamicCast() {
     SrcExpr = ExprError();
     return;
   }
+
+  // Similarly, dynamic_cast is not available in CUDA device code, except for
+  // dynamic_cast to void*.
+  if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
 
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {
@@ -2612,19 +2618,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     // casting the return value of dlsym() and GetProcAddress().
     // FIXME: Conditionally-supported behavior should be configurable in the
     // TargetInfo or similar.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
   if (DestType->isFunctionPointerType()) {
     // See above.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
@@ -2980,6 +2980,16 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
           Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
           SrcExpr.get()->getValueKind(), nullptr, CCK);
     Kind = CK_HLSLAggregateSplatCast;
+    return true;
+  }
+
+  // HLSL includes packed data types that can be converted directly to and from
+  // uint, and with each other
+  if (Self.HLSL().CanPerformPackedTypeCast(SrcExpr.get(), DestType)) {
+    SrcExpr =
+        Self.ImpCastExprToType(SrcExpr.get(), DestType, CK_IntegralCast,
+                               SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_IntegralCast;
     return true;
   }
 

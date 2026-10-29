@@ -20,7 +20,7 @@
 namespace llvm {
 namespace jitlink {
 
-/// Create a LinkGraph from an ELF/aarch64 relocatable object
+/// Create a LinkGraph from an ELF/aarch64 (little-endian) relocatable object
 ///
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
@@ -29,10 +29,24 @@ LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_aarch64(
     MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP);
 
-/// jit-link the given object buffer, which must be a ELF aarch64 relocatable
-/// object file.
+/// Create a LinkGraph from an ELF/aarch64_be (BE8) relocatable object
+///
+/// Note: The graph does not take ownership of the underlying buffer, nor copy
+/// its contents. The caller is responsible for ensuring that the object buffer
+/// outlives the graph.
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject_aarch64_be(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP);
+
+/// jit-link the given object buffer, which must be an ELF aarch64
+/// (little-endian) relocatable object file.
 LLVM_ABI void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
                                std::unique_ptr<JITLinkContext> Ctx);
+
+/// jit-link the given object buffer, which must be an ELF aarch64_be (BE8)
+/// relocatable object file.
+LLVM_ABI void link_ELF_aarch64_be(std::unique_ptr<LinkGraph> G,
+                                  std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm

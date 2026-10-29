@@ -24,8 +24,21 @@ libc_test(
 )
 
 libc_test(
+    name = "fp_bitwise_test",
+    srcs = ["fp_bitwise_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_fp_bitwise",
+        "//libc:__support_macros_properties_types",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
     name = "bfloat16_test",
     srcs = ["bfloat16_test.cpp"],
+    overlay_build_only = True,  # Depends on mpfr
     deps = [
         "//libc:__support_fputil_bfloat16",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -38,6 +51,7 @@ libc_test(
     name = "dyadic_float_test",
     srcs = ["dyadic_float_test.cpp"],
     copts = ["-frounding-math"],
+    overlay_build_only = True,  # Depends on mpfr
     deps = [
         "//libc:__support_big_int",
         "//libc:__support_fputil_dyadic_float",
@@ -51,6 +65,7 @@ libc_test(
 libc_test(
     name = "rounding_mode_test",
     srcs = ["rounding_mode_test.cpp"],
+    overlay_build_only = True,  # Depends on mpfr
     deps = [
         "//libc:__support_fputil_rounding_mode",
         "//libc:__support_uint128",
@@ -66,6 +81,19 @@ libc_test(
         "//libc:__support_fputil_bfloat16",
         "//libc:__support_fputil_comparison_operations",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_macros_properties_types",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "is_integer_test",
+    srcs = ["is_integer_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:__support_fputil_float128",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_is_integer",
         "//libc:__support_macros_properties_types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],

@@ -23,9 +23,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 // __non_propagating_cache is a helper type that allows storing an optional value in it,
@@ -98,8 +98,8 @@ public:
 struct __empty_cache {};
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H

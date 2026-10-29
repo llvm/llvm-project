@@ -84,9 +84,9 @@ define void @ashr_zero(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%iv>, ir<0>
-; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
-; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%l>
@@ -343,7 +343,7 @@ define void @usub_sat(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%idx> = call ir<%iv>, ir<0>, ir<@llvm.usub.sat.i64>
+; CHECK-NEXT:      EMIT ir<%idx> = call i64 @llvm.usub.sat.i64(ir<%iv>, ir<0>)
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
@@ -406,7 +406,7 @@ define void @uadd_sat(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%idx> = call ir<%iv>, ir<0>, ir<@llvm.uadd.sat.i64>
+; CHECK-NEXT:      EMIT ir<%idx> = call i64 @llvm.uadd.sat.i64(ir<%iv>, ir<0>)
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
@@ -470,7 +470,7 @@ define void @usub_sat_clamped(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%idx> = call ir<4>, ir<%iv>, ir<@llvm.usub.sat.i64>
+; CHECK-NEXT:      EMIT ir<%idx> = call i64 @llvm.usub.sat.i64(ir<4>, ir<%iv>)
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>

@@ -5,6 +5,7 @@ add_lldb_library(lldbPluginTypeSystemClang PLUGIN
     Support
   LINK_LIBS
     lldbCore
+    lldbInterpreter
     lldbSymbol
     lldbTarget
     lldbUtility
@@ -15,6 +16,8 @@ add_lldb_library(lldbPluginTypeSystemClang PLUGIN
   CLANG_LIBS
     clangAST
     clangBasic
+    clangDriver
     clangFrontend
     clangSema
+    clangSerialization
 )

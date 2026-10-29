@@ -218,14 +218,28 @@ template <typename SubPattern_t> struct Splat_match {
       auto *Splat = C->getSplatValue();
       return Splat ? SubPattern.match(Splat) : false;
     }
-    // TODO: Extend to other cases (e.g. shufflevectors).
-    return false;
+
+    auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
+    if (!Shuffle || !Shuffle->isZeroEltSplat())
+      return false;
+
+    // Look for an insertelement.
+    auto *Insert = dyn_cast<InsertElementInst>(Shuffle->getOperand(0));
+    if (!Insert)
+      return false;
+
+    Value *SplatElt = Insert->getOperand(1);
+    ConstantInt *Idx = dyn_cast<ConstantInt>(Insert->getOperand(2));
+    if (!Idx || !Idx->isZero())
+      return false;
+
+    return SubPattern.match(SplatElt);
   }
 };
 
-/// Match a constant splat. TODO: Extend this to non-constant splats.
-template <typename T>
-inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
+/// Match a vector splat. May be a constant splat or a shufflevector of the
+/// first element.
+template <typename T> inline Splat_match<T> m_Splat(const T &SubPattern) {
   return SubPattern;
 }
 
@@ -582,16 +596,18 @@ inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
   return cst_pred_ty<is_non_zero_int>();
 }
 
-struct is_zero {
+template <bool AllowPoison> struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
     // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    return C && (C->isNullValue() ||
+                 cst_pred_ty<is_zero_int, AllowPoison>().match(C));
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
-inline is_zero m_Zero() { return is_zero(); }
+inline is_zero<true> m_Zero() { return is_zero<true>(); }
+inline is_zero<false> m_ZeroForbidPoison() { return is_zero<false>(); }
 
 inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 
@@ -683,6 +699,17 @@ struct icmp_pred_with_threshold {
 inline cst_pred_ty<icmp_pred_with_threshold>
 m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
   cst_pred_ty<icmp_pred_with_threshold> P;
+  P.Pred = Predicate;
+  P.Thr = &Threshold;
+  return P;
+}
+
+/// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
+/// to Threshold. For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<icmp_pred_with_threshold, false>
+m_SpecificInt_ICMP_ForbidPoison(ICmpInst::Predicate Predicate,
+                                const APInt &Threshold) {
+  cst_pred_ty<icmp_pred_with_threshold, false> P;
   P.Pred = Predicate;
   P.Thr = &Threshold;
   return P;
@@ -1977,6 +2004,21 @@ m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
+/// Matches BitInsertInst.
+template <typename Base_t, typename Val_t, typename Off_t>
+inline ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>
+m_BitInsert(const Base_t &Base, const Val_t &Val, const Off_t &Off) {
+  return ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>(Base, Val,
+                                                                      Off);
+}
+
+/// Matches BitExtractInst.
+template <typename Src_t, typename Off_t>
+inline TwoOps_match<Src_t, Off_t, Instruction::BitExtract>
+m_BitExtract(const Src_t &Src, const Off_t &Off) {
+  return TwoOps_match<Src_t, Off_t, Instruction::BitExtract>(Src, Off);
+}
+
 /// Matches shuffle.
 template <typename T0, typename T1, typename T2> struct Shuffle_match {
   T0 Op1;
@@ -2982,6 +3024,12 @@ template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
                                                          const RHS &R) {
   return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, true> m_c_Cmp(const LHS &L,
+                                                       const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.

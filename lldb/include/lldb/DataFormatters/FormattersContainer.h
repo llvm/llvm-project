@@ -40,7 +40,7 @@ public:
 class TypeMatcher {
   /// Type name for exact match, or name of the python callback if m_match_type
   /// is `eFormatterMatchCallback`.
-  ConstString m_name;
+  std::string m_name;
   RegularExpression m_type_name_regex;
   /// Indicates what kind of matching strategy should be used:
   /// - eFormatterMatchExact: match the exact type name in m_name.
@@ -54,8 +54,8 @@ class TypeMatcher {
   // match any type because of the way we strip qualifiers from typenames this
   // method looks for the case where the user is adding a
   // "class","struct","enum" or "union" Foo and strips the unnecessary qualifier
-  static ConstString StripTypeName(ConstString type) {
-    if (type.IsEmpty())
+  static llvm::StringRef StripTypeName(llvm::StringRef type) {
+    if (type.empty())
       return type;
 
     llvm::StringRef type_lexer(type);
@@ -66,14 +66,15 @@ class TypeMatcher {
     type_lexer.consume_front("union ");
     type_lexer = type_lexer.ltrim();
 
-    return ConstString(type_lexer);
+    return type_lexer;
   }
 
 public:
   TypeMatcher() = delete;
   /// Creates a matcher that accepts any type with exactly the given type name.
-  TypeMatcher(ConstString type_name)
-      : m_name(type_name), m_match_type(lldb::eFormatterMatchExact) {}
+  TypeMatcher(std::string type_name)
+      : m_name(std::move(type_name)), m_match_type(lldb::eFormatterMatchExact) {
+  }
   /// Creates a matcher that accepts any type matching the given regex.
   TypeMatcher(RegularExpression regex)
       : m_type_name_regex(std::move(regex)),
@@ -89,13 +90,13 @@ public:
 
   /// True iff this matches the given type.
   bool Matches(FormattersMatchCandidate candidate_type) const {
-    ConstString type_name = candidate_type.GetTypeName();
+    llvm::StringRef type_name = candidate_type.GetTypeName().GetStringRef();
     switch (m_match_type) {
     case lldb::eFormatterMatchExact:
       return m_name == type_name ||
              StripTypeName(m_name) == StripTypeName(type_name);
     case lldb::eFormatterMatchRegex:
-      return m_type_name_regex.Execute(type_name.GetStringRef());
+      return m_type_name_regex.Execute(type_name);
     case lldb::eFormatterMatchCallback:
       // CommandObjectType{Synth,Filter}Add tries to prevent the user from
       // creating both a synthetic child provider and a filter for the same type
@@ -104,7 +105,7 @@ public:
       // Skip callback matching in these cases.
       if (candidate_type.GetScriptInterpreter())
         return candidate_type.GetScriptInterpreter()->FormatterCallbackFunction(
-            m_name.AsCString(nullptr),
+            m_name.c_str(),
             std::make_shared<TypeImpl>(candidate_type.GetType()));
     }
     return false;
@@ -113,11 +114,11 @@ public:
   lldb::FormatterMatchType GetMatchType() const { return m_match_type; }
 
   /// Returns the underlying match string for this TypeMatcher.
-  ConstString GetMatchString() const {
+  llvm::StringRef GetMatchString() const {
     if (m_match_type == lldb::eFormatterMatchExact)
-        return StripTypeName(m_name);
+      return StripTypeName(m_name);
     if (m_match_type == lldb::eFormatterMatchRegex)
-        return ConstString(m_type_name_regex.GetText());
+      return m_type_name_regex.GetText();
     return m_name;
   }
 
@@ -221,8 +222,7 @@ public:
       return lldb::TypeNameSpecifierImplSP();
     TypeMatcher type_matcher = m_map[index].first;
     return std::make_shared<TypeNameSpecifierImpl>(
-        type_matcher.GetMatchString().GetStringRef(),
-        type_matcher.GetMatchType());
+        type_matcher.GetMatchString(), type_matcher.GetMatchType());
   }
 
   void Clear() {
@@ -250,7 +250,7 @@ public:
 
   void AutoComplete(CompletionRequest &request) {
     ForEach([&request](const TypeMatcher &matcher, const ValueSP &value) {
-      request.TryCompleteCurrentArg(matcher.GetMatchString().GetStringRef());
+      request.TryCompleteCurrentArg(matcher.GetMatchString());
       return true;
     });
   }

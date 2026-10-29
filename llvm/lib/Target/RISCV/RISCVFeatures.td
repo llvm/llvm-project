@@ -507,7 +507,7 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
-                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
+                  AssemblerPredicate<(none_of FeatureStdExtZbb)>;
 
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
@@ -530,7 +530,7 @@ def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
 def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
-                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
+                   AssemblerPredicate<(none_of FeatureStdExtZbkb)>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<1, 0, "Crossbar permutation instructions">,
@@ -702,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -770,7 +771,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 2,
+    : RISCVExperimentalExtension<0, 9,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
@@ -924,7 +925,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 3, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
@@ -1099,6 +1100,15 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
     : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
@@ -1129,6 +1139,15 @@ def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
                     AssemblerPredicate<(all_of FeatureStdExtSsip),
                         "'Ssip' (Support for Interrupt Handler Push/Pop at "
                         "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1308,7 +1327,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -1685,6 +1704,15 @@ def HasVendorXqccmp
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
+
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
                      [FeatureStdExtZca, FeatureStdExtZicsr]>;
@@ -1966,7 +1994,7 @@ def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
+             AssemblerPredicate<(none_of Feature64Bit),
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
@@ -2227,6 +2255,10 @@ def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
+
+def TuneAvoidVXRM
+    : SubtargetFeature<"avoid-vxrm", "AvoidVXRM",
+                       "true", "Instructions that use VXRM should be avoided">;
 
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).

@@ -347,8 +347,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
 
   // Handle argmin/argmax pattern: PHI has uses outside the reduction chain
   // that are not intermediate min/max operations (which are handled below).
-  // Requires integer min/max, and single-use BackedgeValue (so vectorizer can
-  // handle both PHIs together).
+  // Requires integer min/max, and the PHI must be the only in-loop user of
+  // BackedgeValue (so vectorizer can handle both PHIs together).
   bool PhiHasInvalidUses = any_of(Phi->users(), [&](Instruction *U) {
     Value *A, *B;
     return !Chain.contains(U) && TheLoop->contains(U) &&
@@ -356,7 +356,10 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   });
   if (PhiHasInvalidUses) {
     if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-        !BackedgeValue->hasOneUse())
+        any_of(BackedgeValue->users(), [&](User *U) {
+          auto *UI = cast<Instruction>(U);
+          return UI != Phi && TheLoop->contains(UI);
+        }))
       return {};
     return RecurrenceDescriptor(
         Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
@@ -411,6 +414,17 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     else if (IntermediateStore->comesBefore(SI))
       IntermediateStore = SI;
   }
+
+  // The vectorizer replaces the per-iteration store to the invariant address
+  // with a single store of the final reduced value in the middle block. That is
+  // only correct if the store stores the reduction value itself. If it stores a
+  // value derived from it (e.g. `%other = smax(%phi, 42); store %other`), that
+  // value observes the per-iteration running min/max, so replacing it with the
+  // final reduction value would miscompile. Mirrors the check in
+  // AddReductionVar.
+  if (IntermediateStore &&
+      IntermediateStore->getValueOperand() != BackedgeValue)
+    return {};
 
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
@@ -1174,8 +1188,15 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || isa<PHINode>(Previous))
     return false;
+
+  // Handle recurrences with a loop-invariant latch value.
+  if (!TheLoop->contains(Previous)) {
+    assert(DT->dominates(Previous, Phi) &&
+           "loop-invariant latch value must dominate the header phi");
+    return true;
+  }
 
   // Ensure every user of the phi node (recursively) is dominated by the
   // previous value. The dominance requirement ensures the loop vectorizer will
@@ -1397,7 +1418,7 @@ InductionDescriptor::InductionDescriptor(
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+  assert((!getConstStepValue() || !getConstStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1422,10 +1443,10 @@ InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
                              SE.getOne(Ty));
 }
 
-ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+std::optional<APInt> InductionDescriptor::getConstStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
-    return ConstStep->getValue();
-  return nullptr;
+    return ConstStep->getValue()->getValue();
+  return {};
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1695,4 +1716,102 @@ bool InductionDescriptor::isInductionPHI(
   D = InductionDescriptor(StartValue, IK_PtrInduction, Step,
                           /*InductionBinOp=*/nullptr, /*Casts=*/nullptr, Preds);
   return true;
+}
+
+// Recognize a conditional induction PHI by matching the following pattern:
+// loop_header:
+//   %conditional_iv = phi [ %start, %preheader ], [ %latch_phi, %latch ]
+//   br i1 %do_step, label %step_bb, label %latch
+//
+// step_bb:
+//   %step = add/gep %conditional_iv, %step_val
+//   br label %latch
+//
+// latch:
+//   %latch_phi = phi [ %conditional_iv, %loop_header ], [ %step, %step_bb ]
+//   br label %loop_header
+bool ConditionalInductionDescriptor::isConditionalInductionPHI(
+    PHINode *PN, const Loop *L, ConditionalInductionDescriptor &Desc,
+    ScalarEvolution &SE) {
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch || !PN->getType()->isIntOrPtrTy() ||
+      PN->getParent() != L->getHeader())
+    return false;
+
+  auto *BackedgePHI = dyn_cast<PHINode>(PN->getIncomingValueForBlock(Latch));
+  if (!BackedgePHI)
+    return false;
+
+  // Ensure the only users of the backedge PHI are outside the loop or the
+  // header PHI (PN).
+  for (User *U : BackedgePHI->users()) {
+    auto *UI = cast<Instruction>(U);
+    if (UI != PN && L->contains(UI))
+      return false;
+  }
+
+  // Find the step operation used to increment the conditional induction PHI.
+  // TODO: Support chains of PHIs.
+  Value *StepOp =
+      find_singleton<Value>(BackedgePHI->incoming_values(),
+                            [&](Use &Incoming, bool /*AllowRepeats*/) {
+                              return Incoming != PN ? Incoming.get() : nullptr;
+                            });
+  if (!StepOp || !StepOp->hasOneUse())
+    return false;
+
+  auto *StepInst = dyn_cast<Instruction>(StepOp);
+  if (!StepInst)
+    return false;
+
+  Value *Step = nullptr;
+  bool StepMatch =
+      PN->getType()->isPointerTy()
+          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
+  if (!StepMatch || !L->isLoopInvariant(Step))
+    return false;
+
+  // Ensure GEP offsets are extended to the size of the PHI.
+  const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
+      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
+
+  if (StepSCEV->isZero())
+    return false;
+
+  Value *Start = PN->getIncomingValueForBlock(Preheader);
+  const SCEV *StartSCEV = SE.getSCEV(Start);
+
+  SCEVFlags NoWrapFlags = SCEV::FlagNone;
+  if (auto *GEP = dyn_cast<GEPOperator>(StepInst)) {
+    // With NUSW, we can add NUW if the step is non-negative. We can't add NSW
+    // as the base address is unsigned.
+    if (GEP->hasNoUnsignedWrap() ||
+        (GEP->hasNoUnsignedSignedWrap() && SE.isKnownNonNegative(StepSCEV)))
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
+  } else if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(StepInst)) {
+    if (OBO->hasNoUnsignedWrap())
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
+    if (OBO->hasNoSignedWrap())
+      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNSW);
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: Found a conditional induction phi: HeaderPHI: "
+                    << *PN << ", StepInst: " << *StepInst << "\n");
+
+  Desc = ConditionalInductionDescriptor(PN, BackedgePHI, StepInst, StartSCEV,
+                                        StepSCEV, NoWrapFlags);
+  return true;
+}
+
+const SCEV *
+ConditionalInductionDescriptor::getUnconditionalAddRec(ScalarEvolution &SE,
+                                                       const Loop &L) const {
+  assert(L.contains(HeaderPHI) &&
+         "The provided loop does not contain this conditional induction");
+  return SE.getAddRecExpr(getStartSCEV(), getStepSCEV(), &L, SCEV::FlagNone);
 }

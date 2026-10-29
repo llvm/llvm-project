@@ -133,10 +133,10 @@ define i32 @workgroup_atomic_load_acquire_i32(ptr addrspace(5) %addr) {
 define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(ptr addrspace(5) %addr, i32 %old, i32 %in) {
 ; GFX1200-LABEL: define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(
 ; GFX1200-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[OLD:%.*]], i32 [[IN:%.*]]) {
-; GFX1200-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[OLD]]
 ; GFX1200-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[IN]], i32 [[TMP1]]
-; GFX1200-NEXT:    store i32 [[TMP3]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    store volatile i32 [[TMP3]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP1]], 0
 ; GFX1200-NEXT:    [[TMP5:%.*]] = insertvalue { i32, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; GFX1200-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
@@ -157,8 +157,8 @@ define i32 @system_atomic_cmpxchg_acq_rel_acquire_i32(ptr addrspace(5) %addr, i3
 define i32 @system_atomicrmw_xchg_acq_rel_i32(ptr addrspace(5) %addr, i32 %in) {
 ; GFX1200-LABEL: define i32 @system_atomicrmw_xchg_acq_rel_i32(
 ; GFX1200-SAME: ptr addrspace(5) [[ADDR:%.*]], i32 [[IN:%.*]]) {
-; GFX1200-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[ADDR]], align 4
-; GFX1200-NEXT:    store i32 [[IN]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    store volatile i32 [[IN]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret i32 [[TMP1]]
 ;
 ; GFX1250-LABEL: define i32 @system_atomicrmw_xchg_acq_rel_i32(
@@ -174,8 +174,8 @@ define i32 @system_atomicrmw_xchg_acq_rel_i32(ptr addrspace(5) %addr, i32 %in) {
 define i16 @system_atomicrmw_xchg_acq_rel_i16(ptr addrspace(5) %addr, i16 %in) {
 ; GFX1200-LABEL: define i16 @system_atomicrmw_xchg_acq_rel_i16(
 ; GFX1200-SAME: ptr addrspace(5) [[ADDR:%.*]], i16 [[IN:%.*]]) {
-; GFX1200-NEXT:    [[TMP1:%.*]] = load i16, ptr addrspace(5) [[ADDR]], align 2
-; GFX1200-NEXT:    store i16 [[IN]], ptr addrspace(5) [[ADDR]], align 2
+; GFX1200-NEXT:    [[TMP1:%.*]] = load volatile i16, ptr addrspace(5) [[ADDR]], align 2
+; GFX1200-NEXT:    store volatile i16 [[IN]], ptr addrspace(5) [[ADDR]], align 2
 ; GFX1200-NEXT:    ret i16 [[TMP1]]
 ;
 ; GFX1250-LABEL: define i16 @system_atomicrmw_xchg_acq_rel_i16(
@@ -191,9 +191,9 @@ define i16 @system_atomicrmw_xchg_acq_rel_i16(ptr addrspace(5) %addr, i16 %in) {
 define half @system_atomicrmw_fmax_acq_rel_half(ptr addrspace(5) %addr, half %in) {
 ; GFX1200-LABEL: define half @system_atomicrmw_fmax_acq_rel_half(
 ; GFX1200-SAME: ptr addrspace(5) [[ADDR:%.*]], half [[IN:%.*]]) {
-; GFX1200-NEXT:    [[TMP1:%.*]] = load half, ptr addrspace(5) [[ADDR]], align 2
+; GFX1200-NEXT:    [[TMP1:%.*]] = load volatile half, ptr addrspace(5) [[ADDR]], align 2
 ; GFX1200-NEXT:    [[TMP2:%.*]] = call half @llvm.maxnum.f16(half [[TMP1]], half [[IN]])
-; GFX1200-NEXT:    store half [[TMP2]], ptr addrspace(5) [[ADDR]], align 2
+; GFX1200-NEXT:    store volatile half [[TMP2]], ptr addrspace(5) [[ADDR]], align 2
 ; GFX1200-NEXT:    ret half [[TMP1]]
 ;
 ; GFX1250-LABEL: define half @system_atomicrmw_fmax_acq_rel_half(
@@ -209,9 +209,9 @@ define half @system_atomicrmw_fmax_acq_rel_half(ptr addrspace(5) %addr, half %in
 define float @system_atomicrmw_fminimum_acq_rel_float(ptr addrspace(5) %addr, float %in) {
 ; GFX1200-LABEL: define float @system_atomicrmw_fminimum_acq_rel_float(
 ; GFX1200-SAME: ptr addrspace(5) [[ADDR:%.*]], float [[IN:%.*]]) {
-; GFX1200-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    [[TMP1:%.*]] = load volatile float, ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    [[TMP2:%.*]] = call float @llvm.minimum.f32(float [[TMP1]], float [[IN]])
-; GFX1200-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ADDR]], align 4
+; GFX1200-NEXT:    store volatile float [[TMP2]], ptr addrspace(5) [[ADDR]], align 4
 ; GFX1200-NEXT:    ret float [[TMP1]]
 ;
 ; GFX1250-LABEL: define float @system_atomicrmw_fminimum_acq_rel_float(

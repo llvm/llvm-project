@@ -1,0 +1,19 @@
+Name: SliceGroupsExact
+Functions:
+  - Name: sliceGroupExactProbe
+    SwiftName: 'broadUnversioned(_:)'
+  - Name: sliceGroupExactProbe
+    Where:
+      Parameters:
+        - int
+    SwiftName: 'exactUnversioned(_:)'
+SwiftVersions:
+  - Version: 3.0
+    Functions:
+      - Name: sliceGroupExactProbe
+        SwiftName: 'broadV3(_:)'
+      - Name: sliceGroupExactProbe
+        Where:
+          Parameters:
+            - int
+        SwiftName: 'exactV3(_:)'

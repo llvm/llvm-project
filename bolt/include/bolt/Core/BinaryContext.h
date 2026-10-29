@@ -24,6 +24,7 @@
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -317,6 +318,13 @@ public:
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
     MIB = std::move(TargetBuilder);
+  }
+
+  /// Set up target-specific relocation handling.
+  void initializeRelocationHandler(std::unique_ptr<RelocationHandler> Handler) {
+    assert(Handler && "expected a relocation handler");
+    assert(!RelocHandler && "relocation handler is already initialized");
+    RelocHandler = std::move(Handler);
   }
 
   /// Return function fragments to skip.
@@ -728,7 +736,6 @@ public:
   std::unique_ptr<DWARFContext> DwCtx;
 
   std::unique_ptr<Triple> TheTriple;
-
   std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
@@ -750,6 +757,8 @@ public:
   std::unique_ptr<const MCInstrAnalysis> MIA;
 
   std::unique_ptr<MCPlusBuilder> MIB;
+
+  std::unique_ptr<RelocationHandler> RelocHandler;
 
   std::unique_ptr<const MCRegisterInfo> MRI;
 
@@ -949,6 +958,10 @@ public:
   /// and are referenced from BinaryFunction.
   std::list<std::pair<BinaryFunction *, uint64_t>> InterproceduralReferences;
 
+  /// Invalid external branch targets discovered during validation.
+  DenseSet<std::pair<BinaryFunction *, uint64_t>>
+      InvalidInterproceduralReferences;
+
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
@@ -981,6 +994,11 @@ public:
   bool isELF() const { return TheTriple->isOSBinFormatELF(); }
 
   bool isMachO() const { return TheTriple->isOSBinFormatMachO(); }
+
+  const RelocationHandler &getRelocationHandler() const {
+    assert(RelocHandler && "relocation handler is not initialized");
+    return *RelocHandler;
+  }
 
   bool isAArch64() const {
     return TheTriple->getArch() == llvm::Triple::aarch64;
@@ -1061,8 +1079,9 @@ public:
   /// point.
   ///
   /// This function also performs validations: If \p Address points to an
-  /// invalid instruction or lies within a constant island, return nullptr and
-  /// mark both \p Source and \p Target as ignored.
+  /// invalid instruction or lies within a constant island, return nullptr. The
+  /// caller is responsible for marking \p Source and \p Target as ignored
+  /// after all relevant references have been validated.
   MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &Source,
                                        BinaryFunction &Target);
 
@@ -1205,6 +1224,9 @@ public:
   const char *getInjectedColdCodeSectionName() const {
     return ".text.injected.cold";
   }
+
+  /// Return true if \p A should be emitted before \p B in code section order.
+  bool compareSectionNames(StringRef A, StringRef B) const;
 
   ErrorOr<BinarySection &> getGdbIndexSection() const {
     return getUniqueSectionByName(".gdb_index");
@@ -1460,9 +1482,10 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0,
-                            bool IsRELR = false);
+  void addDynamicRelocation(
+      uint64_t Address, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
+      uint64_t Value = 0, bool IsRELR = false,
+      uint32_t JmpRelocationIndex = Relocation::NoJmpRelocationIndex);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.

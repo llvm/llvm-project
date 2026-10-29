@@ -691,7 +691,7 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    // Loop until we analysed the last intruction inside at least one of the
+    // Loop until we analysed the last instruction inside at least one of the
     // bundles.
     while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
       ++I1;
@@ -1037,7 +1037,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   // Assume that all registers in a memory operand are pointers.
   if (F.isMemKind())
-    return TRI->getPointerRegClass();
+    return TII->getInlineAsmMemoryOperandRegClass(F.getMemoryConstraintID());
 
   return nullptr;
 }
@@ -1129,6 +1129,20 @@ int MachineInstr::findRegisterUseOperandIdx(Register Reg,
         return i;
   }
   return -1;
+}
+
+bool MachineInstr::hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const {
+  bool Tied = false;
+  unsigned Reads = 0;
+  for (const MachineOperand &MO : all_uses()) {
+    if (MO.getReg() != Reg || MO.getSubReg() != SubReg)
+      continue;
+    ++Reads;
+    // A tie its def already satisfies is not rewritten.
+    Tied |= MO.isTied() &&
+            getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg;
+  }
+  return Tied && Reads > 1;
 }
 
 /// readsWritesVirtualRegister - Return a pair of bools (reads, writes)
@@ -1752,7 +1766,8 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   if (!OpInfo.isGenericType())
     return MRI.getType(Op.getReg());
 
-  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
+  // The MIR parser requires a type on every generic register definition.
+  if (PrintedTypes[OpInfo.getGenericTypeIndex()] && !Op.isDef())
     return LLT{};
 
   LLT TypeToPrint = MRI.getType(Op.getReg());

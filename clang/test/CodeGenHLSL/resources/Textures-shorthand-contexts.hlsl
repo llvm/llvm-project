@@ -1,33 +1,43 @@
+// Texture2D
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
 // RUN:   --check-prefixes=CHECK,CHECK-TEXEL
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
-// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -o - %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DCOORD_DIM=3 -DDXIL_TY=4 -DRW=0 \
-// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
-// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -o - %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
-// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
-// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -o - %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 -DDXIL_TY=9 \
-// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 \
 // RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-TEXEL
+
+// Texture3D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D -DCOORD_DIM=3 -DDXIL_TY=4 -DRW=0 \
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
+
+// TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
+
+// TextureCubeArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 -DDXIL_TY=9 \
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

@@ -1,0 +1,118 @@
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -amdgpu-lirp-reschedule=true  -verify-misched -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -amdgpu-lirp-reschedule=false -verify-misched -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s --check-prefix=DISABLE
+# REQUIRES: asserts
+
+# Test that the live interval pressure reschedule stage runs and detects a gap in pressure estimates:
+#
+# CHECK: Starting scheduling stage: Live Interval RP Reschedule
+# CHECK: LIRP: Region {{[0-9]+}},{{.*}}InstantRP=2, LIRP=3
+# DISABLE-NOT: LIRP:
+--- |
+  define void @lirp_estimate_test() { ret void }
+  define void @lirp_slot_reuse_test() { ret void }
+  define void @lirp_reschedule() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,512" "amdgpu-waves-per-eu"="4,4" }
+  ; 4 waves per EU: 1024 / 4 = 256 total VGPRs per wave
+...
+---
+name: lirp_estimate_test
+tracksRegLiveness: true
+isSSA: false
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vgpr_32 = IMPLICIT_DEF ; A def (seg1)
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    ; A (%0) is live-in, used and redefined (seg2) below.
+    ; B (%1) overlaps A seg1, C (%2) overlaps A seg2.
+    ; B and C overlap in the gap.
+    ;
+    ; InstantRP: max 2 at any point
+    ; LIRP: 3 (A, B, C interfere with each other)
+    %1:vgpr_32 = IMPLICIT_DEF   ; B def
+    KILL %0                     ; A dies (seg1)
+    %2:vgpr_32 = IMPLICIT_DEF   ; C def
+    KILL %1                     ; B dies
+    %0:vgpr_32 = IMPLICIT_DEF   ; A redef (seg2)
+    KILL %2                     ; C dies
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# CHECK: LIRP: Region {{[0-9]+}},{{.*}}InstantRP=1, LIRP=1
+---
+name: lirp_slot_reuse_test
+tracksRegLiveness: true
+isSSA: false
+body: |
+  bb.0:
+    ; %0 and %1 have disjoint live ranges, so RA can reuse the same slot.
+    ; InstantRP: max 1
+    ; LIRP: 1
+    %0:vgpr_32 = IMPLICIT_DEF
+    KILL %0                     ; %0 dies
+    %1:vgpr_32 = IMPLICIT_DEF
+    KILL %1                     ; %1 dies
+    S_ENDPGM 0
+...
+
+# Test that the stage changes the schedule:
+#
+# CHECK-LABEL: name: lirp_reschedule
+# CHECK:      KILL %14
+# CHECK-NEXT: %15:vreg_512_align2 = IMPLICIT_DEF
+#
+# DISABLE-LABEL: name: lirp_reschedule
+# DISABLE:      %15:vreg_512_align2 = IMPLICIT_DEF
+# DISABLE-NEXT: KILL %14
+---
+name: lirp_reschedule
+tracksRegLiveness: true
+isSSA: false
+machineFunctionInfo:
+  occupancy: 4
+body: |
+  bb.0:
+    successors: %bb.1
+    ; 216 VGPRs of baseline pressure, live across the loop.
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    %3:vreg_512_align2 = IMPLICIT_DEF
+    %4:vreg_512_align2 = IMPLICIT_DEF
+    %5:vreg_512_align2 = IMPLICIT_DEF
+    %6:vreg_512_align2 = IMPLICIT_DEF
+    %7:vreg_512_align2 = IMPLICIT_DEF
+    %8:vreg_512_align2 = IMPLICIT_DEF
+    %9:vreg_512_align2 = IMPLICIT_DEF
+    %10:vreg_512_align2 = IMPLICIT_DEF
+    %11:vreg_512_align2 = IMPLICIT_DEF
+    %12:vreg_512_align2 = IMPLICIT_DEF
+    %13:vreg_256_align2 = IMPLICIT_DEF
+
+    %14:vreg_512_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    ; %14, %15 and %16 pairwise interfere, only two are live at once.
+    ; %14 is live-in, used and redefined below.
+    %15:vreg_512_align2 = IMPLICIT_DEF
+    KILL %14
+    %16:vreg_512_align2 = IMPLICIT_DEF
+    KILL %15
+    %14:vreg_512_align2 = IMPLICIT_DEF
+    KILL %16
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    KILL %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14
+    S_ENDPGM 0
+...

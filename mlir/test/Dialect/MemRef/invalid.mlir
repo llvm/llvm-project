@@ -261,6 +261,14 @@ func.func @memref_reshape_dst_ranked_shape_unranked(
 
 // -----
 
+func.func @memref_reshape_dst_unranked_shape_ranked(
+       %buf: memref<*xf32>, %shape: memref<1xi32>) {
+  // expected-error @+1 {{cannot use shape operand with static length to reshape to unranked memref type}}
+  memref.reshape %buf(%shape) : (memref<*xf32>, memref<1xi32>) -> memref<*xf32>
+}
+
+// -----
+
 func.func @memref_reshape_dst_shape_rank_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{length of shape operand differs from the result's memref rank}}
@@ -1218,5 +1226,36 @@ func.func @distinct_objects_types_mismatch(%arg0: memref<?xf32>, %arg1: memref<?
 func.func @distinct_objects_0_operands() {
   // expected-error @+1 {{expected at least one operand}}
   "memref.distinct_objects"() : () -> ()
+  return
+}
+
+// -----
+
+func.func @collapse_shape_empty_reassociation_group(
+    %arg0: memref<2x3xf32, strided<[6, 1], offset: 0>>) {
+  // expected-error@+1 {{'memref.collapse_shape' op reassociation indices must not be empty}}
+  %0 = memref.collapse_shape %arg0 [[], [0, 1]]
+      : memref<2x3xf32, strided<[6, 1], offset: 0>>
+        into memref<1x6xf32, strided<[6, 1], offset: 0>>
+  return
+}
+
+// -----
+
+func.func @collapse_shape_empty_reassociation_group_identity(
+    %arg0: memref<2x3xf32>) {
+  // expected-error@+1 {{'memref.collapse_shape' op reassociation indices must not be empty}}
+  %0 = memref.collapse_shape %arg0 [[], [0, 1]]
+      : memref<2x3xf32> into memref<1x6xf32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_empty_reassociation_group(
+    %arg0: memref<1x6xf32>) {
+  // expected-error@+1 {{'memref.expand_shape' op reassociation indices must not be empty}}
+  %0 = memref.expand_shape %arg0 [[], [0, 1]] output_shape [2, 3]
+      : memref<1x6xf32> into memref<2x3xf32>
   return
 }

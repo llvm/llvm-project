@@ -344,7 +344,6 @@ namespace {
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
 using EquivalenceClassMap = DenseMap<const BasicBlock *, const BasicBlock *>;
 using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
-using EdgeWeightMap = DenseMap<Edge, uint64_t>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
@@ -1410,11 +1409,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   CandidateQueue CQueue;
   InlineCandidate NewCandidate;
   for (auto &BB : F) {
-    for (auto &I : BB) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-      if (getInlineCandidate(&NewCandidate, CB))
+    for (CallBase &CB : make_isa_range<CallBase>(BB)) {
+      if (getInlineCandidate(&NewCandidate, &CB))
         CQueue.push(NewCandidate);
     }
   }
@@ -1732,7 +1728,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrLifetime();
         }
       }
     }

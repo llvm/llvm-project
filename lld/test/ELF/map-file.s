@@ -115,4 +115,4 @@ labs = 0x1AB5
 
 # RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck --check-prefix=FAIL %s
-# FAIL: cannot open map file /
+# FAIL: error: cannot open /:

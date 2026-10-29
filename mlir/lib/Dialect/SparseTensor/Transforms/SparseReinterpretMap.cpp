@@ -692,7 +692,7 @@ struct TensorInsertDemapper
 };
 
 struct SparseAssembleDemapper : public OpRewritePattern<AssembleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(AssembleOp op,
                                 PatternRewriter &rewriter) const override {
     if (!hasAnyNonIdentityOperandsOrResults(op))

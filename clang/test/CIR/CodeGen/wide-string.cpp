@@ -6,7 +6,7 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // CIR: cir.global external @some_array = #cir.const_array<[#cir.int<97> : !u16i], trailing_zeros> : !cir.array<!u16i x 10>
-// LLVM: @some_array = global [10 x i16] [i16 97, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0]
+// LLVM: @some_array = global <{ i16, [9 x i16] }> <{ i16 97, [9 x i16] zeroinitializer }>
 // OGCG: @some_array = global [10 x i16] [i16 97, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0]
 char16_t some_array[10] = u"a";
 
@@ -66,3 +66,11 @@ const char16_t *test_char16_typedef() {
 // CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.const_array<[#cir.int<116> : !u16i, #cir.int<101> : !u16i, #cir.int<115> : !u16i, #cir.int<116> : !u16i], trailing_zeros> : !cir.array<!u16i x 5>
 // LLVM: @{{.+}} = private constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
 // OGCG: @{{.+}} = private unnamed_addr constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
+
+const wchar_t *test_wchar_high_bit() {
+  return L"\x80000000";
+}
+
+// CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.const_array<[#cir.int<-2147483648> : !s32i], trailing_zeros> : !cir.array<!s32i x 2>
+// LLVM: @{{.+}} = private constant [2 x i32] [i32 -2147483648, i32 0]
+// OGCG: @{{.+}} = private unnamed_addr constant [2 x i32] [i32 -2147483648, i32 0]

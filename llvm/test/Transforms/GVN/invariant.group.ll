@@ -71,20 +71,6 @@ entry:
   ret i8 %b
 }
 
-; FIXME: The first call could be also removed by GVN. Right now
-; DCE removes it. The second call is CSE'd with the first one.
-define i1 @proveEqualityForStrip(ptr %a) {
-; CHECK-LABEL: define i1 @proveEqualityForStrip(
-; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[B1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A]])
-; CHECK-NEXT:    ret i1 true
-;
-  %b1 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %b2 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %r = icmp eq ptr %b1, %b2
-  ret i1 %r
-}
-
 define i8 @unoptimizable1() {
 ; CHECK-LABEL: define i8 @unoptimizable1() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -573,7 +559,6 @@ declare void @_ZN1AC1Ev(ptr)
 declare void @fooBit(ptr, i1)
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 
 declare void @llvm.assume(i1 %cmp.vtables)

@@ -12,6 +12,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -35,6 +36,7 @@ struct LegalityTest : public testing::Test {
   std::unique_ptr<ScalarEvolution> SE;
   std::unique_ptr<BasicAAResult> BAA;
   std::unique_ptr<AAResults> AA;
+  std::unique_ptr<TargetTransformInfo> TTI;
 
   void getAnalyses(llvm::Function &LLVMF) {
     DT = std::make_unique<DominatorTree>(LLVMF);
@@ -50,6 +52,7 @@ struct LegalityTest : public testing::Test {
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
+    TTI = std::make_unique<TargetTransformInfo>(M->getDataLayout());
     if (!M) {
       Err.print("LegalityTest", errs());
       return;
@@ -137,7 +140,7 @@ bb:
   auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
                                        sandboxir::SchedDirection::BottomUp);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
@@ -290,7 +293,7 @@ define void @foo(ptr %ptr) {
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
                                        sandboxir::SchedDirection::BottomUp);
   {
     // Can vectorize St0,St1.
@@ -327,7 +330,7 @@ define void @foo() {
 
   sandboxir::Context Ctx(C);
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
                                        sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));

@@ -1377,20 +1377,6 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
   return innerLoops;
 }
 
-// Stripmines a `forOp` by `factor` and sinks it under a single `target`.
-// Returns the new for operation, nested immediately under `target`.
-template <typename SizeType>
-static scf::ForOp stripmineSink(scf::ForOp forOp, SizeType factor,
-                                scf::ForOp target) {
-  // TODO: Use cheap structural assertions that targets are nested under
-  // forOp and that targets are not nested under each other when DominanceInfo
-  // exposes the capability. It seems overkill to construct a whole function
-  // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<scf::ForOp>(target));
-  assert(res.size() == 1 && "Expected 1 inner forOp");
-  return res[0];
-}
-
 SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
                                  ArrayRef<Value> sizes,
                                  ArrayRef<scf::ForOp> targets) {

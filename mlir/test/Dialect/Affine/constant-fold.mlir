@@ -90,3 +90,15 @@ func.func @affine_apply_poison_division_zero_2() -> index {
   %0 = affine.apply affine_map<(d0)[s0] -> (d0 mod (s0 - s0))>(%c16)[%c16]
   return %0 : index
 }
+
+// -----
+
+memref.global "private" constant @empty : memref<0xi8> = dense<>
+
+// CHECK-LABEL: func.func @load_from_empty_global
+func.func @load_from_empty_global() -> i8 {
+  %0 = memref.get_global @empty : memref<0xi8>
+  // CHECK: affine.load %{{.*}}[0] : memref<0xi8>
+  %1 = affine.load %0[0] : memref<0xi8>
+  return %1 : i8
+}

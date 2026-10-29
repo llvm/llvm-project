@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/rintbf16.h"
 
-LIST_RINT_TESTS(bfloat16, LIBC_NAMESPACE::rintbf16)
+LIST_RINT_TESTS(Rintbf16, bfloat16, LIBC_NAMESPACE::rintbf16)

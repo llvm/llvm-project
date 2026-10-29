@@ -36,3 +36,18 @@ LogicalResult OpenCLKernelArgMetadataAttr::verify(
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// OpenCLVersionAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+OpenCLVersionAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                          int32_t majorVersion, int32_t minorVersion) {
+  if (majorVersion <= 0)
+    return emitError() << "OpenCL major version must be positive";
+  if (minorVersion < 0)
+    return emitError() << "OpenCL minor version must be non-negative";
+
+  return success();
+}

@@ -99,6 +99,16 @@ TEST_F(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
             std::errc::timed_out);
 }
 
+TEST_F(raw_socket_streamTest, CONNECT_FAILURE_RETURNS_ERROR) {
+  ServerListener->shutdown();
+
+  // Connecting to a closed or nonexistent socket should return an error,
+  // not terminate the process while cleaning up the temporary native socket.
+  Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
+      raw_socket_stream::createConnectedUnix(SocketPath);
+  ASSERT_THAT_EXPECTED(MaybeClient, llvm::Failed());
+}
+
 TEST_F(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
   // Create a separate thread to close the socket after a delay. Simulates a
   // signal handler calling ServerListener::shutdown

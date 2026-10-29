@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   MC
   MCDisassembler
+  Object
   Support
   AArch64CodeGen
   AArch64Desc
@@ -21,6 +22,7 @@ endif()
 add_llvm_library(LLVMBOLTTargetAArch64
   AArch64MCPlusBuilder.cpp
   AArch64MCSymbolizer.cpp
+  AArch64RelocationHandler.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB

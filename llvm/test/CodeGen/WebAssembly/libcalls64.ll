@@ -328,9 +328,9 @@ define i1 @unordt(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:    local.get $push5=, 1
 ; CHECK-NEXT:    local.get $push4=, 2
 ; CHECK-NEXT:    local.get $push3=, 3
-; CHECK-NEXT:    call $push1=, __unordtf2, $pop6, $pop5, $pop4, $pop3
-; CHECK-NEXT:    i32.const $push0=, 0
-; CHECK-NEXT:    i32.ne $push2=, $pop1, $pop0
+; CHECK-NEXT:    call $push0=, __unordtf2, $pop6, $pop5, $pop4, $pop3
+; CHECK-NEXT:    i32.const $push1=, 0
+; CHECK-NEXT:    i32.ne $push2=, $pop0, $pop1
 ; CHECK-NEXT:    return $pop2
  %a = fcmp uno fp128 %x, %y
  ret i1 %a

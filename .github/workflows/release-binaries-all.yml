@@ -63,7 +63,7 @@ jobs:
   setup-variables:
     if: >-
       (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}

@@ -31,34 +31,13 @@ enum ID {
 #include "SubCommandOpts.inc"
 #undef OPTION
 };
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SubCommandOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMANDS_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_SUBCOMMANDS_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SubCommandOpts.inc"
-#undef OPTION
-};
-
-class TestOptSubCommandTable : public GenericOptTable {
+class TestOptSubCommandTable : public OptTable {
 public:
   TestOptSubCommandTable(bool IgnoreCase = false)
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        /*IgnoreCase=*/false, OptionSubCommands,
-                        OptionSubCommandIDsTable) {}
+      : OptTable(optionTables(), IgnoreCase) {}
 };
 
 // Test fixture
@@ -204,6 +183,44 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_NE(std::string::npos,
               ErrMsg.find("Unregistered positionals passed"));
     EXPECT_NE(std::string::npos, ErrMsg.find("input"));
+  }
+
+  {
+    // Test case 8: Check that with AllowSubCommandNamesAsPositionals, later
+    // positional arguments that match a subcommand name are positionals.
+    ErrMsg.clear();
+    const char *Args[] = {"-uppercase", "foo", "foo", "bar"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals,
+        /*AllowSubCommandNamesAsPositionals=*/true);
+    EXPECT_EQ(SC, "foo");
+    EXPECT_EQ(ErrMsg, "Unregistered positionals passed\n\nfoo\nbar");
+  }
+
+  {
+    // Test case 9: Check that with AllowSubCommandNamesAsPositionals, the
+    // subcommand does not need to be the first positional argument.
+    ErrMsg.clear();
+    const char *Args[] = {"input", "bar", "foo"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals,
+        /*AllowSubCommandNamesAsPositionals=*/true);
+    EXPECT_EQ(SC, "bar");
+    EXPECT_EQ(ErrMsg, "Unregistered positionals passed\n\ninput\nfoo");
+  }
+
+  {
+    // Test case 10: Check that without AllowSubCommandNamesAsPositionals, a
+    // repeated subcommand is still an error.
+    ErrMsg.clear();
+    const char *Args[] = {"foo", "foo"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    EXPECT_TRUE(SC.empty());
+    EXPECT_EQ(ErrMsg, "Multiple subcommands passed\n\nfoo\nfoo");
   }
 }
 

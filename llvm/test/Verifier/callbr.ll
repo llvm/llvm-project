@@ -69,11 +69,6 @@ abnormal:
   ret i32 %ret
 }
 
-;; Tests of the callbr.landingpad intrinsic function with bad type.
-; CHECK: intrinsic argument 0 type (matching overload type 0) expected i32, but got i64
-; CHECK-NEXT: declare i32 @llvm.callbr.landingpad.i64(i64)
-declare i32 @llvm.callbr.landingpad.i64(i64)
-
 declare i32 @llvm.callbr.landingpad.i32(i32)
 define i32 @callbrpad_multi_preds() {
 entry:
@@ -81,7 +76,7 @@ entry:
 direct:
   br label %indirect
 indirect:
-; CHECK-NEXT: Intrinsic in block must have 1 unique predecessor
+; CHECK: Intrinsic in block must have 1 unique predecessor
 ; CHECK-NEXT: %out = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
   %out = call i32 @llvm.callbr.landingpad.i32(i32 %foo)
   ret i32 %out

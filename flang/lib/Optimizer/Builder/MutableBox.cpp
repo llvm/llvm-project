@@ -16,10 +16,32 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+
+/// Allocator index to record in the descriptor of an entity whose storage is
+/// allocated with the given CUDA Fortran data attribute. The runtime frees the
+/// storage with the allocator recorded in the descriptor, so it must describe
+/// the memory space the storage was allocated in.
+static unsigned getCUFAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+  if (!dataAttr)
+    return kDefaultAllocator;
+  switch (dataAttr.getValue()) {
+  case cuf::DataAttribute::Pinned:
+    return kPinnedAllocatorPos;
+  case cuf::DataAttribute::Device:
+    return kDeviceAllocatorPos;
+  case cuf::DataAttribute::Managed:
+    return kManagedAllocatorPos;
+  case cuf::DataAttribute::Unified:
+    return kUnifiedAllocatorPos;
+  default:
+    return kDefaultAllocator;
+  }
+}
 
 /// Create a fir.box describing the new address, bounds, and length parameters
 /// for a MutableBox \p box.
@@ -27,7 +49,8 @@ static mlir::Value
 createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
                 const fir::MutableBoxValue &box, mlir::Value addr,
                 mlir::ValueRange lbounds, mlir::ValueRange extents,
-                mlir::ValueRange lengths, mlir::Value tdesc = {}) {
+                mlir::ValueRange lengths, mlir::Value tdesc = {},
+                unsigned allocator = kDefaultAllocator) {
   if (mlir::isa<fir::BaseBoxType>(addr.getType()))
     // The entity is already boxed.
     return builder.createConvert(loc, box.getBoxTy(), addr);
@@ -78,8 +101,11 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value emptySlice;
   auto boxType = fir::updateTypeWithVolatility(
       box.getBoxTy(), fir::isa_volatile_type(cleanedAddr.getType()));
-  return fir::EmboxOp::create(builder, loc, boxType, cleanedAddr, shape,
-                              emptySlice, cleanedLengths, tdesc);
+  auto embox = fir::EmboxOp::create(builder, loc, boxType, cleanedAddr, shape,
+                                    emptySlice, cleanedLengths, tdesc);
+  if (allocator != kDefaultAllocator)
+    embox.setAllocatorIdx(allocator);
+  return embox;
 }
 
 //===----------------------------------------------------------------------===//
@@ -280,10 +306,9 @@ private:
   /// Update the IR box (fir.ref<fir.box<T>>) of the MutableBoxValue.
   void updateIRBox(mlir::Value addr, mlir::ValueRange lbounds,
                    mlir::ValueRange extents, mlir::ValueRange lengths,
-                   mlir::Value tdesc = {},
-                   unsigned allocator = kDefaultAllocator) {
+                   mlir::Value tdesc = {}) {
     mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
-                                        extents, lengths, tdesc);
+                                        extents, lengths, tdesc, allocator);
     const bool valueTypeIsVolatile =
         fir::isa_volatile_type(fir::unwrapRefType(box.getAddr().getType()));
     irBox = builder.createVolatileCast(loc, valueTypeIsVolatile, irBox);
@@ -749,13 +774,23 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
                                              const fir::MutableBoxValue &box,
                                              mlir::ValueRange extents,
                                              mlir::ValueRange lenParams,
-                                             llvm::StringRef allocName) {
+                                             llvm::StringRef allocName,
+                                             cuf::DataAttributeAttr dataAttr) {
   auto lengths = getNewLengths(builder, loc, box, lenParams);
-  auto newStorage = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
-                                            allocName, lengths, extents);
 
-  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
-    newStorage.setAlignment(fir::defaultArrayGlobalAlignment);
+  mlir::Value newStorage;
+  if (!dataAttr) {
+    auto alloc = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
+                                         allocName, lengths, extents);
+    if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+      alloc.setAlignment(fir::defaultArrayGlobalAlignment);
+    newStorage = alloc.getResult();
+  } else {
+    newStorage = cuf::AllocOp::create(builder, loc, box.getBaseTy(), allocName,
+                                      allocName, dataAttr, lengths, extents)
+                     .getResult();
+  }
+
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {
     // TODO: skip runtime initialization if this is not required. Currently,
     // there is no way to know here if a derived type needs it or not. But the
@@ -765,6 +800,10 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
         createNewFirBox(builder, loc, box, newStorage, {}, extents, lengths);
     fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
   }
+
+  if (dataAttr)
+    return fir::ConvertOp::create(
+        builder, loc, fir::HeapType::get(box.getBaseTy()), newStorage);
   return newStorage;
 }
 
@@ -810,7 +849,8 @@ fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const fir::MutableBoxValue &box, mlir::ValueRange shape,
     mlir::ValueRange lengthParams,
-    fir::factory::ReallocStorageHandlerFunc storageHandler) {
+    fir::factory::ReallocStorageHandlerFunc storageHandler,
+    cuf::DataAttributeAttr dataAttr) {
   // Implement 10.2.1.3 point 3 logic when lhs is an array.
   auto reader = MutablePropertyReader(builder, loc, box);
   auto addr = reader.readBaseAddress();
@@ -886,7 +926,7 @@ fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
                                       : shape;
                               auto heap = allocateAndInitNewStorage(
                                   builder, loc, box, extents, lengthParams,
-                                  ".auto.alloc");
+                                  ".auto.alloc", dataAttr);
                               if (storageHandler)
                                 storageHandler(getExtValForStorage(heap));
                               fir::ResultOp::create(builder, loc, heap);
@@ -913,8 +953,9 @@ fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
               fir::ResultOp::create(builder, loc,
                                     mlir::ValueRange{trueValue, addr});
             } else {
-              auto heap = allocateAndInitNewStorage(
-                  builder, loc, box, shape, lengthParams, ".auto.alloc");
+              auto heap = allocateAndInitNewStorage(builder, loc, box, shape,
+                                                    lengthParams, ".auto.alloc",
+                                                    dataAttr);
               if (storageHandler)
                 storageHandler(getExtValForStorage(heap));
               fir::ResultOp::create(builder, loc,
@@ -934,7 +975,8 @@ void fir::factory::finalizeRealloc(fir::FirOpBuilder &builder,
                                    const fir::MutableBoxValue &box,
                                    mlir::ValueRange lbounds,
                                    bool takeLboundsIfRealloc,
-                                   const MutableBoxReallocation &realloc) {
+                                   const MutableBoxReallocation &realloc,
+                                   cuf::DataAttributeAttr dataAttr) {
   builder.genIfThen(loc, realloc.wasReallocated)
       .genThen([&]() {
         auto reader = MutablePropertyReader(builder, loc, box);
@@ -953,10 +995,20 @@ void fir::factory::finalizeRealloc(fir::FirOpBuilder &builder,
         auto heap = fir::getBase(realloc.newValue);
         auto extents = fir::factory::getExtents(loc, builder, realloc.newValue);
         builder.genIfThen(loc, realloc.oldAddressWasAllocated)
-            .genThen([&]() { ::genFreemem(builder, loc, realloc.oldAddress); })
+            .genThen([&]() {
+              if (dataAttr) {
+                mlir::Value devPtr = builder.createConvert(
+                    loc, fir::ReferenceType::get(box.getBaseTy()),
+                    realloc.oldAddress);
+                cuf::FreeOp::create(builder, loc, devPtr, dataAttr);
+              } else {
+                ::genFreemem(builder, loc, realloc.oldAddress);
+              }
+            })
             .end();
-        MutablePropertyWriter{builder, loc, box}.updateMutableBox(
-            heap, lbs, extents, lengths);
+        MutablePropertyWriter{builder, loc, box, /*typeSourceBox=*/{},
+                              getCUFAllocatorIdx(dataAttr)}
+            .updateMutableBox(heap, lbs, extents, lengths);
       })
       .end();
 }

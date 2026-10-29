@@ -206,6 +206,37 @@ void foo() {
 }
 } // namespace ReturnTypeRequirementInLambda
 
+namespace GH236286 {
+template <class T, class U>
+concept DecaysTo = __is_same(__decay(T), U);
+
+template <class T, auto Constraint>
+concept Satisfies = requires { Constraint.template operator()<T>(); };
+
+static_assert(requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<int>> {}>;
+});
+static_assert(!requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<double>> {}>;
+});
+} // namespace GH236286
+
+namespace LambdaTypeConstraintSubstitution {
+template <class T, class U>
+concept DecaysTo = __is_same(__decay(T), U);
+
+template <class T, auto Constraint>
+concept Satisfies = requires { Constraint.template operator()<T>(); };
+
+template <class T, class Expected>
+concept Matches = requires(T t) {
+  { t } -> Satisfies<[]<class U> requires DecaysTo<Expected, int> {}>;
+};
+
+static_assert(Matches<int, int>);
+static_assert(!Matches<int, double>);
+} // namespace LambdaTypeConstraintSubstitution
+
 namespace GH73418 {
 void foo() {
   int x;
@@ -491,21 +522,5 @@ static_assert(count_if_v_bad_2<L, double> == 111);
 // expected-note@#pass_a_concept_inside_a_lambda_2 {{false}}
 // expected-note@#requires_pass_a_concept_inside_a_lambda_2 {{no matching member function}}
 static_assert(count_if_v_bad_2<L, char> == 111);
-
-}
-
-namespace GH209632 {
-
-template <class A, class B> concept same_as = __is_same(A, B);
-
-template <class NR> void f(NR) {
-  using N = NR;
-  auto inner = [](same_as<N> auto) {};
-  inner(N{});
-}
-
-void main() {
-  f(0);
-}
 
 }

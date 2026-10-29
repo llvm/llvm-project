@@ -694,7 +694,7 @@ void PthreadLockChecker::reportBug(CheckerContext &C,
                                    const MemRegion *MtxRegion,
                                    CheckerKind CheckKind, StringRef Desc,
                                    const MemRegion *ExtraInteresting) const {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
   initBugType(CheckKind);

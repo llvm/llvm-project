@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -22,15 +26,17 @@ Expected<std::unique_ptr<EPCGenericRTDyldMemoryManager>>
 EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
     ExecutorProcessControl &EPC) {
   SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName},
-           {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionAllocActionName},
-           {SAs.DeregisterEHFrame,
-            rt::DeregisterEHFrameSectionAllocActionName}}))
+  if (auto Err = lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {recordAddr(rt::sps_ci::SimpleNativeMemoryMapInstanceName,
+                      &SAs.MemMgr.Instance),
+           recordProxy<sps::MemMgrReserveProxySpec>(&SAs.MemMgr.Reserve),
+           recordProxy<sps::MemMgrInitializeProxySpec>(&SAs.MemMgr.Initialize),
+           recordProxy<sps::MemMgrReleaseProxySpec>(&SAs.MemMgr.Release),
+           recordAddr(rt::RegisterEHFrameSectionAllocActionName,
+                      &SAs.RegisterEHFrame),
+           recordAddr(rt::DeregisterEHFrameSectionAllocActionName,
+                      &SAs.DeregisterEHFrame)}))
     return std::move(Err);
   return std::make_unique<EPCGenericRTDyldMemoryManager>(EPC, std::move(SAs));
 }
@@ -46,16 +52,9 @@ EPCGenericRTDyldMemoryManager::~EPCGenericRTDyldMemoryManager() {
   if (!ErrMsg.empty())
     errs() << "Destroying with existing errors:\n" << ErrMsg << "\n";
 
-  Error Err = Error::success();
-  if (auto Err2 = EPC.callSPSWrapper<
-                  rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
-          SAs.Reserve, Err, SAs.Instance, FinalizedAllocs)) {
-    // FIXME: Report errors through EPC once that functionality is available.
-    logAllUnhandledErrors(std::move(Err2), errs(), "");
-    return;
-  }
-
-  if (Err)
+  // FIXME: Report errors through EPC once that functionality is available.
+  if (auto Err = SAs.MemMgr.Release(EPC.getExecutionSession(),
+                                    SAs.MemMgr.Instance, FinalizedAllocs))
     logAllUnhandledErrors(std::move(Err), errs(), "");
 }
 
@@ -127,14 +126,8 @@ void EPCGenericRTDyldMemoryManager::reserveAllocationSpace(
            << formatv("{0:x}", TotalSize) << " bytes.\n";
   });
 
-  Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
-  if (auto Err = EPC.callSPSWrapper<
-                 rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
-          SAs.Reserve, TargetAllocAddr, SAs.Instance, TotalSize)) {
-    std::lock_guard<std::mutex> Lock(M);
-    ErrMsg = toString(std::move(Err));
-    return;
-  }
+  Expected<ExecutorAddr> TargetAllocAddr = SAs.MemMgr.Reserve(
+      EPC.getExecutionSession(), SAs.MemMgr.Instance, TotalSize);
   if (!TargetAllocAddr) {
     std::lock_guard<std::mutex> Lock(M);
     ErrMsg = toString(TargetAllocAddr.takeError());
@@ -267,17 +260,8 @@ bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
 
     // We'll also need to make an extra allocation for the eh-frame wrapper call
     // arguments.
-    Expected<ExecutorAddr> InitializeKey((ExecutorAddr()));
-    if (auto Err = EPC.callSPSWrapper<
-                   rt::SPSSimpleExecutorMemoryManagerInitializeSignature>(
-            SAs.Initialize, InitializeKey, SAs.Instance, std::move(FR))) {
-      std::lock_guard<std::mutex> Lock(M);
-      this->ErrMsg = toString(std::move(Err));
-      dbgs() << "Serialization error: " << this->ErrMsg << "\n";
-      if (ErrMsg)
-        *ErrMsg = this->ErrMsg;
-      return true;
-    }
+    Expected<ExecutorAddr> InitializeKey = SAs.MemMgr.Initialize(
+        EPC.getExecutionSession(), SAs.MemMgr.Instance, std::move(FR));
     if (!InitializeKey) {
       std::lock_guard<std::mutex> Lock(M);
       this->ErrMsg = toString(InitializeKey.takeError());

@@ -32,3 +32,13 @@ define <2 x double> @splice_v2f64_idx3(<2 x double> %a, <2 x double> %b, i32 %ev
 
 attributes #0 = { vscale_range(1,16) }
 attributes #1 = { vscale_range(2,16) }
+
+; A scalar result is invalid, but calling it must not crash the verifier.
+; CHECK: intrinsic return type (overload type 0) expected any vector type, but got i32
+; CHECK-NEXT: declare i32 @llvm.experimental.vp.splice.i32(i32, i32, i32, i1, i32, i32)
+declare i32 @llvm.experimental.vp.splice.i32(i32, i32, i32, i1, i32, i32)
+
+define i32 @vp_splice_scalar(i32 %a, i32 %b, i32 %evl) {
+  %r = call i32 @llvm.experimental.vp.splice.i32(i32 %a, i32 %b, i32 0, i1 true, i32 %evl, i32 %evl)
+  ret i32 %r
+}

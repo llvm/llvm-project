@@ -6,34 +6,34 @@
 // attribute, so it lands on every function and every call site. It defaults to
 // on for CUDA/HIP.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -foffload-uniform-block -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -foffload-uniform-block -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -foffload-uniform-block -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fno-offload-uniform-block -fclangir -emit-cir %s -o %t-noub.cir
 // RUN: FileCheck --input-file=%t-noub.cir %s --check-prefix=CIR-NOUB
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fno-offload-uniform-block -fclangir -emit-llvm %s -o %t-noub-cir.ll
 // RUN: FileCheck --input-file=%t-noub-cir.ll %s --check-prefix=NOUB
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fno-offload-uniform-block -emit-llvm %s -o %t-noub.ll
 // RUN: FileCheck --input-file=%t-noub.ll %s --check-prefix=NOUB
 

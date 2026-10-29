@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
@@ -41,15 +40,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "optimize-mips-pic-call"
-
-static cl::opt<bool> LoadTargetFromGOT("mips-load-target-from-got",
-                                       cl::init(true),
-                                       cl::desc("Load target address from GOT"),
-                                       cl::Hidden);
-
-static cl::opt<bool> EraseGPOpnd("mips-erase-gp-opnd",
-                                 cl::init(true), cl::desc("Erase GP Operand"),
-                                 cl::Hidden);
 
 namespace {
 
@@ -151,16 +141,17 @@ static void setCallTargetReg(MachineBasicBlock *MBB,
   MachineFunction &MF = *MBB->getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   Register SrcReg = I->getOperand(0).getReg();
-  unsigned DstReg = getRegTy(SrcReg, MF) == MVT::i32 ? Mips::T9 : Mips::T9_64;
+  MCRegister DstReg = MF.getSubtarget<MipsSubtarget>().getABI().getTempReg(
+      9, getRegTy(SrcReg, MF) != MVT::i32);
   BuildMI(*MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), DstReg)
       .addReg(SrcReg);
   I->getOperand(0).setReg(DstReg);
 }
 
 /// Search MI's operands for register GP and erase it.
-static void eraseGPOpnd(MachineInstr &MI) {
-  if (!EraseGPOpnd)
-    return;
+static bool eraseGPOpnd(const MipsOptions &CLOpts, MachineInstr &MI) {
+  if (!CLOpts.erase_gp_opnd)
+    return false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
   MVT::SimpleValueType Ty = getRegTy(MI.getOperand(0).getReg(), MF);
@@ -170,7 +161,7 @@ static void eraseGPOpnd(MachineInstr &MI) {
     MachineOperand &MO = MI.getOperand(I);
     if (MO.isReg() && MO.getReg() == Reg) {
       MI.removeOperand(I);
-      return;
+      return true;
     }
   }
 
@@ -227,36 +218,47 @@ bool OptimizePICCall::runOnMachineFunction(MachineFunction &F) {
 bool OptimizePICCall::visitNode(MBBInfo &MBBI) {
   bool Changed = false;
   MachineBasicBlock *MBB = MBBI.getNode()->getBlock();
+  const MipsSubtarget &STI = MBB->getParent()->getSubtarget<MipsSubtarget>();
+  const MipsOptions &CLOpts = STI.getCLOpts();
+  const MipsRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  // Definition of $gp reaching the current instruction.
+  MachineOperand *GPDef = nullptr;
 
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
        ++I) {
     unsigned Reg;
     ValueType Entry;
 
-    // Skip instructions that are not call instructions via registers.
-    if (!isCallViaRegister(*I, Reg, Entry))
-      continue;
+    // Handle call instructions via registers.
+    if (isCallViaRegister(*I, Reg, Entry)) {
+      Changed = true;
+      unsigned N = getCount(Entry);
 
-    Changed = true;
-    unsigned N = getCount(Entry);
+      if (N != 0) {
+        // If a function has been called more than twice, we do not have to emit
+        // a load instruction to get the function address from the GOT, but can
+        // instead reuse the address that has been loaded before.
+        if (N >= 2 && !CLOpts.load_target_from_got)
+          getCallTargetRegOpnd(*I)->setReg(getReg(Entry));
 
-    if (N != 0) {
-      // If a function has been called more than twice, we do not have to emit a
-      // load instruction to get the function address from the GOT, but can
-      // instead reuse the address that has been loaded before.
-      if (N >= 2 && !LoadTargetFromGOT)
-        getCallTargetRegOpnd(*I)->setReg(getReg(Entry));
+        // Erase the $gp operand if this isn't the first time a function has
+        // been called. $gp needs to be set up only if the function call can go
+        // through a lazy binding stub.
+        if (eraseGPOpnd(CLOpts, *I) && GPDef)
+          GPDef->setIsDead();
+      }
 
-      // Erase the $gp operand if this isn't the first time a function has
-      // been called. $gp needs to be set up only if the function call can go
-      // through a lazy binding stub.
-      eraseGPOpnd(*I);
+      if (Entry)
+        incCntAndSetReg(Entry, Reg);
+
+      setCallTargetReg(MBB, I);
     }
 
-    if (Entry)
-      incCntAndSetReg(Entry, Reg);
-
-    setCallTargetReg(MBB, I);
+    if (MachineOperand *Def = I->findRegisterDefOperand(Mips::GP, &TRI))
+      GPDef = Def;
+    else if (I->readsRegister(Mips::GP, &TRI))
+      GPDef = nullptr;
   }
 
   return Changed;

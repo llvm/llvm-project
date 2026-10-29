@@ -14,7 +14,7 @@ subroutine allocate_pointer
 end 
 
 ! CHECK-LABEL: func.func @_QMmod1Pallocate_pointer()
-! CHECK-COUNT-2: fir.embox %{{.*}} {allocator_idx = 2 : i32} : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK-COUNT-2: fir.embox %{{.*}} allocator_idx(2) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 
 subroutine c_f_pointer_sync
   use iso_c_binding
