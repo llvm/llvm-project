@@ -19,6 +19,7 @@ add_llvm_target(AIRCodeGen
   AIRCrossBufferStoreSeparate.cpp
   AIRFromGenericGPU.cpp
   AIRDemoteF64.cpp
+  AIREmulateF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp
   LLVMToAIRIntrinsics.cpp
@@ -43,10 +44,12 @@ add_llvm_target(AIRCodeGen
 
   LINK_COMPONENTS
   Analysis
+  AsmParser
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  Linker
   MC
   Object
   Passes

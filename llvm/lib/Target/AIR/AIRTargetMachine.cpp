@@ -23,6 +23,7 @@
 #include "AIRCrossBufferStoreSeparate.h"
 #include "AIRAliasAnnotate.h"
 #include "AIRDemoteF64.h"
+#include "AIREmulateF64.h"
 #include "AIRDeviceLoadsVolatile.h"
 #include "AIRInlineNonKernel.h"
 #include "LLVMToAIRIntrinsics.h"
@@ -81,6 +82,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRFromGenericGPUPass(*PR);
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
+  initializeAIREmulateF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
   initializeAIRSimdDivergenceGuardLegacyPass(*PR);
   initializeAIRLegalizeUnsupportedIRLegacyPass(*PR);
@@ -218,9 +220,14 @@ static cl::opt<bool> AIRPortable(
 // The passes of the full pipeline (AIRPassConfig::addCodeGenPrepare) that
 // define AIR rather than work around the Metal driver, in the same order.
 // Scalar arguments become constant buffers, AIR's own form, where the full
-// pipeline packs them into _scalar_buf for the Triton host.
+// pipeline packs them into _scalar_buf for the Triton host. AIR has no double
+// and no floating point environment: doubles and constrained intrinsics are
+// emulated first, before the passes that write AIR's functions (the soft-f64
+// library's intrinsics too). A module without them is left as it is (the
+// AIR agx-raise-to-air writes).
 void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
   PM.add(createAIRFromGenericGPULegacyPass());
+  PM.add(createAIREmulateF64LegacyPass());
   PM.add(createAIRNaNMinMaxLegacyPass());
   PM.add(createLLVMToAIRIntrinsicsLegacyPass());
   PM.add(createAIRBarrierRenameLegacyPass());

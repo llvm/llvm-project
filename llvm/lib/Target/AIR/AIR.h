@@ -42,6 +42,14 @@ void initializeAIRDemoteF64LegacyPass(PassRegistry &);
 /// Pass to rewrite all `double` operations to `float` (AIR has no f64).
 ModulePass *createAIRDemoteF64LegacyPass();
 
+/// Initializer for the AIR double precision emulation pass.
+void initializeAIREmulateF64LegacyPass(PassRegistry &);
+
+/// Pass to make every double i64 bits and its operations calls of the
+/// soft-f64 library, and constrained intrinsics AIR (AIR has no f64 and no
+/// floating point environment).
+ModulePass *createAIREmulateF64LegacyPass();
+
 /// Initializer for the AIR SIMD-group divergence guard pass.
 void initializeAIRSimdDivergenceGuardLegacyPass(PassRegistry &);
 
