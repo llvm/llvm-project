@@ -1342,7 +1342,7 @@ struct VectorContractToAMXDotProduct
     scf::ForOp outerLoop;
 
     // For VNNI layout, accumulator tiles stay in their original layout.
-    // Load and and store them back in place when possible.
+    // Load and store them back in place when possible.
     // Otherwise, start from zero tile and accumulate only the final result.
     std::optional<SmallVector<Operation *>> inPlaceAccReads, inPlaceAccWrites;
     if (isVnni)
@@ -1696,8 +1696,8 @@ struct VectorContractToAMXDotProduct
     auto mBound = arith::ConstantIndexOp::create(rewriter, loc, M);
 
     if (!isVnni || addAccFromMemory) {
-      // Create a loop that iterates over the MxN memerf, retrives two rows +
-      // shuffle them, add up the C element values and stores them to temp
+      // Create a loop that iterates over the MxN memref, retrieves two rows +
+      // shuffles them, adds up the C element values and stores them to the temp
       // buffer.
       scf::ForOp::create(
           rewriter, loc, c0, mBound, one, ValueRange{},
