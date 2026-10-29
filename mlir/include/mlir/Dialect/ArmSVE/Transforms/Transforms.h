@@ -10,8 +10,8 @@
 #define MLIR_DIALECT_ARMSVE_TRANSFORMS_H
 
 namespace mlir {
-
-class LLVMConversionTarget;
+class ConversionTarget;
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
@@ -27,8 +27,10 @@ void populateArmSVELegalizeForLLVMExportPatterns(
 
 /// Configure the target to support lowering ArmSVE ops to ops that map to LLVM
 /// intrinsics.
-void configureArmSVELegalizeForExportTarget(LLVMConversionTarget &target);
+void configureArmSVELegalizeForExportTarget(ConversionTarget &target);
 
+/// Register the LLVM conversion interface for the ArmSVE dialect.
+void registerConvertArmSVEToLLVMInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARMSVE_TRANSFORMS_H

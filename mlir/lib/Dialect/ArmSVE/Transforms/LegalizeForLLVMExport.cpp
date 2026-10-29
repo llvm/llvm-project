@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -55,7 +55,6 @@ using ScalableMaskedDivFOpLowering =
                                  ScalableMaskedDivFIntrOp>;
 
 namespace {
-
 /// Unrolls a conversion to/from equivalent vector types, to allow using a
 /// conversion intrinsic that only supports 1-D vector types.
 ///
@@ -65,31 +64,42 @@ namespace {
 /// ```
 /// is rewritten into:
 /// ```
-/// %cst = arith.constant dense<false> : vector<2x[16]xi1>
-/// %1 = vector.extract %source[0] : vector<[4]xi1> from vector<2x[4]xi1>
+/// %cst = llvm.mlir.constant(dense<false> : vector<2x[16]xi1>)
+///          : !llvm.array<2 x vector<[16]xi1>>
+/// %1 = llvm.extractvalue %source[0] : !llvm.array<2 x vector<[4]xi1>>
 /// %2 = "arm_sve.intr.convert.to.svbool"(%1)
 ///                : (vector<[4]xi1>) -> vector<[16]xi1>
-/// %3 = vector.insert %2, %cst[0] : vector<[16]xi1> into vector<2x[16]xi1>
-/// %4 = vector.extract %source[1] : vector<[4]xi1> from vector<2x[4]xi1>
+/// %3 = llvm.insertvalue %2, %cst[0] : !llvm.array<2 x vector<[16]xi1>>
+/// %4 = llvm.extractvalue %source[1] : !llvm.array<2 x vector<[4]xi1>>
 /// %5 = "arm_sve.intr.convert.to.svbool"(%4)
 ///                : (vector<[4]xi1>) -> vector<[16]xi1>
-/// %result = vector.insert %5, %3[1] : vector<[16]xi1> into vector<2x[16]xi1>
+/// %result = llvm.insertvalue %5, %3[1] : !llvm.array<2 x vector<[16]xi1>>
 /// ```
 template <typename Op, typename IntrOp>
 struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
   using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Op convertOp, typename Op::Adaptor,
+  matchAndRewrite(Op convertOp, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = convertOp.getLoc();
 
-    auto source = convertOp.getSource();
-    VectorType sourceType = source.getType();
+    VectorType sourceType = convertOp.getSource().getType();
     VectorType resultType = convertOp.getResult().getType();
+    auto convertedType =
+        VectorType::get(resultType.getShape().back(),
+                        resultType.getElementType(), /*scalableDims=*/true);
+    if (sourceType.getRank() == 1) {
+      rewriter.replaceOpWithNewOp<IntrOp>(convertOp, convertedType,
+                                          adaptor.getSource());
+      return success();
+    }
 
-    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
-                                             rewriter.getZeroAttr(resultType));
+    Type llvmResultType = this->getTypeConverter()->convertType(resultType);
+    if (!llvmResultType)
+      return failure();
+    Value result = LLVM::ConstantOp::create(rewriter, loc, llvmResultType,
+                                            rewriter.getZeroAttr(resultType));
 
     // We want to iterate over the input vector in steps of the trailing
     // dimension. So this creates tile shape where all leading dimensions are 1,
@@ -100,16 +110,13 @@ struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
     // Iterate over all scalable mask/predicate slices of the source vector.
     for (SmallVector<int64_t> index :
          StaticTileOffsetRange(sourceType.getShape(), tileShape)) {
-      auto extractOrInsertPosition = ArrayRef(index).drop_back();
-      auto sourceVector = vector::ExtractOp::create(rewriter, loc, source,
-                                                    extractOrInsertPosition);
-      VectorType convertedType =
-          VectorType::Builder(llvm::cast<VectorType>(sourceVector.getType()))
-              .setDim(0, resultType.getShape().back());
-      auto convertedVector =
+      auto position = ArrayRef(index).drop_back();
+      Value sourceVector = LLVM::ExtractValueOp::create(
+          rewriter, loc, adaptor.getSource(), position);
+      Value convertedVector =
           IntrOp::create(rewriter, loc, TypeRange{convertedType}, sourceVector);
-      result = vector::InsertOp::create(rewriter, loc, convertedVector, result,
-                                        extractOrInsertPosition);
+      result = LLVM::InsertValueOp::create(rewriter, loc, result,
+                                           convertedVector, position);
     }
 
     rewriter.replaceOp(convertOp, result);
@@ -138,10 +145,15 @@ struct PselOpLowering : public ConvertOpToLLVMPattern<PselOp> {
     auto loc = pselOp.getLoc();
     auto svboolP1 = ConvertToSvboolIntrOp::create(rewriter, loc, svboolType,
                                                   adaptor.getP1());
-    auto indexI32 = arith::IndexCastOp::create(
-        rewriter, loc, rewriter.getI32Type(), pselOp.getIndex());
+    Value index = adaptor.getIndex();
+    unsigned indexWidth = cast<IntegerType>(index.getType()).getWidth();
+    Type i32Type = rewriter.getI32Type();
+    if (indexWidth > 32)
+      index = LLVM::TruncOp::create(rewriter, loc, i32Type, index);
+    else if (indexWidth < 32)
+      index = LLVM::SExtOp::create(rewriter, loc, i32Type, index);
     auto pselIntr = PselIntrOp::create(rewriter, loc, svboolType, svboolP1,
-                                       pselOp.getP2(), indexI32);
+                                       adaptor.getP2(), index);
     rewriter.replaceOpWithNewOp<ConvertFromSvboolIntrOp>(
         pselOp, adaptor.getP1().getType(), pselIntr);
     return success();
@@ -181,7 +193,6 @@ struct CreateMaskOpLowering
     return success();
   }
 };
-
 } // namespace
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
@@ -216,8 +227,7 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
   // clang-format on
 }
 
-void mlir::configureArmSVELegalizeForExportTarget(
-    LLVMConversionTarget &target) {
+void mlir::configureArmSVELegalizeForExportTarget(ConversionTarget &target) {
   // clang-format off
   target.addLegalOp<BfmmlaOp,
                     ConvertFromSvboolIntrOp,
@@ -262,4 +272,29 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       ZipX4Op,
                       SdotOp>();
   // clang-format on
+}
+
+namespace {
+/// Implement the interface to convert ArmSVE to LLVM.
+struct ArmSVEToLLVMDialectInterface : ConvertToLLVMPatternInterface {
+  explicit ArmSVEToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    configureArmSVELegalizeForExportTarget(target);
+    populateArmSVELegalizeForLLVMExportPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertArmSVEToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, ArmSVEDialect *dialect) {
+    dialect->addInterfaces<ArmSVEToLLVMDialectInterface>();
+  });
 }
