@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is used as the registry of passes that are part of the AVR
+// This file is used as the registry of passes that are part of the XCore
 // backend.
 //
 //===----------------------------------------------------------------------===//
