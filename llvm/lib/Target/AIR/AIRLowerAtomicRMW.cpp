@@ -153,15 +153,15 @@ static bool isOrdered(AtomicOrdering O) {
 }
 
 /// air.atomic.fence for an ordered operation of scope Scope.
-static void emitFence(IRBuilder<> &B, Module &M, unsigned Scope) {
+static void emitFence(IRBuilder<> &B, Module &M, unsigned Scope,
+                      unsigned Order = OrderSeqCst) {
   Type *I32 = B.getInt32Ty();
   FunctionCallee F = M.getOrInsertFunction(
       "air.atomic.fence", FunctionType::get(B.getVoidTy(), {I32, I32, I32},
                                             false));
   unsigned Flags =
       Scope == ScopeThreadgroup ? MemThreadgroup : MemDevice | MemThreadgroup;
-  B.CreateCall(F, {B.getInt32(Flags), B.getInt32(OrderSeqCst),
-                   B.getInt32(Scope)});
+  B.CreateCall(F, {B.getInt32(Flags), B.getInt32(Order), B.getInt32(Scope)});
 }
 
 // ── Atomics Metal has no function for (Metal pipeline only) ─────────────────
@@ -618,8 +618,13 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
 
     if (auto *Fence = dyn_cast<FenceInst>(I)) {
       // A fence within one thread orders nothing for other threads.
+      // The portable form keeps the fence's ordering (an acquire or release
+      // fence is cheaper than a full one on a consumer that has them); Metal
+      // takes sequentially consistent fences.
       if (Fence->getSyncScopeID() != SyncScope::SingleThread)
-        emitFence(B, M, getScope(Ctx, /*AS=*/0, Fence->getSyncScopeID()));
+        emitFence(B, M, getScope(Ctx, /*AS=*/0, Fence->getSyncScopeID()),
+                  OrderingHints ? mslOrder(Fence->getOrdering())
+                                : unsigned(OrderSeqCst));
       Fence->eraseFromParent();
       Changed = true;
       continue;
