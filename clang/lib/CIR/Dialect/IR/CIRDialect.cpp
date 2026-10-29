@@ -2069,31 +2069,31 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // Execution always starts in the body region.
+  // The cleanup can also run from the middle of the body, on an unwind out of
+  // a call or on a cir.return, cir.break, cir.continue or cir.goto. None of
+  // these is a branch point, so the cleanup region is a successor of the
+  // parent and of every body exit to stand in for them.
   if (point.isParent()) {
+    regions.reserve(regions.size() + 2);
     regions.emplace_back(&getBodyRegion());
+    regions.emplace_back(&getCleanupRegion());
     return;
   }
 
   mlir::Operation *term = point.getTerminatorPredecessorOrNull();
-  assert(term && "expected a terminator predecessor");
-
-  if (term->getParentRegion() == &getBodyRegion()) {
-    // cir.resume unwinds out of the body. Every other terminator, such as
-    // cir.yield or cir.co_return, is a normal exit.
-    cir::CleanupKindAttr kind = getCleanupKindAttr();
-    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
-      regions.emplace_back(&getCleanupRegion());
-      return;
-    }
+  if (term->getParentRegion() == &getCleanupRegion()) {
+    regions.emplace_back(getOperation());
+    return;
   }
 
-  // Exiting the cleanup region, or a body exit that skips it, leaves the
-  // operation. An unwind out of the middle of the body is not a
-  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
-  // cir.goto, so a cleanup region reached only that way has no predecessor
-  // here.
-  regions.emplace_back(getOperation());
+  regions.emplace_back(&getCleanupRegion());
+
+  // cir.resume unwinds out of the body, and every other terminator is a
+  // normal exit. An exit that the cleanup kind does not cover can also leave
+  // the operation directly.
+  cir::CleanupKindAttr kind = getCleanupKindAttr();
+  if (isa<cir::ResumeOp>(term) ? !kind.isEH() : !kind.isNormal())
+    regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
