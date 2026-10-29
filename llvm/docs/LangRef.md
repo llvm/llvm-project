@@ -2971,6 +2971,14 @@ fn -> other_fn -> other_fn ; fn is norecurse
     than `UINT_MAX`.  It's unspecified which threshold will be used when
     duplicate definitions are linked together with differing values.
 
+`"unsafe-stack-size"="<size>"`
+:   This attribute records the size in bytes of the static unsafe stack frame
+    of a function with the `safestack` attribute. The SafeStack pass sets it,
+    and code generation adds it to the frame size when reporting stack usage.
+    It is ignored on functions without `safestack`. It takes one required
+    integer value, which should be a non-negative integer, and less than
+    `UINT_MAX`.
+
 `vscale_range(<min>[, <max>])`
 :   This function attribute indicates `vscale` is a power-of-two within a
     specified range. `min` must be a power-of-two that is greater than 0. When

@@ -2726,6 +2726,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                .empty(),
           "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "unsafe-stack-size", V);
   for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
     checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
 
@@ -3504,6 +3505,9 @@ void Verifier::visitFunction(const Function &F) {
         Check(NumKCFIAttachments == 1,
               "function must have a single !kcfi_type attachment", &F,
               I.second);
+        break;
+      case LLVMContext::MD_annotation:
+        visitAnnotationMetadata(I.second);
         break;
       }
 
