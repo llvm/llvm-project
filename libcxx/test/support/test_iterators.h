@@ -248,19 +248,44 @@ public:
     }
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
-    TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    TEST_CONSTEXPR_CXX14 reference operator[](I n) const {
+      return it_[n];
+    }
 
     TEST_CONSTEXPR_CXX14 random_access_iterator& operator++() {++it_; return *this;}
     TEST_CONSTEXPR_CXX14 random_access_iterator& operator--() {--it_; return *this;}
     TEST_CONSTEXPR_CXX14 random_access_iterator operator++(int) {return random_access_iterator(it_++);}
     TEST_CONSTEXPR_CXX14 random_access_iterator operator--(int) {return random_access_iterator(it_--);}
 
-    TEST_CONSTEXPR_CXX14 random_access_iterator& operator+=(difference_type n) {it_ += n; return *this;}
-    TEST_CONSTEXPR_CXX14 random_access_iterator& operator-=(difference_type n) {it_ -= n; return *this;}
-    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator+(random_access_iterator x, difference_type n) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator+(difference_type n, random_access_iterator x) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator-(random_access_iterator x, difference_type n) {x -= n; return x;}
-    friend TEST_CONSTEXPR difference_type operator-(random_access_iterator x, random_access_iterator y) {return x.it_ - y.it_;}
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    TEST_CONSTEXPR_CXX14 random_access_iterator& operator+=(I n) {
+      it_ += n;
+      return *this;
+    }
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    TEST_CONSTEXPR_CXX14 random_access_iterator& operator-=(I n) {
+      it_ -= n;
+      return *this;
+    }
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator+(random_access_iterator x, I n) {
+      x += n;
+      return x;
+    }
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator+(I n, random_access_iterator x) {
+      x += n;
+      return x;
+    }
+    template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+    friend TEST_CONSTEXPR_CXX14 random_access_iterator operator-(random_access_iterator x, I n) {
+      x -= n;
+      return x;
+    }
+    friend TEST_CONSTEXPR difference_type operator-(random_access_iterator x, random_access_iterator y) {
+      return x.it_ - y.it_;
+    }
 
     friend TEST_CONSTEXPR bool operator==(const random_access_iterator& x, const random_access_iterator& y) {return x.it_ == y.it_;}
     friend TEST_CONSTEXPR bool operator!=(const random_access_iterator& x, const random_access_iterator& y) {return x.it_ != y.it_;}
@@ -313,7 +338,10 @@ public:
   }
 
   TEST_CONSTEXPR_CXX14 reference operator*() const { return *it_; }
-  TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const { return it_[n]; }
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  TEST_CONSTEXPR_CXX14 reference operator[](I n) const {
+    return it_[n];
+  }
 
   TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator++() {
     ++it_;
@@ -330,26 +358,28 @@ public:
     return three_way_random_access_iterator(it_--);
   }
 
-  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator+=(difference_type n) {
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator+=(I n) {
     it_ += n;
     return *this;
   }
-  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator-=(difference_type n) {
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator-=(I n) {
     it_ -= n;
     return *this;
   }
-  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
-  operator+(three_way_random_access_iterator x, difference_type n) {
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator+(three_way_random_access_iterator x, I n) {
     x += n;
     return x;
   }
-  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
-  operator+(difference_type n, three_way_random_access_iterator x) {
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator+(I n, three_way_random_access_iterator x) {
     x += n;
     return x;
   }
-  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
-  operator-(three_way_random_access_iterator x, difference_type n) {
+  template <class I, typename std::enable_if<std::is_same<I, difference_type>::value, int>::type = 0>
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator-(three_way_random_access_iterator x, I n) {
     x -= n;
     return x;
   }
@@ -443,7 +473,10 @@ public:
   }
 
   constexpr decltype(auto) operator*() const { return *it_; }
-  constexpr decltype(auto) operator[](difference_type n) const { return it_[n]; }
+  template <std::same_as<difference_type> I>
+  constexpr decltype(auto) operator[](I n) const {
+    return it_[n];
+  }
 
   constexpr cpp20_random_access_iterator& operator++() {
     ++it_;
@@ -456,23 +489,28 @@ public:
   constexpr cpp20_random_access_iterator operator++(int) { return cpp20_random_access_iterator(it_++); }
   constexpr cpp20_random_access_iterator operator--(int) { return cpp20_random_access_iterator(it_--); }
 
-  constexpr cpp20_random_access_iterator& operator+=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr cpp20_random_access_iterator& operator+=(I n) {
     it_ += n;
     return *this;
   }
-  constexpr cpp20_random_access_iterator& operator-=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr cpp20_random_access_iterator& operator-=(I n) {
     it_ -= n;
     return *this;
   }
-  friend constexpr cpp20_random_access_iterator operator+(cpp20_random_access_iterator x, difference_type n) {
+  template <std::same_as<difference_type> I>
+  friend constexpr cpp20_random_access_iterator operator+(cpp20_random_access_iterator x, I n) {
     x += n;
     return x;
   }
-  friend constexpr cpp20_random_access_iterator operator+(difference_type n, cpp20_random_access_iterator x) {
+  template <std::same_as<difference_type> I>
+  friend constexpr cpp20_random_access_iterator operator+(I n, cpp20_random_access_iterator x) {
     x += n;
     return x;
   }
-  friend constexpr cpp20_random_access_iterator operator-(cpp20_random_access_iterator x, difference_type n) {
+  template <std::same_as<difference_type> I>
+  friend constexpr cpp20_random_access_iterator operator-(cpp20_random_access_iterator x, I n) {
     x -= n;
     return x;
   }
@@ -543,7 +581,10 @@ public:
 
   constexpr reference operator*() const { return *it_; }
   constexpr pointer operator->() const { return it_; }
-  constexpr reference operator[](difference_type n) const { return it_[n]; }
+  template <std::same_as<difference_type> I>
+  constexpr reference operator[](I n) const {
+    return it_[n];
+  }
 
   constexpr contiguous_iterator& operator++() {
     ++it_;
@@ -556,23 +597,28 @@ public:
   constexpr contiguous_iterator operator++(int) { return contiguous_iterator(it_++); }
   constexpr contiguous_iterator operator--(int) { return contiguous_iterator(it_--); }
 
-  constexpr contiguous_iterator& operator+=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr contiguous_iterator& operator+=(I n) {
     it_ += n;
     return *this;
   }
-  constexpr contiguous_iterator& operator-=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr contiguous_iterator& operator-=(I n) {
     it_ -= n;
     return *this;
   }
-  friend constexpr contiguous_iterator operator+(contiguous_iterator x, difference_type n) {
+  template <std::same_as<difference_type> I>
+  friend constexpr contiguous_iterator operator+(contiguous_iterator x, I n) {
     x += n;
     return x;
   }
-  friend constexpr contiguous_iterator operator+(difference_type n, contiguous_iterator x) {
+  template <std::same_as<difference_type> I>
+  friend constexpr contiguous_iterator operator+(I n, contiguous_iterator x) {
     x += n;
     return x;
   }
-  friend constexpr contiguous_iterator operator-(contiguous_iterator x, difference_type n) {
+  template <std::same_as<difference_type> I>
+  friend constexpr contiguous_iterator operator-(contiguous_iterator x, I n) {
     x -= n;
     return x;
   }
@@ -640,18 +686,41 @@ public:
 
     constexpr reference operator*() const {return *it_;}
     constexpr pointer operator->() const {return it_;}
-    constexpr reference operator[](difference_type n) const {return it_[n];}
+    template <std::same_as<difference_type> I>
+    constexpr reference operator[](I n) const {
+      return it_[n];
+    }
 
     constexpr three_way_contiguous_iterator& operator++() {++it_; return *this;}
     constexpr three_way_contiguous_iterator& operator--() {--it_; return *this;}
     constexpr three_way_contiguous_iterator operator++(int) {return three_way_contiguous_iterator(it_++);}
     constexpr three_way_contiguous_iterator operator--(int) {return three_way_contiguous_iterator(it_--);}
 
-    constexpr three_way_contiguous_iterator& operator+=(difference_type n) {it_ += n; return *this;}
-    constexpr three_way_contiguous_iterator& operator-=(difference_type n) {it_ -= n; return *this;}
-    friend constexpr three_way_contiguous_iterator operator+(three_way_contiguous_iterator x, difference_type n) {x += n; return x;}
-    friend constexpr three_way_contiguous_iterator operator+(difference_type n, three_way_contiguous_iterator x) {x += n; return x;}
-    friend constexpr three_way_contiguous_iterator operator-(three_way_contiguous_iterator x, difference_type n) {x -= n; return x;}
+    template <std::same_as<difference_type> I>
+    constexpr three_way_contiguous_iterator& operator+=(I n) {
+      it_ += n;
+      return *this;
+    }
+    template <std::same_as<difference_type> I>
+    constexpr three_way_contiguous_iterator& operator-=(I n) {
+      it_ -= n;
+      return *this;
+    }
+    template <std::same_as<difference_type> I>
+    friend constexpr three_way_contiguous_iterator operator+(three_way_contiguous_iterator x, I n) {
+      x += n;
+      return x;
+    }
+    template <std::same_as<difference_type> I>
+    friend constexpr three_way_contiguous_iterator operator+(I n, three_way_contiguous_iterator x) {
+      x += n;
+      return x;
+    }
+    template <std::same_as<difference_type> I>
+    friend constexpr three_way_contiguous_iterator operator-(three_way_contiguous_iterator x, I n) {
+      x -= n;
+      return x;
+    }
     friend constexpr difference_type operator-(three_way_contiguous_iterator x, three_way_contiguous_iterator y) {return x.it_ - y.it_;}
 
     friend constexpr auto operator<=>(const three_way_contiguous_iterator& x, const three_way_contiguous_iterator& y) {return x.it_ <=> y.it_;}
@@ -998,7 +1067,10 @@ public:
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
-    constexpr decltype(auto) operator[](difference_type n) const { return It(base_)[n]; }
+    template <std::same_as<difference_type> I>
+    constexpr decltype(auto) operator[](I n) const {
+      return It(base_)[n];
+    }
 
     constexpr operation_counting_iterator& operator++() {
       It tmp(base_);
@@ -1034,39 +1106,39 @@ public:
       return temp;
     }
 
-    constexpr operation_counting_iterator& operator+=(difference_type const n)
+    template <std::same_as<difference_type> I>
       requires std::random_access_iterator<It>
-    {
+    constexpr operation_counting_iterator& operator+=(const I n) {
       It tmp(base_);
       base_ = base(tmp += n);
       moved_by(n);
       return *this;
     }
 
-    constexpr operation_counting_iterator& operator-=(difference_type const n)
+    template <std::same_as<difference_type> I>
       requires std::random_access_iterator<It>
-    {
+    constexpr operation_counting_iterator& operator-=(const I n) {
       It tmp(base_);
       base_ = base(tmp -= n);
       moved_by(-n);
       return *this;
     }
 
-    friend constexpr operation_counting_iterator operator+(operation_counting_iterator it, difference_type n)
+    template <std::same_as<difference_type> I>
       requires std::random_access_iterator<It>
-    {
+    friend constexpr operation_counting_iterator operator+(operation_counting_iterator it, I n) {
       return it += n;
     }
 
-    friend constexpr operation_counting_iterator operator+(difference_type n, operation_counting_iterator it)
+    template <std::same_as<difference_type> I>
       requires std::random_access_iterator<It>
-    {
+    friend constexpr operation_counting_iterator operator+(I n, operation_counting_iterator it) {
       return it += n;
     }
 
-    friend constexpr operation_counting_iterator operator-(operation_counting_iterator it, difference_type n)
+    template <std::same_as<difference_type> I>
       requires std::random_access_iterator<It>
-    {
+    friend constexpr operation_counting_iterator operator-(operation_counting_iterator it, I n) {
       return it -= n;
     }
 
@@ -1239,25 +1311,33 @@ class Iterator {
   constexpr int iter_swaps() const { assert(iter_swaps_); return *iter_swaps_; }
 
   constexpr value_type& operator*() const { return *ptr_; }
-  constexpr reference operator[](difference_type n) const { return ptr_[n]; }
+  template <std::same_as<difference_type> I>
+  constexpr reference operator[](I n) const {
+    return ptr_[n];
+  }
 
-  friend constexpr Iterator operator+(Iterator i, difference_type n) {
+  template <std::same_as<difference_type> I>
+  friend constexpr Iterator operator+(Iterator i, I n) {
     return Iterator(i.ptr_ + n, i.iter_moves_, i.iter_swaps_);
   }
-  friend constexpr Iterator operator+(difference_type n, Iterator i) {
+  template <std::same_as<difference_type> I>
+  friend constexpr Iterator operator+(I n, Iterator i) {
     return i + n;
   }
-  constexpr Iterator operator-(difference_type n) const {
+  template <std::same_as<difference_type> I>
+  constexpr Iterator operator-(I n) const {
     return Iterator(ptr_ - n, iter_moves_, iter_swaps_);
   }
   constexpr difference_type operator-(Iterator rhs) const {
     return ptr_ - rhs.ptr_;
   }
-  constexpr Iterator& operator+=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr Iterator& operator+=(I n) {
     ptr_ += n;
     return *this;
   }
-  constexpr Iterator& operator-=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr Iterator& operator-=(I n) {
     ptr_ -= n;
     return *this;
   }
@@ -1336,18 +1416,21 @@ public:
     return tmp;
   }
 
-  constexpr rvalue_iterator operator+(difference_type n) const {
+  template <std::same_as<difference_type> I>
+  constexpr rvalue_iterator operator+(I n) const {
     auto tmp = *this;
     tmp.it_ += n;
     return tmp;
   }
 
-  constexpr friend rvalue_iterator operator+(difference_type n, rvalue_iterator iter) {
+  template <std::same_as<difference_type> I>
+  constexpr friend rvalue_iterator operator+(I n, rvalue_iterator iter) {
     iter += n;
     return iter;
   }
 
-  constexpr rvalue_iterator operator-(difference_type n) const {
+  template <std::same_as<difference_type> I>
+  constexpr rvalue_iterator operator-(I n) const {
     auto tmp = *this;
     tmp.it_ -= n;
     return tmp;
@@ -1355,17 +1438,22 @@ public:
 
   constexpr difference_type operator-(const rvalue_iterator& other) const { return it_ - other.it_; }
 
-  constexpr rvalue_iterator& operator+=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr rvalue_iterator& operator+=(I n) {
     it_ += n;
     return *this;
   }
 
-  constexpr rvalue_iterator& operator-=(difference_type n) {
+  template <std::same_as<difference_type> I>
+  constexpr rvalue_iterator& operator-=(I n) {
     it_ -= n;
     return *this;
   }
 
-  constexpr reference operator[](difference_type n) const { return std::move(it_[n]); }
+  template <std::same_as<difference_type> I>
+  constexpr reference operator[](I n) const {
+    return std::move(it_[n]);
+  }
 
   auto operator<=>(const rvalue_iterator&) const noexcept = default;
 
@@ -1627,20 +1715,23 @@ struct ProxyIterator : ProxyIteratorBase<Base> {
   }
 
   // to satisfy random_access_iterator
-  constexpr ProxyIterator& operator+=(difference_type n)
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  constexpr ProxyIterator& operator+=(I n) {
     base_ += n;
     return *this;
   }
 
-  constexpr ProxyIterator& operator-=(difference_type n)
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  constexpr ProxyIterator& operator-=(I n) {
     base_ -= n;
     return *this;
   }
 
-  constexpr Proxy<std::iter_reference_t<Base>> operator[](difference_type n) const
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  constexpr Proxy<std::iter_reference_t<Base>> operator[](I n) const {
     return {base_[n]};
   }
 
@@ -1669,18 +1760,21 @@ struct ProxyIterator : ProxyIteratorBase<Base> {
     return x.base_ <=> y.base_;
   }
 
-  friend constexpr ProxyIterator operator+(const ProxyIterator& x, difference_type n)
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  friend constexpr ProxyIterator operator+(const ProxyIterator& x, I n) {
     return ProxyIterator{x.base_ + n};
   }
 
-  friend constexpr ProxyIterator operator+(difference_type n, const ProxyIterator& x)
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  friend constexpr ProxyIterator operator+(I n, const ProxyIterator& x) {
     return ProxyIterator{n + x.base_};
   }
 
-  friend constexpr ProxyIterator operator-(const ProxyIterator& x, difference_type n)
-    requires std::random_access_iterator<Base> {
+  template <std::same_as<difference_type> I>
+    requires std::random_access_iterator<Base>
+  friend constexpr ProxyIterator operator-(const ProxyIterator& x, I n) {
     return ProxyIterator{x.base_ - n};
   }
 
@@ -1775,7 +1869,8 @@ public:
   decltype(*iter_) operator*() { return *iter_; }
   decltype(*iter_) operator*() const { return *iter_; }
 
-  decltype(iter_[0]) operator[](difference_type v) const {
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  decltype(iter_[0]) operator[](I v) const {
     return iter_[v];
   }
 
@@ -1801,12 +1896,14 @@ public:
     return tmp;
   }
 
-  Derived& operator+=(difference_type i) {
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  Derived& operator+=(I i) {
     iter_ += i;
     return static_cast<Derived&>(*this);
   }
 
-  Derived& operator-=(difference_type i) {
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  Derived& operator-=(I i) {
     iter_ -= i;
     return static_cast<Derived&>(*this);
   }
@@ -1815,17 +1912,22 @@ public:
     return lhs.iter_ - rhs.iter_;
   }
 
-  friend Derived operator-(Derived iter, difference_type i) {
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  friend Derived operator-(Derived iter, I i) {
     iter.iter_ -= i;
     return iter;
   }
 
-  friend Derived operator+(Derived iter, difference_type i) {
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  friend Derived operator+(Derived iter, I i) {
     iter.iter_ += i;
     return iter;
   }
 
-  friend Derived operator+(difference_type i, Derived iter) { return iter + i; }
+  template <class I, std::enable_if_t<std::is_same_v<I, difference_type>, int> = 0>
+  friend Derived operator+(I i, Derived iter) {
+    return iter + i;
+  }
 
   friend bool operator==(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ == rhs.iter_; }
   friend bool operator!=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ != rhs.iter_; }
