@@ -1383,9 +1383,6 @@ public:
     LogicalAnd,     // Non-poison propagating logical And.
     LogicalOr,      // Non-poison propagating logical Or.
     NumActiveLanes, // Counts the number of active lanes in a mask.
-    // Returns a mask of all the lanes before the first active lane, i.e.
-    // @llvm.mask.beforefirst.
-    MaskBeforeFirst,
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).

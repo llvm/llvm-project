@@ -3463,8 +3463,8 @@ static bool handleUncountableExitsWithSideEffects(
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
-  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::MaskBeforeFirst, Cond,
-                                           DebugLoc(), "uncountable.exit.mask");
+  VPValue *Mask = MaskBuilder.createWidenIntrinsic(Intrinsic::mask_beforefirst,
+                                                   Cond, Cond->getScalarType());
 
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))

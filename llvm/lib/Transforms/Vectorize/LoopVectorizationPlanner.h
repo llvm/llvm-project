@@ -563,6 +563,15 @@ public:
     return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
   }
 
+  VPWidenIntrinsicRecipe *
+  createWidenIntrinsic(Intrinsic::ID VectorIntrinsicID,
+                       ArrayRef<VPValue *> CallArguments, Type *Ty,
+                       const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
+                       DebugLoc DL = DebugLoc::getUnknown()) {
+    return tryInsertInstruction(new VPWidenIntrinsicRecipe(
+        VectorIntrinsicID, CallArguments, Ty, Flags, MD, DL));
+  }
+
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
