@@ -48,11 +48,12 @@ void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
                                        DenseElementsAttr varShapeAttr,
                                        TypeAttr typeAttr,
                                        Attribute initialValueAttr);
+} // namespace tosa
+} // namespace mlir
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
-} // namespace tosa
-
+namespace mlir {
 namespace OpTrait {
 namespace tosa {
 
@@ -100,9 +101,7 @@ bool isa_tosa_shape_type(mlir::Type t);
 /// operation, -1 can be used to indicate a size that is the remainder
 /// of the other dimensions.
 constexpr int64_t kInferableDimSize = -1;
-
 } // namespace tosa
-
 } // namespace mlir
 
 #define GET_ATTRDEF_CLASSES

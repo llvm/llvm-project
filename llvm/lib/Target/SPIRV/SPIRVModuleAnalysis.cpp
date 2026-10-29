@@ -91,15 +91,17 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
   bool MaxVerOK =
       ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
+  bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
   if (ReqCaps.empty()) {
-    if (ReqExts.empty()) {
-      if (MinVerOK && MaxVerOK)
+    // A met minimum version makes the extension unnecessary.
+    if (ReqExts.empty() || (VerOK && !ReqMinVer.empty())) {
+      if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
-  } else if (MinVerOK && MaxVerOK) {
+  } else if (VerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap)) {
@@ -130,15 +132,15 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   }
   // If there are no capabilities, or we can't satisfy the version or
   // capability requirements, use the list of extensions (if the subtarget
-  // can handle them all).
-  if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
+  // can handle them all). Without an extension the version must hold. An
+  // extension stands in for an unmet version.
+  if ((!ReqExts.empty() || VerOK) &&
+      llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true,
-            {},
-            std::move(ReqExts),
-            VersionTuple(),
-            VersionTuple()}; // TODO: add versions to extensions.
+    if (VerOK)
+      return {true, {}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+    return {true, {}, std::move(ReqExts), VersionTuple(), VersionTuple()};
   }
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
