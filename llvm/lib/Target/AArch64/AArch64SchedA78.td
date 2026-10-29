@@ -1150,7 +1150,7 @@ def : InstRW<[A78Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 def : InstRW<[A78Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
 
 // FP transfer, from vec to gen reg
-def : SchedAlias<WriteFCopy, A78Write_2c_1V>;
+def : SchedAlias<WriteFCopy, A78Write_2c_1V1>;
 
 // FP load instructions
 // -----------------------------------------------------------------------------
