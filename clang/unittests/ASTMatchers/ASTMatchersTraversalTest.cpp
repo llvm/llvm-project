@@ -10,6 +10,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -5224,6 +5225,50 @@ TEST(ForEachDescendant, BindsMultipleNodes) {
       "          class E { class F { int y; int z; }; }; };",
     recordDecl(hasName("C"), forEachDescendant(fieldDecl().bind("f"))),
     std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 4)));
+}
+
+TEST(ForEachDescendant, PreservesSharedInitializerBindings) {
+  auto AST = tooling::buildASTFromCodeWithArgs(R"c(
+    struct V { const struct V *child; };
+    void f(void) {
+      struct V value = {
+          .child = (struct V[]){{.child = (struct V[]){{.child = 0}}}}};
+    }
+  )c",
+                                               {"-std=c99"}, "input.c");
+  ASSERT_TRUE(AST);
+  auto &Ctx = AST->getASTContext();
+  auto Functions = match(functionDecl(hasName("f")).bind("f"), Ctx);
+  ASSERT_EQ(Functions.size(), 1u);
+  const auto *Function = Functions.front().getNodeAs<FunctionDecl>("f");
+
+  // A shared subtree still contributes a successful descendant binding for
+  // each incoming path. Compare with the ordinary visitor's traversal.
+  struct LiteralVisitor : RecursiveASTVisitor<LiteralVisitor> {
+    std::vector<const IntegerLiteral *> Literals;
+    bool shouldVisitImplicitCode() const { return true; }
+    bool VisitIntegerLiteral(IntegerLiteral *Literal) {
+      Literals.push_back(Literal);
+      return true;
+    }
+  } Visitor;
+  Visitor.TraverseDecl(const_cast<FunctionDecl *>(Function));
+  ASSERT_GT(Visitor.Literals.size(), 1u);
+
+  auto Results =
+      match(functionDecl(hasName("f"),
+                         forEachDescendant(integerLiteral().bind("literal"))),
+            Ctx);
+  ASSERT_EQ(Results.size(), Visitor.Literals.size());
+  for (size_t I = 0; I < Results.size(); ++I)
+    EXPECT_EQ(Results[I].getNodeAs<IntegerLiteral>("literal"),
+              Visitor.Literals[I]);
+
+  EXPECT_TRUE(match(functionDecl(hasName("f"), hasDescendant(callExpr())), Ctx)
+                  .empty());
+  // The outer traversal reports each compound literal once, while the
+  // descendant matcher above preserves its successful binding multiplicity.
+  EXPECT_EQ(match(compoundLiteralExpr(), Ctx).size(), 2u);
 }
 
 TEST(ForEachDescendant, BindsRecursiveCombinations) {

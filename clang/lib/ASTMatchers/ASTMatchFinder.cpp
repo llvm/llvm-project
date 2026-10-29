@@ -29,6 +29,7 @@
 #include <deque>
 #include <memory>
 #include <set>
+#include <tuple>
 
 namespace clang {
 namespace ast_matchers {
@@ -191,8 +192,28 @@ public:
 
     if (!match(*StmtToTraverse))
       return false;
+    // No descendant can match a direct-child query below this depth.
+    if (CurrentDepth >= MaxDepth)
+      return true;
     return VisitorBase::TraverseStmt(StmtToTraverse, Queue);
   }
+  // The input bindings and matcher are fixed for this visitor. Cache only
+  // descendant searches with no matches, preserving successful binding
+  // multiplicity even when a statement has several incoming AST edges.
+  bool dataTraverseStmtPre(Stmt *S) {
+    if (MaxDepth == INT_MAX && NoMatchingDescendants.contains(S))
+      return false;
+    MatchCounts.push_back(MatchCount);
+    return true;
+  }
+
+  bool dataTraverseStmtPost(Stmt *S) {
+    if (MaxDepth == INT_MAX && MatchCounts.back() == MatchCount)
+      NoMatchingDescendants.insert(S);
+    MatchCounts.pop_back();
+    return true;
+  }
+
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
   bool TraverseType(QualType TypeNode, bool TraverseQualifier = true) {
@@ -379,6 +400,7 @@ private:
       if (Matcher->matches(DynTypedNode::create(Node), Finder,
                            &RecursiveBuilder)) {
         Matches = true;
+        ++MatchCount;
         ResultBindings.addMatch(RecursiveBuilder);
         return false; // Abort as soon as a match is found.
       }
@@ -388,6 +410,7 @@ private:
                            &RecursiveBuilder)) {
         // After the first match the matcher succeeds.
         Matches = true;
+        ++MatchCount;
         ResultBindings.addMatch(RecursiveBuilder);
       }
     }
@@ -414,6 +437,9 @@ private:
   const bool IgnoreImplicitChildren;
   const ASTMatchFinder::BindKind Bind;
   bool Matches;
+  size_t MatchCount = 0;
+  llvm::SmallVector<size_t, 16> MatchCounts;
+  llvm::SmallPtrSet<const Stmt *, 32> NoMatchingDescendants;
 };
 
 // Controls the outermost traversal of the AST and allows to match multiple
@@ -775,6 +801,8 @@ public:
   }
 
 private:
+  std::set<std::tuple<const Stmt *, bool, bool, bool>>
+      TraversedCCompoundLiterals;
   bool TraversingASTNodeNotSpelledInSource = false;
   bool TraversingASTNodeNotAsIs = false;
   bool TraversingASTChildrenNotSpelledInSource = false;
@@ -1549,6 +1577,16 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
   bool ScopedTraversal = TraversingASTNodeNotSpelledInSource ||
                          TraversingASTChildrenNotSpelledInSource;
 
+  // C designated initializers share compound literals between syntactic
+  // and semantic forms. Visit each literal once in each traversal context;
+  // repeating the same subtree adds duplicate callbacks, not new matches.
+  if (!getASTContext().getLangOpts().CPlusPlus &&
+      isa<CompoundLiteralExpr>(StmtNode) &&
+      !TraversedCCompoundLiterals
+           .emplace(StmtNode, ScopedTraversal, TraversingASTNodeNotAsIs,
+                    TraversingASTChildrenNotSpelledInSource)
+           .second)
+    return true;
   ASTNodeNotSpelledInSourceScope RAII(this, ScopedTraversal);
   match(*StmtNode);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
