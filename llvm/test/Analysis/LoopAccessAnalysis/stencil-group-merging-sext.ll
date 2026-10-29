@@ -55,7 +55,7 @@ define void @sext_coeff_two_with_constant(ptr %src, ptr %dst0, ptr %dst1, i32 %s
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i32 %s to i64) + %n + %src) umax (1 + (sext i32 (2 + (2 * %s)) to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: %src High: (1 + (sext i32 (2 + (2 * %s)) to i64) + %n + %src))
 ; MERGE-NEXT:            Member: {(1 + (sext i32 (2 + (2 * %s)) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {%src,+,1}<%loop>
@@ -63,7 +63,7 @@ define void @sext_coeff_two_with_constant(ptr %src, ptr %dst0, ptr %dst1, i32 %s
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 (2 + (2 * %s)) to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 1073741822
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -196,7 +196,7 @@ define void @sext_narrow_i8(ptr %src, ptr %dst0, ptr %dst1, i8 %s, i64 %n) {
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i8 (2 * %s) to i64) + %n + %src) umax ((sext i8 %s to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: %src High: ((sext i8 (2 * %s) to i64) + %n + %src))
 ; MERGE-NEXT:            Member: {((sext i8 (2 * %s) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i8 %s to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {%src,+,1}<%loop>
@@ -204,7 +204,7 @@ define void @sext_narrow_i8(ptr %src, ptr %dst0, ptr %dst1, i8 %s, i64 %n) {
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i8 %s to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i8 (2 * %s) to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i8 %s to i64) sle) 63
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -339,7 +339,7 @@ define void @sext_exact_limits(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i64 %n) {
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i32 (2 + (-1 * %s)) to i64) + %n + %src) umax ((sext i32 (-2 + (-1 * %s)) to i64) + %n + %src) umax ((sext i32 %s to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: ((sext i32 (-2 + (-1 * %s)) to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
 ; MERGE-NEXT:            Member: {((sext i32 (-2 + (-1 * %s)) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 (2 + (-1 * %s)) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
@@ -347,9 +347,8 @@ define void @sext_exact_limits(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i64 %n) {
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
-; MERGE-NEXT:      Compare predicate: (sext i32 (2 + (-1 * %s)) to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 (-2 + (-1 * %s)) to i64) sgt) 0
 ; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 2147483646
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -499,7 +498,7 @@ define void @sext_coeff_minus_two(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i64 %n
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i32 (-2 * %s) to i64) + %n + %src) umax ((sext i32 %s to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: ((sext i32 (-2 * %s) to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
 ; MERGE-NEXT:            Member: {((sext i32 (-2 * %s) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {%src,+,1}<%loop>
@@ -507,7 +506,7 @@ define void @sext_coeff_minus_two(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i64 %n
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 (-2 * %s) to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 1073741824
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -989,67 +988,111 @@ exit:
 ;;   sext(4+4*s): s <= 536870910 (chosen)
 ;;   sext(2*s):   s <= 1073741823
 define void @sext_two_limits_in_one_offset(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i64 %n) {
-; CHECK-LABEL: 'sext_two_limits_in_one_offset'
-; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
-; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
-; CHECK-NEXT:      Check 5:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
-; CHECK-NEXT:      Check 6:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
-; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst0 High: (%n + %dst0))
-; CHECK-NEXT:            Member: {%dst0,+,1}<%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %dst1 High: (%n + %dst1))
-; CHECK-NEXT:            Member: {%dst1,+,1}<%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: ((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %src) High: ((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: ((sext i32 %s to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP4:
-; CHECK-NEXT:          (Low: %src High: (%n + %src))
-; CHECK-NEXT:            Member: {%src,+,1}<%loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; CHECK-NEXT:      SCEV assumptions:
-; CHECK-EMPTY:
-; CHECK-NEXT:      Expressions re-written:
+; MERGE-LABEL: 'sext_two_limits_in_one_offset'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
+; MERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; MERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
+; MERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; MERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; MERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %src High: ((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %n + %src))
+; MERGE-NEXT:            Member: {((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {%src,+,1}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 536870910
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'sext_two_limits_in_one_offset'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.sum = getelementptr i8, ptr %p.part, i64 %twice64
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; NOMERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; NOMERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %src) High: ((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 (4 + (4 * %s)) to i64) + (sext i32 (2 * %s) to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: ((sext i32 %s to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: %src High: (%n + %src))
+; NOMERGE-NEXT:            Member: {%src,+,1}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
 ;
 entry:
   %s64 = sext i32 %s to i64
@@ -1122,7 +1165,7 @@ define void @sext_general_limit_is_smaller(ptr %src, ptr %dst0, ptr %dst1, i32 %
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((8589934592 * (sext i32 (1 + %s) to i64)) + %n + %src) umax ((8589934592 * (sext i32 %s to i64)) + %n + %src)))
+; MERGE-NEXT:          (Low: %src High: ((8589934592 * (sext i32 (1 + %s) to i64)) + %n + %src))
 ; MERGE-NEXT:            Member: {((8589934592 * (sext i32 (1 + %s) to i64)) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((8589934592 * (sext i32 %s to i64)) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {%src,+,1}<%loop>
@@ -1130,9 +1173,7 @@ define void @sext_general_limit_is_smaller(ptr %src, ptr %dst0, ptr %dst1, i32 %
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 536870911
-; MERGE-NEXT:      Compare predicate: (sext i32 (1 + %s) to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 (1 + %s) to i64) sle) 536870911
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 1073741822
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -1244,93 +1285,145 @@ exit:
 ;;   sext(-1-(s+t)): s, t <= 1073741823
 ;;   sext(2*s-t):    s, t <= 1073741824
 define void @sext_two_strides_star(ptr %src, ptr %dst0, ptr %dst1, i32 %s, i32 %t, i64 %n) {
-; CHECK-LABEL: 'sext_two_strides_star'
-; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
-; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP5:
-; CHECK-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
-; CHECK-NEXT:      Check 5:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP6:
-; CHECK-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
-; CHECK-NEXT:      Check 6:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
-; CHECK-NEXT:      Check 7:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
-; CHECK-NEXT:      Check 8:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
-; CHECK-NEXT:      Check 9:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP5:
-; CHECK-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
-; CHECK-NEXT:      Check 10:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP6:
-; CHECK-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
-; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst0 High: (%n + %dst0))
-; CHECK-NEXT:            Member: {%dst0,+,1}<%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %dst1 High: (%n + %dst1))
-; CHECK-NEXT:            Member: {%dst1,+,1}<%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: ((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %src) High: ((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: ((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src) High: ((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP4:
-; CHECK-NEXT:          (Low: ((sext i32 %t to i64) + %src) High: ((sext i32 %t to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 %t to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP5:
-; CHECK-NEXT:          (Low: ((sext i32 %s to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP6:
-; CHECK-NEXT:          (Low: (1 + (sext i32 (%s + %t) to i64) + %src) High: (1 + (sext i32 (%s + %t) to i64) + %n + %src))
-; CHECK-NEXT:            Member: {(1 + (sext i32 (%s + %t) to i64) + %src),+,1}<%loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; CHECK-NEXT:      SCEV assumptions:
-; CHECK-EMPTY:
-; CHECK-NEXT:      Expressions re-written:
+; MERGE-LABEL: 'sext_two_strides_star'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
+; MERGE-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
+; MERGE-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
+; MERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; MERGE-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
+; MERGE-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
+; MERGE-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
+; MERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; MERGE-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; MERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: ((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src) High: (((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %n + %src) umax (1 + (sext i32 (%s + %t) to i64) + %n + %src)))
+; MERGE-NEXT:            Member: {((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {((sext i32 %t to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {(1 + (sext i32 (%s + %t) to i64) + %src),+,1}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 1073741823
+; MERGE-NEXT:      Compare predicate: (sext i32 %t to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %t to i64) sle) 1073741823
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'sext_two_strides_star'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.diff = getelementptr i8, ptr %sp, i64 %diff64
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.not = getelementptr i8, ptr %sp, i64 %not64
+; NOMERGE-NEXT:      Check 8:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p.t = getelementptr i8, ptr %sp, i64 %t64
+; NOMERGE-NEXT:      Check 9:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p.s = getelementptr i8, ptr %sp, i64 %s64
+; NOMERGE-NEXT:      Check 10:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %p.add1 = getelementptr i8, ptr %p.add, i64 1
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; NOMERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; NOMERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %src) High: ((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 ((2 * %s) + (-1 * %t)) to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: ((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src) High: ((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 (-1 + (-1 * (%s + %t))) to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: ((sext i32 %t to i64) + %src) High: ((sext i32 %t to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 %t to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: ((sext i32 %s to i64) + %src) High: ((sext i32 %s to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP6:
+; NOMERGE-NEXT:          (Low: (1 + (sext i32 (%s + %t) to i64) + %src) High: (1 + (sext i32 (%s + %t) to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {(1 + (sext i32 (%s + %t) to i64) + %src),+,1}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
 ;
 entry:
   %add = add i32 %t, %s
@@ -1416,7 +1509,7 @@ define void @sext_two_strides_mixed_signs(ptr %src, ptr %dst0, ptr %dst1, i32 %s
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i32 (10 + (-3 * %s) + %t) to i64) + %n + %src) umax ((sext i32 %s to i64) + %n + %src) umax ((sext i32 %t to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: (((sext i32 (10 + (-3 * %s) + %t) to i64) + %src) umin %src) High: (((sext i32 (10 + (-3 * %s) + %t) to i64) + %n + %src) umax ((sext i32 %s to i64) + %n + %src) umax ((sext i32 %t to i64) + %n + %src)))
 ; MERGE-NEXT:            Member: {((sext i32 (10 + (-3 * %s) + %t) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 %t to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i32 %s to i64) + %src),+,1}<%loop>
@@ -1425,8 +1518,9 @@ define void @sext_two_strides_mixed_signs(ptr %src, ptr %dst0, ptr %dst1, i32 %s
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i32 %t to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i32 (10 + (-3 * %s) + %t) to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %t to i64) sle) 715827886
 ; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i32 %s to i64) sle) 715827886
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -1583,7 +1677,7 @@ define void @sext_two_strides_cancel(ptr %src, ptr %dst0, ptr %dst1, i8 %s, i8 %
 ; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
 ; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: %src High: (((sext i8 (100 + (50 * %s) + (-50 * %t)) to i64) + %n + %src) umax ((sext i8 %s to i64) + %n + %src) umax ((sext i8 %t to i64) + %n + %src)))
+; MERGE-NEXT:          (Low: (((sext i8 (100 + (50 * %s) + (-50 * %t)) to i64) + %src) umin %src) High: (((sext i8 (100 + (50 * %s) + (-50 * %t)) to i64) + %n + %src) umax ((sext i8 %s to i64) + %n + %src) umax ((sext i8 %t to i64) + %n + %src)))
 ; MERGE-NEXT:            Member: {((sext i8 (100 + (50 * %s) + (-50 * %t)) to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i8 %t to i64) + %src),+,1}<%loop>
 ; MERGE-NEXT:            Member: {((sext i8 %s to i64) + %src),+,1}<%loop>
@@ -1592,8 +1686,9 @@ define void @sext_two_strides_cancel(ptr %src, ptr %dst0, ptr %dst1, i8 %s, i8 %
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: (sext i8 %t to i64) sgt) 0
-; MERGE-NEXT:      Compare predicate: (sext i8 (100 + (50 * %s) + (-50 * %t)) to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i8 %t to i64) sle) 1
 ; MERGE-NEXT:      Compare predicate: (sext i8 %s to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i8 %s to i64) sle) 1
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -1718,57 +1813,101 @@ exit:
 ;; So y must stay as a stride with coefficient 0 and keep its checks
 ;; 1 <= y <= 126. Without them, y = 127 reads outside the group.
 define void @sext_nested_coeff_cancels(ptr %src, ptr %dst0, ptr %dst1, i8 %y, i64 %n) {
-; CHECK-LABEL: 'sext_nested_coeff_cancels'
-; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
-; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
-; CHECK-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
-; CHECK-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
-; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst0 High: (%n + %dst0))
-; CHECK-NEXT:            Member: {%dst0,+,1}<%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %dst1 High: (%n + %dst1))
-; CHECK-NEXT:            Member: {%dst1,+,1}<%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: ((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %src) High: ((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %n + %src))
-; CHECK-NEXT:            Member: {((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %src),+,1}<%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: %src High: (2 + %n + %src))
-; CHECK-NEXT:            Member: {(2 + %src),+,1}<%loop>
-; CHECK-NEXT:            Member: {%src,+,1}<%loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; CHECK-NEXT:      SCEV assumptions:
-; CHECK-EMPTY:
-; CHECK-NEXT:      Expressions re-written:
+; MERGE-LABEL: 'sext_nested_coeff_cancels'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
+; MERGE-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
+; MERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
+; MERGE-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
+; MERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; MERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; MERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %src High: (2 + %n + %src))
+; MERGE-NEXT:            Member: {((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {(2 + %src),+,1}<%loop>
+; MERGE-NEXT:            Member: {%src,+,1}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: (sext i8 %y to i64) sgt) 0
+; MERGE-NEXT:      Compare predicate: (sext i8 %y to i64) sle) 126
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'sext_nested_coeff_cancels'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %d0 = phi ptr [ %dst0, %entry ], [ %next.d0, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
+; NOMERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p.mix = getelementptr i8, ptr %sp, i64 %mix64
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %d1 = phi ptr [ %dst1, %entry ], [ %next.d1, %loop ]
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p.2 = getelementptr i8, ptr %sp, i64 2
+; NOMERGE-NEXT:          %sp = phi ptr [ %src, %entry ], [ %next.sp, %loop ]
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %dst0 High: (%n + %dst0))
+; NOMERGE-NEXT:            Member: {%dst0,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %dst1 High: (%n + %dst1))
+; NOMERGE-NEXT:            Member: {%dst1,+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %src) High: ((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %n + %src))
+; NOMERGE-NEXT:            Member: {((sext i16 ((sext i8 (1 + %y) to i16) + (-1 * (sext i8 %y to i16))<nsw>) to i64) + %src),+,1}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %src High: (2 + %n + %src))
+; NOMERGE-NEXT:            Member: {(2 + %src),+,1}<%loop>
+; NOMERGE-NEXT:            Member: {%src,+,1}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
 ;
 entry:
   %y1 = add i8 %y, 1
