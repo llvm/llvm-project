@@ -31539,6 +31539,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
       (N1.getResNo() != N2.getResNo()))
     return SDValue();
 
+  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
+    return SDValue();
+
   // The use checks are intentionally on SDNode because we may be dealing
   // with opcodes that produce more than one SDValue.
   if (!N1->hasOneUse() || !N2->hasOneUse())
