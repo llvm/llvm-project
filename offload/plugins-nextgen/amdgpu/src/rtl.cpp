@@ -235,6 +235,20 @@ static void flushPcieWc(void *Ptr, size_t Size) {
   (void)Readback;
 }
 
+/// Copy \p Size bytes from \p Src to the device memory at \p Dst.
+/// \p OverXGMI tells whether the host reaches that memory over XGMI.
+///
+/// Without XGMI, this needs a WC flush. With XGMI, this isn't necessary
+/// (according to the code in HSA-runtime).
+static Error publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
+                                   bool OverXGMI) {
+  std::memcpy(Dst, Src, Size);
+  if (OverXGMI)
+    return Plugin::success();
+  hsa_utils::flushPcieWc(Dst, Size);
+  return Plugin::success();
+}
+
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
 template <typename ElemTy, typename IterFuncTy, typename CallbackTy>
@@ -702,22 +716,6 @@ private:
   /// Reference to the actual memory manager.
   MemoryManagerTy *MemoryManager;
 };
-
-/// Largest size for direct host to device transfer.
-static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
-
-/// Copy \p Size bytes from \p Src to the device memory at \p Dst.
-/// \p OverXGMI tells whether the host reaches that memory over XGMI.
-///
-/// Without XGMI, this needs a WC flush. With XGMI, this isn't necessary
-/// (according to the code in HSA-runtime).
-static void publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
-                                  bool OverXGMI) {
-  std::memcpy(Dst, Src, Size);
-  if (OverXGMI)
-    return;
-  hsa_utils::flushPcieWc(Dst, Size);
-}
 
 /// Class implementing the AMDGPU device images' properties.
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
@@ -3099,6 +3097,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Whether a transfer of \p Size bytes should be done via direct H2D
   /// transfer.
   bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
+    // A first heuristic, tune as new insights arise.
+    static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
     return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
            hsa_utils::isHostWritable(Agent, Ptr, Size);
   }
@@ -3114,10 +3114,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // A synchronous transfer is not ordered with the work on any queue, so the
     // host can write the memory directly.
-    if (AsyncInfoWrapper.isSynchronous() && allowsDirectWrite(TgtPtr, Size)) {
-      publishToDeviceMemory(TgtPtr, HstPtr, Size, HostLinkIsXGMI);
-      return Plugin::success();
-    }
+    if (AsyncInfoWrapper.isSynchronous() && allowsDirectWrite(TgtPtr, Size))
+      return hsa_utils::publishToDeviceMemory(TgtPtr, HstPtr, Size,
+                                              HostLinkIsXGMI);
 
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
