@@ -99,11 +99,10 @@ def ApplyPrepareVectorContractLoopsPatternsOp : Op<Transform_Dialect,
   let description = [{
     Apply patterns that rewrite bf16 and i8 matmul loops to contract packed
     VNNI operands directly, avoiding RHS unpacking. Supported unpacking uses
-    shape casts and transposes, or bf16 even/odd split-and-join sequences.
-
-    Before applying these patterns, remove leading unit dimensions from
-    vectors with
-    `apply_patterns.vector.cast_away_vector_leading_one_dim`.
+    shape casts and transposes, or split-and-join sequences. Splits may use
+    deinterleave (binary) or transpose/extract (any width dividing the VNNI
+    factor); joins may use interleave (binary) or slice inserts (any width
+    dividing the VNNI factor).
   }];
 
   let assemblyFormat = "attr-dict";

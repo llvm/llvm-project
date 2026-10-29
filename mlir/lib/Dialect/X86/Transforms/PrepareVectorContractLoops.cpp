@@ -74,10 +74,11 @@ static Value skipReshapes(Value v) {
   return v;
 }
 
-// Find the source and parity of an even/odd split: v[i] = src[2 * i + j].
-// Match either pattern below (unit dimensions may also be present):
+// Find the source and VNNI lane j of a split: v[i] = src[factor * i + j].
+// A split step of width s keeps every s-th element. Match either form below
+// (unit dimensions may also be present):
 //
-//   %even, %odd = vector.deinterleave %src
+//   %even, %odd = vector.deinterleave %src  // s = 2
 //       : vector<4x8xbf16> -> vector<4x4xbf16>
 //
 // or:
@@ -90,11 +91,36 @@ static Value skipReshapes(Value v) {
 //       : vector<4x4xbf16> from vector<2x4x4xbf16>
 //   %odd = vector.extract %split[1]
 //       : vector<4x4xbf16> from vector<2x4x4xbf16>
-static std::optional<std::pair<Value, int64_t>> matchEvenOrOdd(Value v) {
+//
+// If s < factor, the split's input must itself come from splits of src
+// totaling factor / s. For example, for factor = 4, a 4-way transpose/extract
+// split of src matches, as do two levels of binary splits:
+//
+//   %even, %odd = vector.deinterleave %src  // lanes {0, 2} and {1, 3}
+//   %l1, %l3 = vector.deinterleave %odd     // %l3[i] = src[4 * i + 3]
+//
+// Splits closer to src give the low lane bits; result j of the split that
+// produces v gives the high bits.
+static std::optional<std::pair<Value, int64_t>> matchSplit(Value v,
+                                                           int64_t factor) {
   v = skipReshapes(v);
+  if (factor == 1)
+    return std::pair(v, int64_t(0));
+
+  auto matchSource =
+      [&](Value source, int64_t ways,
+          int64_t j) -> std::optional<std::pair<Value, int64_t>> {
+    if (factor % ways != 0)
+      return std::nullopt;
+    auto lane = matchSplit(source, factor / ways);
+    if (!lane)
+      return std::nullopt;
+    lane->second += factor / ways * j;
+    return lane;
+  };
   if (auto deinterleave = v.getDefiningOp<vector::DeinterleaveOp>())
-    return std::pair(skipReshapes(deinterleave.getSource()),
-                     int64_t(cast<OpResult>(v).getResultNumber()));
+    return matchSource(deinterleave.getSource(), 2,
+                       cast<OpResult>(v).getResultNumber());
 
   auto extract = v.getDefiningOp<vector::ExtractOp>();
   auto transpose =
@@ -109,37 +135,38 @@ static std::optional<std::pair<Value, int64_t>> matchEvenOrOdd(Value v) {
   auto isNonUnit = [&](int64_t dim) { return shape[dim] != 1; };
   SmallVector<int64_t> order =
       llvm::filter_to_vector(llvm::seq<int64_t>(0, shape.size()), isNonUnit);
-  if (order.empty() || shape[order.back()] != 2)
+  if (order.empty())
     return std::nullopt;
+  int64_t ways = shape[order.back()];
 
   std::rotate(order.begin(), std::prev(order.end()), order.end());
   ArrayRef<int64_t> perm = transpose.getPermutation();
   if (llvm::filter_to_vector(perm, isNonUnit) != order)
     return std::nullopt;
 
-  // The dimension of size 2 is now first among the non-unit dimensions.
-  // Keeping exactly half the elements means the extract indexes that
-  // dimension; any other dimensions it indexes must be unit dimensions.
-  if (2 * type.getNumElements() !=
+  // The split dimension is now first among the non-unit dimensions. Keeping
+  // exactly 1 / ways of the elements means the extract indexes that dimension;
+  // any other dimensions it indexes must be unit dimensions.
+  if (ways * type.getNumElements() !=
       transpose.getSourceVectorType().getNumElements())
     return std::nullopt;
 
   int64_t j =
       extract
           .getStaticPosition()[llvm::find(perm, order.front()) - perm.begin()];
-  if (j != 0 && j != 1)
+  if (j < 0 || j >= ways)
     return std::nullopt;
 
-  return std::pair(skipReshapes(transpose.getVector()), j);
+  return matchSource(transpose.getVector(), ways, j);
 }
 
-// Find the even and odd inputs of either pattern below. The slice inserts may
-// appear in either order.
+// Find the inputs in VNNI-lane order for a join. A join step of width s
+// interleaves s inputs. Match either form below:
 //
-//   %joined = vector.interleave %even, %odd
+//   %joined = vector.interleave %even, %odd  // s = 2
 //       : vector<4x1xbf16> -> vector<4x2xbf16>
 //
-// or:
+// or s slice inserts in any order (shown for s = 2):
 //
 //   %poison = ub.poison : vector<4x2xbf16>
 //   %partial = vector.insert_strided_slice %odd, %poison
@@ -148,37 +175,61 @@ static std::optional<std::pair<Value, int64_t>> matchEvenOrOdd(Value v) {
 //   %joined = vector.insert_strided_slice %even, %partial
 //       offsets = [0, 0], strides = [1, 1]
 //       : vector<4x1xbf16> into vector<4x2xbf16>
-static std::optional<std::array<Value, 2>> matchInterleave(Value v) {
+//
+// If s < factor, each input must itself be a join of width factor / s
+// (possibly built from smaller joins).
+static std::optional<SmallVector<Value, 4>> matchJoin(Value v, int64_t factor) {
   v = skipReshapes(v);
-  if (auto interleave = v.getDefiningOp<vector::InterleaveOp>())
-    return std::array<Value, 2>{interleave.getLhs(), interleave.getRhs()};
+  if (factor == 1)
+    return SmallVector<Value, 4>{v};
 
-  // Both slices must be complete and disjoint so the original destination
-  // contributes no elements to the result.
-  std::array<Value, 2> halves;
-  for (int i = 0; i < 2; ++i) {
-    auto insert = v.getDefiningOp<vector::InsertStridedSliceOp>();
-    if (!insert)
+  SmallVector<Value, 4> parts;
+  if (auto interleave = v.getDefiningOp<vector::InterleaveOp>()) {
+    parts = {interleave.getLhs(), interleave.getRhs()};
+  } else if (auto insert = v.getDefiningOp<vector::InsertStridedSliceOp>()) {
+    int64_t ways = insert.getDestVectorType().getShape().back();
+    if (ways < 2 || factor % ways != 0)
       return std::nullopt;
-
-    ArrayRef<int64_t> shape = insert.getDestVectorType().getShape();
-    SmallVector<int64_t> slice(shape.drop_back());
-    slice.push_back(1);
-    auto offsets = extractFromIntegerArrayAttr<int64_t>(insert.getOffsets());
-    int64_t j = offsets.back();
-    if (shape.back() != 2 ||
-        insert.getSourceVectorType().getShape() != ArrayRef(slice) || halves[j])
-      return std::nullopt;
-
-    halves[j] = insert.getValueToStore();
-    v = insert.getDest();
+    parts.resize(ways);
+    // All slices must be complete and disjoint so the original destination
+    // contributes no elements to the result.
+    for (int64_t i = 0; i < ways; ++i) {
+      auto insert = v.getDefiningOp<vector::InsertStridedSliceOp>();
+      if (!insert)
+        return std::nullopt;
+      ArrayRef<int64_t> shape = insert.getDestVectorType().getShape();
+      SmallVector<int64_t> slice(shape.drop_back());
+      slice.push_back(1);
+      int64_t j =
+          extractFromIntegerArrayAttr<int64_t>(insert.getOffsets()).back();
+      if (insert.getSourceVectorType().getShape() != ArrayRef(slice) ||
+          parts[j])
+        return std::nullopt;
+      parts[j] = insert.getValueToStore();
+      v = insert.getDest();
+    }
+  } else {
+    return std::nullopt;
   }
-  return halves;
+
+  int64_t ways = parts.size();
+  if (factor % ways != 0)
+    return std::nullopt;
+  SmallVector<Value, 4> lanes(factor);
+  for (auto [j, part] : llvm::enumerate(parts)) {
+    auto inner = matchJoin(part, factor / ways);
+    if (!inner)
+      return std::nullopt;
+    for (auto [i, lane] : llvm::enumerate(*inner))
+      lanes[ways * i + j] = lane;
+  }
+  return lanes;
 }
 
 // Find the packed RHS so the contraction can use it without unpacking.
-// For a K x N RHS and VNNI factor f, require
-//   rhs[f * r + j][c] = src[r][c][j], with src viewed as K/f x N x f.
+// For a K x N RHS and VNNI factor f, require for each VNNI lane j:
+//   rhs[f * r + j][c] = src[r][c][j],
+// where 0 <= j < f and src is viewed as K/f x N x f.
 // Match transpose/shape_cast unpacking (shown for f = 2):
 //
 //   %packed = vector.shape_cast %src
@@ -188,7 +239,7 @@ static std::optional<std::array<Value, 2>> matchInterleave(Value v) {
 //   %rhs = vector.shape_cast %transposed
 //       : vector<4x2x3xbf16> to vector<8x3xbf16>
 //
-// or, for f = 2, split/transpose/join/transpose unpacking:
+// or split/transpose/join/transpose unpacking (shown for f = 2):
 //
 //   %even, %odd = vector.deinterleave %src
 //       : vector<4x6xbf16> -> vector<4x3xbf16>
@@ -200,6 +251,21 @@ static std::optional<std::array<Value, 2>> matchInterleave(Value v) {
 //       : vector<3x4xbf16> -> vector<3x8xbf16>
 //   %rhs = vector.transpose %joined, [1, 0]
 //       : vector<3x8xbf16> to vector<8x3xbf16>
+//
+// For f = 4, splits and joins may each be one 4-way transpose/extract or
+// slice-insert step, or two levels of binary steps. With binary steps, the
+// second-level splits produce VNNI lanes 0/2 and 1/3:
+//
+//   %even, %odd = vector.deinterleave %src  // lanes {0, 2} and {1, 3}
+//   %l0, %l2 = vector.deinterleave %even
+//   %l1, %l3 = vector.deinterleave %odd
+//   // Transpose each lane %lj to %tj.
+//   %even_t = vector.interleave %t0, %t2
+//   %odd_t = vector.interleave %t1, %t3
+//   %joined = vector.interleave %even_t, %odd_t
+//
+// Any binary split or join may instead use the transpose/extract or
+// slice-insert form.
 static Value matchUnpackedRhs(Value rhs, int64_t factor) {
   auto type = cast<VectorType>(rhs.getType());
   int64_t k = type.getDimSize(0) / factor, n = type.getDimSize(1);
@@ -222,28 +288,28 @@ static Value matchUnpackedRhs(Value rhs, int64_t factor) {
   }
 
   const int64_t swap[] = {1, 0};
-  if (factor != 2 || perm != ArrayRef(swap) ||
-      shape != ArrayRef<int64_t>{n, 2 * k})
+  if (perm != ArrayRef(swap) || shape != ArrayRef<int64_t>{n, factor * k})
     return {};
 
-  std::optional<std::array<Value, 2>> halves =
-      matchInterleave(transpose.getVector());
-  if (!halves)
+  auto lanes = matchJoin(transpose.getVector(), factor);
+  if (!lanes)
     return {};
 
   Value src;
-  for (auto [j, half] : llvm::enumerate(*halves)) {
-    auto transpose = skipReshapes(half).getDefiningOp<vector::TransposeOp>();
-    if (!transpose || transpose.getPermutation() != ArrayRef(swap) ||
-        transpose.getSourceVectorType().getShape() != ArrayRef<int64_t>{k, n})
+  for (auto [j, lane] : llvm::enumerate(*lanes)) {
+    auto laneTranspose =
+        skipReshapes(lane).getDefiningOp<vector::TransposeOp>();
+    if (!laneTranspose || laneTranspose.getPermutation() != ArrayRef(swap) ||
+        laneTranspose.getSourceVectorType().getShape() !=
+            ArrayRef<int64_t>{k, n})
       return {};
 
-    auto evenOrOdd = matchEvenOrOdd(transpose.getVector());
-    if (!evenOrOdd || evenOrOdd->second != int64_t(j) ||
-        (src && evenOrOdd->first != src))
+    auto source = matchSplit(laneTranspose.getVector(), factor);
+    if (!source || source->second != int64_t(j) ||
+        (src && source->first != src))
       return {};
 
-    src = evenOrOdd->first;
+    src = source->first;
   }
   return src;
 }
