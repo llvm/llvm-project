@@ -8,20 +8,18 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-output=text \
-// RUN:   -triple x86_64-pc-windows-msvc -verify=expected,not-applied
+// RUN:   -triple x86_64-pc-windows-msvc -verify=expected,applied
 
 // RUN: %clang_analyze_cc1 %s -std=c11 \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-output=text \
-// RUN:   -triple x86_64-pc-windows-msvc -verify=expected,not-applied
+// RUN:   -triple x86_64-pc-windows-msvc -verify=expected,applied
 
 // The MSVC C runtime (UCRT) declares fopen without the restrict qualifiers of
-// the standard prototype. From C99 on, the summary of fopen does not match
-// this declaration, so the path misses the note about the successful call.
-//
-// FIXME: The summary should be applied in C99 and later too, and the note
-// should be present as in C89. See std-c-library-functions-restrict-msvc.c.
+// the standard prototype. The summary of fopen is still applied, so the path
+// has the note about the successful call in all language modes.
+// See std-c-library-functions-restrict-msvc.c.
 
 typedef struct _iobuf FILE;
 FILE *fopen(char const *_FileName, char const *_Mode);
