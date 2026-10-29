@@ -651,7 +651,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -665,7 +666,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -679,7 +681,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -695,7 +698,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ieee_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -710,7 +714,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ftz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -725,7 +730,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ieee_ieee__float_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -740,7 +746,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_f32_f16__mode_ftpz_dapz__float_ieee_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -768,7 +775,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nsub_source__fptrunc_f3
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nsub_source__fptrunc_f32_f16__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call float @returns_nsub_f32()
@@ -782,7 +790,8 @@ define nofpclass(inf norm sub nzero) half @pzero_demands_nsub_source__fptrunc_f3
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nsub_source__fptrunc_f32_f16__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %nsub = call float @returns_nsub_f32()
@@ -810,7 +819,8 @@ define nofpclass(inf norm sub pzero) half @nzero_demands_pnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf pzero sub norm) half @nzero_demands_pnorm_source__fptrunc_f32_f16__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call float @returns_pnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %pnorm = call float @returns_pnorm_f32()
@@ -826,7 +836,8 @@ define nofpclass(inf norm sub pzero) half @nzero_demands_pnorm_source__fptrunc_f
 ; CHECK-LABEL: define nofpclass(inf pzero sub norm) half @nzero_demands_pnorm_source__fptrunc_f32_f16__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[PNORM:%.*]] = call float @returns_pnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to half
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %pnorm = call float @returns_pnorm_f32()
@@ -857,7 +868,8 @@ define nofpclass(inf norm sub nzero) bfloat @pzero_demands_nnorm_source__fptrunc
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) bfloat @pzero_demands_nnorm_source__fptrunc_f32_bf16__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to bfloat
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -871,7 +883,8 @@ define nofpclass(inf norm sub nzero) bfloat @pzero_demands_nnorm_source__fptrunc
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) bfloat @pzero_demands_nnorm_source__fptrunc_f32_bf16__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[UNKNOWN]] to bfloat
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[SELECT]] to bfloat
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %nnorm = call float @returns_nnorm_f32()
@@ -960,7 +973,8 @@ define nofpclass(inf norm sub nzero) <2 x half> @pzero_demands_nnorm_source__fpt
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) <2 x half> @pzero_demands_nnorm_source__fptrunc_v2f32_v2f16__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call <2 x float> @returns_nnorm_v2f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf <2 x float> [[UNKNOWN]] to <2 x half>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <2 x float> [[NNORM]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf <2 x float> [[SELECT]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %nnorm = call <2 x float> @returns_nnorm_v2f32()
@@ -974,7 +988,8 @@ define nofpclass(inf norm sub nzero) <2 x half> @pzero_demands_nnorm_source__fpt
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) <2 x half> @pzero_demands_nnorm_source__fptrunc_v2f32_v2f16__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x float> [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NNORM:%.*]] = call <2 x float> @returns_nnorm_v2f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf <2 x float> [[UNKNOWN]] to <2 x half>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <2 x float> [[NNORM]], <2 x float> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf <2 x float> [[SELECT]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %nnorm = call <2 x float> @returns_nnorm_v2f32()

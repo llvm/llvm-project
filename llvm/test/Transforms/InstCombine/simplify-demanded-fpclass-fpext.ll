@@ -516,7 +516,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -530,7 +531,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -544,7 +546,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -560,7 +563,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ieee_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -575,7 +579,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ftz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -591,7 +596,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ieee_ieee__float_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -606,7 +612,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_f16_f32__mode_ftpz_dapz__float_ieee_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -636,7 +643,8 @@ define nofpclass(inf norm sub pzero) float @nzero_demands_nsub_source__fpext_f16
 ; CHECK-LABEL: define nofpclass(inf pzero sub norm) float @nzero_demands_nsub_source__fpext_f16_f32__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call half @returns_nsub_f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NSUB]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf half [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call half @returns_nsub_f16()
@@ -667,7 +675,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_bf1
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_bf16_f32__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call bfloat @returns_nsub_bf16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], bfloat [[NSUB]], bfloat [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call bfloat @returns_nsub_bf16()
@@ -681,7 +690,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_bf1
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_bf16_f32__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call bfloat @returns_nsub_bf16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], bfloat [[NSUB]], bfloat [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call bfloat @returns_nsub_bf16()
@@ -697,7 +707,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_bf1
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_bf16_f32__mode_ftz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call bfloat @returns_nsub_bf16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], bfloat [[NSUB]], bfloat [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call bfloat @returns_nsub_bf16()
@@ -712,7 +723,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_bf1
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_bf16_f32__mode_ieee_ieee__float_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[UNKNOWN:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call bfloat @returns_nsub_bf16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], bfloat [[NSUB]], bfloat [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call bfloat @returns_nsub_bf16()
@@ -727,7 +739,8 @@ define nofpclass(inf norm sub nzero) float @pzero_demands_nsub_source__fpext_bf1
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) float @pzero_demands_nsub_source__fpext_bf16_f32__mode_ftpz_dapz__float_ieee_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], bfloat [[UNKNOWN:%.*]]) #[[ATTR7]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call bfloat @returns_nsub_bf16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[UNKNOWN]] to float
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], bfloat [[NSUB]], bfloat [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf bfloat [[SELECT]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nsub = call bfloat @returns_nsub_bf16()
@@ -816,7 +829,8 @@ define nofpclass(inf norm sub nzero) <2 x float> @pzero_demands_nsub_source__fpe
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) <2 x float> @pzero_demands_nsub_source__fpext_v2f16_v2f32__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x half> [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call <2 x half> @returns_nsub_v2f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf <2 x half> [[UNKNOWN]] to <2 x float>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <2 x half> [[NSUB]], <2 x half> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf <2 x half> [[SELECT]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[RESULT]]
 ;
   %nsub = call <2 x half> @returns_nsub_v2f16()
@@ -830,7 +844,8 @@ define nofpclass(inf norm sub nzero) <2 x float> @pzero_demands_nsub_source__fpe
 ; CHECK-LABEL: define nofpclass(inf nzero sub norm) <2 x float> @pzero_demands_nsub_source__fpext_v2f16_v2f32__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], <2 x half> [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call <2 x half> @returns_nsub_v2f16()
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf <2 x half> [[UNKNOWN]] to <2 x float>
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <2 x half> [[NSUB]], <2 x half> [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext ninf <2 x half> [[SELECT]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[RESULT]]
 ;
   %nsub = call <2 x half> @returns_nsub_v2f16()
