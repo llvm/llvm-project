@@ -1483,6 +1483,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.expbf16
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
 )
@@ -1528,6 +1529,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.exp2bf16
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.bfloat16
 )
 
@@ -5153,6 +5155,7 @@ add_fp_unittest(
     libc.src.math.atanbf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.bfloat16
 )
 

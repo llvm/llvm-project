@@ -82,10 +82,11 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
         if (x_bits.is_inf())
           return x;
 
+        fputil::raise_overflow_except_if_required<float>();
+
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         // If we can only RN, then it'll go towards INF
         fputil::set_errno_if_required(ERANGE);
-        fputil::raise_overflow_except_if_required<float>();
         return FPBits::inf().get_val();
 #else
         // If not, get what other rounding modes are available
@@ -94,7 +95,6 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
         case FE_UPWARD:
           // Both of these go to Inf
           fputil::set_errno_if_required(ERANGE);
-          fputil::raise_overflow_except_if_required<float>();
           return FPBits::inf().get_val();
         default:
           // RD and RZ go to the maximum possible value in the
@@ -138,6 +138,14 @@ LIBC_INLINE bfloat16 exp2bf16(bfloat16 x) {
       return fputil::cast<bfloat16>(
           exp2bf16_internal::EXP2_DENORMAL[x_uint - DENORMAL_LUT_BASE]);
     }
+  }
+
+  // This interval rounds like 1 + x * log(2) in every bfloat16 mode.
+  // Double intermediates avoid underflow in the float polynomial for tiny x.
+  if (LIBC_UNLIKELY(x_bits.abs().uintval() <= 0x3980U)) {
+    double xd = static_cast<float>(x);
+    return fputil::cast<bfloat16>(
+        fputil::multiply_add(xd, 0x1.62e42fefa39efp-1, 1.0));
   }
 
   // For inputs not handled above in -134.0 < x < 128.0,

@@ -105,6 +105,25 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
+  // The correction to x is nonzero but less than half a subnormal ulp.
+  // Select the adjacent half value directly, preserving signed zero.
+  if (LIBC_UNLIKELY(x_abs != 0 && x_abs < 0x0400U)) {
+    uint16_t out = x_u;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    int mode = fputil::quick_get_round();
+    if ((x_bits.is_pos() && mode == FE_UPWARD) ||
+        (x_bits.is_neg() && mode == FE_DOWNWARD))
+      out = static_cast<uint16_t>(x_u + 1);
+#endif
+    int excepts = FE_INEXACT;
+    if ((out & 0x7fffU) < 0x0400U) {
+      fputil::set_errno_if_required(ERANGE);
+      excepts |= FE_UNDERFLOW;
+    }
+    fputil::raise_except_if_required(excepts);
+    return FPBits(out).get_val();
+  }
+
   // When |x| = 0, or -2^(-14) <= x <= -2^(-9), or |x| >= asinh(2^16), or x is
   // NaN.
   if (LIBC_UNLIKELY(x_abs == 0U || (x_u >= 0x8400U && x_u <= 0xa400U) ||
@@ -129,9 +148,10 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf(x_bits.sign()).get_val();
 
+      fputil::raise_overflow_except_if_required<float>();
+
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       return FPBits::inf(x_bits.sign()).get_val();
 #else
       int rounding_mode = fputil::quick_get_round();
@@ -139,7 +159,6 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
           (x_bits.is_pos() && rounding_mode == FE_UPWARD) ||
           (x_bits.is_neg() && rounding_mode == FE_DOWNWARD)) {
         fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return FPBits::inf(x_bits.sign()).get_val();
       }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY

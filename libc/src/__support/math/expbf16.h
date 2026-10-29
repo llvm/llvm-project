@@ -65,6 +65,12 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
+  // For |x| <= 2^-12, exp(x) rounds like 1 + x in bfloat16.
+  // Use double so tiny products in the float polynomial cannot underflow.
+  if (LIBC_UNLIKELY(x_abs <= 0x3980U))
+    return fputil::cast<bfloat16>(1.0 +
+                                  static_cast<double>(static_cast<float>(x)));
+
   // 0 <= |x| <= 2^(-3), or |x| >= 89, or x is NaN
   if (LIBC_UNLIKELY(x_abs <= 0x3e00U || x_abs >= 0x42b2U)) {
 
@@ -111,10 +117,13 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      if (LIBC_UNLIKELY(x_u == 0xc2b9U))
+        return FPBits::min_subnormal().get_val();
       return FPBits::zero().get_val();
 #else
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
+        return FPBits::min_subnormal().get_val();
       case FE_TONEAREST:
         if (LIBC_UNLIKELY(x_u == 0xc2b9U))
           return FPBits::min_subnormal().get_val();
