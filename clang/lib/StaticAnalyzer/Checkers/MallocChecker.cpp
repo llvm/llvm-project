@@ -3924,7 +3924,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
   // call later, keep tracking the top level arguments.
   SymbolRef EscapingSymbol = nullptr;
   if (Kind == PSK_DirectEscapeOnCall &&
-      ignoreDirectEscapeTo(Call, State, EscapingSymbol) && !EscapingSymbol) {
+      ignoreDirectEscapeTo(Call, State, EscapingSymbol)) {
     return State;
   }
 
