@@ -1,11 +1,11 @@
 ; RUN: llc -filetype=obj %s -o %t.dxbc
-; RUN: obj2yaml %t.dxbc | FileCheck %s --check-prefix=PARTS
-; RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
-; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefixes=MD,DXIL
+; RUN: obj2yaml %t.dxbc | FileCheck %s
 
-; SV_ViewID is not part of the signature. Using it marks the shader as using
-; the view ID, and every written output component is conservatively treated as
-; depending on it, both in dx.viewIdState and in PSV0.
+; SV_ViewID is not part of the signature. Reading it sets ViewID in SFI0 and
+; UsesViewID in PSV0, and every written output component is conservatively
+; treated as depending on it in PSV0. The dx.viewIdState metadata is covered by
+; Metadata/semantic-signatures-view-id.ll and the dx.op.viewID lowering by
+; view_id.ll.
 target triple = "dxil-pc-shadermodel6.1-pixel"
 
 define void @main() #0 {
@@ -29,19 +29,12 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !6 = !{i32 0, !"SV_Target", i32 9, i32 16, !7, i32 0, i32 1, i8 4, i32 0, i8 0, i8 0, i8 0, i32 0}
 !7 = !{i32 0}
 
-; DXIL: call i32 @dx.op.viewID.i32(i32 138)
-
-; The state is the input and output scalar counts, the outputs depending on
-; the view ID (components 0 and 2), then one output mask per input scalar.
-; MD-DAG: !dx.viewIdState = !{![[STATE:[0-9]+]]}
-; MD-DAG: ![[STATE]] = !{[7 x i32] [i32 4, i32 4, i32 5, i32 5, i32 0, i32 0, i32 0]}
-; MD-DAG: !{i32 0, i64 2097152}
-
-; PARTS: Name: SFI0
-; PARTS: ViewID: true
-; PARTS: Name: PSV0
-; PARTS: UsesViewID: 1
-; PARTS:      OutputVectorMasks:
-; PARTS-NEXT:   - [ 0x5 ]
-; PARTS:      InputOutputMap:
-; PARTS-NEXT:   - [ 0x5, 0x0, 0x0, 0x0 ]
+; CHECK: Name: SFI0
+; CHECK: ViewID: true
+; CHECK: Name: PSV0
+; CHECK: UsesViewID: 1
+; Outputs depending on the view ID: components 0 and 2.
+; CHECK:      OutputVectorMasks:
+; CHECK-NEXT:   - [ 0x5 ]
+; CHECK:      InputOutputMap:
+; CHECK-NEXT:   - [ 0x5, 0x0, 0x0, 0x0 ]
