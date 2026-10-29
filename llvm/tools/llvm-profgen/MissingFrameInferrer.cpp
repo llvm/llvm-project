@@ -128,8 +128,10 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   // source and target frame address on the a tail call graph that consists of
   // only tail call edges. Note that only a unique path counts. Multiple paths
   // are treated unreachable.
-  if (From == To)
+  if (From == To) {
+    ++NumFoundPaths;
     return 1;
+  }
 
   // Ignore cyclic paths. Since we are doing a recursive DFS walk, if the source
   // frame being visited is already in the stack, it means we are seeing a
@@ -151,7 +153,7 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     NumPaths += computeUniqueTailCallPath(TailCall, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.
-    if (NumPaths > 1)
+    if (NumFoundPaths > 1)
       break;
   }
 
@@ -180,6 +182,7 @@ uint64_t MissingFrameInferrer::searchUniqueTailCallPath(
 
   uint64_t Pos = Path.size();
   Visiting.clear();
+  NumFoundPaths = 0;
   uint64_t NumPaths = computeUniqueTailCallPath(From, To, Path);
   if (NumPaths == 1 &&
       hasOtherTailCallPath(ArrayRef(Path).drop_front(Pos), To)) {
@@ -213,6 +216,8 @@ bool MissingFrameInferrer::hasOtherTailCallPath(ArrayRef<uint64_t> Path,
     Funcs.push_back(Binary->findFuncRange(Site)->Func);
   Funcs.push_back(To);
   Visiting.clear();
+  // Count the path itself, so that a walk stops at the first path it finds.
+  NumFoundPaths = 1;
   SmallVector<uint64_t, 8> OtherPath;
   for (auto [I, PathSite] : enumerate(Path)) {
     Visiting.insert(Funcs[I]);
@@ -240,7 +245,7 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     NumPaths += computeUniqueTailCallPath(Target, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.
-    if (NumPaths > 1)
+    if (NumFoundPaths > 1)
       break;
   }
 

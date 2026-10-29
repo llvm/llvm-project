@@ -102,6 +102,10 @@ private:
 
   DenseSet<BinaryFunction *> Visiting;
 
+  // Number of tail call paths to the target found by the current search, which
+  // stops once it finds more than one.
+  uint64_t NumFoundPaths = 0;
+
 #if LLVM_ENABLE_STATS
   DenseSet<std::pair<uint64_t, uint64_t>> ReachableViaUniquePaths;
   DenseSet<std::pair<uint64_t, uint64_t>> Unreachables;
