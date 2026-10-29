@@ -711,7 +711,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
   // Fetching the MDNodes used by an MDFunctionLocalContext is expensive; if we
   // need to get them at all, do so once in this map and reuse as needed.
   DenseMap<const MDFunctionLocalContext *, SmallVector<const MDNode *, 0>>
-    FLContextUsedNodes;
+      FLContextUsedNodes;
   while (!Worklist.empty()) {
     const MDNode *N = Worklist.back().first;
     size_t &OpNum = Worklist.back().second;
@@ -743,7 +743,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       // operand count. For now, we have an assert to prevent a silent fail from
       // being introduced.
       assert(N->getNumOperands() == 0 &&
-        "MDFunctionLocalContext expected to have no operands");
+             "MDFunctionLocalContext expected to have no operands");
       auto Result = FLContextUsedNodes.try_emplace(FLContext);
       auto &UsedMDNodes = Result.first->second;
       if (Result.second)
@@ -764,7 +764,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       }
     } else {
       assert(OpNum <= N->getNumOperands() &&
-        "Visited past the end of N's operands");
+             "Visited past the end of N's operands");
     }
 
     // All the operands have been visited.  Now assign an ID.
