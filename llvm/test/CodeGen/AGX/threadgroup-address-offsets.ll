@@ -65,7 +65,7 @@ exit:
 ; CHECK: threadgroup_load i32, xy,
 ; OFF-LABEL: const_expr_offset:
 ; OFF-COUNT-2: threadgroup_load i32, x,
-define void @const_expr_offset(ptr addrspace(1) %out, i32 %t) {
+define agx_kernel void @const_expr_offset(ptr addrspace(1) %out, i32 %t) {
   %base = shl i32 %t, 4
   %a0 = add i32 %base, ptrtoint (ptr addrspace(3) @s to i32)
   %p0 = inttoptr i32 %a0 to ptr addrspace(3)
