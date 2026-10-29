@@ -579,6 +579,30 @@ cc_test(
 )
 
 cc_test(
+    name = "ObjectContainerTests",
+    srcs = glob(["ObjectContainer/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectContainerClangOffloadBundle",
+        "//lldb/source/Plugins:PluginObjectContainerMachOArchive",
+        "//lldb/source/Plugins:PluginObjectContainerMachOFileset",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginObjectFileMachO",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "ObjectFileBreakpadTests",
     srcs = glob(["ObjectFile/Breakpad/*.cpp"]),
     deps = [
