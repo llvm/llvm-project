@@ -765,12 +765,6 @@ public:
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
-  /// Returns true if tail-folding is preferred over an epilogue.
-  bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
-  }
-
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
     return ChosenTailFoldingStyle;
@@ -5170,7 +5164,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
       EpilogueTailLoweringStatus, OrigLoop, PSE, LI, Legal, TTI, TLI, CM->AC,
       ORE, CM->GetBFI, CM->TheFunction, CM->InterleaveInfo, Config);
 
-  assert(EpilogueTfCM.preferTailFoldedLoop() &&
+  assert(!EpilogueTfCM.isEpilogueAllowed() &&
          "Epilogue tail-folding is expected to be enabled");
 
   LLVM_DEBUG(dbgs() << "LV: plan for tail-folded epilogue\n");
