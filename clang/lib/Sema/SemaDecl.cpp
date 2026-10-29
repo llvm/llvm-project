@@ -5539,9 +5539,9 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         << DeclSpec::getSpecifierName(SCS);
   }
 
-  if (DeclSpec::TSCS TSCS = DS.getThreadStorageClassSpec())
+  if (DS.getThreadStorageClassSpec())
     Diag(DS.getThreadStorageClassSpecLoc(), DiagID)
-      << DeclSpec::getSpecifierName(TSCS);
+        << DS.getThreadStorageClassSpecName();
   if (DS.getTypeQualifiers()) {
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
@@ -8220,7 +8220,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
          !DC->isFunctionOrMethod()))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_non_global)
-        << DeclSpec::getSpecifierName(TSCS);
+          << D.getDeclSpec().getThreadStorageClassSpecName();
     else if (!Context.getTargetInfo().isTLSSupported()) {
       if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
         // Postpone error emission until we've collected attributes required to
@@ -10297,10 +10297,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   DeclarationName Name = NameInfo.getName();
   StorageClass SC = getFunctionStorageClass(*this, D);
 
-  if (DeclSpec::TSCS TSCS = D.getDeclSpec().getThreadStorageClassSpec())
+  if (D.getDeclSpec().getThreadStorageClassSpec())
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)
-      << DeclSpec::getSpecifierName(TSCS);
+        << D.getDeclSpec().getThreadStorageClassSpecName();
 
   if (D.isFirstDeclarationOfMember())
     adjustMemberFunctionCC(
@@ -15975,9 +15975,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
     D.getMutableDeclSpec().ClearStorageClassSpecs();
   }
 
-  if (DeclSpec::TSCS TSCS = DS.getThreadStorageClassSpec())
+  if (DS.getThreadStorageClassSpec())
     Diag(DS.getThreadStorageClassSpecLoc(), diag::err_invalid_thread)
-      << DeclSpec::getSpecifierName(TSCS);
+        << DS.getThreadStorageClassSpecName();
   if (DS.isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_non_function)
         << getLangOpts().CPlusPlus17;
@@ -19601,10 +19601,10 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
   if (D.getDeclSpec().isInlineSpecified())
     Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
         << getLangOpts().CPlusPlus17;
-  if (DeclSpec::TSCS TSCS = D.getDeclSpec().getThreadStorageClassSpec())
+  if (D.getDeclSpec().getThreadStorageClassSpec())
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)
-      << DeclSpec::getSpecifierName(TSCS);
+        << D.getDeclSpec().getThreadStorageClassSpecName();
 
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;
