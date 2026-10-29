@@ -516,9 +516,9 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
 /// A must be a positive Y or a non-negative abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
-                                            KnownBits &KnownOut,
-                                            const SimplifyQuery &Q,
-                                            unsigned Depth) {
+                                             KnownBits &KnownOut,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth) {
   Type *Ty = Op0->getType();
 
   // Only handle scalars for now.
@@ -580,7 +580,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   if (KnownOut.isUnknown() && !NSW && !NUW) {
     if (Add)
       // Independent operand bits give no result, but the Euclidean remainder
-      // pattern can establish non-negativity through the operands' relationship.
+      // pattern can establish non-negativity through the operands'
+      // relationship.
       computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
     return;
   }
