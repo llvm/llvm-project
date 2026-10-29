@@ -1143,7 +1143,6 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::Indirect:
   case ABIArgInfo::Direct:
   case ABIArgInfo::Extend:
-  case ABIArgInfo::ConservativeExtend:
     return !Info.getInReg();
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:

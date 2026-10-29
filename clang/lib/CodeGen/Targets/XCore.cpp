@@ -158,7 +158,6 @@ RValue XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
   case ABIArgInfo::TargetSpecific:
-  case ABIArgInfo::ConservativeExtend:
     llvm_unreachable("Unsupported ABI kind for va_arg");
   case ABIArgInfo::Ignore:
     Val = Address(llvm::UndefValue::get(ArgPtrTy), ArgTy, TypeAlign);

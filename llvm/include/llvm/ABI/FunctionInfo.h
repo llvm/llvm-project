@@ -36,9 +36,6 @@ public:
     /// Valid only for integer argument types. Same as 'direct' but also emit a
     /// zero/sign extension attribute.
     Extend,
-    /// Valid only for integer argument types. Same as 'Extend', but the callee
-    /// does not get to assume that the caller actually did the extension.
-    ConservativeExtend,
     /// Pass the argument indirectly via a hidden pointer with the specified
     /// alignment and address space.
     Indirect,
@@ -81,6 +78,7 @@ private:
   Kind TheKind;
   bool SignExt : 1;
   bool ZeroExt : 1;
+  bool Conservative : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
   bool CanBeFlattened : 1;
@@ -88,9 +86,9 @@ private:
   unsigned NeededSseRegs : 3;
 
   ArgInfo(Kind K = Direct)
-      : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false), CanBeFlattened(false), NeededIntRegs(0),
-        NeededSseRegs(0) {}
+      : TheKind(K), SignExt(false), ZeroExt(false), Conservative(false),
+        IndirectByVal(false), IndirectRealign(false), CanBeFlattened(false),
+        NeededIntRegs(0), NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -134,7 +132,7 @@ public:
 
   static ArgInfo getConservativeExtend(const Type *T) {
     ArgInfo AI = getExtend(T);
-    AI.TheKind = ConservativeExtend;
+    AI.Conservative = true;
     return AI;
   }
 
@@ -208,12 +206,10 @@ public:
   bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
-  bool isConservativeExtend() const { return TheKind == ConservativeExtend; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
   unsigned getDirectOffset() const {
-    assert((isDirect() || isExtend() || isConservativeExtend()) &&
-           "Not a direct or extend kind");
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     return DirectAttr.Offset;
   }
 
@@ -230,8 +226,7 @@ public:
   }
 
   MaybeAlign getDirectAlign() const {
-    assert((isDirect() || isExtend() || isConservativeExtend()) &&
-           "Not a direct or extend kind");
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     return Alignment;
   }
 
@@ -266,23 +261,29 @@ public:
   }
 
   bool isSignExt() const {
-    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
+    assert(isExtend() && "Invalid Kind!");
     return SignExt;
   }
 
   bool isZeroExt() const {
-    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
+    assert(isExtend() && "Invalid Kind!");
     return ZeroExt;
   }
 
   bool isNoExt() const {
-    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
+    assert(isExtend() && "Invalid Kind!");
     return !SignExt && !ZeroExt;
   }
 
+  /// Whether the extension is conservative, i.e. the caller should extend, but
+  /// the callee not assume the extension. Only supported for arguments.
+  bool isConservative() const {
+    assert(isExtend() && "Invalid Kind!");
+    return Conservative;
+  }
+
   const Type *getCoerceToType() const {
-    assert((isDirect() || isExtend() || isConservativeExtend() ||
-            isCoerceAndExpand()) &&
+    assert((isDirect() || isExtend() || isCoerceAndExpand()) &&
            "Invalid Kind!");
     return CoercionType;
   }

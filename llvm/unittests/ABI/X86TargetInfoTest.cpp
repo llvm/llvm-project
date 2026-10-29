@@ -141,13 +141,15 @@ static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
 static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
                                 bool IsSigned) {
   EXPECT_TRUE(Info.isExtend());
+  EXPECT_TRUE(!Info.isConservative());
   EXPECT_EQ(Info.isSignExt(), IsSigned);
   EXPECT_EQ(Info.getCoerceToType(), Ty);
 }
 
 static void expectConservativeExtendInteger(const ArgInfo &Info,
                                             const ABIType *Ty, bool IsSigned) {
-  EXPECT_TRUE(Info.isConservativeExtend());
+  EXPECT_TRUE(Info.isExtend());
+  EXPECT_TRUE(Info.isConservative());
   EXPECT_EQ(Info.isSignExt(), IsSigned);
   EXPECT_EQ(Info.getCoerceToType(), Ty);
 }

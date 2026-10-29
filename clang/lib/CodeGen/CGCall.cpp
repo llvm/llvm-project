@@ -876,8 +876,6 @@ static const char *abiKindToString(ABIArgInfo::Kind K) {
     return "Direct";
   case ABIArgInfo::Extend:
     return "Extend";
-  case ABIArgInfo::ConservativeExtend:
-    return "ConservativeExtend";
   case ABIArgInfo::Indirect:
     return "Indirect";
   case ABIArgInfo::IndirectAliased:
@@ -965,9 +963,10 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
 
     switch (Res.getKind()) {
     case ABIArgInfo::Extend:
-    case ABIArgInfo::ConservativeExtend:
       CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
       CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      CheckSimple(Target.isConservative(), Res.isConservative(),
+                  "Conservative");
       [[fallthrough]];
     case ABIArgInfo::Direct:
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
@@ -1043,18 +1042,6 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                  /*Padding=*/nullptr,
                                  AbiInfo.getCanBeFlattened(), DirectAlign);
   }
-  case llvm::abi::ArgInfo::ConservativeExtend: {
-    llvm::Type *CoercedType = nullptr;
-    if (AbiInfo.getCoerceToType())
-      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
-    if (!CoercedType)
-      CoercedType = getTypes().ConvertType(Type);
-    ABIArgInfo AI = ABIArgInfo::getConservativeExtend(
-        useFirstFieldIfTransparentUnion(Type), CoercedType);
-    AI.setSignExt(AbiInfo.isSignExt());
-    AI.setZeroExt(AbiInfo.isZeroExt());
-    return AI;
-  }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
     if (AbiInfo.getCoerceToType())
@@ -1066,11 +1053,16 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     // useFirstFieldIfTransparentUnion.  Passing the union type to
     // ABIArgInfo::getSignExtend would trip its integral-type assert.
     QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
+    // TODO
+    ABIArgInfo Res;
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
-    if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
-    return ABIArgInfo::getExtend(ExtendType, CoercedType);
+      Res = ABIArgInfo::getSignExtend(ExtendType, CoercedType);
+    else if (AbiInfo.isZeroExt())
+      Res = ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    else
+      Res = ABIArgInfo::getNoExtend(cast<llvm::IntegerType>(CoercedType));
+    Res.setConservative(AbiInfo.isConservative());
+    return Res;
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -1997,8 +1989,7 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
     switch (AI.getKind()) {
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct:
-    case ABIArgInfo::ConservativeExtend: {
+    case ABIArgInfo::Direct: {
       // FIXME: handle sseregparm someday...
       llvm::StructType *STy = dyn_cast<llvm::StructType>(AI.getCoerceToType());
       if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
@@ -2110,7 +2101,6 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
-  case ABIArgInfo::ConservativeExtend:
     resultType = retAI.getCoerceToType();
     break;
 
@@ -2183,8 +2173,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       break;
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct:
-    case ABIArgInfo::ConservativeExtend: {
+    case ABIArgInfo::Direct: {
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
       llvm::Type *argType = ArgInfo.getCoerceToType();
@@ -2654,9 +2643,7 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
   if (AI.getKind() == ABIArgInfo::Indirect ||
       AI.getKind() == ABIArgInfo::IndirectAliased)
     return true;
-  if ((AI.getKind() == ABIArgInfo::Extend ||
-       AI.getKind() == ABIArgInfo::ConservativeExtend) &&
-      !AI.isNoExt())
+  if (AI.getKind() == ABIArgInfo::Extend && !AI.isNoExt())
     return true;
   if (!DL.typeSizeEqualsStoreSize(Ty))
     // TODO: This will result in a modest amount of values not marked noundef
@@ -3053,7 +3040,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   switch (RetAI.getKind()) {
   case ABIArgInfo::Extend:
-  case ABIArgInfo::ConservativeExtend:
+    assert(!RetAI.isConservative() && "Conservative return not supported");
     if (RetAI.isSignExt())
       RetAttrs.addAttribute(llvm::Attribute::SExt);
     else if (RetAI.isZeroExt())
@@ -3214,10 +3201,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // sense to do it here because parameters are so messed up.
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
-    case ABIArgInfo::ConservativeExtend:
-      // Under ConservativeExtend, add sext/zext only on the call site; the
+      // Under conservative extension, add sext/zext only on the call site; the
       // callee does not get to assume extension.
-      if (AttrOnCallSite || AI.getKind() == ABIArgInfo::Extend) {
+      if (AttrOnCallSite || !AI.isConservative()) {
         if (AI.isSignExt())
           Attrs.addAttribute(llvm::Attribute::SExt);
         else if (AI.isZeroExt())
@@ -3641,8 +3627,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     }
 
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct:
-    case ABIArgInfo::ConservativeExtend: {
+    case ABIArgInfo::Direct: {
       auto AI = Fn->getArg(FirstIRArg);
       llvm::Type *LTy = ConvertType(Arg->getType());
 
@@ -4494,7 +4479,6 @@ void CodeGenFunction::EmitFunctionEpilog(
 
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
-  case ABIArgInfo::ConservativeExtend:
     if (RetAI.getCoerceToType() == ConvertType(RetTy) &&
         RetAI.getDirectOffset() == 0) {
       // The internal return value temp always will have pointer-to-return-type
@@ -6004,8 +5988,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       break;
 
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct:
-    case ABIArgInfo::ConservativeExtend: {
+    case ABIArgInfo::Direct: {
       if (!isa<llvm::StructType>(ArgInfo.getCoerceToType()) &&
           ArgInfo.getCoerceToType() == ConvertType(info_it->type) &&
           ArgInfo.getDirectOffset() == 0) {
@@ -6782,7 +6765,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         return GetUndefRValue(RetTy);
 
       case ABIArgInfo::Extend:
-      case ABIArgInfo::ConservativeExtend:
       case ABIArgInfo::Direct: {
         llvm::Type *RetIRTy = ConvertType(RetTy);
         if (RetAI.getCoerceToType() == RetIRTy &&

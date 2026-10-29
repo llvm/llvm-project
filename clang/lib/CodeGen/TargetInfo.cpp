@@ -70,9 +70,6 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
     else
       OS << "null";
     break;
-  case ConservativeExtend:
-    OS << "ConservativeExtend";
-    break;
   }
   OS << ")\n";
 }

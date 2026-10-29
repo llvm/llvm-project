@@ -673,8 +673,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   // there is no offset to honor here.
   // A conservative extension is performed by the caller, but the callee does
   // not get to assume it, so its attribute only goes on call sites.
-  if (info.isExtend() || info.isConservativeExtend()) {
-    bool onCallSiteOnly = info.isConservativeExtend();
+  if (info.isExtend()) {
+    bool onCallSiteOnly = info.isConservative();
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt(),
                                           onCallSiteOnly);
