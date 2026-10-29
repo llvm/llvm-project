@@ -4643,13 +4643,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
       // All instructions in an Any-of reduction chain are narrowed to bool.
       // Check if that is the case for this phi node.
-      auto *HeaderUser = cast_if_present<PHINode>(
-          find_singleton<User>(Phi->users(), [this](User *U, bool) -> User * {
+      auto *HeaderUser = find_singleton<PHINode>(
+          Phi->users(), [this](User *U, bool) -> PHINode * {
             auto *Phi = dyn_cast<PHINode>(U);
             if (Phi && Phi->getParent() == TheLoop->getHeader())
               return Phi;
             return nullptr;
-          }));
+          });
       if (HeaderUser) {
         auto &ReductionVars = Legal->getReductionVars();
         auto Iter = ReductionVars.find(HeaderUser);
@@ -4691,9 +4691,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     [[fallthrough]];
   case Instruction::Add:
   case Instruction::Sub: {
-    auto Info = Legal->getHistogramInfo(I);
-    if (Info && VF.isVector()) {
-      const HistogramInfo *HGram = Info.value();
+    const HistogramInfo *HGram = Legal->getHistogramInfo(I);
+    if (HGram && VF.isVector()) {
       // Assume that a non-constant update value (or a constant != 1) requires
       // a multiply, and add that into the cost.
       InstructionCost MulCost = TTI::TCC_Free;
@@ -5605,8 +5604,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                  /*OnlyLatches=*/true);
-  RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
-                 VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
       BestVF * BestUF, *OrigLoop->getHeader()->getParent());
 
@@ -5867,25 +5864,23 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (VPI->getOpcode() != Instruction::Store)
     return nullptr;
 
-  auto HistInfo =
+  const HistogramInfo *HistInfo =
       Legal->getHistogramInfo(cast<StoreInst>(VPI->getUnderlyingInstr()));
   if (!HistInfo)
     return nullptr;
-
-  const HistogramInfo *HI = *HistInfo;
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
   HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
-  HGramOps.push_back(Plan.getOrAddLiveIn(HI->Update->getOperand(1)));
+  HGramOps.push_back(Plan.getOrAddLiveIn(HistInfo->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HI->Store))
+  if (CM.isMaskRequired(HistInfo->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+  return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
