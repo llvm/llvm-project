@@ -830,7 +830,7 @@ static bool isBFloatArith(const Instruction &I) {
 
 /// An f32 operation that ieee32 emulates: add, sub, mul, div, fma, sqrt.
 static StringRef ieeeF32Op(const Instruction &I) {
-  if (!I.getType()->isFloatTy())
+  if (!I.getType()->isFloatTy() || I.hasMetadata("air.ieee32.checked"))
     return "";
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     switch (BO->getOpcode()) {
@@ -1001,9 +1001,164 @@ static void constrainBFloat(Instruction &I) {
   I.eraseFromParent();
 }
 
+/// The hardware's f32 operation for an IEEE f32 operation of ieeeF32Op's
+/// name, from operands Ops.
+static Value *plainIEEEF32(IRBuilder<> &B, StringRef Name,
+                           ArrayRef<Value *> Ops) {
+  if (Name == "add")
+    return B.CreateFAdd(Ops[0], Ops[1]);
+  if (Name == "sub")
+    return B.CreateFSub(Ops[0], Ops[1]);
+  if (Name == "mul")
+    return B.CreateFMul(Ops[0], Ops[1]);
+  if (Name == "div")
+    return B.CreateFDiv(Ops[0], Ops[1]);
+  if (Name == "fma")
+    return B.CreateIntrinsic(Intrinsic::fma, {B.getFloatTy()},
+                             {Ops[0], Ops[1], Ops[2]});
+  if (Name == "sqrt")
+    return B.CreateUnaryIntrinsic(Intrinsic::sqrt, Ops[0]);
+  return nullptr;
+}
+
+/// The operands of an IEEE f32 operation (a constrained form's without its
+/// metadata).
+static SmallVector<Value *, 3> ieeeF32Operands(Instruction &I) {
+  SmallVector<Value *, 3> Ops;
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    for (Value *A : II->args())
+      if (!isa<MetadataAsValue>(A))
+        Ops.push_back(A);
+  } else {
+    Ops.append(I.op_begin(), I.op_end());
+  }
+  return Ops;
+}
+
+/// IEEE f32 emulation, a run at a time: in a run of instructions without side
+/// effects or convergent calls that has two or more IEEE f32 operations, the
+/// hardware's operations, with one test of all their operands and results and
+/// one branch to a copy of the run whose operations are emulated one by one
+/// (replaceOperations). An operand that an earlier operation of the run
+/// computed needs no test: the run is kept only if that result was normal.
+/// A branch per operation made a loop of f32 operations five times slower
+/// than without emulation on the M2 Max.
+static void speculateIEEEF32Runs(Function &F) {
+  LLVMContext &Ctx = F.getContext();
+  SmallVector<BasicBlock *, 16> Blocks;
+  for (BasicBlock &BB : F)
+    Blocks.push_back(&BB);
+  for (BasicBlock *BB : Blocks) {
+    // the runs of BB: [first, last] with their operation counts
+    SmallVector<std::pair<Instruction *, Instruction *>, 4> Runs;
+    Instruction *First = nullptr, *Last = nullptr;
+    unsigned Ops = 0;
+    auto End = [&] {
+      if (First && Ops >= 2)
+        Runs.push_back({First, Last});
+      First = Last = nullptr;
+      Ops = 0;
+    };
+    for (Instruction &I : *BB) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (isa<PHINode>(I) || I.isTerminator() || I.mayHaveSideEffects() ||
+          isa<AllocaInst>(I) || (CB && CB->isConvergent())) {
+        End();
+        continue;
+      }
+      if (!First)
+        First = &I;
+      Last = &I;
+      if (!ieeeF32Op(I).empty())
+        ++Ops;
+    }
+    End();
+    for (auto [First, Last] : Runs) {
+      BasicBlock *Run = SplitBlock(First->getParent(), First);
+      BasicBlock *Post = SplitBlock(Run, Last->getNextNode());
+      ValueToValueMapTy VMap;
+      BasicBlock *Slow = CloneBasicBlock(Run, VMap, ".ieee32.slow", &F);
+      for (Instruction &I : *Slow)
+        RemapInstruction(&I, VMap,
+                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      SmallVector<std::pair<Instruction *, Value *>, 16> Pairs;
+      for (Instruction &I : *Run)
+        if (!I.isTerminator())
+          Pairs.push_back({&I, VMap[&I]});
+      // The fast run.
+      DenseMap<Instruction *, Value *> FastOf;
+      SmallPtrSet<Value *, 16> Computed;
+      // The least exponent field of the results (zero: a zero or denormal
+      // result) and the least magnitude minus one of the operands tested
+      // (below 0x7fffff: a denormal operand), each a running minimum.
+      Value *LeastExp = nullptr, *LeastOp = nullptr;
+      IRBuilder<> B(Ctx);
+      auto Min = [&](Value *&L, Value *V) {
+        L = L ? B.CreateBinaryIntrinsic(Intrinsic::umin, L, V) : V;
+      };
+      for (Instruction &I : make_early_inc_range(*Run)) {
+        StringRef Name = ieeeF32Op(I);
+        if (Name.empty())
+          continue;
+        B.SetInsertPoint(&I);
+        SmallVector<Value *, 3> Operands = ieeeF32Operands(I);
+        Value *Fast = plainIEEEF32(B, Name, Operands);
+        if (!Fast)
+          continue;
+        cast<Instruction>(Fast)->setMetadata("air.ieee32.checked",
+                                             MDNode::get(Ctx, {}));
+        Type *I32 = B.getInt32Ty();
+        for (Value *X : Operands) {
+          if (Computed.contains(X))
+            continue;
+          if (auto *C = dyn_cast<ConstantFP>(X); C && !C->getValueAPF().isDenormal())
+            continue;
+          Min(LeastOp, B.CreateSub(B.CreateAnd(B.CreateBitCast(X, I32), 0x7fffffff),
+                                   B.getInt32(1)));
+        }
+        Min(LeastExp, B.CreateAnd(B.CreateBitCast(Fast, I32), 0x7f800000));
+        Computed.insert(Fast);
+        FastOf[&I] = Fast;
+        Fast->takeName(&I);
+        I.replaceAllUsesWith(Fast);
+        I.eraseFromParent();
+      }
+      Run->getTerminator()->eraseFromParent();
+      B.SetInsertPoint(Run);
+      Value *Ok = LeastExp ? B.CreateICmpNE(LeastExp, B.getInt32(0)) : B.getTrue();
+      if (LeastOp)
+        Ok = B.CreateAnd(Ok, B.CreateICmpUGE(LeastOp, B.getInt32(0x7fffff)));
+      B.CreateCondBr(Ok, Post, Slow);
+      // The values the run gives later code: the fast or the slow one.
+      B.SetInsertPoint(Post, Post->begin());
+      for (auto [Orig, SlowV] : Pairs) {
+        Value *FastV = FastOf.lookup(Orig);
+        if (!FastV)
+          FastV = Orig;
+        if (!SlowV || FastV->getType()->isVoidTy())
+          continue;
+        SmallVector<Use *, 4> Outside;
+        for (Use &U : FastV->uses())
+          if (auto *UI = dyn_cast<Instruction>(U.getUser());
+              UI && UI->getParent() != Run)
+            Outside.push_back(&U);
+        if (Outside.empty())
+          continue;
+        PHINode *P = B.CreatePHI(FastV->getType(), 2);
+        P->addIncoming(FastV, Run);
+        P->addIncoming(SlowV, Slow);
+        for (Use *U : Outside)
+          U->set(P);
+      }
+    }
+  }
+}
+
 /// The double precision operations of F and its constrained intrinsics
 /// become calls of emulations.
 void EmulateF64::replaceOperations(Function &F) {
+  if (ieeeF32(F))
+    speculateIEEEF32Runs(F);
   if (ieeeModule(F))
     for (Instruction &I : make_early_inc_range(instructions(F)))
       if (isBFloatArith(I))
@@ -1101,6 +1256,10 @@ void EmulateF64::replaceOperations(Function &F) {
       replaceWithEmulation(I, Key, Ops);
     }
   }
+  // (the marks of the operations a run tested, which no AIR consumer reads:
+  // Metal's bitcode reader rejects an unknown metadata kind, "Invalid ID")
+  for (Instruction &I : instructions(F))
+    I.setMetadata("air.ieee32.checked", nullptr);
 }
 
 /// Every double of the module becomes an i64: the globals and functions
@@ -1317,10 +1476,19 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
       Fast = B.CreateUnaryIntrinsic(Intrinsic::sqrt, A[0]);
     else
       return NoEmulation();
-    Value *Ok = B.CreateICmpNE(B.CreateAnd(Bits(Fast), 0x7f800000),
-                               B.getInt32(0));
-    for (Value *X : A)
-      Ok = B.CreateAnd(Ok, B.CreateNot(Denormal(X)));
+    // (an operand is denormal when its magnitude's bits minus one, unsigned,
+    // are below 0x7fffff: one minimum over the operands and one comparison,
+    // where testing each operand's exponent and fraction made a loop of f32
+    // operations six times slower on the M2 Max)
+    (void)Denormal;
+    Value *Least = nullptr;
+    for (Value *X : A) {
+      Value *M = B.CreateSub(B.CreateAnd(Bits(X), 0x7fffffff), B.getInt32(1));
+      Least = Least ? B.CreateBinaryIntrinsic(Intrinsic::umin, Least, M) : M;
+    }
+    Value *Ok = B.CreateAnd(
+        B.CreateICmpNE(B.CreateAnd(Bits(Fast), 0x7f800000), B.getInt32(0)),
+        B.CreateICmpUGE(Least, B.getInt32(0x7fffff)));
     BasicBlock *Slow = BasicBlock::Create(Ctx, "ieee32.slow", &F);
     BasicBlock *Done = BasicBlock::Create(Ctx, "ieee32.done", &F);
     BasicBlock *FastEnd = B.GetInsertBlock();
