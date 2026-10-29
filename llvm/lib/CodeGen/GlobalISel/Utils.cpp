@@ -1702,7 +1702,9 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     for (auto &MOUse : MRI.use_operands(Def.getReg())) {
       MachineInstr *DbgValue = MOUse.getParent();
       // Ignore partially formed DBG_VALUEs.
-      if (DbgValue->isNonListDebugValue() && DbgValue->getNumOperands() == 4) {
+      if ((DbgValue->isNonListDebugValue() &&
+           DbgValue->getNumOperands() == 4) ||
+          DbgValue->isDebugValueList()) {
         DbgUsers.push_back(&MOUse);
       }
     }

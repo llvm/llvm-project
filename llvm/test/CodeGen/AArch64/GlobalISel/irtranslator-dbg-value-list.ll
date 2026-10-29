@@ -12,7 +12,7 @@ define i32 @two_regs(i32 %a, i32 %b) !dbg !5 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i32) = G_MUL [[COPY]], [[COPY1]], debug-location !6
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location !6
+  ; CHECK-NEXT:   DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]](i32), [[COPY1]](i32), debug-location !6
   ; CHECK-NEXT:   $w0 = COPY [[MUL]](i32), debug-location !6
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0, debug-location !6
   %m = mul i32 %a, %b, !dbg !10
@@ -27,7 +27,7 @@ define i32 @same_reg_twice(i32 %a) !dbg !11 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i32) = G_MUL [[COPY]], [[COPY]], debug-location !10
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !11, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), debug-location !10
+  ; CHECK-NEXT:   DBG_VALUE_LIST !11, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), [[COPY]](i32), [[COPY]](i32), debug-location !10
   ; CHECK-NEXT:   $w0 = COPY [[MUL]](i32), debug-location !10
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0, debug-location !10
   %m = mul i32 %a, %a, !dbg !13
@@ -41,7 +41,7 @@ define i64 @single_arg(i64 %x) !dbg !14 {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), debug-location !14
+  ; CHECK-NEXT:   DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), [[COPY]](i64), debug-location !14
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](i64), debug-location !14
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0, debug-location !14
     #dbg_value(!DIArgList(i64 %x), !15, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), !16)
@@ -54,7 +54,7 @@ define i32 @reg_and_int_const(i32 %a) !dbg !17 {
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !16, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location !17
+  ; CHECK-NEXT:   DBG_VALUE_LIST !16, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]](i32), -7, debug-location !17
   ; CHECK-NEXT:   $w0 = COPY [[COPY]](i32), debug-location !17
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0, debug-location !17
     #dbg_value(!DIArgList(i32 %a, i32 -7), !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), !19)
@@ -67,7 +67,7 @@ define float @reg_and_fp_const(float %f) !dbg !20 {
   ; CHECK-NEXT:   liveins: $s0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location !20
+  ; CHECK-NEXT:   DBG_VALUE_LIST !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]](f32), float 1.500000e+00, debug-location !20
   ; CHECK-NEXT:   $s0 = COPY [[COPY]](f32), debug-location !20
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0, debug-location !20
     #dbg_value(!DIArgList(float %f, float 1.500000e+00), !21, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), !22)
@@ -82,7 +82,7 @@ define i128 @reg_and_wide_const(i128 %w) !dbg !23 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !22, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location !23
+  ; CHECK-NEXT:   DBG_VALUE_LIST !22, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[MV]](i128), i128 18446744073709551616, debug-location !23
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[MV]](i128), debug-location !23
   ; CHECK-NEXT:   $x0 = COPY [[UV]](i64), debug-location !23
   ; CHECK-NEXT:   $x1 = COPY [[UV1]](i64), debug-location !23
@@ -97,7 +97,7 @@ define ptr @ptr_and_null(ptr %p) !dbg !26 {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !25, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), debug-location !26
+  ; CHECK-NEXT:   DBG_VALUE_LIST !25, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY]](p0), 0, debug-location !26
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0), debug-location !26
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0, debug-location !26
     #dbg_value(!DIArgList(ptr %p, ptr null), !27, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), !28)
