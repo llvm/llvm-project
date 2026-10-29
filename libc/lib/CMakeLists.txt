@@ -35,6 +35,7 @@ else()
 endif()
 
 set(added_archive_targets "")
+set(added_shared_targets "")
 set(added_bitcode_targets "")
 foreach(archive IN ZIP_LISTS
   libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
@@ -58,7 +59,47 @@ foreach(archive IN ZIP_LISTS
       add_dependencies(${archive_1} libc-startup)
     endif()
   endif()
+  # With LIBC_ENABLE_SHARED the definition of `app` moves out of crt1.o and
+  # into libc, so the archive needs it too or a static link is left with the
+  # weak declaration resolving to nothing.
+  if(LIBC_ENABLE_SHARED AND archive_1 STREQUAL "libc"
+    AND TARGET libc.startup.${LIBC_TARGET_OS}.app)
+    target_sources(${archive_1} PRIVATE
+      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.app>
+      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.passive_abi>)
+  endif()
   list(APPEND added_archive_targets ${archive_1})
+
+  if(LIBC_ENABLE_SHARED)
+    add_entrypoint_library(
+      ${archive_1}-shared
+      SHARED
+      SOVERSION ${LIBC_ABI_VERSION}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${archive_1}-shared
+      PROPERTIES
+        OUTPUT_NAME ${archive_0}
+    )
+    target_link_libraries(${archive_1}-shared PUBLIC libc-headers)
+    if(TARGET libc-startup)
+      add_dependencies(${archive_1}-shared libc-startup)
+    endif()
+    set(app_object libc.startup.${LIBC_TARGET_OS}.app)
+    if(archive_1 STREQUAL "libc")
+      if(TARGET ${app_object})
+        target_sources(${archive_1}-shared
+          PRIVATE $<TARGET_OBJECTS:${app_object}>
+          $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.passive_abi>)
+      endif()
+    else()
+      # libm and libmvec reference errno and other libc internals.
+      target_link_libraries(${archive_1}-shared PRIVATE libc-shared)
+    endif()
+    list(APPEND added_shared_targets ${archive_1}-shared)
+  endif()
 
   # Add the offloading version of the library for offloading languages. These
   # are installed in the standard search path separate from the other libraries.
@@ -71,6 +112,10 @@ foreach(archive IN ZIP_LISTS
     list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()
+# Everything is in libc, but a great deal of software still asks for the
+# separate libraries it used to be split across, and a link that names one
+# fails if there is nothing of that name to find. Empty archives are what
+# glibc leaves in their place for the same reason.
 
 if(libc_subarchive_entrypoints)
   add_entrypoint_library(
@@ -98,6 +143,14 @@ install(
   COMPONENT libc
 )
 
+if(added_shared_targets)
+  install(
+    TARGETS ${added_shared_targets}
+    LIBRARY DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    COMPONENT libc
+  )
+endif()
+
 foreach(file ${added_bitcode_targets})
   install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
     DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
@@ -105,11 +158,9 @@ foreach(file ${added_bitcode_targets})
   )
 endforeach()
 
-# Add empty archive libraries for compatibility with systems expecting certain
-# bits of libc to be located in separate files (e.g. libpthread).
 set(added_empty_archives "")
 if(LLVM_LIBC_FULL_BUILD AND ${LIBC_TARGET_OS} STREQUAL "linux")
-  list(APPEND libc_empty_archive_names pthread dl rt)
+  list(APPEND libc_empty_archive_names pthread dl resolv rt util)
   foreach(archive ${libc_empty_archive_names})
     set(empty_archive_path ${LIBC_LIBRARY_DIR}/lib${archive}.a)
     add_custom_command(
@@ -126,6 +177,8 @@ if(LLVM_LIBC_FULL_BUILD AND ${LIBC_TARGET_OS} STREQUAL "linux")
     add_custom_target(empty-${archive} ALL DEPENDS ${empty_archive_path})
     list(APPEND added_empty_archives empty-${archive})
   endforeach()
+  # They are installed with libc, so building libc has to make them.
+  add_dependencies(libc ${added_empty_archives})
 endif()
 
 set(startup_target "")
@@ -141,20 +194,31 @@ if(LLVM_LIBC_FULL_BUILD)
   set(header_install_target install-libc-headers)
 endif()
 
+# The loader is installed alongside the shared libraries it exists to load,
+# so it has to be built before the install step runs.
+set(loader_target "")
+if(TARGET libc-loader)
+  set(loader_target libc-loader)
+endif()
+
 add_custom_target(install-libc
   DEPENDS ${added_archive_targets}
+    ${added_shared_targets}
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}
+    ${loader_target}
     ${header_install_target}
   COMMAND "${CMAKE_COMMAND}"
     -DCMAKE_INSTALL_COMPONENT=libc
     -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
   DEPENDS ${added_archive_targets}
+    ${added_shared_targets}
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}
+    ${loader_target}
     ${header_install_target}
   COMMAND "${CMAKE_COMMAND}"
     -DCMAKE_INSTALL_COMPONENT=libc

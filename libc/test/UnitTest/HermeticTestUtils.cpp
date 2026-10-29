@@ -30,7 +30,7 @@ int atexit(void (*func)(void));
 
 } // namespace LIBC_NAMESPACE_DECL
 
-constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
+constexpr uint64_t ALIGNMENT = alignof(max_align_t);
 
 namespace {
 

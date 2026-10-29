@@ -62,7 +62,13 @@ struct AppProperties {
   uintptr_t *env_ptr;
 };
 
+#ifdef LIBC_COPT_SHARED_LIBRARY
+// Defined in libc rather than in crt1.o, so libc.so can reach it too. An
+// inline variable would give each of them a copy of its own.
+extern LIBC_SHARED_INTERNAL AppProperties app;
+#else
 LIBC_INLINE_VAR AppProperties app;
+#endif
 
 // The descriptor of a thread's TLS area.
 struct TLSDescriptor {

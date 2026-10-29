@@ -110,6 +110,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_yield
 
+    # The general dynamic thread local model
+    libc.src.tls.__tls_get_addr
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -499,7 +502,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
     libc.src.unistd.getegid
-    libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize

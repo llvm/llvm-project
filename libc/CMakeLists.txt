@@ -269,6 +269,31 @@ endif()
 option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
   "Link hermetic tests against LLVM libc's own startup object"
   ON)
+option(LIBC_ENABLE_SHARED
+  "Additionally build the entrypoint libraries as shared objects" OFF)
+if(LIBC_ENABLE_SHARED AND NOT LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR
+    "LIBC_ENABLE_SHARED requires LLVM_LIBC_FULL_BUILD. The overlay build "
+    "produces a static archive that is linked ahead of the system libc.")
+endif()
+# Bumped when the shared object ABI changes incompatibly. LLVM-libc does not
+# offer ABI stability yet, so this stays at 0 until it does.
+set(LIBC_ABI_VERSION 0 CACHE STRING
+  "SOVERSION for the LLVM-libc shared objects")
+if(LIBC_ENABLE_SHARED)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} --rtlib=compiler-rt --print-libgcc-file-name
+    OUTPUT_VARIABLE LIBC_COMPILER_RT_BUILTINS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(NOT EXISTS "${LIBC_COMPILER_RT_BUILTINS}")
+    message(WARNING
+      "Could not locate the compiler-rt builtins archive. The shared objects "
+      "may fail to link.")
+    set(LIBC_COMPILER_RT_BUILTINS "")
+  endif()
+endif()
+
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
@@ -594,6 +619,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
   # The startup system can potentially depend on the library components so add
   # it after the library implementation directories.
   add_subdirectory(startup)
+  add_subdirectory(loader)
 endif()
 
 # The lib and test directories are added at the very end as tests

@@ -1,0 +1,30 @@
+header: execinfo.h
+standards:
+  - gnu
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: backtrace
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: void **
+      - type: int
+  - name: backtrace_symbols
+    standards:
+      - gnu
+    return_type: char **
+    arguments:
+      - type: void *const *
+      - type: int
+  - name: backtrace_symbols_fd
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: void *const *
+      - type: int
+      - type: int

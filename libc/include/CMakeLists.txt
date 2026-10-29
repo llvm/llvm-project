@@ -470,6 +470,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  execinfo
+  ../libc/include/execinfo.yaml
+  execinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   signal
   ../libc/include/signal.yaml
   signal.h
@@ -623,6 +631,7 @@ add_header_macro(
     .llvm-libc-types.struct_passwd
     .llvm-libc-types.uid_t
     .llvm-libc-types.gid_t
+    .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
 

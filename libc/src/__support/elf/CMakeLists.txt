@@ -1,0 +1,311 @@
+add_header_library(
+  elf_types
+  HDRS
+    elf_types.h
+  DEPENDS
+    libc.hdr.elf_proxy
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  run_path
+  HDRS
+    run_path.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.readlink
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  thread_pointer
+  HDRS
+    thread_pointer.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  dynamic
+  HDRS
+    dynamic.h
+  DEPENDS
+    libc.src.__support.elf.elf_types
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  hash
+  HDRS
+    hash.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  symbol
+  HDRS
+    symbol.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.elf.hash
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  relocation
+  HDRS
+    relocation.h
+  DEPENDS
+    libc.src.__support.elf.elf_types
+    libc.hdr.elf_macros
+    libc.hdr.types.size_t
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
+add_header_library(
+  module
+  HDRS
+    module.h
+  DEPENDS
+    libc.src.__support.elf.elf_types
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.dynamic
+    libc.src.__support.elf.relocation
+    libc.src.__support.elf.symbol
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  tls_layout
+  HDRS
+    tls_layout.h
+  DEPENDS
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
+add_header_library(
+  load_layout
+  HDRS
+    load_layout.h
+  DEPENDS
+    libc.src.__support.elf.elf_types
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  map_segments
+  HDRS
+    map_segments.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.errno_macros
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.elf.load_layout
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  load_module
+  HDRS
+    load_module.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.elf.map_segments
+    libc.src.__support.elf.module
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  search
+  HDRS
+    search.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.link_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.elf.load_module
+    libc.src.__support.elf.module
+    libc.src.__support.elf.run_path
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+
+add_header_library(
+  bind
+  HDRS
+    bind.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.elf.module
+    libc.src.__support.elf.relocation
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  tls_block
+  HDRS
+    tls_block.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.errno_macros
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.elf.module
+    libc.src.__support.elf.tls_layout
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_header_library(
+  registry
+  HDRS
+    registry.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.elf.bind
+    libc.src.__support.elf.load_module
+    libc.src.__support.elf.module
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  startup_stack
+  HDRS
+    startup_stack.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  passive_abi
+  HDRS
+    passive_abi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.map_segments
+    libc.src.__support.elf.module
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  dtv
+  HDRS
+    dtv.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.module
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_object_library(
+  dynamic_blocks
+  SRCS
+    dynamic_blocks.cpp
+  HDRS
+    dynamic_blocks.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.elf.dtv
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)

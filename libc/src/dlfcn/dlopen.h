@@ -15,6 +15,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 void *dlopen(const char *, int);
 
+namespace internal {
+void *dlopen_impl(const char *path, int mode);
+} // namespace internal
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLOPEN_H

@@ -86,6 +86,10 @@ public:
   }
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
+  // False when the address space for the regions could not be reserved, which
+  // is what a limit on it (RLIMIT_AS) does. Every request is then served by
+  // the secondary, one mapping each, rather than the process being aborted.
+  bool isUsable() const { return !Unavailable; }
   static constexpr bool conditionVariableEnabled() {
     return Config::hasConditionVariableT();
   }
@@ -140,6 +144,7 @@ public:
   AtomicOptions Options;
 
 private:
+  bool Unavailable = false;
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr MapSizeIncrement = Config::getMapSizeIncrement();
@@ -387,18 +392,22 @@ void SizeClassAllocator64<Config>::init(s32 ReleaseToOsInterval)
   if (Config::getEnableContiguousRegions()) {
     ReservedMemoryT ReservedMemory = {};
     // Reserve the space required for the Primary.
-    CHECK(ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
-                                "scudo:primary_reserve"));
-    const uptr PrimaryBase = ReservedMemory.getBase();
+    if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
+                                        "scudo:primary_reserve",
+                                        MAP_ALLOWNOMEM))) {
+      Unavailable = true;
+    } else {
+      const uptr PrimaryBase = ReservedMemory.getBase();
 
-    for (uptr I = 0; I < NumClasses; I++) {
-      MemMapT RegionMemMap = ReservedMemory.dispatch(
-          PrimaryBase + (I << RegionSizeLog), RegionSize);
-      RegionInfo *Region = getRegionInfo(I);
+      for (uptr I = 0; I < NumClasses; I++) {
+        MemMapT RegionMemMap = ReservedMemory.dispatch(
+            PrimaryBase + (I << RegionSizeLog), RegionSize);
+        RegionInfo *Region = getRegionInfo(I);
 
-      initRegion(Region, I, RegionMemMap, Config::getEnableRandomOffset());
+        initRegion(Region, I, RegionMemMap, Config::getEnableRandomOffset());
+      }
+      shuffle(RegionInfoArray, NumClasses, &Seed);
     }
-    shuffle(RegionInfoArray, NumClasses, &Seed);
   }
 
   if constexpr (SCUDO_DEBUG && conditionVariableEnabled()) {

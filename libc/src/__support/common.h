@@ -25,12 +25,26 @@
 #define LIBC_TARGET_USES_LEADING_UNDERSCORE
 #endif
 
+// LIBC_NAMESPACE_DECL gives every declaration hidden visibility. The public C
+// symbols are controlled independently here, and must be given default
+// visibility to be exported from a shared object.
+// Both are spelled the GNU way rather than as C++ attributes: they expand in
+// positions where a `[[...]]` attribute would appertain to the type rather
+// than to the declaration.
 #ifndef LLVM_LIBC_FUNCTION_ATTR
+#ifdef LIBC_COPT_SHARED_LIBRARY
+#define LLVM_LIBC_FUNCTION_ATTR __attribute__((visibility("default")))
+#else
 #define LLVM_LIBC_FUNCTION_ATTR
+#endif
 #endif
 
 #ifndef LLVM_LIBC_VARIABLE_ATTR
+#ifdef LIBC_COPT_SHARED_LIBRARY
+#define LLVM_LIBC_VARIABLE_ATTR __attribute__((visibility("default")))
+#else
 #define LLVM_LIBC_VARIABLE_ATTR
+#endif
 #endif
 
 // clang-format off

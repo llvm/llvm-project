@@ -14,7 +14,7 @@ add_dependencies(
 )
 
 # A convenience target to build all performance tests.
-add_custom_target(libc-math-performance-tests)
+add_libc_testsuite(libc-math-performance-tests)
 
 function(add_perf_binary target_name)
   cmake_parse_arguments(

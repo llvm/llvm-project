@@ -76,6 +76,7 @@ public:
   }
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
+  bool isUsable() const { return true; }
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 

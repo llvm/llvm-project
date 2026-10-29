@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern struct r_debug _r_debug;
+extern LIBC_SHARED_INTERNAL struct r_debug _r_debug;
 
 } // namespace LIBC_NAMESPACE_DECL
 

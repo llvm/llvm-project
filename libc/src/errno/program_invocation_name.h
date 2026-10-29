@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern char *program_invocation_name;
+extern LIBC_SHARED_INTERNAL char *program_invocation_name;
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -186,6 +186,14 @@ if(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC)
   set(SCUDO_DEPS libc-headers)
 
   list(APPEND SCUDO_CFLAGS "-ffreestanding")
+
+  # A shared libc links scudo into libc.so, so it is compiled the way the
+  # libc's own objects are: position independent, with initial-exec TLS.
+  if(LIBC_ENABLE_SHARED)
+    append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SCUDO_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
+                   -ftls-model=initial-exec SCUDO_CFLAGS)
+  endif()
 endif()
 
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SCUDO_LINK_FLAGS)

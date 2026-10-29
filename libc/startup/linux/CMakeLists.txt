@@ -65,7 +65,9 @@ function(add_startup_object name)
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
     DEPENDS ${ADD_STARTUP_OBJECT_DEPENDS}
-    COMPILE_OPTIONS ${ADD_STARTUP_OBJECT_COMPILE_OPTIONS}
+    COMPILE_OPTIONS
+      ${ADD_STARTUP_OBJECT_COMPILE_OPTIONS}
+      -fno-lto
   )
   set_target_properties(
     ${fq_target_name}
@@ -89,6 +91,15 @@ endif()
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_object_library(
+  app
+  SRCS
+    app.cpp
+  DEPENDS
+    libc.config.app_h
+    libc.src.__support.macros.config
+)
+
+add_object_library(
   gnu_property_section
   SRCS
     gnu_property_section.cpp
@@ -109,6 +120,7 @@ add_object_library(
     do_start.h
     irelative.h
   DEPENDS
+    .app
     libc.config.app_h
     libc.hdr.elf_proxy
     libc.hdr.link_macros
@@ -140,10 +152,20 @@ add_object_library(
     -fno-stack-protector # stack protect canary is not available yet.
 )
 
+# A program linked against libc.so cannot reach the TLS routines there, which
+# are hidden, so a shared build carries its own copy of them in crt1.o. A
+# static link takes them from crt1.o in the same way and leaves libc.a's.
+set(crt1_tls "")
+if(LIBC_ENABLE_SHARED)
+  set(crt1_tls
+    libc.src.__support.threads.linux.${LIBC_TARGET_ARCHITECTURE}.tls)
+endif()
+
 # TODO: factor out crt1 into multiple objects
 merge_relocatable_object(
   crt1
   .${LIBC_TARGET_ARCHITECTURE}.start
+  ${crt1_tls}
   .${LIBC_TARGET_ARCHITECTURE}.irelative
   .do_start
   .gnu_property_section
@@ -171,3 +193,21 @@ foreach(target IN LISTS startup_components)
     RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
     COMPONENT libc)
 endforeach()
+
+add_object_library(
+  passive_abi
+  SRCS
+    passive_abi.cpp
+  DEPENDS
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.macros.config
+)
+
+# Position independent executables start from Scrt1.o. The objects of a shared
+# build are position independent already, so crt1.o serves under both names.
+if(LIBC_ENABLE_SHARED)
+  install(FILES $<TARGET_OBJECTS:libc.startup.linux.crt1>
+    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    RENAME Scrt1.o
+    COMPONENT libc)
+endif()

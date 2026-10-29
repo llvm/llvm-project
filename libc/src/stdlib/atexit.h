@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int atexit(__atexithandler_t);
+LIBC_SHARED_INTERNAL int atexit(__atexithandler_t);
 
 } // namespace LIBC_NAMESPACE_DECL
 

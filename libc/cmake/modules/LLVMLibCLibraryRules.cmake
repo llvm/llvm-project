@@ -1,52 +1,57 @@
 function(collect_object_file_deps target result)
   # NOTE: This function does add entrypoint targets to |result|.
   # It is expected that the caller adds them separately.
-  set(all_deps "")
+  #
+  # Header libraries are dense in the dependency graph, so each target keeps
+  # the result of its walk and every later visit is a lookup. A target reached
+  # again while its own walk is still in progress adds nothing, which ends a
+  # cycle. A dependency named but never defined, as some header libraries
+  # have, has nothing to add either.
+  if(NOT TARGET ${target})
+    set(${result} "" PARENT_SCOPE)
+    return()
+  endif()
+  get_target_property(aliased ${target} "ALIASED_TARGET")
+  if(aliased)
+    set(target ${aliased})
+  endif()
+  get_target_property(done ${target} "COLLECTED_OBJECT_DEPS_DONE")
+  if(done)
+    get_target_property(all_deps ${target} "COLLECTED_OBJECT_DEPS")
+    set(${result} ${all_deps} PARENT_SCOPE)
+    return()
+  endif()
+  get_target_property(in_progress ${target} "COLLECTING_OBJECT_DEPS")
   get_target_property(target_type ${target} "TARGET_TYPE")
-  if(NOT target_type)
+  if(in_progress OR NOT target_type)
+    set(${result} "" PARENT_SCOPE)
     return()
   endif()
+  set_target_properties(${target} PROPERTIES COLLECTING_OBJECT_DEPS TRUE)
 
-  if(${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
-    list(APPEND all_deps ${target})
-    get_target_property(deps ${target} "DEPS")
-    foreach(dep IN LISTS deps)
-      collect_object_file_deps(${dep} dep_targets)
-      list(APPEND all_deps ${dep_targets})
-    endforeach()
-    list(REMOVE_DUPLICATES all_deps)
-    set(${result} ${all_deps} PARENT_SCOPE)
-    return()
-  endif()
-
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
-    set(entrypoint_target ${target})
-    get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
-    if(is_alias)
-      get_target_property(aliasee ${entrypoint_target} "DEPS")
-      if(NOT aliasee)
-        message(FATAL_ERROR
-          "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
-      endif()
-      set(entrypoint_target ${aliasee})
-    endif()
-    get_target_property(deps ${target} "DEPS")
-    foreach(dep IN LISTS deps)
-      collect_object_file_deps(${dep} dep_targets)
-      list(APPEND all_deps ${dep_targets})
-    endforeach()
-    list(REMOVE_DUPLICATES all_deps)
-    set(${result} ${all_deps} PARENT_SCOPE)
-    return()
-  endif()
-
+  set(all_deps "")
+  get_target_property(deps ${target} "DEPS")
   if(${target_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})
     # It is not possible to recursively extract deps of external dependencies.
     # So, we just accumulate the direct dep and return.
-    get_target_property(deps ${target} "DEPS")
-    set(${result} ${deps} PARENT_SCOPE)
-    return()
+    set(all_deps ${deps})
+  elseif((${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE}) OR
+      (${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
+      (${target_type} STREQUAL ${HDR_LIBRARY_TARGET_TYPE}))
+    if(${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
+      list(APPEND all_deps ${target})
+    endif()
+    foreach(dep IN LISTS deps)
+      collect_object_file_deps(${dep} dep_targets)
+      list(APPEND all_deps ${dep_targets})
+    endforeach()
+    list(REMOVE_DUPLICATES all_deps)
   endif()
+
+  set_target_properties(${target} PROPERTIES
+    COLLECTED_OBJECT_DEPS "${all_deps}"
+    COLLECTED_OBJECT_DEPS_DONE TRUE)
+  set(${result} ${all_deps} PARENT_SCOPE)
 endfunction()
 
 function(get_all_object_file_deps result fq_deps_list)
@@ -138,8 +143,15 @@ endfunction()
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
+#       target_name
+#       [SHARED]
+#       [SOVERSION <version>]
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
+#
+# Without SHARED a static archive is produced. SHARED builds a shared object
+# instead and requires LIBC_ENABLE_SHARED, which makes the entrypoint objects
+# position independent.
 #
 # NOTE: If one wants an entrypoint to be available in a library, then they will
 # have to list the entrypoint target explicitly in the DEPENDS list. Implicit
@@ -147,14 +159,18 @@ endfunction()
 function(add_entrypoint_library target_name)
   cmake_parse_arguments(
     "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
+    "SHARED" # Optional arguments
+    "SOVERSION" # Single value arguments
     "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
     message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
       "of 'add_entrypoint_object' targets.")
+  endif()
+  if(ENTRYPOINT_LIBRARY_SHARED AND NOT LIBC_ENABLE_SHARED)
+    message(FATAL_ERROR
+      "'add_entrypoint_library' with SHARED requires LIBC_ENABLE_SHARED.")
   endif()
 
   get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
@@ -165,12 +181,34 @@ function(add_entrypoint_library target_name)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
   endforeach()
 
+  if(NOT ENTRYPOINT_LIBRARY_SHARED)
+    add_library(
+      ${target_name}
+      STATIC
+        ${objects}
+    )
+    set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+    return()
+  endif()
+
   add_library(
     ${target_name}
-    STATIC
+    SHARED
       ${objects}
   )
-  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+  set_target_properties(${target_name}
+    PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+  if(NOT ENTRYPOINT_LIBRARY_SOVERSION STREQUAL "")
+    set_target_properties(${target_name}
+      PROPERTIES SOVERSION ${ENTRYPOINT_LIBRARY_SOVERSION})
+  endif()
+  # Link nothing from the host toolchain except the compiler runtime, which the
+  # math and fixed-point entrypoints need for builtins such as __divti3. The
+  # driver defaults would otherwise add a DT_NEEDED on the system libm.
+  target_link_options(${target_name} PRIVATE -nostdlib)
+  if(LIBC_COMPILER_RT_BUILTINS)
+    target_link_libraries(${target_name} PRIVATE ${LIBC_COMPILER_RT_BUILTINS})
+  endif()
 endfunction()
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
