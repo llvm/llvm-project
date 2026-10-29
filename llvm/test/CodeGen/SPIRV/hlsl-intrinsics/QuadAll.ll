@@ -4,8 +4,8 @@
 ; RUN: not llc -O0 -mtriple=spirv1.5-unknown-vulkan-library \
 ; RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=NO-EXT
 ; RUN: not llc -O0 -mtriple=spirv1.5-unknown-vulkan-library \
-; RUN:   --spirv-ext=+SPV_KHR_quad_control %s -o - 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=NO-RECONVERGENCE
+; RUN:   --spirv-ext=+SPV_KHR_quad_control,-SPV_KHR_maximal_reconvergence \
+; RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=NO-RECONVERGENCE
 ; RUN: not llc -O0 -mtriple=spirv32v1.2-unknown-vulkan-library \
 ; RUN:   --spirv-ext=+SPV_KHR_quad_control,+SPV_KHR_maximal_reconvergence \
 ; RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=VERSION
