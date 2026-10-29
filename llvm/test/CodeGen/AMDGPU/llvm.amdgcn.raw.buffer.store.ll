@@ -146,7 +146,6 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float>, i32, i32,
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null offen
 ; GFX1250-NEXT:    buffer_load_b128 v[8:11], v5, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

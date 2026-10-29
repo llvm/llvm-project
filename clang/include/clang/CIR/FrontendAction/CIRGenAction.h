@@ -44,13 +44,11 @@ private:
 
   mlir::OwningOpRef<mlir::ModuleOp> MLIRMod;
 
-  mlir::MLIRContext *MLIRCtx;
-
   std::unique_ptr<llvm::LLVMContext> Ctx;
   llvm::SmallVector<clang::LinkModule> LinkModules;
 
 protected:
-  CIRGenAction(OutputType Action, mlir::MLIRContext *MLIRCtx = nullptr);
+  CIRGenAction(OutputType Action);
 
   bool BeginSourceFileAction(clang::CompilerInstance &CI) override;
 
@@ -72,42 +70,42 @@ class EmitCIRAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitCIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitCIRAction();
 };
 
 class EmitCIRBCAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitCIRBCAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitCIRBCAction();
 };
 
 class EmitLLVMAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitLLVMAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitLLVMAction();
 };
 
 class EmitBCAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitBCAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitBCAction();
 };
 
 class EmitAssemblyAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitAssemblyAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitAssemblyAction();
 };
 
 class EmitObjAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitObjAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitObjAction();
 };
 
 } // namespace cir

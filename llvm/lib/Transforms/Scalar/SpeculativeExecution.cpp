@@ -82,10 +82,7 @@ class SpeculativeExecutionLegacyPass : public FunctionPass {
 public:
   static char ID;
   explicit SpeculativeExecutionLegacyPass(bool OnlyIfDivergentTarget = false)
-      : FunctionPass(ID),
-        OnlyIfDivergentTarget(
-            OnlyIfDivergentTarget ||
-            ScalarOptions::Global.spec_exec_only_if_divergent_target),
+      : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget),
         Impl(OnlyIfDivergentTarget) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -128,7 +125,9 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
-  if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence(&F)) {
+  Opts = &getScalarOptions(F);
+  if ((OnlyIfDivergentTarget || Opts->spec_exec_only_if_divergent_target) &&
+      !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "
                          "TTI->hasBranchDivergence() is false.\n");
     return false;
@@ -259,7 +258,6 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
   SmallPtrSet<const Instruction *, 8> NotHoisted;
   auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
     for (const Value *V : Values) {
@@ -281,11 +279,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
-      if (TotalSpeculationCost > Opts.spec_exec_max_speculation_cost)
+      if (TotalSpeculationCost > Opts->spec_exec_max_speculation_cost)
         return false;  // too much to hoist
     } else {
       NotHoistedInstCount++;
-      if (NotHoistedInstCount > Opts.spec_exec_max_not_hoisted)
+      if (NotHoistedInstCount > Opts->spec_exec_max_not_hoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
     }
@@ -313,9 +311,7 @@ FunctionPass *llvm::createSpeculativeExecutionIfHasBranchDivergencePass() {
 }
 
 SpeculativeExecutionPass::SpeculativeExecutionPass(bool OnlyIfDivergentTarget)
-    : OnlyIfDivergentTarget(
-          OnlyIfDivergentTarget ||
-          ScalarOptions::Global.spec_exec_only_if_divergent_target) {}
+    : OnlyIfDivergentTarget(OnlyIfDivergentTarget) {}
 
 PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {

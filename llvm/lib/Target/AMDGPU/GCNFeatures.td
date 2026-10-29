@@ -231,7 +231,7 @@ defm Minimum3Maximum3PKF16 : AMDGPUSubtargetFeature<"minimum3-maximum3-pkf16",
   "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
 >;
 
-def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
+def FeatureSupportsXNACK : AMDGPUGenericAnyFeature<"xnack-support",
   "SupportsXNACK",
   "true",
   "Hardware supports XNACK",
@@ -363,6 +363,11 @@ defm NSAtoVMEMBug : AMDGPUSubtargetFeature<"nsa-to-vmem-bug",
 
 defm NSAClauseBug : AMDGPUSubtargetFeature<"nsa-clause-bug",
   "MIMG-NSA in a hard clause has unpredictable results on GFX10.1",
+  /*GenPredicate=*/0
+>;
+
+defm MixedLoadStoreClauses : AMDGPUSubtargetFeature<"mixed-load-store-clauses",
+  "Loads, stores and atomics of the same memory class share one S_CLAUSE type",
   /*GenPredicate=*/0
 >;
 
@@ -1380,8 +1385,8 @@ defm 64BitLiterals : AMDGPUSubtargetFeature<"64-bit-literals",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
-defm 1024AddressableVGPRs : AMDGPUSubtargetFeature<"1024-addressable-vgprs",
-  "Has 1024 addressable VGPRs"
+defm VGPRMSBs : AMDGPUSubtargetFeature<"vgpr-msbs",
+  "Has MSB registers to address VGPRs that don't fit in the instruction encodings"
 >;
 
 defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixup",
@@ -1413,6 +1418,11 @@ defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unc
 defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
   "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
   GenPredicate=false
+>;
+
+defm CacheFillSize : AMDGPUSubtargetFeature<"cache-fill-size",
+  "Has a cache fill size field in VMEM instructions indicating how much data is fetched on a cache miss",
+  /*GenPredicate=*/0
 >;
 
 defm SAddPCI64Inst : AMDGPUSubtargetFeature<"s-add-pc-i64-inst",
@@ -1910,6 +1920,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureExtendedImageInsts,
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
+   FeatureMixedLoadStoreClauses,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
@@ -1918,7 +1929,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2189,7 +2200,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
-     FeatureLDSAllocGranularity1280,
+     FeatureLDSAllocGranularity512,
      FeatureLDSEncodingGranularity1280,
      FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
@@ -2209,7 +2220,8 @@ def FeatureISAVersion10_Common : FeatureSet<
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
-    [FeatureLDSAllocGranularity512,
+    [FeatureMixedLoadStoreClauses,
+     FeatureLDSAllocGranularity512,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
@@ -2467,7 +2479,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
    FeatureFormattedMUBUFInsts,
-   FeatureDataCacheLineSize128,
+   FeatureDataCacheLineSize128
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2476,7 +2488,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
-   Feature1024AddressableVGPRs,
+   FeatureVGPRMSBs,
    Feature64BitLiterals,
    FeatureDLInsts,
    FeatureFmacF64Inst,
@@ -2526,7 +2538,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureSRAMECCOnOffModes,
+   FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
    FeatureAsynccnt,
@@ -2584,7 +2596,6 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
@@ -2595,6 +2606,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
    ])>;
@@ -2623,7 +2635,6 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureBlock16ConversionScaleInsts,
    FeatureFP8E5M3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
@@ -2633,6 +2644,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
    ])>;
@@ -2666,13 +2678,13 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureBlock16ConversionScaleInsts,
    FeatureFP8E5M3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2698,7 +2710,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
-   FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
    ])>;
 
@@ -2832,7 +2843,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,
   FeatureLDSAllocGranularity512,

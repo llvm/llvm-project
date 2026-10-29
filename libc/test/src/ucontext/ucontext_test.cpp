@@ -11,6 +11,7 @@
 
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
+#include "src/signal/sigismember.h"
 #include "src/signal/sigprocmask.h"
 
 #include "test/UnitTest/Test.h"
@@ -18,14 +19,6 @@
 #include "include/llvm-libc-macros/signal-macros.h"
 
 namespace LIBC_NAMESPACE {
-
-static bool is_signal_set(const sigset_t *set, int signum) {
-  // TODO: Replace this with sigismember once it is implemented.
-  // sigset_t is an array of unsigned long, signum is 1-indexed.
-  int word = (signum - 1) / (sizeof(unsigned long) * 8);
-  int bit = (signum - 1) % (sizeof(unsigned long) * 8);
-  return (set->__signals[word] & (1UL << bit)) != 0;
-}
 
 TEST(LlvmLibcUcontextTest, BasicStubTest) {
   static volatile int jumped = 0;
@@ -50,8 +43,8 @@ TEST(LlvmLibcUcontextTest, SignalMaskTest) {
   getcontext(&ctx);
 
   // Verify that getcontext captured the mask
-  ASSERT_TRUE(is_signal_set(&ctx.uc_sigmask, SIGUSR1));
-  ASSERT_FALSE(is_signal_set(&ctx.uc_sigmask, SIGUSR2));
+  ASSERT_EQ(sigismember(&ctx.uc_sigmask, SIGUSR1), 1);
+  ASSERT_EQ(sigismember(&ctx.uc_sigmask, SIGUSR2), 0);
 
   sigset_t new_set;
   static volatile int mask_jumped = 0;
@@ -71,8 +64,8 @@ TEST(LlvmLibcUcontextTest, SignalMaskTest) {
   // Restore original mask for clean state
   sigprocmask(SIG_SETMASK, &old_set, nullptr);
 
-  ASSERT_TRUE(is_signal_set(&current, SIGUSR1));
-  ASSERT_FALSE(is_signal_set(&current, SIGUSR2));
+  ASSERT_EQ(sigismember(&current, SIGUSR1), 1);
+  ASSERT_EQ(sigismember(&current, SIGUSR2), 0);
 }
 
 } // namespace LIBC_NAMESPACE

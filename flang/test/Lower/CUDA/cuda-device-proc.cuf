@@ -123,9 +123,9 @@ end
 ! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
-! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
-! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
-! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf16>
+! CHECK: %{{.*}} = llvm.atomicrmw ignore_denormal_mode fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw ignore_denormal_mode fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+! CHECK: %{{.*}} = llvm.atomicrmw ignore_denormal_mode fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<2xf16>
 
 ! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64

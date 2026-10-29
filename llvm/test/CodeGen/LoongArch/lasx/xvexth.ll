@@ -104,20 +104,18 @@ define void @xvexth_q_d(ptr %a, ptr %r) nounwind {
 ; LA32-LABEL: xvexth_q_d:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 7
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 3
-; LA32-NEXT:    srai.w $a5, $a4, 31
-; LA32-NEXT:    srai.w $a6, $a3, 31
-; LA32-NEXT:    st.w $a3, $a1, 20
-; LA32-NEXT:    st.w $a2, $a1, 16
-; LA32-NEXT:    st.w $a4, $a1, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    st.w $a6, $a1, 28
-; LA32-NEXT:    st.w $a6, $a1, 24
-; LA32-NEXT:    st.w $a5, $a1, 12
-; LA32-NEXT:    st.w $a5, $a1, 8
+; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 7
+; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 3
+; LA32-NEXT:    srai.w $a2, $a2, 31
+; LA32-NEXT:    srai.w $a0, $a0, 31
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 20, 7
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 16, 6
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 4, 3
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 0, 2
+; LA32-NEXT:    st.w $a0, $a1, 28
+; LA32-NEXT:    st.w $a0, $a1, 24
+; LA32-NEXT:    st.w $a2, $a1, 12
+; LA32-NEXT:    st.w $a2, $a1, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvexth_q_d:
@@ -227,18 +225,14 @@ define void @xvexth_qu_du(ptr %a, ptr %r) nounwind {
 ; LA32-LABEL: xvexth_qu_du:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 3
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 7
 ; LA32-NEXT:    st.w $zero, $a1, 28
 ; LA32-NEXT:    st.w $zero, $a1, 24
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 20, 7
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 16, 6
 ; LA32-NEXT:    st.w $zero, $a1, 12
 ; LA32-NEXT:    st.w $zero, $a1, 8
-; LA32-NEXT:    st.w $a4, $a1, 20
-; LA32-NEXT:    st.w $a3, $a1, 16
-; LA32-NEXT:    st.w $a2, $a1, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 4, 3
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 0, 2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xvexth_qu_du:

@@ -216,6 +216,13 @@ class LLVM_MemOpPatterns {
   code setVolatileCode = [{
     inst->setVolatile($volatile_);
   }];
+  code setIgnoreDenormalModeCode = [{
+    if ($ignore_denormal_mode) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                        metadata);
+    }
+  }];
   code setSyncScopeCode = [{
     if ($syncscope.has_value()) {
       llvm::LLVMContext &llvmContext = builder.getContext();
@@ -237,6 +244,13 @@ class LLVM_MemOpPatterns {
     if ($invariantGroup) {
       llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
       inst->setMetadata(llvm::LLVMContext::MD_invariant_group, metadata);
+    }
+  }];
+  code setRangeCode = [{
+    if ($range) {
+      llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
+          .createRange($range->getLower(), $range->getUpper());
+      inst->setMetadata(llvm::LLVMContext::MD_range, metadata);
     }
   }];
   code setAccessGroupsMetadataCode = [{

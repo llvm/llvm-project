@@ -2081,6 +2081,13 @@ public:
                                           EVT VT, ArrayRef<SDValue> Ops,
                                           SDNodeFlags Flags = SDNodeFlags());
 
+  /// Constant fold a node with multiple results, returning a MERGE_VALUES of
+  /// the folded results on success.
+  LLVM_ABI SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                          SDVTList VTList,
+                                          ArrayRef<SDValue> Ops,
+                                          SDNodeFlags Flags = SDNodeFlags());
+
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -2710,6 +2717,8 @@ public:
   }
 
   LLVM_ABI bool shouldOptForSize() const;
+
+  LLVM_ABI const BasicBlock *getBasicBlock() const;
 
   /// Get the (commutative) identity element for the given opcode, if it exists.
   LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,

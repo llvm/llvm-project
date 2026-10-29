@@ -663,6 +663,22 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   return I != livein_end() && (I->LaneMask & LaneMask).any();
 }
 
+bool MachineBasicBlock::isLiveInOverlappedWith(
+    MCRegister Reg, const TargetRegisterInfo &TRI) const {
+  return any_of(LiveIns, [&](const RegisterMaskPair &LI) {
+    if (!TRI.regsOverlap(Reg, LI.PhysReg))
+      return false;
+    if (LI.LaneMask.all())
+      return true;
+    for (MCRegUnitMaskIterator U(LI.PhysReg, &TRI); U.isValid(); ++U) {
+      auto [Unit, UnitMask] = *U;
+      if ((UnitMask & LI.LaneMask).any() && TRI.hasRegUnit(Reg, Unit))
+        return true;
+    }
+    return false;
+  });
+}
+
 void MachineBasicBlock::sortUniqueLiveIns() {
   llvm::sort(LiveIns,
              [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
@@ -1824,10 +1840,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    // Prefer the "exception-model" module flag, else the TargetOptions default.
     ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-    if (EH == ExceptionHandling::Default)
-      EH = TLI.getTargetMachine().getExceptionModel();
     ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
     ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }

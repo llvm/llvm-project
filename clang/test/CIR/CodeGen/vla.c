@@ -232,10 +232,10 @@ void f3(unsigned len) {
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
 // LLVM: define{{.*}} void @f3(i32 {{.*}} %[[LEN_ARG:.*]])
-// LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   %[[I:.*]] = alloca i32
+// LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN_SIZE_T:.*]] = zext i32 %[[LEN]] to i64
@@ -329,8 +329,8 @@ int f5(unsigned long len) {
 }
 
 // CIR: cir.func{{.*}} @f5(%[[LEN_ARG:.*]]: !u64i {{.*}}) -> !s32i
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
@@ -347,8 +347,9 @@ int f5(unsigned long len) {
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 
 // LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
-// LLVM:   %[[LEN_ADDR:.*]] = alloca i64
+// LLVM:   %[[CLEANUP_DEST:.*]] = alloca i32
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i64
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i64 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i64, ptr %[[LEN_ADDR]]

@@ -789,8 +789,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
-       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed) &&
-       !Tok.is(tok::annot_module_name)))
+       !Tok.is(tok::annot_embed) && !Tok.is(tok::annot_module_name)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -946,8 +945,6 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // -traditional-cpp the lexer keeps /all/ whitespace, including comments.
       PP.Lex(Tok);
       continue;
-    } else if (Tok.is(tok::annot_repl_input_end)) {
-      // Fall through to exit the loop.
     } else if (Tok.is(tok::eod)) {
       // Don't print end of directive tokens, since they are typically newlines
       // that mess up our line tracking. These come from unknown pre-processor
@@ -1084,7 +1081,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     Callbacks->setEmittedTokensOnThisLine();
     IsStartOfLine = false;
 
-    if (Tok.is(tok::eof) || Tok.is(tok::annot_repl_input_end))
+    if (Tok.is(tok::eof))
       break;
 
     PP.Lex(Tok);

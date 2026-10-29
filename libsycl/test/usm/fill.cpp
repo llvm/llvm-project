@@ -25,6 +25,9 @@ int main() {
   sycl::queue Q;
   runTests<int>(
       Q, [&](void *Ptr, int Pattern) { Q.fill(Ptr, Pattern, ElementCount); });
+  runTests<int>(Q, [&](void *Ptr, int Pattern) {
+    Q.submit([&](sycl::handler &CGH) { CGH.fill(Ptr, Pattern, ElementCount); });
+  });
   // Liboffload handles patterns with a size that's not a power of two
   // differently, check that case separately.
   Foo Val({'a', 'b', 'c'});

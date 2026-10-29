@@ -138,3 +138,66 @@ __device__ unsigned test_grid_size_z() {
 // OGCG: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // OGCG: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i32 20
 // OGCG: load i32, ptr addrspace(4) [[GEP]], align 4, !range !{{.*}}, !invariant.load
+
+__device__ unsigned test_workgroup_size_x() {
+  return __builtin_amdgcn_workgroup_size_x();
+}
+
+// CIR-LABEL: cir.func no_inline @_Z21test_workgroup_size_xv
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %{{.*}} : (!cir.ptr<!void, target_address_space(4)>, !u64i)
+// CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!u16i, target_address_space(4)>, !u16i
+
+// LLVM-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_xv
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i64 12
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+
+// OGCG-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_xv
+// OGCG: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// OGCG: [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[P]], i64 12
+// OGCG: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !range !{{.*}}, !invariant.load !{{.*}}, !noundef
+// OGCG: zext i16 [[SIZE]] to i32
+
+__device__ unsigned test_workgroup_size_y() {
+  return __builtin_amdgcn_workgroup_size_y();
+}
+
+// CIR-LABEL: cir.func no_inline @_Z21test_workgroup_size_yv
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %{{.*}} : (!cir.ptr<!void, target_address_space(4)>, !u64i)
+// CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!u16i, target_address_space(4)>, !u16i
+
+// LLVM-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_yv
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i64 14
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+
+// OGCG-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_yv
+// OGCG: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// OGCG: [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[P]], i64 14
+// OGCG: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !range !{{.*}}, !invariant.load !{{.*}}, !noundef
+// OGCG: zext i16 [[SIZE]] to i32
+
+__device__ unsigned test_workgroup_size_z() {
+  return __builtin_amdgcn_workgroup_size_z();
+}
+
+// CIR-LABEL: cir.func no_inline @_Z21test_workgroup_size_zv
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %{{.*}} : (!cir.ptr<!void, target_address_space(4)>, !u64i)
+// CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!u16i, target_address_space(4)>, !u16i
+
+// LLVM-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_zv
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i64 16
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+
+// OGCG-LABEL: define spir_func noundef i32 @_Z21test_workgroup_size_zv
+// OGCG: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// OGCG: [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[P]], i64 16
+// OGCG: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, !range !{{.*}}, !invariant.load !{{.*}}, !noundef
+// OGCG: zext i16 [[SIZE]] to i32

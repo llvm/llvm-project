@@ -88,11 +88,6 @@ iterator_range<location_op_iterator> RawLocationWrapper::location_ops() const {
           location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
 }
 
-iterator_range<location_op_iterator>
-DbgVariableIntrinsic::location_ops() const {
-  return getWrappedLocation().location_ops();
-}
-
 Value *DbgVariableIntrinsic::getVariableLocationOp(unsigned OpIdx) const {
   return getWrappedLocation().getVariableLocationOp(OpIdx);
 }
@@ -111,84 +106,6 @@ Value *RawLocationWrapper::getVariableLocationOp(unsigned OpIdx) const {
   assert(OpIdx == 0 && "Operand Index must be 0 for a debug intrinsic with a "
                        "single location operand.");
   return V->getValue();
-}
-
-static ValueAsMetadata *getAsMetadata(Value *V) {
-  return isa<MetadataAsValue>(V) ? dyn_cast<ValueAsMetadata>(
-                                       cast<MetadataAsValue>(V)->getMetadata())
-                                 : ValueAsMetadata::get(V);
-}
-
-void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
-                                                     Value *NewValue,
-                                                     bool AllowEmpty) {
-  // If OldValue is used as the address part of a dbg.assign intrinsic replace
-  // it with NewValue and return true.
-  auto ReplaceDbgAssignAddress = [this, OldValue, NewValue]() -> bool {
-    auto *DAI = dyn_cast<DbgAssignIntrinsic>(this);
-    if (!DAI || OldValue != DAI->getAddress())
-      return false;
-    DAI->setAddress(NewValue);
-    return true;
-  };
-  bool DbgAssignAddrReplaced = ReplaceDbgAssignAddress();
-  (void)DbgAssignAddrReplaced;
-
-  assert(NewValue && "Values must be non-null");
-  auto Locations = location_ops();
-  auto OldIt = find(Locations, OldValue);
-  if (OldIt == Locations.end()) {
-    if (AllowEmpty || DbgAssignAddrReplaced)
-      return;
-    assert(DbgAssignAddrReplaced &&
-           "OldValue must be dbg.assign addr if unused in DIArgList");
-    return;
-  }
-
-  assert(OldIt != Locations.end() && "OldValue must be a current location");
-  if (!hasArgList()) {
-    Value *NewOperand = isa<MetadataAsValue>(NewValue)
-                            ? NewValue
-                            : MetadataAsValue::get(
-                                  getContext(), ValueAsMetadata::get(NewValue));
-    return setArgOperand(0, NewOperand);
-  }
-  SmallVector<ValueAsMetadata *, 4> MDs;
-  ValueAsMetadata *NewOperand = getAsMetadata(NewValue);
-  for (auto *VMD : Locations)
-    MDs.push_back(VMD == *OldIt ? NewOperand : getAsMetadata(VMD));
-  setArgOperand(
-      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
-}
-
-std::optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
-  if (auto Fragment = getExpression()->getFragmentInfo())
-    return Fragment->SizeInBits;
-  return getVariable()->getSizeInBits();
-}
-
-Value *DbgAssignIntrinsic::getAddress() const {
-  auto *MD = getRawAddress();
-  if (auto *V = dyn_cast<ValueAsMetadata>(MD))
-    return V->getValue();
-
-  // When the value goes to null, it gets replaced by an empty MDNode.
-  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
-  return nullptr;
-}
-
-void DbgAssignIntrinsic::setAssignId(DIAssignID *New) {
-  setOperand(OpAssignID, MetadataAsValue::get(getContext(), New));
-}
-
-void DbgAssignIntrinsic::setAddress(Value *V) {
-  setOperand(OpAddress,
-             MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
-}
-
-void DbgAssignIntrinsic::setValue(Value *V) {
-  setOperand(OpValue,
-             MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
@@ -693,8 +610,6 @@ const Value *GCProjectionInst::getStatepoint() const {
     cast<Instruction>(Token)->getParent()->getUniquePredecessor();
 
   assert(InvokeBB && "safepoints should have unique landingpads");
-  assert(InvokeBB->getTerminator() &&
-         "safepoint block should be well formed");
 
   return cast<GCStatepointInst>(InvokeBB->getTerminator());
 }

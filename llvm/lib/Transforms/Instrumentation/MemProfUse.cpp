@@ -242,6 +242,7 @@ struct AllocMatchInfo {
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   for (Function &F : M) {
@@ -262,8 +263,8 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
         StringRef CalleeName = CalledFunction->getName();
         // True if we are calling a heap allocation function that supports
         // hot/cold variants.
-        bool IsAlloc = isAllocationWithHotColdVariant(
-            InstrumentationOptions::Global, CalledFunction, TLI);
+        bool IsAlloc =
+            isAllocationWithHotColdVariant(Opts, CalledFunction, TLI);
         // True for the first iteration below, indicating that we are looking at
         // a leaf node.
         bool IsLeaf = true;
@@ -548,7 +549,7 @@ static void handleCallSite(const InstrumentationOptions &Opts, Instruction &I,
                            OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
-  // to support cases where the instuction's inlined frames match multiple call
+  // to support cases where the instruction's inlined frames match multiple call
   // site entries, which can happen if the profile was collected from a binary
   // where this instruction was eventually inlined into multiple callers.
   SetVector<GlobalValue::GUID> CalleeGuids;
@@ -756,8 +757,6 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
   // debug locations.
   for (auto &BB : F) {
     for (auto &I : BB) {
-      if (I.isDebugOrPseudoInst())
-        continue;
       // We are only interested in calls (allocation or interior call stack
       // context calls).
       auto *CI = dyn_cast<CallBase>(&I);
@@ -838,7 +837,7 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Return immediately if the module doesn't contain any function or global
   // variables.
   if (M.empty() && M.globals().empty())

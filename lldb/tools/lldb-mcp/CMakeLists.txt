@@ -5,10 +5,10 @@ add_lldb_tool(lldb-mcp
   LINK_COMPONENTS
     Support
   LINK_LIBS
-    liblldb
     lldbHost
     lldbProtocolMCP
     lldbUtility
+    liblldb
   )
 
 # lldb-mcp hosts debug sessions in its own process. It drives the debug engine
@@ -29,7 +29,7 @@ endif()
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-mcp
+  lldb_add_rpaths(lldb-mcp
     BUILD_RPATH
       "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH

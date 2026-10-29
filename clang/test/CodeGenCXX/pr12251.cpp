@@ -103,7 +103,7 @@ enum e13 : char {e13_a = -1 };
 e13 g13(e13 *x) {
   return *x;
 }
-// CHECK-LABEL: define{{.*}} signext i8 @_Z3g13P3e13
+// CHECK-LABEL: define{{.*}} i8 @_Z3g13P3e13
 // CHECK: load i8, ptr %x, align 1
 // CHECK-NOT: range
 // CHECK: ret
