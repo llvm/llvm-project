@@ -427,7 +427,6 @@ body:             |
     ; CHECK: liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr10
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_192 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4, [[COPY2]], %subreg.sub5
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY]]
@@ -436,7 +435,6 @@ body:             |
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
     %0:sreg_64 = COPY $sgpr8_sgpr9
-    %1:sreg_32 = COPY $sgpr10
     %2:sreg_32 = COPY $sgpr11
     %3:vreg_192 = REG_SEQUENCE %0, %subreg.sub0_sub1, %0, %subreg.sub2_sub3, %2, %subreg.sub4, %2, %subreg.sub5
     %4:areg_192 = COPY %3
