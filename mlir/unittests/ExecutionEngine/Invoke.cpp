@@ -25,8 +25,13 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "gmock/gmock.h"
 
@@ -38,9 +43,6 @@
 #endif
 
 using namespace mlir;
-
-// The JIT isn't supported on Windows at that time
-#if !defined(_WIN32) && !defined(_AIX)
 
 static struct LLVMInitializer {
   LLVMInitializer() {
@@ -59,6 +61,73 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
+
+namespace {
+/// Forwards to sys::Memory and records what each mapping was requested for.
+class RecordingMemoryMapper : public llvm::SectionMemoryManager::MemoryMapper {
+public:
+  llvm::sys::MemoryBlock
+  allocateMappedMemory(llvm::SectionMemoryManager::AllocationPurpose purpose,
+                       size_t numBytes, const llvm::sys::MemoryBlock *nearBlock,
+                       unsigned flags, std::error_code &ec) override {
+    purposes.push_back(purpose);
+    return llvm::sys::Memory::allocateMappedMemory(numBytes, nearBlock, flags,
+                                                   ec);
+  }
+
+  std::error_code protectMappedMemory(const llvm::sys::MemoryBlock &block,
+                                      unsigned flags) override {
+    return llvm::sys::Memory::protectMappedMemory(block, flags);
+  }
+
+  std::error_code releaseMappedMemory(llvm::sys::MemoryBlock &block) override {
+    return llvm::sys::Memory::releaseMappedMemory(block);
+  }
+
+  std::vector<llvm::SectionMemoryManager::AllocationPurpose> purposes;
+};
+} // namespace
+
+// On AArch64 and COFF hosts the JIT carves each object's code and data from
+// one reserved mapping, because their relocations limit the distance between
+// sections. Code mapped on its own could land anywhere relative to the data.
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CodeAndDataShareOneMapping)) {
+  llvm::Triple host(llvm::sys::getProcessTriple());
+  if (!host.isAArch64() && !host.isOSBinFormatCOFF())
+    GTEST_SKIP() << "only AArch64 and COFF hosts reserve one mapping";
+  std::string moduleStr = R"mlir(
+  func.func @foo(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
+    %res = arith.addi %arg0, %arg0 : i32
+    return %res : i32
+  }
+  )mlir";
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerBuiltinDialectTranslation(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+  ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
+  RecordingMemoryMapper mapper;
+  ExecutionEngineOptions options;
+  options.sectionMemoryMapper = &mapper;
+  auto jitOrError = ExecutionEngine::create(*module, options);
+  ASSERT_TRUE(!!jitOrError);
+  std::unique_ptr<ExecutionEngine> jit = std::move(jitOrError.get());
+  int result = 0;
+  llvm::Error error =
+      jit->invoke("foo", 42, ExecutionEngine::Result<int>(result));
+  ASSERT_TRUE(!error);
+  ASSERT_EQ(result, 42 + 42);
+  ASSERT_FALSE(mapper.purposes.empty());
+  EXPECT_FALSE(llvm::is_contained(
+      mapper.purposes, llvm::SectionMemoryManager::AllocationPurpose::Code));
+}
+
+// The JIT tests are not enabled on AIX yet.
+#if !defined(_AIX)
 
 TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
 #ifdef __s390__
@@ -391,4 +460,4 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CallbackInGlobalCtor)) {
   ASSERT_EQ(initCnt, 1);
 }
 
-#endif // _WIN32
+#endif // !defined(_AIX)
