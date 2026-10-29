@@ -10,7 +10,6 @@
 #define _LIBCPP___ALGORITHM_RANGES_SET_DIFFERENCE_H
 
 #include <__algorithm/in_out_result.h>
-#include <__algorithm/make_projected.h>
 #include <__algorithm/set_difference.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -57,8 +56,7 @@ struct __set_difference {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    return std::__set_difference(
-        __first1, __last1, __first2, __last2, __result, ranges::__make_projected_comp(__comp, __proj1, __proj2));
+    return std::__set_difference(__first1, __last1, __first2, __last2, __result, __comp, __proj1, __proj2);
   }
 
   template <input_range _Range1,
@@ -81,7 +79,9 @@ struct __set_difference {
         ranges::begin(__range2),
         ranges::end(__range2),
         __result,
-        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+        __comp,
+        __proj1,
+        __proj2);
   }
 };
 
