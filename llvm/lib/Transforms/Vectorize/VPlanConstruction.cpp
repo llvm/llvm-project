@@ -956,8 +956,7 @@ getIntInductionDescriptor(VPPhi *PhiR, PredicatedScalarEvolution &PSE,
     return std::nullopt;
   const SCEV *Step =
       PSE.getPredicatedSCEV(vputils::getSCEVExprForVPValue(StepV, PSE, &L));
-  if (isa<SCEVCouldNotCompute>(Step) || Step->isZero() ||
-      !PSE.getSE()->isLoopInvariant(Step, &L))
+  if (isa<SCEVCouldNotCompute>(Step) || !PSE.getSE()->isLoopInvariant(Step, &L))
     return std::nullopt;
   return InductionDescriptor(
       cast<VPIRValue>(PhiR->getOperand(0))->getValue(),
