@@ -860,6 +860,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    SDValue Src = Op.getOperand(0);
+    // Preserve shared casts unless the cast is free and its source is not
+    // shared, or the truncate cancels an extension.
+    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
+                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
+    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
+                      ISD::isExtOpcode(Src.getOpcode()) &&
+                      Src.getOperand(0).getValueType() == VT;
+    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
+      break;
+    unsigned SrcBits = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
+    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
+        DemandedBits.getActiveBits() > SrcBits)
+      SrcDemandedBits.setSignBit();
+
+    // Do not preserve flags that the simplified source may invalidate.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();

@@ -2176,29 +2176,58 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = getPointerTy(DAG.getDataLayout());
 
-  // Handle PIC mode first. SPARC needs a got load for every variable!
+  // Handle PIC mode first.
   if (isPositionIndependent()) {
     const Module *M = DAG.getMachineFunction().getFunction().getParent();
     PICLevel::Level picLevel = M->getPICLevel();
-    SDValue Idx;
-
-    if (picLevel == PICLevel::SmallPIC) {
-      // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
-      Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
-    } else {
-      // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, ELF::R_SPARC_GOT22, ELF::R_SPARC_GOT10, DAG);
-    }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
-    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
     // GLOBAL_BASE_REG codegen'ed with call. Inform MFI that this
     // function has calls.
     MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     MFI.setHasCalls(true);
-    return DAG.getLoad(VT, DL, DAG.getEntryNode(), AbsAddr,
-                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+
+    if (picLevel == PICLevel::SmallPIC) {
+      // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
+      // There is no 13-bit form of the GOTDATA_OP relocations, so always load
+      // the address from the GOT.
+      SDValue Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
+                                withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
+      SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
+      return DAG.getLoad(VT, DL, DAG.getEntryNode(), AbsAddr,
+                         MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+    }
+
+    // This is the pic32 code model, the GOT is known to be smaller than 4GB.
+    // Use the GOTDATA_OP sequence:
+    //
+    //   sethi %gdop_hix22(sym), %r1
+    //   xor   %r1, %gdop_lox10(sym), %r1
+    //   ld[x] [%gotbase + %r1], %r2, %gdop(sym)
+    //
+    // The three relocations tell the linker this is a GOT load of sym's
+    // address. If sym binds locally, the linker rewrites the sethi/xor to
+    // produce sym's offset from the GOT and turns the load into an add, so
+    // nothing is read from the GOT at run time. This matches GCC and matters
+    // for code that runs before dynamic relocations are applied, such as the
+    // dynamic linker's own startup code.
+    SDValue Hi =
+        DAG.getNode(SPISD::Hi, DL, VT,
+                    withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP_HIX22, DAG));
+    SDValue Lo =
+        DAG.getNode(SPISD::Lo, DL, VT,
+                    withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP_LOX10, DAG));
+    SDValue Idx = DAG.getNode(ISD::XOR, DL, VT, Hi, Lo);
+    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
+    // Attach a GOT memory operand, as for the plain GOT load above, so that
+    // the load is still known to be invariant and can be hoisted, CSE'd and
+    // rematerialized.
+    SDValue Ops[] = {DAG.getEntryNode(), AbsAddr,
+                     withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP, DAG)};
+    return DAG.getMemIntrinsicNode(
+        SPISD::LOAD_GDOP, DL, DAG.getVTList(VT, MVT::Other), Ops, VT,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+        /*Alignment=*/std::nullopt, MachineMemOperand::MOLoad);
   }
 
   // This is one of the absolute code models.

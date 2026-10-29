@@ -418,7 +418,8 @@ def tlscall       : SDNode<"SPISD::TLS_CALL", SDT_SPCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;
 
-def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop>;
+def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 def getPCX        : Operand<iPTR> {
   let PrintMethod = "printGetPCX";
@@ -753,6 +754,11 @@ let mayLoad = 1, isAsmParserOnly = 1 in {
                       [(set i32:$rd,
                           (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
+
+def : Pat<(i32 (load_gdop ADDRrr:$addr, tconstpool:$sym)),
+          (GDOP_LDrr ADDRrr:$addr, tconstpool:$sym)>;
+def : Pat<(i32 (load_gdop ADDRrr:$addr, tblockaddress:$sym)),
+          (GDOP_LDrr ADDRrr:$addr, tblockaddress:$sym)>;
 
 // Section B.4 - Store Integer Instructions, p. 95
 defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
@@ -1973,6 +1979,14 @@ def : Pat<(SPhi tglobaladdr:$in), (SETHIi tglobaladdr:$in)>;
 def : Pat<(SPlo tglobaladdr:$in), (ORri (i32 G0), tglobaladdr:$in)>;
 def : Pat<(SPhi tconstpool:$in), (SETHIi tconstpool:$in)>;
 def : Pat<(SPlo tconstpool:$in), (ORri (i32 G0), tconstpool:$in)>;
+
+// GOTDATA_OP hix22/lox10 pairs.
+def : Pat<(xor (SPhi tglobaladdr:$in1), (SPlo tglobaladdr:$in2)),
+          (XORri (SETHIi tglobaladdr:$in1), (tglobaladdr:$in2))>;
+def : Pat<(xor (SPhi tconstpool:$in1), (SPlo tconstpool:$in2)),
+          (XORri (SETHIi tconstpool:$in1), (tconstpool:$in2))>;
+def : Pat<(xor (SPhi tblockaddress:$in1), (SPlo tblockaddress:$in2)),
+          (XORri (SETHIi tblockaddress:$in1), (tblockaddress:$in2))>;
 
 // GlobalTLS addresses
 def : Pat<(SPhi tglobaltlsaddr:$in), (SETHIi tglobaltlsaddr:$in)>;
