@@ -3024,7 +3024,6 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
   }];
 
   let constrainedLLVMIntrinsic = mnemonic;
-
 }
 
 //===----------------------------------------------------------------------===//
