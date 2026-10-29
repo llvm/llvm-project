@@ -500,19 +500,19 @@ public:
   bool hasHistograms() const { return !Histograms.empty(); }
 
   /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
-  /// a conditional induction PHI, otherwise nullptr.
-  const CompressedPtrInfo *getCompressedPtrInfo(const Value *Ptr) const {
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(Value *Ptr) const {
     auto It = CompressedPtrs.find(Ptr);
     if (It != CompressedPtrs.end())
-      return &It->second;
-    return nullptr;
+      return It->second;
+    return std::nullopt;
   }
 
   /// Returns the true for \p I if it corresponds to a compressed load or store
   /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
-  bool isCompressedLoadOrStore(const Instruction *I) {
+  bool isCompressedLoadOrStore(Instruction *I) {
     return isa<LoadInst, StoreInst>(I) &&
-           getCompressedPtrInfo(getLoadStorePointerOperand(I));
+           getCompressedPtrInfo(getLoadStorePointerOperand(I)).has_value();
   }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {

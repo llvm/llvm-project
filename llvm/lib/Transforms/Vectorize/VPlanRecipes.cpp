@@ -1564,12 +1564,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
   }
-  case VPInstruction::NumActiveLanes: {
-    Type *ElementTy = getOperand(0)->getScalarType();
-    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
-    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
-                                              std::nullopt, Ctx.CostKind);
-  }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);

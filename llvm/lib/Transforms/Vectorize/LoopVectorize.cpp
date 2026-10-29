@@ -5917,10 +5917,10 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
-const CompressedPtrInfo *
+std::optional<CompressedPtrInfo>
 VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
   if (!is_contained({Instruction::Load, Instruction::Store}, VPI->getOpcode()))
-    return nullptr;
+    return std::nullopt;
   Instruction *I = VPI->getUnderlyingInstr();
   return Legal->getCompressedPtrInfo(getLoadStorePointerOperand(I));
 }

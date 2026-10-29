@@ -67,7 +67,7 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-ZNVER4-LABEL: define void @compress_store(
 ; CHECK-ZNVER4-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-ZNVER4-NEXT:  [[ENTRY:.*:]]
-; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 48
+; CHECK-ZNVER4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-ZNVER4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-ZNVER4:       [[VECTOR_PH]]:
 ; CHECK-ZNVER4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 15
@@ -221,7 +221,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ZNVER4-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_PH]]:
 ; CHECK-ZNVER4-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-ZNVER4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[CONDITIONAL_STEP]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-ZNVER4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[CONDITIONAL_STEP]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-ZNVER4-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 3
 ; CHECK-ZNVER4-NEXT:    [[N_VEC2:%.*]] = sub i64 [[N]], [[TMP8]]
 ; CHECK-ZNVER4-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
@@ -229,7 +229,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ZNVER4-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-ZNVER4-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-ZNVER4-NEXT:    [[CONDITIONAL_IV6:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ], [ [[CONDITIONAL_STEP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-ZNVER4-NEXT:    [[CONDITIONAL_IV6:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[CONDITIONAL_STEP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-ZNVER4-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX5]]
 ; CHECK-ZNVER4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; CHECK-ZNVER4-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD7]], [[BROADCAST_SPLAT4]]
@@ -246,8 +246,8 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ZNVER4-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[N]], [[N_VEC2]]
 ; CHECK-ZNVER4-NEXT:    br i1 [[CMP_N10]], [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-ZNVER4:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-ZNVER4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-ZNVER4-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i64 [ [[CONDITIONAL_STEP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[CONDITIONAL_STEP]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-ZNVER4-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i64 [ [[N_VEC2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-ZNVER4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[CONDITIONAL_STEP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[CONDITIONAL_STEP]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-ZNVER4-NEXT:    br label %[[FOR_INC:.*]]
 ; CHECK-ZNVER4:       [[FOR_INC]]:
 ;

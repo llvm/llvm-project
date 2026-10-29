@@ -6456,7 +6456,7 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(HeaderVPBB))) {
     for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
-      if (const CompressedPtrInfo *Info =
+      if (std::optional<CompressedPtrInfo> Info =
               RecipeBuilder.getCompressedPtrInfo(&VPI))
         CondIndToMemOps[Info->ConditionalInductionPHI].push_back(&VPI);
     }
