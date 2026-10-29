@@ -75,6 +75,13 @@ module attributes {
   // CHECK:        %[[V:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big, target_address_space(4)>, !rec_Big
   // CHECK-NEXT:   cir.return %[[V]] : !rec_Big
 
+  // A byref pointer drops llvm.nofpclass, which only describes FP values.
+  cir.func private @kernel_nofpclass(%arg0: !rec_Big {llvm.nofpclass = 3 : i64})
+      attributes { test_classify = #byref_as4 }
+
+  // CHECK:      cir.func private @kernel_nofpclass(!cir.ptr<!rec_Big, target_address_space(4)>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+
   cir.func private @takes_big_as5(%arg0: !rec_Big)
       attributes { test_classify = #byref_as5 }
 
