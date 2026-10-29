@@ -1366,6 +1366,9 @@ void gepsOfIntToPtrAsIntegers(Module &M) {
     bool Changed = true;
     while (Changed) {
       Changed = false;
+      // (the bases left unused are erased after the walk: one may be the
+      // instruction the walk visits next)
+      SmallVector<IntToPtrInst *, 8> Bases;
       for (Instruction &I : make_early_inc_range(instructions(F))) {
         auto *GEP = dyn_cast<GetElementPtrInst>(&I);
         auto *Base =
@@ -1381,17 +1384,23 @@ void gepsOfIntToPtrAsIntegers(Module &M) {
         R->takeName(GEP);
         GEP->replaceAllUsesWith(R);
         GEP->eraseFromParent();
-        if (Base->use_empty())
-          Base->eraseFromParent();
+        if (!is_contained(Bases, Base))
+          Bases.push_back(Base);
         Changed = true;
       }
+      for (IntToPtrInst *Base : Bases)
+        if (Base->use_empty())
+          Base->eraseFromParent();
     }
     // The same address used with different pointees (a memset of it and an
     // i32 store to it, Cycles' intersect_volume_stack): an inttoptr of its
     // own for each use other than the first.
     for (Instruction &I : make_early_inc_range(instructions(F))) {
       auto *ITP = dyn_cast<IntToPtrInst>(&I);
-      if (!ITP || ITP->getType()->isVectorTy() || ITP->hasOneUse())
+      // (at least two uses: drop_begin of an unused one's uses, Cycles'
+      // intersect_closest once its callees were no longer inlined, walked
+      // past their end)
+      if (!ITP || ITP->getType()->isVectorTy() || !ITP->hasNUsesOrMore(2))
         continue;
       SmallVector<Use *, 8> Uses;
       for (Use &U : ITP->uses())
