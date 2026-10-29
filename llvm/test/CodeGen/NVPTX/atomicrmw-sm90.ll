@@ -2431,7 +2431,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
+; SM90-FTZ-DISALLOW-NEXT:    neg.f16 %rs2, %rs1;
 ; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
@@ -2444,7 +2444,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
+; SM90-FTZ-ALLOW-NEXT:    neg.f16 %rs2, %rs1;
 ; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs3;
 ; SM90-FTZ-ALLOW-NEXT:    ret;
@@ -2549,7 +2549,7 @@ define half @fmin_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-DISALLOW-NEXT:    min.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2586,7 +2586,7 @@ define half @fmin_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-ALLOW-NEXT:    min.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2701,7 +2701,7 @@ define half @fmax_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-DISALLOW-NEXT:    max.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2738,7 +2738,7 @@ define half @fmax_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-ALLOW-NEXT:    max.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2853,7 +2853,7 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.NaN.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-DISALLOW-NEXT:    min.NaN.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -2890,7 +2890,7 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.NaN.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-ALLOW-NEXT:    min.NaN.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -3005,7 +3005,7 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.NaN.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-DISALLOW-NEXT:    max.NaN.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r10, %r13, %r2;
@@ -3042,7 +3042,7 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r13, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.NaN.f16 %rs3, %rs2, %rs1;
+; SM90-FTZ-ALLOW-NEXT:    max.NaN.f16 %rs3, %rs2, %rs1;
 ; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs3;
 ; SM90-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM90-FTZ-ALLOW-NEXT:    and.b32 %r10, %r13, %r2;

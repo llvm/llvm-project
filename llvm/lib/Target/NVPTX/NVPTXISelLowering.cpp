@@ -158,6 +158,11 @@ bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   return true;
 }
 
+bool NVPTXTargetLowering::useF16FTZ(const MachineFunction &MF) const {
+  return MF.getDenormalMode(APFloat::IEEEhalf()).Output ==
+         DenormalMode::PreserveSign;
+}
+
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
   return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
          DenormalMode::PreserveSign;

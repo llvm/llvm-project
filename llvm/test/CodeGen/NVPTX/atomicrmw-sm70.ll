@@ -2479,7 +2479,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    neg.f16 %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
 ; SM70-FTZ-DISALLOW-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
@@ -2492,7 +2492,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_half_global_cta_param_0];
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b16 %rs1, [fsub_acq_rel_half_global_cta_param_1];
-; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16 %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    neg.f16 %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs3, [%rd1], %rs2;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; SM70-FTZ-ALLOW-NEXT:    ret;
@@ -2941,11 +2941,11 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -2985,11 +2985,11 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.lt.ftz.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.lt.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -3121,11 +3121,11 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-DISALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-DISALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-DISALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-DISALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
@@ -3165,11 +3165,11 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM70-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
-; SM70-FTZ-ALLOW-NEXT:    setp.gt.ftz.f16 %p2, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.gt.f16 %p2, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
-; SM70-FTZ-ALLOW-NEXT:    setp.nan.ftz.f16 %p3, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.nan.f16 %p3, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs5, 0x7E00, %rs4, %p3;
-; SM70-FTZ-ALLOW-NEXT:    setp.eq.ftz.f16 %p4, %rs2, %rs1;
+; SM70-FTZ-ALLOW-NEXT:    setp.eq.f16 %p4, %rs2, %rs1;
 ; SM70-FTZ-ALLOW-NEXT:    selp.b16 %rs6, %rs3, %rs5, %p4;
 ; SM70-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM70-FTZ-ALLOW-NEXT:    shl.b32 %r9, %r8, %r1;
