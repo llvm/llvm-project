@@ -2606,7 +2606,6 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
-   FeatureNoMTypeNC,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
