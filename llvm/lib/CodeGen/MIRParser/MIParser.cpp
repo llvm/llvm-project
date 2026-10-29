@@ -2650,11 +2650,7 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
 bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi address space literal");
-  if (Token.integerValue().isSigned())
-    return error("expected an unsigned integer (cfi address space)");
-  AddressSpace = Token.integerValue().getZExtValue();
-  lex();
-  return false;
+  return parseCFIUnsigned(AddressSpace);
 }
 
 bool MIParser::parseCFIEscapeValues(std::string &Values) {
