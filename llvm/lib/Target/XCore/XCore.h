@@ -15,25 +15,33 @@
 #define LLVM_LIB_TARGET_XCORE_XCORE_H
 
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-  class FunctionPass;
-  class ModulePass;
-  class PassRegistry;
-  class TargetMachine;
-  class XCoreTargetMachine;
+class FunctionPass;
+class ModulePass;
+class PassRegistry;
+class TargetMachine;
+class XCoreTargetMachine;
 
-  void initializeXCoreLowerThreadLocalPass(PassRegistry &p);
+void initializeXCoreLowerThreadLocalPass(PassRegistry &p);
 
-  FunctionPass *createXCoreFrameToArgsOffsetEliminationPass();
-  FunctionPass *createXCoreISelDag(XCoreTargetMachine &TM,
-                                   CodeGenOptLevel OptLevel);
-  ModulePass *createXCoreLowerThreadLocalPass();
-  void initializeXCoreAsmPrinterPass(PassRegistry &);
-  void initializeXCoreDAGToDAGISelLegacyPass(PassRegistry &);
+FunctionPass *createXCoreFrameToArgsOffsetEliminationPass();
 
-} // end namespace llvm;
+class XCoreISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  XCoreISelDAGToDAGPass(XCoreTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createXCoreISelDagLegacyPass(XCoreTargetMachine &TM,
+                                           CodeGenOptLevel OptLevel);
+ModulePass *createXCoreLowerThreadLocalPass();
+void initializeXCoreAsmPrinterPass(PassRegistry &);
+void initializeXCoreDAGToDAGISelLegacyPass(PassRegistry &);
+
+} // namespace llvm
 
 #endif
