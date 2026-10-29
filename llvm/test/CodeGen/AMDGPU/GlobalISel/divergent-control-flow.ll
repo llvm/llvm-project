@@ -162,10 +162,11 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, 1.0, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; CHECK-NEXT:    s_cbranch_execz .LBB4_4
 ; CHECK-NEXT:  ; %bb.3: ; %bb7
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
-; CHECK-NEXT:  ; %bb.4: ; %bb8
+; CHECK-NEXT:  .LBB4_4: ; %bb8
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc

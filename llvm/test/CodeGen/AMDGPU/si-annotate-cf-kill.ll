@@ -12,9 +12,10 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; SI-NEXT:    s_cbranch_execz .LBB0_2
 ; SI-NEXT:  ; %bb.1: ; %if1
 ; SI-NEXT:    s_xor_b64 s[2:3], exec, -1
-; SI-NEXT:  ; %bb.2: ; %endif1
+; SI-NEXT:  .LBB0_2: ; %endif1
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_wqm_b64 s[4:5], s[2:3]
 ; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]
@@ -54,9 +55,10 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; FLAT-NEXT:    v_and_b32_e32 v0, 1, v0
 ; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; FLAT-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; FLAT-NEXT:    s_cbranch_execz .LBB0_2
 ; FLAT-NEXT:  ; %bb.1: ; %if1
 ; FLAT-NEXT:    s_xor_b64 s[2:3], exec, -1
-; FLAT-NEXT:  ; %bb.2: ; %endif1
+; FLAT-NEXT:  .LBB0_2: ; %endif1
 ; FLAT-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; FLAT-NEXT:    s_wqm_b64 s[4:5], s[2:3]
 ; FLAT-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]

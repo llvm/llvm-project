@@ -812,10 +812,11 @@ define i32 @bitcast_v2f16_to_i32(<2 x half> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX9-NEXT:    s_movk_i32 s6, 0x200
 ; GFX9-NEXT:    v_pk_add_f16 v0, v0, s6 op_sel_hi:[1,0]
-; GFX9-NEXT:  ; %bb.2: ; %end
+; GFX9-NEXT:  .LBB10_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2883,10 +2884,11 @@ define float @bitcast_v2f16_to_f32(<2 x half> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_cbranch_execz .LBB30_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX9-NEXT:    s_movk_i32 s6, 0x200
 ; GFX9-NEXT:    v_pk_add_f16 v0, v0, s6 op_sel_hi:[1,0]
-; GFX9-NEXT:  ; %bb.2: ; %end
+; GFX9-NEXT:  .LBB30_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4640,10 +4642,11 @@ define <2 x i16> @bitcast_v2f16_to_v2i16(<2 x half> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_cbranch_execz .LBB46_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX9-NEXT:    s_movk_i32 s6, 0x200
 ; GFX9-NEXT:    v_pk_add_f16 v0, v0, s6 op_sel_hi:[1,0]
-; GFX9-NEXT:  ; %bb.2: ; %end
+; GFX9-NEXT:  .LBB46_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6302,10 +6305,11 @@ define <2 x bfloat> @bitcast_v2f16_to_v2bf16(<2 x half> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_cbranch_execz .LBB60_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX9-NEXT:    s_movk_i32 s6, 0x200
 ; GFX9-NEXT:    v_pk_add_f16 v0, v0, s6 op_sel_hi:[1,0]
-; GFX9-NEXT:  ; %bb.2: ; %end
+; GFX9-NEXT:  .LBB60_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6842,10 +6846,11 @@ define <1 x i32> @bitcast_v2f16_to_v1i32(<2 x half> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; GFX9-NEXT:    s_cbranch_execz .LBB64_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX9-NEXT:    s_movk_i32 s6, 0x200
 ; GFX9-NEXT:    v_pk_add_f16 v0, v0, s6 op_sel_hi:[1,0]
-; GFX9-NEXT:  ; %bb.2: ; %end
+; GFX9-NEXT:  .LBB64_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
