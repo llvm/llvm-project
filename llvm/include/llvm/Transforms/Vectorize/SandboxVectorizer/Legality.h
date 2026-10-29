@@ -368,7 +368,8 @@ public:
 
   /// \returns true if the alignment of the vector composed of \p Values has
   /// alignment that is supported by the target.
-  LLVM_ABI bool isAlignmentSupported(ArrayRef<Value *> Values) const;
+  template <typename ValueT>
+  LLVM_ABI bool isAlignmentSupported(BndlRef<ValueT *> Values) const;
 
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.

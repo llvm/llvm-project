@@ -103,3 +103,22 @@ define i32 @vectorize_loads_mixed_types_not_vectorized(ptr %ptr) {
   %sum = add i32 %ld0, %ext
   ret i32 %sum
 }
+
+; %ld1 depends on %ld0 through the store, so the loads cannot be scheduled as
+; one bundle and must not be vectorized.
+define void @vectorize_loads_cant_schedule(ptr %ptr) {
+; CHECK-LABEL: @vectorize_loads_cant_schedule(
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[PTR0]], align 4, !sandboxvec [[META5:![0-9]+]]
+; CHECK-NEXT:    store i32 [[LD0]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[PTR1]], align 4, !sandboxvec [[META5]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr i32, ptr %ptr, i32 0
+  %ptr1 = getelementptr i32, ptr %ptr, i32 1
+  %ld0 = load i32, ptr %ptr0
+  store i32 %ld0, ptr %ptr1
+  %ld1 = load i32, ptr %ptr1
+  ret void
+}

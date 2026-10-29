@@ -648,12 +648,14 @@ void CodeGenSchedModels::collectSchedRW() {
   // itinerary resources. Index reads and writes in separate domains.
   llvm::sort(SWDefs, LessRecord());
   for (const Record *SWDef : SWDefs) {
-    assert(!getSchedRWIdx(SWDef, /*IsRead=*/false) && "duplicate SchedWrite");
+    if (!SchedWriteIdx.try_emplace(SWDef, SchedWrites.size()).second)
+      llvm_unreachable("duplicate SchedWrite");
     SchedWrites.emplace_back(SchedWrites.size(), SWDef);
   }
   llvm::sort(SRDefs, LessRecord());
   for (const Record *SRDef : SRDefs) {
-    assert(!getSchedRWIdx(SRDef, /*IsRead-*/ true) && "duplicate SchedWrite");
+    if (!SchedReadIdx.try_emplace(SRDef, SchedReads.size()).second)
+      llvm_unreachable("duplicate SchedRead");
     SchedReads.emplace_back(SchedReads.size(), SRDef);
   }
   // Initialize WriteSequence vectors.
@@ -708,10 +710,7 @@ std::string CodeGenSchedModels::genRWName(ArrayRef<unsigned> Seq, bool IsRead) {
 
 unsigned CodeGenSchedModels::getSchedRWIdx(const Record *Def,
                                            bool IsRead) const {
-  const std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-  const auto I = find_if(
-      RWVec, [Def](const CodeGenSchedRW &RW) { return RW.TheDef == Def; });
-  return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
+  return (IsRead ? SchedReadIdx : SchedWriteIdx).lookup(Def);
 }
 
 static void splitSchedReadWrites(const ConstRecVec &RWDefs,
