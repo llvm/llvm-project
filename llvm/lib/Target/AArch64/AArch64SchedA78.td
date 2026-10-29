@@ -1012,9 +1012,9 @@ def : InstRW<[WriteAdr, A78Write_4c_2L, WriteLDHi],
              (instregex "^LDPX(post|pre)$")>;
 
 // Load pair, signed immed offset, signed words
-def : InstRW<[A78Write_5c_1M0, WriteLDHi], (instrs LDPSWi)>;
+def : InstRW<[A78Write_5c_1I_1L, WriteLDHi], (instrs LDPSWi)>;
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[WriteAdr, A78Write_5c_1M0, WriteLDHi],
+def : InstRW<[WriteAdr, A78Write_5c_1I_1L, WriteLDHi],
              (instregex "^LDPSW(post|pre)$")>;
 
 def A78Write_ScaledLDRH : SchedWriteVariant<[

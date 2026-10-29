@@ -198,13 +198,13 @@ ldpsw	x0, x1, [x2], #4
 # CHECK-NEXT:  2      4     0.33    *                   ldnp	w0, w1, [x2, #-256]
 # CHECK-NEXT:  3      4     0.67    *                   ldp	x0, x1, [x2, #504]
 # CHECK-NEXT:  3      4     0.67    *                   ldnp	x0, x1, [x2, #504]
-# CHECK-NEXT:  2      5     5.00    *                   ldpsw	x0, x1, [x2, #4]
+# CHECK-NEXT:  3      5     0.33    *                   ldpsw	x0, x1, [x2, #4]
 # CHECK-NEXT:  3      4     0.33    *                   ldp	w0, w1, [x2, #-256]!
 # CHECK-NEXT:  3      4     0.33    *                   ldp	w0, w1, [x2], #-256
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x0, x1, [x2, #-256]!
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x0, x1, [x2], #-256
-# CHECK-NEXT:  3      5     5.00    *                   ldpsw	x0, x1, [x2, #4]!
-# CHECK-NEXT:  3      5     5.00    *                   ldpsw	x0, x1, [x2], #4
+# CHECK-NEXT:  4      5     0.50    *                   ldpsw	x0, x1, [x2, #4]!
+# CHECK-NEXT:  4      5     0.50    *                   ldpsw	x0, x1, [x2], #4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - A78UnitB
@@ -226,7 +226,7 @@ ldpsw	x0, x1, [x2], #4
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -     26.33  26.33  26.33  25.00  10.00  10.00  10.00   -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -     27.33  27.33  27.33  10.75  10.75  10.75  10.75   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -301,10 +301,10 @@ ldpsw	x0, x1, [x2], #4
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldnp	w0, w1, [x2, #-256]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldp	x0, x1, [x2, #504]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -     ldnp	x0, x1, [x2, #504]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     5.00    -      -      -      -      -     ldpsw	x0, x1, [x2, #4]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2, #-256]!
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldp	w0, w1, [x2], #-256
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2, #-256]!
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67   0.25   0.25   0.25   0.25    -      -     ldp	x0, x1, [x2], #-256
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     5.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2, #4]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     5.25   0.25   0.25   0.25    -      -     ldpsw	x0, x1, [x2], #4
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -     ldpsw	x0, x1, [x2, #4]!
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -     ldpsw	x0, x1, [x2], #4
