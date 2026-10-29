@@ -94,7 +94,7 @@ bool XCorePassConfig::addPreISel() {
 }
 
 bool XCorePassConfig::addInstSelector() {
-  addPass(createXCoreISelDag(getXCoreTargetMachine(), getOptLevel()));
+  addPass(createXCoreISelDagLegacyPass(getXCoreTargetMachine(), getOptLevel()));
   return false;
 }
 
