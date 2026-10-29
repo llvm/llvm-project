@@ -515,7 +515,14 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
   // (their magnitudes and the results' are within its range), rounded in the
   // same direction to half; twice in one direction rounds once. bfloats the
   // same way where the fast path is exact, else as below.
-  if ((ST->isHalfTy() || ST->isBFloatTy()) &&
+  // (a bfloat's subnormals are float subnormals, which hardware flushing
+  // float subnormals would flush in the float operation: bfloats only with a
+  // known directed rounding, whose operands outside the fast path's range
+  // take the double precision path; to nearest they stay as below)
+  auto *KnownRounding = dyn_cast<ConstantInt>(Rounding);
+  bool BFloatDirected =
+      ST->isBFloatTy() && KnownRounding && !KnownRounding->isOne();
+  if ((ST->isHalfTy() || BFloatDirected) &&
       (Base == "fadd" || Base == "fsub" || Base == "fmul")) {
     auto Wide = [&](Value *V) {
       return ST->isHalfTy() ? B.CreateFPExt(V, B.getFloatTy()) : bf16ToF32(B, V);

@@ -35,8 +35,9 @@ define void @nearest(ptr addrspace(1) %p, float %x, float %y, <2 x half> %v) "ai
 }
 
 ; Directed: float multiplication toward zero, by the error-free product
-; where it is exact and soft-f64 elsewhere; half addition upward; integer to
-; float downward.
+; where it is exact and soft-f64 elsewhere; half addition upward, by the
+; float error-free sum (exact for any halves) rounded upward to half with no
+; soft-f64; integer to float downward.
 ; CHECK-LABEL: define void @directed(
 ; CHECK: fmul float %x, %y
 ; CHECK: call float @llvm.fma.f32(
@@ -44,8 +45,10 @@ define void @nearest(ptr addrspace(1) %p, float %x, float %y, <2 x half> %v) "ai
 ; CHECK: call i64 @__air_f64_mul_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 0)
 ; CHECK: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 0)
 ; CHECK: fpext half %h to float
-; CHECK: call i64 @__air_f64_add_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 2)
-; CHECK: call i32 @__air_f64_to_f16_r(i64 %{{[0-9]+}}, i32 2)
+; CHECK: fadd float
+; CHECK-NOT: __air_f64
+; CHECK: fptrunc float %{{[0-9]+}} to half
+; CHECK: store half
 ; CHECK: call i64 @__air_f64_from_i64_r(i64 %i, i32 3)
 ; CHECK: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 3)
 ; CHECK: ret void
