@@ -173,8 +173,8 @@ namespace {
 
 class RefState {
   enum Kind {
-    // Reference to allocated memory.
-    Allocated,
+    // Reference to allocated memory, no information about allocation size.
+    AllocatedAnySize,
     // Reference to zero-allocated memory.
     AllocatedOfSizeZero,
     // Reference to released/freed memory.
@@ -199,7 +199,9 @@ class RefState {
   }
 
 public:
-  bool isAllocated() const { return K == Allocated; }
+  bool isAllocated() const {
+    return K == AllocatedAnySize || K == AllocatedOfSizeZero;
+  }
   bool isAllocatedOfSizeZero() const { return K == AllocatedOfSizeZero; }
   bool isReleased() const { return K == Released; }
   bool isRelinquished() const { return K == Relinquished; }
@@ -211,8 +213,8 @@ public:
     return K == X.K && S == X.S && Family == X.Family;
   }
 
-  static RefState getAllocated(AllocationFamily family, const Stmt *s) {
-    return RefState(Allocated, s, family);
+  static RefState getAllocated(AllocationFamily F, const Stmt *S) {
+    return RefState(AllocatedAnySize, S, F);
   }
   static RefState getAllocatedOfSizeZero(const RefState *RS) {
     return RefState(AllocatedOfSizeZero, RS->getStmt(),
@@ -236,12 +238,14 @@ public:
 
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const {
     switch (K) {
+    case AllocatedAnySize:
+      OS << "Allocated";
+      break;
 #define CASE(ID) case ID: OS << #ID; break;
-    CASE(Allocated)
-    CASE(AllocatedOfSizeZero)
-    CASE(Released)
-    CASE(Relinquished)
-    CASE(Escaped)
+      CASE(AllocatedOfSizeZero)
+      CASE(Released)
+      CASE(Relinquished)
+      CASE(Escaped)
     }
   }
 
@@ -1033,10 +1037,8 @@ public:
   static inline bool isAllocated(const RefState *RSCurr, const RefState *RSPrev,
                                  const Stmt *Stmt) {
     return (isa_and_nonnull<CallExpr, CXXNewExpr>(Stmt) &&
-            (RSCurr &&
-             (RSCurr->isAllocated() || RSCurr->isAllocatedOfSizeZero())) &&
-            (!RSPrev ||
-             !(RSPrev->isAllocated() || RSPrev->isAllocatedOfSizeZero())));
+            (RSCurr && RSCurr->isAllocated())) &&
+           (!RSPrev || !RSPrev->isAllocated());
   }
 
   /// Did not track -> released. Other state (allocated) -> released.
@@ -1067,10 +1069,8 @@ public:
                                       const RefState *RSPrev,
                                       const Stmt *Stmt) {
     return ((!isa_and_nonnull<CallExpr>(Stmt)) &&
-            (RSCurr &&
-             (RSCurr->isAllocated() || RSCurr->isAllocatedOfSizeZero())) &&
-            (RSPrev &&
-             !(RSPrev->isAllocated() || RSPrev->isAllocatedOfSizeZero())));
+            (RSCurr && RSCurr->isAllocated())) &&
+           (RSPrev && !RSPrev->isAllocated());
   }
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
@@ -1154,7 +1154,7 @@ class EscapeTrackedCallback final : public SymbolVisitor {
 public:
   bool VisitSymbol(SymbolRef Sym) override {
     if (const RefState *RS = State->get<RegionState>(Sym)) {
-      if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
+      if (RS->isAllocated()) {
         State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
       }
     }
@@ -1810,7 +1810,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
 
     const RefState *RS = State->get<RegionState>(Sym);
     if (RS) {
-      if (RS->isAllocated())
+      if (RS->isAllocated() && !RS->isAllocatedOfSizeZero())
         return TrueState->set<RegionState>(
             Sym, RefState::getAllocatedOfSizeZero(RS));
       return State;
@@ -2406,8 +2406,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   const RefState *RsBase = State->get<RegionState>(SymBase);
   SymbolRef PreviousRetStatusSymbol = nullptr;
 
-  IsKnownToBeAllocated =
-      RsBase && (RsBase->isAllocated() || RsBase->isAllocatedOfSizeZero());
+  IsKnownToBeAllocated = RsBase && RsBase->isAllocated();
 
   if (RsBase) {
 
@@ -2427,8 +2426,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
 
     // If the pointer is allocated or escaped, but we are now trying to free it,
     // check that the call to free is proper.
-    if (RsBase->isAllocated() || RsBase->isAllocatedOfSizeZero() ||
-        RsBase->isEscaped()) {
+    if (RsBase->isAllocated() || RsBase->isEscaped()) {
 
       // Check if an expected deallocation function matches the real one.
       bool DeallocMatchesAlloc = RsBase->getAllocationFamily() == Family;
@@ -3143,7 +3141,7 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 2> Errors;
   for (auto [Sym, State] : RS) {
     if (SymReaper.isDead(Sym)) {
-      if (State.isAllocated() || State.isAllocatedOfSizeZero())
+      if (State.isAllocated())
         Errors.push_back(Sym);
       // Remove the dead symbol from the map.
       RS = F.remove(RS, Sym);
@@ -3383,7 +3381,7 @@ ProgramStateRef MallocChecker::handleSmartPointerConstructorArguments(
       SymbolRef Sym = ArgVal.getAsSymbol();
       if (Sym && State->contains<RegionState>(Sym)) {
         const RefState *RS = State->get<RegionState>(Sym);
-        if (RS && (RS->isAllocated() || RS->isAllocatedOfSizeZero())) {
+        if (RS && RS->isAllocated()) {
           State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
         }
       }
@@ -3937,7 +3935,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
       continue;
 
     if (const RefState *RS = State->get<RegionState>(sym))
-      if (RS->isAllocated() || RS->isAllocatedOfSizeZero())
+      if (RS->isAllocated())
         if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS))
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
