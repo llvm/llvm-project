@@ -66,8 +66,10 @@ static void StackStripMain(SymbolizedStack *frames) {
   if (last2 && 0 == internal_strcmp(last2, "main")) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
-  // Strip our internal thread start routine.
-  } else if (last && 0 == internal_strcmp(last, "__tsan_thread_start_func")) {
+    // Strip our internal thread start routines.
+  } else if (last &&
+             (0 == internal_strcmp(last, "__tsan_thread_start_func") ||
+              0 == internal_strcmp(last, "__tsan_c11_thread_start_func"))) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
     // Strip global ctors init, .preinit_array and main caller.
