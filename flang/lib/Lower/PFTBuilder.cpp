@@ -343,11 +343,12 @@ private:
   /// Leave arrays, descriptors, derived types, automatic objects and special
   /// runtime/device storage on their existing lowering paths.
   static bool canUseGlobal(const semantics::Symbol &symbol) {
-    // Privatizers and MIF coarray handles append these fragments to object
-    // names. Leave potential collisions on their existing local-storage path.
+    // Avoid collisions between user globals and generated privatizer names.
+    // FIXME: Remove the privatizer exclusions once naming is fixed.
+    // See https://github.com/llvm/llvm-project/issues/236705.
     const auto name = toStringRef(symbol.name());
     if (name.contains("_private_") || name.contains("_firstprivate_") ||
-        name.ends_with("_coarray_handle"))
+        name.contains("_linear_") || name.ends_with("_coarray_handle"))
       return false;
     const auto *object = symbol.detailsIf<semantics::ObjectEntityDetails>();
     const auto *type = symbol.GetType();

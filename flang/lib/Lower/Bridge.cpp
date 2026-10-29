@@ -6616,10 +6616,10 @@ private:
 
     // New global host associations already borrow a stable scope-variable plan.
     // Reuse those records rather than recomputing them for the host itself.
-    const auto *variables = funit.hostAssociations.getVariables();
+    auto variables = funit.hostAssociations.getVariables();
     std::optional<Fortran::lower::pft::VariableList> localVariables;
     if (!variables) {
-      variables = &localVariables.emplace(
+      variables = localVariables.emplace(
           Fortran::lower::pft::getScopeVariableList(scope));
     }
     // Map function equivalences and variables.

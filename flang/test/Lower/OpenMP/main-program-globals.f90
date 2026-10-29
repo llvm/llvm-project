@@ -17,7 +17,7 @@
 ! RUN: %if asserts %{ %flang_fc1 -fopenmp -fno-openmp-main-program-globals -fdebug-dump-pft -mllvm -debug-only=flang-pft %t/miniweather.f90 2>&1 | FileCheck %s --check-prefix=PFT_OFF %}
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %t/objects.f90 -o %t.objects
 ! RUN: FileCheck %s --check-prefix=OBJECTS < %t.objects
-! RUN: FileCheck %s --check-prefix=MODULE --implicit-check-not='fir.global internal @_QFE{{(array|matrix|storage|i|j|ap|ptr|record|private_value|listed|eq1|eq2|x|y|serial_only|x_private_i32|y_firstprivate_i32|allocated|address|pointee|actual|element|extent|rhs|field)[[:space:]]}}' < %t.objects
+! RUN: FileCheck %s --check-prefix=MODULE --implicit-check-not='fir.global internal @_QFE{{(array|matrix|storage|i|j|ap|ptr|record|private_value|listed|eq1|eq2|x|y|serial_only|x_private_i32|y_firstprivate_i32|x_linear_i32|allocated|address|pointee|actual|element|extent|rhs|field)[[:space:]]}}' < %t.objects
 ! RUN: %flang_fc1 -fopenmp -fno-openmp-main-program-globals -emit-hlfir %t/objects.f90 -o %t.off
 ! RUN: FileCheck %s --check-prefix=BOUNDARY < %t.off
 ! RUN: FileCheck %s --check-prefix=MODULE --implicit-check-not='fir.global internal @_QFE{{(text|if_condition|if_action|where_value|forall_value)[[:space:]]}}' < %t.off
@@ -102,7 +102,8 @@ end subroutine
 end program
 
 ! Select intrinsic scalars in nested regions and statement expressions while
-! preserving excluded objects and private copies. Calls and constructors do not
+! preserving excluded objects and private copies. Generated privatizer names
+! must not collide with excluded scalars. Calls and constructors do not
 ! seed selection. The 32/33-byte CHARACTER cases distinguish new selection from
 ! existing static storage. serial_only checks collection stops at END PARALLEL.
 ! OBJECTS-LABEL: func.func @_QQmain()
@@ -147,7 +148,8 @@ program p
   integer :: direct,actual,element,extent,rhs,field
   integer :: array(2),matrix(2,2),private_value,listed,eq1,eq2,x,y
   integer :: if_condition,if_action,serial_only,where_value,forall_value,i,j
-  integer :: x_private_i32,y_firstprivate_i32,allocated,pointee,storage(1)
+  integer :: x_private_i32,y_firstprivate_i32,x_linear_i32
+  integer :: allocated,pointee,storage(1)
   integer(8) :: address
   pointer(address,pointee)
 !$omp allocate(allocated)
@@ -161,7 +163,8 @@ program p
   array=1; matrix=0; where_value=2; forall_value=3
 !$omp parallel
   print *,array,ap,ptr,record,private_value,listed,eq1,eq2
-  print *,x_private_i32,y_firstprivate_i32,allocated,address,pointee,saved
+  print *,x_private_i32,y_firstprivate_i32,x_linear_i32
+  print *,allocated,address,pointee,saved
   print *,direct,abs(actual),[element],[character(extent)::]
   print *,t(field)
   call sink(actual)
@@ -182,6 +185,12 @@ program p
 !$omp parallel private(private_value,x) firstprivate(y)
   private_value=x+y
 !$omp end parallel
+  x=0
+!$omp simd linear(x)
+  do i=1,4
+    x=x+1
+  end do
+!$omp end simd
   serial_only=1
 contains
   subroutine sink(n)

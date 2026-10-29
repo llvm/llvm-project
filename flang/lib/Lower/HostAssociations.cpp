@@ -545,7 +545,7 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
 void Fortran::lower::HostAssociations::addSymbolsToBind(
     const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
     const Fortran::semantics::Scope &hostScope,
-    llvm::function_ref<const std::vector<pft::Variable> &()> getVariables) {
+    llvm::function_ref<llvm::ArrayRef<pft::Variable>()> getVariables) {
   assert(tupleSymbols.empty() && globalSymbols.empty() &&
          "must be initially empty");
   this->hostScope = &hostScope;
@@ -564,7 +564,7 @@ void Fortran::lower::HostAssociations::addSymbolsToBind(
       tupleSymbols.insert(s);
     }
   if (hasNewGlobals) {
-    variables = &getVariables();
+    variables = getVariables();
     // Aggregate stores precede their aliases. Select backwards so each chosen
     // alias requests its backing store using the already computed storage key.
     // Resolve each USE/host association tail once, including rejected records.

@@ -10,10 +10,11 @@
 #define FORTRAN_LOWER_HOSTASSOCIATIONS_H
 
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include <vector>
+#include <optional>
 
 namespace Fortran {
 namespace semantics {
@@ -46,9 +47,11 @@ public:
   void addSymbolsToBind(
       const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
       const Fortran::semantics::Scope &hostScope,
-      llvm::function_ref<const std::vector<pft::Variable> &()> getVariables);
+      llvm::function_ref<llvm::ArrayRef<pft::Variable>()> getVariables);
 
-  const std::vector<pft::Variable> *getVariables() const { return variables; }
+  std::optional<llvm::ArrayRef<pft::Variable>> getVariables() const {
+    return variables;
+  }
 
   /// Code gen the FIR for the local bindings for the host associated symbols
   /// for the host (parent) procedure using `builder`.
@@ -82,9 +85,9 @@ private:
   /// These records borrow Program's cached variable list; std::map nodes and
   /// finalized variable lists remain stable through all child bindings.
   llvm::SmallVector<const pft::Variable *> globalBindings;
-  /// Whole-scope records reused by the host's own lowering as well. A null
-  /// pointer preserves the legacy path when no newly promoted globals occur.
-  const std::vector<pft::Variable> *variables = nullptr;
+  /// Whole-scope records reused by the host's own lowering as well. Disengaged
+  /// when no newly promoted globals occur, preserving the legacy path.
+  std::optional<llvm::ArrayRef<pft::Variable>> variables;
 
   /// The type of the extra argument to be added to each internal procedure.
   mlir::Type argType;
