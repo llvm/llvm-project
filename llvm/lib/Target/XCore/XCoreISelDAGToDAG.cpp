@@ -85,7 +85,7 @@ char XCoreDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(XCoreDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-/// createXCoreISelDag - This pass converts a legalized DAG into a
+/// createXCoreISelDagLegacyPass - This pass converts a legalized DAG into a
 /// XCore-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createXCoreISelDagLegacyPass(XCoreTargetMachine &TM,

@@ -926,10 +926,12 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_012(<8 x i32> inreg %rsrc,
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v3, v0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s8
-; GFX13-NEXT:    image_sample v[0:2], v4, s[0:7], rsrcidx(v3) dmask:0x7 dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_sample v[2:4], v1, s[0:7], rsrcidx(v0) dmask:0x7 dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GFX13-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, i32 %samp, i1 0, i32 0, i32 0)
@@ -993,10 +995,12 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_123(<8 x i32> inreg %rsrc,
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v3, v0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s8
-; GFX13-NEXT:    image_sample v[0:2], v4, s[0:7], rsrcidx(v3) dmask:0xe dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_sample v[2:4], v1, s[0:7], rsrcidx(v0) dmask:0xe dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
+; GFX13-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, i32 %samp, i1 0, i32 0, i32 0)
