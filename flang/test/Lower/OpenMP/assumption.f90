@@ -6,7 +6,7 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %s | FileCheck %s --check-prefix=SYMBOLS
 
 ! SIMD: module
-! SIMD-NOT: "omp_no_
+! SIMD-NOT: "llvm.assume"
 
 ! SYMBOLS-DAG: assume_block (Subroutine): Subprogram
 ! SYMBOLS-DAG: assumes_module (OmpAssumesNoOpenmp): Module
@@ -147,7 +147,7 @@ module scoped_assumes
   end interface
 contains
   ! SCOPE-LABEL: func.func @_QMscoped_assumesPmodule_work()
-  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_barrier,omp_no_parallel"]]
+  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
   subroutine module_work()
   end subroutine module_work
 end module scoped_assumes
@@ -176,6 +176,8 @@ module use_parent
   interface
     module subroutine imported_work()
     end subroutine imported_work
+    module subroutine absent_imported_work()
+    end subroutine absent_imported_work
   end interface
 end module use_parent
 
@@ -184,14 +186,14 @@ submodule (use_parent) use_child
   implicit none
 contains
   ! SCOPE-LABEL: func.func @_QMuse_parentPimported_work()
-  ! SCOPE5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  ! SCOPE5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
   ! SCOPE60-NOT: "omp_no_openmp"
   module procedure imported_work
   end procedure imported_work
 end submodule use_child
 
 ! ABSENT-LABEL: func.func @_QPassumes_absent
-! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_barrier,omp_no_parallel"]]
+! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(parallel)"]]
 subroutine assumes_absent(x)
   implicit none
   !$omp assumes absent(parallel, barrier)
@@ -209,25 +211,25 @@ module absent_module
   end interface
 contains
   ! ABSENT-LABEL: func.func @_QMabsent_modulePmodule_work()
-  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_barrier,omp_no_parallel"]]
+  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
   subroutine module_work()
   end subroutine module_work
 
   ! ABSENT-LABEL: func.func @_QMabsent_modulePlocal_work()
-  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_barrier,omp_no_critical,omp_no_parallel"]]
+  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(critical),absent(parallel)"]]
   subroutine local_work()
     !$omp assumes absent(critical)
   end subroutine local_work
 end module absent_module
 
 ! ABSENT-LABEL: func.func @_QPassumes_host()
-! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallel"]]
+! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(parallel)"]]
 subroutine assumes_host()
   !$omp assumes absent(parallel)
   call internal_work()
 contains
   ! ABSENT-LABEL: func.func {{.*}}@_QFassumes_hostPinternal_work()
-  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,omp_no_barrier,omp_no_parallel"]]
+  ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
   subroutine internal_work()
     !$omp assumes absent(parallel, barrier) no_openmp
     !$omp assumes absent(barrier)
@@ -235,13 +237,14 @@ contains
 end subroutine assumes_host
 
 ! ABSENT-LABEL: func.func @_QPassumes_multiword()
-! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_target_enter_data"]]
+! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(target enter data)"]]
+! ABSENT60-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(target_enter_data)"]]
 subroutine assumes_multiword()
   !$omp assumes absent(target enter data)
 end subroutine assumes_multiword
 
 ! ABSENT-LABEL: func.func @_QPuses_absent_module()
-! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
 ! ABSENT60-NOT: llvm.passthrough
 subroutine uses_absent_module()
   use absent_module, only: module_work
@@ -251,7 +254,7 @@ subroutine uses_absent_module()
 end subroutine uses_absent_module
 
 ! ABSENT-LABEL: func.func @_QPassumes_keeps_parallel()
-! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_target"]]
+! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(target)"]]
 subroutine assumes_keeps_parallel()
   !$omp assumes absent(target)
   ! ABSENT: omp.parallel {
@@ -270,17 +273,51 @@ contains
   end procedure separate_absent_work
 
   ! RELOAD-LABEL: func.func @{{.*}}Plocal_work()
-  ! RELOAD-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_critical"]]
+  ! RELOAD-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(critical)"]]
   subroutine local_work()
     !$omp assumes absent(critical)
   end subroutine local_work
 end submodule absent_implementation
 
 ! RELOAD-LABEL: func.func @_QPuses_absent_module_reload()
-! RELOAD5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+! RELOAD5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
 ! RELOAD60-NOT: llvm.passthrough
 subroutine uses_absent_module_reload()
   use absent_module, only: separate_absent_work
   ! RELOAD: fir.call @separate_absent_work()
   call separate_absent_work()
 end subroutine uses_absent_module_reload
+
+module absent_imports
+  !$omp assumes absent(parallel, barrier)
+end module absent_imports
+
+module absent_reexport
+  use absent_imports, only:
+  !$omp assumes absent(parallel, target)
+contains
+  ! ABSENT-LABEL: func.func @_QMabsent_reexportPreexported_work()
+  ! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(parallel),absent(target)"]]
+  ! ABSENT60-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(parallel),absent(target)"]]
+  subroutine reexported_work()
+  end subroutine reexported_work
+end module absent_reexport
+
+! ABSENT-LABEL: func.func @_QPuses_absent_only()
+! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(critical),absent(parallel),absent(target)"]]
+! ABSENT60-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(critical)"]]
+subroutine uses_absent_only()
+  use absent_imports, only:
+  use absent_reexport, only:
+  !$omp assumes absent(critical)
+end subroutine uses_absent_only
+
+submodule (use_parent) absent_use_child
+  use absent_reexport, only:
+contains
+  ! ABSENT-LABEL: func.func @_QMuse_parentPabsent_imported_work()
+  ! ABSENT5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(parallel),absent(target)"]]
+  ! ABSENT60-NOT: llvm.passthrough
+  module procedure absent_imported_work
+  end procedure absent_imported_work
+end submodule absent_use_child

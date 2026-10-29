@@ -85,7 +85,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <optional>
 #include <set>
 
@@ -6533,11 +6532,11 @@ private:
     for (llvm::omp::Directive directive : absent) {
       if (!assumptions.empty())
         assumptions += ',';
-      std::string name = llvm::omp::getOpenMPDirectiveName(
-                             directive, langOptions.getOpenMPVersion())
-                             .str();
-      std::replace(name.begin(), name.end(), ' ', '_');
-      assumptions += "omp_no_" + name;
+      assumptions += "absent(";
+      assumptions += llvm::omp::getOpenMPDirectiveName(
+                         directive, langOptions.getOpenMPVersion())
+                         .str();
+      assumptions += ')';
     }
     llvm::SmallVector<mlir::Attribute> llvmAttrs;
     if (auto existing =
