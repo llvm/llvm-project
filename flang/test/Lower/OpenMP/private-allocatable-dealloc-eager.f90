@@ -1,9 +1,8 @@
 ! RUN: bbc -fopenmp -emit-hlfir --enable-delayed-privatization=false %s -o - | FileCheck %s --implicit-check-not=fir.freemem --implicit-check-not=omp.private
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -mmlir --enable-delayed-privatization=false %s -o - | FileCheck %s --implicit-check-not=fir.freemem --implicit-check-not=omp.private
 
-! Restricting cleanup to locally privatized symbols must preserve eager
-! privatization. The local allocatable msut be freed exactly once at region exit.
-! Neither the original argument nor pointer/scalar privates should be freed.
+! Restricting cleanup to locally privatized symbols must still work with eager
+! privatization. The local allocatable must be freed exactly once at region exit.
 ! CHECK-LABEL: func.func @_QPlocal_cleanup(
 subroutine local_cleanup(a, p)
   integer, allocatable :: a

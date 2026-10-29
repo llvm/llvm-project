@@ -5637,7 +5637,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
 
-  // The SIMD data sharingprocessor handles lastprivate for the entire
+  // The SIMD DataSharingProcessor handles lastprivate for the entire
   // composite, including symbols using wsloop storage. Calling `processStep2`
   // on both processors would duplicate copy-back for those symbols.
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
