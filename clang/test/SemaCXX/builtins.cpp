@@ -51,6 +51,10 @@ namespace addressof {
 
   template <typename T> void tmpl(T) {}
   static_assert(__builtin_addressof(tmpl<int>) == &tmpl<int>, "");
+  template <typename T> void dependent() {
+    void (*ptmpl)(int) = __builtin_addressof(tmpl<T>);
+  }
+  auto _ = (dependent<int>(), 0);
 
   void ovl(int); // expected-note {{possible target for call}}
   void ovl(long); // expected-note {{possible target for call}}
