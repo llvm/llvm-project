@@ -107,20 +107,12 @@ static bool needsDwarfCFI(const MachineFunction &MF) {
 static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
-  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
-  // We check Zimop instead of (Zimop || Zcmop) to determine whether HW shadow
-  // stack is available despite the fact that sspush/sspopchk both have a
-  // compressed form, because if only Zcmop is available, we would need to
-  // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
-  // using X5 as the return address register.
-  // However, we can still aggressively use c.sspush x1 if zcmop is available.
-  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
-  bool HasSWShadowStack =
-      MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
-  if (!HasHWShadowStack && !HasSWShadowStack)
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  RISCVMachineFunctionInfo::ShadowStackKind SSK = RVFI->getShadowStackKind(MF);
+  if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::None)
     return;
 
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const llvm::RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
   // Do not save RA to the SCS if it's not saved to the regular stack,
@@ -131,12 +123,15 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (HasHWShadowStack) {
+  if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::Hardware) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH))
         .addReg(RAReg)
         .setMIFlag(MachineInstr::FrameSetup);
     return;
   }
+
+  assert(SSK == RISCVMachineFunctionInfo::ShadowStackKind::Software &&
+         "Unexpected Shadow Stack Kind");
 
   Register SCSPReg = RISCVABI::getSCSPReg();
 
@@ -180,13 +175,12 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
-  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
-  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
-  bool HasSWShadowStack =
-      MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
-  if (!HasHWShadowStack && !HasSWShadowStack)
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  RISCVMachineFunctionInfo::ShadowStackKind SSK = RVFI->getShadowStackKind(MF);
+  if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::None)
     return;
+
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
 
   // See emitSCSPrologue() above.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
@@ -199,12 +193,18 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
       (MI->getOpcode() == RISCV::CM_POP || MI->getOpcode() == RISCV::QC_CM_POP))
     ++MI;
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (HasHWShadowStack) {
+  if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::Hardware) {
+    // `sspopchk x5` is the only compressible form, but this would require using
+    // `x5` as the return address everywhere, which would also mean reserving
+    // it. We prefer to just use `x1` to avoid that complexity.
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK))
         .addReg(RAReg)
         .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
+
+  assert(SSK == RISCVMachineFunctionInfo::ShadowStackKind::Software &&
+         "Unexpected Shadow Stack Kind");
 
   Register SCSPReg = RISCVABI::getSCSPReg();
 
@@ -580,7 +580,10 @@ getUnmanagedCSI(const MachineFunction &MF,
 
   for (auto &CS : CSI) {
     int FI = CS.getFrameIdx();
-    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::Default)
+    // Callee saves with negative frame indices have fixed positions on the
+    // stack, usually relating to libcalls or push/pop.
+    bool IsManagedFI = (FI < 0);
+    if (!IsManagedFI && MFI.getStackID(FI) == TargetStackID::Default)
       NonLibcallCSI.push_back(CS);
   }
 
@@ -1361,23 +1364,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                    getUnmanagedCSI(MF, CSI, PreferAscendingLS).size());
   CFIBuilder.setInsertPoint(MBBI);
 
-  if (getLibCallID(MF, CSI) != -1) {
-    // tail __riscv_restore_[0-12] instruction is considered as a terminator,
-    // therefore it is unnecessary to place any CFI instructions after it. Just
-    // deallocate stack if needed and return.
-    if (StackSize != 0)
-      deallocateStack(MF, MBB, MBBI, DL, StackSize,
-                      RVFI->getLibCallStackSize());
-
-    // Emit epilogue for shadow call stack.
-    emitSCSEpilogue(MF, MBB, MBBI, DL);
-    return;
-  }
-
-  // Recover callee-saved registers.
-  if (NeedsDwarfCFI) {
-    for (const CalleeSavedInfo &CS :
-         getUnmanagedCSI(MF, CSI, PreferAscendingLS)) {
+  auto emitRestoreCFI = [&](auto CSInfo) {
+    for (auto &CS : CSInfo) {
       MCRegister Reg = CS.getReg();
       // Emit CFI for both sub-registers.
       if (RISCV::GPRPairRegClass.contains(Reg)) {
@@ -1389,7 +1377,40 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
         CFIBuilder.buildRestore(Reg);
       }
     }
+  };
+
+  if (RVFI->useSaveRestoreLibCalls(MF)) {
+    if (RVFI->hasShadowStack(MF)) {
+      // We don't use `__riscv_restore_<N>` to restore in this case, so we need
+      // to make sure we're correctly accounting for the stack deallocation we
+      // need to do, which now must include the allocation made by
+      // `__riscv_save_<N>`.
+      StackSize += RVFI->getLibCallStackSize();
+
+      SmallVector<CalleeSavedInfo, 8> LibcallCSI =
+          getPushOrLibCallsSavedInfo(MF, CSI);
+      MBBI = std::next(MBBI, LibcallCSI.size());
+      CFIBuilder.setInsertPoint(MBBI);
+
+      if (NeedsDwarfCFI)
+        emitRestoreCFI(LibcallCSI);
+    } else {
+      // tail __riscv_restore_[0-12] instruction is considered as a terminator,
+      // therefore it is unnecessary to place any CFI instructions after it.
+      // Just deallocate stack if needed and return.
+      if (StackSize != 0)
+        deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                        RVFI->getLibCallStackSize());
+
+      // Emit epilogue for shadow call stack.
+      emitSCSEpilogue(MF, MBB, MBBI, DL);
+      return;
+    }
   }
+
+  // Recover callee-saved registers.
+  if (NeedsDwarfCFI)
+    emitRestoreCFI(getUnmanagedCSI(MF, CSI, PreferAscendingLS));
 
   if (RVFI->isPushable(MF) && MBBI != MBB.end() && isPop(MBBI->getOpcode())) {
     // Use available stack adjustment in pop instruction to deallocate stack
@@ -1558,7 +1579,12 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     MaxCSFI = std::max(CSI.front().getFrameIdx(), CSI.back().getFrameIdx());
   }
 
-  if (FI >= MinCSFI && FI <= MaxCSFI) {
+  auto FIIsCalleeSave = [&](const CalleeSavedInfo &CS) -> bool {
+    return FI == CS.getFrameIdx();
+  };
+  bool IsInlineRestoredLibcallCSR = llvm::any_of(
+      getPushOrLibCallsSavedInfo(MF, MFI.getCalleeSavedInfo()), FIIsCalleeSave);
+  if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInlineRestoredLibcallCSR) {
     FrameReg = SPReg;
 
     if (FirstSPAdjustAmount)
@@ -2496,7 +2522,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       getUnmanagedCSI(*MF, CSI, STI.preferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
-  auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+  auto loadRegFromStackSlot = [&](ArrayRef<CalleeSavedInfo> CSInfo) {
     for (auto &CS : CSInfo) {
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
@@ -2534,6 +2560,16 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
         PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
   } else if (const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI)) {
+    assert(RVFI->useSaveRestoreLibCalls(*MF) &&
+           "Expected restore with libcall to use save restore libcalls");
+
+    // Restore is not compatible with shadow stacks, so do the restore manually.
+    // This ensures we still get the code size saving of `__riscv_save_<N>`.
+    if (RVFI->hasShadowStack(*MF)) {
+      loadRegFromStackSlot(getPushOrLibCallsSavedInfo(*MF, CSI));
+      return true;
+    }
+
     // Add restore libcall via tail call.
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
@@ -2600,6 +2636,10 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   // come in the final block of its function as it both pops and returns.
   if (RVFI->useQCIInterrupt(*MF))
     return MBB.succ_empty();
+
+  // If we have a shadow stack, we don't use `__riscv_restore` libcalls.
+  if (RVFI->hasShadowStack(*MF))
+    return true;
 
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;
