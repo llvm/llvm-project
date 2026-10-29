@@ -1771,6 +1771,19 @@ define <2 x i16> @test_pmulh_h(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+; Test packed multiply high signed for v2i16 built from element-wise smulh
+define <2 x i16> @test_pmulh_h_insert_element(<2 x i16> %a, <2 x i16> %b) {
+  %a0 = extractelement <2 x i16> %a, i32 0
+  %b0 = extractelement <2 x i16> %b, i32 0
+  %m0 = call i16 @llvm.smulh.i16(i16 %a0, i16 %b0)
+  %v0 = insertelement <2 x i16> poison, i16 %m0, i32 0
+  %a1 = extractelement <2 x i16> %a, i32 1
+  %b1 = extractelement <2 x i16> %b, i32 1
+  %m1 = call i16 @llvm.smulh.i16(i16 %a1, i16 %b1)
+  %res = insertelement <2 x i16> %v0, i16 %m1, i32 1
+  ret <2 x i16> %res
+}
+
 ; Test packed multiply high unsigned for v2i16
 define <2 x i16> @test_pmulhu_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_pmulhu_h:
