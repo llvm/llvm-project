@@ -174,10 +174,36 @@ private:
   bool arrayFromParenthesesExpr{false};
 };
 
+// Gate for folding SHAPE/SIZE/SIZEOF/UBOUND into a stored expression: a raw
+// rank-1 bound element left in an extent (because neither UBOUND nor LBOUND is
+// exact for that dimension; see CloneBound in shape.cpp) has no Fortran
+// spelling, so the inquiry must stay intact rather than fold.  The extent is
+// folded first, in place: an element with a constant base, as in a(0:[2,3]),
+// reduces to its scalar value and must not block folding.
+static bool FoldedExtentHasUntaggedRankOneBoundElement(
+    FoldingContext &context, MaybeExtentExpr &extent) {
+  if (extent) {
+    extent = Fold(context, std::move(*extent));
+    return ContainsUntaggedRankOneBoundElement(*extent);
+  }
+  return false;
+}
+static bool ShapeHasUntaggedRankOneBoundElement(
+    FoldingContext &context, std::optional<Shape> &shape) {
+  if (shape) {
+    for (auto &extent : *shape) {
+      if (FoldedExtentHasUntaggedRankOneBoundElement(context, extent)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
 Expr<Type<TypeCategory::Integer>> LBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
     std::optional<int> dim;
@@ -272,15 +298,20 @@ Expr<Type<TypeCategory::Integer>> UBOUND(FoldingContext &context,
         return GetConstantArrayBoundHelper::GetUbound<T>(kind, *array, dim);
       }
       if (takeBoundsFromShape) {
+        // UBOUND(transpose(a),DIM), UBOUND((a)), UBOUND(x%a): the bounds are
+        // the shape's extents, which may embed a raw rank-1 bound element.
         if (auto shape{GetContextFreeShape(context, *array)}) {
           if (dim) {
-            if (auto &dimSize{shape->at(*dim)}) {
+            if (auto &dimSize{shape->at(*dim)}; dimSize &&
+                !FoldedExtentHasUntaggedRankOneBoundElement(context, dimSize)) {
               return Fold(context,
                   ConvertToType<T>(
                       kind, Expr<ExtentType>{std::move(*dimSize)}));
             }
-          } else if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
-            return Fold(context, ConvertToType<T>(kind, std::move(*shapeExpr)));
+          } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
+            if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
+              return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
+            }
           }
         }
       }
@@ -1464,7 +1495,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       }
     }
   } else if (name == "shape") {
-    if (auto shape{GetContextFreeShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])};
+        shape && !ShapeHasUntaggedRankOneBoundElement(context, shape)) {
       if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
         return Fold(context, ConvertToType<T>(kind, std::move(*shapeExpr)));
       }
@@ -1484,31 +1516,38 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "size") {
     if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (args[1]) { // DIM= is present, get one extent
+        // DIM= is validated whenever the shape is known, so that a raw rank-1
+        // bound element in some extent neither hides an out-of-range DIM nor
+        // blocks folding of a dimension that does not contain one.
         std::optional<int> dim;
         if (const auto *array{args[0].value().UnwrapExpr()}; array &&
             !CheckDimArg(args[1], *array, context.messages(), false, dim)) {
           return MakeInvalidIntrinsic<T>(std::move(funcRef));
         } else if (dim) {
-          if (auto &extent{shape->at(*dim)}) {
-            return Fold(context, ConvertToType<T>(kind, std::move(*extent)));
+          if (auto &extent{shape->at(*dim)}; extent &&
+              !FoldedExtentHasUntaggedRankOneBoundElement(context, extent)) {
+            return Fold(context, ConvertToType<T>(std::move(*extent)));
           }
         }
-      } else if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
-        // DIM= is absent; compute PRODUCT(SHAPE())
-        ExtentExpr product{MakeExtentExpr(1)};
-        for (auto &&extent : std::move(*extents)) {
-          product = std::move(product) * std::move(extent);
+      } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
+        if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
+          // DIM= is absent; compute PRODUCT(SHAPE())
+          ExtentExpr product{1};
+          for (auto &&extent : std::move(*extents)) {
+            product = std::move(product) * std::move(extent);
+          }
+          return Expr<T>{ConvertToType<T>(Fold(context, std::move(product)))};
         }
-        return Expr<T>{
-            ConvertToType<T>(kind, Fold(context, std::move(product)))};
       }
     }
   } else if (name == "sizeof") { // in bytes; extension
-    if (auto info{
-            characteristics::TypeAndShape::Characterize(args[0], context)}) {
-      if (auto bytes{info->MeasureSizeInBytes(context)}) {
-        return Expr<T>{
-            Fold(context, ConvertToType<T>(kind, std::move(*bytes)))};
+    if (auto shape{GetContextFreeShape(context, args[0])};
+        !ShapeHasUntaggedRankOneBoundElement(context, shape)) {
+      if (auto info{
+              characteristics::TypeAndShape::Characterize(args[0], context)}) {
+        if (auto bytes{info->MeasureSizeInBytes(context)}) {
+          return Expr<T>{Fold(context, ConvertToType<T>(std::move(*bytes)))};
+        }
       }
     }
   } else if (name == "storage_size") { // in bits
@@ -1646,20 +1685,312 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   return AsExpr(std::move(inquiry));
 }
 
+template <int KIND>
+static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
+ExtractRankOneElement(FoldingContext &context,
+    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim);
+
+// Subscripts `entity`, whose last part-ref is the rank>0 array, at element
+// [dim] (0-based) using its lower bound.
+static std::optional<DataRef> SubscriptArrayPartRef(
+    FoldingContext &context, NamedEntity &&entity, int dim) {
+  MaybeExtentExpr lb{GetLBOUND(context, entity, /*dim=*/0)};
+  if (!lb) {
+    return std::nullopt;
+  }
+  std::vector<Subscript> ss;
+  ss.emplace_back(Fold(context, std::move(*lb) + Expr<SubscriptInteger>{dim}));
+  return DataRef{ArrayRef{std::move(entity), std::move(ss)}};
+}
+
+// Builds the rank-0 DataRef for element [dim] (0-based) of a rank-1 designator
+// by subscripting its sole array part-ref (C919) at lbound+dim, leaving every
+// scalar part-ref -- including scalar-subscripted array parts anywhere in the
+// chain -- intact.  Handles whole arrays, array/scalar components, a single
+// triplet section (element l+dim*s), and arbitrary nesting such as
+// x(1)%c%d(3)%e -> x(1)%c(dim)%d(3)%e.  A vector subscript n(V) yields
+// n(element[dim] of V) when V itself reduces.  Null when the array part is a
+// coarray, or a vector subscript whose index expression cannot be reduced.
+static std::optional<DataRef> SubscriptRankOneElement(
+    FoldingContext &context, const DataRef &dr, int dim) {
+  return common::visit(
+      common::visitors{
+          [&](const SymbolRef &s) -> std::optional<DataRef> {
+            if (s->Rank() == 0) {
+              return std::nullopt;
+            }
+            return SubscriptArrayPartRef(context, NamedEntity{s.get()}, dim);
+          },
+          [&](const Component &c) -> std::optional<DataRef> {
+            if (c.GetLastSymbol().Rank() > 0) {
+              return SubscriptArrayPartRef(
+                  context, NamedEntity{Component{c}}, dim);
+            }
+            // Scalar component: the array part is in the base.
+            if (auto base{SubscriptRankOneElement(context, c.base(), dim)}) {
+              return DataRef{Component{std::move(*base), c.GetLastSymbol()}};
+            }
+            return std::nullopt;
+          },
+          [&](const ArrayRef &a) -> std::optional<DataRef> {
+            int nonScalar{0}, nonScalarDim{-1};
+            for (int j{0}; j < a.size(); ++j) {
+              if (std::holds_alternative<Triplet>(a.at(j).u) ||
+                  a.at(j).Rank() != 0) {
+                ++nonScalar;
+                nonScalarDim = j;
+              }
+            }
+            if (nonScalar > 1) {
+              return std::nullopt;
+            }
+            if (nonScalar == 1) {
+              // One rank-contributing subscript carries the whole rank (C919).
+              // A triplet l:u:s yields element l+dim*s; a vector subscript V
+              // yields the scalar n(element[dim] of V); scalars are kept.
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                const Subscript &sub{a.at(j)};
+                if (j != nonScalarDim) {
+                  ss.emplace_back(sub);
+                } else if (const auto *trip{std::get_if<Triplet>(&sub.u)}) {
+                  std::optional<Expr<SubscriptInteger>> lower;
+                  if (const auto *lo{trip->GetLower()}) {
+                    lower = *lo;
+                  } else if (auto lb{GetLBOUND(context, a.base(), j)}) {
+                    lower = std::move(*lb);
+                  } else {
+                    return std::nullopt;
+                  }
+                  ss.emplace_back(Fold(context,
+                      std::move(*lower) +
+                          Expr<SubscriptInteger>{dim} * trip->stride()));
+                } else {
+                  const auto &vec{
+                      std::get<IndirectSubscriptIntegerExpr>(sub.u).value()};
+                  if (auto elem{ExtractRankOneElement(context, vec, dim)}) {
+                    ss.emplace_back(std::move(*elem));
+                  } else {
+                    return std::nullopt;
+                  }
+                }
+              }
+              return DataRef{ArrayRef{NamedEntity{a.base()}, std::move(ss)}};
+            }
+            // All-scalar subscripts: the rank comes from the base component's
+            // parent (ArrayRef::Rank).  Recurse through the base to the array
+            // part-ref, then rebuild these subscripts on the element.
+            const Component *comp{a.base().UnwrapComponent()};
+            if (!comp) {
+              return std::nullopt;
+            }
+            if (auto base{
+                    SubscriptRankOneElement(context, comp->base(), dim)}) {
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                ss.emplace_back(a.at(j));
+              }
+              return DataRef{ArrayRef{NamedEntity{Component{std::move(*base),
+                                          comp->GetLastSymbol()}},
+                  std::move(ss)}};
+            }
+            return std::nullopt;
+          },
+          [&](const CoarrayRef &) -> std::optional<DataRef> {
+            return std::nullopt;
+          },
+      },
+      dr.u);
+}
+
+// Extract element [dim] (0-based, array-element order) from a rank-1 integer
+// array expression as a scalar, distributing the extraction through kind
+// conversions, elementwise integer operations, and elemental intrinsic calls,
+// and indexing array sections and array constructors (including implied-dos),
+// so the result is genuine Fortran that round-trips through module files.
+// Returns std::nullopt when a leaf cannot be reduced (e.g. a user function
+// reference), so the caller keeps the RankOneBoundElement unchanged.
+template <int KIND>
+static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
+ExtractRankOneElement(FoldingContext &context,
+    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim) {
+  using T = Type<TypeCategory::Integer, KIND>;
+  if (base.Rank() == 0) {
+    return base; // a scalar operand contributes itself to every element
+  }
+  return common::visit(
+      [&](const auto &y) -> std::optional<Expr<T>> {
+        using Ty = std::decay_t<decltype(y)>;
+        if constexpr (std::is_same_v<Ty, Constant<T>>) {
+          ConstantSubscripts at{y.lbounds()};
+          at[0] = y.lbounds()[0] + dim;
+          return Expr<T>{Constant<T>{y.At(at)}};
+        } else if constexpr (std::is_same_v<Ty, Designator<T>>) {
+          if (auto dr{ExtractDataRef(y)}) {
+            if (auto elem{SubscriptRankOneElement(context, *dr, dim)}) {
+              if (auto expr{AsGenericExpr(std::move(*elem))}) {
+                if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*expr)}) {
+                  return ConvertToType<T>(std::move(*ie));
+                }
+              }
+            }
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, ArrayConstructor<T>>) {
+          // Pull element [dim] straight out of the constructor's values
+          // instead of wrapping the whole constructor.
+          ConstantSubscript target{dim};
+          for (const auto &value : y) {
+            if (const auto *e{std::get_if<Expr<T>>(&value.u)}) {
+              if (e->Rank() != 0) {
+                return std::nullopt; // array-valued element: too complex
+              }
+              if (target == 0) {
+                return Expr<T>{*e};
+              }
+              --target;
+            } else {
+              const auto &ido{std::get<ImpliedDo<T>>(value.u)};
+              auto lower{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.lower()}))};
+              auto upper{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.upper()}))};
+              auto stride{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.stride()}))};
+              if (!lower || !upper || !stride || *stride == 0) {
+                return std::nullopt;
+              }
+              // A scalar-per-value body contributes one element per iteration.
+              ConstantSubscript perTrip{0};
+              for (const auto &bv : ido.values()) {
+                const auto *be{std::get_if<Expr<T>>(&bv.u)};
+                if (!be || be->Rank() != 0) {
+                  return std::nullopt; // nested/array body: too complex
+                }
+                ++perTrip;
+              }
+              ConstantSubscript trips{(*upper - *lower + *stride) / *stride};
+              if (trips < 0) {
+                trips = 0;
+              }
+              if (ConstantSubscript total{trips * perTrip}; target < total) {
+                ConstantSubscript iVal{*lower + (target / perTrip) * *stride};
+                ConstantSubscript within{target % perTrip};
+                context.StartImpliedDo(ido.name(), iVal);
+                std::optional<Expr<T>> result;
+                ConstantSubscript k{0};
+                for (const auto &bv : ido.values()) {
+                  if (k++ == within) {
+                    result = Fold(context, Expr<T>{std::get<Expr<T>>(bv.u)});
+                    break;
+                  }
+                }
+                context.EndImpliedDo(ido.name());
+                return result;
+              } else {
+                target -= total;
+              }
+            }
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Parentheses<T>>) {
+          if (auto op{ExtractRankOneElement(context, y.left(), dim)}) {
+            return Expr<T>{Parentheses<T>{std::move(*op)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Negate<T>>) {
+          if (auto op{ExtractRankOneElement(context, y.left(), dim)}) {
+            return Expr<T>{Negate<T>{std::move(*op)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Add<T>> ||
+            std::is_same_v<Ty, Subtract<T>> ||
+            std::is_same_v<Ty, Multiply<T>> || std::is_same_v<Ty, Divide<T>>) {
+          auto l{ExtractRankOneElement(context, y.left(), dim)};
+          auto r{ExtractRankOneElement(context, y.right(), dim)};
+          if (l && r) {
+            return Expr<T>{Ty{std::move(*l), std::move(*r)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Extremum<T>>) {
+          auto l{ExtractRankOneElement(context, y.left(), dim)};
+          auto r{ExtractRankOneElement(context, y.right(), dim)};
+          if (l && r) {
+            return Expr<T>{
+                Extremum<T>{y.ordering, std::move(*l), std::move(*r)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty,
+                                 Convert<T, TypeCategory::Integer>>) {
+          return common::visit(
+              [&](const auto &inner) -> std::optional<Expr<T>> {
+                if (auto op{ExtractRankOneElement(context, inner, dim)}) {
+                  return Expr<T>{Convert<T, TypeCategory::Integer>{
+                      Expr<SomeInteger>{std::move(*op)}}};
+                }
+                return std::nullopt;
+              },
+              y.left().u);
+        } else if constexpr (std::is_same_v<Ty, FunctionRef<T>>) {
+          // Elemental intrinsic f(array): element [dim] is f(array(dim)).
+          if (y.proc().GetSpecificIntrinsic() && y.IsElemental()) {
+            FunctionRef<T> reduced{y};
+            bool ok{true};
+            for (auto &arg : reduced.arguments()) {
+              if (!arg) {
+                continue; // absent optional argument
+              }
+              Expr<SomeType> *e{arg->UnwrapExpr()};
+              if (!e) {
+                ok = false;
+                break;
+              }
+              if (e->Rank() == 0) {
+                continue; // scalar argument contributes itself
+              }
+              auto *ie{std::get_if<Expr<SomeInteger>>(&e->u)};
+              if (!ie ||
+                  !common::visit(
+                      [&](auto &kx) {
+                        if (auto elem{
+                                ExtractRankOneElement(context, kx, dim)}) {
+                          kx = std::move(*elem);
+                          return true;
+                        }
+                        return false;
+                      },
+                      ie->u)) {
+                ok = false; // non-integer or irreducible array argument
+                break;
+              }
+            }
+            if (ok) {
+              return Expr<T>{std::move(reduced)};
+            }
+          }
+          return std::nullopt;
+        } else {
+          return std::nullopt; // user function, transformational intrinsic,
+                               // etc.
+        }
+      },
+      base.u);
+}
+
 Expr<RankOneBoundElement::Result> FoldOperation(
     FoldingContext &context, RankOneBoundElement &&x) {
   using ResultType = RankOneBoundElement::Result;
   auto folded{Fold(context, Expr<ResultType>{x.base()})};
-  if (auto *c{UnwrapConstantValue<ResultType>(
-          RankOneBoundElement::ResultKind, folded)}) {
-    // Base is a constant array; extract the element at dimension_ (0-based).
-    ConstantSubscripts at{c->lbounds()};
-    at[0] = c->lbounds()[0] + x.dimension();
-    return MakeConstantExpr<ResultType>(
-        RankOneBoundElement::ResultKind, c->At(at));
+  if (auto reduced{ExtractRankOneElement(context, folded, x.dimension())}) {
+    return Fold(context, std::move(*reduced));
   }
-  return Expr<ResultType>{
-      RankOneBoundElement{std::move(folded), x.dimension()}};
+  RankOneBoundElement result{std::move(folded), x.dimension()};
+  // Preserve any serialization provenance (ubound/lbound origin) so an
+  // irreducible element still round-trips as a real intrinsic in a mod file.
+  if (x.originatingArray()) {
+    result.set_provenance(*x.originatingArray(), x.isUpperBound());
+  }
+  return Expr<ResultType>{std::move(result)};
 }
 
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &expr) {

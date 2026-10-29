@@ -237,6 +237,42 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
   return MyVisitor{}(expr);
 }
 
+template <typename T>
+bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
+  struct MyVisitor : public AnyTraverse<MyVisitor> {
+    using Base = AnyTraverse<MyVisitor>;
+    MyVisitor() : Base{*this} {}
+    using Base::operator();
+    bool operator()(const RankOneBoundElement &x) {
+      return !x.originatingArray() || (*this)(x.base());
+    }
+  };
+  return MyVisitor{}(expr);
+}
+template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
+template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeInteger> &);
+template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
+
+// Copies a declared bound out of its ShapeSpec.  A rank-1 array bound is stored
+// as a RankOneBoundElement wrapping the whole rank-1 expression; the copy is
+// stamped with ubound()/lbound() provenance so that, if it survives folding, it
+// serializes as that intrinsic rather than as the non-Fortran %ROBE marker.
+// Callers must only request provenance where the intrinsic is exact, i.e. where
+// its empty-dimension result (UBOUND -> 0, LBOUND -> 1) coincides with the
+// declared bound; otherwise the raw copy stays untagged and any inquiry that
+// would embed it must decline to fold.
+static ExtentExpr CloneBound(const ExtentExpr &bound,
+    const NamedEntity *array = nullptr, bool isUpperBound = false) {
+  ExtentExpr copy{bound};
+  if (array) {
+    if (auto *robe{std::get_if<RankOneBoundElement>(&copy.u)}) {
+      robe->set_provenance(*array, isUpperBound);
+    }
+  }
+  return copy;
+}
+
 // Determines lower bound on a dimension.  This can be other than 1 only
 // for a reference to a whole array object or component. (See LBOUND, 16.9.109).
 // ASSOCIATE construct entities may require traversal of their referents.
@@ -318,9 +354,12 @@ public:
                   ok = true;
                 }
               }
-              return ok ? *lbound : Result{};
+              // ok: LBOUND is exact here (lb==1, dimension provably nonempty,
+              // or assumed-size last dimension), so lbound() provenance is
+              // safe.
+              return ok ? Result{CloneBound(*lbound, &base, false)} : Result{};
             } else {
-              return *lbound;
+              return CloneBound(*lbound); // raw declared bound, internal use
             }
           } else {
             return MakeExtentExpr(1);
@@ -470,7 +509,7 @@ Shape GetLBOUNDs(
 // If the upper and lower bounds are constant, return a constant expression for
 // the extent.  In particular, if the upper bound is less than the lower bound,
 // return zero.
-static MaybeExtentExpr GetNonNegativeExtent(
+static MaybeExtentExpr GetNonNegativeExtent(const NamedEntity &base,
     const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   const auto &lbound{shapeSpec.lbound().GetExplicit()};
@@ -496,12 +535,16 @@ static MaybeExtentExpr GetNonNegativeExtent(
     // Apply effective IDIM (MAX calculation with 0) so thet the
     // result is never negative
     if (lval.value_or(0) == 1) {
-      return ExtentExpr{Extremum<SubscriptInteger>{
-          Ordering::Greater, MakeExtentExpr(0), common::Clone(*ubound)}};
-    } else {
+      // max(0,ub) == max(0,UBOUND(a,dim)) for every ub when lb == 1, so a
+      // surviving rank-1 bound element can carry ubound() provenance exactly.
       return ExtentExpr{Extremum<SubscriptInteger>{Ordering::Greater,
-          MakeExtentExpr(0),
-          common::Clone(*ubound) - common::Clone(*lbound) + MakeExtentExpr(1)}};
+          ExtentExpr{0}, CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
+    } else {
+      // Neither UBOUND() nor LBOUND() equals the declared bound of an empty
+      // dimension, so the raw copies cannot carry provenance here.
+      return ExtentExpr{
+          Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
+              CloneBound(*ubound) - CloneBound(*lbound) + ExtentExpr{1}}};
     }
   } else {
     return std::nullopt;
@@ -558,7 +601,8 @@ MaybeExtentExpr GetExtent(
       int j{0};
       for (const auto &shapeSpec : details->shape()) {
         if (j++ == dimension) {
-          if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
+          if (auto extent{
+                  GetNonNegativeExtent(base, shapeSpec, invariantOnly)}) {
             return extent;
           } else if (semantics::IsAssumedSizeArray(symbol) &&
               j == symbol.Rank()) {
@@ -672,15 +716,17 @@ MaybeExtentExpr GetRawUpperBound(FoldingContext &context,
 }
 
 static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
-    const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
+    const NamedEntity &base, const semantics::ShapeSpec &shapeSpec,
+    bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   if (ubound && ubound->Rank() == 0 &&
       (!invariantOnly || IsScopeInvariantExpr(*ubound, context))) {
-    if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
+    if (auto extent{GetNonNegativeExtent(base, shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
         if (cstExtent > 0) {
-          return *ubound;
+          // Dimension is nonempty, so UBOUND is exactly the declared bound.
+          return CloneBound(*ubound, &base, /*isUpperBound=*/true);
         } else if (cstExtent == 0) {
           return MakeExtentExpr(0);
         }
@@ -697,7 +743,8 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
     int rank{details->shape().Rank()};
     if (dimension < rank) {
       const semantics::ShapeSpec &shapeSpec{details->shape()[dimension]};
-      if (auto ubound{GetExplicitUBOUND(context, shapeSpec, invariantOnly)}) {
+      if (auto ubound{
+              GetExplicitUBOUND(context, base, shapeSpec, invariantOnly)}) {
         return *ubound;
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {

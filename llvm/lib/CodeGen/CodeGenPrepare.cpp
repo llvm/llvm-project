@@ -1201,46 +1201,10 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
     IRBuilder<> Builder(RelocatedBase->getNextNode());
     Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
 
-    // If gc_relocate does not match the actual type, cast it to the right type.
-    // In theory, there must be a bitcast after gc_relocate if the type does not
-    // match, and we should reuse it to get the derived pointer. But it could be
-    // cases like this:
-    // bb1:
-    //  ...
-    //  %g1 = call coldcc i8 addrspace(1)*
-    //  @llvm.experimental.gc.relocate.p1i8(...) br label %merge
-    //
-    // bb2:
-    //  ...
-    //  %g2 = call coldcc i8 addrspace(1)*
-    //  @llvm.experimental.gc.relocate.p1i8(...) br label %merge
-    //
-    // merge:
-    //  %p1 = phi i8 addrspace(1)* [ %g1, %bb1 ], [ %g2, %bb2 ]
-    //  %cast = bitcast i8 addrspace(1)* %p1 in to i32 addrspace(1)*
-    //
-    // In this case, we can not find the bitcast any more. So we insert a new
-    // bitcast no matter there is already one or not. In this way, we can handle
-    // all cases, and the extra bitcast should be optimized away in later
-    // passes.
-    Value *ActualRelocatedBase = RelocatedBase;
-    if (RelocatedBase->getType() != Base->getType()) {
-      ActualRelocatedBase =
-          Builder.CreateBitCast(RelocatedBase, Base->getType());
-    }
-    Value *Replacement =
-        Builder.CreateGEP(Derived->getSourceElementType(), ActualRelocatedBase,
-                          ArrayRef(OffsetV));
+    Value *Replacement = Builder.CreateGEP(Derived->getSourceElementType(),
+                                           RelocatedBase, ArrayRef(OffsetV));
     Replacement->takeName(ToReplace);
-    // If the newly generated derived pointer's type does not match the original
-    // derived pointer's type, cast the new derived pointer to match it. Same
-    // reasoning as above.
-    Value *ActualReplacement = Replacement;
-    if (Replacement->getType() != ToReplace->getType()) {
-      ActualReplacement =
-          Builder.CreateBitCast(Replacement, ToReplace->getType());
-    }
-    ToReplace->replaceAllUsesWith(ActualReplacement);
+    ToReplace->replaceAllUsesWith(Replacement);
     ToReplace->eraseFromParent();
 
     MadeChange = true;
@@ -3490,8 +3454,6 @@ class TypePromotionTransaction {
     /// instances of the new value with the original value.
     Value *New;
 
-    using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
-
   public:
     /// Replace all the use of \p Inst by \p New.
     UsesReplacer(Instruction *Inst, Value *New)
@@ -3621,9 +3583,6 @@ public:
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
-
-  using CommitPt =
-      SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator;
 
   SetOfInstrs &RemovedInsts;
 };

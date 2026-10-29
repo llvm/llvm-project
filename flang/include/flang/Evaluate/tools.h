@@ -1110,6 +1110,23 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Assignment &);
 
+// Collects the originating arrays named by the ubound()/lbound() provenance of
+// the RankOneBoundElements in an expression.  Traverse() visits only an
+// element's base, so CollectSymbols() never sees these; the module file writer
+// needs them so that a bound serialized as ubound(a,dim) also declares 'a'.
+// This is deliberately not part of Traverse(): an element's value depends only
+// on its base, and visiting the originating array there would make an element
+// whose array is an INTENT(OUT) or INTENT(INOUT) dummy fail
+// IsScopeInvariantExpr() and block folding that is valid today.
+template <typename A>
+semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet
+CollectRankOneBoundProvenanceSymbols(const Expr<SubscriptInteger> &);
+
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
 semantics::UnorderedSymbolSet CollectCudaSymbols(const A &);

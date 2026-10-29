@@ -133,6 +133,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignf128
+    libc.src.math.copysignf80
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
@@ -140,6 +141,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.daddl
     libc.src.math.ddivl
@@ -157,6 +159,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsf128
+    libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -220,6 +223,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodl
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpf128
     libc.src.math.frexpl
     libc.src.math.fsub
     libc.src.math.fsubl
@@ -227,6 +231,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
+    libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
     libc.src.math.isnanf128
@@ -253,6 +258,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
+    libc.src.math.logbf128
     libc.src.math.logbl
     libc.src.math.lrint
     libc.src.math.lrintf
@@ -306,6 +312,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincosf
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf
@@ -313,6 +320,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
+    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.trunc
     libc.src.math.truncf
@@ -361,6 +369,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.issignalingl
     libc.src.math.llogb
     libc.src.math.llogbf
+    libc.src.math.llogbf128
     libc.src.math.llogbl
     libc.src.math.nextdown
     libc.src.math.nextdownf
@@ -384,9 +393,11 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderf128
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
+    libc.src.math.totalordermagf128
     libc.src.math.totalordermagl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
@@ -536,15 +547,11 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.ffmaf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
-    libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
     libc.src.math.fsubf128
-    libc.src.math.ilogbf128
     libc.src.math.ldexpf128
-    libc.src.math.llogbf128
-    libc.src.math.logbf128
     libc.src.math.modff128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
@@ -553,8 +560,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.remquof128
     libc.src.math.scalblnf128
     libc.src.math.scalbnf128
-    libc.src.math.totalorderf128
-    libc.src.math.totalordermagf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )

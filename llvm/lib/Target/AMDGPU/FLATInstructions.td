@@ -481,7 +481,7 @@ class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseud
   opName,
   (outs ),
   !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
-  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+  !if(EnableSaddr, " $saddr$offset", "")#"$cpol"> {
 
   let is_flat_global = 1;
   let has_vdst = 0;

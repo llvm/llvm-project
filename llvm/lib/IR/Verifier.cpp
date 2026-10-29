@@ -6828,12 +6828,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "gc.relocate: statepoint derived index out of bounds", Call);
     }
 
-    // Relocated value must be either a pointer type or vector-of-pointer type,
-    // but gc_relocate does not need to return the same pointer type as the
-    // relocated pointer. It can be casted to the correct type later if it's
-    // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(Call);
-    auto *ResultType = Call.getType();
     auto *DerivedType = Relocate.getDerivedPtr()->getType();
     auto *BaseType = Relocate.getBasePtr()->getType();
 
@@ -6841,15 +6836,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "gc.relocate: relocated value must be a pointer", Call);
     Check(DerivedType->isPtrOrPtrVectorTy(),
           "gc.relocate: relocated value must be a pointer", Call);
-
-    Check(ResultType->isVectorTy() == DerivedType->isVectorTy(),
-          "gc.relocate: vector relocates to vector and pointer to pointer",
-          Call);
-    Check(
-        ResultType->getPointerAddressSpace() ==
-            DerivedType->getPointerAddressSpace(),
-        "gc.relocate: relocating a pointer shouldn't change its address space",
-        Call);
+    Check(Call.getType() == DerivedType,
+          "gc.relocate: must return the type of the relocated value", Call);
 
     auto GC = llvm::getGCStrategy(Relocate.getFunction()->getGC());
     Check(GC, "gc.relocate: calling function must have GCStrategy",
@@ -6858,7 +6846,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto isGCPtr = [&GC](Type *PTy) {
         return GC->isGCManagedPointer(PTy->getScalarType()).value_or(true);
       };
-      Check(isGCPtr(ResultType), "gc.relocate: must return gc pointer", Call);
       Check(isGCPtr(BaseType),
             "gc.relocate: relocated value must be a gc pointer", Call);
       Check(isGCPtr(DerivedType),

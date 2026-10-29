@@ -149,14 +149,13 @@ SourcedActionStmt GetActionStmt(const parser::Block &block) {
 }
 
 std::string ThisVersion(llvm::omp::Version version) {
-  auto v{static_cast<unsigned>(version)};
+  auto v{version.value()};
   std::string tv{std::to_string(v / 10) + "." + std::to_string(v % 10)};
   return "OpenMP v" + tv;
 }
 
 std::string TryVersion(llvm::omp::Version version) {
-  return "try -fopenmp-version=" +
-      std::to_string(static_cast<unsigned>(version));
+  return "try -fopenmp-version=" + std::to_string(version.value());
 }
 
 static const Symbol *GetFunctionReferenceSymbol(

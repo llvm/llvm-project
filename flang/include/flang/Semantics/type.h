@@ -251,8 +251,28 @@ struct ArraySpec : public std::vector<ShapeSpec> {
   inline bool CanBeImpliedShape() const;
   inline bool CanBeAssumedSize() const;
   inline bool IsAssumedRank() const;
+  // Which bounds of this shape were declared with a rank-1 integer array
+  // (F2023 R818 explicit-shape-bounds-spec)?  A constant bounds array is
+  // folded into ordinary per-dimension bounds, so the spec itself no longer
+  // shows it; the module file writer uses this to write the declared
+  // whole-array form back out.
+  bool isFromRankOneBounds() const {
+    return lboundIsRankOne_ || uboundIsRankOne_;
+  }
+  bool lboundIsRankOne() const { return lboundIsRankOne_; }
+  bool uboundIsRankOne() const { return uboundIsRankOne_; }
+  void set_rankOneBounds(bool lower, bool upper) {
+    lboundIsRankOne_ = lower;
+    uboundIsRankOne_ = upper;
+  }
+  void clear() {
+    std::vector<ShapeSpec>::clear();
+    lboundIsRankOne_ = uboundIsRankOne_ = false;
+  }
 
 private:
+  bool lboundIsRankOne_{false};
+  bool uboundIsRankOne_{false};
   // Check non-empty and predicate is true for each element.
   template <typename P> bool CheckAll(P predicate) const {
     return !empty() && std::all_of(begin(), end(), predicate);

@@ -81,4 +81,4 @@ signed _BitInt(100) F10(float P0, float P1, double P2, char P3) {
 // CHECK-ARM: musttail call arm_aapcscc void @_Z2F9ffdc(ptr dead_on_unwind writable sret(i128) align 8 %agg.result, float noundef %P0, float noundef %P1, double noundef %P2, i8 noundef signext %P3)
 // CHECK-ARM64: musttail call noundef i100 @_Z2F9ffdc(float noundef %P0, float noundef %P1, double noundef %P2, i8 noundef %P3)
 // CHECK-X86: musttail call void @_Z2F9ffdc(ptr dead_on_unwind writable sret(i128) align 4 %agg.result, float noundef %P0, float noundef %P1, double noundef %P2, i8 noundef signext %P3)
-// CHECK-X64: musttail call noundef { i64, i64 } @_Z2F9ffdc(float noundef %P0, float noundef %P1, double noundef %P2, i8 noundef signext %P3)
+// CHECK-X64: musttail call noundef i100 @_Z2F9ffdc(float noundef %P0, float noundef %P1, double noundef %P2, i8 noundef signext %P3)

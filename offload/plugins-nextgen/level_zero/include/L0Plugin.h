@@ -92,13 +92,13 @@ class LevelZeroPluginTy final : public GenericPluginTy {
 private:
   struct DeviceInfoTy {
     L0DeviceIdTy Id;
-    L0ContextTy *Driver;
+    L0DriverTy *Driver;
     bool isRoot() const { return Id.SubId < 0 && Id.CCSId < 0; }
   };
   llvm::SmallVector<DeviceInfoTy> DetectedDevices;
 
-  /// Context (and Driver) specific data.
-  std::list<L0ContextTy> ContextList;
+  /// Driver-specific data.
+  std::list<L0DriverTy> DriverList;
 
   /// L0 plugin options.
   L0OptionsTy Options;

@@ -2129,10 +2129,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
-    if (Subtarget->hasSVEBitPerm() &&
-        (Subtarget->isSVEAvailable() ||
-         (Subtarget->isSVEorStreamingSVEAvailable() &&
-          Subtarget->hasSSVE_BitPerm()))) {
+    if (Subtarget->isSVEBitPermAvailable()) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
         setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
       }
@@ -4942,7 +4939,12 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     return SDValue();
   }
 
-  assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
+  assert(VT == MVT::f128 && "Expected fp128 result type");
+  if (!IsStrict && Op0VT == MVT::bf16) {
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Ext);
+  }
   return SDValue();
 }
 
@@ -4954,6 +4956,17 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
   SDNodeFlags Flags = Op->getFlags();
+
+  if (!IsStrict && SrcVT == MVT::f128 && VT == MVT::bf16) {
+    SDLoc DL(Op);
+    // Round inexact results to odd before rounding to bf16 to avoid double
+    // rounding through fp32. Exact conversions do not need the correction.
+    SDValue Narrow =
+        Trunc ? DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, SrcVal,
+                            DAG.getIntPtrConstant(0, DL, true), Flags)
+              : expandRoundInexactToOdd(MVT::f32, SrcVal, DL, DAG);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, Narrow, Op.getOperand(1), Flags);
+  }
 
   if (VT.isScalableVector()) {
     // Let common code split the operation.
@@ -11156,6 +11169,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
                                 ? alignTo(NumBytes, StackAlign)
                                 : 0;
+
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget->isTargetWindows() && CalleePopBytes != 0)
+    FuncInfo->setHasWinCallToCalleePopFunction(true);
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);

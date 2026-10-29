@@ -4037,10 +4037,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If the assume has operand bundles, the folds below will never work, so
-    // don't bother trying.
-    if (II->hasOperandBundles())
+    if (II->hasOperandBundles()) {
+      // Merge consecutive assumes to save some resources
+      if (auto *PrevAI = dyn_cast_or_null<AssumeInst>(II->getPrevNode());
+          PrevAI && PrevAI->hasOperandBundles()) {
+        SmallVector<OperandBundleDef, 4> Bundles;
+        Bundles.reserve(II->getNumOperandBundles() +
+                        PrevAI->getNumOperandBundles());
+        for (auto Bundle : PrevAI->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        for (auto Bundle : II->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        Builder.CreateAssumption(Bundles);
+        eraseInstFromFunction(*PrevAI);
+        return eraseInstFromFunction(*II);
+      }
+
+      // If the assume has operand bundles, the folds below will never work, so
+      // don't bother trying.
       break;
+    }
 
     Value *IIOperand = II->getArgOperand(0);
 
@@ -5304,9 +5320,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         auto *OpIntTy = GCR.getOperand(2)->getType();
         GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
       }
-
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
 
       // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
       LiveGcValues.insert(BasePtr);
