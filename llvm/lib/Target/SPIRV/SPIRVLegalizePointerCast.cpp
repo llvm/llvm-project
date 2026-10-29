@@ -228,35 +228,6 @@ class SPIRVLegalizePointerCastImpl {
     return nullptr;
   }
 
-  // Rebuild a typed logical access chain from a folded byte-offset GEP.
-  Value *rebuildLogicalGEP(IRBuilder<> &B, Value *Ptr, Type *AccessTy) {
-    auto *GEP = dyn_cast<GEPOperator>(Ptr);
-    if (!GEP)
-      return nullptr;
-
-    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-    unsigned IndexBits = DL.getIndexTypeSizeInBits(Ptr->getType());
-    APInt Offset(IndexBits, 0);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      return nullptr;
-
-    Value *BasePtr = GEP->getPointerOperand();
-    Type *ElemTy = GR->findDeducedElementType(BasePtr);
-    if (!ElemTy || !ElemTy->isSized())
-      return nullptr;
-
-    SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(ElemTy, Offset);
-    if (!Offset.isZero() || ElemTy != AccessTy)
-      return nullptr;
-
-    SmallVector<Value *> Args{B.getInt1(GEP->isInBounds()), BasePtr};
-    for (const APInt &Index : Indices)
-      Args.push_back(ConstantInt::get(B.getContext(), Index));
-
-    return B.CreateIntrinsic(Intrinsic::spv_gep,
-                             {Ptr->getType(), BasePtr->getType()}, {Args});
-  }
-
   Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, unsigned ByteOffset) {
     if (ByteOffset == 0)
       return BasePtr;
@@ -377,11 +348,18 @@ class SPIRVLegalizePointerCastImpl {
                                  Value *OriginalPtr) {
     Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
     const DataLayout &DL = B.getDataLayout();
-    if (OriginalElemTy && OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
+    if (getResourceGetPointer(OriginalPtr) &&
+        OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
         AccessTy->isSingleValueType() && DL.getTypeStoreSize(AccessTy) > 1)
       return true;
 
     return false;
+  }
+
+  static bool canReinterpretType(Type *FromTy, Type *ToTy) {
+    return FromTy && ToTy &&
+           (FromTy->isIntOrIntVectorTy() || FromTy->isFPOrFPVectorTy()) &&
+           CastInst::isBitCastable(FromTy, ToTy);
   }
 
   bool tryReinterpretLoad(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
@@ -389,9 +367,6 @@ class SPIRVLegalizePointerCastImpl {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
-
-    if (Value *LogicalGEP = rebuildLogicalGEP(B, OriginalPtr, AccessTy))
-      OriginalPtr = LogicalGEP;
 
     Align Alignment = IllegalLoad->getAlign();
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
@@ -416,23 +391,31 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     }
 
-    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
-    LoadInst *LI = B.CreateLoad(AccessTy, OriginalPtr);
+    Type *OriginalTy = GR->findDeducedElementType(OriginalPtr);
+    if (!canReinterpretType(OriginalTy, AccessTy))
+      report_fatal_error(
+          "Cannot lower a pointer cast without equal-width numeric types for "
+          "Logical SPIR-V",
+          false);
+    LoadInst *LI = B.CreateLoad(OriginalTy, OriginalPtr);
     LI->setAlignment(Alignment);
-    buildAssignType(B, AccessTy, LI);
-    GR->replaceAllUsesWith(IllegalLoad, LI, /* DeleteOld= */ true);
+    LI->setVolatile(IllegalLoad->isVolatile());
+    LI->setAtomic(IllegalLoad->getOrdering(), IllegalLoad->getSyncScopeID());
+    buildAssignType(B, OriginalTy, LI);
+    Value *Loaded =
+        B.CreateIntrinsic(Intrinsic::spv_bitcast, {AccessTy, OriginalTy}, {LI});
+    buildAssignType(B, AccessTy, Loaded);
+    GR->replaceAllUsesWith(IllegalLoad, Loaded, /* DeleteOld= */ true);
     DeadInstructions.push_back(IllegalLoad);
     return true;
   }
 
   bool tryReinterpretStore(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
-                           Value *CastedPtr, Value *StoreSrc, Align Alignment) {
+                           Value *CastedPtr, Value *StoreSrc, Align Alignment,
+                           Instruction *IllegalStore) {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
-
-    if (Value *LogicalGEP = rebuildLogicalGEP(B, OriginalPtr, AccessTy))
-      OriginalPtr = LogicalGEP;
 
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       const DataLayout &DL = B.getDataLayout();
@@ -450,9 +433,21 @@ class SPIRVLegalizePointerCastImpl {
       return true;
     }
 
-    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
-    StoreInst *SI = B.CreateStore(StoreSrc, OriginalPtr);
+    Type *OriginalTy = GR->findDeducedElementType(OriginalPtr);
+    if (!canReinterpretType(AccessTy, OriginalTy))
+      report_fatal_error(
+          "Cannot lower a pointer cast without equal-width numeric types for "
+          "Logical SPIR-V",
+          false);
+    Value *Stored = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                      {OriginalTy, AccessTy}, {StoreSrc});
+    buildAssignType(B, OriginalTy, Stored);
+    StoreInst *SI = B.CreateStore(Stored, OriginalPtr);
     SI->setAlignment(Alignment);
+    if (auto *OldSI = dyn_cast<StoreInst>(IllegalStore)) {
+      SI->setVolatile(OldSI->isVolatile());
+      SI->setAtomic(OldSI->getOrdering(), OldSI->getSyncScopeID());
+    }
     return true;
   }
 
@@ -765,8 +760,8 @@ class SPIRVLegalizePointerCastImpl {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
     if (!ResultOpt) {
-      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src,
-                              Alignment))
+      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src, Alignment,
+                              IllegalStore))
         return;
       llvm_unreachable("Failed to store to aggregate: "
                        "Could not find compatible memory layout.");

@@ -373,12 +373,124 @@ define void @workgroupStore() {
 ; CHECK-LABEL: define void @workgroupStore(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(
-; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i64 0, i64 256)
+; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 256)
 ; CHECK: call void @llvm.spv.assign.ptr.type.p3(
 ; CHECK-SAME: ptr addrspace(3) %[[PTR]], metadata i32 poison, i32 3)
 ; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
 entry:
   store i32 42, ptr addrspace(3) getelementptr inbounds
     (i8, ptr addrspace(3) @WorkgroupValues, i64 1024), align 4
+  ret void
+}
+
+@WorkgroupNested = internal addrspace(3) global [2 x [4 x i32]]
+  zeroinitializer, align 4
+@WorkgroupStruct = internal addrspace(3) global { i32, [4 x i32] }
+  zeroinitializer, align 4
+@WorkgroupVectors = internal addrspace(3) global [2 x <4 x i32>]
+  zeroinitializer, align 16
+@WorkgroupFloat = internal addrspace(3) global float 0.0, align 4
+
+; Offset 16 reaches an array. The scalar access needs one more zero index.
+define i32 @workgroupNested() {
+; CHECK-LABEL: define i32 @workgroupNested(
+; CHECK: %[[ARRAY:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupNested, i32 0, i64 1)
+; CHECK: %[[STORE:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
+; CHECK: store i32 42, ptr addrspace(3) %[[STORE]], align 4
+; CHECK: %[[LOAD:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 false, ptr addrspace(3) %[[ARRAY]], i32 0, i32 0)
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[LOAD]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupNested, i64 16), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupNested, i64 16), align 4
+  ret i32 %value
+}
+
+define i32 @workgroupStruct() {
+; CHECK-LABEL: define i32 @workgroupStruct(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupStruct, i32 0, i64 1, i64 1)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupStruct, i64 8), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupStruct, i64 8), align 4
+  ret i32 %value
+}
+
+define i32 @workgroupVectorElement() {
+; CHECK-LABEL: define i32 @workgroupVectorElement(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupVectors, i32 0, i64 1, i64 1)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) %[[PTR]], align 4
+; CHECK: ret i32 %[[VALUE]]
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupVectors, i64 20), align 4
+  %value = load i32, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupVectors, i64 20), align 4
+  ret i32 %value
+}
+
+define float @workgroupReinterpret(float %value) {
+; CHECK-LABEL: define float @workgroupReinterpret(
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 1)
+; CHECK: %[[STORED:.*]] = call i32 @llvm.spv.bitcast.i32.f32(float %value)
+; CHECK: store atomic volatile i32 %[[STORED]], ptr addrspace(3) %[[PTR]] release, align 4
+; CHECK: %[[LOADED:.*]] = load atomic volatile i32, ptr addrspace(3) %[[PTR]] acquire, align 4
+; CHECK: %[[RESULT:.*]] = call float @llvm.spv.bitcast.f32.i32(i32 %[[LOADED]])
+; CHECK: ret float %[[RESULT]]
+entry:
+  store atomic volatile float %value, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupValues, i64 4) release, align 4
+  %result = load atomic volatile float, ptr addrspace(3) getelementptr
+    inbounds (i8, ptr addrspace(3) @WorkgroupValues, i64 4) acquire, align 4
+  ret float %result
+}
+
+define i32 @workgroupReinterpretScalar(i32 %value) {
+; CHECK-LABEL: define i32 @workgroupReinterpretScalar(
+; CHECK: %[[STORED:.*]] = call float @llvm.spv.bitcast.f32.i32(i32 %value)
+; CHECK: store float %[[STORED]], ptr addrspace(3) @WorkgroupFloat, align 4
+; CHECK: %[[LOADED:.*]] = load float, ptr addrspace(3) @WorkgroupFloat, align 4
+; CHECK: %[[RESULT:.*]] = call i32 @llvm.spv.bitcast.i32.f32(float %[[LOADED]])
+; CHECK: ret i32 %[[RESULT]]
+entry:
+  store i32 %value, ptr addrspace(3) @WorkgroupFloat, align 4
+  %result = load i32, ptr addrspace(3) @WorkgroupFloat, align 4
+  ret i32 %result
+}
+
+define void @workgroupDynamic(i64 %index) {
+; CHECK-LABEL: define void @workgroupDynamic(
+; CHECK: %[[OFFSET:.*]] = shl i64 %index, 2
+; CHECK: %[[INDEX:.*]] = udiv i64 %[[OFFSET]], 4
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) @WorkgroupValues, i32 0, i64 %[[INDEX]])
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+entry:
+  %offset = shl i64 %index, 2
+  %ptr = getelementptr inbounds i8, ptr addrspace(3) @WorkgroupValues,
+    i64 %offset
+  store i32 42, ptr addrspace(3) %ptr, align 4
+  ret void
+}
+
+define void @workgroupNestedExpression() {
+; CHECK-LABEL: define void @workgroupNestedExpression(
+; CHECK: %[[VALUE:.*]] = load i32, ptr addrspace(3) {{%.*}}, align 4
+; CHECK: call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(i1 true, ptr addrspace(3) {{%.*}}, i32 0, i64 1)
+; CHECK: store i32 %[[VALUE]], ptr addrspace(3) {{%.*}}, align 4
+entry:
+  %value = load i32, ptr addrspace(3) getelementptr inbounds inrange(0, 16)
+    ([2 x [4 x i32]], ptr addrspace(3) @WorkgroupNested, i64 0, i64 1),
+    align 4
+  store i32 %value, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) getelementptr inbounds inrange(0, 16)
+      ([2 x [4 x i32]], ptr addrspace(3) @WorkgroupNested, i64 0, i64 1),
+      i64 4), align 4
   ret void
 }
