@@ -70,6 +70,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -234,6 +235,43 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
                              const SIRegisterInfo &TRI) {
   return DstRC != &AMDGPU::VReg_1RegClass && TRI.isSGPRClass(SrcRC) &&
          TRI.hasVectorRegisters(DstRC);
+}
+
+// Return true if Reg is an input to inline asm with an SGPR register-class
+// constraint. INLINEASM encodes each operand group as a flag followed by its
+// register operands.
+static bool isSGPRConstrainedInlineAsmInput(Register Reg,
+                                            const MachineRegisterInfo &MRI,
+                                            const SIRegisterInfo &TRI) {
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
+    const MachineInstr &MI = *Use.getParent();
+    if (MI.getOpcode() != TargetOpcode::INLINEASM)
+      continue;
+
+    for (unsigned i = InlineAsm::MIOp_FirstOperand; i < MI.getNumOperands();) {
+      const MachineOperand &FlagMO = MI.getOperand(i);
+      if (!FlagMO.isImm())
+        break;
+
+      const InlineAsm::Flag Flag(FlagMO.getImm());
+      const unsigned NumRegs = Flag.getNumOperandRegisters();
+      unsigned RCID;
+      if (Flag.isRegUseKind() && NumRegs &&
+          Flag.hasRegClassConstraint(RCID) &&
+          TRI.isSGPRClass(TRI.getRegClass(RCID))) {
+        // Check every register in this input group; operands may span multiple
+        // registers, such as a 64-bit value.
+        for (unsigned j = 0; j < NumRegs; ++j) {
+          const MachineOperand &AsmUse = MI.getOperand(i + 1 + j);
+          if (AsmUse.isReg() && AsmUse.isUse() && AsmUse.getReg() == Reg)
+            return true;
+        }
+      }
+
+      i += 1 + NumRegs;
+    }
+  }
+  return false;
 }
 
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
@@ -1041,6 +1079,10 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
+  Register DstReg = Info->Copy->getOperand(0).getReg();
+  if (isSGPRConstrainedInlineAsmInput(DstReg, *MRI, *TRI))
+    return false;
+
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;
