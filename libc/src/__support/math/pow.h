@@ -135,7 +135,7 @@ namespace math {
 //   extreme exponent boundaries (|e_h| ~ 2^10 and |dx| ~ 2^-7) the error can
 //   drift up to ~7.8 ULPs (bounded theoretically by ~16 ULPs).
 
-LIBC_INLINE double pow(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR double pow(double x, double y) {
   using namespace pow_internal;
   using FPBits = fputil::FPBits<double>;
 

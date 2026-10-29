@@ -15,13 +15,16 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
-#if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
+#if (defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                    \
+     defined(LIBC_TARGET_CPU_HAS_SSE4_2)) &&                                   \
+    !defined(LIBC_USE_CONSTEXPR)
 #include "x86_64/nearest_integer.h"
 #elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                 \
        defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) &&                               \
-       defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
+       defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)) &&                             \
+    !defined(LIBC_USE_CONSTEXPR)
 #include "aarch64/nearest_integer.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU) && !defined(LIBC_USE_CONSTEXPR)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

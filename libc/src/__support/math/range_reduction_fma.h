@@ -33,7 +33,7 @@ LIBC_INLINE_VAR constexpr double THIRTYTWO_OVER_PI[5] = {
 
 // Return k and y, where
 //   k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
-LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
+LIBC_INLINE LIBC_CONSTEXPR int64_t small_range_reduction(double x, double &y) {
   double kd = fputil::nearest_integer(x * THIRTYTWO_OVER_PI[0]);
   y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[0], -kd);
   y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], y);
@@ -43,7 +43,8 @@ LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
 // Return k and y, where
 //   k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
 // This is used for sinf, cosf, sincosf.
-LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
+LIBC_INLINE LIBC_CONSTEXPR int64_t large_range_reduction(double x, int x_exp,
+                                                         double &y) {
   // 2^45 <= |x| < 2^99
   if (x_exp < 99) {
     // - When x < 2^99, the full exact product of x * THIRTYTWO_OVER_PI[0]

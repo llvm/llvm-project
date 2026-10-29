@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float acospif(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float acospif(float x) {
   using FPBits = fputil::FPBits<float>;
 
   FPBits xbits(x);

@@ -15,7 +15,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float sqrtf(float x) { return fputil::sqrt<float>(x); }
+LIBC_INLINE LIBC_CONSTEXPR float sqrtf(float x) {
+  return fputil::sqrt<float>(x);
+}
 
 } // namespace math
 

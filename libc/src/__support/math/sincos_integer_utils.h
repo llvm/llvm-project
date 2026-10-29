@@ -86,8 +86,8 @@ LIBC_INLINE_VAR constexpr Frac128 PI_OVER_2_M1({0x898c'c517'01b8'39a2,
 //   x_frac: |x - k * pi/2|
 // Return:
 //   x_frac_is_neg.
-LIBC_INLINE bool trig_range_reduction(uint64_t x_u, unsigned x_e, unsigned &k,
-                                      Frac128 &x_frac) {
+LIBC_INLINE LIBC_CONSTEXPR bool
+trig_range_reduction(uint64_t x_u, unsigned x_e, unsigned &k, Frac128 &x_frac) {
   using FPBits = typename fputil::FPBits<double>;
   bool x_frac_is_neg = false;
   // We do multiplication x * (2/pi)
@@ -221,8 +221,8 @@ LIBC_INLINE_VAR constexpr Frac128 COS_COEFF[] = {
 };
 
 // Compute sin(x) with relative errors ~ 2^-54.
-LIBC_INLINE double sin_eval(const Frac128 &x_frac, unsigned k, bool is_neg,
-                            bool x_frac_is_neg) {
+LIBC_INLINE constexpr double sin_eval(const Frac128 &x_frac, unsigned k,
+                                      bool is_neg, bool x_frac_is_neg) {
   // cos when k = 1, 3
   bool is_cos = ((k & 1) == 1);
   // flip sign when k = 2, 3

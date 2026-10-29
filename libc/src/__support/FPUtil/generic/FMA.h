@@ -18,7 +18,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -29,10 +29,10 @@ namespace fputil {
 namespace generic {
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z);
 
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
@@ -90,7 +90,8 @@ namespace internal {
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>,
+                                       bool>
 shift_mantissa(int shift_length, T &mant) {
   if (shift_length >= cpp::numeric_limits<T>::digits) {
     mant = 0;
@@ -105,10 +106,10 @@ shift_mantissa(int shift_length, T &mant) {
 } // namespace internal
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;

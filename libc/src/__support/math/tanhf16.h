@@ -32,7 +32,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float16 tanhf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 tanhf16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);

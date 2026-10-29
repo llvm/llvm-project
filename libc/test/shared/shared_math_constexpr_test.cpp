@@ -80,6 +80,7 @@ static_assert(0.0 == [] {
 static_assert(0.0 == LIBC_NAMESPACE::shared::ldexp(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbln(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbn(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::hypot(0.0, 0.0));
 static_assert(0 == [] {
   double setpayload_x = 0.0;
   return LIBC_NAMESPACE::shared::setpayload(&setpayload_x, 0.0);

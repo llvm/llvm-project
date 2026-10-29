@@ -32,7 +32,8 @@
 #undef LIBC_MATH_USE_SYSTEM_FENV
 #endif // LIBC_FULL_BUILD
 
-#if defined(LIBC_MATH_USE_SYSTEM_FENV) && !defined(LIBC_MATH_HAS_NO_EXCEPT)
+#if defined(LIBC_MATH_USE_SYSTEM_FENV) && !defined(LIBC_MATH_HAS_NO_EXCEPT) && \
+    !defined(LIBC_USE_CONSTEXPR)
 
 // Simply call the system libc fenv.h functions, only for those that are used in
 // math function implementations.
@@ -101,7 +102,8 @@ LIBC_INLINE int set_env(const fenv_t *env) {
 
 #else // !LIBC_MATH_USE_SYSTEM_FENV
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP) &&               \
+    !defined(LIBC_USE_CONSTEXPR)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else
@@ -112,14 +114,16 @@ LIBC_INLINE int set_env(const fenv_t *env) {
 // the dummy implementations below. Once a proper x86_64 darwin fenv is set up,
 // the apple condition here should be removed.
 // TODO: fully support fenv for MSVC.
-#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
+#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__) &&               \
+    !defined(LIBC_USE_CONSTEXPR)
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP) &&                 \
-    !defined(LIBC_COMPILER_IS_MSVC)
+    !defined(LIBC_COMPILER_IS_MSVC) && !defined(LIBC_USE_CONSTEXPR)
 #include "arm/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen) &&       \
+    !defined(LIBC_USE_CONSTEXPR)
 #include "riscv/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON) && !defined(LIBC_USE_CONSTEXPR)
 #include "hexagon/FEnvImpl.h"
 #else
 
@@ -142,7 +146,7 @@ LIBC_INLINE int enable_except(int) { return 0; }
 
 LIBC_INLINE int disable_except(int) { return 0; }
 
-LIBC_INLINE int get_round() { return FE_TONEAREST; }
+LIBC_INLINE constexpr int get_round() { return FE_TONEAREST; }
 
 LIBC_INLINE int set_round(int rounding_mode) {
   return (rounding_mode == FE_TONEAREST) ? 0 : 1;
