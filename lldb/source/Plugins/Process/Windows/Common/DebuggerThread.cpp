@@ -291,16 +291,20 @@ void DebuggerThread::DebugLoop() {
   LLDB_LOG_VERBOSE(log, "Entering WaitForDebugEventEx loop");
   while (should_debug) {
     bool draining = !m_is_shutting_down && m_debug_delegate->HasDeferredStop();
+
     if (draining && drained_events >= max_drained_events) {
       LLDB_LOG(log, "reporting the stop after taking {0} queued debug events",
                drained_events);
       ReportDeferredStopAndWaitForResume();
       draining = false;
     }
+
     if (!draining)
       drained_events = 0;
+
     LLDB_LOG_VERBOSE(log, "Calling WaitForDebugEvent");
     BOOL wait_result = g_wait_for_debug_event(&dbe, draining ? 0 : INFINITE);
+
     if (draining) {
       if (!wait_result) {
         ReportDeferredStopAndWaitForResume();
@@ -308,6 +312,7 @@ void DebuggerThread::DebugLoop() {
       }
       ++drained_events;
     }
+
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
       bool shutting_down = m_is_shutting_down;

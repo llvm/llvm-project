@@ -201,8 +201,9 @@ private:
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
 
-  /// Set by DeferStop(), cleared once the stop is reported or the process
-  /// exits.
+  /// Whether the process is stopped but the stop has not been reported to the
+  /// delegate yet. Set by DeferStop(), cleared once the stop is reported or the
+  /// process exits.
   bool m_deferred_stop = false;
 
   /// The thread whose debug event started the deferred stop. Reported as the
