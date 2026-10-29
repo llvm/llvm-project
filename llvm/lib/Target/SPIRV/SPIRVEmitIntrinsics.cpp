@@ -1787,6 +1787,8 @@ static bool isAggregateValueIdInstr(const Instruction &I) {
 // arm matches the result once it is mutated to a value-id.
 void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
                                                            IRBuilder<> &B) {
+  bool HasPoisonExt = TM.getSubtargetImpl(*CurrF)->canUseExtension(
+      SPIRV::Extension::SPV_KHR_poison_freeze);
   auto *Phi = dyn_cast<PHINode>(I);
   for (Use &U : I->operands()) {
     Value *Op = U.get();
@@ -1803,6 +1805,15 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
     for (unsigned Idx = 0, E = AggrTy->getNumElements(); Idx != E; ++Idx) {
       Value *Field = B.CreateExtractValue(Op, Idx);
       Composite = B.CreateInsertValue(Composite, Field, Idx);
+      // Start from a typed placeholder, as preprocessUndefsAndPoisons would
+      // have: a bare poison becomes the uniqued i32 undef in
+      // visitInsertValueInst and merges with any genuine i32 undef.
+      if (auto *First = dyn_cast<InsertValueInst>(Composite); First && !Idx) {
+        B.SetInsertPoint(First);
+        First->setOperand(0, lowerUndefOrPoison(First->getAggregateOperand(), B,
+                                                HasPoisonExt));
+        B.SetInsertPoint(First->getNextNode());
+      }
     }
     U.set(Composite);
   }
