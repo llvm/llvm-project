@@ -2448,61 +2448,61 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NOHSA-NEXT:    s_mov_b32 s10, 0
 ; SI-NOHSA-NEXT:    s_mov_b32 s11, s3
-; SI-NOHSA-NEXT:    v_lshlrev_b32_e32 v12, 6, v0
+; SI-NOHSA-NEXT:    v_lshlrev_b32_e32 v28, 6, v0
 ; SI-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NOHSA-NEXT:    s_mov_b64 s[8:9], s[6:7]
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v13, 0
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[0:3], v[12:13], s[8:11], 0 addr64 offset:48
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[4:7], v[12:13], s[8:11], 0 addr64 offset:32
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], v[12:13], s[8:11], 0 addr64 offset:16
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[12:15], v[12:13], s[8:11], 0 addr64
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v29, 0
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[0:3], v[28:29], s[8:11], 0 addr64 offset:32
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[4:7], v[28:29], s[8:11], 0 addr64 offset:48
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], v[28:29], s[8:11], 0 addr64 offset:16
 ; SI-NOHSA-NEXT:    s_mov_b32 s2, -1
 ; SI-NOHSA-NEXT:    s_mov_b32 s0, s4
 ; SI-NOHSA-NEXT:    s_mov_b32 s1, s5
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(3)
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v1
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v0
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v20, v0
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v22, v1
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v3
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v2
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v16, v2
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v18, v3
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(2)
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v7
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v6
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v5
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v4
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v24, v4
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v26, v5
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v0, v6
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v2, v7
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v3
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v2
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(1)
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v11
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v10
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v9
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v8
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v28, v8
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v30, v9
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v4, v10
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v6, v11
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v7
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v6
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v5
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v4
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v20, v4
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v22, v5
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v16, v6
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v18, v7
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v1
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v0
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v4, v0
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v6, v1
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v12, v2
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v14, v3
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v15
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v14
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v35, 31, v13
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v33, 31, v12
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v32, v12
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v34, v13
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v8, v14
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v10, v15
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v11
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v10
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v9
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v8
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v24, v8
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v26, v9
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v0, v10
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v2, v11
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], v[28:29], s[8:11], 0 addr64
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(0)
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v11
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v10
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v35, 31, v9
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v33, 31, v8
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v32, v8
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v34, v9
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v28, v10
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v30, v11
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:96
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:112
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:64
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:80
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:32
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:48
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:64
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:80
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:32
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[32:35], off, s[0:3], 0
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:16
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:16
 ; SI-NOHSA-NEXT:    s_endpgm
 ;
 ; GCNX3-HSA-LABEL: global_sextload_v16i32_to_v16i64:
@@ -3245,302 +3245,300 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCNX3-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v24, vcc, s2, v0
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v1, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[24:25]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v0, vcc, 0x70, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v0, vcc, 0x60, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[0:1]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v0, vcc, 0x50, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[16:19], v[0:1]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v0, vcc, 16, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v20, vcc, 64, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v26, vcc, 48, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v27, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v32, vcc, 32, v24
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v25, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[24:27], v[26:27]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v20, vcc, s2, v0
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[20:21]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v4, vcc, 0x70, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v8, vcc, 0x60, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v12, vcc, 0x50, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v16, vcc, 64, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v22, vcc, 48, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v23, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v32, vcc, 32, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v28, vcc, 16, v20
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v21, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[20:23], v[22:23]
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[32:35], v[32:33]
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 16
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v37, s1
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v36, s0
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v5
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v28, v4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v30, v5
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v1
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v1
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s1
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xe0
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v3
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v3
+; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(8)
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v5
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v5
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xe0
-; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[36:37], v[28:31]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v37, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v36, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xf0
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v7
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v6
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v28, v6
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v30, v7
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[28:31]
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(8)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v9
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v29, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v28, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xc0
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v7
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v6
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v6
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v7
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v8
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v8
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v9
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[36:37], v[4:7]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v31, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v30, s2
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xd0
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(9)
 ; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v11
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v9
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v8
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v8
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v9
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, s2
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xd0
+; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v10
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xa0
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v10
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v11
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[28:29], v[4:7]
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(9)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v15
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v13
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v12
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v12
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v13
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[30:31], v[4:7]
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v14
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(10)
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v13
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xa0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v14
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v15
-; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[8:11]
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(10)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v17
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xb0
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v12
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v12
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v13
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v16
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v16
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v17
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v13, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x80
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v19
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v18
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v18
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v19
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v15
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v14
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v14
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v15
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v13, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x90
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(11)
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v17
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v16
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v16
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v17
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(10)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v21
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v20
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v20
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v21
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v17, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x60
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v23
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v22
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v22
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v23
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v19
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v18
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v18
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v19
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v17, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x70
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(11)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v25
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v24
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v24
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v25
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v21, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v20, s2
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 64
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v27
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v26
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v26
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v27
-; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[20:21], v[16:19]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v21, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v20, s2
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x50
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(12)
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v19, 31, v33
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v17, 31, v32
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v32
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v33
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v21
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v20
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v20
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v21
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, s2
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 64
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v23
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v22
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v22
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v23
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[20:21], v[16:19]
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v1
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v17, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, s2
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x50
+; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v13, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, s2
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 32
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(12)
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v33
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v32
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v32
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v33
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v11, 31, v35
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v34
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v34
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v35
 ; GCNX3-HSA-NEXT:    s_add_u32 s0, s0, 48
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v9, 31, v0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, v0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v10, v1
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v29
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v28
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v28
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v29
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v9, s3
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v8, s2
 ; GCNX3-HSA-NEXT:    s_addc_u32 s1, s1, 0
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v3
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v2
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v35
-; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v34
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v12, v34
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v14, v35
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, v2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, v3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s1
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v31
+; GCNX3-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v30
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, v30
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, v31
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s1
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s0
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCNX3-HSA-NEXT:    s_endpgm
 ;
 ; GCNX3-NOHSA-LABEL: global_sextload_v32i32_to_v32i64:
 ; GCNX3-NOHSA:       ; %bb.0:
-; GCNX3-NOHSA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; GCNX3-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCNX3-NOHSA-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s2, -1
 ; GCNX3-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v1, s7
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v32, vcc, s6, v0
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v1, vcc
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[32:33]
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v4, vcc, 0x70, v32
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v33, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v12, vcc, 0x60, v32
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v33, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v16, vcc, 0x50, v32
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v1, s3
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v28, vcc, s2, v0
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v1, vcc
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[28:29]
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v4, vcc, 0x70, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v29, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v8, vcc, 0x60, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v29, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v12, vcc, 64, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v29, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v16, vcc, 0x50, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v29, vcc
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v33, vcc
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v30, vcc, 48, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v31, vcc, 0, v29, vcc
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v20, vcc, 64, v32
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v33, vcc
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v34, vcc, 48, v32
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v35, vcc, 0, v33, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e64 v8, s[0:1], 16, v32
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v32, vcc, 32, v32
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e64 v9, s[0:1], 0, v33, s[0:1]
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v33, vcc
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s0, s4
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s1, s5
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(5)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v3
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v2
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v1
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v0
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v28, v0
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v30, v1
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v2
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v3
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[34:35]
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v32, vcc, 32, v28
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v29, vcc
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s2, -1
+; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(4)
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v0
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v0
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v0, vcc, 16, v28
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v1
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v1
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v29, vcc
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v3
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v2
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v20, v2
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v22, v3
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[28:31], v[30:31]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[32:35], v[32:33]
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:16
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:16
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(8)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v5
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v7
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v6
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v4
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v28, v4
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v30, v5
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v6
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v7
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:224
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:240
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v5
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v7
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v6
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v4
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v4
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v5
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v20, v6
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v22, v7
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:224
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:240
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(9)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v31, 31, v13
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v15
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v14
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v29, 31, v12
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v28, v12
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v30, v13
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v14
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v15
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:192
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:208
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v11
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v10
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v9
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v8
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v20, v8
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v22, v9
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v11
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v10
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:192
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:208
+; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(9)
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v23, 31, v17
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v19
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v18
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v21, 31, v16
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v20, v16
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v22, v17
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v19
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v8, 31, v13
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v18
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:160
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:176
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(10)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v19
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v18
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v27, 31, v17
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v25, 31, v16
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v24, v16
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v26, v17
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v18
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v19
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:160
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:176
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(10)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v6, 31, v11
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v21
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v20
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v20
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v21
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:128
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v4, 31, v10
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v23
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v22
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v22
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v23
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:144
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v18, 31, v9
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v16, 31, v8
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v17, v9
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v5, v11
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v10, 31, v3
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v6, 31, v12
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v5, v12
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v7, v13
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:128
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v14
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v15
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v14
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v15
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:144
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v8, 31, v2
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(11)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v1
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v0
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v0
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v1
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:96
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(11)
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v34
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v3
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v2
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v2
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v3
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v35
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:112
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v0, v34
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v33
-; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v32
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v12, v32
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v14, v33
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v2, v35
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:64
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:80
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v15, v8
-; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v3, v10
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:32
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[3:6], off, s[0:3], 0 offset:48
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v29
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v28
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v28
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v29
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:96
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v14, 31, v1
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v31
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v30
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v30
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v31
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:112
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v12, 31, v0
+; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(12)
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v33
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v32
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v32
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v33
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:64
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v11, v0
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v7, 31, v35
+; GCNX3-NOHSA-NEXT:    v_ashrrev_i32_e32 v5, 31, v34
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v4, v34
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v6, v35
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:80
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v13, v1
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v7, v2
+; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v9, v3
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[11:14], off, s[0:3], 0 offset:32
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0 offset:48
 ; GCNX3-NOHSA-NEXT:    s_endpgm
 ;
 ; EG-LABEL: global_sextload_v32i32_to_v32i64:
@@ -4007,152 +4005,153 @@ define amdgpu_kernel void @global_zextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCNX3-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCNX3-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v28, vcc, s2, v0
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v1, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[28:29]
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v24, vcc, s2, v0
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v1, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[24:25]
 ; GCNX3-HSA-NEXT:    s_movk_i32 s2, 0x70
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v4, vcc, s2, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v29, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v4, vcc, s2, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v25, vcc
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GCNX3-HSA-NEXT:    s_movk_i32 s2, 0x60
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v8, vcc, s2, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v29, vcc
-; GCNX3-HSA-NEXT:    s_movk_i32 s2, 0x50
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v8, vcc, s2, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v25, vcc
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v12, vcc, s2, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v29, vcc
+; GCNX3-HSA-NEXT:    s_movk_i32 s2, 0x50
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v12, vcc, s2, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v25, vcc
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v16, vcc, 64, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v29, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v20, vcc, 48, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v29, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v20, vcc, 64, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v25, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v26, vcc, 16, v24
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v30, vcc, 16, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v31, vcc, 0, v29, vcc
-; GCNX3-HSA-NEXT:    v_add_i32_e32 v32, vcc, 32, v28
-; GCNX3-HSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v29, vcc
-; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[28:31], v[30:31]
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v27, vcc, 0, v25, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v32, vcc, 32, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v33, vcc, 0, v25, vcc
+; GCNX3-HSA-NEXT:    v_add_i32_e32 v28, vcc, 48, v24
+; GCNX3-HSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v25, vcc
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
 ; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[32:35], v[32:33]
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v25, 0
+; GCNX3-HSA-NEXT:    flat_load_dwordx4 v[24:27], v[26:27]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v17, 0
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 16
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v27, v25
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v19, v17
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v1
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v1
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s0
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s1
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xe0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v3
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, s2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v3, s3
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xf0
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(8)
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v4
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v5
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xc0
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(8)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v4
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v5
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[24:27]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v3, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xd0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v6
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v7
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v5, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xa0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v6
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v7
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v7, s3
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v6, s2
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
-; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xb0
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(9)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v8
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v9
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[24:27]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v8
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v9
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[16:19]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v2, s2
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v3, s3
+; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0xb0
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v10
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v11
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v10
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v11
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(10)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v12
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v13
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v12
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v13
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x80
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[6:7], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[16:19]
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v14
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v15
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v14
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v15
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x90
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(11)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v16
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v17
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v20
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v21
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x60
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v18
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v19
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v22
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v23
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x70
 ; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(12)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v20
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v21
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v28
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v29
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 64
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v22
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v23
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v30
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v31
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 0x50
-; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(12)
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v32
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v33
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(13)
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v32
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v33
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_add_u32 s2, s0, 32
 ; GCNX3-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v34
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v35
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v34
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v35
 ; GCNX3-HSA-NEXT:    s_add_u32 s0, s0, 48
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s2
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v28
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v29
+; GCNX3-HSA-NEXT:    s_waitcnt vmcnt(14)
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v24
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v25
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCNX3-HSA-NEXT:    s_addc_u32 s1, s1, 0
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v0, s0
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v24, v30
-; GCNX3-HSA-NEXT:    v_mov_b32_e32 v26, v31
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v16, v26
+; GCNX3-HSA-NEXT:    v_mov_b32_e32 v18, v27
 ; GCNX3-HSA-NEXT:    v_mov_b32_e32 v1, s1
-; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
+; GCNX3-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; GCNX3-HSA-NEXT:    s_endpgm
 ;
 ; GCNX3-NOHSA-LABEL: global_zextload_v32i32_to_v32i64:
@@ -4484,10 +4483,10 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
 ; SI-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NOHSA-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v29, 0
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[0:3], v[28:29], s[8:11], 0 addr64 offset:96
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[4:7], v[28:29], s[8:11], 0 addr64 offset:112
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], v[28:29], s[8:11], 0 addr64 offset:64
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[12:15], v[28:29], s[8:11], 0 addr64 offset:80
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[0:3], v[28:29], s[8:11], 0 addr64 offset:112
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[4:7], v[28:29], s[8:11], 0 addr64 offset:96
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], v[28:29], s[8:11], 0 addr64 offset:80
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[12:15], v[28:29], s[8:11], 0 addr64 offset:64
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[16:19], v[28:29], s[8:11], 0 addr64 offset:32
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[20:23], v[28:29], s[8:11], 0 addr64 offset:48
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[24:27], v[28:29], s[8:11], 0 addr64
@@ -4495,14 +4494,12 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
 ; SI-NOHSA-NEXT:    s_mov_b32 s6, -1
 ; SI-NOHSA-NEXT:    s_mov_b32 s4, s0
 ; SI-NOHSA-NEXT:    s_mov_b32 s5, s1
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0 offset:96
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:112
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0 offset:64
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0 offset:80
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(6)
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:96
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0 offset:112
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(6)
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0 offset:64
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0 offset:80
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0 offset:32
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
@@ -4602,52 +4599,50 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
 ; GCNX3-NOHSA:       ; %bb.0:
 ; GCNX3-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCNX3-NOHSA-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s7, 0xf000
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s6, -1
 ; GCNX3-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCNX3-NOHSA-NEXT:    v_mov_b32_e32 v1, s3
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v28, vcc, 16, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v12, vcc, 48, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v8, vcc, 32, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    s_movk_i32 s2, 0x50
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v16, vcc, s2, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v6, vcc, 64, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v7, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    s_movk_i32 s2, 0x70
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v20, vcc, s2, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v24, vcc, 0x60, v4
-; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v5, vcc
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[4:7], v[6:7]
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v20, vcc, s2, v0
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v28, vcc, 16, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v29, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v4, vcc, 48, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v8, vcc, 32, v20
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s4, s0
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    s_movk_i32 s0, 0x50
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v12, vcc, s0, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v16, vcc, 64, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v17, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    s_movk_i32 s0, 0x70
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v22, vcc, s0, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v23, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    v_add_u32_e32 v24, vcc, 0x60, v20
+; GCNX3-NOHSA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v21, vcc
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[0:3], v[20:21]
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
-; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
+; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[20:23], v[22:23]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
 ; GCNX3-NOHSA-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
-; GCNX3-NOHSA-NEXT:    s_mov_b32 s2, -1
+; GCNX3-NOHSA-NEXT:    s_mov_b32 s5, s1
+; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(3)
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0 offset:64
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0 offset:80
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0 offset:32
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:48
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[4:7], 0 offset:112
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:64
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[4:7], 0 offset:96
 ; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:80
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:112
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:96
-; GCNX3-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:16
+; GCNX3-NOHSA-NEXT:    buffer_store_dwordx4 v[28:31], off, s[4:7], 0 offset:16
 ; GCNX3-NOHSA-NEXT:    s_endpgm
 ;
 ; EG-LABEL: global_load_v32i32:

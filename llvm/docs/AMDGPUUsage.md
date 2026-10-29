@@ -3917,11 +3917,10 @@ The AMDGPU backend uses the following ELF header:
       See {ref}`amdgpu-generic-processor-versioning`
   :::
 
-  For code object V4 and later, processors with hardwired-on XNACK, such as
-  `gfx1250`, use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4` (zero) because
-  they do not support mode selection. Their XNACK behavior is implied by
-  `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is disabled on
-  these processors.
+  For code object V4 and later use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
+  (zero) because they do not support mode selection. Their XNACK behavior is
+  implied by `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is
+  disabled on these processors.
 
   For code object V4 and later, processors with hardwired-on SRAMECC use
   `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4` (zero) because they do not

@@ -193,6 +193,7 @@ else()
       libc.src.__support.math.fmaxf
       libc.src.__support.math.fmaxf128
       libc.src.__support.math.fmaxf16
+      libc.src.__support.math.fmaxf80
       libc.src.__support.math.fmaximum
       libc.src.__support.math.fmaximum_mag
       libc.src.__support.math.fmaximum_mag_num
@@ -216,6 +217,7 @@ else()
       libc.src.__support.math.fmaximumf
       libc.src.__support.math.fmaximumf128
       libc.src.__support.math.fmaximumf16
+      libc.src.__support.math.fmaximumf80
       libc.src.__support.math.fmaximuml
       libc.src.__support.math.fmaxl
       libc.src.__support.math.fmin
@@ -223,6 +225,7 @@ else()
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
@@ -246,6 +249,7 @@ else()
       libc.src.__support.math.fminimumf
       libc.src.__support.math.fminimumf128
       libc.src.__support.math.fminimumf16
+      libc.src.__support.math.fminimumf80
       libc.src.__support.math.fminimuml
       libc.src.__support.math.fminl
       libc.src.__support.math.fmod
@@ -579,6 +583,9 @@ else()
       libc.src.__support.math.fdiv
       libc.src.__support.math.fdivf128
       libc.src.__support.math.fdivl
+      libc.src.__support.math.ffma
+      libc.src.__support.math.ffmal
+      libc.src.__support.math.ffmaf128
       libc.src.__support.math.floor
       libc.src.__support.math.floorbf16
       libc.src.__support.math.floorf
@@ -615,12 +622,14 @@ else()
       libc.src.__support.math.fmaximumf
       libc.src.__support.math.fmaximumf128
       libc.src.__support.math.fmaximumf16
+      libc.src.__support.math.fmaximumf80
       libc.src.__support.math.fmaximuml
       libc.src.__support.math.fmin
       libc.src.__support.math.fminbf16
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
@@ -644,6 +653,7 @@ else()
       libc.src.__support.math.fminimumf
       libc.src.__support.math.fminimumf128
       libc.src.__support.math.fminimumf16
+      libc.src.__support.math.fminimumf80
       libc.src.__support.math.fminimuml
       libc.src.__support.math.fminl
       libc.src.__support.math.fmod
