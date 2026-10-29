@@ -417,6 +417,7 @@ inline DeviceSetsVec allDevicesSeparatelyWithHost() {
 }
 
 // Vectors of devices that are compatible with one another
+// and can be grouped into one offload context
 inline DeviceSetsVec groupedCompatibleDevices() {
   using KeyT = std::pair<ol_platform_handle_t, uint32_t>;
   std::vector<std::pair<KeyT, DevicesVec>> Groups;
