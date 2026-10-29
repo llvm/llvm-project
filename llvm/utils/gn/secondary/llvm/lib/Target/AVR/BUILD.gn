@@ -37,6 +37,7 @@ static_library("LLVMAVRCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "AVRAsmPrinter.cpp",
+    "AVRCodeGenPassBuilder.cpp",
     "AVRExpandPseudoInsts.cpp",
     "AVRFrameLowering.cpp",
     "AVRISelDAGToDAG.cpp",
