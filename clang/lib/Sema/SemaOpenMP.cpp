@@ -3021,6 +3021,13 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
         PrivateCopies.push_back(nullptr);
         continue;
       }
+      // Data members are captured, and get private copies, on instantiation.
+      if (isa<MemberExpr>(DE->IgnoreParens())) {
+        assert(SemaRef.CurContext->isDependentContext() &&
+               "uncaptured data member in a non-dependent context");
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
       auto *DRE = cast<DeclRefExpr>(DE->IgnoreParens());
       auto *D = DRE->getDecl();
       if (auto *BD = dyn_cast<BindingDecl>(D)) {

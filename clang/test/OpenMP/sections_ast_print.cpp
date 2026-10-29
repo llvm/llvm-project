@@ -30,6 +30,26 @@ T tmain(T argc) {
   return T();
 }
 
+struct S {
+  int a;
+  template <class T> void foo();
+};
+
+template <class T> void S::foo() {
+#pragma omp parallel
+#pragma omp sections firstprivate(a) lastprivate(this->a)
+  {
+    a = 0;
+  }
+}
+// CHECK: template <class T> void S::foo() {
+// CHECK-NEXT: #pragma omp parallel
+// CHECK-NEXT: #pragma omp sections firstprivate(this->a) lastprivate(this->a){{$}}
+// CHECK-NEXT: {
+// CHECK-NEXT: this->a = 0;
+// CHECK-NEXT: }
+// CHECK-NEXT: }
+
 int main(int argc, char **argv) {
 // CHECK: int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
