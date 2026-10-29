@@ -5100,6 +5100,18 @@ defm data_sections : BoolFOption<"data-sections",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each data in its own section">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
+def fclang_bss_section_EQ : Joined<["-"], "fclang-bss-section=">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<name>">,
+  HelpText<"Place zero-initialized data in section <name>, as if the "
+           "translation unit started with '#pragma clang section bss=\"<name>\"'">,
+  MarshallingInfoString<LangOpts<"ClangBSSSection">>;
+def fclang_data_section_EQ : Joined<["-"], "fclang-data-section=">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<name>">,
+  HelpText<"Place initialized data in section <name>, as if the translation "
+           "unit started with '#pragma clang section data=\"<name>\"'">,
+  MarshallingInfoString<LangOpts<"ClangDataSection">>;
 defm experimental_call_graph_section
     : BoolFOption<"experimental-call-graph-section",
                   CodeGenOpts<"CallGraphSection">, DefaultFalse,

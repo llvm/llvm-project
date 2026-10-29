@@ -6675,6 +6675,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_unique_section_names);
   Args.addOptInFlag(CmdArgs, options::OPT_fseparate_named_sections,
                     options::OPT_fno_separate_named_sections);
+  // These act as if a '#pragma clang section bss/data=' appeared at the start
+  // of the translation unit.
+  Args.AddLastArg(CmdArgs, options::OPT_fclang_bss_section_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fclang_data_section_EQ);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,

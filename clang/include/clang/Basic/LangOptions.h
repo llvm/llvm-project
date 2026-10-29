@@ -532,6 +532,16 @@ public:
   /// If none is specified, abort (GCC-compatible behaviour).
   std::string OverflowHandler;
 
+  /// The section name to place zero-initialized data in, as specified by
+  /// -fclang-bss-section=. Acts like a `#pragma clang section bss=` at the
+  /// start of the translation unit.
+  std::string ClangBSSSection;
+
+  /// The section name to place initialized data in, as specified by
+  /// -fclang-data-section=. Acts like a `#pragma clang section data=` at the
+  /// start of the translation unit.
+  std::string ClangDataSection;
+
   /// The module currently being compiled as specified by -fmodule-name.
   std::string ModuleName;
 

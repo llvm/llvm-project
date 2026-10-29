@@ -3800,6 +3800,9 @@ def err_attribute_section_invalid_for_target : Error<
   "argument to %select{'code_seg'|'section'}1 attribute is not valid for this target: %0">;
 def err_pragma_section_invalid_for_target : Error<
   "argument to #pragma section is not valid for this target: %0">;
+def err_clang_section_option_invalid_for_target : Error<
+  "argument to '-fclang-%select{bss|data}0-section=' is not valid for this "
+  "target: %1">;
 def warn_attribute_section_drectve : Warning<
   "#pragma %0(\".drectve\") has undefined behavior, "
   "use #pragma comment(linker, ...) instead">, InGroup<MicrosoftDrectveSection>;

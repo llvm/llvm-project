@@ -478,6 +478,35 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
   CSec->PragmaLocation = PragmaLoc;
 }
 
+void Sema::InitClangSectionsFromLangOpts() {
+  // 0 -> bss, 1 -> data; matches err_clang_section_option_invalid_for_target.
+  auto Init = [&](StringRef SecName, unsigned OptionIndex,
+                  PragmaClangSection &CSec, int SectionFlags) {
+    if (SecName.empty())
+      return;
+
+    if (llvm::Error E = isValidSectionSpecifier(SecName)) {
+      Diag(SourceLocation(), diag::err_clang_section_option_invalid_for_target)
+          << OptionIndex << toString(std::move(E));
+      return;
+    }
+
+    if (UnifySection(SecName, SectionFlags, SourceLocation()))
+      return;
+
+    CSec.Valid = true;
+    CSec.SectionName = std::string(SecName);
+    // An invalid location marks the section as coming from the command line
+    // rather than from a '#pragma clang section' in the source.
+    CSec.PragmaLocation = SourceLocation();
+  };
+
+  Init(getLangOpts().ClangBSSSection, /*bss=*/0, PragmaClangBSSSection,
+       ASTContext::PSF_Read | ASTContext::PSF_Write | ASTContext::PSF_ZeroInit);
+  Init(getLangOpts().ClangDataSection, /*data=*/1, PragmaClangDataSection,
+       ASTContext::PSF_Read | ASTContext::PSF_Write);
+}
+
 void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
                            StringRef SlotLabel, Expr *Alignment) {
   bool IsXLPragma = getLangOpts().XLPragmaPack;
