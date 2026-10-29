@@ -117,7 +117,8 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
   if (shouldLegalizeInstType(Ty)) {
     LegalizedTy = PointerType::get(
         Ty->getContext(),
-        storageClassToAddressSpace(SPIRV::StorageClass::Generic));
+        storageClassToAddressSpace(SPIRV::StorageClass::Generic,
+                                   TM.getTargetTriple()));
 
   } else if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
     SmallVector<Type *, 8> ElemTypes;

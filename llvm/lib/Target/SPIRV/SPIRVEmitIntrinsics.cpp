@@ -1758,12 +1758,17 @@ void SPIRVEmitIntrinsicsImpl::preprocessUndefsAndPoisons(IRBuilder<> &B) {
 // pointer.
 void SPIRVEmitIntrinsicsImpl::simplifyNullAddrSpaceCasts() {
   for (Instruction &I : make_early_inc_range(instructions(CurrF)))
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
       if (isa<ConstantPointerNull>(ASC->getPointerOperand())) {
-        ASC->replaceAllUsesWith(
-            ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        if (ASC->getType()->isVectorTy()) {
+          ASC->replaceAllUsesWith(ConstantVector::getNullValue(ASC->getType()));
+        } else {
+          ASC->replaceAllUsesWith(
+              ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
+        }
         ASC->eraseFromParent();
       }
+    }
 }
 
 // True for an aggregate value the legalizer splits into a multi-result op
