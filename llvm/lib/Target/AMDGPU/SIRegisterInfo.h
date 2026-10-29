@@ -134,6 +134,10 @@ public:
     return 27;
   }
 
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
+
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
   // the mask, so it might consider that any register in the block is available

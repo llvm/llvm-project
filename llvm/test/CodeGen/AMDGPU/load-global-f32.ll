@@ -508,8 +508,8 @@ entry:
 define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-NOHSA-LABEL: global_load_v11f32:
 ; SI-NOHSA:       ; %bb.0: ; %entry
-; SI-NOHSA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
-; SI-NOHSA-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NOHSA-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NOHSA-NEXT:    s_mov_b32 s10, 0
 ; SI-NOHSA-NEXT:    s_mov_b32 s11, s3
 ; SI-NOHSA-NEXT:    v_lshlrev_b32_e32 v8, 6, v0

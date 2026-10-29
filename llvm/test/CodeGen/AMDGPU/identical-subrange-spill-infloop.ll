@@ -181,14 +181,14 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s57, v7, 13
 ; CHECK-NEXT:    v_readlane_b32 s58, v7, 14
 ; CHECK-NEXT:    v_readlane_b32 s59, v7, 15
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v4, v3
 ; CHECK-NEXT:    v_readlane_b32 s45, v7, 1
 ; CHECK-NEXT:    v_readlane_b32 s46, v7, 2
 ; CHECK-NEXT:    v_readlane_b32 s47, v7, 3
-; CHECK-NEXT:    image_sample_lz v0, v[0:1], s[52:59], s[24:27] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s48, v7, 4
 ; CHECK-NEXT:    v_readlane_b32 s49, v7, 5
+; CHECK-NEXT:    image_sample_lz v0, v[2:3], s[52:59], s[24:27] dmask:0x1
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_readlane_b32 s50, v7, 6
 ; CHECK-NEXT:    v_readlane_b32 s51, v7, 7
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)

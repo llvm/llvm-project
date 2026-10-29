@@ -488,7 +488,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      Custom);
 
   // Avoid stack access for these.
-  // TODO: Generalize to more vector types.
+  // TODO: Generalize to wider i8 vectors.
   setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
                      {MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::v2i8, MVT::v4i8,
                       MVT::v8i8, MVT::v4i16, MVT::v4f16, MVT::v4bf16},
@@ -879,10 +879,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     for (MVT Vec16 :
          {MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::v16i16, MVT::v16f16,
           MVT::v16bf16, MVT::v32i16, MVT::v32f16, MVT::v32bf16}) {
-      setOperationAction(
-          {ISD::BUILD_VECTOR, ISD::EXTRACT_VECTOR_ELT, ISD::SCALAR_TO_VECTOR},
-          Vec16, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, Vec16, Expand);
+      setOperationAction({ISD::BUILD_VECTOR, ISD::EXTRACT_VECTOR_ELT,
+                          ISD::INSERT_VECTOR_ELT, ISD::SCALAR_TO_VECTOR},
+                         Vec16, Custom);
     }
   }
 
@@ -4529,8 +4528,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
-  if (!Subtarget->hasFlatScratchEnabled())
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+  if (!Subtarget->hasFlatScratchEnabled()) {
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv));
+  }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
@@ -4564,10 +4565,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
-                              ScratchRSrcReg);
+      RegsToPass.emplace_back(
+          AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv),
+          ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
@@ -9807,36 +9807,67 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   // Avoid stack access for dynamic indexing by custom lowering to
   // v_bfi_b32 (v_bfm_b32 16, (shl idx, 16)), val, vec
-
-  assert(VecSize <= 64 && "Expected target vector size to be <= 64 bits");
-
-  MVT IntVT = MVT::getIntegerVT(VecSize);
-
-  // Convert vector index to bit-index and get the required bit mask.
+  // Vectors wider than 64 bits do this on each 64-bit piece.
   assert(isPowerOf2_32(EltSize));
+  unsigned PieceSize = std::min(VecSize, 64u);
+  unsigned NumPieces = VecSize / PieceSize;
+  unsigned EltsPerPiece = PieceSize / EltSize;
+  MVT IntVT = MVT::getIntegerVT(PieceSize);
+  EVT PieceVT = EVT::getVectorVT(*DAG.getContext(), EltVT, EltsPerPiece);
+
+  // Convert vector index to bit-index within its piece and get the required
+  // bit mask. Using the index within the piece keeps the shift below 64.
+  SDValue PieceIdx = Idx;
+  if (NumPieces > 1)
+    PieceIdx = DAG.getNode(ISD::AND, SL, MVT::i32, Idx,
+                           DAG.getConstant(EltsPerPiece - 1, SL, MVT::i32));
   const auto EltMask = maskTrailingOnes<uint64_t>(EltSize);
   SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
-  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, ScaleFactor);
+  SDValue ScaledIdx =
+      DAG.getNode(ISD::SHL, SL, MVT::i32, PieceIdx, ScaleFactor);
   SDValue BFM = DAG.getNode(ISD::SHL, SL, IntVT,
                             DAG.getConstant(EltMask, SL, IntVT), ScaledIdx);
 
   // 1. Create a congruent vector with the target value in each element.
-  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
-                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
+  SDValue ExtVal =
+      DAG.getBitcast(IntVT, DAG.getSplatBuildVector(PieceVT, SL, InsVal));
 
-  // 2. Mask off all other indices except the required index within (1).
-  SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, BFM, ExtVal);
+  auto InsertIntoPiece = [&](SDValue Piece, SDValue Mask) {
+    // 2. Mask off all other indices except the required index within (1).
+    SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, Mask, ExtVal);
 
-  // 3. Mask off the required index within the target vector.
-  SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
-  SDValue RHS =
-      DAG.getNode(ISD::AND, SL, IntVT, DAG.getNOT(SL, BFM, IntVT), BCVec);
+    // 3. Mask off the required index within the target vector.
+    SDValue RHS =
+        DAG.getNode(ISD::AND, SL, IntVT, DAG.getNOT(SL, Mask, IntVT), Piece);
 
-  // 4. Get (2) and (3) ORed into the target vector.
-  SDValue BFI =
-      DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS, SDNodeFlags::Disjoint);
+    // 4. Get (2) and (3) ORed into the target vector.
+    return DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS, SDNodeFlags::Disjoint);
+  };
 
-  return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
+  if (NumPieces == 1)
+    return DAG.getBitcast(VecVT,
+                          InsertIntoPiece(DAG.getBitcast(IntVT, Vec), BFM));
+
+  // 5. Apply (2)-(4) to each 64-bit piece, with the mask cleared in every
+  // piece except the one that holds the index, and rebuild the vector.
+  MVT PiecesVT = MVT::getVectorVT(IntVT, NumPieces);
+  SDValue BCVec = DAG.getBitcast(PiecesVT, Vec);
+  SDValue PieceNo =
+      DAG.getNode(ISD::SRL, SL, MVT::i32, Idx,
+                  DAG.getConstant(Log2_32(EltsPerPiece), SL, MVT::i32));
+  SDValue Zero = DAG.getConstant(0, SL, IntVT);
+  SmallVector<SDValue, 8> Pieces;
+  Pieces.reserve(NumPieces);
+  for (unsigned I = 0; I != NumPieces; ++I) {
+    SDValue CurPieceNo = DAG.getConstant(I, SL, MVT::i32);
+    SDValue Piece =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, IntVT, BCVec, CurPieceNo);
+    SDValue Mask =
+        DAG.getSelectCC(SL, PieceNo, CurPieceNo, BFM, Zero, ISD::SETEQ);
+    Pieces.push_back(InsertIntoPiece(Piece, Mask));
+  }
+
+  return DAG.getBitcast(VecVT, DAG.getBuildVector(PiecesVT, SL, Pieces));
 }
 
 SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
@@ -17472,7 +17503,10 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
 
   // INSERT_VECTOR_ELT (<n x e>, var-idx)
   // => BUILD_VECTOR n x select (e, const-idx)
-  if (!shouldExpandVectorDynExt(N))
+  // 16-bit elements are left to lowerINSERT_VECTOR_ELT, which is cheaper.
+  if (!shouldExpandVectorDynExt(N) ||
+      (EltVT.getSizeInBits() == 16 &&
+       isOperationCustom(ISD::INSERT_VECTOR_ELT, VecVT)))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

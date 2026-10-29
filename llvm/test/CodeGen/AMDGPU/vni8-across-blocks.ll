@@ -250,8 +250,8 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX942-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
+; GFX942-NEXT:    v_and_b32_e32 v62, 0x3ff, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 3, v62
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx4 v[4:7], v1, s[0:1] offset:240
