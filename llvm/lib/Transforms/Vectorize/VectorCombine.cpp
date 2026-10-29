@@ -129,6 +129,9 @@ private:
   bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldInsertElementsToStores(Instruction &I);
+  bool foldAdjacentStores(StoreInst &First);
+  bool concatStores(StoreInst &First, StoreInst &Second,
+                    FixedVectorType *WideTy, bool CrossesCall);
   bool scalarizeLoad(Instruction &I);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
@@ -1944,6 +1947,179 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
     return commonAlignment(VectorAlignment,
                            C->getZExtValue() * DL.getTypeStoreSize(ScalarType));
   return commonAlignment(VectorAlignment, DL.getTypeStoreSize(ScalarType));
+}
+
+/// Find stores to Address + ByteOffset through pointer uses.
+/// Basic block, instruction order, and access legality are checked by callers.
+///
+/// \returns Store candidates in Address's address space, in unspecified order.
+///          Empty if none are found, offset addition overflows, or the search
+///          budget is exceeded; partial results are discarded.
+static SmallVector<StoreInst *, 4>
+findStoresAtOffset(Value *Address, int64_t ByteOffset, const DataLayout &DL,
+                   unsigned MaxInstrsToScan) {
+  int64_t AddressOffset, TargetOffset;
+  Value *Base = GetPointerBaseWithConstantOffset(Address, AddressOffset, DL,
+                                                 /*AllowNonInbounds=*/false);
+  if (AddOverflow(AddressOffset, ByteOffset, TargetOffset))
+    return {};
+
+  unsigned StoreAddrSpace = Address->getType()->getPointerAddressSpace();
+  SmallVector<StoreInst *, 4> Stores;
+  SmallVector<Value *, 4> Pointers{Base};
+  SmallPtrSet<Value *, 4> Visited{Base};
+  unsigned NumUses = 0;
+  while (!Pointers.empty()) {
+    Value *Ptr = Pointers.pop_back_val();
+    int64_t Offset;
+    if (GetPointerBaseWithConstantOffset(Ptr, Offset, DL,
+                                         /*AllowNonInbounds=*/false) != Base)
+      continue;
+    for (User *U : Ptr->users()) {
+      if (++NumUses > MaxInstrsToScan)
+        return {};
+      if (U->getType()->isPointerTy() && Visited.insert(U).second)
+        Pointers.push_back(U);
+      auto *Store = dyn_cast<StoreInst>(U);
+      if (Offset == TargetOffset && Store &&
+          Store->getPointerOperand() == Ptr &&
+          Store->getPointerAddressSpace() == StoreAddrSpace)
+        Stores.push_back(Store);
+    }
+  }
+  return Stores;
+}
+
+/// Concatenate two equal vector stores at consecutive addresses without
+/// increasing their cost.
+///
+/// \code
+/// Before (S is the store size of either N-lane vector, in bytes):
+///
+///   V0: [ a0 ... aN-1 ] --> First:  store to %p
+///                         ... intervening instructions ...
+///   V1: [ b0 ... bN-1 ] --> Second: store to %p + S
+///
+/// After (the intervening instructions remain in place):
+///
+///   V0 ----+
+///          +--> shuffle [ V0 lanes | V1 lanes ] --> wide store to %p
+///   V1 ----+                                      (at Second)
+/// \endcode
+///
+/// Steps:
+///   1. Validate First and the scan budget.
+///   2. Check the wide store's target legality.
+///   3. Find and validate the consecutive store candidate.
+///   4. Check the intervening instructions for safe sinking.
+///   5. Cost and emit the replacement, then schedule it for revisiting.
+bool VectorCombine::foldAdjacentStores(StoreInst &First) {
+  // Step 1: Require a supported store, a fixed vector without store padding,
+  // and enough scan budget for the two stores.
+  unsigned MaxInstrsToScan = Opts.vector_combine_max_scan_instrs;
+  auto IsSupportedStore = [](const StoreInst &Store) {
+    return Store.isSimple() && !Store.getMetadata(LLVMContext::MD_nontemporal);
+  };
+  if (MaxInstrsToScan < 2 || !IsSupportedStore(First))
+    return false;
+
+  auto *Ty = dyn_cast<FixedVectorType>(First.getValueOperand()->getType());
+  if (!Ty || !DL->typeSizeEqualsStoreSize(Ty))
+    return false;
+
+  // Step 2: Check the wide type, target width, store chain, and alignment.
+  auto *WideTy = FixedVectorType::getDoubleElementsVectorType(Ty);
+  uint64_t WideStoreSizeInBits = DL->getTypeStoreSizeInBits(WideTy);
+  unsigned StoreAddrSpace = First.getPointerAddressSpace();
+  if (WideStoreSizeInBits > TTI.getLoadStoreVecRegBitWidth(StoreAddrSpace))
+    return false;
+
+  uint64_t WideStoreSizeInBytes = DL->getTypeStoreSize(WideTy);
+  Align Alignment = First.getAlign();
+  if (!TTI.isTypeLegal(WideTy) ||
+      !TTI.isLegalToVectorizeStoreChain(WideStoreSizeInBytes, Alignment,
+                                        StoreAddrSpace) ||
+      (Alignment < DL->getABITypeAlign(WideTy) &&
+       !TTI.allowsMisalignedMemoryAccesses(F.getContext(), WideStoreSizeInBits,
+                                           StoreAddrSpace, Alignment)))
+    return false;
+
+  // Step 3: Choose the earliest later store to the next address in this block,
+  // and require a supported access with the same vector type.
+  StoreInst *Second = nullptr;
+  for (StoreInst *Store :
+       findStoresAtOffset(First.getPointerOperand(),
+                          static_cast<int64_t>(DL->getTypeStoreSize(Ty)), *DL,
+                          MaxInstrsToScan))
+    if (Store->getParent() == First.getParent() && First.comesBefore(Store) &&
+        (!Second || Store->comesBefore(Second)))
+      Second = Store;
+  if (!Second || !IsSupportedStore(*Second) ||
+      Second->getValueOperand()->getType() != Ty)
+    return false;
+
+  // Step 4: Within the scan limit, sinking First must cross no implicit exit
+  // or instruction that may read or write the memory accessed by First.
+  MemoryLocation FirstLoc = MemoryLocation::get(&First);
+  unsigned Scanned = 2;
+  bool CrossesCall = false;
+  for (Instruction *I = First.getNextNode(); I != Second;
+       I = I->getNextNode()) {
+    if (isa<PseudoProbeInst>(I))
+      continue;
+    if (++Scanned > MaxInstrsToScan ||
+        !isGuaranteedToTransferExecutionToSuccessor(I) ||
+        isModOrRefSet(AA.getModRefInfo(I, FirstLoc)))
+      return false;
+    CrossesCall |= isa<CallBase>(I);
+  }
+
+  // Step 5: Cost and emit the replacement at Second, then queue it for
+  // revisiting. Across calls, require a strict improvement to allow for spills.
+  return concatStores(First, *Second, WideTy, CrossesCall);
+}
+
+/// Replace equal-type stores to consecutive addresses with a concatenation and
+/// wide store at no extra cost, using First's address/alignment at Second.
+/// The caller must have checked target legality and safe sinking to Second.
+///
+/// \param[in,out] First Lower-address store; erased on success.
+/// \param[in,out] Second Adjacent higher-address store; erased on success.
+/// \param WideTy Same element type as the inputs, with twice as many lanes.
+/// \param CrossesCall Whether sinking First crosses a call; ties are rejected.
+/// \returns True if both stores were replaced; false leaves IR unchanged.
+bool VectorCombine::concatStores(StoreInst &First, StoreInst &Second,
+                                 FixedVectorType *WideTy, bool CrossesCall) {
+  auto *Ty = cast<FixedVectorType>(First.getValueOperand()->getType());
+  unsigned StoreAddrSpace = First.getPointerAddressSpace();
+  Align Alignment = First.getAlign();
+  Value *V0 = First.getValueOperand(), *V1 = Second.getValueOperand();
+  auto Mask = createSequentialMask(0, WideTy->getNumElements(), 0);
+  Value *Packed = simplifyShuffleVectorInst(V0, V1, Mask, WideTy, SQ);
+  InstructionCost OldCost = 0;
+  for (StoreInst *Store : {&First, &Second})
+    OldCost += TTI.getMemoryOpCost(Instruction::Store, Ty, Store->getAlign(),
+                                   StoreAddrSpace, CostKind);
+  InstructionCost NewCost = TTI.getMemoryOpCost(
+      Instruction::Store, WideTy, Alignment, StoreAddrSpace, CostKind);
+  if (!Packed)
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, WideTy, Ty, CostKind,
+                                  Mask, 0, nullptr, {V0, V1});
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost ||
+      (CrossesCall && NewCost == OldCost))
+    return false;
+
+  Builder.SetInsertPoint(&Second);
+  if (!Packed)
+    Packed = Builder.CreateShuffleVector(V0, V1, Mask);
+  auto *NewStore =
+      Builder.CreateAlignedStore(Packed, First.getPointerOperand(), Alignment);
+  propagateMetadata(NewStore, {&First, &Second});
+  if (NextInst == &Second)
+    NextInst = Second.getNextNode();
+  eraseInstruction(First);
+  eraseInstruction(Second);
+  return true;
 }
 
 /// Fold a vector store fed by a single-use insertelement chain into scalar
@@ -7064,6 +7240,9 @@ bool VectorCombine::run() {
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)
       return false;
+
+    if (Opcode == Instruction::Store && foldAdjacentStores(cast<StoreInst>(I)))
+      return true;
 
     if (Opcode == Instruction::Call)
       if (foldBitOrderReverseAndSwap(I))
