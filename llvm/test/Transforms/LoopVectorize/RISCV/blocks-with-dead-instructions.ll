@@ -459,9 +459,7 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[N_EXT]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP8]], 12
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP1]], 12
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[X]], 2
@@ -539,7 +537,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+64bit,+v" }
+attributes #0 = { "target-features"="+64bit,+v" vscale_range(2, 1024) }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -553,7 +551,7 @@ attributes #0 = { "target-features"="+64bit,+v" }
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"LVerDomain"}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]], [[META15:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
 ; CHECK: [[META15]] = distinct !{[[META15]], [[META12]]}

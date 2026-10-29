@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -stop-after=live-debug-values -experimental-debug-variable-locations=true | FileCheck %s
 ;
 ; In the simple loop below, the location of the variable "toast" is %bar in
 ; the entry block, then set to constant zero at the end of the loop. We cannot

@@ -31,6 +31,10 @@
 // RUN:   FileCheck --check-prefix=LA64-RELAX %s
 // RUN: %clang --target=loongarch64-unknown-linux-gnu -mno-relax -### %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=LA64-NORELAX %s
+// RUN: %clang --target=loongarch64-unknown-elf -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=LA64-RELAX %s
+// RUN: %clang --target=loongarch64-unknown-elf -mno-relax -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=LA64-NORELAX %s
 // LA64-RELAX:     "-X"
 // LA64-RELAX-NOT: "--no-relax"
 // LA64-NORELAX:   "-X" "--no-relax"

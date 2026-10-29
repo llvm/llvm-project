@@ -825,18 +825,17 @@ void test_multi_dim_init_list_partial_array_cleanup() {
     S arr[2][2] = { {S(), S()}, {S(), S()} };
 }
 
-// There are three nested EH cleanups here, innermost first:
-//  - row 1's S[2] init list (elementType S, already non-array)
-//  - row 0's S[2] init list (elementType S, already non-array)
-//  - the outer S[2][2] init list (elementType S[2], STILL an array --
-//    this is the one that needs the bitcast down to S)
+// Each row's partial-array EH cleanup ends when that row is initialized.
+// Row 1's cleanup is a sibling of row 0's, inside the outer S[2][2]
+// cleanup. The outer element type is still S[2], so that cleanup
+// bitcasts down to S. The array destructor follows initialization.
 // CIR-BEFORE-LPP-LABEL: cir.func {{.*}} @_Z46test_multi_dim_init_list_partial_array_cleanupv()
 // CIR-BEFORE-LPP:       %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>>
 // CIR-BEFORE-LPP:       %[[OUTER_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
 // CIR-BEFORE-LPP:       %[[ROW0_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR-BEFORE-LPP:       %[[ROW0_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-BEFORE-LPP:       %[[ROW1_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-BEFORE-LPP:       %[[ROW1_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
-// CIR-BEFORE-LPP:       %[[ROW0_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-BEFORE-LPP:       %[[OUTER_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-BEFORE-LPP:       %[[ROW0_BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 2>>
 // CIR-BEFORE-LPP:       cir.store {{.*}} %[[ROW0_BEGIN]], %[[OUTER_END]] : !cir.ptr<!cir.array<!rec_S x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
@@ -849,39 +848,8 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // CIR-BEFORE-LPP:           %[[ROW0_ELT1:.*]] = cir.ptr_stride %[[ROW0_ELT0]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW0_ELT1]], %[[ROW0_END]]
 // CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[ROW0_ELT1]])
-// CIR-BEFORE-LPP:           %[[ROW1_BEGIN:.*]] = cir.ptr_stride %[[ROW0_BEGIN]], %{{.*}} : (!cir.ptr<!cir.array<!rec_S x 2>>, !s64i) -> !cir.ptr<!cir.array<!rec_S x 2>>
-// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW1_BEGIN]], %[[OUTER_END]]
-// CIR-BEFORE-LPP:           %[[ROW1_ELT0:.*]] = cir.cast array_to_ptrdecay %[[ROW1_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW1_ELT0]], %[[ROW1_END]]
-// CIR-BEFORE-LPP:           cir.cleanup.scope {
-//                             --- row 1: S(), S() ---
-// CIR-BEFORE-LPP:             cir.call @_ZN1SC1Ev(%[[ROW1_ELT0]])
-// CIR-BEFORE-LPP:             %[[ROW1_ELT1:.*]] = cir.ptr_stride %[[ROW1_ELT0]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:             cir.store {{.*}} %[[ROW1_ELT1]], %[[ROW1_END]]
-// CIR-BEFORE-LPP:             cir.call @_ZN1SC1Ev(%[[ROW1_ELT1]])
-// CIR-BEFORE-LPP:             cir.yield
-//                             --- innermost EH cleanup (row 1): elementType is already S, no bitcast ---
-// CIR-BEFORE-LPP:           } cleanup eh {
-// CIR-BEFORE-LPP:             %[[ROW1_EH_END:.*]] = cir.load {{.*}} %[[ROW1_END]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:             %[[ROW1_EH_NE:.*]] = cir.cmp ne %[[ROW1_EH_END]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:             cir.if %[[ROW1_EH_NE]] {
-// CIR-BEFORE-LPP:               cir.store {{.*}} %[[ROW1_EH_END]], %[[ROW1_ITER]]
-// CIR-BEFORE-LPP:               cir.do {
-// CIR-BEFORE-LPP:                 %[[ROW1_EH_CUR:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:                 %[[ROW1_EH_PREV:.*]] = cir.ptr_stride %[[ROW1_EH_CUR]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:                 cir.store {{.*}} %[[ROW1_EH_PREV]], %[[ROW1_ITER]]
-// CIR-BEFORE-LPP:                 cir.call @_ZN1SD1Ev(%[[ROW1_EH_PREV]]) nothrow
-// CIR-BEFORE-LPP:                 cir.yield
-// CIR-BEFORE-LPP:               } while {
-// CIR-BEFORE-LPP:                 %[[ROW1_EH_CUR2:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:                 %[[ROW1_EH_CONT:.*]] = cir.cmp ne %[[ROW1_EH_CUR2]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
-// CIR-BEFORE-LPP:                 cir.condition(%[[ROW1_EH_CONT]])
-// CIR-BEFORE-LPP:               }
-// CIR-BEFORE-LPP:             }
-// CIR-BEFORE-LPP:             cir.yield
-// CIR-BEFORE-LPP:           }
 // CIR-BEFORE-LPP:           cir.yield
-//                           --- middle EH cleanup (row 0): elementType is already S, no bitcast ---
+//                           --- row 0 EH cleanup ends before row 1 starts ---
 // CIR-BEFORE-LPP:         } cleanup eh {
 // CIR-BEFORE-LPP:           %[[ROW0_EH_END:.*]] = cir.load {{.*}} %[[ROW0_END]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:           %[[ROW0_EH_NE:.*]] = cir.cmp ne %[[ROW0_EH_END]], %[[ROW0_ELT0]] : !cir.ptr<!rec_S>
@@ -901,10 +869,40 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // CIR-BEFORE-LPP:           }
 // CIR-BEFORE-LPP:           cir.yield
 // CIR-BEFORE-LPP:         }
+// CIR-BEFORE-LPP:         %[[ROW1_BEGIN:.*]] = cir.ptr_stride %[[ROW0_BEGIN]], %{{.*}} : (!cir.ptr<!cir.array<!rec_S x 2>>, !s64i) -> !cir.ptr<!cir.array<!rec_S x 2>>
+// CIR-BEFORE-LPP:         cir.store {{.*}} %[[ROW1_BEGIN]], %[[OUTER_END]]
+// CIR-BEFORE-LPP:         %[[ROW1_ELT0:.*]] = cir.cast array_to_ptrdecay %[[ROW1_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:         cir.store {{.*}} %[[ROW1_ELT0]], %[[ROW1_END]]
+// CIR-BEFORE-LPP:         cir.cleanup.scope {
+//                           --- row 1: S(), S() ---
+// CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[ROW1_ELT0]])
+// CIR-BEFORE-LPP:           %[[ROW1_ELT1:.*]] = cir.ptr_stride %[[ROW1_ELT0]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           cir.store {{.*}} %[[ROW1_ELT1]], %[[ROW1_END]]
+// CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[ROW1_ELT1]])
+// CIR-BEFORE-LPP:           cir.yield
+//                           --- row 1 EH cleanup: elementType is already S ---
+// CIR-BEFORE-LPP:         } cleanup eh {
+// CIR-BEFORE-LPP:           %[[ROW1_EH_END:.*]] = cir.load {{.*}} %[[ROW1_END]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           %[[ROW1_EH_NE:.*]] = cir.cmp ne %[[ROW1_EH_END]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:           cir.if %[[ROW1_EH_NE]] {
+// CIR-BEFORE-LPP:             cir.store {{.*}} %[[ROW1_EH_END]], %[[ROW1_ITER]]
+// CIR-BEFORE-LPP:             cir.do {
+// CIR-BEFORE-LPP:               %[[ROW1_EH_CUR:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               %[[ROW1_EH_PREV:.*]] = cir.ptr_stride %[[ROW1_EH_CUR]], %{{.*}} : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               cir.store {{.*}} %[[ROW1_EH_PREV]], %[[ROW1_ITER]]
+// CIR-BEFORE-LPP:               cir.call @_ZN1SD1Ev(%[[ROW1_EH_PREV]]) nothrow
+// CIR-BEFORE-LPP:               cir.yield
+// CIR-BEFORE-LPP:             } while {
+// CIR-BEFORE-LPP:               %[[ROW1_EH_CUR2:.*]] = cir.load {{.*}} %[[ROW1_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               %[[ROW1_EH_CONT:.*]] = cir.cmp ne %[[ROW1_EH_CUR2]], %[[ROW1_ELT0]] : !cir.ptr<!rec_S>
+// CIR-BEFORE-LPP:               cir.condition(%[[ROW1_EH_CONT]])
+// CIR-BEFORE-LPP:             }
+// CIR-BEFORE-LPP:           }
+// CIR-BEFORE-LPP:           cir.yield
+// CIR-BEFORE-LPP:         }
 // CIR-BEFORE-LPP:         cir.yield
-//                         --- outer EH cleanup (S[2][2]): elementType is still S[2] here, so the
-//                             cleanup must bitcast down to the base non-array element type (S)
-//                             before comparing pointers and destroying -- this is the regression ---
+//                         --- outer EH cleanup (S[2][2]): elementType is still S[2], so the
+//                             cleanup bitcasts down to the base element type S ---
 // CIR-BEFORE-LPP:       } cleanup eh {
 // CIR-BEFORE-LPP:         %[[OUTER_EH_END:.*]] = cir.load {{.*}} %[[OUTER_END]] : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>, !cir.ptr<!cir.array<!rec_S x 2>>
 // CIR-BEFORE-LPP:         %[[OUTER_EH_BEGIN_BASE:.*]] = cir.cast bitcast %[[ROW0_BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
@@ -926,8 +924,7 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // CIR-BEFORE-LPP:         }
 // CIR-BEFORE-LPP:         cir.yield
 // CIR-BEFORE-LPP:       }
-//                       --- normal (non-EH) cleanup: unconditional, uses the array.dtor sugar
-//                           over the fully-flattened S[4] view (this path was never buggy) ---
+//                       --- normal cleanup: array.dtor over the flattened S[4] view ---
 // CIR-BEFORE-LPP:       cir.cleanup.scope {
 // CIR-BEFORE-LPP:         cir.yield
 // CIR-BEFORE-LPP:       } cleanup all {
@@ -946,13 +943,14 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // CIR:       %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 2> x 2>> -> !cir.ptr<!cir.array<!rec_S x 2>>
 // CIR:       cir.store {{.*}} %[[BEGIN]], %[[END_OF_INIT]] : !cir.ptr<!cir.array<!rec_S x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>
 // CIR:       cir.cleanup.scope {
-//              --- explicit inits for both rows ---
+//              --- row 0, then its EH cleanup, then row 1 ---
 // CIR:         cir.call @_ZN1SC1Ev
 // CIR:         cir.call @_ZN1SC1Ev
+// CIR:       } cleanup eh {
+// CIR:         cir.call @_ZN1SD1Ev
 // CIR:         cir.call @_ZN1SC1Ev
 // CIR:         cir.call @_ZN1SC1Ev
-//              --- outer EH cleanup: drill the still-array elementType (S[2])
-//                  down to the base non-array element type (S) via bitcast ---
+//              --- outer EH cleanup: element type is still S[2], bitcast to S ---
 // CIR:       } cleanup eh {
 // CIR:         %[[END_VAL:.*]] = cir.load {{.*}} %[[END_OF_INIT]] : !cir.ptr<!cir.ptr<!cir.array<!rec_S x 2>>>, !cir.ptr<!cir.array<!rec_S x 2>>
 // CIR:         %[[BEGIN_BASE:.*]] = cir.cast bitcast %[[BEGIN]] : !cir.ptr<!cir.array<!rec_S x 2>> -> !cir.ptr<!rec_S>
@@ -995,11 +993,10 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 
 // LLVM-LABEL: define {{.*}}@_Z46test_multi_dim_init_list_partial_array_cleanupv()
 // LLVM:      %[[ARR:.*]] = alloca [2 x [2 x %struct.S]]
-// LLVM:      %[[OUTER_END_A:.*]] = alloca ptr
 //
 //            --- row 0: element 0, element 1 ---
 // LLVM:      %[[ROW0_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ARR]], i32 0
-// LLVM:      store ptr %[[ROW0_BEGIN]], ptr %[[OUTER_END_A]]
+// LLVM:      store ptr %[[ROW0_BEGIN]], ptr %[[OUTER_END_A:.*]]
 // LLVM:      %[[ROW0_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW0_BEGIN]], i32 0
 // LLVM:      store ptr %[[ROW0_ELT0]], ptr %[[ROW0_END_A:.*]]
 // LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT0]])
@@ -1010,38 +1007,7 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW0_ELT1]])
 // LLVM:        to label %{{.*}} unwind label %[[ROW0_LPAD]]
 //
-//            --- row 1: element 0, element 1 ---
-// LLVM:      %[[ROW1_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ROW0_BEGIN]], i64 1
-// LLVM:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
-// LLVM:      %[[ROW1_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW1_BEGIN]], i32 0
-// LLVM:      store ptr %[[ROW1_ELT0]], ptr %[[ROW1_END_A:.*]]
-// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT0]])
-// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
-//
-// LLVM:      %[[ROW1_ELT1:.*]] = getelementptr %struct.S, ptr %[[ROW1_ELT0]], i64 1
-// LLVM:      store ptr %[[ROW1_ELT1]], ptr %[[ROW1_END_A]]
-// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT1]])
-// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD]]
-//
-//            --- row 1 EH cleanup (elementType S, no bitcast needed) ---
-// LLVM:      [[ROW1_LPAD]]:
-// LLVM:        landingpad { ptr, i32 }
-// LLVM:          cleanup
-// LLVM:        %[[ROW1_EH_END:.*]] = load ptr, ptr %[[ROW1_END_A]]
-// LLVM:        %[[ROW1_EH_NE:.*]] = icmp ne ptr %[[ROW1_EH_END]], %[[ROW1_ELT0]]
-// LLVM:        br i1 %[[ROW1_EH_NE]], label %[[ROW1_DTOR:.*]], label %{{.*}}
-//
-// LLVM:      [[ROW1_DTOR]]:
-// LLVM:        store ptr %[[ROW1_EH_END]], ptr %[[ROW1_ITER:.*]]
-// LLVM:        br label %[[ROW1_DTOR_BODY:.*]]
-//
-// LLVM:      [[ROW1_DTOR_BODY]]:
-// LLVM:        %[[ROW1_DCUR:.*]] = load ptr, ptr %[[ROW1_ITER]]
-// LLVM:        %[[ROW1_DPREV:.*]] = getelementptr %struct.S, ptr %[[ROW1_DCUR]], i64 -1
-// LLVM:        store ptr %[[ROW1_DPREV]], ptr %[[ROW1_ITER]]
-// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW1_DPREV]])
-//
-//            --- row 0 EH cleanup (elementType S, no bitcast needed) ---
+//            --- row 0 EH cleanup runs before row 1 is initialized ---
 // LLVM:      [[ROW0_LPAD]]:
 // LLVM:        landingpad { ptr, i32 }
 // LLVM:          cleanup
@@ -1059,7 +1025,38 @@ void test_multi_dim_init_list_partial_array_cleanup() {
 // LLVM:        store ptr %[[ROW0_DPREV]], ptr %[[ROW0_ITER]]
 // LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW0_DPREV]])
 //
-//            --- outer EH cleanup
+//            --- row 1: element 0, element 1 ---
+// LLVM:      %[[ROW1_BEGIN:.*]] = getelementptr [2 x %struct.S], ptr %[[ROW0_BEGIN]], i64 1
+// LLVM:      store ptr %[[ROW1_BEGIN]], ptr %[[OUTER_END_A]]
+// LLVM:      %[[ROW1_ELT0:.*]] = getelementptr %struct.S, ptr %[[ROW1_BEGIN]], i32 0
+// LLVM:      store ptr %[[ROW1_ELT0]], ptr %[[ROW1_END_A:.*]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT0]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD:.*]]
+//
+// LLVM:      %[[ROW1_ELT1:.*]] = getelementptr %struct.S, ptr %[[ROW1_ELT0]], i64 1
+// LLVM:      store ptr %[[ROW1_ELT1]], ptr %[[ROW1_END_A]]
+// LLVM:      invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ROW1_ELT1]])
+// LLVM:        to label %{{.*}} unwind label %[[ROW1_LPAD]]
+//
+//            --- row 1 EH cleanup ---
+// LLVM:      [[ROW1_LPAD]]:
+// LLVM:        landingpad { ptr, i32 }
+// LLVM:          cleanup
+// LLVM:        %[[ROW1_EH_END:.*]] = load ptr, ptr %[[ROW1_END_A]]
+// LLVM:        %[[ROW1_EH_NE:.*]] = icmp ne ptr %[[ROW1_EH_END]], %[[ROW1_ELT0]]
+// LLVM:        br i1 %[[ROW1_EH_NE]], label %[[ROW1_DTOR:.*]], label %{{.*}}
+//
+// LLVM:      [[ROW1_DTOR]]:
+// LLVM:        store ptr %[[ROW1_EH_END]], ptr %[[ROW1_ITER:.*]]
+// LLVM:        br label %[[ROW1_DTOR_BODY:.*]]
+//
+// LLVM:      [[ROW1_DTOR_BODY]]:
+// LLVM:        %[[ROW1_DCUR:.*]] = load ptr, ptr %[[ROW1_ITER]]
+// LLVM:        %[[ROW1_DPREV:.*]] = getelementptr %struct.S, ptr %[[ROW1_DCUR]], i64 -1
+// LLVM:        store ptr %[[ROW1_DPREV]], ptr %[[ROW1_ITER]]
+// LLVM:        call void @_ZN1SD1Ev(ptr {{.*}} %[[ROW1_DPREV]])
+//
+//            --- outer EH cleanup, reached from either row ---
 // LLVM:        %[[OUTER_EH_END:.*]] = load ptr, ptr %[[OUTER_END_A]]
 // LLVM:        %[[OUTER_EH_NE:.*]] = icmp ne ptr %[[OUTER_EH_END]], %[[ROW0_BEGIN]]
 // LLVM:        br i1 %[[OUTER_EH_NE]], label %[[OUTER_DTOR:.*]], label %{{.*}}
@@ -1237,7 +1234,7 @@ void Temp2InArray() {
 // CIR-NEXT:      %[[CURRENT:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
 // CIR-NEXT:      cir.call @_ZN5Temp2C1Ev(%[[TMP]])
 // CIR-NEXT:      cir.cleanup.scope {
-// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.byref = !rec_Temp2}) -> ()
+// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      } cleanup all {
 // CIR-NEXT:        cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
@@ -1287,7 +1284,7 @@ void Temp2InArray() {
 // LLVM: [[EMPTY2]]:
 // LLVM: br label %[[CONSTRUCT_CT:.*]]
 // LLVM: [[CONSTRUCT_CT]]:
-// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}} %{{.*}}, ptr byref(%struct.Temp2) align 1 %[[TMP]])
+// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}} %{{.*}}, ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // LLVM-NEXT:         to label %[[EMPTY3:.*]] unwind label %[[EXCEPT:.*]]
 // LLVM: [[EMPTY3]]:
 // LLVM: br label %[[DTOR_TEMP:.*]]
@@ -1320,7 +1317,7 @@ void Temp2InArray() {
 // OGCG-NEXT:         to label %[[TMP_CTD:.*]] unwind label %[[TMP_UNWIND:.*]]
 
 // OGCG: [[TMP_CTD]]:
-// OGCG-NEXT: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%{{.*}}, ptr {{.*}}%[[TMP]])
+// OGCG-NEXT: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%{{.*}}, ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // OGCG-NEXT:      to label %[[CTD:.*]] unwind label %[[UNWIND:.*]]
 
 // OGCG: [[CTD]]:
@@ -1343,4 +1340,96 @@ void Temp2InArray() {
 // OGCG: [[CLEANUP_DTOR]]:
 // OGCG: %[[DTOR_ELT:.*]] = getelementptr inbounds %struct.CausesTemp2, ptr %{{.*}}, i64 -1
 // OGCG: call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])
+
+struct Agg {
+  int a;
+  const char *b;
+  S s;
+};
+
+void side_effect();
+
+// Aggregate initialization has no ExprWithCleanups around the
+// initializer. The partial-array EH cleanup still ends when
+// initialization finishes. side_effect() is covered by the array
+// variable's own destructor cleanup.
+void test_partial_cleanup_covers_init_only() {
+  Agg arr[2] = {{1, "a"}, {2, "b"}};
+  side_effect();
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z37test_partial_cleanup_covers_init_onlyv()
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.call @_ZN1SC1Ev
+// CIR:         cir.call @_ZN1SC1Ev
+// CIR-NOT:     cir.call @_Z11side_effectv()
+// CIR:       } cleanup eh {
+// CIR:         cir.if %{{.*}} {
+// CIR:           cir.do {
+// CIR:             cir.call @_ZN3AggD1Ev
+// CIR:           } while {
+// CIR:           }
+// CIR:         }
+// CIR:       }
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.call @_Z11side_effectv()
+// CIR:       } cleanup all {
+// CIR:         cir.do {
+// CIR:           cir.call @_ZN3AggD1Ev
+// CIR:         } while {
+// CIR:         }
+// CIR:       }
+
+// Both constructors unwind to the partial-array landing pad. The second
+// constructor's normal successor reaches side_effect(), which unwinds to
+// the full-array destructor.
+// LLVM-LABEL: define {{.*}} @_Z37test_partial_cleanup_covers_init_onlyv()
+// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}})
+// LLVM:           to label %[[CONT1:.*]] unwind label %[[INIT_LPAD:.*]]
+// LLVM:       [[CONT1]]:
+// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}})
+// LLVM:           to label %[[CONT2:.*]] unwind label %[[INIT_LPAD]]
+// LLVM:       [[CONT2]]:
+// LLVM:         br label %[[AFTER_INIT:.*]]
+// LLVM-NOT:     @_Z11side_effectv()
+// LLVM:       [[INIT_LPAD]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM:           cleanup
+// LLVM:         icmp ne ptr %{{.*}}, %{{.*}}
+// LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// LLVM:         resume { ptr, i32 }
+// LLVM:       [[AFTER_INIT]]:
+// LLVM:         br label %[[SIDE:.*]]
+// LLVM:       [[SIDE]]:
+// LLVM:         invoke void @_Z11side_effectv()
+// LLVM:           to label %{{.*}} unwind label %[[FULL_LPAD:.*]]
+// LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// LLVM:       [[FULL_LPAD]]:
+// LLVM:         landingpad { ptr, i32 }
+// LLVM:           cleanup
+// LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// LLVM:         resume { ptr, i32 }
+
+// The second constructor's continuation calls side_effect(). Original
+// codegen emits that normal path before the landing pads.
+// OGCG-LABEL: define {{.*}} @_Z37test_partial_cleanup_covers_init_onlyv()
+// OGCG:         invoke void @_ZN1SC1Ev(ptr {{.*}})
+// OGCG:           to label %[[CONT1:.*]] unwind label %[[INIT_LPAD:.*]]
+// OGCG:       [[CONT1]]:
+// OGCG:         invoke void @_ZN1SC1Ev(ptr {{.*}})
+// OGCG:           to label %[[CONT2:.*]] unwind label %[[INIT_LPAD]]
+// OGCG:       [[CONT2]]:
+// OGCG:         invoke void @_Z11side_effectv()
+// OGCG:           to label %{{.*}} unwind label %[[FULL_LPAD:.*]]
+// OGCG:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// OGCG:       [[INIT_LPAD]]:
+// OGCG:         landingpad { ptr, i32 }
+// OGCG:           cleanup
+// OGCG:         icmp eq ptr %{{.*}}, %{{.*}}
+// OGCG:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// OGCG:       [[FULL_LPAD]]:
+// OGCG:         landingpad { ptr, i32 }
+// OGCG:           cleanup
+// OGCG:         call void @_ZN3AggD1Ev(ptr {{.*}})
+// OGCG:         resume { ptr, i32 }
 

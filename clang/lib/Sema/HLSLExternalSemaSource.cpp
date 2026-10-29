@@ -33,6 +33,28 @@ using namespace llvm::hlsl;
 
 using clang::hlsl::BuiltinTypeDeclBuilder;
 
+static NamespaceDecl *createImplicitNamespace(Sema &S, StringRef Name,
+                                              DeclContext *DC) {
+  ASTContext &AST = S.getASTContext();
+  IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
+  LookupResult Result(S, &II, SourceLocation(), Sema::LookupNamespaceName);
+  NamespaceDecl *PrevDecl = nullptr;
+  if (S.LookupQualifiedName(Result, DC))
+    PrevDecl = Result.getAsSingle<NamespaceDecl>();
+
+  NamespaceDecl *NS =
+      NamespaceDecl::Create(AST, DC, /*Inline=*/false, SourceLocation(),
+                            SourceLocation(), &II, PrevDecl, /*Nested=*/false);
+  NS->setImplicit(true);
+  NS->setHasExternalLexicalStorage();
+  DC->addDecl(NS);
+
+  // Force external decls in the namespace to load from the PCH.
+  (void)NS->getCanonicalDecl()->decls_begin();
+
+  return NS;
+}
+
 void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   SemaPtr = &S;
   ASTContext &AST = SemaPtr->getASTContext();
@@ -40,21 +62,12 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   if (AST.getTranslationUnitDecl()->hasExternalLexicalStorage())
     (void)AST.getTranslationUnitDecl()->decls_begin();
 
-  IdentifierInfo &HLSL = AST.Idents.get("hlsl", tok::TokenKind::identifier);
-  LookupResult Result(S, &HLSL, SourceLocation(), Sema::LookupNamespaceName);
-  NamespaceDecl *PrevDecl = nullptr;
-  if (S.LookupQualifiedName(Result, AST.getTranslationUnitDecl()))
-    PrevDecl = Result.getAsSingle<NamespaceDecl>();
-  HLSLNamespace = NamespaceDecl::Create(
-      AST, AST.getTranslationUnitDecl(), /*Inline=*/false, SourceLocation(),
-      SourceLocation(), &HLSL, PrevDecl, /*Nested=*/false);
-  HLSLNamespace->setImplicit(true);
-  HLSLNamespace->setHasExternalLexicalStorage();
-  AST.getTranslationUnitDecl()->addDecl(HLSLNamespace);
+  HLSLNamespace = createImplicitNamespace(
+      S, "hlsl", cast<DeclContext>(AST.getTranslationUnitDecl()));
+  HLSLDetailNamespace = createImplicitNamespace(S, "__detail", HLSLNamespace);
 
-  // Force external decls in the HLSL namespace to load from the PCH.
-  (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
+  defineInternalHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
   defineHLSLAtomicIntrinsics();
 
@@ -233,6 +246,29 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLMatrixAlias();
 }
 
+void HLSLExternalSemaSource::defineHeapResourceInfoTypes() {
+  ASTContext &AST = SemaPtr->getASTContext();
+  CXXRecordDecl *ResDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace,
+                                                  "heap_resource_info")
+                               .finalizeForwardDeclaration();
+  if (!ResDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, ResDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+
+  CXXRecordDecl *SampDecl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace, "heap_sampler_info")
+          .finalizeForwardDeclaration();
+  if (!SampDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, SampDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+}
+
+void HLSLExternalSemaSource::defineInternalHLSLTypes() {
+  defineHeapResourceInfoTypes();
+}
+
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
@@ -242,6 +278,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor(HasCounter)
       .addStaticInitializationFunctions(HasCounter);
 }
 
@@ -252,6 +289,7 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapSamplerInfoConstructor()
       .addStaticInitializationFunctions(false);
 }
 
@@ -302,6 +340,20 @@ struct TextureTypeInfo {
 } // namespace
 
 static const TextureTypeInfo TextureTypes[] = {
+    {"Texture1D", ResourceClass::SRV, ResourceDimension::Dim1D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD},
+    {"RWTexture1D", ResourceClass::UAV, ResourceDimension::Dim1D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript},
+    {"Texture1DArray", ResourceClass::SRV, ResourceDimension::Dim1D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD},
+    {"RWTexture1DArray", ResourceClass::UAV, ResourceDimension::Dim1D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript},
     {"Texture2D", ResourceClass::SRV, ResourceDimension::Dim2D,
      /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
      TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
@@ -322,6 +374,13 @@ static const TextureTypeInfo TextureTypes[] = {
      /*IsArray=*/false, /*IsROV=*/false,
      TemplateShape::ElementTypeAndSampleCount,
      TexCap::LoadMS | TexCap::Subscript},
+    {"Texture3D", ResourceClass::SRV, ResourceDimension::Dim3D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::CalcLOD | TexCap::GetDims},
+    {"RWTexture3D", ResourceClass::UAV, ResourceDimension::Dim3D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript | TexCap::GetDims},
     {"TextureCube", ResourceClass::SRV, ResourceDimension::Cube,
      /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
      TexCap::Sample | TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |
@@ -349,10 +408,19 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
   }
 
   BuiltinTypeDeclBuilder B(S, Decl);
-  B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr)
-      .addDefaultHandleConstructor()
+  B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr);
+
+  // The `mips` member holds a second copy of the resource handle.
+  // addCopyConstructor, addCopyAssignmentOperator and
+  // addStaticInitializationFunctions are what initialize that copy, and they
+  // look the member up by name, so it has to exist before they run.
+  if (T.has(TexCap::Mips))
+    B.addMipsMember(Dim);
+
+  B.addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor()
       .addStaticInitializationFunctions(false);
 
   if (T.has(TexCap::Load))
@@ -363,8 +431,6 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
     B.addRWTextureLoadMethods(Dim, IsArray);
   if (T.has(TexCap::Subscript))
     B.addArraySubscriptOperators(Dim, IsArray);
-  if (T.has(TexCap::Mips))
-    B.addMipsMember(Dim);
 
   if (T.has(TexCap::Sample))
     B.addSampleMethods(Dim, IsArray)
@@ -806,26 +872,66 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   }
 }
 
+// Shapes of the synthesized atomic overloads. The read-modify-write operations
+// can report the previous value through a trailing reference. Compare-store
+// takes only inputs; compare-exchange adds the trailing reference.
+enum class AtomicOverloadShape {
+  Binary,             // (dest, value)
+  BinaryWithOriginal, // (dest, value, original_value)
+  CompareStore,       // (dest, compare_value, value)
+  CompareExchange,    // (dest, compare_value, value, original_value)
+};
+
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
 // `dest` is an address-space-qualified reference; `original_value` (when
-// present) is a plain reference. The synthesized FunctionDecl aliases the
-// underlying clang builtin via BuiltinAliasAttr.
+// present) is an HLSL `out` parameter. The synthesized FunctionDecl aliases
+// the underlying clang builtin via BuiltinAliasAttr.
 static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
                                 StringRef BuiltinName, QualType ElemTy,
-                                LangAS DestAS, bool ThreeArg) {
+                                LangAS DestAS, AtomicOverloadShape Shape) {
   ASTContext &AST = S.getASTContext();
 
   QualType DestTy =
       AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
-  QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
+  QualType OrigRefTy = S.HLSL().getInoutParameterType(ElemTy);
 
-  SmallVector<QualType, 3> ParamTypes;
-  ParamTypes.push_back(DestTy);
-  ParamTypes.push_back(ElemTy);
-  if (ThreeArg)
+  SmallVector<QualType, 4> ParamTypes = {DestTy, ElemTy};
+  switch (Shape) {
+  case AtomicOverloadShape::Binary:
+    break;
+  case AtomicOverloadShape::BinaryWithOriginal:
     ParamTypes.push_back(OrigRefTy);
+    break;
+  case AtomicOverloadShape::CompareStore:
+    ParamTypes.push_back(ElemTy);
+    break;
+  case AtomicOverloadShape::CompareExchange:
+    ParamTypes.push_back(ElemTy);
+    ParamTypes.push_back(OrigRefTy);
+    break;
+  }
+
+  // The loop below stops at the end of ParamTypes, so a shorter overload
+  // ignores the trailing names.
+  constexpr const char *BinaryNames[] = {"dest", "value", "original_value"};
+  constexpr const char *CompareNames[] = {"dest", "compare_value", "value",
+                                          "original_value"};
+  const bool IsCompare = Shape == AtomicOverloadShape::CompareStore ||
+                         Shape == AtomicOverloadShape::CompareExchange;
+  const bool HasOriginalValue =
+      Shape == AtomicOverloadShape::BinaryWithOriginal ||
+      Shape == AtomicOverloadShape::CompareExchange;
+  ArrayRef<const char *> ParamNames = IsCompare
+                                          ? ArrayRef<const char *>(CompareNames)
+                                          : ArrayRef<const char *>(BinaryNames);
 
   FunctionProtoType::ExtProtoInfo EPI;
+  SmallVector<FunctionType::ExtParameterInfo, 4> ParamExtInfos(
+      ParamTypes.size());
+  if (HasOriginalValue) {
+    ParamExtInfos.back() = ParamExtInfos.back().withABI(ParameterABI::HLSLOut);
+    EPI.ExtParameterInfos = ParamExtInfos.data();
+  }
   QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
   auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
 
@@ -837,8 +943,7 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
       SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
       /*hasWrittenPrototype=*/true);
 
-  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
-  SmallVector<ParmVarDecl *, 3> ParmDecls;
+  SmallVector<ParmVarDecl *, 4> ParmDecls;
   unsigned I = 0;
   for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
     IdentifierInfo &PII = AST.Idents.get(ParamName, tok::TokenKind::identifier);
@@ -846,6 +951,9 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
         AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
         AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
         nullptr);
+    if (HasOriginalValue && I == ParamTypes.size() - 1)
+      Parm->addAttr(HLSLParamModifierAttr::Create(
+          AST, SourceRange(), HLSLParamModifierAttr::Keyword_out));
     Parm->setScopeInfo(0, I++);
     ParmDecls.push_back(Parm);
   }
@@ -859,25 +967,87 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
 }
 
 // Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
-// x {groupshared, device} x {2-arg, 3-arg}.
+// x {groupshared, device} x {2-arg, 3-arg}. Operations that always report the
+// previous value, such as InterlockedExchange, only get the 3-arg form.
+// InterlockedExchange also accepts float, which lowers to a bitwise exchange
+// of the 32-bit pattern.
 static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
-                                      StringRef FuncName,
-                                      StringRef BuiltinName) {
+                                      StringRef FuncName, StringRef BuiltinName,
+                                      bool RequiresOriginalValue = false,
+                                      bool SupportsFloat = false) {
   ASTContext &AST = S.getASTContext();
   // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
-  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
-                      AST.UnsignedLongTy};
+  SmallVector<QualType, 5> Elems = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                                    AST.UnsignedLongTy};
+  if (SupportsFloat)
+    Elems.push_back(AST.FloatTy);
   LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
 
   for (QualType ElemTy : Elems)
-    for (LangAS AS : AddrSpaces)
-      for (bool ThreeArg : {false, true})
-        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
+    for (LangAS AS : AddrSpaces) {
+      if (!RequiresOriginalValue)
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                            AtomicOverloadShape::Binary);
+      buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                          AtomicOverloadShape::BinaryWithOriginal);
+    }
+}
+
+// Synthesize the compare-and-swap overload sets: {int, uint, int64_t,
+// uint64_t} x {groupshared, device}. Each function has one form only.
+static void defineHLSLInterlockedCompareFunc(Sema &S, NamespaceDecl *NS,
+                                             StringRef FuncName,
+                                             StringRef BuiltinName,
+                                             AtomicOverloadShape Shape) {
+  ASTContext &AST = S.getASTContext();
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : {LangAS::hlsl_groupshared, LangAS::hlsl_device})
+      buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, Shape);
+}
+
+// The float-bitwise compare-and-swap functions have their own names and take
+// float only.
+static void defineHLSLInterlockedCompareFuncFloat(Sema &S, NamespaceDecl *NS,
+                                                  StringRef FuncName,
+                                                  StringRef BuiltinName,
+                                                  AtomicOverloadShape Shape) {
+  ASTContext &AST = S.getASTContext();
+  buildAtomicOverload(S, NS, FuncName, BuiltinName, AST.FloatTy,
+                      LangAS::hlsl_groupshared, Shape);
+  buildAtomicOverload(S, NS, FuncName, BuiltinName, AST.FloatTy,
+                      LangAS::hlsl_device, Shape);
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
                             "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAnd",
+                            "__builtin_hlsl_interlocked_and");
+  defineHLSLInterlockedCompareFunc(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareExchange",
+      "__builtin_hlsl_interlocked_compare_exchange",
+      AtomicOverloadShape::CompareExchange);
+  defineHLSLInterlockedCompareFuncFloat(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareExchangeFloatBitwise",
+      "__builtin_hlsl_interlocked_compare_exchange_float_bitwise",
+      AtomicOverloadShape::CompareExchange);
+  defineHLSLInterlockedCompareFunc(*SemaPtr, HLSLNamespace,
+                                   "InterlockedCompareStore",
+                                   "__builtin_hlsl_interlocked_compare_store",
+                                   AtomicOverloadShape::CompareStore);
+  defineHLSLInterlockedCompareFuncFloat(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareStoreFloatBitwise",
+      "__builtin_hlsl_interlocked_compare_store_float_bitwise",
+      AtomicOverloadShape::CompareStore);
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedExchange",
+                            "__builtin_hlsl_interlocked_exchange",
+                            /*RequiresOriginalValue=*/true,
+                            /*SupportsFloat=*/true);
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMax",
+                            "__builtin_hlsl_interlocked_max");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",
                             "__builtin_hlsl_interlocked_min");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",

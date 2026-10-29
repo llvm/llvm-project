@@ -12,17 +12,41 @@ exports_files(["libc_math_test_rules.bzl"])
 
 licenses(["notice"])
 
+math_mpfr_test(name = "acos")
+
+math_mpfr_test(
+    name = "acosbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "acosf")
 
 math_mpfr_test(name = "acoshf")
+
+math_mpfr_test(name = "acospif")
+
+math_mpfr_test(name = "asin")
+
+math_mpfr_test(
+    name = "asinbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_mpfr_test(name = "asinf")
 
 math_mpfr_test(name = "asinhf")
 
+math_mpfr_test(name = "asinpif")
+
 math_mpfr_test(name = "atan2")
 
 math_mpfr_test(name = "atan2f")
+
+math_mpfr_test(name = "atan2f16")
 
 math_mpfr_test(
     name = "atan2f128",
@@ -31,11 +55,75 @@ math_mpfr_test(
 
 math_mpfr_test(name = "atan")
 
+math_mpfr_test(
+    name = "atanbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "atanf")
+
+math_mpfr_test(name = "atanf16")
 
 math_mpfr_test(name = "atanhf")
 
+math_mpfr_test(name = "atanhf16")
+
+math_mpfr_test(name = "atanpif16")
+
+math_mpfr_test(
+    name = "bf16addf",
+    hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16divf",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mulf",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16subf",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "cbrt")
+
+math_mpfr_test(
+    name = "cbrtbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_mpfr_test(name = "cbrtf")
 
@@ -73,6 +161,16 @@ math_mpfr_test(
     ],
 )
 
+math_mpfr_test(
+    name = "copysign",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_mpfr_test(
+    name = "copysignf",
+    hdrs = ["CopySignTest.h"],
+)
+
 math_mpfr_test(name = "cos")
 
 math_mpfr_test(
@@ -80,6 +178,15 @@ math_mpfr_test(
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+        "//libc:__support_math_cosf",
+    ],
+)
+
+math_mpfr_test(
+    name = "cosh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_cosh_double_eval",
     ],
 )
 
@@ -108,7 +215,23 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add dfmal, dmull test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "dfmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "dmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "dsqrtl",
@@ -122,17 +245,60 @@ math_mpfr_test(
 
 math_mpfr_test(name = "erff")
 
-math_mpfr_test(name = "exp")
+math_mpfr_test(name = "erff16")
 
-math_mpfr_test(name = "expf")
+math_mpfr_test(name = "erfcf16")
+
+math_mpfr_test(
+    name = "exp",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp_double_eval",
+    ],
+)
+
+math_mpfr_test(
+    name = "expf",
+    deps = [
+        "//libc:__support_math_expf_double_eval",
+        "//libc:__support_math_expf_float_eval",
+        "//libc:__support_math_expf_integer_eval",
+    ],
+)
 
 math_mpfr_test(name = "exp10")
 
-math_mpfr_test(name = "exp10f")
+math_mpfr_test(
+    name = "exp10f",
+    deps = [
+        "//libc:__support_math_exp10f_double_eval",
+        "//libc:__support_math_exp10f_float_eval",
+    ],
+)
 
-math_mpfr_test(name = "exp2")
+math_mpfr_test(
+    name = "exp10m1f",
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
 
-math_mpfr_test(name = "exp2f")
+math_mpfr_test(
+    name = "exp2",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp2_double_eval",
+    ],
+)
+
+math_mpfr_test(
+    name = "exp2f",
+    deps = [
+        "//libc:__support_math_exp2f_double_eval",
+        "//libc:__support_math_exp2f_float_eval",
+        "//libc:__support_math_exp2f_integer_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "exp2m1f",
@@ -144,6 +310,8 @@ math_mpfr_test(
 math_mpfr_test(name = "expm1")
 
 math_mpfr_test(name = "expm1f")
+
+math_mpfr_test(name = "expm1f16")
 
 math_mpfr_test(
     name = "fabs",
@@ -182,6 +350,16 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fmaxf",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_mpfr_test(
+    name = "fminf",
+    hdrs = ["FMinTest.h"],
+)
+
+math_mpfr_test(
     name = "f16add",
     hdrs = ["AddTest.h"],
 )
@@ -194,6 +372,11 @@ math_mpfr_test(
 math_mpfr_test(
     name = "f16addl",
     hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
+    name = "fdim",
+    hdrs = ["FDimTest.h"],
 )
 
 math_mpfr_test(
@@ -221,7 +404,23 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add ffma, ffmal test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "ffma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "ffmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "floor",
@@ -249,15 +448,128 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+# TODO: Add fmal test.  Missing stdlib/rand dependency.
 
-# math_mpfr_test(name = "f16mul")
-# math_mpfr_test(name = "f16mulf")
-# math_mpfr_test(name = "f16mull")
+math_mpfr_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
-# math_mpfr_test(name = "f16fma")
-# math_mpfr_test(name = "f16fmaf")
-# math_mpfr_test(name = "f16fmal")
+math_mpfr_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmax",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmin",
+    hdrs = ["FMinTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmod",
+    hdrs = ["FModTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16mul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16mulf",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16mull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "f16fmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmaf16",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmabf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_mpfr_test(
     name = "frexp",
@@ -283,6 +595,14 @@ math_mpfr_test(
 math_mpfr_test(
     name = "frexpl",
     hdrs = ["FrexpTest.h"],
+)
+
+math_mpfr_test(
+    name = "frexpf128",
+    hdrs = ["FrexpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_mpfr_test(
@@ -326,6 +646,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "hypotbf16",
+    hdrs = ["HypotTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "hypotf",
     hdrs = [
         "HypotTest.h",
@@ -341,8 +669,41 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ilogb",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "ilogbf",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexp",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexpf",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
+    name = "logb",
+    hdrs = ["LogbTest.h"],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "llrintbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
 )
 
 math_mpfr_test(
@@ -363,6 +724,14 @@ math_mpfr_test(
 math_mpfr_test(
     name = "llround",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "llroundbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
 )
 
 math_mpfr_test(
@@ -387,6 +756,18 @@ math_mpfr_test(
 
 math_mpfr_test(name = "log")
 
+math_mpfr_test(
+    name = "logbf",
+    hdrs = ["LogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "log_bf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "logf")
 
 math_mpfr_test(name = "log10")
@@ -404,6 +785,14 @@ math_mpfr_test(name = "log2f")
 math_mpfr_test(
     name = "lrint",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "lrintbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
 )
 
 math_mpfr_test(
@@ -427,6 +816,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "lroundbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "lroundf",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -436,13 +833,32 @@ math_mpfr_test(
     hdrs = ["RoundToIntegerTest.h"],
 )
 
-# TODO: add nan tests.
+# TODO: Add nan tests.
+
+math_mpfr_test(
+    name = "modf",
+    hdrs = ["ModfTest.h"],
+)
+
+math_mpfr_test(
+    name = "modff",
+    hdrs = ["ModfTest.h"],
+)
 
 math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
         "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
+    name = "nearbyintbf16",
+    hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc:__support_fputil_bfloat16",
     ],
 )
 
@@ -470,9 +886,25 @@ math_mpfr_test(
     ],
 )
 
+math_mpfr_test(
+    name = "nextafter",
+    hdrs = ["NextAfterTest.h"],
+)
+
+math_mpfr_test(
+    name = "nextafterf",
+    hdrs = ["NextAfterTest.h"],
+)
+
 math_mpfr_test(name = "pow")
 
-math_mpfr_test(name = "powf")
+math_mpfr_test(
+    name = "powf",
+    deps = [
+        "//libc:__support_math_powf_double_eval",
+        "//libc:__support_math_powf_float_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "remquo",
@@ -503,6 +935,14 @@ math_mpfr_test(
 math_mpfr_test(
     name = "rint",
     hdrs = ["RIntTest.h"],
+)
+
+math_mpfr_test(
+    name = "rintbf16",
+    hdrs = ["RIntTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
 )
 
 math_mpfr_test(
@@ -578,6 +1018,14 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_float128"],
 )
 
+math_mpfr_test(
+    name = "scalbn",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
 math_mpfr_test(name = "sin")
 
 math_mpfr_test(
@@ -585,6 +1033,7 @@ math_mpfr_test(
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+        "//libc:__support_math_sinf",
     ],
 )
 
@@ -595,6 +1044,14 @@ math_mpfr_test(
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
+    name = "sinh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_sinh_double_eval",
     ],
 )
 
@@ -627,6 +1084,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "sqrtbf16",
+    hdrs = ["SqrtTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "sqrtf",
     hdrs = ["SqrtTest.h"],
 )
@@ -655,6 +1120,15 @@ math_mpfr_test(
     hdrs = ["SqrtTest.h"],
 )
 
+math_mpfr_test(name = "sqrtf16")
+
+math_mpfr_test(
+    name = "rsqrtf",
+    hdrs = ["RsqrtTest.h"],
+)
+
+math_mpfr_test(name = "rsqrtf16")
+
 math_mpfr_test(
     name = "f16sqrtl",
     hdrs = ["SqrtTest.h"],
@@ -663,10 +1137,34 @@ math_mpfr_test(
 math_mpfr_test(name = "tan")
 
 math_mpfr_test(
+    name = "tanbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "scalbnf",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_mpfr_test(
     name = "tanf",
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+        "//libc:__support_math_tanf",
+    ],
+)
+
+math_mpfr_test(
+    name = "tanh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_tanh_double_eval",
     ],
 )
 
@@ -731,7 +1229,17 @@ math_mpfr_test(name = "exp10m1f16")
 
 math_mpfr_test(name = "asinf16")
 
+math_mpfr_test(name = "asinhf16")
+
+math_mpfr_test(name = "asinpi")
+
+math_mpfr_test(name = "asinpif16")
+
 math_mpfr_test(name = "acosf16")
+
+math_mpfr_test(name = "acoshf16")
+
+math_mpfr_test(name = "acospif16")
 
 math_mpfr_test(name = "coshf16")
 
@@ -743,4 +1251,12 @@ math_mpfr_test(name = "logf16")
 
 math_mpfr_test(name = "log2f16")
 
+math_mpfr_test(name = "log2p1f16")
+
 math_mpfr_test(name = "log10f16")
+
+math_mpfr_test(name = "log10p1f16")
+
+math_mpfr_test(name = "lgammaf")
+
+math_mpfr_test(name = "lgammaf16")

@@ -36,7 +36,7 @@ public:
       llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-  void ExecuteInterpreterLoop() override;
+  llvm::Error ExecuteInterpreterLoop() override;
 
   bool ExecuteOneLineWithReturn(
       llvm::StringRef in_string,
@@ -123,9 +123,9 @@ public:
                                                bool has_extra_args,
                                                bool is_callback) override;
 
-  bool GenerateWatchpointCommandCallbackData(StringList &input,
-                                             std::string &output,
-                                             bool is_callback) override;
+  llvm::Error GenerateWatchpointCommandCallbackData(StringList &input,
+                                                    std::string &output,
+                                                    bool is_callback) override;
 
   bool GetScriptedSummary(const char *function_name, lldb::ValueObjectSP valobj,
                           StructuredData::ObjectSP &callee_wrapper_sp,
@@ -179,28 +179,29 @@ public:
                                           CommandReturnObject &result) override;
 
   /// Set the callback body text into the callback for the breakpoint.
-  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                      const char *callback_body,
-                                      bool is_callback) override;
+  llvm::Error SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                                           const char *callback_body,
+                                           bool is_callback) override;
 
-  Status SetBreakpointCommandCallbackFunction(
+  llvm::Error SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,
       StructuredData::ObjectSP extra_args_sp) override;
 
   /// This one is for deserialization:
-  Status SetBreakpointCommandCallback(
+  llvm::Error SetBreakpointCommandCallback(
       BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
 
-  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                      const char *command_body_text,
-                                      StructuredData::ObjectSP extra_args_sp,
-                                      bool uses_extra_args, bool is_callback);
+  llvm::Error
+  SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                               const char *command_body_text,
+                               StructuredData::ObjectSP extra_args_sp,
+                               bool uses_extra_args, bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
-  void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                    const char *user_input,
-                                    bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *user_input,
+                                           bool is_callback) override;
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
@@ -217,7 +218,8 @@ public:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;
 
-  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger,
+                                                  lldb::ScriptLanguage);
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -273,7 +275,7 @@ public:
   static bool WatchpointCallbackFunction(void *baton,
                                          StoppointCallbackContext *context,
                                          lldb::user_id_t watch_id);
-  static void Initialize();
+  static llvm::Error Initialize();
 
   class SynchronicityHandler {
   private:

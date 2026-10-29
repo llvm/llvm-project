@@ -28,9 +28,9 @@ body: |
     ; CHECK: liveins: $rdi, $esi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !mem.cache_hint !0)
+    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !mem.cache_hint !{{[0-9]+}})
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-    ; CHECK-NEXT: MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[COPY1]] :: (store (s32) into %ir.p, !mem.cache_hint !2)
+    ; CHECK-NEXT: MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[COPY1]] :: (store (s32) into %ir.p, !mem.cache_hint !{{[0-9]+}})
     ; CHECK-NEXT: $eax = COPY [[MOV32rm]]
     ; CHECK-NEXT: RET 0, $eax
     %0:gr64 = COPY $rdi

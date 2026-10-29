@@ -46,15 +46,16 @@ static Function *ExtractDestroyFunction(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp = target_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
 
-  Status error;
   auto destroy_func_ptr_addr = frame_ptr_addr + ptr_size;
-  lldb::addr_t destroy_func_addr =
-      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> destroy_func_addr =
+      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr);
+  if (!destroy_func_addr) {
+    llvm::consumeError(destroy_func_addr.takeError());
     return nullptr;
+  }
 
   Address destroy_func_address;
-  if (!target_sp->ResolveLoadAddress(destroy_func_addr, destroy_func_address))
+  if (!target_sp->ResolveLoadAddress(*destroy_func_addr, destroy_func_address))
     return nullptr;
 
   return destroy_func_address.CalculateSymbolContextFunction();
@@ -196,7 +197,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   for (const auto &[idx, child_sp] : llvm::enumerate(m_children)) {
     if (child_sp->GetName() == name)
       return idx;

@@ -47,6 +47,11 @@ public:
                               ++m_accelerator_action_identifier);
   }
 
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetDynamicLoaderLibraryInfos(const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
 protected:
   GDBServer &m_native_gdb_server;
   MainLoop &m_native_main_loop;

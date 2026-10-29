@@ -21,7 +21,7 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -418,7 +418,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 namespace {
 class CreateGroupOpLowering : public OpConversionPattern<CreateGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CreateGroupOp op, OpAdaptor adaptor,
@@ -437,7 +437,7 @@ public:
 namespace {
 class AddToGroupOpLowering : public OpConversionPattern<AddToGroupOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(AddToGroupOp op, OpAdaptor adaptor,

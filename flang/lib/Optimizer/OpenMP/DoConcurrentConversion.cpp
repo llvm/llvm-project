@@ -203,6 +203,125 @@ static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
                                    mlir::ConversionPatternRewriter &rewriter) {
   rewriter.moveOpBefore(local.getDefiningOp(), &allocRegion.front().front());
 }
+
+/// Holds information needed to inline a LOCAL_INIT copy_region into the
+/// omp.loop_nest body for per-iteration initialization.
+///
+/// Fortran LOCAL_INIT semantics require that at the start of each iteration,
+/// the private variable is re-initialized from the host (original) variable.
+/// OpenMP firstprivate (omp.private copy_region) only initializes once per
+/// thread, which is wrong. Instead, we:
+///   (A) Create the omp.private privatizer the same way as LOCAL (no
+///       copy_region on the privatizer — just init + dealloc).
+///   (B) Inline the copy_region ops at the top of the omp.loop_nest body so
+///       re-initialization happens every iteration.
+///
+/// This struct carries the info collected during (A) in genPrivatizers() that
+/// is consumed during (B) in matchAndRewrite() after block arg remapping.
+///
+/// Example of what the generated IR looks like (host path):
+///
+///   omp.private {type = private} @tmp.omp : f32  // no copy_region
+///
+///   omp.parallel {
+///     omp.wsloop private(@tmp.omp %orig -> %priv : !fir.ref<f32>) {
+///       omp.loop_nest (%iv) = (%lb) to (%ub) step (%st) {
+///         // --- inlined copy_region (per-iteration) ---
+///         %val = fir.load %orig : !fir.ref<f32>
+///         fir.store %val to %priv : !fir.ref<f32>
+///         // --- end inlined copy ---
+///         ... loop body ...
+///         omp.yield
+///       }
+///     }
+///     omp.terminator
+///   }
+struct LocalInitCopyInfo {
+  /// The fir.local op whose copy_region will be inlined. The copy_region
+  /// contains the operations that initialize the private variable from the
+  /// original (e.g., load from original, store to private).
+  fir::LocalitySpecifierOp localizer;
+
+  /// The host (original) variable that the copy reads from. On the host path,
+  /// this is the raw SSA value from the function scope. On the device path,
+  /// this is the device-mapped value obtained via mapper.lookup().
+  mlir::Value originalVar;
+
+  /// Index into the privateClauseOps.privateVars list. After genEntryBlock()
+  /// creates block args for the wsloop (host) or parallel (device) op, this
+  /// index resolves to the actual block arg representing private storage.
+  unsigned privateVarIdx;
+};
+
+/// Inlines the operations from a fir.local copy_region into an existing block,
+/// at the beginning of that block. This is used for LOCAL_INIT to achieve
+/// per-iteration initialization within the omp.loop_nest body.
+///
+/// The copy_region has two block arguments:
+///   - arg0: the original (mold) variable to read from
+///   - arg1: the private variable to write to
+///
+/// These are mapped to \p originalVar and \p privateVar respectively via an
+/// IRMapping. Each operation in the copy_region (except the fir.yield
+/// terminator) is cloned into the target block.
+///
+/// This is modeled on the cloneLocalizerRegion lambda in
+/// SimplifyFIROperations.cpp, which does the same thing for the non-OpenMP
+/// path. We cannot use cloneFIRRegionToOMP or rewriter.cloneRegionBefore
+/// because those would create a new block in the target region, but
+/// omp.loop_nest needs its body in a single block.
+///
+/// For a simple scalar f32 LOCAL_INIT, the copy_region typically contains:
+///   ^bb0(%orig: !fir.ref<f32>, %priv: !fir.ref<f32>):
+///     %val = fir.load %orig : !fir.ref<f32>
+///     fir.store %val to %priv : !fir.ref<f32>
+///     fir.yield(%priv : !fir.ref<f32>)
+///
+/// After inlining into the loop body (with mapping orig->originalVar,
+/// priv->privateVar), the loop body starts with:
+///     %val = fir.load %originalVar : !fir.ref<f32>
+///     fir.store %val to %privateVar : !fir.ref<f32>
+///     ... rest of loop body ...
+static mlir::LogicalResult
+inlineCopyRegionToLoopBody(mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Region &copyRegion, mlir::Value originalVar,
+                           mlir::Value privateVar, mlir::Block &loopBody) {
+  // At this point in the pipeline (before CFG conversion), control-flow
+  // constructs like `if` are still represented by their encapsulating
+  // structured FIR ops (e.g. fir.if), so regions are expected to have a
+  // single block containing straight-line code. Multi-block copy regions
+  // could theoretically arise if CFG conversion ran earlier or if a complex
+  // type's copy involves lowered control flow, but this is not expected at
+  // this pipeline stage. If it does happen, bail out with a diagnostic
+  // rather than silently miscompiling.
+  //
+  // TODO: Support multi-block copy regions if the need arises. This would
+  // require inlining the full CFG (multiple blocks with branches) into the
+  // loop body, not just cloning ops from a single block.
+  if (!copyRegion.hasOneBlock())
+    return mlir::emitError(copyRegion.getLoc())
+           << "LOCAL_INIT copy region with multiple blocks is not yet "
+              "supported in OpenMP conversion. Expected single-block "
+              "straight-line code at this pipeline stage.";
+
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(&loopBody);
+
+  // Map the copy_region's block arguments to the concrete SSA values:
+  //   copy_region arg0 (mold/original) -> originalVar
+  //   copy_region arg1 (private)       -> privateVar
+  mlir::IRMapping mapping;
+  mapping.map(copyRegion.getArgument(0), originalVar);
+  mapping.map(copyRegion.getArgument(1), privateVar);
+
+  // Clone each operation except the terminator (fir.yield). The fir.yield's
+  // result is not needed — the copy is purely side-effecting (load + store).
+  for (mlir::Operation &op : copyRegion.front().without_terminator())
+    rewriter.clone(op, mapping);
+
+  return mlir::success();
+}
+
 } // namespace looputils
 
 class DoConcurrentConversion
@@ -331,8 +450,14 @@ public:
       teamsOp.setCombined(true);
     }
 
+    // Collects info about LOCAL_INIT variables that need per-iteration copy
+    // inlining. Populated by genPrivatizers() (called from genParallelOp on the
+    // device path, or from genWsLoopOp on the host path). Consumed below after
+    // block arg remapping to inline the copy_region into omp.loop_nest.
+    llvm::SmallVector<looputils::LocalInitCopyInfo> localInitCopies;
+
     mlir::omp::ParallelOp parallelOp =
-        genParallelOp(rewriter, loop, ivInfos, mapper);
+        genParallelOp(rewriter, loop, ivInfos, mapper, localInitCopies);
 
     // Only set as composite when part of `distribute parallel do`, and only set
     // as combined when part of `parallel do`.
@@ -351,7 +476,7 @@ public:
 
     auto [loopNestOp, wsLoopOp] =
         genWsLoopOp(rewriter, loop, mapper, loopNestClauseOps,
-                    /*isComposite=*/mapToDevice);
+                    /*isComposite=*/mapToDevice, localInitCopies);
 
     // `local` region arguments are transferred/cloned from the `do concurrent`
     // loop to the loopnest op when the region is cloned above. Instead, these
@@ -380,6 +505,48 @@ public:
          i < loop.getLocalVars().size() + loop.getReduceVars().size(); ++i)
       loopNestOp.getRegion().eraseArgument(
           loopNestClauseOps.loopLowerBounds.size());
+
+    // Inline copy_region for LOCAL_INIT variables at the top of the
+    // omp.loop_nest body. This must happen after the block arg remapping above,
+    // because we need the final (remapped) private block args to map the
+    // copy_region's arguments to.
+    //
+    // For each LOCAL_INIT variable, we resolve the privateVarIdx to the actual
+    // block arg on whichever op holds the private clause (omp.parallel for
+    // device, omp.wsloop for host), then inline the copy_region ops at the
+    // start of the loop_nest body. This gives per-iteration initialization:
+    //
+    //   omp.loop_nest (%iv) = ... {
+    //     // inlined copy: re-init private from original every iteration
+    //     %v = fir.load %originalVar
+    //     fir.store %v to %privateVar
+    //     // ... rest of loop body ...
+    //   }
+    if (!localInitCopies.empty()) {
+      for (auto &info : localInitCopies) {
+        // Resolve the private block arg. On the device path, privates are on
+        // omp.parallel; on the host path, they are on omp.wsloop.
+        //
+        // We use BlockArgOpenMPOpInterface::getPrivateBlockArgs() rather than
+        // raw getRegion().getArgument(idx) because the block arg layout
+        // depends on which clause types are present. The layout order is:
+        //   hasDeviceAddr, hostEval, inReduction, map, private, reduction, ...
+        // Using getPrivateBlockArgs() correctly accounts for any preceding
+        // clause block args, making the indexing robust if new clause types
+        // are added to the op in the future.
+        mlir::Operation *privArgOwner =
+            mapToDevice ? parallelOp.getOperation() : wsLoopOp.getOperation();
+        auto blockArgIface =
+            mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(privArgOwner);
+        mlir::Value privateBlockArg =
+            blockArgIface.getPrivateBlockArgs()[info.privateVarIdx];
+
+        if (mlir::failed(looputils::inlineCopyRegionToLoopBody(
+                rewriter, info.localizer.getCopyRegion(), info.originalVar,
+                privateBlockArg, loopNestOp.getRegion().front())))
+          return mlir::failure();
+      }
+    }
 
     rewriter.setInsertionPoint(doLoop);
     fir::FirOpBuilder builder(
@@ -411,15 +578,18 @@ public:
   }
 
 private:
-  mlir::omp::ParallelOp
-  genParallelOp(mlir::ConversionPatternRewriter &rewriter,
-                fir::DoConcurrentLoopOp loop,
-                looputils::InductionVariableInfos &ivInfos,
-                mlir::IRMapping &mapper) const {
+  mlir::omp::ParallelOp genParallelOp(
+      mlir::ConversionPatternRewriter &rewriter, fir::DoConcurrentLoopOp loop,
+      looputils::InductionVariableInfos &ivInfos, mlir::IRMapping &mapper,
+      llvm::SmallVectorImpl<looputils::LocalInitCopyInfo> &localInitCopies)
+      const {
     mlir::omp::ParallelOperands parallelOps;
 
+    // On the device path, private variables are attached to omp.parallel
+    // (not omp.wsloop). genPrivatizers populates localInitCopies for any
+    // LOCAL_INIT variables encountered.
     if (mapToDevice)
-      genPrivatizers(rewriter, mapper, loop, parallelOps);
+      genPrivatizers(rewriter, mapper, loop, parallelOps, localInitCopies);
 
     mlir::Location loc = loop.getLoc();
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc, parallelOps);
@@ -499,11 +669,15 @@ private:
   std::pair<mlir::omp::LoopNestOp, mlir::omp::WsloopOp>
   genWsLoopOp(mlir::ConversionPatternRewriter &rewriter,
               fir::DoConcurrentLoopOp loop, mlir::IRMapping &mapper,
-              const mlir::omp::LoopNestOperands &clauseOps,
-              bool isComposite) const {
+              const mlir::omp::LoopNestOperands &clauseOps, bool isComposite,
+              llvm::SmallVectorImpl<looputils::LocalInitCopyInfo>
+                  &localInitCopies) const {
     mlir::omp::WsloopOperands wsloopClauseOps;
+    // On the host path, private variables are attached to omp.wsloop
+    // (not omp.parallel). genPrivatizers populates localInitCopies for any
+    // LOCAL_INIT variables encountered.
     if (!mapToDevice)
-      genPrivatizers(rewriter, mapper, loop, wsloopClauseOps);
+      genPrivatizers(rewriter, mapper, loop, wsloopClauseOps, localInitCopies);
 
     genReductions(rewriter, mapper, loop, wsloopClauseOps);
 
@@ -546,6 +720,23 @@ private:
                                                    mlir::omp::MapBoundsType>(
         builder, info, extVal,
         /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
+  }
+
+  static bool recordHasAllocatableMember(fir::RecordType recordType) {
+    for (auto [fieldName, fieldType] : recordType.getTypeList()) {
+      if (fir::isPointerType(fir::unwrapRefType(fieldType)))
+        continue;
+
+      if (fir::isAllocatableType(fieldType))
+        return true;
+
+      if (auto nestedRec = mlir::dyn_cast<fir::RecordType>(
+              fir::getFortranElementType(fieldType)))
+        if (recordHasAllocatableMember(nestedRec))
+          return true;
+    }
+
+    return false;
   }
 
   mlir::omp::MapInfoOp
@@ -596,34 +787,17 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    auto asRecordType = [&](mlir::Type eleType) {
-      return mlir::dyn_cast<fir::RecordType>(
-          fir::getDerivedType(fir::unwrapRefType(eleType)));
-    };
+    fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
+        fir::getDerivedType(fir::unwrapRefType(eleType)));
 
-    fir::RecordType recordType = asRecordType(eleType);
-
-    bool requiresImplcitMapper = [&]() {
-      if (!recordType)
-        return false;
-
-      for (auto [fieldName, fieldType] : recordType.getTypeList()) {
-        if (fir::isAllocatableType(fieldType))
-          return true;
-
-        if (asRecordType(fieldType))
-          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
-      }
-
-      return false;
-    }();
+    bool requiresImplicitMapper =
+        recordType && recordHasAllocatableMember(recordType);
 
     mlir::FlatSymbolRefAttr mapperId;
-    if (requiresImplcitMapper) {
+    if (requiresImplicitMapper) {
       std::string mapperIdName =
           Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
               recordType);
-      // TODO Add a mangler callback once nested record types are supported.
       mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
           builder, liveIn.getLoc(), recordType, mapperIdName);
     }
@@ -829,28 +1003,45 @@ private:
   /// Generate bodies of OpenMP privatizers by cloning the bodies of FIR
   /// privatizers.
   ///
-  /// \param [in] rewriter - used to driver IR generation for privatizers.
+  /// For both LOCAL and LOCAL_INIT variables, this creates an omp.private op
+  /// with DataSharingClauseType::Private and clones the init and dealloc
+  /// regions. The copy_region is NOT cloned into omp.private for LOCAL_INIT
+  /// because omp.private copy_region fires once per thread (firstprivate
+  /// semantics), but LOCAL_INIT requires per-iteration initialization. Instead,
+  /// LOCAL_INIT copy info is recorded in \p localInitCopies for later inlining
+  /// into the omp.loop_nest body by the caller.
+  ///
+  /// \param [in] rewriter - used to drive IR generation for privatizers.
   /// \param [in] mapper - value mapping from FIR to OpenMP constructs.
   /// \param [in] loop - FIR loop to convert its localizers.
   ///
   /// \param [out] privateClauseOps - OpenMP privatizers to gen their bodies.
+  /// \param [out] localInitCopies - info for LOCAL_INIT variables that need
+  ///   per-iteration copy inlining. Populated here, consumed after block arg
+  ///   remapping in matchAndRewrite().
   void genPrivatizers(mlir::ConversionPatternRewriter &rewriter,
                       mlir::IRMapping &mapper, fir::DoConcurrentLoopOp loop,
-                      mlir::omp::PrivateClauseOps &privateClauseOps) const {
-    // For `local` (and `local_init`) operands, emit corresponding `private`
-    // clauses and attach these clauses to the workshare loop.
-    if (!loop.getLocalVars().empty())
+                      mlir::omp::PrivateClauseOps &privateClauseOps,
+                      llvm::SmallVectorImpl<looputils::LocalInitCopyInfo>
+                          &localInitCopies) const {
+    // For `local` and `local_init` operands, emit corresponding `private`
+    // clauses and attach these clauses to the workshare loop (host) or
+    // parallel op (device).
+    if (!loop.getLocalVars().empty()) {
+      // Track the index into privateClauseOps.privateVars so we can later
+      // resolve it to the wsloop/parallel block arg for LOCAL_INIT inlining.
+      unsigned privateVarIdx = 0;
+
       for (auto [var, sym, arg] : llvm::zip_equal(
                loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
         auto localizer = moduleSymbolTable.lookup<fir::LocalitySpecifierOp>(
             sym.getLeafReference());
-        if (localizer.getLocalitySpecifierType() ==
-            fir::LocalitySpecifierType::LocalInit)
-          TODO(localizer.getLoc(),
-               "local_init conversion is not supported yet");
 
+        // Both LOCAL and LOCAL_INIT get the same omp.private {type = private}
+        // privatizer with init + dealloc regions (no copy_region). This gives
+        // each thread its own storage.
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(localizer);
 
@@ -866,11 +1057,27 @@ private:
 
         moduleSymbolTable.insert(privatizer);
 
-        privateClauseOps.privateVars.push_back(mapToDevice ? mapper.lookup(var)
-                                                           : var);
+        // On the device path, use the mapped (device-side) value. On the host
+        // path, use the raw value since omp.parallel is not IsolatedFromAbove.
+        mlir::Value actualVar = mapToDevice ? mapper.lookup(var) : var;
+        privateClauseOps.privateVars.push_back(actualVar);
         privateClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
+
+        // For LOCAL_INIT, record the info needed for per-iteration copy
+        // inlining. The copy_region on the fir.local op will be inlined at
+        // the top of the omp.loop_nest body later in matchAndRewrite(), after
+        // block arg remapping has established the final SSA values.
+        if (localizer.getLocalitySpecifierType() ==
+            fir::LocalitySpecifierType::LocalInit) {
+          localInitCopies.push_back({/*localizer=*/localizer,
+                                     /*originalVar=*/actualVar,
+                                     /*privateVarIdx=*/privateVarIdx});
+        }
+
+        ++privateVarIdx;
       }
+    }
   }
 
   void genReductions(mlir::ConversionPatternRewriter &rewriter,

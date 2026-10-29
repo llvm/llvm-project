@@ -13,7 +13,6 @@ POINTER = "POINTER"
 
 
 class GenericBitsetDataFormatterTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

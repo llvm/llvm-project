@@ -1925,7 +1925,7 @@ define <4 x i16> @clmulr_v4i16_neon(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; CHECK-AES-NEXT:    mov v2.d[1], v4.d[0]
 ; CHECK-AES-NEXT:    mov v0.d[1], v3.d[0]
 ; CHECK-AES-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
-; CHECK-AES-NEXT:    shrn v0.4h, v0.4s, #15
+; CHECK-AES-NEXT:    addhn v0.4h, v0.4s, v0.4s
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <4 x i16> %a to <4 x i32>
   %b.ext = zext <4 x i16> %b to <4 x i32>
@@ -2148,7 +2148,7 @@ define <2 x i32> @clmulr_v2i32_neon(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-AES-NEXT:    pmull2 v2.1q, v0.2d, v1.2d
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-AES-NEXT:    shrn v0.2s, v0.2d, #31
+; CHECK-AES-NEXT:    addhn v0.2s, v0.2d, v0.2d
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <2 x i32> %a to <2 x i64>
   %b.ext = zext <2 x i32> %b to <2 x i64>

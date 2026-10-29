@@ -75,7 +75,7 @@ define i1 @fcmp_trunc_ord_inf(double %0) {
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp ord float %trunc, 0x7FF0000000000000
+  %result = fcmp ord float %trunc, +inf
   ret i1 %result
 }
 
@@ -219,7 +219,7 @@ define i1 @fcmp_trunc_nan(double %0) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp oge float %trunc, 0x7FF8000000000000
+  %result = fcmp oge float %trunc, +qnan
   ret i1 %result
 }
 
@@ -353,7 +353,7 @@ define i1 @fcmp_trunc_literal_nan(double %0) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp oge float %trunc, 0x7FF8000000000000
+  %result = fcmp oge float %trunc, +qnan
   ret i1 %result
 }
 
@@ -365,7 +365,7 @@ define i1 @fcmp_trunc_literal_positive_inf(double %0) {
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp oge float %trunc, 0x7FF0000000000000
+  %result = fcmp oge float %trunc, +inf
   ret i1 %result
 }
 
@@ -377,7 +377,7 @@ define i1 @fcmp_trunc_literal_negative_inf(double %0) {
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp ult float %trunc, 0xFFF0000000000000
+  %result = fcmp ult float %trunc, -inf
   ret i1 %result
 }
 
@@ -388,7 +388,7 @@ define i1 @fcmp_trunc_nan_ugt(double %0) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp ugt float %trunc, 0x7FF8000000000000
+  %result = fcmp ugt float %trunc, +qnan
   ret i1 %result
 }
 
@@ -400,7 +400,7 @@ define i1 @fcmp_trunc_inf_uge(double %0) {
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp uge float %trunc, 0x7FF0000000000000
+  %result = fcmp uge float %trunc, +inf
   ret i1 %result
 }
 
@@ -411,7 +411,7 @@ define i1 @fcmp_trunc_ninf_olt(double %0) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp olt float %trunc, 0xFFF0000000000000
+  %result = fcmp olt float %trunc, -inf
   ret i1 %result
 }
 

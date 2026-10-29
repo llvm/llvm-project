@@ -2445,18 +2445,20 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     llvm_unreachable("Declaration context must already be complete!");
 #endif
 
+  // Inform the external source that we're looking for a qualified name.
   struct QualifiedLookupInScope {
-    bool oldVal;
-    DeclContext *Context;
-    // Set flag in DeclContext informing debugger that we're looking for qualified name
-    QualifiedLookupInScope(DeclContext *ctx)
-        : oldVal(ctx->shouldUseQualifiedLookup()), Context(ctx) {
-      ctx->setUseQualifiedLookup();
+    ExternalSemaSource *Source;
+    const DeclContext *Context;
+    QualifiedLookupInScope(ExternalSemaSource *Source, const DeclContext *Ctx)
+        : Source(Source), Context(Ctx) {
+      if (Source)
+        Source->StartedQualifiedLookup(Context);
     }
     ~QualifiedLookupInScope() {
-      Context->setUseQualifiedLookup(oldVal);
+      if (Source)
+        Source->FinishedQualifiedLookup(Context);
     }
-  } QL(LookupCtx);
+  } QL(ExternalSource.get(), LookupCtx);
 
   CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
@@ -3383,6 +3385,19 @@ void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
   Functions.append(Operators.begin(), Operators.end());
 }
 
+static Sema::SpecialMemberCacheKey
+makeSpecialMemberCacheKey(const CXXRecordDecl *RD, CXXSpecialMemberKind SM,
+                          bool ConstArg, bool VolatileArg, bool RValueThis,
+                          bool ConstThis, bool VolatileThis) {
+  unsigned Flags = llvm::to_underlying(SM) << 5;
+  Flags |= ConstArg << 4;
+  Flags |= VolatileArg << 3;
+  Flags |= RValueThis << 2;
+  Flags |= ConstThis << 1;
+  Flags |= VolatileThis;
+  return {RD, Flags};
+}
+
 Sema::SpecialMemberOverloadResult
 Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
                           bool ConstArg, bool VolatileArg, bool RValueThis,
@@ -3402,27 +3417,14 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   // FIXME: Get the caller to pass in a location for the lookup.
   SourceLocation LookupLoc = RD->getLocation();
 
-  llvm::FoldingSetNodeID ID;
-  ID.AddPointer(RD);
-  ID.AddInteger(llvm::to_underlying(SM));
-  ID.AddInteger(ConstArg);
-  ID.AddInteger(VolatileArg);
-  ID.AddInteger(RValueThis);
-  ID.AddInteger(ConstThis);
-  ID.AddInteger(VolatileThis);
+  SpecialMemberCacheKey Key = makeSpecialMemberCacheKey(
+      RD, SM, ConstArg, VolatileArg, RValueThis, ConstThis, VolatileThis);
 
-  llvm::FoldingSetInsertToken Token;
-  SpecialMemberOverloadResultEntry *Result =
-      SpecialMemberCache.lookup(ID, Token);
+  auto [It, Inserted] = SpecialMemberCache.try_emplace(Key);
+  if (!Inserted)
+    return It->second;
 
-  // This was already cached
-  if (Result)
-    return *Result;
-
-  Result = BumpAlloc.Allocate<SpecialMemberOverloadResultEntry>();
-  Result = new (Result) SpecialMemberOverloadResultEntry(ID);
-  SpecialMemberCache.insert(Result, Token);
-
+  SpecialMemberOverloadResult Result;
   if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {
       runWithSufficientStackSpace(RD->getLocation(), [&] {
@@ -3430,11 +3432,11 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
       });
     }
     CXXDestructorDecl *DD = RD->getDestructor();
-    Result->setMethod(DD);
-    Result->setKind(DD && !DD->isDeleted()
-                        ? SpecialMemberOverloadResult::Success
-                        : SpecialMemberOverloadResult::NoMemberOrDeleted);
-    return *Result;
+    Result.setMethod(DD);
+    Result.setKind(DD && !DD->isDeleted()
+                       ? SpecialMemberOverloadResult::Success
+                       : SpecialMemberOverloadResult::NoMemberOrDeleted);
+    return SpecialMemberCache[Key] = Result;
   }
 
   // Prepare for overload resolution. Here we construct a synthetic argument
@@ -3532,9 +3534,9 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
     // destructor.
     assert(SM == CXXSpecialMemberKind::DefaultConstructor &&
            "lookup for a constructor or assignment operator was empty");
-    Result->setMethod(nullptr);
-    Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
-    return *Result;
+    Result.setMethod(nullptr);
+    Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+    return SpecialMemberCache[Key] = Result;
   }
 
   // Copy the candidates as our processing of them may load new declarations
@@ -3582,27 +3584,27 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   OverloadCandidateSet::iterator Best;
   switch (OCS.BestViableFunction(*this, LookupLoc, Best)) {
     case OR_Success:
-      Result->setMethod(cast<CXXMethodDecl>(Best->Function));
-      Result->setKind(SpecialMemberOverloadResult::Success);
+      Result.setMethod(cast<CXXMethodDecl>(Best->Function));
+      Result.setKind(SpecialMemberOverloadResult::Success);
       break;
 
     case OR_Deleted:
-      Result->setMethod(cast<CXXMethodDecl>(Best->Function));
-      Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+      Result.setMethod(cast<CXXMethodDecl>(Best->Function));
+      Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
       break;
 
     case OR_Ambiguous:
-      Result->setMethod(nullptr);
-      Result->setKind(SpecialMemberOverloadResult::Ambiguous);
+      Result.setMethod(nullptr);
+      Result.setKind(SpecialMemberOverloadResult::Ambiguous);
       break;
 
     case OR_No_Viable_Function:
-      Result->setMethod(nullptr);
-      Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+      Result.setMethod(nullptr);
+      Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
       break;
   }
 
-  return *Result;
+  return SpecialMemberCache[Key] = Result;
 }
 
 CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
@@ -4262,7 +4264,10 @@ private:
             // there anyway.
             continue;
           }
-          const auto *TST = BaseType->getAs<TemplateSpecializationType>();
+          // Look through an alias template, whose TemplateName is a
+          // TypeAliasTemplateDecl rather than the ClassTemplateDecl we are
+          // after; otherwise the base is skipped entirely.
+          const auto *TST = BaseType->getAsNonAliasTemplateSpecializationType();
           if (!TST)
             continue;
           TemplateName TN = TST->getTemplateName();

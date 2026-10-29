@@ -18,8 +18,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 
-static llvm::StringSet<> nameObj;
-
 namespace llvm {
 
 /// Default traits class for extracting a graph from an analysis pass.
@@ -87,6 +85,7 @@ private:
 };
 
 static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
+  static llvm::StringSet<> nameObj;
   if (FN.length() > len)
     FN.resize(len);
   auto strLen = FN.length();
@@ -315,27 +314,6 @@ public:
 private:
   std::string Name;
 };
-
-template <typename GraphT>
-void WriteDOTGraphToFile(Function &F, GraphT &&Graph,
-                         std::string FileNamePrefix, bool IsSimple) {
-  std::string Filename = FileNamePrefix + "." + F.getName().str();
-  shortenFileName(Filename);
-  Filename = Filename + ".dot";
-  std::error_code EC;
-
-  errs() << "Writing '" << Filename << "'...";
-
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
-  std::string GraphName = DOTGraphTraits<GraphT>::getGraphName(Graph);
-  std::string Title = GraphName + " for '" + F.getName().str() + "' function";
-
-  if (!EC)
-    WriteGraph(File, Graph, IsSimple, Title);
-  else
-    errs() << "  error opening file for writing!";
-  errs() << "\n";
-}
 
 } // end namespace llvm
 

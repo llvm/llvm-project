@@ -933,11 +933,10 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
 bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -992,7 +991,7 @@ void ModuloScheduleExpander::updateMemOperands(MachineInstr &NewMI,
     }
     unsigned Delta;
     if (Num != UINT_MAX && computeDelta(OldMI, Delta)) {
-      int64_t AdjOffset = Delta * Num;
+      int64_t AdjOffset = static_cast<int64_t>(Delta) * Num;
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {

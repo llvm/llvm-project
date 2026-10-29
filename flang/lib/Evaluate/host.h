@@ -73,13 +73,14 @@ template <typename FTN_T>
 inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
   if constexpr (FTN_T::category == TypeCategory::Complex &&
-      sizeof(Scalar<FTN_T>) != sizeof(HostType<FTN_T>)) {
+      Scalar<FTN_T>::bytesStored() != sizeof(HostType<FTN_T>)) {
     // X87 is usually padded to 12 or 16bytes. Need to cast piecewise for
     // complex
     return Scalar<FTN_T>{CastHostToFortran<typename FTN_T::Part>(std::real(x)),
         CastHostToFortran<typename FTN_T::Part>(std::imag(x))};
   } else {
-    return *reinterpret_cast<const Scalar<FTN_T> *>(&x);
+    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
+    return Scalar<FTN_T>::FromRawBytes(&x, sizeof(x));
   }
 }
 
@@ -87,20 +88,16 @@ inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
 template <typename FTN_T>
 inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
-  if constexpr (FTN_T::category == TypeCategory::Complex) {
+  if constexpr (FTN_T::category == TypeCategory::Complex &&
+      Scalar<FTN_T>::bytesStored() != sizeof(HostType<FTN_T>)) {
     using FortranPartType = typename FTN_T::Part;
     return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
         CastFortranToHost<FortranPartType>(x.AIMAG())};
-  } else if constexpr (std::is_same_v<FTN_T, Type<TypeCategory::Real, 10>>) {
-    // x87 80-bit floating-point occupies 16 bytes as a C "long double";
-    // copy the data to avoid a legitimate (but benign due to little-endianness)
-    // warning from GCC >= 11.2.0.
-    HostType<FTN_T> y;
-    std::memcpy(&y, &x, sizeof x);
-    return y;
   } else {
-    static_assert(sizeof x == sizeof(HostType<FTN_T>));
-    return *reinterpret_cast<const HostType<FTN_T> *>(&x);
+    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
+    HostType<FTN_T> result;
+    x.StoreRawBytes(&result, sizeof(result));
+    return result;
   }
 }
 
@@ -136,7 +133,7 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(24)>> {
   // IEEE 754 32bits
   using Type = std::conditional_t<sizeof(float) == 4 &&
-          std::numeric_limits<float>::is_iec559,
+          common::numeric_limits<float>::is_iec559,
       float, UnsupportedType>;
 };
 
@@ -145,7 +142,7 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(53)>> {
   // IEEE 754 64bits
   using Type = std::conditional_t<sizeof(double) == 8 &&
-          std::numeric_limits<double>::is_iec559,
+          common::numeric_limits<double>::is_iec559,
       double, UnsupportedType>;
 };
 
@@ -154,8 +151,8 @@ struct HostTypeHelper<
     Type<TypeCategory::Real, common::RealKindForPrecision(64)>> {
   // X87 80bits
   using Type = std::conditional_t<sizeof(long double) >= 10 &&
-          std::numeric_limits<long double>::digits == 64 &&
-          std::numeric_limits<long double>::max_exponent == 16384,
+          common::numeric_limits<long double>::digits == 64 &&
+          common::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
 
@@ -168,8 +165,8 @@ template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
-          std::numeric_limits<long double>::digits == 113 &&
-          std::numeric_limits<long double>::max_exponent == 16384,
+          common::numeric_limits<long double>::digits == 113 &&
+          common::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
 #endif

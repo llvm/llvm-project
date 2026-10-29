@@ -33,7 +33,7 @@ class Library {
                          MemAllocKind AllocKind);
   AnyValue executeCalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args,
                          MemAllocKind AllocKind);
-  AnyValue executeFree(ArrayRef<AnyValue> Args);
+  AnyValue executeFree(ArrayRef<AnyValue> Args, unsigned AS);
   AnyValue executePuts(ArrayRef<AnyValue> Args);
   AnyValue executePrintf(ArrayRef<AnyValue> Args);
   AnyValue executeExit(ArrayRef<AnyValue> Args);
@@ -47,7 +47,8 @@ public:
   /// Simulates a libcall. Returns std::nullopt if an unsupported LibFunc is
   /// passed. Note that the caller is responsible for ensuring the types and
   /// number of the arguments are correct.
-  std::optional<AnyValue> executeLibcall(LibFunc LF, StringRef Name, Type *Type,
+  std::optional<AnyValue> executeLibcall(LibFunc LF, StringRef Name,
+                                         FunctionType *FuncType,
                                          ArrayRef<AnyValue> Args);
 };
 

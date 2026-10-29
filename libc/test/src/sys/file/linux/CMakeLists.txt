@@ -1,0 +1,22 @@
+add_libc_testsuite(libc-sys-file-tests)
+
+add_libc_test(
+  flock_test
+  SUITE
+    libc-sys-file-tests
+  SRCS
+    flock_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_file_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.file.flock
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -293,6 +293,18 @@ define i1 @test_icmp_samesign(i32 %a, i32 %b) {
   ret i1 %res
 }
 
+define ptr @test_addrspacecast_nonnull(ptr addrspace(1) %a) {
+; CHECK: %res = addrspacecast nonnull ptr addrspace(1) %a to ptr
+  %res = addrspacecast nonnull ptr addrspace(1) %a to ptr
+  ret ptr %res
+}
+
+define <2 x ptr> @test_addrspacecast_nonnull_vector(<2 x ptr addrspace(1)> %a) {
+; CHECK: %res = addrspacecast nonnull <2 x ptr addrspace(1)> %a to <2 x ptr>
+  %res = addrspacecast nonnull <2 x ptr addrspace(1)> %a to <2 x ptr>
+  ret <2 x ptr> %res
+}
+
 define <2 x i1> @test_icmp_samesign2(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK: %res = icmp samesign ult <2 x i32> %a, %b
   %res = icmp samesign ult <2 x i32> %a, %b

@@ -15,7 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -294,7 +294,7 @@ struct DoWhileLowering : public OpRewritePattern<WhileOp> {
 
 /// Lower an `scf.index_switch` operation to a `cf.switch` operation.
 struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IndexSwitchOp op,
                                 PatternRewriter &rewriter) const override;
@@ -313,17 +313,21 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 } // namespace
 
+static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(from->getDiscardableAttrs(), std::back_inserter(llvmAttrs),
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                });
+  to->setDiscardableAttrs(llvmAttrs);
+}
+
 static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
   // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
   // llvm.loop_annotation attribute.
   // LLVM requires the loop metadata to be attached on the "latch" block. Which
   // is the back-edge to the header block (conditionBlock)
-  SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(scfOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-                });
-  brOp->setDiscardableAttrs(llvmAttrs);
+  copyLLVMDialectAttrs(scfOp, brOp);
 }
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -354,7 +358,14 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   Operation *terminator = lastBodyBlock->getTerminator();
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.getStep();
-  auto stepped = arith::AddIOp::create(rewriter, loc, iv, step).getResult();
+  // `scf.for` requires `LB + n*Step` to be representable in the induction
+  // variable type, so the increment cannot wrap in the signed (or, with
+  // `unsignedCmp`, unsigned) interpretation of the bounds.
+  arith::IntegerOverflowFlags overflowFlags =
+      forOp.getUnsignedCmp() ? arith::IntegerOverflowFlags::nuw
+                             : arith::IntegerOverflowFlags::nsw;
+  auto stepped =
+      arith::AddIOp::create(rewriter, loc, iv, step, overflowFlags).getResult();
   if (!stepped)
     return failure();
 
@@ -471,7 +482,7 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+      cf::BranchOp::create(rewriter, terminator.getLoc(), remainingOpsBlock,
                            terminatorOperands);
       rewriter.eraseOp(terminator);
     }
@@ -507,10 +518,14 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
+  ForOp innermostForOp;
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
+    ForOp forOp =
+        ForOp::create(rewriter, loc, lower, upper, step, iterArgs,
+                      /*bodyBuilder=*/nullptr, parallelOp.getUnsignedCmp());
+    innermostForOp = forOp;
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
     iterArgs.assign(iterRange.begin(), iterRange.end());
@@ -529,6 +544,12 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
 
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
+
+  // Serializing into the for nest would drop attributes such as
+  // llvm.loop_annotation. The loop above emits one scf.for per dimension, so
+  // the attributes go to the innermost one, which runs the body.
+  if (innermostForOp)
+    copyLLVMDialectAttrs(parallelOp, innermostForOp);
 
   // First, merge reduction blocks into the main region.
   SmallVector<Value> yieldOperands;

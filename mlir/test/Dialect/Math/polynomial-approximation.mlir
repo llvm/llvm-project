@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-math-polynomial-approximation | FileCheck %s
-// RUN: mlir-opt %s -test-math-polynomial-approximation=enable-avx2 \
+// RUN: mlir-opt %s -transform-interpreter | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter=entry-point=avx2 \
 // RUN: | FileCheck --check-prefix=AVX2 %s
 
 // Check that all math functions lowered to approximations built from
@@ -1051,4 +1051,24 @@ func.func @rsqrt_f16(%arg0 : vector<2x8xf16>) -> vector<2x8xf16> {
   // AVX2-NOT: math.rsqrt
   %0 = "math.rsqrt"(%arg0) : (vector<2x8xf16>) -> vector<2x8xf16>
   return %0 : vector<2x8xf16>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.math.f32_expansion
+      transform.apply_patterns.math.polynomial_approximation
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @avx2(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.math.f32_expansion
+      transform.apply_patterns.math.polynomial_approximation enable_avx2
+    } : !transform.any_op
+    transform.yield
+  }
 }

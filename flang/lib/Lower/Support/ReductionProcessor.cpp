@@ -204,9 +204,10 @@ ReductionProcessor::findUserDefinedReductionForIntrinsic(
   if (!symbol || !type)
     return nullptr;
 
-  std::string mangledName = "op." + getRealName(symbol).ToString();
-  const semantics::Symbol *reductionSymbol =
-      scope.FindSymbol(parser::CharBlock{mangledName});
+  parser::CharBlock mangledName =
+      semantics::MangleSpecialFunctions(getRealName(symbol));
+
+  const semantics::Symbol *reductionSymbol = scope.FindSymbol(mangledName);
   if (!reductionSymbol)
     return nullptr;
 
@@ -317,8 +318,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/true));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, minInt);
+    return builder.createIntegerConstant(loc, type,
+                                         llvm::APInt::getSignedMinValue(bits));
   }
   case ReductionIdentifier::MIN: {
     if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
@@ -327,8 +328,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, maxInt);
+    return builder.createIntegerConstant(loc, type,
+                                         llvm::APInt::getSignedMaxValue(bits));
   }
   case ReductionIdentifier::IOR: {
     unsigned bits = type.getIntOrFloatBitWidth();
@@ -1205,9 +1206,8 @@ bool ReductionProcessor::processReductionArguments(
         if (semaCtx) {
           const semantics::DeclTypeSpec *opVarType =
               reductionSymbols[idx]->GetUltimate().GetType();
-          parser::CharBlock mangledOpName =
-              semantics::omp::MangledIntrinsicOperatorReductionName(
-                  toParserIntrinsicOperator(intrinsicOp), *semaCtx);
+          parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
+              toParserIntrinsicOperator(intrinsicOp), *semaCtx);
           if (const semantics::Symbol *userSym =
                   semantics::omp::FindUserReductionSymbol(
                       converter.getCurrentScope(), mangledOpName, opVarType)) {

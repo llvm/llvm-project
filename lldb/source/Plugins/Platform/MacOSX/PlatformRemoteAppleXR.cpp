@@ -148,8 +148,11 @@ PlatformRemoteAppleXR::GetSupportedArchitectures(
   return result;
 }
 
-llvm::StringRef PlatformRemoteAppleXR::GetDeviceSupportDirectoryName() {
-  return "XROS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteAppleXR::GetDeviceSupportDirectoryNames() {
+  // Xcode 27+ uses "visionOS DeviceSupport"; earlier versions used
+  // "XROS DeviceSupport".
+  return {"visionOS DeviceSupport", "XROS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteAppleXR::GetPlatformName() {

@@ -49,12 +49,14 @@
 ; CHECK-NEXT:   DXIL Resource Implicit Binding
 ; CHECK-NEXT:   DXIL Resources Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
+; CHECK-NEXT:   DXIL Semantic Signature Analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Root Signature Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
+; CHECK-NEXT:   DXIL Debug Info
 
 ; CHECK-ASM-NEXT: DXIL Pretty Printer
 

@@ -68,13 +68,14 @@ protected:
 
 class InstructionSelectImpl {
 public:
-  bool selectMachineFunction(MachineFunction &MF);
+  LLVM_ABI bool selectMachineFunction(MachineFunction &MF);
   void setInstructionSelector(InstructionSelector *NewISel) { ISel = NewISel; }
-  bool runOnMachineFunction(MachineFunction &MF,
-                            function_ref<GISelValueTracking *()> GetVT,
-                            function_ref<ProfileSummaryInfo *()> GetPSI,
-                            function_ref<BlockFrequencyInfo *()> GetBFI);
-  InstructionSelectImpl(CodeGenOptLevel OL);
+  LLVM_ABI bool
+  runOnMachineFunction(MachineFunction &MF,
+                       function_ref<GISelValueTracking *()> GetVT,
+                       function_ref<ProfileSummaryInfo *()> GetPSI,
+                       function_ref<BlockFrequencyInfo *()> GetBFI);
+  LLVM_ABI InstructionSelectImpl(CodeGenOptLevel OL);
 
 protected:
   class MIIteratorMaintainer;
@@ -86,7 +87,7 @@ protected:
 
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
-  bool selectInstr(MachineInstr &MI);
+  LLVM_ABI bool selectInstr(MachineInstr &MI);
 };
 
 class InstructionSelectPass
@@ -95,10 +96,10 @@ class InstructionSelectPass
   bool RequireRegBankSelection = true;
 
 public:
-  InstructionSelectPass(CodeGenOptLevel OL = CodeGenOptLevel::Default,
-                        bool RequireRegBankSelection = true);
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI InstructionSelectPass(CodeGenOptLevel OL = CodeGenOptLevel::Default,
+                                 bool RequireRegBankSelection = true);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     MachineFunctionProperties RequiredProperties;

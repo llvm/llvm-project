@@ -368,7 +368,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     // Tagging operations with shifts for debugging purposes.
     LLVM_DEBUG({
       OpBuilder b(&op);
-      op.setAttr("shift", b.getI64IntegerAttr(shifts[s - 1]));
+      op.setDiscardableAttr("shift", b.getI64IntegerAttr(shifts[s - 1]));
     });
   }
 

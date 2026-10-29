@@ -29,6 +29,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
+  They now mean what they say again; the default behavior is unchanged.
+
 ### Breaking changes
 
 ### COFF Improvements
@@ -36,6 +39,15 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 ### MinGW Improvements
 
 ### MachO Improvements
+
+* `__objc_stubs` entries are now ordered by the priority of the sections that
+  call them, so that stubs reached from prioritized code are laid out together.
+  This applies whenever section priorities exist, such as with `-order_file`.
+
+* Added `--warn-missing-subsections-via-symbols` and
+  `--no-warn-missing-subsections-via-symbols` to lld to warn when input object
+  files lack the `MH_SUBSECTIONS_VIA_SYMBOLS` flag, which prevents
+  dead-stripping and subsection splitting.
 
 ### WebAssembly Improvements
 

@@ -357,7 +357,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // Collect the list of users of this GEP instruction. Will add it to the
   // last node created for it.
   UseSet Us;
-  for (Value::user_iterator UI = GepI->user_begin(), UE = GepI->user_end();
+  for (Instruction::user_iterator UI = GepI->user_begin(),
+                                  UE = GepI->user_end();
        UI != UE; ++UI) {
     // Check if this gep is used by anything other than other geps that
     // we will process.

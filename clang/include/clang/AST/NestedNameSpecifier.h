@@ -28,8 +28,6 @@ auto NestedNameSpecifier::getKind() const -> Kind {
       return Kind::Null;
     case FlagKind::Global:
       return Kind::Global;
-    case FlagKind::Invalid:
-      llvm_unreachable("use of invalid NestedNameSpecifier");
     }
     llvm_unreachable("unhandled FlagKind");
   }

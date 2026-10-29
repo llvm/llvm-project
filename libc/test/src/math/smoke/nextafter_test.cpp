@@ -10,4 +10,4 @@
 
 #include "src/math/nextafter.h"
 
-LIST_NEXTAFTER_TESTS(double, LIBC_NAMESPACE::nextafter)
+LIST_NEXTAFTER_TESTS(Nextafter, double, LIBC_NAMESPACE::nextafter)

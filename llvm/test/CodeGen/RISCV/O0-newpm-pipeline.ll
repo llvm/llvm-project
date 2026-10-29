@@ -24,6 +24,7 @@
 ; CHECK-NEXT:   ee-instrument<post-inline>
 ; CHECK-NEXT:   scalarize-masked-mem-intrin
 ; CHECK-NEXT:   expand-reductions
+; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
@@ -36,7 +37,6 @@
 ; CHECK-NEXT:     localstackalloc
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
 ; CHECK-NEXT:     phi-node-elimination
-; CHECK-NEXT:     two-address-instruction
 ; CHECK-NEXT:     regallocfast
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved

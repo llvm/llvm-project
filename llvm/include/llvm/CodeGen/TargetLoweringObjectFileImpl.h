@@ -47,12 +47,11 @@ protected:
 public:
   ~TargetLoweringObjectFileELF() override = default;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
-
-  void getModuleMetadata(Module &M) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   /// Emit Obj-C garbage collection and linker options.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, const Module &M) const override;
 
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &DL,
                             const MCSymbol *Sym,
@@ -63,7 +62,8 @@ public:
                                         const MCSymbol *Sym,
                                         const MachineModuleInfo *MMI) const;
 
-  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
+  void emitLinkerDirectives(MCStreamer &Streamer,
+                            const Module &M) const override;
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
@@ -141,15 +141,17 @@ public:
   TargetLoweringObjectFileMachO();
   ~TargetLoweringObjectFileMachO() override = default;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
   /// Emit the module flags that specify the garbage collection information.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, const Module &M) const override;
 
-  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
+  void emitLinkerDirectives(MCStreamer &Streamer,
+                            const Module &M) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
@@ -188,12 +190,12 @@ public:
 
 class LLVM_ABI TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
-  const TargetMachine *TM = nullptr;
 
 public:
   ~TargetLoweringObjectFileCOFF() override = default;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 
@@ -210,9 +212,10 @@ public:
                                            const Function &F) const override;
 
   /// Emit Obj-C garbage collection and linker options.
-  void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
+  void emitModuleMetadata(MCStreamer &Streamer, const Module &M) const override;
 
-  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
+  void emitLinkerDirectives(MCStreamer &Streamer,
+                            const Module &M) const override;
 
   MCSection *getStaticCtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
@@ -239,7 +242,8 @@ public:
   TargetLoweringObjectFileWasm() = default;
   ~TargetLoweringObjectFileWasm() override = default;
 
-  void getModuleMetadata(Module &M) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
@@ -267,7 +271,8 @@ public:
 
   static MCSymbol *getEHInfoTableSymbol(const MachineFunction *MF);
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
@@ -329,10 +334,14 @@ public:
   TargetLoweringObjectFileGOFF();
   ~TargetLoweringObjectFileGOFF() override = default;
 
-  void getModuleMetadata(Module &M) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

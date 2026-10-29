@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -90,6 +91,10 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   // as such calls make the `isFunctionVectorizable` raise an
   // exception.
   if (CI.isNoBuiltin() || !CI.getCalledFunction())
+    return;
+
+  // Skip variadic function calls as they are not supported (like 'int pow();')
+  if (CI.getFunctionType()->isVarArg())
     return;
 
   StringRef ScalarName = CI.getCalledFunction()->getName();

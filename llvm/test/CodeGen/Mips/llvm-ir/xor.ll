@@ -63,8 +63,8 @@ define signext i1 @xor_i1(i1 signext %a, i1 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i1:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xor16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xor16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i1:
@@ -112,8 +112,8 @@ define signext i8 @xor_i8(i8 signext %a, i8 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i8:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xor16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xor16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i8:
@@ -161,8 +161,8 @@ define signext i16 @xor_i16(i16 signext %a, i16 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i16:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xor16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xor16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i16:
@@ -207,8 +207,8 @@ define signext i32 @xor_i32(i32 signext %a, i32 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i32:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xor16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xor16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i32:
@@ -256,10 +256,10 @@ define signext i64 @xor_i64(i64 signext %a, i64 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i64:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xor16 $4, $6
-; MM32R3-NEXT:    xor16 $5, $7
-; MM32R3-NEXT:    move $2, $4
 ; MM32R3-NEXT:    move $3, $5
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xor16 $2, $6
+; MM32R3-NEXT:    xor16 $3, $7
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i64:
@@ -372,16 +372,19 @@ define signext i1 @xor_i1_4(i1 signext %b) {
 ;
 ; MIPS64-LABEL: xor_i1_4:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: xor_i1_4:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: xor_i1_4:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;
@@ -537,21 +540,21 @@ entry:
 define signext i64 @xor_i64_4(i64 signext %b) {
 ; MIPS-LABEL: xor_i64_4:
 ; MIPS:       # %bb.0: # %entry
-; MIPS-NEXT:    xori $3, $5, 4
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    xori $3, $5, 4
 ;
 ; MIPS32R2-LABEL: xor_i64_4:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    xori $3, $5, 4
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    xori $3, $5, 4
 ;
 ; MIPS32R6-LABEL: xor_i64_4:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    xori $3, $5, 4
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    xori $3, $5, 4
 ;
 ; MIPS64-LABEL: xor_i64_4:
 ; MIPS64:       # %bb.0: # %entry
@@ -570,14 +573,14 @@ define signext i64 @xor_i64_4(i64 signext %b) {
 ;
 ; MM32R3-LABEL: xor_i64_4:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xori $3, $5, 4
 ; MM32R3-NEXT:    move $2, $4
-; MM32R3-NEXT:    jrc $ra
+; MM32R3-NEXT:    jr $ra
+; MM32R3-NEXT:    xori $3, $5, 4
 ;
 ; MM32R6-LABEL: xor_i64_4:
 ; MM32R6:       # %bb.0: # %entry
-; MM32R6-NEXT:    xori $3, $5, 4
 ; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    xori $3, $5, 4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = xor i64 4, %b
@@ -587,65 +590,60 @@ entry:
 define signext i128 @xor_i128_4(i128 signext %b) {
 ; MIPS-LABEL: xor_i128_4:
 ; MIPS:       # %bb.0: # %entry
-; MIPS-NEXT:    xori $1, $7, 4
-; MIPS-NEXT:    move $2, $4
 ; MIPS-NEXT:    move $3, $5
-; MIPS-NEXT:    move $4, $6
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    xori $5, $7, 4
 ; MIPS-NEXT:    jr $ra
-; MIPS-NEXT:    move $5, $1
+; MIPS-NEXT:    move $4, $6
 ;
 ; MIPS32R2-LABEL: xor_i128_4:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    xori $1, $7, 4
-; MIPS32R2-NEXT:    move $2, $4
 ; MIPS32R2-NEXT:    move $3, $5
-; MIPS32R2-NEXT:    move $4, $6
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    xori $5, $7, 4
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    move $5, $1
+; MIPS32R2-NEXT:    move $4, $6
 ;
 ; MIPS32R6-LABEL: xor_i128_4:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    xori $1, $7, 4
-; MIPS32R6-NEXT:    move $2, $4
 ; MIPS32R6-NEXT:    move $3, $5
-; MIPS32R6-NEXT:    move $4, $6
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    xori $5, $7, 4
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    move $5, $1
+; MIPS32R6-NEXT:    move $4, $6
 ;
 ; MIPS64-LABEL: xor_i128_4:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    xori $3, $5, 4
-; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    xori $3, $5, 4
 ;
 ; MIPS64R2-LABEL: xor_i128_4:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    xori $3, $5, 4
-; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    xori $3, $5, 4
 ;
 ; MIPS64R6-LABEL: xor_i128_4:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    xori $3, $5, 4
-; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    xori $3, $5, 4
 ;
 ; MM32R3-LABEL: xor_i128_4:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    xori $1, $7, 4
-; MM32R3-NEXT:    move $2, $4
 ; MM32R3-NEXT:    move $3, $5
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    xori $5, $7, 4
 ; MM32R3-NEXT:    move $4, $6
-; MM32R3-NEXT:    move $5, $1
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: xor_i128_4:
 ; MM32R6:       # %bb.0: # %entry
-; MM32R6-NEXT:    xori $1, $7, 4
-; MM32R6-NEXT:    move $2, $4
 ; MM32R6-NEXT:    move $3, $5
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    xori $5, $7, 4
 ; MM32R6-NEXT:    move $4, $6
-; MM32R6-NEXT:    move $5, $1
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = xor i128 4, %b

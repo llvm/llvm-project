@@ -20,15 +20,15 @@ end subroutine omp_tile02
 ! CHECK:    %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "ub"},
 ! CHECK:    %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "inc"}) {
 ! CHECK:         %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_tile02Ei"}
-! CHECK:         %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFomp_tile02Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_tile02Einc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFomp_tile02Ej"}
-! CHECK:         %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFomp_tile02Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_tile02Elb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_tile02Eres"}
-! CHECK:         %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFomp_tile02Eres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_tile02Eub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_tile02Ei"}>
+! CHECK:         %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFomp_tile02Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_tile02Einc") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFomp_tile02Ej"}>
+! CHECK:         %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFomp_tile02Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_tile02Elb") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_tile02Eres"}>
+! CHECK:         %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFomp_tile02Eres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_tile02Eub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 3 : i32
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 7 : i32
 ! CHECK:         %[[VAL_12:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
@@ -41,7 +41,7 @@ end subroutine omp_tile02
 ! CHECK:         %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_14]] : i32
 ! CHECK:         %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_13]], %[[VAL_12]] : i32
 ! CHECK:         %[[VAL_21:.*]] = arith.select %[[VAL_17]], %[[VAL_12]], %[[VAL_13]] : i32
-! CHECK:         %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_20]] overflow<nuw> : i32
+! CHECK:         %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_20]] : i32
 ! CHECK:         %[[VAL_23:.*]] = arith.divui %[[VAL_22]], %[[VAL_19]] : i32
 ! CHECK:         %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_16]] overflow<nuw> : i32
 ! CHECK:         %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_20]] : i32
@@ -57,7 +57,7 @@ end subroutine omp_tile02
 ! CHECK:         %[[VAL_35:.*]] = arith.select %[[VAL_33]], %[[VAL_34]], %[[VAL_30]] : i32
 ! CHECK:         %[[VAL_36:.*]] = arith.select %[[VAL_33]], %[[VAL_29]], %[[VAL_28]] : i32
 ! CHECK:         %[[VAL_37:.*]] = arith.select %[[VAL_33]], %[[VAL_28]], %[[VAL_29]] : i32
-! CHECK:         %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_36]] overflow<nuw> : i32
+! CHECK:         %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_36]] : i32
 ! CHECK:         %[[VAL_39:.*]] = arith.divui %[[VAL_38]], %[[VAL_35]] : i32
 ! CHECK:         %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_32]] overflow<nuw> : i32
 ! CHECK:         %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_37]], %[[VAL_36]] : i32

@@ -15,7 +15,9 @@
 #include "orc-rt/support/sps/SPSAllocAction.h"
 
 #include "AllocActionTestUtils.h"
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 #include <cstring>
@@ -23,6 +25,7 @@
 #include <vector>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 // Write the given value to the address pointed to by P.
 static orc_rt_WrapperFunctionBuffer
@@ -53,7 +56,8 @@ TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
   // expected.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  EXPECT_THAT_EXPECTED(SimpleNativeMemoryMap::Create(S, ThrowAway),
+                       Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
@@ -61,15 +65,17 @@ TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
   // without finalizing any memory within it.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   std::future<Error> ReleaseResult;
-  SNMM->releaseMultiple(waitFor(ReleaseResult), {Addr});
-  cantFail(ReleaseResult.get());
+  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
@@ -83,14 +89,16 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<char *>(Addr) + 64 * 1024;
+      reinterpret_cast<char *>(*Addr) + 64 * 1024;
   uint64_t SentinelValue1 = 0; // Read from pre-filled content
   uint64_t SentinelValue2 =
       0; // Written in initialize, read back during dealloc.
@@ -135,70 +143,70 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   });
 
   std::future<Expected<void *>> InitializeResult;
-  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
-  void *InitializeKeyAddr = cantFail(InitializeResult.get());
+  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  auto InitializeKeyAddr = InitializeResult.get();
+  ASSERT_THAT_EXPECTED(InitializeKeyAddr, Succeeded());
 
   EXPECT_EQ(SentinelValue1, 42U);
   EXPECT_EQ(SentinelValue2, 0U);
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Error> DeallocResult;
-  SNMM->deinitializeMultiple(waitFor(DeallocResult), {InitializeKeyAddr});
-  cantFail(DeallocResult.get());
+  (*SNMM)->deinitializeMultiple(waitFor(DeallocResult), {*InitializeKeyAddr});
+  ASSERT_THAT_ERROR(DeallocResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue1, 42U);
   EXPECT_EQ(SentinelValue2, 42U);
   EXPECT_EQ(SentinelValue3, 0U);
 
   std::future<Error> ReleaseResult;
-  SNMM->releaseMultiple(waitFor(ReleaseResult), {Addr});
-  cantFail(ReleaseResult.get());
+  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveRejectsNonPageSizeMultiple) {
   // Verify that reserve rejects sizes that aren't page-size multiples.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), S.processInfo().pageSize() + 1);
-  auto Result = ReserveResult.get();
-  EXPECT_FALSE(!!Result);
-  consumeError(Result.takeError());
+  (*SNMM)->reserve(waitFor(ReserveResult), S.processInfo().pageSize() + 1);
+  EXPECT_THAT_EXPECTED(ReserveResult.get(), Failed());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveAcceptsPageSizeMultiple) {
   // Verify that reserve accepts a size that's an exact page-size multiple.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), S.processInfo().pageSize());
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), S.processInfo().pageSize());
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   std::future<Error> ReleaseResult;
-  SNMM->releaseMultiple(waitFor(ReleaseResult), {Addr});
-  cantFail(ReleaseResult.get());
+  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReleaseMultipleReportsErrors) {
   // Test that releaseMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   // Try to release an address that was never reserved.
   int Dummy;
   std::future<Error> ReleaseResult;
-  SNMM->releaseMultiple(waitFor(ReleaseResult), {&Dummy});
-  auto Err = ReleaseResult.get();
-  EXPECT_TRUE(!!Err);
-  consumeError(std::move(Err));
+  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {&Dummy});
+  EXPECT_THAT_ERROR(ReleaseResult.get(), Failed());
 
   // The error for the unrecognized address should have been reported
   // via reportError (not silently consumed).
@@ -209,29 +217,28 @@ TEST(SimpleNativeMemoryMapTest, DeinitializeMultipleReportsErrors) {
   // Test that deinitializeMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
+  Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(Errors));
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   // Reserve and initialize a slab so we have a valid context.
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   // Try to deinitialize an address that was never initialized.
   // This should fail and report the error.
   std::future<Error> DeinitResult;
-  SNMM->deinitializeMultiple(waitFor(DeinitResult), {Addr});
-  auto Err = DeinitResult.get();
-  EXPECT_TRUE(!!Err);
-  consumeError(std::move(Err));
+  (*SNMM)->deinitializeMultiple(waitFor(DeinitResult), {*Addr});
+  EXPECT_THAT_ERROR(DeinitResult.get(), Failed());
 
   EXPECT_EQ(Errors.size(), 1U);
 
   std::future<Error> ReleaseResult;
-  SNMM->releaseMultiple(waitFor(ReleaseResult), {Addr});
-  cantFail(ReleaseResult.get());
+  (*SNMM)->releaseMultiple(waitFor(ReleaseResult), {*Addr});
+  ASSERT_THAT_ERROR(ReleaseResult.get(), Succeeded());
 }
 
 TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
@@ -240,14 +247,16 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<char *>(Addr) + 64 * 1024;
+      reinterpret_cast<char *>(*Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   SimpleNativeMemoryMap::InitializeRequest IR;
@@ -263,13 +272,13 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
            ExecutorAddr::fromPtr(InitializeBase))});
 
   std::future<Expected<void *>> InitializeResult;
-  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
-  cantFail(InitializeResult.get());
+  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  ASSERT_THAT_EXPECTED(InitializeResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> ShutdownResult;
-  SNMM->onShutdown(waitFor(ShutdownResult));
+  (*SNMM)->onShutdown(waitFor(ShutdownResult));
   ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
@@ -281,14 +290,16 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
 
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
-  auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
+  auto SNMM = SimpleNativeMemoryMap::Create(S, ThrowAway);
+  ASSERT_THAT_EXPECTED(SNMM, Succeeded());
 
   std::future<Expected<void *>> ReserveResult;
-  SNMM->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
-  void *Addr = cantFail(ReserveResult.get());
+  (*SNMM)->reserve(waitFor(ReserveResult), 1024 * 1024 * 1024);
+  auto Addr = ReserveResult.get();
+  ASSERT_THAT_EXPECTED(Addr, Succeeded());
 
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
-      reinterpret_cast<char *>(Addr) + 64 * 1024;
+      reinterpret_cast<char *>(*Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
   SimpleNativeMemoryMap::InitializeRequest IR;
@@ -304,19 +315,19 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
            ExecutorAddr::fromPtr(InitializeBase))});
 
   std::future<Expected<void *>> InitializeResult;
-  SNMM->initialize(waitFor(InitializeResult), std::move(IR));
-  cantFail(InitializeResult.get());
+  (*SNMM)->initialize(waitFor(InitializeResult), std::move(IR));
+  ASSERT_THAT_EXPECTED(InitializeResult.get(), Succeeded());
 
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> DetachResult;
-  SNMM->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
+  (*SNMM)->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
   DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);
 
   std::future<void> ShutdownResult;
-  SNMM->onShutdown(waitFor(ShutdownResult));
+  (*SNMM)->onShutdown(waitFor(ShutdownResult));
   ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);

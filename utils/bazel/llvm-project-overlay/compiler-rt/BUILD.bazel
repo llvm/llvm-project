@@ -59,6 +59,9 @@ cc_library(
         [
             "lib/sanitizer_common/*.cpp",
         ],
+        exclude = [
+            "lib/sanitizer_common/sanitizer_offload*.cpp",
+        ],
     ),
     linkstatic = True,
     deps = [
@@ -107,6 +110,26 @@ cc_library(
         ":config",
         ":interception",
     ],
+)
+
+cc_library(
+    name = "FuzzerMain",
+    srcs = glob(
+        ["lib/fuzzer/Fuzzer*.cpp"],
+        exclude = ["lib/fuzzer/FuzzerInterceptors.cpp"],
+    ),
+    hdrs = glob(["lib/fuzzer/Fuzzer*.h"]),
+    copts = select({
+        "@rules_cc//cc/compiler:clang": [
+            # Not using no-sanitize=address per https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow#false-positives
+            "-fno-sanitize=memory,thread,undefined",
+            "-fsanitize-coverage=0",
+        ],
+        "//conditions:default": [],
+    }),
+    includes = ["lib/fuzzer"],
+    linkstatic = True,
+    textual_hdrs = glob(["lib/fuzzer/Fuzzer*.def"]),
 )
 
 cc_library(
@@ -303,6 +326,30 @@ BUILTINS_LIBC_MATH_EXCLUDES = [
     "lib/builtins/extendsfdf2.cpp",
     "lib/builtins/extendsftf2.cpp",
     "lib/builtins/extendxftf2.cpp",
+    "lib/builtins/fixdfdi.cpp",
+    "lib/builtins/fixdfsi.cpp",
+    "lib/builtins/fixdfti.cpp",
+    "lib/builtins/fixsfdi.cpp",
+    "lib/builtins/fixsfsi.cpp",
+    "lib/builtins/fixsfti.cpp",
+    "lib/builtins/fixunsdfdi.cpp",
+    "lib/builtins/fixunsdfsi.cpp",
+    "lib/builtins/fixunsdfti.cpp",
+    "lib/builtins/fixunssfdi.cpp",
+    "lib/builtins/fixunssfsi.cpp",
+    "lib/builtins/fixunssfti.cpp",
+    "lib/builtins/floatdidf.cpp",
+    "lib/builtins/floatdisf.cpp",
+    "lib/builtins/floatsidf.cpp",
+    "lib/builtins/floatsisf.cpp",
+    "lib/builtins/floattidf.cpp",
+    "lib/builtins/floattisf.cpp",
+    "lib/builtins/floatundidf.cpp",
+    "lib/builtins/floatundisf.cpp",
+    "lib/builtins/floatunsidf.cpp",
+    "lib/builtins/floatunsisf.cpp",
+    "lib/builtins/floatuntidf.cpp",
+    "lib/builtins/floatuntisf.cpp",
     "lib/builtins/muldf3.cpp",
     "lib/builtins/mulsf3.cpp",
     "lib/builtins/multf3.cpp",
@@ -407,6 +454,12 @@ AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
         "echo '#define SIZE " + size + "' >> $(OUTS) && " +
         "echo '#define MODEL " + model + "' >> $(OUTS) && " +
         "cat $(SRCS) >> $(OUTS)"
+    ),
+    cmd_bat = (
+        ">>$(OUTS) echo #define L_" + pat + "&& " +
+        ">>$(OUTS) echo #define SIZE " + size + "&& " +
+        ">>$(OUTS) echo #define MODEL " + model + "&& " +
+        ">>$(OUTS) type $(SRCS)"
     ),
 )] for (pat, size, model) in AARCH64_OUTLINE_ATOMICS]
 
@@ -699,4 +752,155 @@ filegroup(
 make_filtered_builtins_srcs_groups(
     name = "builtins_i386_srcs",
     srcs = [":builtins_unfiltered_i386_srcs"],
+)
+
+filegroup(
+    name = "asan_ignorelist",
+    srcs = ["lib/sanitizer_ignorelists/asan_ignorelist.txt"],
+)
+
+filegroup(
+    name = "sanitizer_hdrs",
+    srcs = glob(
+        [
+            "lib/asan/*.h",
+            "lib/interception/*.h",
+            "lib/lsan/*.h",
+            "lib/sanitizer_common/*.h",
+            "lib/ubsan/*.h",
+        ],
+        exclude = [
+            "lib/sanitizer_common/sanitizer_offload*.h",
+            "lib/ubsan/ubsan_offload*.h",
+        ],
+    ),
+)
+
+filegroup(
+    name = "sanitizer_textual_srcs",
+    srcs = glob(
+        [
+            "lib/asan/*.inc",
+            "lib/lsan/*.inc",
+            "lib/sanitizer_common/*.inc",
+            "lib/sanitizer_common/*.inc.S",
+            "lib/ubsan/*.inc",
+        ],
+        exclude = [
+            "lib/ubsan/ubsan_offload*.inc",
+        ],
+    ),
+)
+
+filegroup(
+    name = "sanitizer_common_srcs",
+    srcs = glob(
+        [
+            "lib/interception/*.cpp",
+            "lib/sanitizer_common/*.cpp",
+        ],
+        exclude = [
+            "lib/sanitizer_common/sanitizer_common_nolibc.cpp",
+            "lib/sanitizer_common/sanitizer_coverage_win_runtime_thunk.cpp",
+            "lib/sanitizer_common/sanitizer_offload*.cpp",
+            "lib/sanitizer_common/sanitizer_win_thunk_interception.cpp",
+        ],
+    ),
+)
+
+filegroup(
+    name = "lsan_common_srcs",
+    srcs = glob(["lib/lsan/lsan_common*.cpp"]),
+)
+
+filegroup(
+    name = "lsan_srcs",
+    srcs = glob(
+        ["lib/lsan/*.cpp"],
+        exclude = ["lib/lsan/lsan_common*.cpp"],
+    ),
+)
+
+filegroup(
+    name = "ubsan_common_srcs",
+    srcs = [
+        "lib/ubsan/ubsan_diag.cpp",
+        "lib/ubsan/ubsan_flags.cpp",
+        "lib/ubsan/ubsan_handlers.cpp",
+        "lib/ubsan/ubsan_init.cpp",
+        "lib/ubsan/ubsan_monitor.cpp",
+        "lib/ubsan/ubsan_value.cpp",
+    ],
+)
+
+filegroup(
+    name = "ubsan_preinit_srcs",
+    srcs = ["lib/ubsan/ubsan_init_standalone_preinit.cpp"],
+)
+
+filegroup(
+    name = "ubsan_standalone_srcs",
+    srcs = [
+        "lib/ubsan/ubsan_diag_standalone.cpp",
+        "lib/ubsan/ubsan_init_standalone.cpp",
+        "lib/ubsan/ubsan_signals_standalone.cpp",
+    ],
+)
+
+filegroup(
+    name = "ubsan_cxx_srcs",
+    srcs = [
+        "lib/ubsan/ubsan_handlers_cxx.cpp",
+        "lib/ubsan/ubsan_type_hash.cpp",
+        "lib/ubsan/ubsan_type_hash_itanium.cpp",
+        "lib/ubsan/ubsan_type_hash_win.cpp",
+    ],
+)
+
+filegroup(
+    name = "ubsan_syms_extra",
+    srcs = ["lib/ubsan/ubsan.syms.extra"],
+)
+
+filegroup(
+    name = "asan_preinit_srcs",
+    srcs = ["lib/asan/asan_preinit.cpp"],
+)
+
+filegroup(
+    name = "asan_srcs",
+    srcs = [
+        "lib/asan/asan_interceptors_vfork.S",
+    ] + glob(
+        ["lib/asan/*.cpp"],
+        exclude = [
+            "lib/asan/asan_*_thunk.cpp",
+            "lib/asan/asan_new_delete.cpp",
+            "lib/asan/asan_preinit.cpp",
+            "lib/asan/asan_rtl_static.cpp",
+        ],
+    ),
+)
+
+filegroup(
+    name = "asan_cxx_srcs",
+    srcs = ["lib/asan/asan_new_delete.cpp"],
+)
+
+filegroup(
+    name = "asan_static_srcs",
+    srcs = [
+        "lib/asan/asan_rtl_static.cpp",
+        "lib/asan/asan_rtl_x86_64.S",
+    ],
+)
+
+filegroup(
+    name = "asan_syms_extra",
+    srcs = ["lib/asan/asan.syms.extra"],
+)
+
+filegroup(
+    name = "gen_dynamic_list",
+    srcs = ["lib/sanitizer_common/scripts/gen_dynamic_list.py"],
 )

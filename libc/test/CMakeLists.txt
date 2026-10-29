@@ -1,14 +1,4 @@
-add_custom_target(libc-unit-tests)
-add_custom_target(libc-hermetic-tests)
-
-add_custom_target(exhaustive-check-libc)
-add_custom_target(libc-long-running-tests)
-
-# Build-only targets for lit (don't run tests, just build executables)
-add_custom_target(libc-unit-tests-build)
-add_custom_target(libc-hermetic-tests-build)
-add_custom_target(libc-integration-tests-build)
-add_custom_target(libc_include_tests-build)
+add_libc_testsuite(libc-tests ROOT)
 
 # Configure the site config file for lit
 configure_lit_site_cfg(
@@ -37,8 +27,7 @@ if(TARGET check-hdrgen)
   add_dependencies(check-libc check-hdrgen)
 endif()
 
-add_dependencies(check-libc-build libc-unit-tests-build)
-add_dependencies(check-libc-build libc-hermetic-tests-build)
+add_dependencies(check-libc-build libc-tests-build)
 
 add_subdirectory(UnitTest)
 

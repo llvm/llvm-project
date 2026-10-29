@@ -620,52 +620,51 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @22, KC0[], KC1[]
 ; EG-NEXT:    TEX 7 @6
-; EG-NEXT:    ALU 30, @23, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    ALU 29, @23, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_8 T5.X, T4.X, 74, #3
-; EG-NEXT:     VTX_READ_8 T6.X, T4.X, 108, #3
-; EG-NEXT:     VTX_READ_8 T7.X, T4.X, 72, #3
-; EG-NEXT:     VTX_READ_8 T8.X, T4.X, 111, #3
-; EG-NEXT:     VTX_READ_8 T9.X, T4.X, 75, #3
-; EG-NEXT:     VTX_READ_8 T10.X, T4.X, 109, #3
-; EG-NEXT:     VTX_READ_8 T11.X, T4.X, 73, #3
-; EG-NEXT:     VTX_READ_8 T4.X, T4.X, 110, #3
+; EG-NEXT:     VTX_READ_8 T1.X, T0.X, 73, #3
+; EG-NEXT:     VTX_READ_8 T2.X, T0.X, 111, #3
+; EG-NEXT:     VTX_READ_8 T3.X, T0.X, 75, #3
+; EG-NEXT:     VTX_READ_8 T4.X, T0.X, 108, #3
+; EG-NEXT:     VTX_READ_8 T5.X, T0.X, 72, #3
+; EG-NEXT:     VTX_READ_8 T6.X, T0.X, 110, #3
+; EG-NEXT:     VTX_READ_8 T7.X, T0.X, 74, #3
+; EG-NEXT:     VTX_READ_8 T0.X, T0.X, 109, #3
 ; EG-NEXT:    ALU clause starting at 22:
-; EG-NEXT:     MOV * T4.X, 0.0,
+; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 23:
-; EG-NEXT:     BFE_INT T0.Z, T5.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T0.W, T4.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT T0.Z, T1.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT T4.X, T11.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT T0.Y, T10.X, 0.0, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     BFE_INT * T1.Z, T9.X, 0.0, literal.x, BS:VEC_201
+; EG-NEXT:     BFE_INT T0.X, T7.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T0.Y, T6.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT * T1.Z, T5.X, 0.0, literal.x, BS:VEC_201
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT T1.W, T8.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T1.W, T4.X, 0.0, literal.x,
 ; EG-NEXT:     MIN_INT * T0.W, T0.Z, T0.W,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     MIN_INT T0.Z, T1.Z, PV.W,
 ; EG-NEXT:     AND_INT T0.W, PS, literal.x,
-; EG-NEXT:     MIN_INT * T1.W, T4.X, T0.Y,
+; EG-NEXT:     MIN_INT * T1.W, T0.X, T0.Y,
 ; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T4.X, PS, literal.x,
+; EG-NEXT:     AND_INT T0.X, PS, literal.x,
 ; EG-NEXT:     LSHL T0.Y, PV.W, literal.y,
-; EG-NEXT:     BFE_INT T1.Z, T7.X, 0.0, literal.z,
-; EG-NEXT:     BFE_INT T0.W, T6.X, 0.0, literal.z, BS:VEC_120/SCL_212
-; EG-NEXT:     LSHL * T1.W, PV.Z, literal.w,
-; EG-NEXT:    255(3.573311e-43), 16(2.242078e-44)
-; EG-NEXT:    8(1.121039e-44), 24(3.363116e-44)
+; EG-NEXT:     BFE_INT T1.Z, T3.X, 0.0, literal.y,
+; EG-NEXT:     BFE_INT T0.W, T2.X, 0.0, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT * T1.W, PV.Z, literal.x,
+; EG-NEXT:    255(3.573311e-43), 8(1.121039e-44)
 ; EG-NEXT:     MIN_INT T0.Z, PV.Z, PV.W,
 ; EG-NEXT:     OR_INT T0.W, PS, PV.Y,
 ; EG-NEXT:     LSHL * T1.W, PV.X, literal.x,
-; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT T0.W, PV.W, PS,
-; EG-NEXT:     AND_INT * T1.W, PV.Z, literal.x,
-; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T4.X, PV.W, PS,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHL * T1.W, PV.Z, literal.x,
+; EG-NEXT:    24(3.363116e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: s_test_imin_sle_v4i8:
@@ -706,28 +705,26 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ;
 ; VI-LABEL: s_test_imin_sle_v4i8:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[8:9], 0x28
-; VI-NEXT:    s_load_dword s3, s[8:9], 0x4c
+; VI-NEXT:    s_load_dword s2, s[8:9], 0x4c
+; VI-NEXT:    s_load_dword s3, s[8:9], 0x28
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    s_add_i32 s12, s12, s17
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xc0c0400
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_sext_i32_i16 s5, s2
-; VI-NEXT:    s_sext_i32_i16 s7, s3
-; VI-NEXT:    s_ashr_i32 s7, s7, 8
-; VI-NEXT:    s_ashr_i32 s5, s5, 8
-; VI-NEXT:    s_min_i32 s5, s5, s7
-; VI-NEXT:    s_sext_i32_i8 s7, s3
-; VI-NEXT:    s_sext_i32_i8 s8, s2
-; VI-NEXT:    s_ashr_i32 s4, s2, 24
-; VI-NEXT:    s_ashr_i32 s6, s3, 24
-; VI-NEXT:    s_min_i32 s7, s8, s7
-; VI-NEXT:    s_bfe_i32 s3, s3, 0x80010
-; VI-NEXT:    s_bfe_i32 s2, s2, 0x80010
-; VI-NEXT:    v_mov_b32_e32 v0, s7
-; VI-NEXT:    s_min_i32 s2, s2, s3
+; VI-NEXT:    s_sext_i32_i8 s4, s2
+; VI-NEXT:    s_sext_i32_i8 s5, s3
+; VI-NEXT:    s_bfe_i32 s6, s2, 0x80008
+; VI-NEXT:    s_min_i32 s4, s5, s4
+; VI-NEXT:    s_bfe_i32 s5, s3, 0x80008
+; VI-NEXT:    s_min_i32 s5, s5, s6
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_perm_b32 v0, s5, v0, v1
-; VI-NEXT:    s_min_i32 s4, s4, s6
+; VI-NEXT:    s_ashr_i32 s4, s2, 24
+; VI-NEXT:    s_ashr_i32 s5, s3, 24
+; VI-NEXT:    s_bfe_i32 s2, s2, 0x80010
+; VI-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; VI-NEXT:    s_min_i32 s2, s3, s2
+; VI-NEXT:    s_min_i32 s4, s5, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x6050400
 ; VI-NEXT:    v_perm_b32 v1, s4, v1, v2
@@ -742,28 +739,26 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ;
 ; GFX9-LABEL: s_test_imin_sle_v4i8:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x28
-; GFX9-NEXT:    s_load_dword s3, s[8:9], 0x4c
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x4c
+; GFX9-NEXT:    s_load_dword s3, s[8:9], 0x28
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0xc0c0400
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x6050400
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_sext_i32_i16 s5, s2
-; GFX9-NEXT:    s_sext_i32_i16 s7, s3
-; GFX9-NEXT:    s_ashr_i32 s7, s7, 8
-; GFX9-NEXT:    s_ashr_i32 s5, s5, 8
-; GFX9-NEXT:    s_min_i32 s5, s5, s7
-; GFX9-NEXT:    s_sext_i32_i8 s7, s3
-; GFX9-NEXT:    s_sext_i32_i8 s8, s2
-; GFX9-NEXT:    s_ashr_i32 s4, s2, 24
-; GFX9-NEXT:    s_ashr_i32 s6, s3, 24
-; GFX9-NEXT:    s_min_i32 s7, s8, s7
-; GFX9-NEXT:    s_bfe_i32 s3, s3, 0x80010
-; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x80010
-; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    s_min_i32 s2, s2, s3
+; GFX9-NEXT:    s_sext_i32_i8 s4, s2
+; GFX9-NEXT:    s_sext_i32_i8 s5, s3
+; GFX9-NEXT:    s_min_i32 s4, s5, s4
+; GFX9-NEXT:    s_bfe_i32 s5, s2, 0x80008
+; GFX9-NEXT:    s_bfe_i32 s6, s3, 0x80008
+; GFX9-NEXT:    s_min_i32 s5, s6, s5
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_perm_b32 v1, s5, v1, v2
-; GFX9-NEXT:    s_min_i32 s4, s4, s6
+; GFX9-NEXT:    s_ashr_i32 s4, s2, 24
+; GFX9-NEXT:    s_ashr_i32 s5, s3, 24
+; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x80010
+; GFX9-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX9-NEXT:    s_min_i32 s2, s3, s2
+; GFX9-NEXT:    s_min_i32 s4, s5, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_perm_b32 v2, s4, v2, v3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -775,29 +770,27 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; GFX10-LABEL: s_test_imin_sle_v4i8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    s_load_dword s2, s[8:9], 0x28
-; GFX10-NEXT:    s_load_dword s3, s[8:9], 0x4c
+; GFX10-NEXT:    s_load_dword s2, s[8:9], 0x4c
+; GFX10-NEXT:    s_load_dword s3, s[8:9], 0x28
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0x6050400
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0xc0c0400
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_ashr_i32 s4, s2, 24
-; GFX10-NEXT:    s_sext_i32_i16 s5, s2
-; GFX10-NEXT:    s_ashr_i32 s6, s3, 24
-; GFX10-NEXT:    s_sext_i32_i16 s7, s3
-; GFX10-NEXT:    s_sext_i32_i8 s8, s3
-; GFX10-NEXT:    s_sext_i32_i8 s9, s2
-; GFX10-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX10-NEXT:    s_sext_i32_i8 s4, s2
+; GFX10-NEXT:    s_sext_i32_i8 s5, s3
+; GFX10-NEXT:    s_bfe_i32 s6, s2, 0x80008
+; GFX10-NEXT:    s_bfe_i32 s7, s3, 0x80008
+; GFX10-NEXT:    s_ashr_i32 s8, s2, 24
+; GFX10-NEXT:    s_ashr_i32 s9, s3, 24
 ; GFX10-NEXT:    s_bfe_i32 s2, s2, 0x80010
-; GFX10-NEXT:    s_min_i32 s4, s4, s6
-; GFX10-NEXT:    s_min_i32 s2, s2, s3
-; GFX10-NEXT:    s_ashr_i32 s7, s7, 8
-; GFX10-NEXT:    v_perm_b32 v0, s4, s2, v0
-; GFX10-NEXT:    s_ashr_i32 s5, s5, 8
-; GFX10-NEXT:    s_min_i32 s3, s9, s8
-; GFX10-NEXT:    s_min_i32 s2, s5, s7
-; GFX10-NEXT:    v_perm_b32 v1, s2, s3, v1
+; GFX10-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX10-NEXT:    s_min_i32 s8, s9, s8
+; GFX10-NEXT:    s_min_i32 s2, s3, s2
+; GFX10-NEXT:    s_min_i32 s3, s7, s6
+; GFX10-NEXT:    v_perm_b32 v0, s8, s2, v0
+; GFX10-NEXT:    s_min_i32 s2, s5, s4
+; GFX10-NEXT:    v_perm_b32 v1, s3, s2, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -806,31 +799,30 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; GFX11-LABEL: s_test_imin_sle_v4i8:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x28
-; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x4c
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x4c
+; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x28
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x6050400
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0xc0c0400
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_ashr_i32 s4, s2, 24
-; GFX11-NEXT:    s_sext_i32_i16 s5, s2
-; GFX11-NEXT:    s_ashr_i32 s6, s3, 24
-; GFX11-NEXT:    s_sext_i32_i16 s7, s3
-; GFX11-NEXT:    s_sext_i32_i8 s8, s3
-; GFX11-NEXT:    s_sext_i32_i8 s9, s2
-; GFX11-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX11-NEXT:    s_sext_i32_i8 s4, s2
+; GFX11-NEXT:    s_sext_i32_i8 s5, s3
+; GFX11-NEXT:    s_bfe_i32 s6, s2, 0x80008
+; GFX11-NEXT:    s_bfe_i32 s7, s3, 0x80008
+; GFX11-NEXT:    s_ashr_i32 s8, s2, 24
+; GFX11-NEXT:    s_ashr_i32 s9, s3, 24
 ; GFX11-NEXT:    s_bfe_i32 s2, s2, 0x80010
-; GFX11-NEXT:    s_min_i32 s4, s4, s6
-; GFX11-NEXT:    s_min_i32 s2, s2, s3
-; GFX11-NEXT:    s_ashr_i32 s7, s7, 8
-; GFX11-NEXT:    v_perm_b32 v0, s4, s2, v0
-; GFX11-NEXT:    s_ashr_i32 s5, s5, 8
-; GFX11-NEXT:    s_min_i32 s3, s9, s8
-; GFX11-NEXT:    s_min_i32 s2, s5, s7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_perm_b32 v1, s2, s3, v1
+; GFX11-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX11-NEXT:    s_min_i32 s8, s9, s8
+; GFX11-NEXT:    s_min_i32 s2, s3, s2
+; GFX11-NEXT:    s_min_i32 s3, s7, s6
+; GFX11-NEXT:    v_perm_b32 v0, s8, s2, v0
+; GFX11-NEXT:    s_min_i32 s2, s5, s4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_perm_b32 v1, s3, s2, v1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -842,31 +834,30 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x28 nv
-; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x28 nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x6050400
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0xc0c0400
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_ashr_i32 s4, s2, 24
-; GFX1250-NEXT:    s_sext_i32_i16 s5, s2
-; GFX1250-NEXT:    s_ashr_i32 s6, s3, 24
-; GFX1250-NEXT:    s_sext_i32_i16 s7, s3
-; GFX1250-NEXT:    s_sext_i32_i8 s8, s3
-; GFX1250-NEXT:    s_sext_i32_i8 s9, s2
-; GFX1250-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX1250-NEXT:    s_sext_i32_i8 s4, s2
+; GFX1250-NEXT:    s_sext_i32_i8 s5, s3
+; GFX1250-NEXT:    s_bfe_i32 s6, s2, 0x80008
+; GFX1250-NEXT:    s_bfe_i32 s7, s3, 0x80008
+; GFX1250-NEXT:    s_ashr_i32 s8, s2, 24
+; GFX1250-NEXT:    s_ashr_i32 s9, s3, 24
 ; GFX1250-NEXT:    s_bfe_i32 s2, s2, 0x80010
-; GFX1250-NEXT:    s_min_i32 s4, s4, s6
-; GFX1250-NEXT:    s_min_i32 s2, s2, s3
-; GFX1250-NEXT:    s_ashr_i32 s7, s7, 8
-; GFX1250-NEXT:    v_perm_b32 v0, s4, s2, v0
-; GFX1250-NEXT:    s_ashr_i32 s5, s5, 8
-; GFX1250-NEXT:    s_min_i32 s3, s9, s8
-; GFX1250-NEXT:    s_min_i32 s2, s5, s7
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_perm_b32 v1, s2, s3, v1
+; GFX1250-NEXT:    s_bfe_i32 s3, s3, 0x80010
+; GFX1250-NEXT:    s_min_i32 s8, s9, s8
+; GFX1250-NEXT:    s_min_i32 s2, s3, s2
+; GFX1250-NEXT:    s_min_i32 s3, s7, s6
+; GFX1250-NEXT:    v_perm_b32 v0, s8, s2, v0
+; GFX1250-NEXT:    s_min_i32 s2, s5, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_perm_b32 v1, s3, s2, v1
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -882,30 +873,30 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(ptr addrspace(1) %out, <2 x i16
 ; EG-NEXT:    ALU 0, @14, KC0[], KC1[]
 ; EG-NEXT:    TEX 3 @6
 ; EG-NEXT:    ALU 13, @15, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_16 T5.X, T4.X, 42, #3
-; EG-NEXT:     VTX_READ_16 T6.X, T4.X, 44, #3
-; EG-NEXT:     VTX_READ_16 T7.X, T4.X, 40, #3
-; EG-NEXT:     VTX_READ_16 T4.X, T4.X, 46, #3
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 40, #3
+; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 46, #3
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 42, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 44, #3
 ; EG-NEXT:    ALU clause starting at 14:
-; EG-NEXT:     MOV * T4.X, 0.0,
+; EG-NEXT:     MOV * T0.X, 0.0,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     BFE_INT T5.X, T5.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT T0.Y, T4.X, 0.0, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:     BFE_INT * T0.Z, T7.X, 0.0, literal.x, BS:VEC_201
+; EG-NEXT:     BFE_INT T1.X, T1.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T0.Y, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT * T0.Z, T3.X, 0.0, literal.x, BS:VEC_201
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT * T0.W, T6.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT * T0.W, T2.X, 0.0, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     MIN_INT T0.W, T0.Z, PV.W,
-; EG-NEXT:     MIN_INT * T1.W, T5.X, T0.Y,
-; EG-NEXT:     LSHL T1.W, PS, literal.x,
-; EG-NEXT:     AND_INT * T0.W, PV.W, literal.y,
-; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
-; EG-NEXT:     OR_INT T4.X, PV.W, PS,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MIN_INT * T1.W, T1.X, T0.Y,
+; EG-NEXT:     AND_INT T1.W, PS, literal.x,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: s_test_imin_sle_v2i16:
@@ -1001,81 +992,50 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(ptr addrspace(1) %out, <2 x i16
 define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16> %a, <4 x i16> %b) #0 {
 ; EG-LABEL: s_test_imin_sle_v4i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 1, @28, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @12
-; EG-NEXT:    ALU 9, @30, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @16
-; EG-NEXT:    ALU 10, @40, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @20
-; EG-NEXT:    ALU 10, @51, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @24
-; EG-NEXT:    ALU 11, @62, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T6.XY, T5.X, 1
+; EG-NEXT:    ALU 0, @22, KC0[], KC1[]
+; EG-NEXT:    TEX 7 @6
+; EG-NEXT:    ALU 25, @23, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 12:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 50, #3
-; EG-NEXT:     VTX_READ_16 T7.X, T5.X, 58, #3
-; EG-NEXT:    Fetch clause starting at 16:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 48, #3
-; EG-NEXT:     VTX_READ_16 T7.X, T5.X, 56, #3
-; EG-NEXT:    Fetch clause starting at 20:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 46, #3
-; EG-NEXT:     VTX_READ_16 T7.X, T5.X, 54, #3
-; EG-NEXT:    Fetch clause starting at 24:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 44, #3
-; EG-NEXT:     VTX_READ_16 T5.X, T5.X, 52, #3
-; EG-NEXT:    ALU clause starting at 28:
-; EG-NEXT:     MOV * T0.Y, T3.X,
-; EG-NEXT:     MOV * T5.X, 0.0,
-; EG-NEXT:    ALU clause starting at 30:
-; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:    Fetch clause starting at 6:
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 50, #3
+; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 54, #3
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 46, #3
+; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 52, #3
+; EG-NEXT:     VTX_READ_16 T5.X, T0.X, 44, #3
+; EG-NEXT:     VTX_READ_16 T6.X, T0.X, 56, #3
+; EG-NEXT:     VTX_READ_16 T7.X, T0.X, 48, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 58, #3
+; EG-NEXT:    ALU clause starting at 22:
+; EG-NEXT:     MOV * T0.X, 0.0,
+; EG-NEXT:    ALU clause starting at 23:
+; EG-NEXT:     BFE_INT T0.Z, T1.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_INT T1.Z, T7.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T1.W, T6.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:     MIN_INT * T0.W, PV.Z, PV.W,
-; EG-NEXT:     LSHL T0.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
-; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
-; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T3.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 40:
-; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MIN_INT T0.W, PV.Z, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     AND_INT * T0.W, PV.W, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV T3.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, T2.X,
-; EG-NEXT:    ALU clause starting at 51:
-; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT T0.X, T5.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T0.Y, T4.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     BFE_INT * T0.Z, T3.X, 0.0, literal.x, BS:VEC_201
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MIN_INT T0.W, PV.Z, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:     BFE_INT T2.W, T2.X, 0.0, literal.x,
+; EG-NEXT:     MIN_INT * T1.W, T1.Z, T1.W,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV * T2.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 62:
-; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T0.W, T5.X, 0.0, literal.x, BS:VEC_120/SCL_212
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MIN_INT * T0.W, PV.Z, PV.W,
-; EG-NEXT:     LSHR T5.X, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT T1.W, T0.Y, literal.y,
-; EG-NEXT:     AND_INT * T0.W, PV.W, literal.z,
-; EG-NEXT:    2(2.802597e-45), -65536(nan)
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T6.X, PV.W, PS,
-; EG-NEXT:     MOV T2.X, PV.X,
-; EG-NEXT:     MOV * T6.Y, T3.X,
+; EG-NEXT:     MIN_INT T1.Y, T0.Z, PV.W,
+; EG-NEXT:     MIN_INT T0.Z, T0.X, T0.Y,
+; EG-NEXT:     AND_INT T1.W, PS, literal.x,
+; EG-NEXT:     LSHL * T0.W, T0.W, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T0.Y, PV.W, PS,
+; EG-NEXT:     AND_INT T0.W, PV.Z, literal.x,
+; EG-NEXT:     LSHL * T1.W, PV.Y, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: s_test_imin_sle_v4i16:
 ; CI:       ; %bb.0:
@@ -2273,22 +2233,22 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    ALU 11, @24, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @12
 ; EG-NEXT:    ALU 8, @36, KC0[], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T6.X, T8.X, 0
-; EG-NEXT:    MEM_RAT MSKOR T7.XW, T0.X
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T3.X, 0
+; EG-NEXT:    MEM_RAT MSKOR T2.XW, T0.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 8:
-; EG-NEXT:     VTX_READ_16 T7.X, T6.X, 4, #1
-; EG-NEXT:     VTX_READ_16 T8.X, T0.X, 4, #1
+; EG-NEXT:     VTX_READ_16 T2.X, T1.X, 4, #1
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 4, #1
 ; EG-NEXT:    Fetch clause starting at 12:
-; EG-NEXT:     VTX_READ_16 T8.X, T6.X, 0, #1
-; EG-NEXT:     VTX_READ_16 T9.X, T0.X, 0, #1
-; EG-NEXT:     VTX_READ_16 T6.X, T6.X, 2, #1
+; EG-NEXT:     VTX_READ_16 T3.X, T1.X, 0, #1
+; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 0, #1
+; EG-NEXT:     VTX_READ_16 T1.X, T1.X, 2, #1
 ; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 2, #1
 ; EG-NEXT:    ALU clause starting at 20:
 ; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT T0.X, KC0[2].Z, PV.W,
-; EG-NEXT:     ADD_INT * T6.X, KC0[2].W, PV.W,
+; EG-NEXT:     ADD_INT * T1.X, KC0[2].W, PV.W,
 ; EG-NEXT:    ALU clause starting at 24:
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, T0.W,
 ; EG-NEXT:     ADD_INT * T1.W, PV.W, literal.x,
@@ -2296,21 +2256,21 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:     AND_INT * T2.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T2.W, PV.W, literal.x,
-; EG-NEXT:     MIN_UINT * T3.W, T8.X, T7.X,
+; EG-NEXT:     MIN_UINT * T3.W, T3.X, T2.X,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T7.X, PS, PV.W,
-; EG-NEXT:     LSHL * T7.W, literal.x, PV.W,
+; EG-NEXT:     LSHL T2.X, PS, PV.W,
+; EG-NEXT:     LSHL * T2.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV * T7.Y, 0.0,
+; EG-NEXT:     MOV * T2.Y, 0.0,
 ; EG-NEXT:    ALU clause starting at 36:
-; EG-NEXT:     MOV T7.Z, 0.0,
-; EG-NEXT:     MIN_UINT * T2.W, T0.X, T6.X,
+; EG-NEXT:     MOV T2.Z, 0.0,
+; EG-NEXT:     MIN_UINT * T3.W, T0.X, T1.X,
 ; EG-NEXT:     LSHR T0.X, T1.W, literal.x,
 ; EG-NEXT:     LSHL T1.W, PV.W, literal.y,
-; EG-NEXT:     MIN_UINT * T2.W, T9.X, T8.X,
+; EG-NEXT:     MIN_UINT * T3.W, T4.X, T3.X,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-; EG-NEXT:     OR_INT T6.X, PV.W, PS,
-; EG-NEXT:     LSHR * T8.X, T0.W, literal.x,
+; EG-NEXT:     OR_INT T1.X, PS, PV.W,
+; EG-NEXT:     LSHR * T3.X, T0.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: v_test_umin_ule_v3i16:
@@ -2449,14 +2409,13 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v4, s[2:3] scale_offset
 ; GFX1250-NEXT:    global_load_b64 v[2:3], v4, s[6:7] scale_offset
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 3, v4
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_pk_min_u16 v1, v1, v3
 ; GFX1250-NEXT:    v_pk_min_u16 v0, v0, v2
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
-; GFX1250-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX1250-NEXT:    global_store_b16 v5, v1, s[0:1] offset:4
+; GFX1250-NEXT:    global_store_b32 v5, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <3 x i16>, ptr addrspace(1) %a.ptr, i32 %tid
@@ -3324,17 +3283,14 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_u16 v1, v0, s[14:15]
-; GFX1250-NEXT:    global_load_u16 v2, v0, s[12:13]
-; GFX1250-NEXT:    s_wait_loadcnt 0x1
-; GFX1250-NEXT:    v_and_b32_e32 v3, 0xffff, v1
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffff, v2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v4, v3
-; GFX1250-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
-; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-NEXT:    s_load_u16 s0, s[12:13], 0x0
+; GFX1250-NEXT:    s_load_u16 s1, s[14:15], 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_cmp_lt_u32 s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b16 v0, v1, s[8:9]
 ; GFX1250-NEXT:    global_store_b8 v0, v2, s[10:11]
@@ -3650,142 +3606,84 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 define amdgpu_kernel void @s_test_umin_ult_v8i16(ptr addrspace(1) %out, <8 x i16> %a, <8 x i16> %b) #0 {
 ; EG-LABEL: s_test_umin_ult_v8i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 1, @52, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @20
-; EG-NEXT:    ALU 9, @54, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @24
-; EG-NEXT:    ALU 8, @64, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @28
-; EG-NEXT:    ALU 10, @73, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @32
-; EG-NEXT:    ALU 8, @84, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @36
-; EG-NEXT:    ALU 10, @93, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @40
-; EG-NEXT:    ALU 8, @104, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @44
-; EG-NEXT:    ALU 10, @113, KC0[], KC1[]
-; EG-NEXT:    TEX 1 @48
-; EG-NEXT:    ALU 10, @124, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T7.XYZW, T8.X, 1
+; EG-NEXT:    ALU 0, @42, KC0[], KC1[]
+; EG-NEXT:    TEX 2 @10
+; EG-NEXT:    ALU 2, @43, KC0[], KC1[]
+; EG-NEXT:    TEX 4 @16
+; EG-NEXT:    ALU 8, @46, KC0[], KC1[]
+; EG-NEXT:    TEX 7 @26
+; EG-NEXT:    ALU 31, @55, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 20:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 66, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 82, #3
-; EG-NEXT:    Fetch clause starting at 24:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 64, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 80, #3
-; EG-NEXT:    Fetch clause starting at 28:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 62, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 78, #3
-; EG-NEXT:    Fetch clause starting at 32:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 60, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 76, #3
-; EG-NEXT:    Fetch clause starting at 36:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 58, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 74, #3
-; EG-NEXT:    Fetch clause starting at 40:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 56, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 72, #3
-; EG-NEXT:    Fetch clause starting at 44:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 54, #3
-; EG-NEXT:     VTX_READ_16 T9.X, T7.X, 70, #3
-; EG-NEXT:    Fetch clause starting at 48:
-; EG-NEXT:     VTX_READ_16 T8.X, T7.X, 52, #3
-; EG-NEXT:     VTX_READ_16 T7.X, T7.X, 68, #3
-; EG-NEXT:    ALU clause starting at 52:
-; EG-NEXT:     MOV * T0.Y, T3.X,
-; EG-NEXT:     MOV * T7.X, 0.0,
-; EG-NEXT:    ALU clause starting at 54:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
+; EG-NEXT:    Fetch clause starting at 10:
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 52, #3
+; EG-NEXT:     VTX_READ_16 T2.X, T0.X, 74, #3
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 58, #3
+; EG-NEXT:    Fetch clause starting at 16:
+; EG-NEXT:     VTX_READ_16 T1.X, T0.X, 62, #3
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 82, #3
+; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 66, #3
+; EG-NEXT:     VTX_READ_16 T5.X, T0.X, 72, #3
+; EG-NEXT:     VTX_READ_16 T6.X, T0.X, 56, #3
+; EG-NEXT:    Fetch clause starting at 26:
+; EG-NEXT:     VTX_READ_16 T3.X, T0.X, 68, #3
+; EG-NEXT:     VTX_READ_16 T4.X, T0.X, 70, #3
+; EG-NEXT:     VTX_READ_16 T5.X, T0.X, 54, #3
+; EG-NEXT:     VTX_READ_16 T6.X, T0.X, 76, #3
+; EG-NEXT:     VTX_READ_16 T7.X, T0.X, 60, #3
+; EG-NEXT:     VTX_READ_16 T8.X, T0.X, 80, #3
+; EG-NEXT:     VTX_READ_16 T9.X, T0.X, 64, #3
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 78, #3
+; EG-NEXT:    ALU clause starting at 42:
+; EG-NEXT:     MOV * T0.X, 0.0,
+; EG-NEXT:    ALU clause starting at 43:
+; EG-NEXT:     AND_INT T0.W, T1.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T3.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MIN_UINT * T0.W, PV.W, PS,
-; EG-NEXT:     LSHL T0.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
+; EG-NEXT:    ALU clause starting at 46:
+; EG-NEXT:     AND_INT * T2.W, T2.X, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     AND_INT T2.X, T6.X, literal.x,
+; EG-NEXT:     AND_INT T0.Y, T5.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     MIN_UINT T0.Z, T1.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, T4.X, literal.x, BS:VEC_201
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     AND_INT * T2.W, T3.X, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:    ALU clause starting at 55:
+; EG-NEXT:     AND_INT T1.X, T1.X, literal.x,
+; EG-NEXT:     AND_INT T1.Y, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT * T1.Z, T9.X, literal.x, BS:VEC_201
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     AND_INT T3.W, T8.X, literal.x,
+; EG-NEXT:     MIN_UINT * T1.W, T1.W, T2.W,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     LSHL T0.X, PS, literal.x,
+; EG-NEXT:     MIN_UINT T2.Y, T1.Z, PV.W,
+; EG-NEXT:     AND_INT T1.Z, T7.X, literal.y,
+; EG-NEXT:     AND_INT T1.W, T6.X, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     MIN_UINT * T2.W, T1.X, T1.Y,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
-; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T3.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 64:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T2.W, T0.Y, literal.x,
-; EG-NEXT:     MIN_UINT * T0.W, PV.W, PS,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, PV.W, PS,
-; EG-NEXT:     MOV T3.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, T2.X,
-; EG-NEXT:    ALU clause starting at 73:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MIN_UINT T0.W, PV.W, PS,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:     LSHL T1.X, PS, literal.x,
+; EG-NEXT:     MIN_UINT T1.Y, PV.Z, PV.W,
+; EG-NEXT:     AND_INT T1.Z, T5.X, literal.y,
+; EG-NEXT:     AND_INT T1.W, T4.X, literal.y, BS:VEC_120/SCL_212
+; EG-NEXT:     OR_INT * T2.W, PV.Y, PV.X,
+; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
+; EG-NEXT:     AND_INT T0.X, T3.X, literal.x,
+; EG-NEXT:     MIN_UINT T3.Y, PV.Z, PV.W,
+; EG-NEXT:     OR_INT T2.Z, PV.Y, PV.X,
+; EG-NEXT:     LSHL T1.W, T0.Z, literal.y,
+; EG-NEXT:     MIN_UINT * T3.W, T2.X, T0.Y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T2.Y, PS, PV.W,
+; EG-NEXT:     LSHL T1.W, PV.Y, literal.x,
+; EG-NEXT:     MIN_UINT * T0.W, T0.W, PV.X,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV * T2.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 84:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T2.W, T0.Y, literal.x,
-; EG-NEXT:     MIN_UINT * T0.W, PV.W, PS,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T7.Z, PV.W, PS,
-; EG-NEXT:     MOV T2.X, PV.Z,
-; EG-NEXT:     MOV * T0.Y, T5.X,
-; EG-NEXT:    ALU clause starting at 93:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MIN_UINT T0.W, PV.W, PS,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV * T5.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 104:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T2.W, T0.Y, literal.x,
-; EG-NEXT:     MIN_UINT * T0.W, PV.W, PS,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, PV.W, PS,
-; EG-NEXT:     MOV T5.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, T4.X,
-; EG-NEXT:    ALU clause starting at 113:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T9.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MIN_UINT T0.W, PV.W, PS,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV * T4.X, PV.W,
-; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 124:
-; EG-NEXT:     AND_INT T0.W, T8.X, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T7.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHR T8.X, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT T2.W, T0.Y, literal.y,
-; EG-NEXT:     MIN_UINT * T0.W, PV.W, PS,
-; EG-NEXT:    2(2.802597e-45), -65536(nan)
-; EG-NEXT:     OR_INT * T7.X, PV.W, PS,
-; EG-NEXT:     MOV T4.X, PV.X,
-; EG-NEXT:     MOV * T7.W, T3.X,
-; EG-NEXT:     MOV * T7.Y, T5.X,
+; EG-NEXT:     OR_INT T2.X, PS, PV.W,
+; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: s_test_umin_ult_v8i16:
 ; CI:       ; %bb.0:
@@ -4402,7 +4300,7 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
 ; VI-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-NEXT:    s_cselect_b32 s0, s3, s5
 ; VI-NEXT:    s_cselect_b32 s1, s2, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
@@ -4419,7 +4317,7 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_cmp_lt_u64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX9-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -4435,7 +4333,7 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_lt_u64_e64 s6, s[2:3], s[4:5]
-; GFX10-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX10-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX10-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX10-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -4451,7 +4349,7 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -4470,7 +4368,12 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_u64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_lt_u64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp ult i64 %a, %b
@@ -4530,7 +4433,7 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
 ; VI-NEXT:    v_cmp_le_u64_e32 vcc, s[2:3], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-NEXT:    s_cselect_b32 s0, s3, s5
 ; VI-NEXT:    s_cselect_b32 s1, s2, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
@@ -4547,7 +4450,7 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_cmp_le_u64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX9-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -4563,7 +4466,7 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_le_u64_e64 s6, s[2:3], s[4:5]
-; GFX10-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX10-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX10-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX10-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -4579,7 +4482,7 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_le_u64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -4598,7 +4501,12 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_u64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_le_u64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp ule i64 %a, %b
@@ -4658,7 +4566,7 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
 ; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-NEXT:    s_cselect_b32 s0, s3, s5
 ; VI-NEXT:    s_cselect_b32 s1, s2, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
@@ -4675,7 +4583,7 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX9-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -4691,7 +4599,7 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_lt_i64_e64 s6, s[2:3], s[4:5]
-; GFX10-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX10-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX10-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX10-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -4707,7 +4615,7 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -4726,7 +4634,12 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_i64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_lt_i64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp slt i64 %a, %b
@@ -4786,7 +4699,7 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
 ; VI-NEXT:    v_cmp_le_i64_e32 vcc, s[2:3], v[1:2]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-NEXT:    s_cselect_b32 s0, s3, s5
 ; VI-NEXT:    s_cselect_b32 s1, s2, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
@@ -4803,7 +4716,7 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_cmp_le_i64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX9-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -4819,7 +4732,7 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_le_i64_e64 s6, s[2:3], s[4:5]
-; GFX10-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX10-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX10-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX10-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -4835,7 +4748,7 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_le_i64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -4854,7 +4767,12 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_i64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_le_i64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp sle i64 %a, %b
@@ -4871,26 +4789,26 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    ALU 0, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
 ; EG-NEXT:    ALU 16, @16, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T6.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 8:
 ; EG-NEXT:     VTX_READ_32 T0.X, T0.X, 0, #1
 ; EG-NEXT:    Fetch clause starting at 10:
-; EG-NEXT:     VTX_READ_32 T7.X, T7.X, 0, #1
+; EG-NEXT:     VTX_READ_32 T6.X, T6.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 12:
 ; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     ADD_INT * T7.X, KC0[2].W, T0.W,
+; EG-NEXT:     ADD_INT * T6.X, KC0[2].W, T0.W,
 ; EG-NEXT:    ALU clause starting at 16:
 ; EG-NEXT:     LSHR T1.W, T0.X, literal.x,
-; EG-NEXT:     LSHR * T2.W, T7.X, literal.x,
+; EG-NEXT:     LSHR * T2.W, T6.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT T8.X, PS, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T7.X, PS, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT T0.Y, PV.W, 0.0, literal.x,
-; EG-NEXT:     BFE_INT T0.Z, T7.X, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T1.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     MIN_INT T1.W, PV.W, PV.Z,
@@ -4900,7 +4818,7 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     OR_INT T0.X, PS, PV.W,
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, T0.W,
-; EG-NEXT:     LSHR * T7.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T6.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: v_test_imin_sle_v2i16:
@@ -5049,25 +4967,25 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    ALU 0, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
 ; EG-NEXT:    ALU 13, @16, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T6.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 8:
 ; EG-NEXT:     VTX_READ_32 T0.X, T0.X, 0, #1
 ; EG-NEXT:    Fetch clause starting at 10:
-; EG-NEXT:     VTX_READ_32 T7.X, T7.X, 0, #1
+; EG-NEXT:     VTX_READ_32 T6.X, T6.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 12:
 ; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].W, PV.W,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     ADD_INT * T7.X, KC0[2].Z, T0.W,
+; EG-NEXT:     ADD_INT * T6.X, KC0[2].Z, T0.W,
 ; EG-NEXT:    ALU clause starting at 16:
 ; EG-NEXT:     LSHR T1.W, T0.X, literal.x,
-; EG-NEXT:     LSHR * T2.W, T7.X, literal.x,
+; EG-NEXT:     LSHR * T2.W, T6.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T0.Z, T0.X, literal.x,
-; EG-NEXT:     AND_INT T3.W, T7.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT T3.W, T6.X, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:     MIN_UINT * T1.W, PS, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T1.W, PS, literal.x,
@@ -5075,7 +4993,7 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT T0.X, PS, PV.W,
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, T0.W,
-; EG-NEXT:     LSHR * T7.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T6.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CI-LABEL: v_test_imin_ule_v2i16:

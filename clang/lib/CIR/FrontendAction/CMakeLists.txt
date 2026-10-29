@@ -1,11 +1,10 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  FrontendOffloading
   ipo
   Linker
   Support
   )
-
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_clang_library(clangCIRFrontendAction
   CIRGenAction.cpp
@@ -14,6 +13,8 @@ add_clang_library(clangCIRFrontendAction
   DEPENDS
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   MLIRBuiltinOpsIncGen
 
   LINK_LIBS
@@ -24,6 +25,10 @@ add_clang_library(clangCIRFrontendAction
   clangCIRLoweringCommon
   clangCIRLoweringDirectToLLVM
   clangCodeGen
+  clangCodeGenUtils
+  CIRRegisterAllDialects
   MLIRCIR
+  MLIRBytecodeWriter
   MLIRIR
+  MLIRParser
   )

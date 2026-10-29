@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -64,7 +65,7 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 /// CurPtr when the requested alignment is no greater than MinAlign.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
           size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128,
-          size_t MinAlign = 8>
+          size_t MinAlign = std::min<size_t>(8, alignof(std::max_align_t))>
 class BumpPtrAllocatorImpl
     : public AllocatorBase<BumpPtrAllocatorImpl<
           AllocatorT, SlabSize, SizeThreshold, GrowthDelay, MinAlign>>,
@@ -414,9 +415,13 @@ public:
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
 
   SpecificBumpPtrAllocator &operator=(SpecificBumpPtrAllocator &&RHS) {
+    DestroyAll();
     Allocator = std::move(RHS.Allocator);
     return *this;
   }
+
+  /// Total memory held by this allocator, including slack in the slabs.
+  size_t getTotalMemory() const { return Allocator.getTotalMemory(); }
 
   /// Call the destructor of each allocated object and deallocate all but the
   /// current slab and reset the current pointer to the beginning of it, freeing
@@ -475,8 +480,20 @@ void *
 operator new(size_t Size,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay, MinAlign> &Allocator) {
-  return Allocator.Allocate(
-      Size, std::min(llvm::bit_ceil(Size), alignof(std::max_align_t)));
+  // alignof(T) is unknown but Size%alignof(T)==0, so the lowest set bit of Size
+  // bounds it. Types with alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ use the
+  // align_val_t overload below.
+  auto S = Size | __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+  return Allocator.Allocate(Size, llvm::Align(S & -S));
+}
+
+template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
+          size_t GrowthDelay, size_t MinAlign>
+void *
+operator new(size_t Size, std::align_val_t Alignment,
+             llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
+                                        GrowthDelay, MinAlign> &Allocator) {
+  return Allocator.Allocate(Size, llvm::Align(static_cast<size_t>(Alignment)));
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,

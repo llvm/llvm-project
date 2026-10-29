@@ -60,3 +60,154 @@ define i1 @pr135603(i64 %conv6, i64 %str.coerce, ptr %conv) {
   ret i1 %cmp
 }
 
+; Tests below check if usub.sat can be replaced by plain sub.
+
+; All guards are signed. %a, %b are known non-negative.
+define i64 @usub_sat_signed_precondition(i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @usub_sat_signed_precondition(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sge i64 [[A]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sge i64 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[PRE:%.*]] = icmp sge i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %a.nneg = icmp sge i64 %a, 0
+  call void @llvm.assume(i1 %a.nneg)
+  %b.nneg = icmp sge i64 %b, 0
+  call void @llvm.assume(i1 %b.nneg)
+  %pre = icmp sge i64 %a, %b
+  call void @llvm.assume(i1 %pre)
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  ret i64 %sub
+}
+
+; %count >= %base must be inferred from more complex condition.
+define i1 @usub_sat_span_offset(i64 %count, i64 %base, i64 %n) {
+; CHECK-LABEL: define i1 @usub_sat_span_offset(
+; CHECK-SAME: i64 [[COUNT:%.*]], i64 [[BASE:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[COUNT_NNEG:%.*]] = icmp sge i64 [[COUNT]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COUNT_NNEG]])
+; CHECK-NEXT:    [[BASE_NNEG:%.*]] = icmp sge i64 [[BASE]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BASE_NNEG]])
+; CHECK-NEXT:    [[N_NNEG:%.*]] = icmp sge i64 [[N]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NNEG]])
+; CHECK-NEXT:    [[REM:%.*]] = sub nsw i64 [[COUNT]], [[N]]
+; CHECK-NEXT:    [[FITS:%.*]] = icmp sge i64 [[REM]], [[BASE]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[FITS]])
+; CHECK-NEXT:    [[AVAIL:%.*]] = sub nuw nsw i64 [[COUNT]], [[BASE]]
+; CHECK-NEXT:    ret i1 true
+;
+  %count.nneg = icmp sge i64 %count, 0
+  call void @llvm.assume(i1 %count.nneg)
+  %base.nneg = icmp sge i64 %base, 0
+  call void @llvm.assume(i1 %base.nneg)
+  %n.nneg = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n.nneg)
+  %rem = sub nsw i64 %count, %n
+  %fits = icmp sge i64 %rem, %base
+  call void @llvm.assume(i1 %fits)
+  %avail = call i64 @llvm.usub.sat.i64(i64 %count, i64 %base)
+  %t = icmp sge i64 %avail, %n
+  ret i1 %t
+}
+
+define i64 @usub_sat_unsigned_precondition_no_nsw(i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @usub_sat_unsigned_precondition_no_nsw(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %pre = icmp uge i64 %a, %b
+  call void @llvm.assume(i1 %pre)
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  ret i64 %sub
+}
+
+define i1 @usub_sat_unsigned_query(i64 %a, i64 %b) {
+; CHECK-LABEL: define i1 @usub_sat_unsigned_query(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[BACK:%.*]] = add nuw i64 [[SUB]], [[B]]
+; CHECK-NEXT:    ret i1 true
+;
+  %pre = icmp uge i64 %a, %b
+  call void @llvm.assume(i1 %pre)
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  %back = add nuw i64 %sub, %b
+  %t = icmp uge i64 %back, %a
+  ret i1 %t
+}
+
+; a >=s b alone is not enough, unless operands are non-negative.
+define i64 @usub_sat_no_nonneg_rhs(i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @usub_sat_no_nonneg_rhs(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sge i64 [[A]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[PRE:%.*]] = icmp sge i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %a.nneg = icmp sge i64 %a, 0
+  call void @llvm.assume(i1 %a.nneg)
+  %pre = icmp sge i64 %a, %b
+  call void @llvm.assume(i1 %pre)
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  ret i64 %sub
+}
+
+define i64 @usub_sat_nonneg_no_order(i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @usub_sat_nonneg_no_order(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sge i64 [[A]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sge i64 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %a.nneg = icmp sge i64 %a, 0
+  call void @llvm.assume(i1 %a.nneg)
+  %b.nneg = icmp sge i64 %b, 0
+  call void @llvm.assume(i1 %b.nneg)
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  ret i64 %sub
+}
+
+define i64 @usub_sat_not_dominated(i64 %a, i64 %b, i1 %c) {
+; CHECK-LABEL: define i64 @usub_sat_not_dominated(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    br i1 [[C]], label %[[GUARDED:.*]], label %[[UNGUARDED:.*]]
+; CHECK:       [[GUARDED]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[USE:.*]], label %[[UNGUARDED]]
+; CHECK:       [[USE]]:
+; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK:       [[UNGUARDED]]:
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+entry:
+  %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  br i1 %c, label %guarded, label %unguarded
+
+guarded:
+  %pre = icmp uge i64 %a, %b
+  br i1 %pre, label %use, label %unguarded
+
+use:
+  ret i64 %sub
+
+unguarded:
+  ret i64 %sub
+}

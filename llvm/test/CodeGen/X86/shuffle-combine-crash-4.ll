@@ -13,7 +13,7 @@ define void @infiloop() {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movabsq $506097522914230528, %rax # imm = 0x706050403020100
 ; CHECK-NEXT:    movq %rax, test24_id5239(%rip)
 ; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [4,1,6,7,6,7,2,3,6,7,4,5,6,7,2,3,6,7,2,3,2,3,2,3,4,5,4,5,2,3,0,1]

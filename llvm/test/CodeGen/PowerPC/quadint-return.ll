@@ -12,8 +12,8 @@ entry:
   ret i128 %0
 }
 
-; CHECK: ********** Function: foo
 ; CHECK: ********** FAST REGISTER ALLOCATION **********
+; CHECK: ********** Function: foo
 ; CHECK: $x3 = COPY %{{[0-9]+}}
 ; CHECK-NEXT: $x4 = COPY %{{[0-9]+}}
 ; CHECK-NEXT: BLR

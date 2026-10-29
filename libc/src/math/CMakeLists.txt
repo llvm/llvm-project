@@ -113,6 +113,7 @@ add_math_entrypoint_object(copysignf)
 add_math_entrypoint_object(copysignl)
 add_math_entrypoint_object(copysignf16)
 add_math_entrypoint_object(copysignf128)
+add_math_entrypoint_object(copysignf80)
 add_math_entrypoint_object(copysignbf16)
 
 add_math_entrypoint_object(cos)
@@ -154,6 +155,7 @@ add_math_entrypoint_object(expf16)
 add_math_entrypoint_object(expbf16)
 
 add_math_entrypoint_object(exp2)
+add_math_entrypoint_object(exp2bf16)
 add_math_entrypoint_object(exp2f)
 add_math_entrypoint_object(exp2f16)
 
@@ -210,6 +212,7 @@ add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
 add_math_entrypoint_object(fabsf16)
 add_math_entrypoint_object(fabsf128)
+add_math_entrypoint_object(fabsf80)
 add_math_entrypoint_object(fabsbf16)
 
 add_math_entrypoint_object(fadd)

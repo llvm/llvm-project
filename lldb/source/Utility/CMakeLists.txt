@@ -68,6 +68,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringList.cpp
+  StringPool.cpp
   StructuredData.cpp
   TildeExpressionResolver.cpp
   Timer.cpp

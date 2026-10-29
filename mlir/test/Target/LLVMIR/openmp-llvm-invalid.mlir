@@ -92,9 +92,11 @@ llvm.func @omp_threadprivate() {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error @below {{Ill-formed type attributes for linear variables}}
-  omp.wsloop linear(%x : !llvm.ptr = %step : i32) linear_var_types([]) {
+  omp.wsloop linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([]) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }
@@ -104,9 +106,11 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error @below {{Ill-formed type attributes for linear variables}} 
-  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([]) {
+  omp.simd linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([]) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }
@@ -117,9 +121,11 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // -----
 
 omp.private {type = private} @i_private_i32 : i32
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @simd_linear_private(%lb : i32, %ub : i32, %step : i32, %i : !llvm.ptr) {
   // expected-error @below {{linear variables cannot appear in other data-sharing clauses}}
-  omp.simd linear(%i : !llvm.ptr = %step : i32) linear_var_types([i32])
+  omp.simd linear(@lin.i32 %i -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([i32])
            private(@i_private_i32 %i -> %priv_i : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
@@ -130,13 +136,15 @@ llvm.func @simd_linear_private(%lb : i32, %ub : i32, %step : i32, %i : !llvm.ptr
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @simd_linear_ambiguous_iv(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr, %y : !llvm.ptr) {
   // expected-error @below {{Could not determine the linear variable associated with the loop nest induction variable}}
   // expected-error @below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd linear(%x : !llvm.ptr = %step : i32, %y : !llvm.ptr = %step : i32) linear_var_types([i32, i32]) {
+  omp.simd linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32, @lin.i32 %y -> %lin1 : !llvm.ptr = %step : i32) linear_var_types([i32, i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      llvm.store %iv, %x : i32, !llvm.ptr
-      llvm.store %iv, %y : i32, !llvm.ptr
+      llvm.store %iv, %lin0 : i32, !llvm.ptr
+      llvm.store %iv, %lin1 : i32, !llvm.ptr
       omp.yield
     }
   }
@@ -191,7 +199,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_data}}
@@ -205,7 +213,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_update_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_update_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_update}}
@@ -217,7 +225,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_enter_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_enter_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_enter_data}}
@@ -229,7 +237,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_exit_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_exit_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_exit_data}}
