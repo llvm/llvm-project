@@ -1560,7 +1560,10 @@ def : GCNPat <
                              SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-let SubtargetPredicate = Has16BitInsts in
+// V_MAD_F16 (v_mad_f16 on GFX8, v_mad_legacy_f16 on GFX9) and V_MAC_F16
+// only exist on GFX8 and GFX9. The newer v_mad_f16 (V_MAD_F16_gfx9) is
+// GFX9-only and not selected by these patterns.
+let SubtargetPredicate = Has16BitInsts, OtherPredicates = [isGFX8GFX9] in
 def : FMADPat <f16, V_MAC_F16_e64>;
 } // AddedComplexity = 9
 
