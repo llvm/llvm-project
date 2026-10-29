@@ -3926,7 +3926,7 @@ static SDValue performPartialReduceMLACombine(SDNode *N, SelectionDAG &DAG) {
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
 
-  // Tablegen handles v4i16 and v8i16.
+  // Tablegen handles v16i8 and v8i16.
   if (LHS.getValueType() != MVT::v8i8)
     return SDValue();
 
