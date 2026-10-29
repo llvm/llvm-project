@@ -307,12 +307,13 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
   auto *Allocator = this->Allocator.get();
   static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
   EXPECT_FALSE(
-      Allocator->isOwned(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
+      Allocator->isOwnedTestOnly(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
 
   scudo::u8 StackBuffer[scudo::Chunk::getHeaderSize() + 1];
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     StackBuffer[I] = 0x42U;
-  EXPECT_FALSE(Allocator->isOwned(&StackBuffer[scudo::Chunk::getHeaderSize()]));
+  EXPECT_FALSE(
+      Allocator->isOwnedTestOnly(&StackBuffer[scudo::Chunk::getHeaderSize()]));
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     EXPECT_EQ(StackBuffer[I], 0x42U);
 }
@@ -333,7 +334,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
           static_cast<scudo::uptr>((1LL << SizeLog) + Delta);
       void *P = Allocator->allocate(Size, Origin, Align);
       EXPECT_NE(P, nullptr);
-      EXPECT_TRUE(Allocator->isOwned(P));
+      EXPECT_TRUE(Allocator->isOwnedTestOnly(P));
       EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
       EXPECT_LE(Size, Allocator->getUsableSize(P));
       memset(P, 0xaa, Size);
@@ -639,7 +640,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
-    scudo::ScopedDisableMemoryTagChecks NoTagChecks;
+    scudo::ScopedTestOnlyDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
     reinterpret_cast<char *>(P)[2048] = 'A';
     Allocator->deallocate(P, Origin);
@@ -1250,6 +1251,10 @@ struct TestQuarantineDisabledConfig : TestQuarantineConfig {
 
 TEST(ScudoCombinedTest, QuarantineDisabled) {
   using AllocatorT = TestAllocator<TestQuarantineDisabledConfig>;
+  EXPECT_LT(sizeof(scudo::Allocator<TestQuarantineDisabledConfig>),
+            sizeof(scudo::Allocator<TestQuarantineConfig>));
+  EXPECT_LT(sizeof(scudo::TSD<scudo::Allocator<TestQuarantineDisabledConfig>>),
+            sizeof(scudo::TSD<scudo::Allocator<TestQuarantineConfig>>));
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;

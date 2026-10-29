@@ -230,6 +230,13 @@ bool isAMDGPUCallBrIntrinsic(Intrinsic::ID ID);
 
 //==============================================================================
 
+// NVVM-specific verification functions
+
+void verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                             CallBase &Call);
+
+//==============================================================================
+
 } // namespace llvm
 
 #endif // LLVM_LIB_IR_VERIFIERINTERNAL_H

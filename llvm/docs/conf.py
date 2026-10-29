@@ -16,13 +16,23 @@ from datetime import date
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
-globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
+globals().update(common_conf(tags))
 
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo", "llvm_sphinx.ext.checks"]
+extensions += [
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "llvm_sphinx.ext.absolute_links",
+    "llvm_sphinx.ext.checks",
+]
+
+llvm_sphinx_doc_url_prefixes = (
+    "https://llvm.org/docs/",
+    "https://www.llvm.org/docs/",
+)
 
 myst_enable_extensions += ["deflist"]
 myst_url_schemes = {

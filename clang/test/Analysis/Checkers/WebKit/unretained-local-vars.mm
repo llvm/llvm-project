@@ -574,6 +574,204 @@ void ns() {
 
 }
 
+@interface ArrayProvider : NSObject
+- (NSArray *)arrayValue;
+@end
+
+namespace fast_enumeration {
+
+NSArray *provideArray();
+void provideArrayToOutArgument(NSArray **);
+void consumeString(NSString *);
+
+void iterateLocal() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    [obj doWork];
+}
+
+void iterateLocalInNestedScope() {
+  RetainPtr<NSArray> array = provideArray();
+  {
+    for (SomeObj *obj in array.get()) {
+      for (SomeObj *otherObj in array.get())
+        [otherObj doWork];
+      [obj doWork];
+    }
+  }
+}
+
+void iterateLocalWithRangeBasedFor() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj : array.get())
+    [obj doWork];
+}
+
+void iterateLocalWithId() {
+  RetainPtr<NSArray> array = provideArray();
+  for (id obj in array.get())
+    [obj doWork];
+}
+
+void iterateLocalClearedInBody() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = nullptr;
+    [obj doWork];
+  }
+}
+
+void iterateLocalClearedAfterLoop() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    [obj doWork];
+  array = nullptr;
+}
+
+void iterateParam(NSArray *array) {
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateParamReassigned(NSArray *array) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = provideArray();
+    // expected-warning@-1{{Parameter 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+  }
+}
+
+void iterateTemporary() {
+  for (SomeObj *obj in retainPtr(provideArray()).get())
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+}
+
+void iterateReturnValue() {
+  for (SomeObj *obj in provideArray())
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+}
+
+void iterateLocalWithStructuredBinding() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get())
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    (void)obj;
+}
+
+void iterateLocalWithStructuredBindingClearedInBody() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get()) {
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    // expected-warning@-2{{Local variable '[obj]' is a raw pointer to RetainPtr-capable type}}
+    array = nullptr;
+    (void)obj;
+  }
+}
+
+void iterateRawLocal() {
+  NSArray *array = provideArray();
+  // expected-warning@-1{{Local variable 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateRawLocalFromMessage(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array)
+    [item doWork];
+}
+
+void iterateRawLocalFromMessageWithRangeBasedFor(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item : array)
+    [item doWork];
+}
+
+void iterateRawLocalFromOutArgument() {
+  NSArray *array = nil;
+  provideArrayToOutArgument(&array);
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateRawLocalAssignedBeforeLoop(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  // expected-warning@-1{{Local variable 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  array = provideArray();
+  for (SomeObj *item in array)
+    [item doWork];
+}
+
+void iterateRawLocalClearedInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array) {
+    // expected-warning@-1{{Local variable 'item' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = nil;
+    [item doWork];
+  }
+}
+
+void iterateRawLocalOverwrittenViaOutArgumentInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array) {
+    // expected-warning@-1{{Local variable 'item' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    provideArrayToOutArgument(&array);
+    [item doWork];
+  }
+}
+
+void iterateStaticRawLocal() {
+  static NSArray *array = @[ @"foo" ];
+  for (NSString *str in array)
+    consumeString(str);
+}
+
+void iterateParamWithIndirectCallOutsideBody(NSArray *array, void (*handler)()) {
+  handler();
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateParamOverwrittenViaOutArgumentInBody(NSArray *array) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    provideArrayToOutArgument(&array);
+    [obj doWork];
+  }
+}
+
+void iterateNested(NSArray *array) {
+  for (NSArray *inner in array) {
+    for (SomeObj *obj in inner)
+      [obj doWork];
+  }
+}
+
+void iterateNestedInLocal() {
+  RetainPtr<NSArray> array = provideArray();
+  for (NSArray *inner in array.get()) {
+    for (SomeObj *obj in inner)
+      [obj doWork];
+  }
+}
+
+void iterateNestedOuterElementReassignedInInnerBody(NSArray *array) {
+  for (NSArray *inner in array) {
+    // expected-warning@-1{{Local variable 'inner' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    for (SomeObj *obj in inner) {
+      // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+      inner = provideArray();
+      [obj doWork];
+    }
+  }
+}
+
+} // namespace fast_enumeration
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 

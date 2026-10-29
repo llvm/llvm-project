@@ -38,8 +38,8 @@ int B::*pt_nested_anon_second = &B::e;
 // LLVM: @pt_nested_anon_second = global i64 8
 
 static union { int gx; float gy; };
-// CIR-BEFORE: cir.global "private" internal dso_local @_Z2gx = #cir.zero : !rec_anon2E3 {alignment = 4 : i64}
-// CIR-AFTER: cir.global "private" internal dso_local @_Z2gx = #cir.zero : !rec_anon2E3 {alignment = 4 : i64}
+// CIR-BEFORE: cir.global "private" internal dso_local @_Z2gx = #cir.zero : !rec_anon2E3 align(4)
+// CIR-AFTER: cir.global "private" internal dso_local @_Z2gx = #cir.zero : !rec_anon2E3 align(4)
 // LLVM: @_Z2gx = internal global %union.anon{{.*}} zeroinitializer, align 4
 
 int test_use(A &a, int A::*member) {

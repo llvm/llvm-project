@@ -7,8 +7,8 @@ subroutine is_finite_test(x, y)
   real(4) x
   real(8) y
 
-  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} {uniq_name = "_QFis_finite_testEx"}
-  ! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} {uniq_name = "_QFis_finite_testEy"}
+  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} uniq_name("_QFis_finite_testEx")
+  ! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} uniq_name("_QFis_finite_testEy")
 
   ! CHECK:     %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
   ! CHECK:     %[[IS_FINITE_X:.*]] = "llvm.intr.is.fpclass"(%[[X_VAL]]) <{bit = 504 : i32}> : (f32) -> i1

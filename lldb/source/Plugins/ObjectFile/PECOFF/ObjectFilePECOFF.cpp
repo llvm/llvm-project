@@ -128,7 +128,10 @@ static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
           content->data(), content->size(),
           coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
       lldb::offset_t gnu_debuglink_offset = 0;
-      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      const char *file = data.GetCStr(&gnu_debuglink_offset);
+      if (!file)
+        return false;
+      gnu_debuglink_file = file;
       // Align to the next 4-byte offset
       gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
       data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
@@ -267,7 +270,7 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
   if (extractor_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
       extractor_sp->SetData(std::move(full_sp));
-  auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
+  auto binary = llvm::object::COFFObjectFile::create(llvm::MemoryBufferRef(
       toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
       file.GetFilename()));
 
@@ -277,9 +280,7 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     return {};
   }
 
-  auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
-  if (!COFFObj)
-    return {};
+  llvm::object::COFFObjectFile *COFFObj = binary->get();
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();
@@ -402,7 +403,7 @@ bool ObjectFilePECOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
+  auto binary = llvm::object::COFFObjectFile::create(llvm::MemoryBufferRef(
       toStringRef(m_data_nsp->GetData()), m_file.GetFilename()));
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -410,11 +411,7 @@ bool ObjectFilePECOFF::CreateBinary() {
     return false;
   }
 
-  // Make sure we only handle COFF format.
-  m_binary =
-      llvm::unique_dyn_cast<llvm::object::COFFObjectFile>(std::move(*binary));
-  if (!m_binary)
-    return false;
+  m_binary = std::move(*binary);
 
   LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
            this, GetModule().get(), GetModule()->GetSpecificationDescription(),
@@ -955,6 +952,19 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
                                            data_dir_exception.vmsize);
 }
 
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  if (m_binary->is64()) {
+    if (m_binary->getTLSDirectory64())
+      addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
+  } else if (m_binary->getTLSDirectory32())
+    addr = m_binary->getTLSDirectory32()->AddressOfIndex.value();
+
+  if (addr == 0)
+    addr = LLDB_INVALID_ADDRESS;
+  return addr;
+}
+
 bool ObjectFilePECOFF::IsStripped() {
   // TODO: determine this for COFF
   return false;
@@ -1038,8 +1048,6 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   m_sections_up = std::make_unique<SectionList>();
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-
     SectionSP header_sp = std::make_shared<Section>(
         module_sp, this, ~user_id_t(0), "PECOFF header", eSectionTypeOther,
         m_coff_header_opt.image_base, m_coff_header_opt.header_size,
@@ -1161,12 +1169,11 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // At this moment we only have the base name of the DLL. The full path can
     // only be seen after the dynamic loading.  Our best guess is Try to get it
     // with the help of the object file's directory.
-    llvm::SmallString<128> dll_fullpath;
     FileSpec dll_specs(dll_name);
     dll_specs.SetDirectory(m_file.GetDirectory());
 
-    if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
-      m_deps_filespec->EmplaceBack(dll_fullpath);
+    if (FileSystem::Instance().Exists(dll_specs))
+      m_deps_filespec->Append(dll_specs);
     else {
       // Known DLLs or DLL not found in the object file directory.
       m_deps_filespec->EmplaceBack(dll_name);

@@ -1025,48 +1025,6 @@ define i32 @test_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 declare i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8>) nounwind readnone
 
 
-define <8 x i16> @test_x86_sse2_pmulh_w(<8 x i16> %a0, <8 x i16> %a1) {
-; SSE-LABEL: test_x86_sse2_pmulh_w:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pmulhw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe5,0xc1]
-; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX1-LABEL: test_x86_sse2_pmulh_w:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe5,0xc1]
-; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX512-LABEL: test_x86_sse2_pmulh_w:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe5,0xc1]
-; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
-  ret <8 x i16> %res
-}
-declare <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16>, <8 x i16>) nounwind readnone
-
-
-define <8 x i16> @test_x86_sse2_pmulhu_w(<8 x i16> %a0, <8 x i16> %a1) {
-; SSE-LABEL: test_x86_sse2_pmulhu_w:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pmulhuw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe4,0xc1]
-; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX1-LABEL: test_x86_sse2_pmulhu_w:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe4,0xc1]
-; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX512-LABEL: test_x86_sse2_pmulhu_w:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe4,0xc1]
-; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
-  ret <8 x i16> %res
-}
-declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>) nounwind readnone
-
-
 define <2 x i64> @test_x86_sse2_psad_bw(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: test_x86_sse2_psad_bw:
 ; SSE:       ## %bb.0:

@@ -98,6 +98,43 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
     lb.erase();
 }
 
+/// Returns the max of the bound given by `map` applied to `operands` and the
+/// lower bound of `forOp`, as a map over the updated `operands`. Returns `map`
+/// unchanged if it is known not to be below the lower bound. Both bounds must
+/// have a single result.
+static AffineMap getMaxWithLowerBound(AffineForOp forOp, AffineMap map,
+                                      SmallVectorImpl<Value> &operands) {
+  AffineMap lbMap = forOp.getLowerBoundMap();
+  assert(map.getNumResults() == 1 && lbMap.getNumResults() == 1 &&
+         "expected single-result bounds");
+  // Place the dims and symbols of the lower bound after those of `map`.
+  unsigned numDims = map.getNumDims();
+  unsigned numLbDims = lbMap.getNumDims();
+  AffineMap shiftedLbMap =
+      lbMap.shiftDims(numDims).shiftSymbols(map.getNumSymbols());
+  AffineMap maxMap = AffineMap::get(
+      shiftedLbMap.getNumDims(), shiftedLbMap.getNumSymbols(),
+      {map.getResult(0), shiftedLbMap.getResult(0)}, forOp.getContext());
+  ValueRange lbOperands = forOp.getLowerBoundOperands();
+  SmallVector<Value, 4> maxOperands(operands.begin(),
+                                    operands.begin() + numDims);
+  llvm::append_range(maxOperands, lbOperands.take_front(numLbDims));
+  llvm::append_range(maxOperands,
+                     ArrayRef<Value>(operands).drop_front(numDims));
+  llvm::append_range(maxOperands, lbOperands.drop_front(numLbDims));
+  fullyComposeAffineMapAndOperands(&maxMap, &maxOperands);
+  canonicalizeMapAndOperands(&maxMap, &maxOperands);
+  maxMap = simplifyAffineMap(maxMap);
+
+  AffineExpr diff =
+      simplifyAffineExpr(maxMap.getResult(0) - maxMap.getResult(1),
+                         maxMap.getNumDims(), maxMap.getNumSymbols());
+  if (auto cst = dyn_cast<AffineConstantExpr>(diff); cst && cst.getValue() >= 0)
+    return map;
+  operands.assign(maxOperands.begin(), maxOperands.end());
+  return maxMap;
+}
+
 /// Helper to replace uses of loop carried values (iter_args) and loop
 /// yield values while promoting single iteration affine.for ops.
 static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
@@ -982,7 +1019,12 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
   if (!cleanupMap)
     return failure();
 
-  cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
+  // The cleanup loop must not execute if `forOp` does not, but `cleanupMap` is
+  // below the lower bound of `forOp` if the trip count is negative.
+  SmallVector<Value, 4> cleanupLbOperands(cleanupOperands);
+  AffineMap cleanupLbMap =
+      getMaxWithLowerBound(forOp, cleanupMap, cleanupLbOperands);
+  cleanupForOp.setLowerBound(cleanupLbOperands, cleanupLbMap);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(cleanupForOp);
 

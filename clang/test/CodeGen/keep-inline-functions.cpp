@@ -5,12 +5,18 @@
 // RUN: %clang_cc1 -O2 -fkeep-inline-functions -emit-llvm %s -o - -triple x86_64-pc-windows-msvc | FileCheck %s --check-prefix=MSVC
 // RUN: %clang_cc1 -O2 -fkeep-inline-functions -emit-llvm %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s
 // RUN: %clang_cc1 -O0 -fkeep-inline-functions -emit-llvm %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s
-// RUN: %clang_cc1 -O0 -mconstructor-aliases -fkeep-inline-functions -emit-llvm %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s --check-prefix=CONSTRUCTOR-ALIASES
+
+// The driver enables -mconstructor-aliases by default for this target, but
+// -cc1 does not, so pass it explicitly here.
+// With -fkeep-inline-functions, C1/D1 must be emitted instead of being
+// silently replaced in the IR (RAUW), so they remain available in the used
+// list.
+// RUN: %clang_cc1 -O0 -mconstructor-aliases -fkeep-inline-functions -emit-llvm %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s
+// RUN: %clang_cc1 -O2 -mconstructor-aliases -fkeep-inline-functions -emit-llvm %s -o - -triple powerpc64-ibm-aix-xcoff | FileCheck %s
 
 // -fkeep-inline-functions retains inline function definitions available in
 // this translation unit. Definitions emitted with available_externally
 // linkage are excluded.
-
 // Retained:
 //   f1  explicit inline and referenced
 //   f2  static inline
@@ -76,22 +82,6 @@ int use(S s) {
 // CHECK-DAG: define {{.*}}@_ZN12TestCtorDtorD1Ev
 // CHECK-DAG: define {{.*}}@_ZN12TestCtorDtorC2Ev
 // CHECK-DAG: define {{.*}}@_ZN12TestCtorDtorD2Ev
-
-// FIXME: -mconstructor-aliases is enabled by default by the driver for this
-// target, but is not enabled by default for -cc1. With -mconstructor-aliases,
-// the C1/D1 constructor and destructor variants are not emitted as separate
-// definitions.
-
-// CONSTRUCTOR-ALIASES: @llvm{{(\.compiler)?}}.used = appending global [8 x ptr]
-
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_Z2f1i
-// CONSTRUCTOR-ALIASES-DAG: define internal {{.*}}@_ZL2f2i
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_Z2f3i
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_ZN1S2f4Ev
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_Z2f7i
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_Z2f8IiET_S0_
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_ZN12TestCtorDtorC2Ev
-// CONSTRUCTOR-ALIASES-DAG: define {{.*}}@_ZN12TestCtorDtorD2Ev
 
 // MSVC: @llvm{{(\.compiler)?}}.used = appending global [8 x ptr]
 

@@ -104,6 +104,18 @@ class SBFormattersAPITestCase(TestBase):
         self.expect("frame variable foo.B", matching=False, substrs=["hello world"])
         self.expect("frame variable foo.F", matching=False, substrs=["hello world"])
 
+        # Don't crash when doing bad things.
+        filter = lldb.SBTypeFilter(0)
+        self.assertEqual(
+            filter.GetExpressionPathAtIndex(5),
+            None,
+            "Should not get a valid expression path",
+        )
+        self.assertFalse(
+            filter.ReplaceExpressionPathAtIndex(5, "foo"),
+            "Should fail to replace expression path at invalid index",
+        )
+
         filter = lldb.SBTypeFilter(0)
         filter.AppendExpressionPath("A")
         filter.AppendExpressionPath("D")

@@ -9,8 +9,8 @@
 func.func @test_no_conflict(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>>, %arg2: !fir.ref<!t> ) {
   %c1 = arith.constant 1 : i64
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "a"} : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "somet"} : (!fir.ref<!t>, !fir.dscope) -> (!fir.ref<!t>, !fir.ref<!t>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("a") : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("somet") fortran_attrs<target> : (!fir.ref<!t>, !fir.dscope) -> (!fir.ref<!t>, !fir.ref<!t>)
   hlfir.forall lb {
     hlfir.yield %c1 : i64
   } ub {
@@ -21,7 +21,7 @@ func.func @test_no_conflict(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>>
       hlfir.yield %5 : !fir.box<!fir.ptr<!t>>
     } to {
       %6 = hlfir.designate %1#0 (%arg3)  : (!fir.box<!fir.array<?x!ptr_wrapper>>, i64) -> !fir.ref<!ptr_wrapper>
-      %7 = hlfir.designate %6{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
+      %7 = hlfir.designate %6{"p"}   fortran_attrs<pointer> : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
       hlfir.yield %7 : !fir.ref<!fir.box<!fir.ptr<!t>>>
     }
   }
@@ -39,7 +39,7 @@ func.func @test_no_conflict(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>>
 // CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_7]] to %[[VAL_8]] step %[[VAL_9]] {
 // CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
 // CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_11]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
-// CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_12]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
+// CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_12]]{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_14:.*]] = fir.embox %[[VAL_6]]#0 : (!fir.ref<!fir.type<t{i:i64}>>) -> !fir.box<!fir.ptr<!fir.type<t{i:i64}>>>
 // CHECK:             fir.store %[[VAL_14]] to %[[VAL_13]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:           }
@@ -49,7 +49,7 @@ func.func @test_no_conflict(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>>
 func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>> ) {
   %c1 = arith.constant 1 : i64
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "a"} : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("a") : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
   hlfir.forall lb {
     hlfir.yield %c1 : i64
   } ub {
@@ -59,12 +59,12 @@ func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
       %5 = arith.addi %n, %c1: i64
       %6 = arith.subi %5, %arg2 : i64
       %8 = hlfir.designate %1#0 (%6)  : (!fir.box<!fir.array<?x!ptr_wrapper>>, i64) -> !fir.ref<!ptr_wrapper>
-      %9 = hlfir.designate %8{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
+      %9 = hlfir.designate %8{"p"}   fortran_attrs<pointer> : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
       %10 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<!t>>>
       hlfir.yield %10 : !fir.box<!fir.ptr<!t>>
     } to {
       %5 = hlfir.designate %1#0 (%arg2)  : (!fir.box<!fir.array<?x!ptr_wrapper>>, i64) -> !fir.ref<!ptr_wrapper>
-      %6 = hlfir.designate %5{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
+      %6 = hlfir.designate %5{"p"}   fortran_attrs<pointer> : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
       hlfir.yield %6 : !fir.ref<!fir.box<!fir.ptr<!t>>>
     }
   }
@@ -89,7 +89,7 @@ func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
 // CHECK:             %[[VAL_19:.*]] = arith.addi %[[VAL_0]], %[[VAL_4]] : i64
 // CHECK:             %[[VAL_20:.*]] = arith.subi %[[VAL_19]], %[[VAL_18]] : i64
 // CHECK:             %[[VAL_21:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_20]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
-// CHECK:             %[[VAL_22:.*]] = hlfir.designate %[[VAL_21]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
+// CHECK:             %[[VAL_22:.*]] = hlfir.designate %[[VAL_21]]{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_23:.*]] = fir.load %[[VAL_22]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>) -> !fir.box<none>
 // CHECK:             fir.call @_FortranAPushDescriptor(%[[VAL_16]], %[[VAL_24]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
@@ -101,7 +101,7 @@ func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
 // CHECK:           fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_29]] {
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 // CHECK:             %[[VAL_32:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_31]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
-// CHECK:             %[[VAL_33:.*]] = hlfir.designate %[[VAL_32]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
+// CHECK:             %[[VAL_33:.*]] = hlfir.designate %[[VAL_32]]{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_34:.*]] = fir.load %[[VAL_3]] : !fir.ref<i64>
 // CHECK:             %[[VAL_35:.*]] = arith.addi %[[VAL_34]], %[[VAL_11]] : i64
 // CHECK:             fir.store %[[VAL_35]] to %[[VAL_3]] : !fir.ref<i64>
@@ -117,8 +117,8 @@ func.func @test_need_to_save_rhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
 func.func @test_need_to_save_lhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrapper>>, %arg2: !fir.ref<!t> ) {
   %c1 = arith.constant 1 : i64
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "a"} : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "somet"} : (!fir.ref<!t>, !fir.dscope) -> (!fir.ref<!t>, !fir.ref<!t>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("a") : (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.dscope) -> (!fir.box<!fir.array<?x!ptr_wrapper>>, !fir.box<!fir.array<?x!ptr_wrapper>>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("somet") fortran_attrs<target> : (!fir.ref<!t>, !fir.dscope) -> (!fir.ref<!t>, !fir.ref<!t>)
   hlfir.forall lb {
     hlfir.yield %c1 : i64
   } ub {
@@ -131,12 +131,12 @@ func.func @test_need_to_save_lhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
       %6 = arith.addi %n, %c1 : i64
       %7 = arith.subi %6, %arg3 : i64
       %9 = hlfir.designate %1#0 (%7)  : (!fir.box<!fir.array<?x!ptr_wrapper>>, i64) -> !fir.ref<!ptr_wrapper>
-      %10 = hlfir.designate %9{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
+      %10 = hlfir.designate %9{"p"}   fortran_attrs<pointer> : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
       %11 = fir.load %10 : !fir.ref<!fir.box<!fir.ptr<!t>>>
       %13 = hlfir.designate %11{"i"}   : (!fir.box<!fir.ptr<!t>>) -> !fir.ref<i64>
       %14 = fir.load %13 : !fir.ref<i64>
       %16 = hlfir.designate %1#0 (%14)  : (!fir.box<!fir.array<?x!ptr_wrapper>>, i64) -> !fir.ref<!ptr_wrapper>
-      %17 = hlfir.designate %16{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
+      %17 = hlfir.designate %16{"p"}   fortran_attrs<pointer> : (!fir.ref<!ptr_wrapper>) -> !fir.ref<!fir.box<!fir.ptr<!t>>>
       hlfir.yield %17 : !fir.ref<!fir.box<!fir.ptr<!t>>>
     }
   }
@@ -163,12 +163,12 @@ func.func @test_need_to_save_lhs(%n: i64, %arg1: !fir.box<!fir.array<?x!ptr_wrap
 // CHECK:             %[[VAL_22:.*]] = arith.addi %[[VAL_0]], %[[VAL_6]] : i64
 // CHECK:             %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] : i64
 // CHECK:             %[[VAL_24:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_23]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
-// CHECK:             %[[VAL_25:.*]] = hlfir.designate %[[VAL_24]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
+// CHECK:             %[[VAL_25:.*]] = hlfir.designate %[[VAL_24]]{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_26:.*]] = fir.load %[[VAL_25]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_27:.*]] = hlfir.designate %[[VAL_26]]{"i"}   : (!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>) -> !fir.ref<i64>
 // CHECK:             %[[VAL_28:.*]] = fir.load %[[VAL_27]] : !fir.ref<i64>
 // CHECK:             %[[VAL_29:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_28]])  : (!fir.box<!fir.array<?x!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>>, i64) -> !fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>
-// CHECK:             %[[VAL_30:.*]] = hlfir.designate %[[VAL_29]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
+// CHECK:             %[[VAL_30:.*]] = hlfir.designate %[[VAL_29]]{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<ptr_wrapper{p:!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<!fir.box<!fir.ptr<!fir.type<t{i:i64}>>>>) -> i64
 // CHECK:             fir.store %[[VAL_31]] to %[[VAL_3]] : !fir.ref<i64>
 // CHECK:             %[[VAL_32:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<i64>) -> !fir.box<i64>

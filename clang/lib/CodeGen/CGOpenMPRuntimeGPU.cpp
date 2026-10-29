@@ -576,7 +576,6 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
-    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
@@ -666,7 +665,6 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
-  case OMPD_taskgraph:
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
@@ -757,8 +755,6 @@ void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
   // configured, so emit it directly here.
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
   Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_BARE;
-  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
-
   CGBuilderTy &Bld = CGF.Builder;
   OMPBuilder.emitKernelEnvironment(Bld, Attrs);
 }
@@ -1803,10 +1799,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
-                         CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
-                          CGF.Builder.GetInsertPoint());
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
       CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
   llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> ReductionInfos;
@@ -1866,8 +1860,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
       CGF.CurFn = CurFn;
 
-      return InsertPointTy(CGF.Builder.GetInsertBlock(),
-                           CGF.Builder.GetInsertPoint());
+      return CGF.Builder.GetInsertPoint();
     };
 
     // For the atomic fast path, hand this reduction an atomic combiner if it is
@@ -1898,12 +1891,11 @@ void CGOpenMPRuntimeGPU::emitReduction(
                               SSID](InsertPointTy IP, llvm::Type *EltTy,
                                     llvm::Value *LHS, llvm::Value *RHS)
             -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
-          llvm::IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
+          llvm::IRBuilder<> Builder(IP);
           llvm::Value *Val = Builder.CreateLoad(EltTy, RHS);
           Builder.CreateAtomicRMW(Op, LHS, Val, Alignment,
                                   llvm::AtomicOrdering::Monotonic, SSID);
-          return InsertPointTy(Builder.GetInsertBlock(),
-                               Builder.GetInsertPoint());
+          return Builder.GetInsertPoint();
         };
       }
     }

@@ -539,8 +539,21 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 }
 
 void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  VisitExpr(E);
+  E->CaretCaretLoc = readSourceLocation();
+  E->Kind = static_cast<ReflectionKind>(Record.readInt());
+  switch (E->Kind) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    E->Operand = nullptr;
+    break;
+  case ReflectionKind::Type:
+    E->Operand = Record.readTypeSourceInfo();
+    break;
+  }
 }
 
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
@@ -2576,6 +2589,10 @@ void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
+void ASTStmtReader::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
 void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
@@ -2679,11 +2696,6 @@ void ASTStmtReader::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPAssumeDirective(OMPAssumeDirective *D) {
-  VisitStmt(D);
-  VisitOMPExecutableDirective(D);
-}
-
-void ASTStmtReader::VisitOMPTaskgraphDirective(OMPTaskgraphDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
 }
@@ -3783,6 +3795,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_FLATTEN_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPFlattenDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FOR_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -3873,11 +3892,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_OMP_TASKWAIT_DIRECTIVE:
       S = OMPTaskwaitDirective::CreateEmpty(
-          Context, Record[ASTStmtReader::NumStmtFields], Empty);
-      break;
-
-    case STMT_OMP_TASKGRAPH_DIRECTIVE:
-      S = OMPTaskgraphDirective::CreateEmpty(
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
 

@@ -15,6 +15,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCRegister.h"
 
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
@@ -58,6 +63,11 @@ private:
 
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
+  /// True if assigning Reg would fit in the current occupancy VGPR budget.
+  bool isRegWithinOccupancyBudget(MCPhysReg Reg, unsigned NumVGPRs,
+                                  unsigned NumAGPRs,
+                                  unsigned MaxVGPRsForCurrentOccupancy) const;
+
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
 
@@ -69,7 +79,6 @@ public:
     SpilledReg(Register R, int L) : VGPR(R), Lane(L) {}
 
     bool hasLane() { return Lane != -1; }
-    bool hasReg() { return VGPR != 0; }
   };
 
   /// \returns the sub reg enum value for the given \p Channel
@@ -117,6 +126,10 @@ public:
     // registers according to getCalleeSavedRegs, so handling of calling
     // conventions with no CSR is handled there.
     return 27;
+  }
+
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
   }
 
   // When building a block VGPR load, we only really transfer a subset of the
@@ -239,18 +252,9 @@ public:
     return hasSGPRs(RC) && !hasVGPRs(RC) && !hasAGPRs(RC);
   }
 
-  /// \returns true if this class ID contains only SGPR registers
-  bool isSGPRClassID(unsigned RCID) const {
-    return isSGPRClass(getRegClass(RCID));
-  }
-
   bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
   bool isSGPRPhysReg(Register Reg) const {
     return isSGPRClass(getPhysRegBaseClass(Reg));
-  }
-
-  bool isVGPRPhysReg(Register Reg) const {
-    return isVGPRClass(getPhysRegBaseClass(Reg));
   }
 
   /// \returns true if this class contains only VGPR registers
@@ -365,9 +369,19 @@ public:
                                   unsigned Idx) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  bool shouldApplyAntiHints(const MachineFunction &MF,
+                            unsigned NumAllocatedVGPRs,
+                            unsigned &MaxVGPRsForCurrentOccupancy) const;
+
+  void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const override;
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
@@ -412,7 +426,6 @@ public:
   const uint32_t *getAllVGPRRegMask() const;
   const uint32_t *getAllAGPRRegMask() const;
   const uint32_t *getAllVectorRegMask() const;
-  const uint32_t *getAllAllocatableSRegMask() const;
 
   // \returns number of 32 bit registers covered by a \p LM
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
@@ -430,14 +443,9 @@ public:
     return SubReg ? (getSubRegIdxOffset(SubReg) + 31) / 32 : 0;
   }
 
-  // \returns a DWORD size of a \p SubReg
-  unsigned getNumChannelsFromSubReg(unsigned SubReg) const {
-    return getNumCoveredRegs(getSubRegIndexLaneMask(SubReg));
-  }
-
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
   // \returns \p Reg otherwise.
-  MCPhysReg get32BitRegister(MCPhysReg Reg) const;
+  MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for
   // the subtarget.

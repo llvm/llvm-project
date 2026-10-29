@@ -467,7 +467,7 @@ public:
 /// reductions ordered based on layout to minimize cross-lane communication.
 class MultiRed2dOpPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -564,7 +564,7 @@ private:
                        xegpu::DistributeLayoutAttr layout) const {
     assert(layout.isForSubgroup() && "Must know the lane layout");
     assert(reductionDims.size() == 2 && "Expected 2D reduction");
-    int64_t intra, cross = -1;
+    int64_t intra = -1, cross = -1;
     xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
     if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
       layoutAttr =

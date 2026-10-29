@@ -5,7 +5,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.lb 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction
@@ -20,7 +20,7 @@ qc.e.lb x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:10: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.lbu 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:13: error: too few operands for instruction
@@ -35,7 +35,7 @@ qc.e.lbu x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.lh 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction
@@ -50,7 +50,7 @@ qc.e.lh x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:10: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.lhu 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:13: error: too few operands for instruction
@@ -65,7 +65,7 @@ qc.e.lhu x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.lw 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction
@@ -80,7 +80,7 @@ qc.e.lw x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.sb 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction
@@ -95,7 +95,7 @@ qc.e.sb x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.sh 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction
@@ -110,7 +110,7 @@ qc.e.sh x11, 12(x10)
 
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR
-# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 qc.e.sw 11, 12(x10)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: too few operands for instruction

@@ -52,6 +52,7 @@ void InstructionOrdering::initialize(const MachineFunction &MF) {
   //                       range. DBG_VALUEs at or after this position for
   //                       variables declared in the scope will have no effect.
   clear();
+  InstNumberMap.reserve(MF.getInstructionCount());
   unsigned Position = 0;
   for (const MachineBasicBlock &MBB : MF)
     for (const MachineInstr &MI : MBB)
@@ -498,6 +499,10 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       // Meta Instructions have no output and do not change any values and so
       // can be safely ignored.
       if (MI.isMetaInstruction())
+        continue;
+
+      // There are no register locations for this instruction to clobber.
+      if (RegVars.empty())
         continue;
 
       // Other instructions may clobber registers which describe some variables.

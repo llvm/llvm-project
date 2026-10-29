@@ -48,10 +48,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -61,6 +63,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -193,7 +196,6 @@ LiteThresholdPct("lite-threshold-pct",
             "threshold of 90 means only top 10 percent of functions with "
             "profile will be processed."),
   cl::init(0),
-  cl::ZeroOrMore,
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
@@ -284,7 +286,6 @@ static cl::opt<bool>
 UseGnuStack("use-gnu-stack",
   cl::desc("use GNU_STACK program header for new segment (workaround for "
            "issues with strip/objcopy)"),
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 static cl::opt<uint64_t> CustomAllocationVMA(
@@ -320,7 +321,7 @@ static cl::list<GadgetKindBitmask> GadgetScannersToRun(
         clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
                    "All Pointer Authentication scanners"),
         clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
+    cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
 // with fallback to next item in case if current item is not available
@@ -342,7 +343,7 @@ cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
                clEnumValN(RLIH_INIT, "init", "use ELF DT_INIT entry"),
                clEnumValN(RLIH_INIT_ARRAY, "init_array",
                           "use ELF .init_array entry")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -361,10 +362,9 @@ namespace bolt {
 
 extern const char *BoltRevision;
 
-// Weird location for createMCPlusBuilder, but this is here to avoid a
-// cyclic dependency of libCore (its natural place) and libTarget. libRewrite
-// can depend on libTarget, but not libCore. Since libRewrite is the only
-// user of this function, we define it here.
+// Weird location for the target factories, but this is here to avoid a cyclic
+// dependency of libCore (their natural place) and libTarget. libRewrite can
+// depend on libTarget, but libCore cannot.
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
@@ -388,10 +388,64 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
 }
 
+std::unique_ptr<RelocationHandler>
+createRelocationHandler(Triple::ArchType Arch) {
+#ifdef X86_AVAILABLE
+  if (Arch == Triple::x86_64)
+    return createX86RelocationHandler();
+#endif
+
+#ifdef AARCH64_AVAILABLE
+  if (Arch == Triple::aarch64)
+    return createAArch64RelocationHandler();
+#endif
+
+#ifdef RISCV_AVAILABLE
+  if (Arch == Triple::riscv32)
+    return createRISCVRelocationHandler(false);
+  if (Arch == Triple::riscv64)
+    return createRISCVRelocationHandler(true);
+#endif
+
+  llvm_unreachable("architecture unsupported by RelocationHandler");
+}
+
 } // namespace bolt
 } // namespace llvm
 
 namespace {
+
+static Error reportDecompressionError(StringRef SectionName, Error E) {
+  return createStringError("failed to decompress section '" + SectionName +
+                           "': " + toString(std::move(E)));
+}
+
+static Error validateCompressedDebugSections(const ELFObjectFileBase &File) {
+  for (const SectionRef &Section : File.sections()) {
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    if (!RewriteInstance::isDebugSection(*NameOrErr) || !Section.isCompressed())
+      continue;
+
+    Expected<StringRef> SectionContentsOrErr = Section.getContents();
+    if (!SectionContentsOrErr)
+      return SectionContentsOrErr.takeError();
+
+    Expected<Decompressor> DecompressorOrErr =
+        Decompressor::create(*NameOrErr, *SectionContentsOrErr,
+                             File.isLittleEndian(), File.is64Bit());
+    if (!DecompressorOrErr)
+      return reportDecompressionError(*NameOrErr,
+                                      DecompressorOrErr.takeError());
+
+    SmallVector<uint8_t, 0> DecompressedContents;
+    if (Error E = DecompressorOrErr->resizeAndDecompress(DecompressedContents))
+      return reportDecompressionError(*NameOrErr, std::move(E));
+  }
+  return Error::success();
+}
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
   return llvm::any_of(opts::ReorderData, [&](const std::string &SectionName) {
@@ -453,7 +507,13 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     }
   }
 
-  Relocation::Arch = TheTriple.getArch();
+  if (opts::UpdateDebugSections) {
+    if (Error E = validateCompressedDebugSections(*File)) {
+      Err = std::move(E);
+      return;
+    }
+  }
+
   auto BCOrErr = BinaryContext::createBinaryContext(
       TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
       Features.get(), IsPIC,
@@ -467,6 +527,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     return;
   }
   BC = std::move(BCOrErr.get());
+  BC->initializeRelocationHandler(
+      createRelocationHandler(BC->TheTriple->getArch()));
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
       createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
                           BC->MII.get(), BC->MRI.get(), BC->STI.get())));
@@ -534,10 +596,11 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
 
 static void createRISCVIFuncResolverFunctions(BinaryContext &BC) {
   assert(BC.isRISCV() && "expected RISC-V target");
+  const RelocationHandler &RH = BC.getRelocationHandler();
 
   for (const BinarySection &Section : BC.allocatableSections()) {
     for (const Relocation &Rel : Section.dynamicRelocations()) {
-      if (!Rel.isIRelative() || !Rel.Addend ||
+      if (!RH.isIRelative(Rel.Type) || !Rel.Addend ||
           BC.getBinaryFunctionAtAddress(Rel.Addend))
         continue;
 
@@ -1444,6 +1507,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   if (BC->isAArch64()) {
+    const RelocationHandler &RH = BC->getRelocationHandler();
     // Check for dynamic relocations that might be contained in
     // constant islands.
     for (const BinarySection &Section : BC->allocatableSections()) {
@@ -1455,7 +1519,8 @@ void RewriteInstance::discoverFileObjects() {
                                                    /*CheckPastEnd*/ false,
                                                    /*UseMaxSize*/ true);
         if (BF) {
-          assert(Rel.isRelative() && "Expected relative relocation for island");
+          assert(RH.isRelative(Rel.Type) &&
+                 "Expected relative relocation for island");
           BC->logBOLTErrorsAndQuitOnFatal(
               BF->markIslandDynamicRelocationAtAddress(RelAddress));
         }
@@ -1493,6 +1558,10 @@ void RewriteInstance::discoverFileObjects() {
 }
 
 void RewriteInstance::discoverBOLTReserved() {
+  // Ignore reserved syms in aggregation/heatmap mode.
+  if (opts::AggregateOnly || opts::HeatmapMode != opts::HM_None)
+    return;
+
   BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
   BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
   if (!StartBD != !EndBD) {
@@ -1551,7 +1620,7 @@ Error RewriteInstance::discoverRtInitAddress() {
   }
 
   if (const Relocation *Reloc = InitArraySection->getDynamicRelocationAt(0)) {
-    if (Reloc->isRelative()) {
+    if (BC->getRelocationHandler().isRelative(Reloc->Type)) {
       BC->StartFunctionAddress = Reloc->Addend;
     } else {
       MCSymbol *Sym = Reloc->Symbol;
@@ -1624,6 +1693,7 @@ Error RewriteInstance::discoverRtFiniAddress() {
 }
 
 Error RewriteInstance::updateRtInitReloc() {
+  const RelocationHandler &RH = BC->getRelocationHandler();
   if (BC->HasInterpHeader && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT)
     return Error::success();
 
@@ -1649,7 +1719,7 @@ Error RewriteInstance::updateRtInitReloc() {
 
   if (std::optional<Relocation> Reloc =
           InitArraySection->takeDynamicRelocationAt(0)) {
-    if (Reloc->isRelative()) {
+    if (RH.isRelative(Reloc->Type)) {
       if (Reloc->Addend != BC->StartFunctionAddress)
         return createStringError(std::errc::not_supported,
                                  "inconsistent .init_array dynamic relocation");
@@ -1669,9 +1739,9 @@ Error RewriteInstance::updateRtInitReloc() {
       if (BF->getAddress() + Reloc->Addend != BC->StartFunctionAddress)
         return createStringError(std::errc::not_supported,
                                  "inconsistent .init_array dynamic relocation");
-      InitArraySection->addDynamicRelocation(Relocation{
-          /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-          /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+      InitArraySection->addDynamicRelocation(
+          Relocation{/*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ RH.getAbs64(),
+                     /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
     }
   }
   // Update the static relocation by adding a pending relocation which will get
@@ -1679,9 +1749,9 @@ Error RewriteInstance::updateRtInitReloc() {
   // flushPendingRelocations will calculate the value to patch as
   // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
   // desired value.
-  InitArraySection->addPendingRelocation(Relocation{
-      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+  InitArraySection->addPendingRelocation(
+      Relocation{/*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ RH.getAbs64(),
+                 /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
   BC->outs()
       << "BOLT-INFO: runtime library initialization was hooked via .init_array "
          "entry, set to 0x"
@@ -1690,6 +1760,7 @@ Error RewriteInstance::updateRtInitReloc() {
 }
 
 Error RewriteInstance::updateRtFiniReloc() {
+  const RelocationHandler &RH = BC->getRelocationHandler();
   // Updating DT_FINI is handled by patchELFDynamic.
   if (BC->FiniAddress)
     return Error::success();
@@ -1725,9 +1796,9 @@ Error RewriteInstance::updateRtFiniReloc() {
   // flushPendingRelocations will calculate the value to patch as
   // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
   // desired value.
-  FiniArraySection->addPendingRelocation(Relocation{
-      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+  FiniArraySection->addPendingRelocation(
+      Relocation{/*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ RH.getAbs64(),
+                 /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
   BC->outs() << "BOLT-INFO: runtime library finalization was hooked via "
                 ".fini_array entry, set to 0x"
              << Twine::utohexstr(RT->getRuntimeFiniAddress()) << "\n";
@@ -1915,7 +1986,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!Rel->Addend || !Rel->isIRelative())
+    if (!Rel->Addend || !BC->getRelocationHandler().isIRelative(Rel->Type))
       return;
 
     // IFUNC trampoline without symbol
@@ -1945,7 +2016,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   // symbols can alias that resolver, and R_RISCV_CALL_PLT relocations may use
   // any of their names. Register every such name for the same IPLT entry so
   // getPLTBinaryDataByName() can resolve those call sites.
-  if (BC->isRISCV() && Rel->isIRelative()) {
+  if (BC->isRISCV() && BC->getRelocationHandler().isIRelative(Rel->Type)) {
     auto ResolverSyms = FileSymRefs.equal_range(Rel->Addend);
     for (const SymbolRef &AliasSymbol : llvm::make_second_range(
              llvm::make_range(ResolverSyms.first, ResolverSyms.second))) {
@@ -2422,12 +2493,12 @@ void RewriteInstance::relocateEHFrameSection() {
       llvm_unreachable("unsupported DWARF encoding type");
     case dwarf::DW_EH_PE_sdata4:
     case dwarf::DW_EH_PE_udata4:
-      RelType = Relocation::getPC32();
+      RelType = BC->getRelocationHandler().getPC32();
       Offset -= 4;
       break;
     case dwarf::DW_EH_PE_sdata8:
     case dwarf::DW_EH_PE_udata8:
-      RelType = Relocation::getPC64();
+      RelType = BC->getRelocationHandler().getPC64();
       Offset -= 8;
       break;
     }
@@ -2456,17 +2527,9 @@ Error RewriteInstance::readSpecialSections() {
     check_error(SectionNameOrErr.takeError(), "cannot get section name");
     StringRef SectionName = *SectionNameOrErr;
 
-    // Detect a debug section and check if it's compressed.
-    // Compressed debug sections currently aren't supported.
+    // Detect a debug section.
     if (isDebugSection(SectionName)) {
       HasDebugInfo = true;
-      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
-        return createStringError(errc::not_supported,
-                                 Twine("compressed debug section '") +
-                                     SectionName +
-                                     "' detected. --update-debug-sections "
-                                     "requires uncompressed debug info");
-      }
     }
 
     if (Error E = Section.getContents().takeError())
@@ -2830,7 +2893,8 @@ bool RewriteInstance::analyzeRelocation(
     const RelocationRef &Rel, uint32_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue) const {
-  if (!Relocation::isSupported(RType))
+  const RelocationHandler &RH = BC->getRelocationHandler();
+  if (!RH.isSupported(RType))
     return false;
 
   auto IsWeakReference = [](const SymbolRef &Symbol) {
@@ -2844,16 +2908,16 @@ bool RewriteInstance::analyzeRelocation(
   const bool IsAArch64 = BC->isAArch64();
   const bool IsRISCV = BC->isRISCV();
 
-  const size_t RelSize = Relocation::getSizeForType(RType);
+  const size_t RelSize = RH.getSizeForType(RType);
 
   ErrorOr<uint64_t> Value =
       BC->getUnsignedValueAtAddress(Rel.getOffset(), RelSize);
   assert(Value && "failed to extract relocated value");
 
-  ExtractedValue = Relocation::extractValue(RType, *Value, Rel.getOffset());
+  ExtractedValue = RH.extractValue(RType, *Value, Rel.getOffset());
   Addend = getRelocationAddend(InputFile, Rel);
 
-  const bool IsPCRelative = Relocation::isPCRelative(RType);
+  const bool IsPCRelative = RH.isPCRelative(RType);
   const uint64_t PCRelOffset = IsPCRelative && !IsAArch64 ? Rel.getOffset() : 0;
   bool SkipVerification = false;
   auto SymbolIter = Rel.getSymbol();
@@ -2914,7 +2978,7 @@ bool RewriteInstance::analyzeRelocation(
   // causing the extracted value mismatch. Similar cases can happen for TLS.
   // Pass the relocation information as is to the disassembler and let it decide
   // how to use it for the operand symbolization.
-  if (Relocation::isGOT(RType) || Relocation::isTLS(RType)) {
+  if (RH.isGOT(RType) || RH.isTLS(RType)) {
     SkipVerification = true;
   } else if (!SymbolAddress) {
     assert(!IsSectionRelocation);
@@ -3055,7 +3119,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     }
 
     const uint32_t RType = Relocation::getType(Rel);
-    if (Relocation::isNone(RType))
+    if (BC->getRelocationHandler().isNone(RType))
       continue;
 
     StringRef SymbolName = "<none>";
@@ -3087,7 +3151,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     // Check if this relocation targets an address within a function. This
     // happens with indirect goto.
     const uint64_t ReferencedAddress = SymbolAddress + Addend;
-    if (Relocation::isRelative(RType)) {
+    if (BC->getRelocationHandler().isRelative(RType)) {
       if (SymbolAddress != 0) {
         BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
                       "relocation type\n";
@@ -3110,7 +3174,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
            << ":\n";
   });
 
-  const uint32_t RType = Relocation::getRelative();
+  const uint32_t RType = BC->getRelocationHandler().getRelative();
   const uint8_t PSize = BC->AsmInfo->getCodePointerSize();
   const uint64_t MaxDelta = ((CHAR_BIT * DynamicRelrEntrySize) - 1) * PSize;
 
@@ -3240,6 +3304,7 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
 
 void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
+  const RelocationHandler &RH = BC->getRelocationHandler();
   const bool IsAArch64 = BC->isAArch64();
   const bool IsX86 = BC->isX86();
   const bool IsFromCode = RelocatedSection.isText();
@@ -3248,7 +3313,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   SmallString<16> TypeName;
   Rel.getTypeName(TypeName);
   uint32_t RType = Relocation::getType(Rel);
-  if (Relocation::skipRelocationType(RType))
+  if (RH.skipRelocationType(RType))
     return;
 
   // Adjust the relocation type as the linker might have skewed it.
@@ -3258,14 +3323,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     RType &= ~ELF::R_X86_64_converted_reloc_bit;
   }
 
-  if (Relocation::isTLS(RType)) {
+  if (RH.isTLS(RType)) {
     // No special handling required for TLS relocations on X86.
     if (IsX86)
       return;
 
     // The non-got related TLS relocations on AArch64 and RISC-V also could be
     // skipped.
-    if (!Relocation::isGOT(RType))
+    if (!RH.isGOT(RType))
       return;
   }
 
@@ -3293,10 +3358,9 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
-      Relocation::isPCRelative(RType)) {
+      RH.isPCRelative(RType)) {
     BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
-    if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
-               BD->nameStartsWith("_ZTCN"))) { // construction vtable
+    if (BD && BD->isVTable()) {
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
       if (BF) {
@@ -3378,7 +3442,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (IsX86 && Relocation::isPCRelative(RType)) {
+  if (IsX86 && RH.isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -3411,7 +3475,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-  if ((BC->isAArch64() || BC->isRISCV()) && Relocation::isGOT(RType))
+  if ((BC->isAArch64() || BC->isRISCV()) && RH.isGOT(RType))
     ForceRelocation = true;
 
   if (!ReferencedSection && !ForceRelocation) {
@@ -3457,15 +3521,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   // Workaround for a member function pointer de-virtualization bug. We check
   // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
-  if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
+  if (IsToCode && ContainingBF && !RH.isPCRelative(RType) &&
       (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
     if (const BinaryFunction *RogueBF =
             BC->getBinaryFunctionAtAddress(Address + 1)) {
       // Do an extra check that the function was referenced previously.
       // It's a linear search, but it should rarely happen.
       auto CheckReloc = [&](const Relocation &Rel) {
-        return Rel.Symbol == RogueBF->getSymbol() &&
-               !Relocation::isPCRelative(Rel.Type);
+        return Rel.Symbol == RogueBF->getSymbol() && !RH.isPCRelative(Rel.Type);
       };
       bool Found = llvm::any_of(
           llvm::make_second_range(ContainingBF->Relocations), CheckReloc);
@@ -3497,7 +3560,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (Relocation::isInstructionReference(RType)) {
+      if (RH.isInstructionReference(RType)) {
         // Instruction labels are created while disassembling so we just leave
         // the symbol empty for now. Since the extracted value is typically
         // unrelated to the referenced symbol (e.g., %pcrel_lo in RISC-V
@@ -4470,111 +4533,17 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   }
 }
 
-namespace {
-
-/// Defines the strict weak ordering for BOLT-produced code sections.
-class CodeSectionOrder {
-public:
-  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
-                   StringRef MainSectionName, StringRef WarmSectionName,
-                   bool HotText, bool HotFunctionsAtEnd)
-      : ColdSectionName(ColdSectionName),
-        HotTextMoverSectionName(HotTextMoverSectionName),
-        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
-        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
-
-  bool operator()(StringRef AName, StringRef BName) const {
-    const SectionKind AKind = getKind(AName);
-    const SectionKind BKind = getKind(BName);
-    const unsigned ARank = getRank(AKind);
-    const unsigned BRank = getRank(BKind);
-    if (ARank != BRank)
-      return ARank < BRank;
-
-    if (AKind == SectionKind::Cold) {
-      if (AName.size() != BName.size())
-        return HotFunctionsAtEnd ? AName.size() > BName.size()
-                                 : AName.size() < BName.size();
-      if (AName != BName)
-        return HotFunctionsAtEnd ? AName > BName : AName < BName;
-    }
-
-    return false;
-  }
-
-private:
-  enum class SectionKind { Mover, Main, Warm, Cold, Other };
-
-  SectionKind getKind(StringRef Name) const {
-    if (HotText && Name == HotTextMoverSectionName)
-      return SectionKind::Mover;
-    if (Name == MainSectionName)
-      return SectionKind::Main;
-    if (Name == WarmSectionName)
-      return SectionKind::Warm;
-    if (Name.starts_with(ColdSectionName))
-      return SectionKind::Cold;
-    return SectionKind::Other;
-  }
-
-  unsigned getRank(SectionKind Kind) const {
-    if (Kind == SectionKind::Mover)
-      return 0;
-    if (HotFunctionsAtEnd) {
-      switch (Kind) {
-      case SectionKind::Other:
-        return 1;
-      case SectionKind::Cold:
-        return 2;
-      case SectionKind::Warm:
-        return 3;
-      case SectionKind::Main:
-        return 4;
-      case SectionKind::Mover:
-        llvm_unreachable("handled above");
-      }
-    }
-    switch (Kind) {
-    case SectionKind::Main:
-      return 1;
-    case SectionKind::Warm:
-      return 2;
-    case SectionKind::Cold:
-      return 3;
-    case SectionKind::Other:
-      return 4;
-    case SectionKind::Mover:
-      llvm_unreachable("handled above");
-    }
-    llvm_unreachable("unknown section kind");
-  }
-
-  StringRef ColdSectionName;
-  StringRef HotTextMoverSectionName;
-  StringRef MainSectionName;
-  StringRef WarmSectionName;
-  bool HotText;
-  bool HotFunctionsAtEnd;
-};
-
-} // namespace
-
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   std::vector<BinarySection *> CodeSections;
   for (BinarySection &Section : BC->textSections())
     if (Section.hasValidSectionID())
       CodeSections.emplace_back(&Section);
 
-  const CodeSectionOrder CompareSections(
-      BC->getColdCodeSectionName(), BC->getHotTextMoverSectionName(),
-      BC->getMainCodeSectionName(), BC->getWarmCodeSectionName(), opts::HotText,
-      opts::HotFunctionsAtEnd);
-
   // Determine the order of sections.
-  llvm::stable_sort(CodeSections,
-                    [&](const BinarySection *A, const BinarySection *B) {
-                      return CompareSections(A->getName(), B->getName());
-                    });
+  llvm::stable_sort(
+      CodeSections, [&](const BinarySection *A, const BinarySection *B) {
+        return BC->compareSectionNames(A->getName(), B->getName());
+      });
 
 #ifndef NDEBUG
   // Verify that the order of sections and functions is consistent.
@@ -4584,7 +4553,7 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
   uint32_t LastIndex = 0;
   for (const BinaryFunction *BF : BC->getOutputBinaryFunctions()) {
-    if (!BF->isEmitted() || BF->isPatch())
+    if (!BF->isEmitted() || BF->isPatch() || BF->isThunk())
       continue;
 
     ErrorOr<BinarySection &> Sec = BF->getCodeSection();
@@ -5182,6 +5151,66 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
 }
 
 template <typename ELFT>
+static Expected<uint64_t>
+writeCompressedDebugSection(StringRef SectionName,
+                            ArrayRef<uint8_t> CompressedSection,
+                            raw_ostream &OS, StringRef UncompressedSection) {
+  using ChdrTy = typename ELFT::Chdr;
+
+  if (CompressedSection.size() < sizeof(ChdrTy)) {
+    return createStringError(
+        errc::invalid_argument,
+        "Compressed debug section '" + SectionName +
+            "' is too small to contain a valid compression header.");
+  }
+
+  // Copy the InputHeader from the compressed section to the new recompressed
+  // section as they remain unchanged.
+  ChdrTy InputHeader{};
+  std::memcpy(&InputHeader, CompressedSection.data(), sizeof(ChdrTy));
+
+  DebugCompressionType CompressionMethod;
+  switch (InputHeader.ch_type) {
+  case ELF::ELFCOMPRESS_ZLIB:
+    CompressionMethod = DebugCompressionType::Zlib;
+    break;
+  case ELF::ELFCOMPRESS_ZSTD:
+    CompressionMethod = DebugCompressionType::Zstd;
+    break;
+  default:
+    return createStringError(
+        errc::not_supported,
+        "Unsupported compression method for debug section '" + SectionName +
+            "'");
+  }
+
+  // Ensure the compression method is supported by the current build.
+  if (const char *Reason = compression::getReasonIfUnsupported(
+          compression::formatFor(CompressionMethod))) {
+    return createStringError(errc::not_supported,
+                             "Compression method for debug section '" +
+                                 SectionName + "' is not supported: " + Reason);
+  }
+
+  SmallVector<uint8_t, 0> CompressedData;
+  compression::compress(compression::Params(CompressionMethod),
+                        arrayRefFromStringRef(UncompressedSection),
+                        CompressedData);
+
+  ChdrTy OutputHeader{};
+  OutputHeader.ch_type = InputHeader.ch_type;
+  OutputHeader.ch_addralign = InputHeader.ch_addralign;
+  OutputHeader.ch_size = UncompressedSection.size();
+
+  OS.write(reinterpret_cast<const char *>(&OutputHeader), sizeof(ChdrTy));
+  OS.write(reinterpret_cast<const char *>(CompressedData.data()),
+           CompressedData.size());
+
+  // Return the total size of the compressed section.
+  return sizeof(ChdrTy) + CompressedData.size();
+}
+
+template <typename ELFT>
 void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
   using ShdrTy = typename ELFT::Shdr;
 
@@ -5236,7 +5265,9 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
         DataWritten = true;
 
         // Add padding as the section extension might rely on the alignment.
-        Size = appendPadding(OS, Size, Section.sh_addralign);
+        if (!(Section.sh_flags & ELF::SHF_COMPRESSED)) {
+          Size = appendPadding(OS, Size, Section.sh_addralign);
+        }
       }
     }
 
@@ -5247,7 +5278,34 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
     if (BSec->getAllocAddress()) {
       assert(!DataWritten && "Writing section twice.");
       (void)DataWritten;
-      Size += BSec->write(OS);
+
+      // If this is a debug-section and it is has been de-compressed.
+      if (isDebugSection(SectionName) &&
+          (Section.sh_flags & ELF::SHF_COMPRESSED)) {
+        // Get the uncompressed section data from the BinarySection.
+        Expected<ArrayRef<uint8_t>> UncompressedDataOrErr =
+            Obj.getSectionContents(Section);
+        if (!UncompressedDataOrErr) {
+          consumeError(UncompressedDataOrErr.takeError());
+          report_fatal_error("Failed to get uncompressed data for section '" +
+                             SectionName + "'");
+        }
+
+        // Write the re-compressed section to the output stream.
+        Expected<uint64_t> CompressedSizeOrErr =
+            writeCompressedDebugSection<ELFT>(SectionName,
+                                              *UncompressedDataOrErr, OS,
+                                              BSec->getOutputContents());
+        if (!CompressedSizeOrErr) {
+          consumeError(CompressedSizeOrErr.takeError());
+          report_fatal_error("Failed to write re-compressed debug section '" +
+                             SectionName + "'");
+        }
+
+        Size += *CompressedSizeOrErr;
+      } else {
+        Size += BSec->write(OS);
+      }
     }
 
     BSec->setOutputFileOffset(NextAvailableOffset);
@@ -5871,18 +5929,26 @@ void RewriteInstance::updateELFSymbolTable(
     }
 
     if (Function) {
+      // AArch64/RISC-V mapping symbols ($x) at the function entry share its
+      // address but are not function symbols: keep them zero-sized and don't
+      // derive fragment symbols ($x.cold.0) from them.
+      const bool IsMarker =
+          BC->getMarkerType(Symbol.getType(), Symbol.st_size, *SymbolName) !=
+          MarkerSymType::NONE;
+
       // If the symbol matched a function that was not emitted, update the
       // corresponding section index but otherwise leave it unchanged.
       if (Function->isEmitted()) {
         NewSymbol.st_value = Function->getOutputAddress();
-        NewSymbol.st_size = Function->getOutputSize();
+        if (!IsMarker)
+          NewSymbol.st_size = Function->getOutputSize();
         NewSymbol.st_shndx = Function->getCodeSection()->getIndex();
       } else if (Symbol.st_shndx < ELF::SHN_LORESERVE) {
         NewSymbol.st_shndx = getNewSectionIndex(Symbol.st_shndx);
       }
 
       // Add new symbols to the symbol table if necessary.
-      if (!IsDynSym)
+      if (!IsDynSym && !IsMarker)
         addExtraSymbols(*Function, NewSymbol);
     } else {
       // Check if the function symbol matches address inside a function, i.e.
@@ -6287,6 +6353,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   using Elf_Rela = typename ELFT::Rela;
   raw_fd_ostream &OS = Out->os();
   const ELFFile<ELFT> &EF = File->getELFFile();
+  const RelocationHandler &RH = BC->getRelocationHandler();
 
   uint64_t RelDynOffset = 0, RelDynEndOffset = 0;
   uint64_t RelPltOffset = 0, RelPltEndOffset = 0;
@@ -6363,7 +6430,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         if (Rel.isJmpRelocation())
           continue;
 
-        const bool IsRelative = Rel.isRelative();
+        const bool IsRelative = RH.isRelative(Rel.Type);
         if (PatchRelative != IsRelative || Rel.isRELR())
           continue;
 
@@ -6385,7 +6452,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
       return;
 
     typename ELFObjectFile<ELFT>::Elf_Rela RelA;
-    RelA.setSymbolAndType(0, Relocation::getNone(), EF.isMips64EL());
+    RelA.setSymbolAndType(0, RH.getNone(), EF.isMips64EL());
     RelA.r_offset = 0;
     RelA.r_addend = 0;
     while (Offset < EndOffset) {
@@ -7084,6 +7151,11 @@ void RewriteInstance::writeEHFrameHeader() {
     EHFrameHdrSec.setOutputAddress(EHFrameHdrOutputAddress);
     EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
   }
+
+  // Byte 3 of the header is the table encoding.
+  if (NewEHFrameHdr[3] == (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata8))
+    BC->outs() << "BOLT-INFO: using DW_EH_PE_sdata8 encoding in "
+               << getEHFrameHdrSectionName() << '\n';
 
   Out->os().seek(EHFrameHdrFileOffset);
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());

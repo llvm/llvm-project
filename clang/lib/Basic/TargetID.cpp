@@ -32,9 +32,9 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
     return Ret;
   const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
       llvm::AMDGPU::getFeatureBitset(ProcKind);
-  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
+  // Only allow features in target IDs if the processor supports on/off modes.
+  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_ON_OFF_MODES))
     Ret.push_back("sramecc");
-  // Only allow xnack in target ID if the processor supports on/off modes.
   if (Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
     Ret.push_back("xnack");
   return Ret;
@@ -207,6 +207,26 @@ std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID) {
   if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
     llvm::replace(FileName, ':', '@');
   return FileName;
+}
+
+std::string normalizeForBundler(const llvm::Triple &OrigT,
+                                llvm::StringRef BoundArch) {
+  llvm::Triple T(OrigT);
+  bool HasTargetID = !BoundArch.empty();
+
+  // FIXME: Short-term hack. The HIP runtime hardcodes the legacy
+  // "amdgcn-amd-amdhsa--" prefix when parsing the target IDs embedded in the
+  // fatbin bundle, so force it.
+  if (HasTargetID && T.isAMDGCN()) {
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+  }
+
+  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
+                        T.getOSName() + "-" + T.getEnvironmentName())
+                           .str()
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 } // namespace clang

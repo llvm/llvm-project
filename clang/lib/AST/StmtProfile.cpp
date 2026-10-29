@@ -535,6 +535,11 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPDepthClause(const OMPDepthClause *C) {
+  if (const Expr *Depth = C->getDepth())
+    Profiler->VisitExpr(Depth);
+}
+
 void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   if (const Expr *First = C->getFirst())
     Profiler->VisitExpr(First);
@@ -619,11 +624,6 @@ void OMPClauseProfiler::VisitOMPOrderedClause(const OMPOrderedClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *C) {
-  if (C->getCondition())
-    Profiler->VisitStmt(C->getCondition());
-}
-
-void OMPClauseProfiler::VisitOMPReplayableClause(const OMPReplayableClause *C) {
   if (C->getCondition())
     Profiler->VisitStmt(C->getCondition());
 }
@@ -958,14 +958,6 @@ void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
   if (C->getGrainsize())
     Profiler->VisitStmt(C->getGrainsize());
 }
-void OMPClauseProfiler::VisitOMPGraphIdClause(const OMPGraphIdClause *C) {
-  if (C->getId())
-    Profiler->VisitStmt(C->getId());
-}
-void OMPClauseProfiler::VisitOMPGraphResetClause(const OMPGraphResetClause *C) {
-  if (C->getCondition())
-    Profiler->VisitStmt(C->getCondition());
-}
 void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
   VisitOMPClauseWithPreInit(C);
   if (C->getNumTasks())
@@ -1107,6 +1099,10 @@ void StmtProfiler::VisitOMPInterchangeDirective(
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPFlattenDirective(const OMPFlattenDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
@@ -1195,10 +1191,6 @@ void StmtProfiler::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *S) {
 }
 
 void StmtProfiler::VisitOMPAssumeDirective(const OMPAssumeDirective *S) {
-  VisitOMPExecutableDirective(S);
-}
-
-void StmtProfiler::VisitOMPTaskgraphDirective(const OMPTaskgraphDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
@@ -2276,8 +2268,30 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 }
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): Add support for Null, TypeSourceInfo,
+  // TemplateReference and DeclRefExpr
+  VisitExpr(E);
+  ID.AddInteger(static_cast<int>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return;
+  case ReflectionKind::Type: {
+    QualType QT = E->getTypeSourceInfo()->getType();
+    if (isTypeAliasAsReflectionName(QT)) {
+      if (const auto *TDT = QT->getAs<TypedefType>()) {
+        ID.AddBoolean(true);
+        VisitDecl(TDT->getDecl()->getCanonicalDecl());
+        return;
+      }
+    }
+    ID.AddBoolean(false);
+    VisitType(QT);
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
 }
 
 void

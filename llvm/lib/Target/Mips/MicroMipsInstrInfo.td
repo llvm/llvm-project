@@ -50,118 +50,108 @@ def immZExt2Shift : ImmLeaf<i32, [{return Imm >= 1 && Imm <= 8;}]>;
 
 def immLi16 : ImmLeaf<i32, [{return Imm >= -1 && Imm <= 126;}]>;
 
-def MicroMipsMemGPRMM16AsmOperand : AsmOperandClass {
-  let Name = "MicroMipsMem";
-  let RenderMethod = "addMicroMipsMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithGRPMM16Base";
+class UImmOffsetAsmOperand<int Bits, int Shift = 0, int Bias = 0>
+    : AsmOperandClass {
+  let ParserMethod = "parseMemOffsetOperand";
+  let Name = "UImmOffset" # Bits # "_" # Shift #
+             !if(!lt(Bias, 0), "Minus", "") #
+             !cast<string>(!if(!lt(Bias, 0), !sub(0, Bias), Bias));
+  let SuperClasses = [SImmPtrAsmOperand];
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod =
+      "isScaledUImm<" # Bits # ", " # Shift # ", " # Bias # ">";
+  let DiagnosticType = "ConstantMemOffset";
 }
 
-class mem_mm_4_generic : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_gpr16mm_rc, simm4);
-  let OperandType = "OPERAND_MEMORY";
-  let ParserMatchClass = MicroMipsMemGPRMM16AsmOperand;
-}
-
-def mem_mm_4 : mem_mm_4_generic {
-  let EncoderMethod = "getMemEncodingMMImm4";
-}
-
-def mem_mm_4_lsl1 : mem_mm_4_generic {
-  let EncoderMethod = "getMemEncodingMMImm4Lsl1";
-}
-
-def mem_mm_4_lsl2 : mem_mm_4_generic {
-  let EncoderMethod = "getMemEncodingMMImm4Lsl2";
-}
-
-def MicroMipsMemSPAsmOperand : AsmOperandClass {
-  let Name = "MicroMipsMemSP";
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithUimmWordAlignedOffsetSP<7>";
-}
-
-def MicroMipsMemGPAsmOperand : AsmOperandClass {
-  let Name = "MicroMipsMemGP";
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithSimmWordAlignedOffsetGP<9>";
-}
-
-def mem_mm_sp_imm5_lsl2 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_sp_rc:$base, simm5:$offset);
-  let OperandType = "OPERAND_MEMORY";
-  let ParserMatchClass = MicroMipsMemSPAsmOperand;
-  let EncoderMethod = "getMemEncodingMMSPImm5Lsl2";
-}
-
-def mem_mm_gp_simm7_lsl2 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_gp_rc:$base, simm7_lsl2:$offset);
-  let OperandType = "OPERAND_MEMORY";
-  let ParserMatchClass = MicroMipsMemGPAsmOperand;
-  let EncoderMethod = "getMemEncodingMMGPImm7Lsl2";
-}
-
-def mem_mm_9 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops mips_ptr_rc, simm9);
-  let EncoderMethod = "getMemEncodingMMImm9";
-  let ParserMatchClass = MipsMemSimmAsmOperand<9>;
+class UImmOffset<int Bits, int Shift = 0, int Bias = 0> : Operand<i32> {
+  let EncoderMethod = "getScaledImmOpValue<" # Shift # ">";
+  let DecoderMethod = "DecodeUImmWithOffsetAndScale<" # Bits # ", 0, " #
+                      !shl(1, Shift) # ">";
+  let ParserMatchClass = UImmOffsetAsmOperand<Bits, Shift, Bias>;
   let OperandType = "OPERAND_MEMORY";
 }
 
-def mem_mm_11 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops GPR32, simm11);
-  let EncoderMethod = "getMemEncodingMMImm11";
-  let ParserMatchClass = MipsMemSimmAsmOperand<11>;
-  let OperandType = "OPERAND_MEMORY";
+def mem_mm_4 : UImmOffset<4>;
+def mem_mm_4_lsl1 : UImmOffset<4, 1>;
+def mem_mm_4_lsl2 : UImmOffset<4, 2>;
+def mem_mm_4_lbu : UImmOffset<4, 0, -1> {
+  let DecoderMethod = "DecodeLBU16Offset";
 }
 
-def mem_mm_12 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops mips_ptr_rc, simm12);
-  let EncoderMethod = "getMemEncodingMMImm12";
-  let ParserMatchClass = MipsMemAsmOperand;
-  let OperandType = "OPERAND_MEMORY";
+def MemBaseSPAsmOperand : MipsAsmRegOperand {
+  let Name = "MemBaseSP";
+  let SuperClasses = [PtrRegAsmOperand];
+  let PredicateMethod = "isSPAsmReg";
+  let RenderMethod = "addPtrRegOperands";
 }
 
-def mem_mm_16 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops mips_ptr_rc, simm16);
-  let EncoderMethod = "getMemEncodingMMImm16";
-  let DecoderMethod = "DecodeMemMMImm16";
-  let ParserMatchClass = MipsMemSimmAsmOperand<16>;
-  let OperandType = "OPERAND_MEMORY";
+def MemBaseGPAsmOperand : MipsAsmRegOperand {
+  let Name = "MemBaseGP";
+  let SuperClasses = [PtrRegAsmOperand];
+  let PredicateMethod = "isGPAsmReg";
+  let RenderMethod = "addPtrRegOperands";
 }
 
-def MipsMemUimm4AsmOperand : AsmOperandClass {
-  let Name = "MemOffsetUimm4";
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithUimmOffsetSP<6>";
+def MemBaseSP : RegisterOperand<ptr_sp_rc> {
+  let ParserMatchClass = MemBaseSPAsmOperand;
+  let DecoderMethod = "DecodeFixedPtrRegister<29>";
 }
 
-def mem_mm_4sp : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_sp_rc, uimm8);
-  let EncoderMethod = "getMemEncodingMMImm4sp";
-  let ParserMatchClass = MipsMemUimm4AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
+def MemBaseGP : RegisterOperand<ptr_gp_rc> {
+  let ParserMatchClass = MemBaseGPAsmOperand;
+  let DecoderMethod = "DecodeFixedPtrRegister<28>";
 }
+
+def mem_mm_sp_imm5_lsl2 : UImmOffset<5, 2>;
+def mem_mm_gp_simm7_lsl2
+    : MemoryOffset<simm7_lsl2, SImmOffsetAsmOperand<7, 2, "SImm7_Lsl2">>;
+
+// A register list expands to a variable number of MC operands. Address
+// operands follow it, so their encoders locate them from the end.
+def MemBaseRegList : RegisterOperand<mips_ptr_rc> {
+  let ParserMatchClass = PtrRegAsmOperand;
+  let DecoderMethod = "DecodePtrRegisterClass";
+  let EncoderMethod = "getOperandFromEndValue<2>";
+  let PrintMethod = "printOperandFromEnd<2>";
+}
+
+def MemBaseSPRegList : RegisterOperand<ptr_sp_rc> {
+  let ParserMatchClass = MemBaseSPAsmOperand;
+  let DecoderMethod = "DecodeFixedPtrRegister<29>";
+  let PrintMethod = "printOperandFromEnd<2>";
+}
+
+class RegListMemoryOffset<Operand Offset, int Shift = 0>
+    : MemoryOffset<Offset, Offset.ParserMatchClass> {
+  let EncoderMethod = "getOperandFromEndValue<1, " # Shift # ">";
+  let PrintMethod = "printOperandFromEnd<1>";
+}
+
+def mem_mm_12 : MemoryOffset<simm12, AnyOffsetAsmOperand>;
+
+def mem_mm_12_reglist : RegListMemoryOffset<mem_mm_12>;
+def mem_mm_4sp : RegListMemoryOffset<simm6, 2> {
+  let DecoderMethod = "DecodeSImmWithOffsetAndScale<4, 0, 4>";
+  let ParserMatchClass = UImmOffsetAsmOperand<6>;
+}
+
+def mem_mm_4sp_lsl2 : RegListMemoryOffset<mem_mm_4_lsl2, 2>;
+
+def mem_mm_9 : MemoryOffset<simm9, SImmOffsetAsmOperand<9>>;
+def mem_mm_11 : MemoryOffset<simm11, SImmOffsetAsmOperand<11>>;
+def mem_mm_16 : MemoryOffset<simm16, SImmOffsetAsmOperand<16>>;
 
 def jmptarget_mm : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET_MM";
   let PrintMethod = "printJumpOperand";
 }
 
 def calltarget_mm : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET_MM";
   let PrintMethod = "printJumpOperand";
 }
 
@@ -200,17 +190,17 @@ class CompactBranchMM<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 let canFoldAsLoad = 1 in
 class LoadLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
-                      Operand MemOpnd> :
-  InstSE<(outs RO:$rt), (ins MemOpnd:$addr, RO:$src),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, (OpNode addrimm12:$addr, RO:$src))],
+                     Operand MemOpnd> :
+  InstSE<(outs RO:$rt), (ins MemBase:$base, MemOpnd:$offset, RO:$src),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RO:$rt,
+               (OpNode (addrimm12 MemBase:$base, iPTR:$offset), RO:$src))],
          FrmI> {
-  let DecoderMethod = "DecodeMemMMImm12";
   string Constraints = "$src = $rt";
   let BaseOpcode = opstr;
   bit mayLoad = 1;
@@ -218,11 +208,10 @@ class LoadLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
 }
 
 class StoreLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
-                       Operand MemOpnd>:
-  InstSE<(outs), (ins RO:$rt, MemOpnd:$addr),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RO:$rt, addrimm12:$addr)], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm12";
+                      Operand MemOpnd> :
+  InstSE<(outs), (ins RO:$rt, MemBase:$base, MemOpnd:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RO:$rt, (addrimm12 MemBase:$base, iPTR:$offset))], FrmI> {
   let BaseOpcode = opstr;
   bit mayLoad = 0;
   bit mayStore = 1;
@@ -238,49 +227,51 @@ MicroMipsInst16<(outs RO1:$rd1, RO2:$rd2), (ins RO3:$rs, RO3:$rt),
   let DecoderMethod = "DecodeMovePOperands";
 }
 
+// Paired transfers encode the first data register and imply the next one.
+def GPR32PairOpnd : Operand<i32> {
+  let MIOperandInfo = (ops GPR32Opnd, GPR32Opnd);
+  let ParserMatchClass = GPR32AsmOperand;
+  let DecoderMethod = "DecodeGPR32Pair";
+}
+
 class StorePairMM<string opstr>
-    :  InstSE<(outs), (ins GPR32Opnd:$rt, GPR32Opnd:$rt2, mem_simm12:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI, opstr> {
-  let DecoderMethod = "DecodeMemMMImm12";
+    : InstSE<(outs), (ins GPR32PairOpnd:$rt,
+                          MemBase:$base, mem_simm12:$offset),
+             !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI, opstr> {
   let mayStore = 1;
   let AsmMatchConverter = "ConvertXWPOperands";
 }
 
 class LoadPairMM<string opstr>
-    : InstSE<(outs GPR32Opnd:$rt, GPR32Opnd:$rt2), (ins mem_simm12:$addr),
-          !strconcat(opstr, "\t$rt, $addr"), [], FrmI, opstr> {
-  let DecoderMethod = "DecodeMemMMImm12";
+    : InstSE<(outs GPR32PairOpnd:$rt), (ins MemBase:$base, mem_simm12:$offset),
+             !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI, opstr> {
   let mayLoad = 1;
   let AsmMatchConverter = "ConvertXWPOperands";
 }
 
 class LLBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem_mm_12:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm12";
+  InstSE<(outs RO:$rt), (ins MemBase:$base, mem_mm_12:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayLoad = 1;
 }
 
 class LLEBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem_simm9:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm9";
+  InstSE<(outs RO:$rt), (ins MemBase:$base, mem_simm9:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   string BaseOpcode = opstr;
   let mayLoad = 1;
 }
 
 class SCBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$dst), (ins RO:$rt, mem_mm_12:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm12";
+  InstSE<(outs RO:$dst), (ins RO:$rt, MemBase:$base, mem_mm_12:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayStore = 1;
   let Constraints = "$rt = $dst";
 }
 
 class SCEBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$dst), (ins RO:$rt, mem_simm9:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm9";
+  InstSE<(outs RO:$dst), (ins RO:$rt, MemBase:$base, mem_simm9:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   string BaseOpcode = opstr;
   let mayStore = 1;
   let Constraints = "$rt = $dst";
@@ -288,10 +279,10 @@ class SCEBaseMM<string opstr, RegisterOperand RO> :
 
 class LoadMM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
              DAGOperand MO = mem_mm_12> :
-  InstSE<(outs RO:$rt), (ins MO:$addr),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, (OpNode addrimm12:$addr))], FrmI, opstr> {
-  let DecoderMethod = "DecodeMemMMImm12";
+  InstSE<(outs RO:$rt), (ins MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RO:$rt, (OpNode (addrimm12 MemBase:$base, iPTR:$offset)))],
+         FrmI, opstr> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
@@ -327,39 +318,34 @@ class ShiftIMM16<string opstr, Operand ImmOpnd, RegisterOperand RO> :
                   !strconcat(opstr, "\t$rd, $rt, $shamt"), [], FrmR>;
 
 class LoadMM16<string opstr, DAGOperand RO, Operand MemOpnd> :
-  MicroMipsInst16<(outs RO:$rt), (ins MemOpnd:$addr),
-                  !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm4";
+  MicroMipsInst16<(outs RO:$rt), (ins GPRMM16Opnd:$base, MemOpnd:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
 
 class StoreMM16<string opstr, DAGOperand RTOpnd, Operand MemOpnd> :
-  MicroMipsInst16<(outs), (ins RTOpnd:$rt, MemOpnd:$addr),
-                  !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMImm4";
+  MicroMipsInst16<(outs), (ins RTOpnd:$rt, GPRMM16Opnd:$base, MemOpnd:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayStore = 1;
 }
 
 class LoadSPMM16<string opstr, DAGOperand RO, Operand MemOpnd> :
-  MicroMipsInst16<(outs RO:$rt), (ins MemOpnd:$offset),
-                  !strconcat(opstr, "\t$rt, $offset"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMSPImm5Lsl2";
+  MicroMipsInst16<(outs RO:$rt), (ins MemBaseSP:$base, MemOpnd:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
 
 class StoreSPMM16<string opstr, DAGOperand RO, Operand MemOpnd> :
-  MicroMipsInst16<(outs), (ins RO:$rt, MemOpnd:$offset),
-                  !strconcat(opstr, "\t$rt, $offset"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMSPImm5Lsl2";
+  MicroMipsInst16<(outs), (ins RO:$rt, MemBaseSP:$base, MemOpnd:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayStore = 1;
 }
 
 class LoadGPMM16<string opstr, DAGOperand RO, Operand MemOpnd> :
-  MicroMipsInst16<(outs RO:$rt), (ins MemOpnd:$offset),
-                  !strconcat(opstr, "\t$rt, $offset"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMGPImm7Lsl2";
+  MicroMipsInst16<(outs RO:$rt), (ins MemBaseGP:$base, MemOpnd:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
@@ -412,7 +398,7 @@ class JumpLinkRegMM16<string opstr, RegisterOperand RO> :
            [(MipsJmpLink RO:$rs)], FrmR> {
   let isCall = 1;
   let hasDelaySlot = 1;
-  let Defs = [RA];
+  let Defs = [R31];
   let hasPostISelHook = 1;
 }
 
@@ -441,7 +427,7 @@ class JumpLinkRegSMM16<string opstr, RegisterOperand RO> :
            [], FrmR> {
   let isCall = 1;
   let hasDelaySlot = 1;
-  let Defs = [RA];
+  let Defs = [R31];
 }
 
 // 16-bit Jump Register Compact - No delay slot
@@ -466,11 +452,11 @@ class CBranchZeroMM<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 // MicroMIPS Jump and Link (Call) - Short Delay Slot
-let isCall = 1, hasDelaySlot = 1, Defs = [RA] in {
+let isCall = 1, hasDelaySlot = 1, Defs = [R31] in {
   class JumpLinkMM<string opstr, DAGOperand opnd> :
     InstSE<(outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
            [], FrmJ, opstr> {
@@ -528,30 +514,30 @@ def reglist16 : Operand<i32> {
 }
 
 class StoreMultMM<string opstr> :
-  InstSE<(outs), (ins reglist:$rt, mem_mm_12:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI, opstr> {
-  let DecoderMethod = "DecodeMemMMImm12";
+  InstSE<(outs), (ins reglist:$rt,
+                     MemBaseRegList:$base, mem_mm_12_reglist:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI, opstr> {
   let mayStore = 1;
 }
 
 class LoadMultMM<string opstr> :
-  InstSE<(outs reglist:$rt), (ins mem_mm_12:$addr),
-          !strconcat(opstr, "\t$rt, $addr"), [], FrmI, opstr> {
-  let DecoderMethod = "DecodeMemMMImm12";
+  InstSE<(outs reglist:$rt),
+         (ins MemBaseRegList:$base, mem_mm_12_reglist:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI, opstr> {
   let mayLoad = 1;
 }
 
 class StoreMultMM16<string opstr> :
-  MicroMipsInst16<(outs), (ins reglist16:$rt, mem_mm_4sp:$addr),
-                  !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMReglistImm4Lsl2";
+  MicroMipsInst16<(outs), (ins reglist16:$rt,
+                             MemBaseSPRegList:$base, mem_mm_4sp:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayStore = 1;
 }
 
 class LoadMultMM16<string opstr> :
-  MicroMipsInst16<(outs reglist16:$rt), (ins mem_mm_4sp:$addr),
-                  !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMemMMReglistImm4Lsl2";
+  MicroMipsInst16<(outs reglist16:$rt),
+                 (ins MemBaseSPRegList:$base, mem_mm_4sp:$offset),
+                 !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayLoad = 1;
 }
 
@@ -564,7 +550,7 @@ class UncondBranchMM16<string opstr> :
   let isBarrier = 1;
   let hasDelaySlot = 1;
   let Predicates = [RelocPIC, InMicroMips];
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 class HypcallMM<string opstr> :
@@ -617,7 +603,7 @@ let FastISelShouldIgnore = 1 in {
   def XOR16_MM : LogicRMM16<"xor16", GPRMM16Opnd, xor>,
                  LOGIC_FM_MM16<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6;
 }
-def LBU16_MM : LoadMM16<"lbu16", GPRMM16Opnd, mem_mm_4>,
+def LBU16_MM : LoadMM16<"lbu16", GPRMM16Opnd, mem_mm_4_lbu>,
                LOAD_STORE_FM_MM16<0x02>, ISA_MICROMIPS;
 def LHU16_MM : LoadMM16<"lhu16", GPRMM16Opnd, mem_mm_4_lsl1>,
                LOAD_STORE_FM_MM16<0x0a>, ISA_MICROMIPS;
@@ -784,55 +770,51 @@ let DecoderNamespace = "MicroMips" in {
   }
 
   /// Load and Store Instructions - aligned
-  let DecoderMethod = "DecodeMemMMImm16" in {
-    def LB_MM  : LoadMemory<"lb", GPR32Opnd, mem_mm_16, sextloadi8>,
-                 MMRel, LW_FM_MM<0x7>, ISA_MICROMIPS;
-    def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16, zextloadi8>,
-                 MMRel, LW_FM_MM<0x5>, ISA_MICROMIPS;
-    def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simmptr, sextloadi16,
-                            addrDefault>, MMRel, LW_FM_MM<0xf>, ISA_MICROMIPS;
-    def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simmptr, zextloadi16>,
-                 MMRel, LW_FM_MM<0xd>, ISA_MICROMIPS;
-    def LW_MM  : Load<"lw", GPR32Opnd>, MMRel, LW_FM_MM<0x3f>,
-                 ISA_MICROMIPS;
-    def SB_MM  : Store<"sb", GPR32Opnd, truncstorei8>, MMRel,
-                 LW_FM_MM<0x6>, ISA_MICROMIPS;
-    def SH_MM  : Store<"sh", GPR32Opnd, truncstorei16>, MMRel,
-                 LW_FM_MM<0xe>, ISA_MICROMIPS;
-    def SW_MM  : Store<"sw", GPR32Opnd>, MMRel,
-                 LW_FM_MM<0x3e>, ISA_MICROMIPS;
-  }
+  def LB_MM  : LoadMemory<"lb", GPR32Opnd, mem_mm_16, sextloadi8>,
+               MMRel, LW_FM_MM<0x7>, ISA_MICROMIPS;
+  def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16, zextloadi8>,
+               MMRel, LW_FM_MM<0x5>, ISA_MICROMIPS;
+  def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simmptr, sextloadi16,
+                          addrDefault>, MMRel, LW_FM_MM<0xf>, ISA_MICROMIPS;
+  def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simmptr, zextloadi16>,
+               MMRel, LW_FM_MM<0xd>, ISA_MICROMIPS;
+  def LW_MM  : Load<"lw", GPR32Opnd>, MMRel, LW_FM_MM<0x3f>,
+               ISA_MICROMIPS;
+  def SB_MM  : Store<"sb", GPR32Opnd, truncstorei8>, MMRel,
+               LW_FM_MM<0x6>, ISA_MICROMIPS;
+  def SH_MM  : Store<"sh", GPR32Opnd, truncstorei16>, MMRel,
+               LW_FM_MM<0xe>, ISA_MICROMIPS;
+  def SW_MM  : Store<"sw", GPR32Opnd>, MMRel,
+               LW_FM_MM<0x3e>, ISA_MICROMIPS;
 
-  let DecoderMethod = "DecodeMemMMImm9" in {
-    def LBE_MM  : MMRel, Load<"lbe", GPR32Opnd>,
-                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x4>, ISA_MICROMIPS, ASE_EVA;
-    def LBuE_MM : MMRel, Load<"lbue", GPR32Opnd>,
-                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x0>, ISA_MICROMIPS, ASE_EVA;
-    def LHE_MM  : MMRel, LoadMemory<"lhe", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>, ISA_MICROMIPS, ASE_EVA;
-    def LHuE_MM : MMRel, LoadMemory<"lhue", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>, ISA_MICROMIPS, ASE_EVA;
-    def LWE_MM  : MMRel, LoadMemory<"lwe", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>, ISA_MICROMIPS, ASE_EVA;
-    def SBE_MM  : MMRel, StoreMemory<"sbe", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>, ISA_MICROMIPS, ASE_EVA;
-    def SHE_MM  : MMRel, StoreMemory<"she", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>, ISA_MICROMIPS, ASE_EVA;
-    def SWE_MM  : MMRel, StoreMemory<"swe", GPR32Opnd, mem_simm9>,
-                  POOL32C_LHUE_FM_MM<0x18, 0xa, 0x7>, ISA_MICROMIPS, ASE_EVA;
-    def LWLE_MM : MMRel, LoadLeftRightMM<"lwle", MipsLWL, GPR32Opnd, mem_mm_9>,
-                  POOL32C_STEVA_LDEVA_FM_MM<0x6, 0x2>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
-    def LWRE_MM : MMRel, LoadLeftRightMM<"lwre", MipsLWR, GPR32Opnd, mem_mm_9>,
-                  POOL32C_STEVA_LDEVA_FM_MM<0x6, 0x3>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
-    def SWLE_MM : MMRel, StoreLeftRightMM<"swle", MipsSWL, GPR32Opnd, mem_mm_9>,
-                  POOL32C_STEVA_LDEVA_FM_MM<0xa, 0x0>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
-    def SWRE_MM : MMRel, StoreLeftRightMM<"swre", MipsSWR, GPR32Opnd, mem_mm_9>,
-                  POOL32C_STEVA_LDEVA_FM_MM<0xa, 0x1>,
-                  ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
-  }
+  def LBE_MM  : MMRel, Load<"lbe", GPR32Opnd>,
+                POOL32C_LHUE_FM_MM<0x18, 0x6, 0x4>, ISA_MICROMIPS, ASE_EVA;
+  def LBuE_MM : MMRel, Load<"lbue", GPR32Opnd>,
+                POOL32C_LHUE_FM_MM<0x18, 0x6, 0x0>, ISA_MICROMIPS, ASE_EVA;
+  def LHE_MM  : MMRel, LoadMemory<"lhe", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>, ISA_MICROMIPS, ASE_EVA;
+  def LHuE_MM : MMRel, LoadMemory<"lhue", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>, ISA_MICROMIPS, ASE_EVA;
+  def LWE_MM  : MMRel, LoadMemory<"lwe", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>, ISA_MICROMIPS, ASE_EVA;
+  def SBE_MM  : MMRel, StoreMemory<"sbe", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>, ISA_MICROMIPS, ASE_EVA;
+  def SHE_MM  : MMRel, StoreMemory<"she", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>, ISA_MICROMIPS, ASE_EVA;
+  def SWE_MM  : MMRel, StoreMemory<"swe", GPR32Opnd, mem_simm9>,
+                POOL32C_LHUE_FM_MM<0x18, 0xa, 0x7>, ISA_MICROMIPS, ASE_EVA;
+  def LWLE_MM : MMRel, LoadLeftRightMM<"lwle", MipsLWL, GPR32Opnd, mem_mm_9>,
+                POOL32C_STEVA_LDEVA_FM_MM<0x6, 0x2>,
+                ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
+  def LWRE_MM : MMRel, LoadLeftRightMM<"lwre", MipsLWR, GPR32Opnd, mem_mm_9>,
+                POOL32C_STEVA_LDEVA_FM_MM<0x6, 0x3>,
+                ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
+  def SWLE_MM : MMRel, StoreLeftRightMM<"swle", MipsSWL, GPR32Opnd, mem_mm_9>,
+                POOL32C_STEVA_LDEVA_FM_MM<0xa, 0x0>,
+                ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
+  def SWRE_MM : MMRel, StoreLeftRightMM<"swre", MipsSWR, GPR32Opnd, mem_mm_9>,
+                POOL32C_STEVA_LDEVA_FM_MM<0xa, 0x1>,
+                ISA_MICROMIPS32_NOT_MIPS32R6, ASE_EVA;
 
   def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>,
                 ISA_MICROMIPS;
@@ -857,12 +839,14 @@ let DecoderNamespace = "MicroMips" in {
 
   /// Load and Store multiple pseudo Instructions
   class LoadWordMultMM<string instr_asm > :
-    MipsAsmPseudoInst<(outs reglist:$rt), (ins mem_mm_12:$addr),
-                      !strconcat(instr_asm, "\t$rt, $addr")> ;
+    MipsAsmPseudoInst<(outs reglist:$rt),
+                     (ins MemBase:$base, mem_mm_12:$offset),
+                     !strconcat(instr_asm, "\t$rt, ${offset}(${base})")>;
 
   class StoreWordMultMM<string instr_asm > :
-    MipsAsmPseudoInst<(outs), (ins reglist:$rt, mem_mm_12:$addr),
-                      !strconcat(instr_asm, "\t$rt, $addr")> ;
+    MipsAsmPseudoInst<(outs),
+                     (ins reglist:$rt, MemBase:$base, mem_mm_12:$offset),
+                     !strconcat(instr_asm, "\t$rt, ${offset}(${base})")>;
 
 
   def SWM_MM  : StoreWordMultMM<"swm">, ISA_MICROMIPS;
@@ -938,6 +922,11 @@ let DecoderNamespace = "MicroMips" in {
   def JALR_MM : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM_MM<0x03c>,
                 ISA_MICROMIPS32_NOT_MIPS32R6;
 
+  def JR_HB_MM : MMRel, JR_HB_DESC<GPR32Opnd>, JR_FM_MM<0x7c>,
+                 ISA_MICROMIPS32_NOT_MIPS32R6;
+  def JALR_HB_MM : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_FM_MM<0x07c>, MMArch,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
+
   /// Jump Instructions - Short Delay Slot
   def JALS_MM   : JumpLinkMM<"jals", calltarget_mm>, J_FM_MM<0x1d>,
                   ISA_MICROMIPS32_NOT_MIPS32R6;
@@ -976,9 +965,8 @@ let DecoderNamespace = "MicroMips" in {
 
   /// Control Instructions
   def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM, ISA_MICROMIPS;
-  let DecoderMethod = "DecodeSyncI_MM" in
-    def SYNCI_MM   : MMRel, SYNCI_FT<"synci", mem_mm_16>, SYNCI_FM_MM,
-                     ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SYNCI_MM   : MMRel, SYNCI_FT<"synci", mem_mm_16>, SYNCI_FM_MM,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
   def BREAK_MM   : MMRel, BRK_FT<"break">, BRK_FM_MM, ISA_MICROMIPS;
   def SYSCALL_MM : MMRel, SYS_FT<"syscall", uimm10>, SYS_FM_MM,
                    ISA_MICROMIPS;
@@ -1031,25 +1019,27 @@ let DecoderNamespace = "MicroMips" in {
   def SCE_MM : MMRel, SCEBaseMM<"sce", GPR32Opnd>, LLE_FM_MM<0xA>,
                ISA_MICROMIPS, ASE_EVA;
 
-  let DecoderMethod = "DecodeCacheOpMM" in {
-    def CACHE_MM : MMRel, CacheOp<"cache", mem_mm_12>,
-                   CACHE_PREF_FM_MM<0x08, 0x6>, ISA_MICROMIPS32_NOT_MIPS32R6;
-    def PREF_MM  : MMRel, CacheOp<"pref", mem_mm_12>,
-                   CACHE_PREF_FM_MM<0x18, 0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
-  }
+  def CACHE_MM : MMRel, CacheOp<"cache", mem_mm_12>,
+                 CACHE_PREF_FM_MM<0x08, 0x6>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PREF_MM  : MMRel, CacheOp<"pref", mem_mm_12>,
+                 CACHE_PREF_FM_MM<0x18, 0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-  let DecoderMethod = "DecodePrefeOpMM" in {
-    def PREFE_MM  : MMRel, CacheOp<"prefe", mem_mm_9>,
-                    CACHE_PREFE_FM_MM<0x18, 0x2>, ISA_MICROMIPS, ASE_EVA;
-    def CACHEE_MM : MMRel, CacheOp<"cachee", mem_mm_9>,
-                    CACHE_PREFE_FM_MM<0x18, 0x3>, ISA_MICROMIPS, ASE_EVA;
-  }
+  def PREFE_MM  : MMRel, CacheOp<"prefe", mem_mm_9>,
+                  CACHE_PREFE_FM_MM<0x18, 0x2>, ISA_MICROMIPS, ASE_EVA;
+  def CACHEE_MM : MMRel, CacheOp<"cachee", mem_mm_9>,
+                  CACHE_PREFE_FM_MM<0x18, 0x3>, ISA_MICROMIPS, ASE_EVA;
+
   def SSNOP_MM : MMRel, Barrier<"ssnop">, BARRIER_FM_MM<0x1>,
                  ISA_MICROMIPS;
   def EHB_MM   : MMRel, Barrier<"ehb">, BARRIER_FM_MM<0x3>,
                  ISA_MICROMIPS;
   def PAUSE_MM : MMRel, Barrier<"pause">, BARRIER_FM_MM<0x5>,
                  ISA_MICROMIPS;
+
+  def MFC0_MM : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>,
+                MFC0_FM_MM<0x0fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MTC0_MM : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>,
+                MFC0_FM_MM<0x2fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def TLBP_MM : MMRel, TLB<"tlbp">, COP0_TLB_FM_MM<0x0d>,
                 ISA_MICROMIPS;
@@ -1135,7 +1125,7 @@ let DecoderNamespace = "MicroMips" in {
 // MicroMips arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
 
-defm : MipsHiLoRelocs<LUi_MM, ADDiu_MM, ZERO, GPR32Opnd>, ISA_MICROMIPS;
+defm : MipsHiLoRelocs<LUi_MM, ADDiu_MM, R0, GPR32Opnd>, ISA_MICROMIPS;
 
 def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi_MM tglobaladdr:$in)>,
       ISA_MICROMIPS;
@@ -1158,19 +1148,22 @@ def : WrapperPat<tblockaddress, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 def : WrapperPat<tjumptable, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 def : WrapperPat<tglobaltlsaddr, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 
-def : MipsPat<(atomic_load_asext_8 addr:$a), (LB_MM addr:$a)>, ISA_MICROMIPS;
-def : MipsPat<(atomic_load_asext_16 addr:$a), (LH_MM addr:$a)>, ISA_MICROMIPS;
-def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW_MM addr:$a)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_asext_8 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LB_MM $a_base, $a_offset)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_asext_16 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LH_MM $a_base, $a_offset)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_nonext_32 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LW_MM $a_base, $a_offset)>, ISA_MICROMIPS;
 
 def : MipsPat<(i32 immLi16:$imm),
               (LI16_MM immLi16:$imm)>, ISA_MICROMIPS;
 
-defm : MaterializeImms<i32, ZERO, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
+defm : MaterializeImms<i32, R0, ADDiu_MM, LUi_MM, ORi_MM>, ISA_MICROMIPS;
 
 def : MipsPat<(not GPRMM16:$in),
               (NOT16_MM GPRMM16:$in)>, ISA_MICROMIPS;
 def : MipsPat<(not GPR32:$in),
-              (NOR_MM GPR32Opnd:$in, ZERO)>, ISA_MICROMIPS;
+              (NOR_MM GPR32Opnd:$in, R0)>, ISA_MICROMIPS;
 
 def : MipsPat<(add GPRMM16:$src, immSExtAddiur2:$imm),
               (ADDIUR2_MM GPRMM16:$src, immSExtAddiur2:$imm)>, ISA_MICROMIPS;
@@ -1203,30 +1196,32 @@ def : MipsPat<(sra GPR32:$src, immZExt5:$imm),
 def : MipsPat<(sra GPR32:$lhs, GPR32:$rhs),
               (SRAV_MM GPR32:$lhs, GPR32:$rhs)>, ISA_MICROMIPS;
 
-def : MipsPat<(store GPRMM16:$src, addrimm4lsl2:$addr),
-              (SW16_MM GPRMM16:$src, addrimm4lsl2:$addr)>, ISA_MICROMIPS;
-def : MipsPat<(store GPR32:$src, addr:$addr),
-              (SW_MM GPR32:$src, addr:$addr)>, ISA_MICROMIPS;
+def : MipsPat<(store GPRMM16:$src,
+                    (addrimm4lsl2 MemBase:$addr_base, iPTR:$addr_offset)),
+              (SW16_MM GPRMM16:$src, $addr_base, $addr_offset)>, ISA_MICROMIPS;
+def : MipsPat<(store GPR32:$src, (addr MemBase:$addr_base, iPTR:$addr_offset)),
+              (SW_MM GPR32:$src, $addr_base, $addr_offset)>, ISA_MICROMIPS;
 
-def : MipsPat<(load addrimm4lsl2:$addr),
-              (LW16_MM addrimm4lsl2:$addr)>, ISA_MICROMIPS;
-def : MipsPat<(load addr:$addr),
-              (LW_MM addr:$addr)>, ISA_MICROMIPS;
+def : MipsPat<(load (addrimm4lsl2 MemBase:$addr_base, iPTR:$addr_offset)),
+              (LW16_MM $addr_base, $addr_offset)>, ISA_MICROMIPS;
+def : MipsPat<(load (addr MemBase:$addr_base, iPTR:$addr_offset)),
+              (LW_MM $addr_base, $addr_offset)>, ISA_MICROMIPS;
 def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
               (SUBu_MM GPR32:$lhs, GPR32:$rhs)>, ISA_MICROMIPS;
 
-def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu_MM addr:$src)>,
-      ISA_MICROMIPS;
+def : MipsPat<(i32 (extloadi1 (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LBu_MM $src_base, $src_offset)>, ISA_MICROMIPS;
 
-def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu_MM addr:$src)>,
-      ISA_MICROMIPS;
+def : MipsPat<(i32 (extloadi8 (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LBu_MM $src_base, $src_offset)>, ISA_MICROMIPS;
 
-def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu_MM addr:$src)>,
-      ISA_MICROMIPS;
+def : MipsPat<(i32 (extloadi16 (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LHu_MM $src_base, $src_offset)>, ISA_MICROMIPS;
 
 let AddedComplexity = 40 in
-  def : MipsPat<(i32 (sextloadi16 addrRegImm:$a)),
-                (LH_MM addrRegImm:$a)>, ISA_MICROMIPS;
+  def : MipsPat<(i32 (sextloadi16
+                       (addrRegImm MemBase:$a_base, iPTR:$a_offset))),
+                (LH_MM $a_base, $a_offset)>, ISA_MICROMIPS;
 
 
 def : MipsPat<(bswap GPR32:$rt), (ROTR_MM (WSBH_MM GPR32:$rt), 16)>,
@@ -1240,14 +1235,14 @@ def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 defm : BrcondPats<GPR32, BEQ_MM, BEQ_MM, BNE_MM, SLT_MM, SLTu_MM, SLTi_MM,
-                  SLTiu_MM, ZERO>, ISA_MICROMIPS32_NOT_MIPS32R6;
+                  SLTiu_MM, R0>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def : MipsPat<(brcond (i32 (setlt i32:$lhs, 1)), bb:$dst),
               (BLEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(brcond (i32 (setgt i32:$lhs, -1)), bb:$dst),
               (BGEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>, ISA_MICROMIPS;
+defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, R0>, ISA_MICROMIPS;
 defm : SetlePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
 defm : SetgtPats<GPR32, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
 defm : SetgePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
@@ -1287,27 +1282,33 @@ class UncondBranchMMPseudo<string opstr> :
 def B_MM_Pseudo : UncondBranchMMPseudo<"b">, ISA_MICROMIPS;
 
 let EncodingPredicates = [InMicroMips] in {
+  def : MipsInstAlias<"mfc0 $rt, $rd",
+                      (MFC0_MM GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
+  def : MipsInstAlias<"mtc0 $rt, $rd",
+                      (MTC0_MM COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
   def SDIV_MM_Pseudo : MultDivPseudo<SDIV_MM, ACC64, GPR32Opnd, MipsDivRem,
                                      0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def UDIV_MM_Pseudo : MultDivPseudo<UDIV_MM, ACC64, GPR32Opnd, MipsDivRemU,
                                      0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
 
   def : MipsInstAlias<"wait", (WAIT_MM 0x0), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"nop", (SLL_MM ZERO, ZERO, 0), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"nop", (MOVE16_MM ZERO, ZERO), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"ei", (EI_MM ZERO), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"di", (DI_MM ZERO), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (SLL_MM R0, R0, 0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (MOVE16_MM R0, R0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"ei", (EI_MM R0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"di", (DI_MM R0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"neg $rt, $rs",
-                      (SUB_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                      (SUB_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"neg $rt",
-                      (SUB_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                      (SUB_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"negu $rt, $rs",
-                      (SUBu_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                      (SUBu_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"negu $rt",
-                      (SUBu_MM GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                      (SUBu_MM GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"teq $rs, $rt",
                       (TEQ_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
@@ -1372,16 +1373,16 @@ let EncodingPredicates = [InMicroMips] in {
   defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu_MM>, ISA_MICROMIPS;
 
   def : MipsInstAlias<"not $rt, $rs",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rs, R0), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"not $rt",
-                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>,
+                      (NOR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, R0), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
   def : MipsInstAlias<"bnez $rs,$offset",
-                      (BNE_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BNE_MM GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"beqz $rs,$offset",
-                      (BEQ_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BEQ_MM GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"seh $rd", (SEH_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,
                      ISA_MICROMIPS;
@@ -1390,7 +1391,10 @@ let EncodingPredicates = [InMicroMips] in {
   def : MipsInstAlias<"break", (BREAK_MM 0, 0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"break $imm", (BREAK_MM uimm10:$imm, 0), 1>,
         ISA_MICROMIPS;
-  def : MipsInstAlias<"bal $offset", (BGEZAL_MM ZERO, brtarget_mm:$offset), 1>,
+  def : MipsInstAlias<"bal $offset", (BGEZAL_MM R0, brtarget_mm:$offset), 1>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
+
+  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB_MM R31, GPR32Opnd:$rs), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def : MipsInstAlias<"j $rs", (JR_MM GPR32Opnd:$rs), 0>,
@@ -1414,6 +1418,7 @@ def : MipsInstAlias<"mtgc0 $rt, $rs",
 def : MipsInstAlias<"mthgc0 $rt, $rs",
                     (MTHGC0_MM COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
                     ISA_MICROMIPS32R5, ASE_VIRT;
-def : MipsInstAlias<"sw $rt, $offset",
-                    (SWSP_MM GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset), 1>,
+def : MipsInstAlias<"sw $rt, ${offset}(${base})",
+                    (SWSP_MM GPR32Opnd:$rt,
+                             MemBaseSP:$base, mem_mm_sp_imm5_lsl2:$offset), 1>,
                     ISA_MICROMIPS;

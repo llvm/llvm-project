@@ -123,7 +123,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     return nullptr;
 
   if (Options.IgnoreUnreachableDests &&
-      isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
+      isa<UnreachableInst>(DestBB->getFirstNonPHIOrLifetime()))
     return nullptr;
 
   auto *LI = Options.LI;

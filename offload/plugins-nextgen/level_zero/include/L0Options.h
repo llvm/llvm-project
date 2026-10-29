@@ -65,19 +65,15 @@ public:
 struct L0OptionFlagsTy {
   uint64_t UseMemoryPool : 1;
   uint64_t UseCopyOffloadHint : 1;
-  uint64_t Reserved : 62;
-  L0OptionFlagsTy() : UseMemoryPool(1), UseCopyOffloadHint(1), Reserved(0) {}
+  uint64_t ShowBuildLog : 1;
+  uint64_t Reserved : 61;
+  L0OptionFlagsTy()
+      : UseMemoryPool(1), UseCopyOffloadHint(1), ShowBuildLog(0), Reserved(0) {}
 };
 
 struct L0OptionsTy {
   /// Binary flags.
   L0OptionFlagsTy Flags;
-
-  /// Staging buffer size.
-  size_t StagingBufferSize = L0StagingBufferSize;
-
-  /// Staging buffer count.
-  size_t StagingBufferCount = L0StagingBufferCount;
 
   struct MemPoolConfigTy {
     bool Use;

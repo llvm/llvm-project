@@ -1,10 +1,10 @@
+add_libc_testsuite(libc-dirent-tests)
 add_subdirectory(testdata)
-add_custom_target(libc_dirent_unittests)
 
 add_libc_test(
   dirent_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     dirent_test.cpp
   DEPENDS
@@ -20,7 +20,7 @@ add_libc_test(
 add_libc_test(
   fdopendir_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     fdopendir_test.cpp
   DEPENDS
@@ -36,4 +36,40 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.hdr.types.DIR
     libc.hdr.types.struct_dirent
+)
+
+add_libc_test(
+  alphasort_test
+  SUITE
+    libc-dirent-tests
+  SRCS
+    alphasort_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.dirent.alphasort
+    libc.src.stdlib.qsort
+)
+
+add_libc_test(
+  scandir_test
+  SUITE
+    libc-dirent-tests
+  SRCS
+    scandir_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.path
+    libc.src.__support.error_or
+    libc.src.dirent.scandir
+    libc.src.stdio.asprintf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.remove
+    libc.src.stdlib.mkdtemp
+    libc.src.string.strcoll
+    libc.src.string.strdup
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

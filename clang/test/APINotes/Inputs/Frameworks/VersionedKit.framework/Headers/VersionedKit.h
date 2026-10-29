@@ -2,6 +2,8 @@ void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)
 
 void unversionedRenameDUMP(void) __attribute__((swift_name("unversionedRename_HEADER()")));
 
+void keylessSliceDUMP(void);
+
 void acceptClosure(void (^ __attribute__((noescape)) block)(void));
 
 void privateFunc(void) __attribute__((swift_private));

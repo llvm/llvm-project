@@ -620,8 +620,9 @@ ParseGlobals(DataExtractor &data) {
           "global section holds %zu of its %u globals", globals.size(), *count);
 
     WasmGlobal global;
-    global.size = GetWasmValueTypeSize(data.GetU8(&offset));
-    data.GetU8(&offset); // mutability
+    global.value_type = data.GetU8(&offset);
+    global.size = GetWasmValueTypeSize(global.value_type);
+    global.is_mutable = data.GetU8(&offset) != 0;
     global.init_expr_value = ParseGlobalInitValue(data, offset);
     globals.push_back(global);
   }
@@ -701,7 +702,7 @@ ParseNames(SectionSP code_section_sp, SectionSP global_section_sp,
         if (*idx >= segments.size())
           continue;
         // Update the segment name.
-        segments[i].name = *name;
+        segments[*idx].name = *name;
       }
 
     } break;

@@ -55,6 +55,7 @@ createTargetLoweringInfo(LowerModule &lm) {
     return createNVPTXTargetLoweringInfo();
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
+    return createCommonSPIRTargetLoweringInfo();
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -69,7 +70,8 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
+    : module(module), langOpts(std::move(langOpts)), target(std::move(target)),
+      abi(createCXXABI(*this)) {}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
@@ -93,11 +95,33 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
 
-  // FIXME(cir): This just uses the default language options. We need to account
-  // for custom options.
-  // Create context.
-  assert(!cir::MissingFeatures::lowerModuleLangOpts());
+  // Populate the lowering-relevant LangOptions from the module's
+  // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
+  // way it was compiled, without a live clang::LangOptions. When the attribute
+  // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
+  if (auto loweringLangOpts =
+          mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(
+              module->getAttr(
+                  cir::CIRDialect::getLoweringLangOptionsAttrName()))) {
+    langOpts.Exceptions = loweringLangOpts.getExceptions();
+    langOpts.ThreadsafeStatics = loweringLangOpts.getThreadsafeStatics();
+    langOpts.CUDA = loweringLangOpts.getCuda();
+    langOpts.CUDAIsDevice = loweringLangOpts.getCudaIsDevice();
+    langOpts.HIP = loweringLangOpts.getHip();
+    langOpts.GPURelocatableDeviceCode = loweringLangOpts.getGpuRdc();
+    langOpts.OpenMP = loweringLangOpts.getOpenmp();
+    langOpts.OpenMPIsTargetDevice = loweringLangOpts.getOpenmpIsTargetDevice();
+    langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
+        loweringLangOpts.getClangAbiCompat()));
+    langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
+  }
+  // Some langopts are still not lowered.
+  assert(!cir::MissingFeatures::lowerModuleLangOpts());
+
+  if (auto cxxABI = module->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getCXXABIAttrName()))
+    langOpts.CXXABI = clang::TargetCXXABI::getKind(cxxABI.getValue());
 
   // FIXME(cir): This just uses the default code generation options. We need to
   // account for custom options.
@@ -109,6 +133,11 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
+
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                 new clang::IgnoringDiagConsumer());
+  targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
 
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,

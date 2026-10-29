@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/llvm-config.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -189,7 +190,11 @@ public:
   };
 
   /// Return true if multi-threading is enabled by the context.
+#if LLVM_ENABLE_THREADS
   bool isMultithreadingEnabled();
+#else
+  bool isMultithreadingEnabled() { return false; }
+#endif
 
   /// Set the flag specifying if multi-threading is disabled by the context.
   /// The command line debugging flag `--mlir-disable-threading` is overriding

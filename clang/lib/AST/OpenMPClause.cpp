@@ -31,6 +31,17 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
+OMPAdjustArgsDescriptor *OMPAdjustArgsDescriptor::Create(
+    const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+    ArrayRef<OMPAdjustArgsItem> Items) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
+  auto *Desc = new (Mem)
+      OMPAdjustArgsDescriptor(AdjustOp, NeedDevicePtrModifier, Items.size());
+  llvm::copy(Items, Desc->getTrailingObjects());
+  return Desc;
+}
+
 OMPClause::child_range OMPClause::children() {
   switch (getClauseKind()) {
   default:
@@ -254,8 +265,6 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
-  case OMPC_graph_id:
-  case OMPC_graph_reset:
   case OMPC_nogroup:
   case OMPC_num_tasks:
   case OMPC_hint:
@@ -324,22 +333,10 @@ OMPClause::child_range OMPNowaitClause::used_children() {
   return children();
 }
 
-OMPClause::child_range OMPReplayableClause::used_children() {
-  if (Condition)
-    return child_range(&Condition, &Condition + 1);
-  return children();
-}
-
 OMPClause::child_range OMPGrainsizeClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&Grainsize, &Grainsize + 1);
-}
-
-OMPClause::child_range OMPGraphResetClause::used_children() {
-  if (Condition)
-    return child_range(&Condition, &Condition + 1);
-  return children();
 }
 
 OMPClause::child_range OMPNumTasksClause::used_children() {
@@ -483,14 +480,14 @@ void OMPFirstprivateClause::setInits(ArrayRef<Expr *> VL) {
   llvm::copy(VL, getPrivateCopies().end());
 }
 
-OMPFirstprivateClause *OMPFirstprivateClause::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
-    SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-    ArrayRef<Expr *> InitVL, OpenMPFirstprivateModifier FPKind,
-    SourceLocation FPKindLoc, SourceLocation ColonLoc, Stmt *PreInit) {
+OMPFirstprivateClause *
+OMPFirstprivateClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                              SourceLocation LParenLoc, SourceLocation EndLoc,
+                              ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
+                              ArrayRef<Expr *> InitVL, Stmt *PreInit) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(3 * VL.size()));
-  OMPFirstprivateClause *Clause = new (Mem) OMPFirstprivateClause(
-      StartLoc, LParenLoc, EndLoc, FPKind, FPKindLoc, ColonLoc, VL.size());
+  OMPFirstprivateClause *Clause =
+      new (Mem) OMPFirstprivateClause(StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setPrivateCopies(PrivateVL);
   Clause->setInits(InitVL);
@@ -2048,6 +2045,15 @@ void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
 
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
 
+void OMPClausePrinter::VisitOMPDepthClause(OMPDepthClause *Node) {
+  OS << "depth";
+  if (Expr *Depth = Node->getDepth()) {
+    OS << '(';
+    Depth->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
+}
+
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   OS << "partial";
 
@@ -2205,15 +2211,6 @@ void OMPClausePrinter::VisitOMPOrderedClause(OMPOrderedClause *Node) {
 
 void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *Node) {
   OS << "nowait";
-  if (auto *Cond = Node->getCondition()) {
-    OS << "(";
-    Cond->printPretty(OS, nullptr, Policy, 0);
-    OS << ")";
-  }
-}
-
-void OMPClausePrinter::VisitOMPReplayableClause(OMPReplayableClause *Node) {
-  OS << "replayable";
   if (auto *Cond = Node->getCondition()) {
     OS << "(";
     Cond->printPretty(OS, nullptr, Policy, 0);
@@ -2404,24 +2401,6 @@ void OMPClausePrinter::VisitOMPGrainsizeClause(OMPGrainsizeClause *Node) {
   OS << ")";
 }
 
-void OMPClausePrinter::VisitOMPGraphIdClause(OMPGraphIdClause *Node) {
-  OS << "graph_id";
-  if (Expr *E = Node->getId()) {
-    OS << "(";
-    E->printPretty(OS, nullptr, Policy, 0);
-    OS << ")";
-  }
-}
-
-void OMPClausePrinter::VisitOMPGraphResetClause(OMPGraphResetClause *Node) {
-  OS << "graph_reset";
-  if (Expr *E = Node->getCondition()) {
-    OS << "(";
-    E->printPretty(OS, nullptr, Policy, 0);
-    OS << ")";
-  }
-}
-
 void OMPClausePrinter::VisitOMPNumTasksClause(OMPNumTasksClause *Node) {
   OS << "num_tasks(";
   OpenMPNumTasksClauseModifier Modifier = Node->getModifier();
@@ -2597,13 +2576,7 @@ void OMPClausePrinter::VisitOMPPrivateClause(OMPPrivateClause *Node) {
 void OMPClausePrinter::VisitOMPFirstprivateClause(OMPFirstprivateClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "firstprivate";
-    OpenMPFirstprivateModifier FPKind = Node->getKind();
-    if (FPKind != OMPC_FIRSTPRIVATE_unknown) {
-      OS << "("
-         << getOpenMPSimpleClauseTypeName(OMPC_firstprivate, Node->getKind())
-         << ":";
-    }
-    VisitOMPClauseList(Node, FPKind == OMPC_FIRSTPRIVATE_unknown ? '(' : ' ');
+    VisitOMPClauseList(Node, '(');
     OS << ")";
   }
 }
@@ -3277,5 +3250,98 @@ bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
     return It->second;
   if (!FeatureValidityCheck(RawString))
     DiagUnknownTrait(RawString);
+  return false;
+}
+
+/// Evaluate one bound of an 'adjust_args' parameter range: either an
+/// 'omp_num_args [+- logical_offset]' expression, or a plain constant integer
+/// expression. An omitted bound leaves Result unchanged. Returns false if the
+/// bound is dependent or not constant.
+static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
+                                   unsigned NumArgs, const ASTContext &Ctx,
+                                   int64_t &Result) {
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
+    return true;
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
+    int64_t Offset = 0;
+    if (const Expr *OffsetExpr = Bound.E) {
+      if (OffsetExpr->isValueDependent())
+        return false;
+      std::optional<llvm::APSInt> Val = OffsetExpr->getIntegerConstantExpr(Ctx);
+      if (!Val)
+        return false;
+      Offset = Val->getLimitedValue(INT32_MAX);
+    }
+    Result = static_cast<int64_t>(NumArgs) +
+             (Bound.IsSubtraction ? -Offset : Offset);
+    return true;
+  }
+  if (Bound.Kind != OMPAdjustArgsItem::Bound::Expression || !Bound.E)
+    return false;
+  const Expr *E = Bound.E->IgnoreParenImpCasts();
+  if (E->isValueDependent())
+    return false;
+  std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+  if (!Val)
+    return false;
+  Result = Val->getLimitedValue(INT32_MAX);
+  return true;
+}
+
+bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                                     const FunctionDecl *FD, unsigned NumArgs,
+                                     const ASTContext &Ctx,
+                                     SmallVectorImpl<unsigned> &Positions) {
+  auto AppendIfInRange = [&](int64_t Pos) {
+    if (Pos >= 1 && Pos <= static_cast<int64_t>(NumArgs))
+      Positions.push_back(static_cast<unsigned>(Pos));
+  };
+
+  // A parameter range 'lb:ub'. An omitted lb defaults to 1, an omitted ub to
+  // 'NumArgs' (OpenMP 6.0 [5.2.1]).
+  if (Item.Kind == OMPAdjustArgsItem::Range) {
+    int64_t Lower = 1;
+    int64_t Upper = NumArgs;
+    if (!evalOMPAdjustArgsBound(Item.Lower, NumArgs, Ctx, Lower) ||
+        !evalOMPAdjustArgsBound(Item.Upper, NumArgs, Ctx, Upper))
+      return false;
+    // An out-of-range literal bound must not turn this into an
+    // unbounded loop.
+    Lower = std::max<int64_t>(Lower, 1);
+    Upper = std::min<int64_t>(Upper, NumArgs);
+    if (Lower > Upper)
+      return true;
+    for (int64_t Pos : llvm::seq_inclusive<int64_t>(Lower, Upper))
+      AppendIfInRange(Pos);
+    return true;
+  }
+
+  if (!Item.E)
+    return false;
+  const Expr *E = Item.E->IgnoreParenImpCasts();
+
+  // A named parameter list item.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+      unsigned Index = PVD->getFunctionScopeIndex();
+      if (FD->getNumParams() > Index &&
+          FD->getParamDecl(Index)->getCanonicalDecl() ==
+              PVD->getCanonicalDecl())
+        AppendIfInRange(static_cast<int64_t>(Index) + 1);
+      return true;
+    }
+  }
+
+  // The position of a parameter, given as a constant integer expression.
+  if (E->getType()->isIntegerType()) {
+    if (E->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+    if (!Val)
+      return false;
+    AppendIfInRange(Val->getLimitedValue(INT32_MAX));
+    return true;
+  }
+
   return false;
 }

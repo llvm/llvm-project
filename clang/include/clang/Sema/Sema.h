@@ -188,7 +188,6 @@ class SemaX86;
 class StandardConversionSequence;
 class TemplateArgument;
 class TemplateArgumentLoc;
-class TemplateInstantiationCallback;
 class TemplatePartialOrderingContext;
 class TemplateSpecCandidateSet;
 class Token;
@@ -1125,6 +1124,34 @@ public:
   sema::CapturedRegionScopeInfo *getCurCapturedRegion();
 
   void ActOnComment(SourceRange Comment);
+
+  /// Returns true if any of the documentation warnings is enabled at \p Loc.
+  bool areDocumentationDiagsEnabled(SourceLocation Loc);
+
+  /// Discard the areDocumentationDiagsEnabled() cache, for when a
+  /// `#pragma clang diagnostic` has changed diagnostic severities.
+  void clearDocumentationDiagsCache();
+
+private:
+  /// The uncached answer for both documentation groups at \p Loc.
+  bool computeDocumentationDiagsAt(SourceLocation Loc) const;
+
+  /// Caches results for areDocumentationDiagsEnabled().
+  /// Flushed whenever a diagnostic pragma changes severities.
+  /// Level one is keyed on the diagnostic state alone.
+  const void *DocDiagsStateKey = nullptr;
+  bool DocDiagsEnabledIgnoringSystem = false;
+
+  /// Level two, for when the location does matter. Bit i of each mask is a
+  /// DiagStateSystemClass value; bit 0 is unused.
+  uint8_t DocDiagsExactComputed = 0;
+  uint8_t DocDiagsExactEnabled = 0;
+
+public:
+  /// Returns true if a comment at \p Loc should be retained in the AST
+  /// (some consumer such as -Wdocumentation, -fparse-all-comments, code
+  /// completion, or AST-file serialization may read it back).
+  bool shouldRetainCommentsInAST(SourceLocation Loc);
 
   /// Retrieve the parser's current scope.
   ///
@@ -2447,6 +2474,8 @@ public:
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
 
   ///@}
 
@@ -2493,6 +2522,50 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+
+    /// Return the flags for a bounds attribute of kind \p K.
+    static BoundsAttrFlags get(AttributeCommonInfo::Kind K);
+  };
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// Check the type shape for counted_by, sized_by and their _or_null variants.
+  /// The caller checks declaration context, count expressions, flexible array
+  /// member eligibility and nesting.
+  ///
+  /// \p Flags selects the attribute variant. For void pointers, counted_by is
+  /// treated as a byte count outside the -fbounds-safety attribute model. Set
+  /// \c Flags.CountInBytes in this case if \p UpdateFlags is true.
+  /// \p AttrSpelling, \p AllowRedecl and \p AttrArg are reserved for that model
+  /// (see LangOptions::hasBoundsSafetyAttributes).
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped. Returns
+  /// true if the shape is valid, after the warning for an array of structs with
+  /// flexible array members, and, under the -fbounds-safety attribute model,
+  /// after an error on a pointer, with \c Flags.CountInBytes set so that type
+  /// construction can recover.
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr,
+                                   bool UpdateFlags = true);
+
+  /// Check a counted_by-family attribute in type position and initialize
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
+  /// and function declarator chunks enclosing the attribute.
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped (see
+  /// ValidateBoundsAttrTypeShape).
+  bool ValidateBoundsAttrTypeForTypePosition(
+      QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
+      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
   /// semantically invalid diagnostics will be emitted explaining the problems.
@@ -2513,6 +2586,33 @@ public:
   /// \returns false iff semantically valid.
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
+
+  /// Late-parsed bounds types dropped while their declarator was built. The
+  /// attribute has already been diagnosed and its node is no longer part of
+  /// any type, so the completion pass must skip it rather than parse its
+  /// argument and complete it.
+  llvm::SmallPtrSet<const BoundsAttributedType *, 1>
+      RejectedLateParsedBoundsTypes;
+
+  void markLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    RejectedLateParsedBoundsTypes.insert(BATy);
+  }
+
+  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
+    return RejectedLateParsedBoundsTypes.contains(BATy);
+  }
+
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+
+  /// Supply the parsed argument of a late-parsed bounds attribute to the type
+  /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
+  /// the owning declaration. \p FD is the field the type belongs to. Returns
+  /// false if the attribute was rejected.
+  bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                       FieldDecl *FD, Expr *Arg);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
@@ -2914,6 +3014,8 @@ public:
   /// Checks that a call expression's argument count is the desired number.
   /// This is useful when doing custom type-checking.  Returns true on error.
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
+
+  bool convertArgumentToType(Expr *&Value, QualType Ty);
 
   /// Returns true if the argument consists of one contiguous run of 1s with any
   /// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB,
@@ -3453,10 +3555,9 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS, const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
 
-  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
-                                              const DeclSpec &DS,
-                                              SourceLocation ColonColonLoc,
-                                              QualType Type);
+  ParsedType ActOnCXXNestedNameSpecifierIndexedPack(
+      CXXScopeSpec &SS, const DeclSpec &DS, TypeSourceInfo *PatternLoc,
+      SourceLocation ColonColonLoc, QualType Type);
 
   /// IsInvalidUnlessNestedName - This method is used for error recovery
   /// purposes to determine whether the specified identifier is only valid as
@@ -4508,6 +4609,14 @@ public:
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
+
+  /// Add \p Params to scope, so a late-parsed attribute can name them.
+  void ActOnReenterFunctionPrototypeParams(Scope *S,
+                                           ArrayRef<ParmVarDecl *> Params);
+  /// Undo the above, for when \p S outlives the attribute so no scope pop
+  /// removes them.
+  void ActOnExitFunctionPrototypeParams(Scope *S,
+                                        ArrayRef<ParmVarDecl *> Params);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.
@@ -4723,7 +4832,6 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
-  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -5251,10 +5359,9 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
-        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+        HP ? getFunctionOrMethodNumParams(D, /*IncludeThis=*/true) : 0;
 
     std::optional<llvm::APSInt> IdxInt;
     if (IdxExpr->isTypeDependent() ||
@@ -5273,7 +5380,7 @@ public:
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
     }
-    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+    if (hasImplicitObjectParameter(D) && !CanIndexImplicitThis) {
       if (IdxSource == 1) {
         Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
             << &AI << IdxExpr->getSourceRange();
@@ -7907,7 +8014,7 @@ public:
   QualType CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                SourceLocation Loc, bool IsCompAssign,
                                bool AllowBothBool, bool AllowBoolConversion,
-                               bool AllowBoolOperation, bool ReportInvalid);
+                               bool AllowBoolOperation);
 
   /// Return a signed ext_vector_type that is of identical size and number of
   /// elements. For floating point vectors, return an integer type of identical
@@ -9081,6 +9188,11 @@ public:
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
 
+  /// The initializers of \p ILE with each multi-element EmbedExpr split into
+  /// one EmbedExpr per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
+
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.
   bool CanPerformAggregateInitializationForOverloadResolution(
@@ -9254,7 +9366,8 @@ public:
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
-  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                               bool IsOpenMP = false);
 
   /// Initialize the given capture with a suitable expression.
   ExprResult BuildCaptureInit(const sema::Capture &Capture,
@@ -12976,6 +13089,11 @@ public:
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
       bool PartialOrdering, bool *StrictPackMatch);
 
+  /// Determine the declared type of the constant template parameter that \p Arg
+  /// names, if any.
+  static QualType
+  getTypeOfConstantTemplateParameter(const TemplateArgument &Arg);
+
   /// Mark which template parameters are used in a given expression.
   ///
   /// \param E the expression from which template parameters will be deduced.
@@ -15177,12 +15295,12 @@ private:
   /// fact subsume the second's.
   llvm::DenseMap<std::pair<const NamedDecl *, const NamedDecl *>, bool>
       SubsumptionCache;
-  /// Caches the normalized associated constraints of declarations (concepts or
-  /// constrained declarations). If an error occurred while normalizing the
-  /// associated constraints of the template or concept, nullptr will be cached
-  /// here.
-  llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
-      NormalizationCache;
+  /// Caches the normal form of constraint expressions (and their pack
+  /// substitution index). These are shared by e.g. the members of all
+  /// specializations of a class template. If an error occurred while
+  /// normalizing an expression, nullptr will be cached here.
+  llvm::DenseMap<std::pair<const Expr *, unsigned>, NormalizedConstraint *>
+      NormalizedConstraintExprCache;
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.
@@ -15310,6 +15428,12 @@ public:
   QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
                           unsigned Quals, SourceRange Brackets,
                           DeclarationName Entity);
+
+  /// Diagnose an array of \p NumElements elements of type \p ElementType
+  /// that is too large. Returns true if a diagnostic was emitted.
+  bool checkArrayTooLarge(QualType ElementType, const llvm::APSInt &NumElements,
+                          SourceLocation Loc,
+                          SourceRange Range = SourceRange());
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
 
   /// Build an ext-vector type.
@@ -15556,10 +15680,9 @@ public:
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
   QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc,
-                                 SourceLocation EllipsisLoc);
+                                 SourceLocation Loc);
   QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 SourceLocation Loc,
                                  bool FullySubstituted = false,
                                  ArrayRef<QualType> Expansions = {});
 

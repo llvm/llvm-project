@@ -59,10 +59,15 @@ You can specify your own custom pipeline with the `-sbvec-passes=` argument to `
 The pipeline shown above is equivalent to this:
 
 ```shell
-$ opt -p=sandbox-vectorizer -sbvec-passes='seed-collection<tr-save,bundle-vec(bottom-up),pack-reuse,tr-accept>' file.ll
+$ opt -p=sandbox-vectorizer -sbvec-passes='seed-collection(stores)<tr-save,bundle-vec(bottom-up),pack-reuse,tr-accept>' file.ll
 ```
 
 If the user does not define a pipeline, the Sandbox Vectorizer will run its default pass-pipeline, which is set in the constructor of the `SandboxVectorizerPass`.
+
+There are two types of arguments that one may pass to sandbox vectorizer internal passes, both of which can be specified in the pass pipeline:
+- Arguments specified within `<` and `>`, e.g., `pass1,pass2` in `seed-collection<pass1,pass2>`, and
+- Auxiliary arguments that are specified within `(` and `)`, e.g, `stores` in `seed-collection(stores)<pass1,pass2>`
+Not all passes support arguments, and their syntax and interpretation is up to each pass.
 
 ## Sandbox Vectorizer Passes
 
@@ -72,12 +77,12 @@ There are two types of passes: [Transformation Passes](#transformation-passes) t
 
 ### Transformation Passes
 
-|  **Pass Name**            |         **File Name**       | **Type** |                     **Description**                     |
-|---------------------------|-----------------------------|----------|---------------------------------------------------------|
-| `seed-collection`         | SeedCollection.h            | Function | Collects the instructions to start vectorizing from, creates a region and runs the region-pass pipeline |
-| `bundle-vec`              | BundleVec.h                 | Region   | An SLP-style vectorizer that forms bundles by recursively walking the use-def (def-use) chains bottom-up (top-down). It can vectorize both scalars and vectors. Requires a `bottom-up` or `top-down` argument, e.g. `bundle-vec(bottom-up)` |
-| `pack-reuse`              | PackReuse.h                 | Region   | A pass that de-duplicates packs                         |
-| `load-store-vec`          | LoadStoreVec.h              | Region   | Vectorize load-store chains                             |
+|  **Pass Name**            | **(Aux Arguments)** | **<Arguments> **                      |         **File Name**       | **Type** |                     **Description**                     |
+|---------------------------|---------------------|---------------------------------------|-----------------------------|----------|---------------------------------------------------------|
+| `seed-collection`         | loads stores        | comma-separated list of region passes | SeedCollection.h            | Function | Collects the instructions to start vectorizing from, creates a region and runs the region-pass pipeline |
+| `bundle-vec`              | top-down bottom-up  |                                       | BundleVec.h                 | Region   | An SLP-style vectorizer that forms bundles by recursively walking the use-def (def-use) chains bottom-up (top-down). It can vectorize both scalars and vectors. Requires a `bottom-up` or `top-down` argument, e.g. `bundle-vec(bottom-up)` |
+| `pack-reuse`              |                     |                                       | PackReuse.h                 | Region   | A pass that de-duplicates packs                         |
+| `load-store-vec`          |                     |                                       | LoadStoreVec.h              | Region   | Vectorize load-store chains                             |
 
 
 ### Helper Passes
