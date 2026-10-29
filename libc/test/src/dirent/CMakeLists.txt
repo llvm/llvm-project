@@ -1,10 +1,10 @@
+add_libc_testsuite(libc-dirent-tests)
 add_subdirectory(testdata)
-add_custom_target(libc_dirent_unittests)
 
 add_libc_test(
   dirent_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     dirent_test.cpp
   DEPENDS
@@ -20,7 +20,7 @@ add_libc_test(
 add_libc_test(
   fdopendir_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     fdopendir_test.cpp
   DEPENDS
@@ -41,7 +41,7 @@ add_libc_test(
 add_libc_test(
   alphasort_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     alphasort_test.cpp
   DEPENDS
@@ -53,7 +53,7 @@ add_libc_test(
 add_libc_test(
   scandir_test
   SUITE
-    libc_dirent_unittests
+    libc-dirent-tests
   SRCS
     scandir_test.cpp
   DEPENDS

@@ -11,8 +11,8 @@
 
 #include "MinidumpTypes.h"
 
-#include "Plugins/Process/Utility/RegisterInfoInterface.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/RegisterInfoInterface.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 
 #include "lldb/Target/RegisterContext.h"
 

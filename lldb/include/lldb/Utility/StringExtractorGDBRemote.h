@@ -131,7 +131,6 @@ public:
     eServerPacketType_qWatchpointSupportInfoSupported,
     eServerPacketType_qXfer,
 
-    eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,
 
     eServerPacketType_vAttach,
@@ -169,6 +168,7 @@ public:
     eServerPacketType__m,
     eServerPacketType_notify, // '%' notification
 
+    eServerPacketType_jLLDBSettings,
     eServerPacketType_jLLDBTraceSupported,
     eServerPacketType_jLLDBTraceStart,
     eServerPacketType_jLLDBTraceStop,

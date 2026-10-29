@@ -473,14 +473,14 @@ bool llvm::runPassPipeline(
     Debugify.registerCallbacks(PIC, MAM);
   }
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&M.getContext().getLibraryOptions());
   // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
   // to false above so we shouldn't necessarily need to check whether or not the
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
   // Let plugins and linked extensions register pass builder callbacks.
@@ -625,7 +625,7 @@ bool llvm::runPassPipeline(
   return true;
 }
 
-void llvm::printPasses(raw_ostream &OS) {
-  PassBuilder PB;
+void llvm::printPasses(LLVMContext &Context, raw_ostream &OS) {
+  PassBuilder PB(Context);
   PB.printPassNames(OS);
 }

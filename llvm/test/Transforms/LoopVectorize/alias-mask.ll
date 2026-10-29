@@ -574,8 +574,8 @@ define i64 @any_of_reduction(i64 %a, ptr %src, ptr %dst, i32 %n) {
 ; CHECK-SAME: i64 [[A:%.*]], ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[DST1]], 4
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[DST1]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SRC2]], 4
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:

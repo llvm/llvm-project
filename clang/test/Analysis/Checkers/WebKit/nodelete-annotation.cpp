@@ -8,10 +8,10 @@
 // those notes have to be expected by file and line.
 // expected-note@mock-types.h:37 + {{Calling '~RefPtr'}}
 // expected-note@mock-types.h:299 + {{Calling 'deref'}}
-// expected-note@mock-types.h:313 + {{Calling 'derefIfNotNull'}}
-// expected-note@mock-types.h:380 + {{Calling 'deref'}}
-// expected-note@mock-types.h:399 + {{Calling '~RefPtr'}}
-// expected-note@mock-types.h:440 + {{Could destruct an object}}
+// expected-note@mock-types.h:316 + {{Calling 'derefIfNotNull'}}
+// expected-note@mock-types.h:383 + {{Calling 'deref'}}
+// expected-note@mock-types.h:402 + {{Calling '~RefPtr'}}
+// expected-note@mock-types.h:443 + {{Could destruct an object}}
 
 void *memcpy(void *dst, const void *src, unsigned int size);
 void *malloc(unsigned int size);

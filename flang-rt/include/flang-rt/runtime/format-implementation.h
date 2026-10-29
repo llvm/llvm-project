@@ -85,9 +85,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::GetIntField(
   }
   int result{0};
   while (ch >= '0' && ch <= '9') {
-    constexpr int tenth{std::numeric_limits<int>::max() / 10};
+    constexpr int tenth{common::numeric_limits<int>::max() / 10};
     if (result > tenth ||
-        ch - '0' > std::numeric_limits<int>::max() - 10 * result) {
+        ch - '0' > common::numeric_limits<int>::max() - 10 * result) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
       if (hadError) {

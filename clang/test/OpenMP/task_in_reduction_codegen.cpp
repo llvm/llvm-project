@@ -455,7 +455,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], ptr nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nonnull align 8 dereferenceable(8) [[DOTTASK_RED_:%.*]], ptr nonnull align 8 dereferenceable(8) [[DOTTASK_RED_1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], ptr nofreeobj nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[DOTTASK_RED_:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[DOTTASK_RED_1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

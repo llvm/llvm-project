@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -159,6 +160,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::vector_extract:
+  case Intrinsic::masked_compressstore:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -173,6 +175,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
+  case Intrinsic::masked_expandload:
+    return ScalarOpdIdx == 0;
   case Intrinsic::loop_dependence_war_mask:
     return true;
   default:
@@ -198,6 +202,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
   case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::masked_expandload:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -211,8 +216,48 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
     return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return OpdIdx == 0 || OpdIdx == 1 || OpdIdx == 2;
+  case Intrinsic::masked_compressstore:
+    return OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 1;
+  case Intrinsic::experimental_vp_strided_load:
+  case Intrinsic::masked_expandload:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned> llvm::getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID) {
+  if (auto MaskPos = VPIntrinsic::getMaskParamPos(ID))
+    return MaskPos;
+  switch (ID) {
+  case Intrinsic::masked_compressstore:
+    return 2;
+  case Intrinsic::masked_expandload:
+    return 1;
+  default:
+    return std::nullopt;
   }
 }
 

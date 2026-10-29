@@ -1,11 +1,12 @@
 // REQUIRES: amdgpu-registered-target
 
 // Host compilation (x86 host, AMDGPU offload target).
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -emit-cir -fclangir %s -o - \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa -emit-cir -fclangir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-HOST
 
 // Device compilation (AMDGPU): allocas live in the private address space.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -emit-cir -fclangir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-DEVICE
 

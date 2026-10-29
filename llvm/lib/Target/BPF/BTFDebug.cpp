@@ -31,9 +31,9 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <optional>
 
@@ -1370,10 +1370,8 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
-  auto LoadFile = [](StringRef FileName) {
-    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
-    auto BypassSandbox = sys::sandbox::scopedDisable();
-    return MemoryBuffer::getFile(FileName);
+  auto LoadFile = [&File](StringRef FileName) {
+    return File->getContext().getVirtualFileSystem().getBufferForFile(FileName);
   };
 
   std::unique_ptr<MemoryBuffer> Buf;
@@ -1685,23 +1683,13 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
   FieldReloc.Label = ORSym;
   FieldReloc.TypeID = RootId;
 
-  StringRef AccessPattern = GVar->getName();
-  size_t FirstDollar = AccessPattern.find_first_of('$');
   if (IsAma) {
-    size_t FirstColon = AccessPattern.find_first_of(':');
-    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
-    StringRef IndexPattern = AccessPattern.substr(FirstDollar + 1);
-    StringRef RelocKindStr = AccessPattern.substr(FirstColon + 1,
-        SecondColon - FirstColon);
-    StringRef PatchImmStr = AccessPattern.substr(SecondColon + 1,
-        FirstDollar - SecondColon);
-
-    FieldReloc.OffsetNameOff = addString(IndexPattern);
-    FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
-    PatchImms[GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
-                                     FieldReloc.RelocKind);
+    auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVar->getName());
+    FieldReloc.OffsetNameOff = addString(Reloc.AccessString);
+    FieldReloc.RelocKind = Reloc.Kind;
+    PatchImms[GVar] = {Reloc.PatchImm, Reloc.Kind};
   } else {
-    StringRef RelocStr = AccessPattern.substr(FirstDollar + 1);
+    StringRef RelocStr = GVar->getName().split('$').second;
     FieldReloc.OffsetNameOff = addString("0");
     FieldReloc.RelocKind = std::stoull(std::string(RelocStr));
     PatchImms[GVar] = std::make_pair(RootId, FieldReloc.RelocKind);

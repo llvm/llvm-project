@@ -8,6 +8,7 @@
 ;; Positive tests:
 ;;
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
+; RUN: llc -enable-new-pm -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
 ;;
 ;; Negative tests:
 ;;

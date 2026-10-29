@@ -64,6 +64,7 @@
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -174,247 +175,12 @@ STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
 STATISTIC(LoopsPartialAliasVectorized,
           "Number of partial aliasing loops vectorized");
 
-static cl::opt<bool> EnableEpilogueVectorization(
-    "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
-    cl::desc("Enable vectorization of epilogue loops."));
-
 static cl::opt<ElementCount> EpilogueVectorizationForceVF(
     "epilogue-vectorization-force-VF", cl::init(ElementCount::getFixed(1)),
     cl::Hidden,
     cl::desc("When epilogue vectorization is enabled, and a value greater than "
              "1 is specified, forces the given VF for all applicable epilogue "
              "loops. Note: This allows all scalable VFs >= vscale x 1."));
-
-static cl::opt<unsigned> EpilogueVectorizationMinVF(
-    "epilogue-vectorization-minimum-VF", cl::Hidden,
-    cl::desc("Only loops with vectorization factor equal to or larger than "
-             "the specified value are considered for epilogue vectorization."));
-
-/// Loops with a known constant trip count below this number are vectorized only
-/// if no scalar iteration overheads are incurred.
-static cl::opt<unsigned> TinyTripCountVectorThreshold(
-    "vectorizer-min-trip-count", cl::init(16), cl::Hidden,
-    cl::desc("Loops with a constant trip count that is smaller than this "
-             "value are vectorized only if no scalar iteration overheads "
-             "are incurred."));
-
-static cl::opt<bool> ForcePartialAliasingVectorization(
-    "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
-    cl::desc("Replace pointer diff checks with alias masks."));
-
-/// Option tail-folding-policy controls the tail-folding strategy and lists all
-/// available options. The vectorizer will attempt to fold the tail-loop into
-/// the vector loop (main/epilogue loops) and predicate the instructions
-/// accordingly. If tail-folding fails, there are different fallback strategies
-/// depending on these values:
-enum class TailFoldingPolicyTy { None = 0, PreferFoldTail, MustFoldTail };
-
-static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
-    "tail-folding-policy", cl::init(TailFoldingPolicyTy::None), cl::Hidden,
-    cl::desc("Tail-folding preferences over creating an epilogue loop."),
-    cl::values(
-        clEnumValN(TailFoldingPolicyTy::None, "dont-fold-tail",
-                   "Don't tail-fold loops."),
-        clEnumValN(TailFoldingPolicyTy::PreferFoldTail, "prefer-fold-tail",
-                   "prefer tail-folding, otherwise create an epilogue when "
-                   "appropriate."),
-        clEnumValN(TailFoldingPolicyTy::MustFoldTail, "must-fold-tail",
-                   "always tail-fold, don't attempt vectorization if "
-                   "tail-folding fails.")));
-
-static cl::opt<TailFoldingPolicyTy> EpilogueTailFoldingPolicy(
-    "epilogue-tail-folding-policy", cl::Hidden,
-    cl::desc(
-        "Epilogue-tail-folding preferences over creating an epilogue loop."),
-    cl::values(
-        clEnumValN(TailFoldingPolicyTy::None, "dont-fold-tail",
-                   "Don't tail-fold loops."),
-        clEnumValN(TailFoldingPolicyTy::PreferFoldTail, "prefer-fold-tail",
-                   "prefer tail-folding, otherwise create an epilogue when "
-                   "appropriate.")));
-
-static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
-    "force-tail-folding-style", cl::desc("Force the tail folding style"),
-    cl::init(TailFoldingStyle::None),
-    cl::values(
-        clEnumValN(TailFoldingStyle::None, "none", "Disable tail folding"),
-        clEnumValN(
-            TailFoldingStyle::Data, "data",
-            "Create lane mask for data only, using active.lane.mask intrinsic"),
-        clEnumValN(TailFoldingStyle::DataWithoutLaneMask,
-                   "data-without-lane-mask",
-                   "Create lane mask with compare/stepvector"),
-        clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
-                   "Create lane mask using active.lane.mask intrinsic, and use "
-                   "it for both data and control flow"),
-        clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
-                   "Use predicated EVL instructions for tail folding. If EVL "
-                   "is unsupported, fallback to data-without-lane-mask.")));
-
-static cl::opt<bool> EnableInterleavedMemAccesses(
-    "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
-    cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
-
-/// An interleave-group may need masking if it resides in a block that needs
-/// predication, or in order to mask away gaps.
-static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
-    "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
-    cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
-
-static cl::opt<unsigned> ForceTargetNumScalarRegs(
-    "force-target-num-scalar-regs", cl::init(0), cl::Hidden,
-    cl::desc("A flag that overrides the target's number of scalar registers."));
-
-static cl::opt<unsigned> ForceTargetNumVectorRegs(
-    "force-target-num-vector-regs", cl::init(0), cl::Hidden,
-    cl::desc("A flag that overrides the target's number of vector registers."));
-
-static cl::opt<unsigned> ForceTargetMaxScalarInterleaveFactor(
-    "force-target-max-scalar-interleave", cl::init(0), cl::Hidden,
-    cl::desc("A flag that overrides the target's max interleave factor for "
-             "scalar loops."));
-
-static cl::opt<unsigned> ForceTargetMaxVectorInterleaveFactor(
-    "force-target-max-vector-interleave", cl::init(0), cl::Hidden,
-    cl::desc("A flag that overrides the target's max interleave factor for "
-             "vectorized loops."));
-
-static cl::opt<unsigned> SmallLoopCost(
-    "small-loop-cost", cl::init(20), cl::Hidden,
-    cl::desc(
-        "The cost of a loop that is considered 'small' by the interleaver."));
-
-static cl::opt<bool> LoopVectorizeWithBlockFrequency(
-    "loop-vectorize-with-block-frequency", cl::init(true), cl::Hidden,
-    cl::desc("Enable the use of the block frequency analysis to access PGO "
-             "heuristics minimizing code growth in cold regions and being more "
-             "aggressive in hot regions."));
-
-// Runtime interleave loops for load/store throughput.
-static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
-    "enable-loadstore-runtime-interleave", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable runtime interleaving until load/store ports are saturated"));
-
-// TODO: Move size-based thresholds out of legality checking, make cost based
-// decisions instead of hard thresholds.
-static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
-    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed."));
-
-static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
-    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed with a "
-             "vectorize(enable) pragma"));
-
-static cl::opt<bool> EnableIndVarRegisterHeur(
-    "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
-    cl::desc("Count the induction variable only once when interleaving"));
-
-static cl::opt<unsigned> MaxNestedScalarReductionIC(
-    "max-nested-scalar-reduction-interleave", cl::init(2), cl::Hidden,
-    cl::desc("The maximum interleave count to use when interleaving a scalar "
-             "reduction in a nested loop."));
-
-static cl::opt<bool> ForceOrderedReductions(
-    "force-ordered-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Enable the vectorisation of loops with in-order (strict) "
-             "FP reductions"));
-
-static cl::opt<bool> PreferPredicatedReductionSelect(
-    "prefer-predicated-reduction-select", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Prefer predicating a reduction operation over an after loop select."));
-
-static cl::opt<bool> EnableVPlanNativePath(
-    "enable-vplan-native-path", cl::Hidden,
-    cl::desc("Enable VPlan-native vectorization path with "
-             "support for outer loop vectorization."));
-
-cl::opt<bool>
-    llvm::VerifyEachVPlan("vplan-verify-each",
-#ifdef EXPENSIVE_CHECKS
-                          cl::init(true),
-#else
-                          cl::init(false),
-#endif
-                          cl::Hidden,
-                          cl::desc("Verify VPlans after VPlan transforms."));
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-cl::opt<bool> llvm::VPlanPrintBeforeAll(
-    "vplan-print-before-all", cl::init(false), cl::Hidden,
-    cl::desc("Print VPlans before all VPlan transformations."));
-
-cl::opt<bool> llvm::VPlanPrintAfterAll(
-    "vplan-print-after-all", cl::init(false), cl::Hidden,
-    cl::desc("Print VPlans after all VPlan transformations."));
-
-cl::list<std::string> llvm::VPlanPrintBeforePasses(
-    "vplan-print-before", cl::Hidden,
-    cl::desc("Print VPlans before specified VPlan transformations (regexp)."));
-
-cl::list<std::string> llvm::VPlanPrintAfterPasses(
-    "vplan-print-after", cl::Hidden,
-    cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
-
-cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
-    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
-    cl::desc("Limit VPlan printing to vector loop region in "
-             "`-vplan-print-after*` if the plan has one."));
-#endif
-
-cl::opt<bool> llvm::EnableLoopInterleaving(
-    "interleave-loops", cl::init(true), cl::Hidden,
-    cl::desc("Enable loop interleaving in Loop vectorization passes"));
-cl::opt<bool> llvm::EnableLoopVectorization(
-    "vectorize-loops", cl::init(true), cl::Hidden,
-    cl::desc("Run the Loop vectorization passes"));
-
-namespace llvm {
-cl::opt<unsigned> ForceTargetInstructionCost(
-    "force-target-instruction-cost", cl::init(0), cl::Hidden,
-    cl::desc("A flag that overrides the target's expected cost for "
-             "an instruction to a single constant value. Mostly "
-             "useful for getting consistent testing."));
-
-/// The number of stores in a loop that are allowed to need predication.
-cl::opt<unsigned> NumberOfStoresToPredicate(
-    "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
-    cl::desc("Max number of stores to be predicated behind an if."));
-
-// This flag enables the stress testing of the VPlan H-CFG construction in the
-// VPlan-native vectorization path. It must be used in conjuction with
-// -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
-// verification of the H-CFGs built.
-cl::opt<bool> VPlanBuildOuterloopStressTest(
-    "vplan-build-outerloop-stress-test", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Build VPlan for every supported loop nest in the function and bail "
-        "out right after the build (stress test the VPlan H-CFG construction "
-        "in the VPlan-native vectorization path)."));
-} // namespace llvm
-
-static cl::opt<cl::boolOrDefault>
-    ForceMaskedDivRem("force-widen-divrem-via-masked-intrinsic", cl::Hidden,
-                      cl::desc("Override cost based masked intrinsic widening "
-                               "for div/rem instructions"));
-
-static cl::opt<bool> EnableEarlyExitVectorization(
-    "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable vectorization of early exit loops with uncountable exits."));
-
-static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
-    "enable-early-exit-vectorization-with-side-effects", cl::init(false),
-    cl::Hidden,
-    cl::desc("Enable vectorization of early exit loops with uncountable exits "
-             "and side effects"));
-
-static cl::opt<unsigned> LowTripCountLoopBodySizeLimit(
-    "low-trip-count-loop-body-size-limit", cl::init(20), cl::Hidden,
-    cl::desc("Minimum number of instructions to vectorize loops with trip "
-             "counts below tail folding threshold"));
 
 // Returns true if the epilogue VF has been set to a non-zero value other than
 // VF=1 (scalar).
@@ -481,8 +247,9 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
 ///      if \p CanUseConstantMax and \p CanExcludeZeroTrips.
 ///   5) Returns std::nullopt if all of the above failed.
 static std::optional<ElementCount> getSmallBestKnownTC(
-    PredicatedScalarEvolution &PSE, Loop *L, bool CanUseConstantMax = true,
-    bool CanExcludeZeroTrips = false, bool ComputeUpperBoundOnly = false) {
+    const VectorizeOptions &Opts, PredicatedScalarEvolution &PSE, Loop *L,
+    bool CanUseConstantMax = true, bool CanExcludeZeroTrips = false,
+    bool ComputeUpperBoundOnly = false) {
   // Check if exact trip count is known.
   if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
@@ -492,7 +259,7 @@ static std::optional<ElementCount> getSmallBestKnownTC(
   // not a usable trip count for the profitability decisions below (and would
   // e.g. divide by zero when scaling runtime check cost), so treat it as
   // unknown.
-  if (LoopVectorizeWithBlockFrequency && !ComputeUpperBoundOnly)
+  if (Opts.loop_vectorize_with_block_frequency && !ComputeUpperBoundOnly)
     if (unsigned EstimatedTC = getLoopEstimatedTripCount(L).value_or(0))
       return ElementCount::getFixed(EstimatedTC);
 
@@ -544,29 +311,16 @@ public:
                       LoopInfo *LI, DominatorTree *DT,
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
                       ElementCount VecWidth, unsigned UnrollFactor,
-                      GeneratedRTChecks &RTChecks, VPlan &Plan)
+                      GeneratedRTChecks &RTChecks)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TTI(TTI), AC(AC),
         VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getModule()),
-        RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPBB(cast<VPBasicBlock>(
-            Plan.getVectorLoopRegion()->getSinglePredecessor())) {}
-
-  virtual ~InnerLoopVectorizer() = default;
-
-  /// Creates a basic block for the scalar preheader.
-  /// EpilogueVectorizerEpilogueLoop overrides the method to create additional
-  /// blocks and checks needed for epilogue vectorization.
-  virtual BasicBlock *createVectorizedLoopSkeleton();
+        RTChecks(RTChecks) {}
 
   /// Fix the vectorized code, taking care of header phi's, and more.
   void fixVectorizedLoop(VPTransformState &State);
 
 protected:
   friend class LoopVectorizationPlanner;
-
-  /// Create and return a new IR basic block for the scalar preheader whose name
-  /// is prefixed with \p Prefix.
-  BasicBlock *createScalarPreheader(StringRef Prefix);
 
   /// The original loop.
   Loop *OrigLoop;
@@ -604,41 +358,6 @@ protected:
   /// Structure to hold information about generated runtime checks, responsible
   /// for cleaning the checks, if vectorization turns out unprofitable.
   GeneratedRTChecks &RTChecks;
-
-  VPlan &Plan;
-
-  /// The vector preheader block of \p Plan, used as target for check blocks
-  /// introduced during skeleton creation.
-  VPBasicBlock *VectorPHVPBB;
-};
-
-/// A specialized derived class of inner loop vectorizer that performs
-/// vectorization of *epilogue* loops in the process of vectorizing loops and
-/// their epilogues. The idea is to run the vplan on a given loop twice, firstly
-/// to vectorize the main loop, and secondly to complete the skeleton from the
-/// first step and vectorize the epilogue. This helps us avoid regenerating and
-/// recomputing runtime safety checks, and shortens the iteration-count-check
-/// path length for loops whose iteration count is so small that the main vector
-/// loop is completely skipped.
-class EpilogueVectorizerEpilogueLoop : public InnerLoopVectorizer {
-  VPlan &MainPlan;
-
-public:
-  VPIRBasicBlock *VecEpilogueIterationCountCheck = nullptr;
-
-  EpilogueVectorizerEpilogueLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
-                                 LoopInfo *LI, DominatorTree *DT,
-                                 const TargetTransformInfo *TTI,
-                                 AssumptionCache *AC, ElementCount VecWidth,
-                                 unsigned UnrollFactor,
-                                 GeneratedRTChecks &Checks, VPlan &Plan,
-                                 VPlan &MainPlan)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
-                            UnrollFactor, Checks, Plan),
-        MainPlan(MainPlan) {}
-  /// Implements the interface for creating a vectorized skeleton using the
-  /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
-  BasicBlock *createVectorizedLoopSkeleton() final;
 };
 } // end namespace llvm
 
@@ -716,9 +435,9 @@ public:
                              std::function<BlockFrequencyInfo &()> GetBFI,
                              const Function *F, InterleavedAccessInfo &IAI,
                              VFSelectionContext &Config)
-      : Config(Config), EpilogueLoweringStatus(SEL), TheLoop(L), PSE(PSE),
-        LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
-        GetBFI(GetBFI), TheFunction(F), InterleaveInfo(IAI) {}
+      : Opts(Config.getOpts()), Config(Config), EpilogueLoweringStatus(SEL),
+        TheLoop(L), PSE(PSE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC),
+        ORE(ORE), GetBFI(GetBFI), TheFunction(F), InterleaveInfo(IAI) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -939,15 +658,8 @@ public:
   /// option so it is not simply a cost comparison.
   bool isDivRemScalarWithPredication(InstructionCost ScalarCost,
                                      InstructionCost MaskedCost) const {
-    switch (ForceMaskedDivRem) {
-    case cl::boolOrDefault::BOU_UNSET:
-      return ScalarCost < MaskedCost;
-    case cl::boolOrDefault::BOU_TRUE:
-      return false;
-    case cl::boolOrDefault::BOU_FALSE:
-      return true;
-    }
-    llvm_unreachable("impossible case value");
+    return !valueOr(Opts.force_widen_divrem_via_masked_intrinsic,
+                    !(ScalarCost < MaskedCost));
   }
 
   /// Returns true if \p I is an instruction which requires predication and
@@ -1032,7 +744,8 @@ public:
     // If we might exit from anywhere but the latch and early exit vectorization
     // is disabled, we must run the exiting iteration in scalar form.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
-        !(EnableEarlyExitVectorization && Legal->hasUncountableEarlyExit())) {
+        !(Opts.enable_early_exit_vectorization &&
+          Legal->hasUncountableEarlyExit())) {
       LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: not exiting "
                            "from latch block\n");
       return true;
@@ -1069,16 +782,16 @@ public:
     }
 
     // Default to TTI preference, but allow command line override.
-    ChosenTailFoldingStyle = TTI.getPreferredTailFoldingStyle();
-    if (ForceTailFoldingStyle.getNumOccurrences())
-      ChosenTailFoldingStyle = ForceTailFoldingStyle.getValue();
+    ChosenTailFoldingStyle = Opts.force_tail_folding_style.value_or(
+        TTI.getPreferredTailFoldingStyle());
 
     if (ChosenTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
+                      TTI.hasActiveVectorLength() &&
+                      !Opts.enable_vplan_native_path;
     if (EVLIsLegal)
       return;
     // If for some reason EVL mode is unsupported, fallback to an epilogue
@@ -1113,7 +826,7 @@ public:
 
     // Note: FixedOrderRecurrences are not supported yet as we cannot handle
     // the required `splice.right` with the alias-mask.
-    if (!ForcePartialAliasingVectorization ||
+    if (!Opts.force_partial_aliasing_vectorization ||
         !Legal->getFixedOrderRecurrences().empty())
       return;
 
@@ -1196,7 +909,7 @@ public:
         HasUsesOutsideReductionChain)
       return true;
 
-    return PreferPredicatedReductionSelect ||
+    return Opts.prefer_predicated_reduction_select ||
            TTI.preferPredicatedReductionSelect();
   }
 
@@ -1238,6 +951,8 @@ public:
   }
 
 private:
+  const VectorizeOptions &Opts;
+
   unsigned NumPredStores = 0;
 
   /// VF selection state independent of cost-modeling decisions.
@@ -1471,6 +1186,8 @@ namespace {
 /// vectorize, the checks are attached to VPlan as IR or recipes. If deciding
 /// not to vectorize, the temporary blocks are completely removed.
 class GeneratedRTChecks {
+  const VectorizeOptions &Opts;
+
   /// Basic block which contains the generated SCEV checks, if any.
   BasicBlock *SCEVCheckBlock = nullptr;
 
@@ -1509,11 +1226,12 @@ class GeneratedRTChecks {
   bool LoopUsesPartialAliasMasking = false;
 
 public:
-  GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
+  GeneratedRTChecks(const VectorizeOptions &Opts,
+                    PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
                     TTI::TargetCostKind CostKind,
                     bool LoopUsesPartialAliasMasking)
-      : DT(DT), LI(LI), TTI(TTI),
+      : Opts(Opts), DT(DT), LI(LI), TTI(TTI),
         SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         PSE(PSE), CostKind(CostKind),
@@ -1682,7 +1400,7 @@ public:
 
           // Get the best known TC estimate.
           if (auto EstimatedTC = getSmallBestKnownTC(
-                  PSE, OuterLoop, /* CanUseConstantMax = */ false))
+                  Opts, PSE, OuterLoop, /* CanUseConstantMax = */ false))
             if (EstimatedTC->isFixed())
               BestTripCount = EstimatedTC->getFixedValue();
 
@@ -1794,10 +1512,10 @@ static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
 // using the same metadata (llvm.loop.vectorize, processed by
 // LoopVectorizeHints). This will be fixed in the future when the native IR
 // representation for pragma 'omp simd' is introduced.
-static bool isExplicitVecOuterLoop(Loop *OuterLp,
+static bool isExplicitVecOuterLoop(const VectorizeOptions &Opts, Loop *OuterLp,
                                    OptimizationRemarkEmitter *ORE) {
   assert(!OuterLp->isInnermost() && "This is not an outer loop");
-  LoopVectorizeHints Hints(OuterLp, true /*DisableInterleaving*/, *ORE);
+  LoopVectorizeHints Hints(Opts, OuterLp, true /*DisableInterleaving*/, *ORE);
 
   // Only outer loops with an explicit vectorization hint are supported.
   // Unannotated outer loops are ignored.
@@ -1822,15 +1540,16 @@ static bool isExplicitVecOuterLoop(Loop *OuterLp,
   return true;
 }
 
-static void collectSupportedLoops(Loop &L, LoopInfo *LI,
-                                  OptimizationRemarkEmitter *ORE,
+static void collectSupportedLoops(const VectorizeOptions &Opts, Loop &L,
+                                  LoopInfo *LI, OptimizationRemarkEmitter *ORE,
                                   SmallVectorImpl<Loop *> &V) {
   // Collect inner loops and outer loops without irreducible control flow. For
   // now, only collect outer loops that have explicit vectorization hints. If we
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
-  if (L.isInnermost() || VPlanBuildOuterloopStressTest ||
-      (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
+  if (L.isInnermost() || Opts.vplan_build_outerloop_stress_test ||
+      (Opts.enable_vplan_native_path &&
+       isExplicitVecOuterLoop(Opts, &L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
     if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI)) {
@@ -1844,7 +1563,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
     }
   }
   for (Loop *InnerL : L)
-    collectSupportedLoops(*InnerL, LI, ORE, V);
+    collectSupportedLoops(Opts, *InnerL, LI, ORE, V);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1857,7 +1576,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
 /// then we know a runtime overflow check always evaluates to false and can be
 /// removed.
 static bool isIndvarOverflowCheckKnownFalse(
-    const LoopVectorizationCostModel *Cost,
+    const VectorizeOptions &Opts, const LoopVectorizationCostModel *Cost,
     ElementCount VF, std::optional<unsigned> UF = std::nullopt) {
   // Always be conservative if we don't know the exact unroll factor.
   uint64_t MaxUF = UF ? *UF
@@ -1871,7 +1590,7 @@ static bool isIndvarOverflowCheckKnownFalse(
   // is known and (max) trip-count + (VF * UF) does not overflow in the type of
   // the vector loop induction variable.
   if (std::optional<ElementCount> TC = getSmallBestKnownTC(
-          Cost->PSE, Cost->TheLoop,
+          Opts, Cost->PSE, Cost->TheLoop,
           /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
           /*ComputeUpperBoundOnly=*/true)) {
     // Compute the maximum runtime values of VF and the trip count.
@@ -1896,12 +1615,11 @@ static bool isIndvarOverflowCheckKnownFalse(
 // Return whether we allow using masked interleave-groups (for dealing with
 // strided loads/stores that reside in predicated blocks, or for dealing
 // with gaps).
-static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
+static bool useMaskedInterleavedAccesses(const VectorizeOptions &Opts,
+                                         const TargetTransformInfo &TTI) {
   // If an override option has been passed in for interleaved accesses, use it.
-  if (EnableMaskedInterleavedMemAccesses.getNumOccurrences() > 0)
-    return EnableMaskedInterleavedMemAccesses;
-
-  return TTI.enableMaskedInterleavedAccessVectorization();
+  return valueOr(Opts.enable_masked_interleaved_mem_accesses,
+                 TTI.enableMaskedInterleavedAccessVectorization());
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
@@ -1927,18 +1645,6 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
   return IRVPBB;
 }
 
-BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
-  BasicBlock *VectorPH = OrigLoop->getLoopPreheader();
-  assert(VectorPH && "Invalid loop structure");
-
-  // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
-  // wrapping the newly created scalar preheader here at the moment, because the
-  // Plan's scalar preheader may be unreachable at this point. Instead it is
-  // replaced in executePlan.
-  return SplitBlock(VectorPH, VectorPH->getTerminator(), DT, LI, nullptr,
-                    Twine(Prefix) + "scalar.ph");
-}
-
 /// Knowing that loop \p L executes a single vector iteration, add instructions
 /// that will get simplified and thus should not have any cost to \p
 /// InstsToIgnore.
@@ -1960,12 +1666,6 @@ static void addFullyUnrolledInstructionsToIgnore(
                [&](const User *U) { return U == IV || U == Cmp; }))
       InstsToIgnore.insert(IVInst);
   }
-}
-
-BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
-  // Create a new IR basic block for the scalar preheader.
-  BasicBlock *ScalarPH = createScalarPreheader("");
-  return ScalarPH->getSinglePredecessor();
 }
 
 namespace {
@@ -2565,7 +2265,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // If masked interleaving is required, we expect that the user/target had
   // enabled it, because otherwise it either wouldn't have been created or
   // it should have been invalidated by the CostModel.
-  assert(useMaskedInterleavedAccesses(TTI) &&
+  assert(useMaskedInterleavedAccesses(Opts, TTI) &&
          "Masked interleave-groups for predicated accesses are not enabled.");
 
   if (Group->isReverse())
@@ -2954,7 +2654,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   // Invalidate interleave groups that require an epilogue if we can't mask
   // the interleave-group.
-  if (!useMaskedInterleavedAccesses(TTI)) {
+  if (!useMaskedInterleavedAccesses(Opts, TTI)) {
     // Note: There is no need to invalidate any cost modeling decisions here, as
     // none were taken so far (see assertion above).
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
@@ -3009,7 +2709,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
   }
 
-  auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
+  auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, TheLoop);
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
@@ -3044,7 +2744,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
           llvm::map_range(TheLoop->blocks(),
                           [](BasicBlock *BB) { return BB->size(); }),
           unsigned(0));
-      if (NumOfInstructions > LowTripCountLoopBodySizeLimit) {
+      if (NumOfInstructions > Opts.low_trip_count_loop_body_size_limit) {
         unsigned VF = MaxVFForTC / EffectiveIC;
         LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
                           << " with 1 scalar iteration remaining.\n");
@@ -3350,15 +3050,15 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
 /// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
 /// otherwise CM_EpilogueAllowed.
 static EpilogueLowering getEpilogueTailLowering(
-    const LoopVectorizationCostModel &MainCM, const Loop *L,
-    OptimizationRemarkEmitter *ORE, LoopVectorizationLegality &LVL,
-    const LoopVectorizeHints &Hints, TargetTransformInfo *TTI) {
+    const VectorizeOptions &Opts, const LoopVectorizationCostModel &MainCM,
+    const Loop *L, OptimizationRemarkEmitter *ORE,
+    LoopVectorizationLegality &LVL, const LoopVectorizeHints &Hints,
+    TargetTransformInfo *TTI) {
   // Epilogue TF is only enabled when explicitly requested via command line.
-  if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
-      EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
+  if (Opts.epilogue_tail_folding_policy != TailFoldingPolicyTy::PreferFoldTail)
     return CM_EpilogueAllowed;
 
-  if (!EnableEpilogueVectorization) {
+  if (!Opts.enable_epilogue_vectorization) {
     reportVectorizationInfo(
         "Options conflict, epilogue vectorization is disallowed while "
         "epilogue tail-folding allowed!",
@@ -3417,7 +3117,7 @@ static EpilogueLowering getEpilogueTailLowering(
   // TODO: Add support once the epilogue has its own IAI, separate from the main
   // loop's.
   if (MainCM.InterleaveInfo.hasGroups() &&
-      !useMaskedInterleavedAccesses(*TTI)) {
+      !useMaskedInterleavedAccesses(Opts, *TTI)) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with interleaved accesses "
         "when masking them isn't supported",
@@ -3425,7 +3125,7 @@ static EpilogueLowering getEpilogueTailLowering(
     return CM_EpilogueAllowed;
   }
 
-  if (ForcePartialAliasingVectorization) {
+  if (Opts.force_partial_aliasing_vectorization) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with alias masking",
         "InvalidTailFoldedEpilogue", ORE, L);
@@ -3449,9 +3149,8 @@ static EpilogueLowering getEpilogueTailLowering(
   // TODO: This is conservative: it rejects any target that prefers EVL, even
   // for fixed-width epilogue VFs where EVL won't be chosen. Move this check to
   // where the epilogue's TF style is known once epilogue TF is supported.
-  TailFoldingStyle TFStyle = TTI->getPreferredTailFoldingStyle();
-  if (ForceTailFoldingStyle.getNumOccurrences())
-    TFStyle = ForceTailFoldingStyle.getValue();
+  TailFoldingStyle TFStyle = Opts.force_tail_folding_style.value_or(
+      TTI->getPreferredTailFoldingStyle());
   // TODO: Remove once EVL recipes support cloning.
   if (TFStyle == TailFoldingStyle::DataWithEVL) {
     reportVectorizationInfo("Epilogue tail-folding is not supported yet with "
@@ -3475,16 +3174,15 @@ bool VFSelectionContext::isEpilogueVectorizationProfitable(
   if (!TTI.preferEpilogueVectorization(VF * IC))
     return false;
 
-  unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
-                                ? EpilogueVectorizationMinVF
-                                : TTI.getEpilogueVectorizationMinVF();
+  unsigned MinVFThreshold = Opts.epilogue_vectorization_minimum_VF.value_or(
+      TTI.getEpilogueVectorizationMinVF());
   return estimateElementCount(VF * IC, getVScaleForTuning()) >= MinVFThreshold;
 }
 
 std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC,
     bool ScalarEpilogueAllowed) {
-  if (!EnableEpilogueVectorization) {
+  if (!Opts.enable_epilogue_vectorization) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n");
     return nullptr;
   }
@@ -3720,7 +3418,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     if (VF.isScalar())
       LoopCost = CM->expectedCost(VF);
     else
-      LoopCost = cost(Plan, VF, &R);
+      LoopCost = cost(Plan, VF, &R, *CM);
     assert(LoopCost.isValid() && "Expected to have chosen a VF with valid cost");
 
     // Loop body is free and there is no need for interleaving.
@@ -3753,13 +3451,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
                       << " registers of "
                       << TTI.getRegisterClassName(Pair.first)
                       << " register class\n");
-    if (VF.isScalar()) {
-      if (ForceTargetNumScalarRegs.getNumOccurrences() > 0)
-        TargetNumRegisters = ForceTargetNumScalarRegs;
-    } else {
-      if (ForceTargetNumVectorRegs.getNumOccurrences() > 0)
-        TargetNumRegisters = ForceTargetNumVectorRegs;
-    }
+    TargetNumRegisters = (VF.isScalar() ? Opts.force_target_num_scalar_regs
+                                        : Opts.force_target_num_vector_regs)
+                             .value_or(TargetNumRegisters);
     unsigned MaxLocalUsers = Pair.second;
     unsigned LoopInvariantRegs = 0;
     if (R.LoopInvariantRegs.contains(Pair.first))
@@ -3768,7 +3462,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     unsigned TmpIC = llvm::bit_floor((TargetNumRegisters - LoopInvariantRegs) /
                                      MaxLocalUsers);
     // Don't count the induction variable as interleaved.
-    if (EnableIndVarRegisterHeur) {
+    if (Opts.enable_ind_var_reg_heur) {
       TmpIC = llvm::bit_floor((TargetNumRegisters - LoopInvariantRegs - 1) /
                               std::max(1U, (MaxLocalUsers - 1)));
     }
@@ -3788,18 +3482,14 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
                     << MaxInterleaveCount << "\n");
 
   // Check if the user has overridden the max.
-  if (VF.isScalar()) {
-    if (ForceTargetMaxScalarInterleaveFactor.getNumOccurrences() > 0)
-      MaxInterleaveCount = ForceTargetMaxScalarInterleaveFactor;
-  } else {
-    if (ForceTargetMaxVectorInterleaveFactor.getNumOccurrences() > 0)
-      MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
-  }
+  MaxInterleaveCount = (VF.isScalar() ? Opts.force_target_max_scalar_interleave
+                                      : Opts.force_target_max_vector_interleave)
+                           .value_or(MaxInterleaveCount);
 
   // Try to get the exact trip count, or an estimate based on profiling data or
   // ConstantMax from PSE, failing that.
   auto BestKnownTC =
-      getSmallBestKnownTC(PSE, OrigLoop,
+      getSmallBestKnownTC(Opts, PSE, OrigLoop,
                           /*CanUseConstantMax=*/true,
                           /*CanExcludeZeroTrips=*/CM->isEpilogueAllowed());
 
@@ -3868,6 +3558,55 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   assert(IC > 0 && "Interleave count must be greater than 0.");
 
+  // FIXME: VF is required to be a vector only because there are several recipes
+  // whose computeCost function asserts that the VF is a vector.
+  if (Opts.enable_interleave_to_reduce_stalls && VF.isVector()) {
+    LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
+                         "instruction latency.\n");
+    // Interleaving a replicator region means we get extra copies of the blocks
+    // in the region. Vector values used in those blocks are expected to later
+    // be sunk to just before them, negating any reduction in stalls. Therefore
+    // there's no gain to be had from interleaving.
+    if (hasReplicatorRegion(Plan)) {
+      LLVM_DEBUG(dbgs() << "LV: Not interleaving due to replicator region.\n");
+      return 1;
+    }
+    VPCostContext LatencyCtx(*TLI, Plan, *CM, Config,
+                             /*ReusePrintingSlotTracker=*/true);
+    LatencyCtx.CostKind = TTI::TCK_Latency;
+    VPCostContext ThroughputCtx(*TLI, Plan, *CM, Config,
+                                /*ReusePrintingSlotTracker=*/true);
+    ThroughputCtx.CostKind = TTI::TCK_RecipThroughput;
+    // Find the largest interleave count that will help with reducing stalls.
+    unsigned StallsIC = 1;
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        // Assuming that each value will be needed as soon as it's generated the
+        // number of stall cycles is one less than the latency.
+        InstructionCost StallCycles = R.cost(VF, LatencyCtx) - 1;
+        if (Opts.force_target_load_latency > 0 && R.mayReadFromMemory())
+          StallCycles = Opts.force_target_load_latency - 1;
+        // Each interleaving above 1 will reduce the stalls by RecipThroughput,
+        // so pick the interleaving that will reduce stalls to zero.
+        InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
+        if (StallCycles.isValid() && RecipThroughput.isValid() &&
+            StallCycles > 0 && RecipThroughput > 0) {
+          unsigned ThisIC = bit_floor<uint64_t>(
+              1 + (StallCycles / RecipThroughput).getValue());
+          StallsIC = std::max(StallsIC, ThisIC);
+        }
+      }
+    }
+    if (StallsIC <= 1) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Not interleaving as it wouldn't reduce stalls.\n");
+      return 1;
+    }
+    IC = std::min(IC, StallsIC);
+    return IC;
+  }
+
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
   if (VF.isVector() && HasReductions) {
@@ -3894,12 +3633,14 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   const bool AggressivelyInterleave =
       TTI.enableAggressiveInterleaving(HasReductions);
   if (!ScalarInterleavingRequiresRuntimePointerCheck &&
-      !ScalarInterleavingRequiresPredication && LoopCost < SmallLoopCost) {
+      !ScalarInterleavingRequiresPredication &&
+      LoopCost < Opts.small_loop_cost) {
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
-    unsigned SmallIC = std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(
-                                        SmallLoopCost / LoopCost.getValue()));
+    unsigned SmallIC =
+        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(Opts.small_loop_cost /
+                                                         LoopCost.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
@@ -3974,13 +3715,13 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         return 1;
       }
 
-      unsigned F = MaxNestedScalarReductionIC;
+      unsigned F = Opts.max_nested_scalar_reduction_interleave;
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
       LoadsIC = std::min(LoadsIC, F);
     }
 
-    if (EnableLoadStoreRuntimeInterleave &&
+    if (Opts.enable_loadstore_runtime_interleave &&
         std::max(StoresIC, LoadsIC) > SmallIC) {
       LLVM_DEBUG(
           dbgs() << "LV: Interleaving to saturate store or load ports.\n");
@@ -4024,8 +3765,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(
   assert((isPredicatedInst(I)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
-         (isa<StoreInst>(I) &&
-          NumPredStores > NumberOfStoresToPredicate);
+         (isa<StoreInst>(I) && NumPredStores > Opts.vectorize_num_stores_pred);
 }
 
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
@@ -4214,8 +3954,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
       InstructionCost C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (C.isValid() && Opts.force_target_instruction_cost)
+        C = InstructionCost(*Opts.force_target_instruction_cost);
 
       BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
@@ -4527,8 +4267,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
-      Value *Ptr =  getLoadStorePointerOperand(&I);
-      if (!Ptr)
+      Value *Ptr = getLoadStorePointerOperand(&I);
+
+      // Ignore if no pointer found or a widening decision has already been
+      // made.
+      if (!Ptr || (getWideningDecision(&I, VF) != CM_Unknown))
         continue;
 
       LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
@@ -4600,10 +4343,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (isAccessInterleaved(&I)) {
         const auto *Group = getInterleavedAccessGroup(&I);
         assert(Group && "Fail to get an interleaved access group.");
-
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
 
         NumAccesses = Group->getNumMembers();
         if (interleavedAccessCanBeWidened(&I, VF))
@@ -5355,7 +5094,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
     Legal->collectUnitStridePredicates();
 
-  auto VPlan1 = tryToBuildVPlan1();
+  auto VPlan1 = tryToBuildVPlan1(*CM);
   if (!VPlan1)
     return;
 
@@ -5367,7 +5106,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     // plan for that VF only.
     ElementCount VF =
         MaxFactors.FixedVF ? MaxFactors.FixedVF : MaxFactors.ScalableVF;
-    buildVPlans(*VPlan1, VF, VF);
+    buildVPlans(*VPlan1, VF, VF, *CM);
     LLVM_DEBUG(printPlans(dbgs()));
     return;
   }
@@ -5378,7 +5117,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
-      !useMaskedInterleavedAccesses(TTI)) {
+      !useMaskedInterleavedAccesses(Opts, TTI)) {
     LLVM_DEBUG(
         dbgs()
         << "LV: Invalidate all interleaved groups due to fold-tail by masking "
@@ -5401,23 +5140,22 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
           "UserVF ignored because it may be larger than the maximal safe VF",
           "InvalidUserVF", ORE, OrigLoop);
     } else {
-      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-             "VF needs to be a power of two");
+      assert(UserVF.isPowerOf2() && "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM->collectNonVectorizedAndSetWideningDecisions(UserVF);
-      buildVPlans(*VPlan1, UserVF, UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF, *CM);
       ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM->collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
-        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
+        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF, *CM);
       }
       if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
         if (UserVF.isScalar() ||
-            cost(*VPlans.front(), UserVF, /*RU=*/nullptr).isValid()) {
+            cost(*VPlans.front(), UserVF, /*RU=*/nullptr, *CM).isValid()) {
           LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
           LLVM_DEBUG(printPlans(dbgs()));
           return;
@@ -5443,8 +5181,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     CM->collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF);
-  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF);
+  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF, *CM);
+  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF,
+              *CM);
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -5453,9 +5192,9 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
                              LoopVectorizationCostModel &CM,
                              VFSelectionContext &Config,
                              bool ReusePrintingSlotTracker)
-    : TTI(Config.getTTI()), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
-      Config(Config), CostKind(Config.CostKind), PSE(Config.getPSE()),
-      L(Config.getLoop()) {
+    : Opts(Config.getOpts()), TTI(Config.getTTI()), TLI(TLI),
+      LLVMCtx(Plan.getContext()), CM(CM), Config(Config),
+      CostKind(Config.CostKind), PSE(Config.getPSE()), L(Config.getLoop()) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (ReusePrintingSlotTracker)
     PlanForSlotTracker = &Plan;
@@ -5465,8 +5204,8 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
   InstructionCost Cost = CM.getInstructionCost(UI, VF);
-  if (Cost.isValid() && ForceTargetInstructionCost.getNumOccurrences())
-    return InstructionCost(ForceTargetInstructionCost);
+  if (Cost.isValid() && Opts.force_target_instruction_cost)
+    return InstructionCost(*Opts.force_target_instruction_cost);
   return Cost;
 }
 
@@ -5530,7 +5269,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply special costs when instruction cost is forced to make sure the
   // forced cost is used for each recipe.
-  if (ForceTargetInstructionCost.getNumOccurrences())
+  if (Opts.force_target_instruction_cost)
     return Cost;
 
   // Pre-compute costs for instructions that are forced-scalar or profitable to
@@ -5566,8 +5305,14 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
+  // Only charge legacy scalarization costs for instructions VPlan replicates.
+  SmallPtrSet<Instruction *, 8> Replicated;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
+      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
-    if (UseVPlanCostModel(Scalarized) ||
+    if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(Scalarized);
@@ -5592,9 +5337,11 @@ getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
 }
 #endif
 
-InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
-                                               VPRegisterUsage *RU) const {
-  VPCostContext CostCtx(*TLI, Plan, *CM, Config,
+InstructionCost
+LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
+                               VPRegisterUsage *RU,
+                               LoopVectorizationCostModel &PlanCM) const {
+  VPCostContext CostCtx(*TLI, Plan, PlanCM, Config,
                         /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost
@@ -5605,8 +5352,8 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
 
   // Add the cost of spills due to excess register usage
   if (RU && Config.shouldConsiderRegPressureForVF(VF)) {
-    InstructionCost SpillCost =
-        RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+    InstructionCost SpillCost = RU->spillCost(
+        TTI, Config.CostKind, Opts.force_target_num_vector_regs.value_or(0));
     LLVM_DEBUG(dbgs() << "Spill costs for VF " << VF << ": " << SpillCost
                       << '\n');
     Cost += SpillCost;
@@ -5735,7 +5482,7 @@ LoopVectorizationPlanner::computeBestVF() {
       }
 
       InstructionCost Cost =
-          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr);
+          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, *CM);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
@@ -5762,11 +5509,10 @@ LoopVectorizationPlanner::LoopVectorizationPlanner(
     Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
     const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
     std::unique_ptr<LoopVectorizationCostModel> CM, VFSelectionContext &Config,
-    InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-    OptimizationRemarkEmitter *ORE,
+    PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
     std::function<const BranchProbabilityInfo &()> GetBPI)
-    : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal),
-      CM(std::move(CM)), Config(Config), IAI(IAI), PSE(PSE), ORE(ORE),
+    : Opts(Config.getOpts()), OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
+      Legal(Legal), CM(std::move(CM)), Config(Config), PSE(PSE), ORE(ORE),
       GetBPI(GetBPI) {}
 
 LoopVectorizationPlanner::~LoopVectorizationPlanner() = default;
@@ -5776,7 +5522,8 @@ void LoopVectorizationPlanner::clearCostModel() { CM.reset(); }
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT,
-    EpilogueVectorizationKind EpilogueVecKind) {
+    EpilogueVectorizationKind EpilogueVecKind,
+    MutableArrayRef<VPBasicBlock *> TrackedBlocks) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
@@ -5794,7 +5541,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  RUN_VPLAN_PASS(VPlanTransforms::materializePacksAndUnpacks, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::materializeUnpacks, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::materializeBroadcasts, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
@@ -5876,7 +5623,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
-  RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan, VPDominatorTree(BestVPlan));
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
@@ -5899,12 +5646,17 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
 
-  // 1. Set up the skeleton for vectorization, including vector pre-header and
-  // middle block. The vector loop is created during VPlan execution.
-  State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
+  // 1. Create the scalar preheader; all other blocks are created during VPlan
+  // execution.
+  State.CFG.PrevBB = OrigLoop->getLoopPreheader();
+  assert(State.CFG.PrevBB && "Invalid loop structure");
+  BasicBlock *ScalarPHBB = SplitBlock(
+      State.CFG.PrevBB, State.CFG.PrevBB->getTerminator(), DT, LI, nullptr,
+      EpilogueVecKind == EpilogueVectorizationKind::Epilogue
+          ? "vec.epilog.scalar.ph"
+          : "scalar.ph");
   if (VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader())
-    replaceVPBBWithIRVPBB(ScalarPH, State.CFG.PrevBB->getSingleSuccessor(),
-                          &BestVPlan);
+    replaceVPBBWithIRVPBB(ScalarPH, ScalarPHBB, &BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
@@ -5975,42 +5727,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::MainLoop)
     for (VPBasicBlock *VPBB : to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(
              vp_depth_first_shallow(BestVPlan.getEntry()))))
-      if (!isa<VPIRBasicBlock>(VPBB))
-        replaceVPBBWithIRVPBB(VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
+      if (!isa<VPIRBasicBlock>(VPBB)) {
+        VPBasicBlock *IRVPBB = replaceVPBBWithIRVPBB(
+            VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
+        replace(TrackedBlocks, VPBB, IRVPBB);
+      }
 
   return ExpandedSCEVs;
-}
-
-//===--------------------------------------------------------------------===//
-// EpilogueVectorizerEpilogueLoop
-//===--------------------------------------------------------------------===//
-
-/// This function creates a new scalar preheader, using the previous one as
-/// entry block to the epilogue VPlan. The minimum iteration check is being
-/// represented in VPlan.
-BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
-  BasicBlock *NewScalarPH = createScalarPreheader("vec.epilog.");
-  BasicBlock *OriginalScalarPH = NewScalarPH->getSinglePredecessor();
-  OriginalScalarPH->setName("vec.epilog.iter.check");
-  VPIRBasicBlock *NewEntry = Plan.createVPIRBasicBlock(OriginalScalarPH);
-  VPBasicBlock *OldEntry = Plan.getEntry();
-  for (auto &R : make_early_inc_range(*OldEntry)) {
-    // Skip moving VPIRInstructions (including VPIRPhis), which are unmovable by
-    // defining.
-    if (isa<VPIRInstruction>(&R))
-      continue;
-    R.moveBefore(*NewEntry, NewEntry->end());
-  }
-
-  VPBlockUtils::reassociateBlocks(OldEntry, NewEntry);
-
-  VecEpilogueIterationCountCheck = NewEntry;
-
-  // Model the skeleton from the main vector loop in the epilogue plan.
-  RUN_VPLAN_PASS(VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan,
-                 NewEntry);
-
-  return OriginalScalarPH;
 }
 
 bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
@@ -6134,16 +5857,9 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+  case Instruction::ExtractValue:
     return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
-  case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
-    auto *EVI = cast<ExtractValueInst>(I);
-    assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
-    unsigned Idx = EVI->getIndices()[0];
-    NewOps.push_back(Plan.getConstantInt(32, Idx));
-    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
-  }
   };
 }
 
@@ -6157,10 +5873,6 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
     return nullptr;
 
   const HistogramInfo *HI = *HistInfo;
-  // FIXME: Support other operations.
-  unsigned Opcode = HI->Update->getOpcode();
-  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-         "Histogram update operation must be an Add or Sub");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
@@ -6173,8 +5885,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
-                               VPI->getDebugLoc());
+  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+                               cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -6293,15 +6005,18 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                        VPI->getOpcode()) &&
          "Should have been handled prior to this!");
 
-  // We can only replicate an extractvalue if its operand generates per lane in
-  // the same block, otherwise we would need to extract a lane from its struct
-  // operand which is invalid.
+  // An extractvalue takes the shape of its operand: we cannot extract a lane
+  // from a widened struct, nor build a struct from replicated lanes.
   if (VPI->getOpcode() == Instruction::ExtractValue &&
       !vputils::isSingleScalar(VPI->getOperand(0)))
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
-      if (!vputils::doesGeneratePerAllLanes(OpR) ||
-          OpR->getParent() != VPI->getParent())
+      if (!vputils::doesGeneratePerAllLanes(OpR))
         return tryToWiden(VPI);
+  if (VPI->getOpcode() == Instruction::ExtractValue)
+    return new VPReplicateRecipe(Instr, VPI->operandsWithoutMask(),
+                                 vputils::isSingleScalar(VPI->getOperand(0)),
+                                 /*Mask=*/nullptr, *VPI, *VPI,
+                                 VPI->getDebugLoc());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -6386,7 +6101,8 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
 }
 #endif
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
+VPlanPtr
+LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
   // Set up loop versioning for inner loops with memory runtime checks.
@@ -6419,7 +6135,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   if (IsInnerLoop) {
     RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
-    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
+    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, PlanCM) &&
            "execution frequencies do not match the loop's block frequencies");
   }
 
@@ -6437,16 +6153,28 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
 
+  // Without -vplan-outer-loop-legality-checks, trust the explicit vectorization
+  // pragma that vectorizing the outer loop is safe.
+  if (!IsInnerLoop && Opts.vplan_outer_loop_legality_checks &&
+      !proveOuterLoopMemorySafety(*VPlan0, PSE, *Legal->getAA(), VPDT,
+                                  OrigLoop)) {
+    reportVectorizationFailure(
+        "Cannot prove outer loop memory accesses safe",
+        "cannot prove memory accesses in outer loop are safe to vectorize",
+        "CantProveOuterLoopMemSafety", ORE, OrigLoop);
+    return nullptr;
+  }
+
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
   bool OptForSize =
       !ForceVectorization &&
-      (CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+      (PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
+       PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
   unsigned SCEVCheckThreshold = ForceVectorization
-                                    ? PragmaVectorizeSCEVCheckThreshold
-                                    : VectorizeSCEVCheckThreshold;
+                                    ? Opts.pragma_vectorize_scev_check_threshold
+                                    : Opts.vectorize_scev_check_threshold;
   if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
                       OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
     return nullptr;
@@ -6455,19 +6183,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
-  // TODO: Remove this once we can properly check the VPlan itself for both
-  //       the presence of an uncountable exit and the presence of stores in
-  //       the loop inside handleUncountableEarlyExits itself.
+  // TODO: Remove this once we can properly check the VPlan itself for the
+  //       presence of an uncountable exit.
   if (Legal->hasUncountableEarlyExit()) {
     if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
                         OrigLoop))
       return nullptr;
 
     // TODO: Check target preference for style.
-    UncountableExitStyle EEStyle =
-        Legal->hasUncountableExitWithSideEffects()
-            ? UncountableExitStyle::MaskedHandleExitInScalarLoop
-            : UncountableExitStyle::ReadOnly;
+    UncountableExitStyle EEStyle = UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
                         EEStyle)) {
@@ -6479,7 +6203,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
-  if (CM->foldTailByMasking())
+  if (PlanCM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
@@ -6488,15 +6212,16 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 }
 
 void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
-                                           ElementCount MaxVF) {
+                                           ElementCount MaxVF,
+                                           LoopVectorizationCostModel &PlanCM) {
   if (ElementCount::isKnownGT(MinVF, MaxVF))
     return;
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    auto Plan =
-        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan1.duplicate()), SubRange);
+    auto Plan = tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan1.duplicate()),
+                                SubRange, PlanCM);
     VF = SubRange.End;
 
     if (!Plan)
@@ -6509,7 +6234,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
-    if (CM->foldTailWithEVL()) {
+    if (PlanCM.foldTailWithEVL()) {
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
@@ -6519,7 +6244,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
             RUN_VPLAN_PASS(VPlanTransforms::narrowInterleaveGroups, *Plan, TTI))
       VPlans.push_back(std::move(P));
 
-    TailFoldingStyle Style = CM->getTailFoldingStyle();
+    TailFoldingStyle Style = PlanCM.getTailFoldingStyle();
     RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMask, *Plan,
                    useActiveLaneMask(Style),
                    useActiveLaneMaskForControlFlow(Style));
@@ -6530,8 +6255,9 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
   }
 }
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
-                                                   VFRange &Range) {
+VPlanPtr
+LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
+                                          LoopVectorizationCostModel &PlanCM) {
 
   // For outer loops, the plan only needs basic recipe conversion and induction
   // live-out optimization; the full inner-loop recipe building below does not
@@ -6557,8 +6283,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   bool RequiresScalarEpilogueCheck =
       LoopVectorizationPlanner::getDecisionAndClampRange(
-          [this](ElementCount VF) {
-            return !CM->requiresScalarEpilogue(VF.isVector());
+          [&PlanCM](ElementCount VF) {
+            return !PlanCM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
   // Update the branch in the middle block if a scalar epilogue is required.
@@ -6576,9 +6302,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // TODO: Consider using getDecisionAndClampRange here to split up VPlans.
   bool IVUpdateMayOverflow = false;
   for (ElementCount VF : Range)
-    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(CM.get(), VF);
+    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(Opts, &PlanCM, VF);
 
-  TailFoldingStyle Style = CM->getTailFoldingStyle();
+  TailFoldingStyle Style = PlanCM.getTailFoldingStyle();
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
   // that the canonical induction increment will not overflow as the vector trip
@@ -6604,10 +6330,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Range, add it to the set of groups to be later applied to the VPlan and add
   // placeholders for its members' Recipes which we'll be replacing with a
   // single VPInterleaveRecipe.
-  for (InterleaveGroup<Instruction> *IG : IAI.getInterleaveGroups()) {
-    auto ApplyIG = [IG, this](ElementCount VF) -> bool {
+  for (InterleaveGroup<Instruction> *IG :
+       PlanCM.InterleaveInfo.getInterleaveGroups()) {
+    auto ApplyIG = [IG, &PlanCM](ElementCount VF) -> bool {
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
-                     CM->getWideningDecision(IG->getInsertPos(), VF) ==
+                     PlanCM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
       // For scalable vectors, the interleave factors must be <= 8 since we
       // require the (de)interleaveN intrinsics instead of shufflevectors.
@@ -6624,12 +6351,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, Legal, *CM, Builder);
+  VPRecipeBuilder RecipeBuilder(*Plan, Legal, PlanCM, Builder);
 
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
                  Range.Start);
 
-  VPCostContext CostCtx(*TLI, *Plan, *CM, Config);
+  VPCostContext CostCtx(*TLI, *Plan, PlanCM, Config);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
@@ -6667,7 +6394,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // Only VPInstrutions with an underlying value need to be processed.
+      // Only VPInstructions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())
         continue;
 
@@ -6702,7 +6429,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
 
-  addReductionResultComputation(Plan, Range.Start);
+  addReductionResultComputation(Plan, Range.Start, PlanCM);
 
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
@@ -6738,7 +6465,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM->isEpilogueAllowed());
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
@@ -6755,7 +6482,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan);
 
-  if (CM->maskPartialAliasing())
+  if (PlanCM.maskPartialAliasing())
     RUN_VPLAN_PASS(VPlanTransforms::attachAliasMaskToHeaderMask, *Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
@@ -6763,7 +6490,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 }
 
 void LoopVectorizationPlanner::addReductionResultComputation(
-    VPlanPtr &Plan, ElementCount MinVF) {
+    VPlanPtr &Plan, ElementCount MinVF, LoopVectorizationCostModel &PlanCM) {
   using namespace VPlanPatternMatch;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
@@ -6806,7 +6533,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
     // Remove the predicated select if the target doesn't want it.
     VPValue *V;
-    if (!CM->usePredicatedReductionSelect(
+    if (!PlanCM.usePredicatedReductionSelect(
             RecurrenceKind, PhiR->hasUsesOutsideReductionChain()) &&
         match(PhiR->getBackedgeValue(),
               m_Select(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
@@ -6982,7 +6709,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
-    VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
+    VPlan &Plan, GeneratedRTChecks &RTChecks, ElementCount VF, unsigned UF,
+    bool HasBranchWeights) const {
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
   if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessors(0)) {
     assert((!Config.OptForSize ||
@@ -6995,7 +6723,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
-    assert((!EnableVPlanNativePath || !Plan.isOuterLoop()) &&
+    assert((!Opts.enable_vplan_native_path || !Plan.isOuterLoop()) &&
            "Runtime checks are not supported for outer loops yet");
 
     if (Config.OptForSize) {
@@ -7013,25 +6741,17 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
-    auto IsUnsupported = IsaPred<SCEVAddRecExpr>;
-    // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
-    // hoist bounds out of an enclosing loop.
+    // The VPlan expander cannot hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    if (RtPtrChecking.getDiffChecks() || OrigLoop->getParentLoop() ||
-        any_of(RtPtrChecking.CheckingGroups,
-               [&](const RuntimeCheckingPtrGroup &CG) {
-                 return SCEVExprContains(CG.Low, IsUnsupported) ||
-                        SCEVExprContains(CG.High, IsUnsupported);
-               }))
+    if (OrigLoop->getParentLoop())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
                             MemCheckCond, MemCheckBlock, HasBranchWeights);
 
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
-    RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan,
-                   RtPtrChecking.getChecks(), *PSE.getSE(),
-                   OrigLoop->getStartLoc(), HasBranchWeights);
+    RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
+                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
+                   HasBranchWeights);
   }
 }
 
@@ -7057,9 +6777,10 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // epilogue lowering for the tail-folded epilogue path will be handled
 // separately in getEpilogueTailLowering.
 static EpilogueLowering
-getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
-                    bool OptForSize, TargetTransformInfo *TTI,
-                    TargetLibraryInfo *TLI, LoopVectorizationLegality &LVL,
+getEpilogueLowering(const VectorizeOptions &Opts, Function *F, Loop *L,
+                    LoopVectorizeHints &Hints, bool OptForSize,
+                    TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                    LoopVectorizationLegality &LVL,
                     InterleavedAccessInfo *IAI) {
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request an epilogue.
@@ -7068,8 +6789,8 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
     return CM_EpilogueNotAllowedOptSize;
 
   // 2) If set, obey the directives
-  if (TailFoldingPolicy.getNumOccurrences()) {
-    switch (TailFoldingPolicy) {
+  if (Opts.tail_folding_policy) {
+    switch (*Opts.tail_folding_policy) {
     case TailFoldingPolicyTy::None:
       return CM_EpilogueAllowed;
     case TailFoldingPolicyTy::PreferFoldTail:
@@ -7267,7 +6988,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
 
   // Skip vectorization if the expected trip count is less than the minimum
   // required trip count.
-  if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
+  if (auto ExpectedTC = getSmallBestKnownTC(CostCtx.Opts, PSE, L)) {
     if (ElementCount::isKnownLT(*ExpectedTC, VF.MinProfitableTripCount)) {
       LLVM_DEBUG(dbgs() << "LV: Vectorization is not beneficial: expected "
                            "trip count < minimum profitable VF ("
@@ -7281,14 +7002,11 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
 }
 
 LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
-    : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced ||
-                               !EnableLoopInterleaving),
-      VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced ||
-                              !EnableLoopVectorization) {}
+    : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced),
+      VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced) {}
 
 /// ResumeForEpilogue markers in the main plan, used by the epilogue plan.
 struct MainPlanResumeMarkers {
-  VPInstruction *CanIVResume;
   VPInstruction *VectorTC;
   SmallVector<VPInstruction *> ResumeValues;
 };
@@ -7330,59 +7048,38 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
 
-  // If there is a suitable resume value for the canonical induction in the
-  // scalar (which will become vector) epilogue loop, use it and move it to the
-  // beginning of the scalar preheader. Otherwise create it below.
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  auto ResumePhiIter =
-      find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
-                                                           m_ZeroInt()));
-      });
-  VPPhi *ResumePhi = nullptr;
-  if (ResumePhiIter == MainScalarPH->phis().end()) {
-    assert(MainPlan.getVectorLoopRegion()->getCanonicalIV() &&
-           "canonical IV must exist");
-    Type *Ty = VectorTC->getScalarType();
-    VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
-    ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
-  } else {
-    ResumePhi = cast<VPPhi>(&*ResumePhiIter);
-    ResumePhi->setName("vec.epilog.resume.val");
-    if (&MainScalarPH->front() != ResumePhi)
-      ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
-  }
-
-  // Create a ResumeForEpilogue for the canonical IV resume and its bypass value
-  // as the first non-phi, to keep them alive for the epilogue.
-  VPBuilder ResumeBuilder(MainScalarPH);
-  VPInstruction *CanIVResume = ResumeBuilder.createNaryOp(
-      VPInstruction::ResumeForEpilogue, {ResumePhi, ResumePhi->getOperand(1)});
-
-  // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis and their bypass values in the scalar header of the main plan and
-  // return them so they can be used as resume values when vectorizing the
-  // epilogue.
+  // Replace the resume phis of the VPIRPhis in the scalar header of the main
+  // plan by ResumeForEpilogue instructions for their incoming values and return
+  // them so they can be used as resume values when vectorizing the epilogue.
+  // The epilogue plan creates the resume phis after the main plan executed.
+  VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
+  MiddleBuilder.setInsertPoint(
+      MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
   auto ResumeValues = to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
-        assert(isa<VPIRPhi>(R) &&
-               "only VPIRPhis expected in the scalar header");
-        VPValue *MainResumePhi = R.getOperand(0);
-        VPValue *Bypass = MainResumePhi->getDefiningRecipe()->getOperand(1);
-        return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
-                                          {MainResumePhi, Bypass});
+        auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
+        assert(ResumePhi->getNumIncoming() == 2 &&
+               ResumePhi->getIncomingBlock(0) == MiddleVPBB &&
+               "expected resume phi merging middle block and bypass value");
+        return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
+                                          ResumePhi->operands());
       }));
-  return {CanIVResume, VectorTCMarker, std::move(ResumeValues)};
+  for (VPRecipeBase &R :
+       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
+    auto *ResumePhi = cast<VPPhi>(&R);
+    ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
+    ResumePhi->eraseFromParent();
+  }
+  return {VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void preparePlanForEpilogueVectorLoop(
-    VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
+    VPlan &MainPlan, VPlan &Plan, const SCEV2ValueTy &ExpandedSCEVs,
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
-    LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
-    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
+    VFSelectionContext &Config, ScalarEvolution &SE,
+    const MainPlanResumeMarkers &Markers, VPBasicBlock *MainCheck) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
@@ -7390,41 +7087,78 @@ static void preparePlanForEpilogueVectorLoop(
   for (auto [HeaderPhi, ResumeForEpi] :
        zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
     IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
+  VPIRBasicBlock *EpilogueCheck = RUN_VPLAN_PASS(
+      VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan, MainCheck);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
+
+  // When skipping the epilogue vector loop, the scalar loop resumes at the
+  // values computed by the main vector loop.
+  for (auto [R, ResumeForEpi] :
+       zip_equal(Plan.getScalarHeader()->phis(), Markers.ResumeValues))
+    cast<VPPhi>(R.getOperand(0))
+        ->setIncomingValueForBlock(
+            EpilogueCheck,
+            Plan.getOrAddLiveIn(ResumeForEpi->getUnderlyingValue()));
+
+  VPBasicBlock *VectorPH = Plan.getVectorPreheader();
+  assert(VectorPH->getNumPredecessors() == 2 &&
+         VectorPH->getPredecessors()[0] == EpilogueCheck &&
+         "vector preheader must be entered from the epilogue check first");
+  // Returns the value to resume at for \p ResumeForEpi: a phi in the vector
+  // preheader merging the value computed by the main vector loop with the
+  // value used when the main vector loop has been bypassed, or the former if
+  // both are equal.
+  auto GetResumeValue = [&](VPInstruction *ResumeForEpi,
+                            const Twine &Name) -> VPValue * {
+    VPValue *MainV = Plan.getOrAddLiveIn(ResumeForEpi->getUnderlyingValue());
+    VPValue *BypassV =
+        Plan.getOrAddLiveIn(ResumeForEpi->getOperand(1)->getUnderlyingValue());
+    if (MainV == BypassV)
+      return MainV;
+    return VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+        .createScalarPhi({MainV, BypassV}, {}, Name);
+  };
 
   VPValue *IV = VectorLoop->getCanonicalIV();
   // When vectorizing the epilogue loop, the canonical induction needs to start
   // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. Add this resume value as an
   // offset to the canonical IV of the epilogue loop.
-  VPValue *VPV = Plan.getOrAddLiveIn(Markers.CanIVResume->getUnderlyingValue());
+  VPValue *VPV = GetResumeValue(Markers.VectorTC, "vec.epilog.resume.val");
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
                   if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
                     return true;
-                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
-                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
+                  auto *VPI = dyn_cast<VPInstruction>(U);
+                  if (!VPI)
+                    return false;
+                  // Only users linear in the canonical IV (e.g. scaling it by
+                  // a stride) stay correct when offsetting it below; others,
+                  // like header masks, may need an epilogue-relative IV.
+                  return Instruction::isCast(VPI->getOpcode()) ||
+                         is_contained({Instruction::Add, Instruction::Mul,
+                                       Instruction::Shl},
+                                      VPI->getOpcode());
                 }) &&
-         "the canonical IV should only be used by its increment or "
-         "ScalarIVSteps when resetting the start value");
+         "the canonical IV should only be used by its increment, casts, "
+         "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
+         "value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
   // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
-  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U) {
-    return &U != Add && &U != Increment;
-  });
+  IV->replaceUsesWithIf(
+      Add, [Add, Increment](VPUser *U) { return U != Add && U != Increment; });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
 
   // Resume values must be created in the vector preheader.
-  VPBasicBlock *VectorPH = Plan.getVectorPreheader();
   VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
 
   // Ensure that the start values for all header phi recipes are updated before
@@ -7457,7 +7191,7 @@ static void preparePlanForEpilogueVectorLoop(
       });
 
       RecurKind RK = ReductionPhi->getRecurrenceKind();
-      ResumeVPV = Plan.getOrAddLiveIn(ResumeForEpi->getUnderlyingValue());
+      ResumeVPV = GetResumeValue(ResumeForEpi, "bc.merge.rdx");
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
         VPValue *BypassOp = ResumeForEpi->getOperand(1);
         assert((isa<VPIRValue>(BypassOp) ||
@@ -7524,26 +7258,29 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
-        } else
-          VPI->setOperand(0, ResumeVPV);
+        } else {
+          // The start vector may be shared by multiple reductions, so create
+          // a new one using the resume.
+          auto *NewStart = cast<VPInstruction>(VPI->clone());
+          NewStart->setOperand(0, ResumeVPV);
+          NewStart->insertBefore(VPI);
+          ReductionPhi->setStartValue(NewStart);
+        }
         continue;
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
       PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
-      ResumeVPV = Plan.getOrAddLiveIn(
-          IRPhiToResumeForEpi.at(IndPhi)->getUnderlyingValue());
+      ResumeVPV =
+          GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
     }
     assert(ResumeVPV && "Must have a resume value");
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
   }
 
-  // Re-use the trip count and steps expanded for the main loop, as skeleton
-  // creation needs it as a value that dominates both the scalar and vector
-  // epilogue loops.
-  // TODO: This is a workaround needed for epilogue vectorization and it
-  // should be removed once induction resume value creation is done
-  // directly in VPlan.
+  // Re-use the SCEVs expanded for the main loop instead of expanding them
+  // again, which also lets simplifyLiveInsWithSCEV fold their users.
+  // TODO: Remove once the epilogue plan uses the main plan's VPValues directly.
   for (VPExpandSCEVRecipe &ExpandR : make_early_inc_range(
            make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry()))) {
     assert(ExpandedSCEVs.contains(ExpandR.getSCEV()) &&
@@ -7565,88 +7302,17 @@ static void preparePlanForEpilogueVectorLoop(
                  EpilogueLoopStep, SE);
 }
 
-static void
-fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, VPlan &BestEpiPlan,
-                                ArrayRef<VPInstruction *> ResumeValues) {
-  auto *ScalarPH = cast<VPIRBasicBlock>(BestEpiPlan.getScalarPreheader());
-  BasicBlock *PH = ScalarPH->getIRBasicBlock();
-  if (ScalarPH->hasPredecessors()) {
-    // Fix resume values for inductions and reductions from the additional
-    // bypass block using the incoming values from the main loop's resume phis.
-    // ResumeValues correspond 1:1 with the scalar loop header phis.
-    for (auto [ResumeV, HeaderPhi] :
-         zip(ResumeValues, BestEpiPlan.getScalarHeader()->phis())) {
-      auto *HeaderPhiR = cast<VPIRPhi>(&HeaderPhi);
-      auto *EpiResumePhi =
-          cast<PHINode>(HeaderPhiR->getIRPhi().getIncomingValueForBlock(PH));
-      if (EpiResumePhi->getBasicBlockIndex(BypassBlock) == -1)
-        continue;
-      auto *MainResumePhi = cast<PHINode>(ResumeV->getUnderlyingValue());
-      EpiResumePhi->setIncomingValueForBlock(
-          BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
-    }
-  }
-}
-
-/// Connect the epilogue vector loop generated for \p EpiPlan to the main vector
-/// loop, after both plans have executed, updating the branch from the iteration
-/// count check of the main loop, as well as updating various phis.
-static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
-                                      VPIRBasicBlock *VecEpilogueIterCheckVPBB,
-                                      ArrayRef<VPInstruction *> ResumeValues) {
-  ArrayRef<VPBlockBase *> Preds = VecEpilogueIterCheckVPBB->getPredecessors();
-  BasicBlock *MainLoopIterationCountCheck =
-      cast<VPIRBasicBlock>(Preds.front())->getIRBasicBlock();
-  BasicBlock *VecEpilogueIterationCountCheck =
-      VecEpilogueIterCheckVPBB->getIRBasicBlock();
-  BasicBlock *VecEpiloguePreHeader =
-      cast<CondBrInst>(VecEpilogueIterationCountCheck->getTerminator())
-          ->getSuccessor(1);
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-
-  MainLoopIterationCountCheck->getTerminator()->replaceSuccessorWith(
-      VecEpilogueIterationCountCheck, VecEpiloguePreHeader);
-  DTU.applyUpdates({{DominatorTree::Delete, MainLoopIterationCountCheck,
-                     VecEpilogueIterationCountCheck},
-                    {DominatorTree::Insert, MainLoopIterationCountCheck,
-                     VecEpiloguePreHeader}});
-
-  // The vec.epilog.iter.check block may contain Phi nodes from inductions
-  // or reductions which merge control-flow from the latch block and the
-  // middle block. Update the incoming values here and move the Phi into the
-  // preheader.
-  SmallVector<PHINode *, 4> PhisInBlock(
-      llvm::make_pointer_range(VecEpilogueIterationCountCheck->phis()));
-
-  for (PHINode *Phi : PhisInBlock) {
-    Phi->moveBefore(VecEpiloguePreHeader->getFirstNonPHIIt());
-    Phi->replaceIncomingBlockWith(
-        VecEpilogueIterationCountCheck->getSinglePredecessor(),
-        VecEpilogueIterationCountCheck);
-  }
-
-  // VecEpilogueIterationCountCheck conditionally skips over the epilogue loop
-  // after executing the main loop. We need to update the resume values of
-  // inductions and reductions during epilogue vectorization.
-  fixScalarResumeValuesFromBypass(VecEpilogueIterationCountCheck, EpiPlan,
-                                  ResumeValues);
-
-  // Remove dead phis that were moved to the epilogue preheader but are unused
-  // (e.g., resume phis for inductions not widened in the epilogue vector loop).
-  for (PHINode &Phi : make_early_inc_range(VecEpiloguePreHeader->phis()))
-    if (Phi.use_empty())
-      Phi.eraseFromParent();
-}
-
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert((EnableVPlanNativePath || L->isInnermost()) &&
+  const VectorizeOptions &Opts = getVectorizeOptions(*L);
+  assert((Opts.enable_vplan_native_path || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
   LLVM_DEBUG(dbgs() << "\nLV: Checking a loop in '"
                     << L->getHeader()->getParent()->getName() << "' from "
                     << L->getLocStr() << "\n");
 
-  LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE, TTI);
+  LoopVectorizeHints Hints(
+      Opts, L, InterleaveOnlyWhenForced || !Opts.interleave_loops, *ORE, TTI);
 
   LLVM_DEBUG(
       dbgs() << "LV: Loop hints:"
@@ -7670,7 +7336,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // less verbose reporting vectorized loops and unvectorized loops that may
   // benefit from vectorization, respectively.
 
-  if (!Hints.allowVectorization(F, L, VectorizeOnlyWhenForced)) {
+  if (!Hints.allowVectorization(
+          F, L, VectorizeOnlyWhenForced || !Opts.vectorize_loops)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
     return false;
   }
@@ -7686,10 +7353,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
+  LoopVectorizationLegality LVL(Opts, L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
-  if (!LVL.canVectorize(EnableVPlanNativePath)) {
+  if (!LVL.canVectorize(Opts.enable_vplan_native_path)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
     return false;
@@ -7704,14 +7371,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (LVL.hasUncountableEarlyExit()) {
-    if (!EnableEarlyExitVectorization) {
+    if (!Opts.enable_early_exit_vectorization) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit is not enabled",
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
     if (LVL.hasUncountableExitWithSideEffects() &&
-        !EnableEarlyExitVectorizationWithSideEffects) {
+        !Opts.enable_early_exit_vectorization_with_side_effects) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit and side effects is not enabled",
                                  "UncountableEarlyExitSideEffectLoopsDisabled",
@@ -7721,16 +7388,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI(), OptForSize);
-  bool UseInterleaved =
-      IsInnerLoop && TTI->enableInterleavedAccessVectorization();
-
   // If an override option has been passed in for interleaved accesses, use it.
-  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
-    UseInterleaved = IsInnerLoop && EnableInterleavedMemAccesses;
+  bool UseInterleaved =
+      IsInnerLoop && valueOr(Opts.enable_interleaved_mem_accesses,
+                             TTI->enableInterleavedAccessVectorization());
 
   // Analyze interleaved memory accesses.
   if (UseInterleaved)
-    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
+    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(Opts, *TTI));
 
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
@@ -7746,13 +7411,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check the function attributes and profiles to find out if this function
   // should be optimized for size.
   EpilogueLowering SEL =
-      getEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, LVL, &IAI);
+      getEpilogueLowering(Opts, F, L, Hints, OptForSize, TTI, TLI, LVL, &IAI);
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
-  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
+  auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, L);
   if (ExpectedTC && ExpectedTC->isFixed() &&
-      ExpectedTC->getFixedValue() < TinyTripCountVectorThreshold) {
+      ExpectedTC->getFixedValue() < Opts.vectorizer_min_trip_count) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
                       << "iteration overheads are incurred.");
@@ -7799,12 +7464,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  bool AllowOrderedReductions;
   // If the flag is set, use that instead and override the TTI behaviour.
-  if (ForceOrderedReductions.getNumOccurrences() > 0)
-    AllowOrderedReductions = ForceOrderedReductions;
-  else
-    AllowOrderedReductions = TTI->enableOrderedReductions();
+  bool AllowOrderedReductions =
+      valueOr(Opts.force_ordered_reductions, TTI->enableOrderedReductions());
   if (!LVL.canVectorizeFPMath(AllowOrderedReductions)) {
     ORE->emit([&]() {
       auto *ExactFPMathInst = Requirements.getExactFPInst();
@@ -7821,17 +7483,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   // Use the cost model.
-  VFSelectionContext Config(*TTI, &LVL, L, *F, PSE, DB, ORE, &Hints,
+  VFSelectionContext Config(Opts, *TTI, &LVL, L, *F, PSE, DB, ORE, &Hints,
                             OptForSize);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(
       L, LI, DT, TLI, *TTI, &LVL,
       std::make_unique<LoopVectorizationCostModel>(
           SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE, GetBFI, F, IAI, Config),
-      Config, IAI, PSE, ORE, GetBPI);
+      Config, PSE, ORE, GetBPI);
 
-  EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(LVP.getCostModel(), L, ORE, LVL, Hints, TTI);
+  EpilogueLowering EpilogueTailLoweringStatus = getEpilogueTailLowering(
+      Opts, LVP.getCostModel(), L, ORE, LVL, Hints, TTI);
   if (EpilogueTailLoweringStatus ==
       EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.
@@ -7859,7 +7521,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // For VPlan build stress testing of outer loops, bail after plan
   // construction.
-  if (!IsInnerLoop && VPlanBuildOuterloopStressTest)
+  if (!IsInnerLoop && Opts.vplan_build_outerloop_stress_test)
     return false;
 
   if (IsInnerLoop && ORE->allowExtraAnalysis(LV_NAME))
@@ -7868,7 +7530,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   assert((IsInnerLoop || !LVP.getCostModel().maskPartialAliasing()) &&
          "Did not expect to alias-mask outer loop");
 
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, Config.CostKind,
+  GeneratedRTChecks Checks(Opts, PSE, DT, LI, TTI, Config.CostKind,
                            LVP.getCostModel().maskPartialAliasing());
   if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
@@ -8104,7 +7766,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
-    LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
+    LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
+                            HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
                    VF.Width, IC, BestMainPlan.requiresScalarEpilogue(), L,
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
@@ -8116,11 +7779,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << "Main Loop VF:" << VF.Width << ", Main Loop UF:" << IC
              << ", Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
-    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
-                                BestMainPlan);
+    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks);
+    // Keep track of the iteration count check of the main vector loop.
+    VPBasicBlock *MainBlocks[] = {cast<VPBasicBlock>(
+        BestMainPlan.getVectorPreheader()->getSinglePredecessor())};
     auto ExpandedSCEVs = LVP.executePlan(
         VF.Width, IC, BestMainPlan, MainILV, DT,
-        LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
+        LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop,
+        MainBlocks);
+    VPBasicBlock *MainCheck = MainBlocks[0];
     ++LoopsVectorized;
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "intermediate fn:\n" << *L->getHeader()->getParent() << "\n";
@@ -8129,15 +7796,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BasicBlock *EntryBB =
         cast<VPIRBasicBlock>(BestMainPlan.getEntry())->getIRBasicBlock();
     EntryBB->setName("iter.check");
+    cast<VPIRBasicBlock>(BestMainPlan.getScalarPreheader())
+        ->getIRBasicBlock()
+        ->setName("vec.epilog.iter.check");
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
-    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC,
-                                             EpilogueVF, /*UnrollFactor=*/1,
-                                             Checks, BestEpiPlan, BestMainPlan);
-    preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, L,
-                                     ExpandedSCEVs, VF.Width, IC, EpilogueVF,
-                                     LVP, Config, *PSE.getSE(), Markers);
+    InnerLoopVectorizer EpilogILV(L, PSE, LI, DT, TTI, AC, EpilogueVF,
+                                  /*UnrollFactor=*/1, Checks);
+    preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, ExpandedSCEVs,
+                                     VF.Width, IC, EpilogueVF, Config,
+                                     *PSE.getSE(), Markers, MainCheck);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
@@ -8149,16 +7818,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "final fn:\n" << *L->getHeader()->getParent() << "\n";
     });
-    connectEpilogueVectorLoop(BestEpiPlan, DT,
-                              EpilogILV.VecEpilogueIterationCountCheck,
-                              Markers.ResumeValues);
     ++LoopsEpilogueVectorized;
   } else {
-    InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
-                           BestPlan);
+    InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
-    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
+    LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)
       LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \"" << F->getName()
@@ -8167,8 +7832,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ++LoopsVectorized;
   }
 
+#ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
+#endif
 
   return true;
 }
@@ -8204,8 +7871,9 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // and can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
 
+  const VectorizeOptions &Opts = getVectorizeOptions(F);
   for (Loop *L : *LI)
-    collectSupportedLoops(*L, LI, ORE, Worklist);
+    collectSupportedLoops(Opts, *L, LI, ORE, Worklist);
 
   LoopsAnalyzed += Worklist.size();
 
@@ -8231,6 +7899,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
   // Verify once per function rather than once per processed loop, which would
   // make the pass quadratic in the number of loops.
+  assert((!Changed || DT->verify(DominatorTree::VerificationLevel::Fast)) &&
+         "DT not preserved correctly");
   assert((!Changed || !verifyFunction(F, &dbgs())) &&
          "Invalid IR produced by LoopVectorize");
 

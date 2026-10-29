@@ -23,7 +23,17 @@ import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Optional, Sequence, TextIO, Tuple, Union, cast
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Optional,
+    Sequence,
+    TextIO,
+    Tuple,
+    Union,
+    cast,
+)
 
 BINARY_VERSION = 2
 
@@ -403,7 +413,7 @@ def assemble_tokens(tokens: list[str]) -> bytes:
             emit(op_begin)
             emit(len(block))  # FIXME: uleb
             bytecode[-1].extend(block)
-        elif tok[0].isdigit():
+        elif tok[0].isdigit() or (tok[0] == "-" and tok[1:2].isdigit()):
             if tok[-1] == "u":
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
@@ -411,7 +421,7 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 # With the introduction of op_lit_integer, op_lit_int is no
                 # longer emitted by the assembler.
                 emit(op_lit_integer)
-                emit(int(tok))  # FIXME
+                bytecode[-1].extend(_to_sleb(int(tok)))
         elif tok[0] == "@":
             emit(op_lit_selector)
             emit(selector[tok])
@@ -487,8 +497,7 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_integer:
-            b = next_byte()
-            asm += str(b)
+            asm += str(_from_sleb(next_byte))
         elif b == op_lit_selector:
             b = next_byte()
             asm += selector[b]
@@ -522,16 +531,77 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
 ################################################################################
 
 
+# A replacement in an llvm::formatv format string, as supported by formatter
+# bytecode. Replacements are automatically indexed, so there is no index.
+_FMT_REPLACEMENT = r"""
+    \{
+    (?: , [^{}:]* )?  # optional layout, which may not contain "{", "}", or ":"
+    (?: : [^{}]* )?   # optional options, which may not contain "{" or "}"
+    \}
+"""
+
+# Tokens of an llvm::formatv format string, as supported by formatter bytecode.
+# Every character of a format string is part of exactly one token. The
+# replacement pattern is inserted with %, since the braces in the pattern would
+# each need to be escaped in an f-string.
+_FMT_TOKEN = re.compile(
+    r"""
+      \{\{      # escaped brace
+    | (?: %s )  # replacement
+    | \{        # invalid replacement
+    | [^{]+     # literal text
+    """
+    % _FMT_REPLACEMENT,
+    re.VERBOSE,
+)
+
+
+def _parse_fmt(fmt: str) -> list[Union[str, int]]:
+    """Parse an llvm::formatv format string into literals (str) and
+    replacement indexes (int). Adjacent literals are merged, so two items in a
+    row are never both literals.
+
+    As in version 2 of the bytecode, replacements are automatically indexed:
+
+        "{" [ "," layout ] [ ":" options ] "}"
+
+    Explicit indexes are not supported. Layouts and options are accepted, but
+    are not yet supported, and are ignored."""
+
+    items: list[Union[str, int]] = []
+    literal = ""
+    next_index = 0
+    for match in _FMT_TOKEN.finditer(fmt):
+        token = match.group()
+        if token == "{{":
+            literal += "{"
+        elif token == "{":
+            raise ValueError(
+                f"invalid replacement in format string at offset {match.start()}"
+            )
+        elif token.startswith("{"):
+            if literal:
+                items.append(literal)
+                literal = ""
+            items.append(next_index)
+            next_index += 1
+        else:
+            literal += token
+    if literal:
+        items.append(literal)
+    return items
+
+
 def count_fmt_params(fmt: str) -> int:
     """Count the number of parameters in a format string"""
-    from string import Formatter
+    return sum(isinstance(item, int) for item in _parse_fmt(fmt))
 
-    f = Formatter()
-    n = 0
-    for _, name, _, _ in f.parse(fmt):
-        if name > n:
-            n = name
-    return n
+
+def formatv(fmt: str, args: list) -> str:
+    """Format args with an llvm::formatv format string"""
+    return "".join(
+        item if isinstance(item, str) else str(args[item]) for item in _parse_fmt(fmt)
+    )
 
 
 def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False):
@@ -633,8 +703,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             b = next_byte()  # FIXME uleb
             data.append(int(b))
         elif b == op_lit_integer:
-            b = next_byte()  # FIXME sleb
-            data.append(int(b))
+            data.append(_from_sleb(next_byte))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -681,7 +750,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_xor:
             data.append(data.pop() ^ data.pop())
         elif b == op_not:
-            data.append(not data.pop())
+            data.append(~int(data.pop()))
         elif b == op_eq:
             data.append(data.pop() == data.pop())
         elif b == op_neq:
@@ -761,10 +830,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             elif sel == sel_fmt:
                 fmt = data.pop()
                 n = count_fmt_params(fmt)
-                args = []
-                for i in range(n):
-                    args.append(data.pop())
-                data.append(fmt.format(*args))
+                # The first argument is the deepest on the stack.
+                args = data[len(data) - n :]
+                del data[len(data) - n :]
+                data.append(formatv(fmt, args))
             else:
                 print("not implemented: " + selector[sel])
                 assert False
@@ -815,6 +884,20 @@ _BUILTINS = {
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
+_BINOPS = {
+    ast.Add: "+",
+    ast.Sub: "-",
+    ast.Mult: "*",
+    # The bytecode has only integer division, which truncates.
+    ast.FloorDiv: "/",
+    ast.Mod: "%",
+    ast.LShift: "<<",
+    ast.RShift: ">>",
+    ast.BitAnd: "&",
+    ast.BitOr: "|",
+    ast.BitXor: "^",
+}
+
 _COMPS = {
     ast.Eq: "=",
     ast.NotEq: "!=",
@@ -833,6 +916,12 @@ _METHOD_SIGS = {
     "get_child_at_index": "@get_child_at_index",
     "get_value": "@get_value",
 }
+
+
+def _string_literal(s: str) -> str:
+    """Quote a string as an assembly string literal."""
+    escaped = s.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 class CompilerError(Exception):
@@ -862,8 +951,9 @@ class Compiler(ast.NodeVisitor):
     [x] Return statements
     [x] String, integer, float, boolean, and None literals
     [x] Binary comparisons
-    [ ] Boolean operators
-    [ ] Math operations
+    [x] Unary operators (-, +, ~)
+    [x] Boolean operators (and, or, not)
+    [x] Math operations (+, -, *, //, %, <<, >>, &, |, ^)
 
     # Unsupported Features
 
@@ -1029,15 +1119,107 @@ class Compiler(ast.NodeVisitor):
             self.visit(node.value)
         self._output("return")
 
+    def visit_BoolOp(self, node: ast.BoolOp) -> None:
+        """
+        Compile `and` / `or` with short-circuit evaluation. The result is
+        normalized to 0 or 1 (rather than one of the operands, as in Python).
+
+            a and b  =>  a { b 0 != } { 0 } ifelse
+            a or b   =>  a { 1 } { b 0 != } ifelse
+        """
+        if isinstance(node.op, ast.And):
+            prefix = "{"
+            suffix = "} { 0 } ifelse"
+        elif isinstance(node.op, ast.Or):
+            prefix = "{ 1 } {"
+            suffix = "} ifelse"
+        else:
+            raise CompilerError(
+                f"unknown boolean operator: {type(node.op).__name__}", node
+            )
+
+        # Each operand but the last opens a nested ifelse, which is closed after
+        # the last operand.
+        *operands, last = node.values
+        for value in operands:
+            self.visit(value)
+            self._output(prefix)
+        self.visit(last)
+        self._output("0 !=")
+        for _ in operands:
+            self._output(suffix)
+
+    def visit_BinOp(self, node: ast.BinOp) -> None:
+        if op := _BINOPS.get(type(node.op)):
+            self.visit(node.left)
+            self.visit(node.right)
+            self._output(op)
+        else:
+            raise CompilerError(
+                f"unsupported binary operator: {type(node.op).__name__}", node
+            )
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+        operand = node.operand
+        if isinstance(node.op, ast.USub):
+            # Fold negative integer literals.
+            if (
+                isinstance(operand, ast.Constant)
+                and isinstance(operand.value, int)
+                and not isinstance(operand.value, bool)
+            ):
+                self._output(-operand.value)
+                return
+            self._output(0)
+            self.visit(operand)
+            self._output("-")
+        elif isinstance(node.op, ast.UAdd):
+            self.visit(operand)
+        elif isinstance(node.op, ast.Invert):
+            self.visit(operand)
+            self._output("~")
+        elif isinstance(node.op, ast.Not):
+            # Logical not; the bytecode `~` is a bitwise not.
+            self.visit(operand)
+            self._output("0 =")
+        else:
+            raise CompilerError("unsupported unary operator", node)
+
     def visit_Constant(self, node: ast.Constant) -> None:
         if isinstance(node.value, str):
-            self._output(f'"{node.value}"')
+            self._output(_string_literal(node.value))
         elif isinstance(node.value, bool):
             self._output(int(node.value))
         elif node.value is None:
             self._output("null")
         else:
             self._output(node.value)
+
+    def visit_JoinedStr(self, node: ast.JoinedStr) -> None:
+        """
+        f-strings are compiled to @fmt, which formats using llvm::formatv. The
+        formatted values are pushed in order, followed by the format string.
+        """
+
+        fmt = ""
+        for child in node.values:
+            if isinstance(child, ast.Constant):
+                string = str(child.value)
+                # formatv escapes a literal "{" as "{{". A "}" is a literal as is.
+                fmt += string.replace("{", "{{")
+            else:
+                self.visit(child)
+                fmt += "{}"
+
+        self._output(_string_literal(fmt))
+        self._output("@fmt call")
+
+    def visit_FormattedValue(self, node: ast.FormattedValue) -> None:
+        if node.conversion != -1:
+            raise CompilerError("unsupported format conversion", node)
+        if node.format_spec:
+            raise CompilerError("unsupported format spec", node)
+        self.visit(node.value)
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
@@ -1160,6 +1342,32 @@ def _to_uleb(value: int) -> bytes:
             break
 
     return bytes(result)
+
+
+def _to_sleb(value: int) -> bytes:
+    """Encode an integer to SLEB128 bytes."""
+    result = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        done = (value == 0 and not byte & 0x40) or (value == -1 and byte & 0x40)
+        result.append(byte if done else byte | 0x80)
+        if done:
+            return bytes(result)
+
+
+def _from_sleb(next_byte: Callable[[], int]) -> int:
+    """Decode a SLEB128 integer, fetching bytes with next_byte."""
+    result = 0
+    shift = 0
+    while True:
+        byte = next_byte()
+        result |= (byte & 0x7F) << shift
+        shift += 7
+        if not (byte & 0x80):
+            if byte & 0x40:
+                result -= 1 << shift
+            return result
 
 
 def _from_uleb(stream: BinaryIO) -> int:
@@ -1285,6 +1493,7 @@ if __name__ == "__main__":
     ############################################################################
     # Tests.
     ############################################################################
+    import itertools
     import tempfile
     import unittest
 
@@ -1318,6 +1527,52 @@ if __name__ == "__main__":
             self.assertEqual(
                 interpret(assemble('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
             )
+
+        def test_fmt(self):
+            def fmt(asm):
+                return interpret(assemble(f"{asm} @fmt call"), [], [])
+
+            # Arguments are in stack order, the first is the deepest.
+            self.assertEqual(fmt('1 2 "{}-{}"'), "1-2")
+            self.assertEqual(fmt('"no args"'), "no args")
+            # Like llvm::formatv, "{{" is a literal "{", and "}" is a literal.
+            self.assertEqual(fmt('1 "{{{}}"'), "{1}")
+            self.assertEqual(count_fmt_params("{} {}"), 2)
+            self.assertEqual(count_fmt_params("{{}"), 0)
+            self.assertEqual(formatv("{}{}", ["a", "b"]), "ab")
+            self.assertEqual(formatv("{{{}}", [1]), "{1}")
+            # A "}" outside of a replacement is always a literal, even if it
+            # follows a replacement, or another "}". Unlike "{{", "}}" is not an
+            # escape. This differs from Python's str.format.
+            self.assertEqual(formatv("}", []), "}")
+            self.assertEqual(formatv("{}}", ["A"]), "A}")
+            self.assertEqual(formatv("}}", []), "}}")
+
+            # Adjacent literals, including escaped braces, are merged.
+            self.assertEqual(_parse_fmt(""), [])
+            self.assertEqual(_parse_fmt("abc"), ["abc"])
+            self.assertEqual(_parse_fmt("a{{b}c"), ["a{b}c"])
+            self.assertEqual(_parse_fmt("{}"), [0])
+            self.assertEqual(
+                _parse_fmt("x={}, {{y}}={}!"), ["x=", 0, ", {y}}=", 1, "!"]
+            )
+            self.assertEqual(_parse_fmt("{}{}"), [0, 1])
+            self.assertEqual(_parse_fmt("}"), ["}"])
+            self.assertEqual(_parse_fmt("{}}"), [0, "}"])
+
+            # Layouts and options are accepted, but ignored.
+            self.assertEqual(formatv("[{,8}]", ["ab"]), "[ab]")
+            self.assertEqual(formatv("[{,*=8:x}]", ["ab"]), "[ab]")
+            self.assertEqual(formatv("[{:a:b,c}]", ["ab"]), "[ab]")
+            self.assertEqual(_parse_fmt("{}{,8}{:x}"), [0, 1, 2])
+
+            # Explicit indexes and malformed replacements are errors.
+            bad = ["{0}", "ab{1,8}", "{x}", "{", "{{{", "{,8", "{:x", "{,a{}", "{:a{}"]
+            for fmt_string in bad:
+                with self.assertRaisesRegex(ValueError, "invalid replacement"):
+                    _parse_fmt(fmt_string)
+            with self.assertRaisesRegex(ValueError, "at offset 2"):
+                _parse_fmt("ab{1,8}")
 
         def test_assemble_file(self):
             def run_assemble(type_name, asm):
@@ -1503,6 +1758,117 @@ if __name__ == "__main__":
             self.assertEqual(interpret(methods["update"], [], [self_dict]), 0)
             self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 3)
 
+        def test_unary(self):
+            methods = self.compile_methods(
+                """
+                class Synthetic:
+                    def get_child_index(self, name):
+                        return -1
+
+                    def num_children(self):
+                        return -(-5) + ~0 + +1
+                """
+            )
+            self.assertEqual(interpret(methods["get_child_index"], [], [{}, "x"]), -1)
+            self.assertEqual(interpret(methods["get_num_children"], [], [{}]), 5)
+
+        def test_boolean(self):
+            def run(expr, *args, valobj=None):
+                methods = self.compile_methods(
+                    f"""
+                    class Synthetic:
+                        def get_child_index(self, a, b, c):
+                            return {expr}
+                    """
+                )
+                data = [{"valobj": valobj}, *args]
+                return interpret(methods["get_child_index"], [], data)
+
+            # The result is normalized to 0 or 1, unlike Python's operands.
+            exprs = [
+                "a and b",
+                "a or b",
+                "not a",
+                "a and b and c",
+                "a or b or c",
+                "a and b or c",
+                "a or b and c",
+                "not (a or b)",
+                "a > 0 and b > 0 or a == 5",
+            ]
+            for a, b, c in itertools.product((0, 1, 2, 5), repeat=3):
+                for expr in exprs:
+                    self.assertEqual(
+                        run(expr, a, b, c), int(bool(eval(expr))), (expr, a, b, c)
+                    )
+
+            # The bytecode `~` is bitwise, `not` is logical.
+            self.assertEqual(run("not a", 1, 0, 0), 0)
+            self.assertEqual(run("~a", 1, 0, 0), -2)
+
+            # The right operand is not evaluated if the left decides the result.
+            # A valobj of None would raise if it were evaluated.
+            self.assertEqual(run("a and self.valobj.GetValueAsUnsigned()", 0, 0, 0), 0)
+            self.assertEqual(run("a or self.valobj.GetValueAsUnsigned()", 1, 0, 0), 1)
+            with self.assertRaises(AttributeError):
+                run("a and self.valobj.GetValueAsUnsigned()", 1, 0, 0)
+
+        def test_fstring(self):
+            def compile_fstring(expr):
+                methods = self.compile_methods(
+                    f"""
+                    class Synthetic:
+                        def get_child_index(self, name):
+                            return {expr}
+                    """
+                )
+                return methods["get_child_index"]
+
+            def run(expr, name="x", valobj=None):
+                self_dict = {"valobj": valobj or self.FakeValue(42)}
+                return interpret(compile_fstring(expr), [], [self_dict, name])
+
+            # Only the formatted values are pushed, followed by the format string.
+            self.assertEqual(
+                compile_fstring('f"a{name}b"'),
+                assemble('1 pick "a{}b" @fmt call return'),
+            )
+            self.assertEqual(run('f"a{name}b"'), "axb")
+
+            # Multiple values, including attributes and selector calls.
+            self.assertEqual(
+                run('f"{name}: {self.valobj.GetValueAsUnsigned()}"'), "x: 42"
+            )
+            self.assertEqual(run('f"{name}{name}"'), "xx")
+
+            # An f-string without replacements.
+            self.assertEqual(run('f"plain"'), "plain")
+
+            # Literal braces are escaped for formatv.
+            self.assertEqual(
+                compile_fstring('f"{{{name}}}"'),
+                assemble('1 pick "{{{}}" @fmt call return'),
+            )
+            self.assertEqual(run('f"{{{name}}}"'), "{x}")
+            # The f-string escape "}}" is a literal "}", which formatv
+            # doesn't escape.
+            self.assertEqual(
+                compile_fstring('f"{name}}}"'),
+                assemble('1 pick "{}}" @fmt call return'),
+            )
+            self.assertEqual(run('f"{name}}}"'), "x}")
+            self.assertEqual(run('f"}}"'), "}")
+
+            # Quotes and backslashes are escaped in the assembly.
+            self.assertEqual(run(r"""f'"{name}"\\'"""), '"x"\\')
+            self.assertEqual(run(r"""'say "hi"'"""), 'say "hi"')
+
+            # Conversions and format specs are not supported.
+            with self.assertRaisesRegex(CompilerError, "unsupported format conversion"):
+                compile_fstring('f"{name!r}"')
+            with self.assertRaisesRegex(CompilerError, "unsupported format spec"):
+                compile_fstring('f"{name:>8}"')
+
         def test_errors(self):
             with self.assertRaisesRegex(CompilerError, "unknown attribute: missing"):
                 self.compile_methods(
@@ -1519,6 +1885,14 @@ if __name__ == "__main__":
                         def num_children(self):
                             self.count = 1
                             return 1
+                    """
+                )
+            with self.assertRaisesRegex(CompilerError, "unsupported binary operator"):
+                self.compile_methods(
+                    """
+                    class Synthetic:
+                        def num_children(self):
+                            return 1 / 2
                     """
                 )
 

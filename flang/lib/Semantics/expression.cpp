@@ -1472,6 +1472,24 @@ std::vector<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscripts(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
+  // A scalar CHARACTER part with a triplet denotes a substring, even when
+  // its parent is array-valued. Substrings cannot specify a stride.
+  if (const Symbol *symbol{parser::GetLastName(ae.Base()).symbol}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    const auto *type{ultimate.GetType()};
+    if (ultimate.Rank() == 0 && type &&
+        type->category() == semantics::DeclTypeSpec::Character &&
+        !semantics::IsProcedure(ultimate) && ae.Subscripts().size() == 1) {
+      if (const auto *triplet{std::get_if<parser::SubscriptTriplet>(
+              &ae.Subscripts().front().u)}) {
+        if (const auto &stride{std::get<2>(triplet->t)}) {
+          Say(stride->thing.thing.value().source,
+              "A substring cannot have a stride"_err_en_US);
+          return std::nullopt;
+        }
+      }
+    }
+  }
   MaybeExpr baseExpr;
   {
     auto restorer{AllowWholeAssumedSizeArray()};
@@ -3003,7 +3021,7 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
-static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
+static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
   std::vector<int> perArg;
@@ -3305,6 +3323,58 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
           *attrs == common::CUDASubprogramAttrs::HostDevice);
 }
 
+// A specific with only the DEVICE attribute cannot be referenced from host
+// code, whatever its dummy arguments' CUDA data attributes score.
+static bool IsCUDADeviceOnly(const Symbol &symbol) {
+  const Symbol *ultimate{&symbol.GetUltimate()};
+  // Type-bound specifics: inspect the bound procedure.
+  if (const auto *binding{
+          ultimate->detailsIf<semantics::ProcBindingDetails>()}) {
+    ultimate = &binding->symbol().GetUltimate();
+  }
+  const auto *subprogram{ultimate->detailsIf<semantics::SubprogramDetails>()};
+  auto attrs{subprogram ? subprogram->cudaSubprogramAttrs() : std::nullopt};
+  return attrs && *attrs == common::CUDASubprogramAttrs::Device;
+}
+
+// True when code in this scope may run on the device. FindCUDADeviceContext
+// reads the scope symbol's own CUDA attributes, which a separate module
+// procedure implementation does not carry: its interface does.
+static bool MayRunOnCUDADevice(const semantics::Scope &scope) {
+  if (semantics::FindCUDADeviceContext(&scope) ||
+      semantics::HasOpenACCRoutineDirective(&scope)) {
+    return true;
+  }
+  for (const semantics::Scope *s{&scope}; !s->IsGlobal(); s = &s->parent()) {
+    // CUF kernel and OpenACC regions share Scope::Kind::OpenACCConstruct and
+    // may hold device code in a host subprogram.
+    if (s->kind() == semantics::Scope::Kind::OpenACCConstruct) {
+      return true;
+    }
+    if (const Symbol *symbol{s->symbol()}) {
+      const auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()};
+      if (subp && subp->moduleInterface()) {
+        // Kernels (GLOBAL, GRID_GLOBAL) run device code too, so any attribute
+        // other than HOST makes this a device context.
+        const auto *interface{subp->moduleInterface()
+                ->GetUltimate()
+                .detailsIf<semantics::SubprogramDetails>()};
+        auto attrs{interface ? interface->cudaSubprogramAttrs() : std::nullopt};
+        if (attrs && *attrs != common::CUDASubprogramAttrs::Host) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Specifics of intrinsic modules such as CUDADEVICE (e.g. ATOMICADD).
+static bool IsFromIntrinsicModule(const Symbol &symbol) {
+  const Symbol *module{symbol.GetUltimate().owner().GetSymbol()};
+  return module && module->attrs().test(semantics::Attr::INTRINSIC);
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
@@ -3343,60 +3413,82 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
-    for (const Symbol &specific0 : genericDetails->specificProcs()) {
-      const Symbol &specific1{BypassGeneric(specific0)};
-      if (isSubroutine != !IsFunction(specific1)) {
-        continue;
-      }
-      const Symbol *specific{ResolveForward(specific1)};
-      if (!specific) {
-        continue;
-      }
-      if (std::optional<characteristics::Procedure> procedure{
-              characteristics::Procedure::Characterize(
-                  ProcedureDesignator{*specific}, context_.foldingContext(),
-                  /*emitError=*/false)}) {
-        ActualArguments localActuals{actuals};
-        if (specific->has<semantics::ProcBindingDetails>()) {
-          if (!adjustActuals.value()(*specific, localActuals)) {
-            continue;
-          }
+    bool inHostCode{
+        context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+        !GetContextualMessages().at().empty() &&
+        !MayRunOnCUDADevice(context_.FindScope(GetContextualMessages().at()))};
+    // Prefer specifics callable from host code at a host call site. If none
+    // matches, still accept device-only specifics of intrinsic modules, which
+    // host code has always been allowed to reference.
+    bool skipDeviceOnly{inHostCode};
+    const auto triedBefore{tried.size()};
+    for (;;) {
+      for (const Symbol &specific0 : genericDetails->specificProcs()) {
+        const Symbol &specific1{BypassGeneric(specific0)};
+        if (isSubroutine != !IsFunction(specific1)) {
+          continue;
         }
-        tried.push_back(*specific);
-        if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-                context_, false /* no integer conversions */) &&
-            CheckCompatibleArguments(
-                *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{
-              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
-          if ((procedure->IsElemental() && elemental) ||
-              (!procedure->IsElemental() && nonElemental)) {
-            if (crtMatchingDistance) {
-              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-              if (cmp > 0) {
-                continue;
-              }
-              if (cmp == 0) {
-                // 16.9.144(6): a bare NULL() is not allowed as an actual
-                // argument to a generic procedure if the specific procedure
-                // cannot be unambiguously distinguished
-                // Underspecified external procedure actual arguments can
-                // also lead to ambiguity.
-                return {nullptr, true /* due to ambiguity */, std::move(tried)};
-              }
-              // Matching distance is smaller than the previously matched
-              // specific. Let it go through so the current procedure is picked.
+        const Symbol *specific{ResolveForward(specific1)};
+        if (!specific) {
+          continue;
+        }
+        if (inHostCode && IsCUDADeviceOnly(*specific) &&
+            (skipDeviceOnly || !IsFromIntrinsicModule(*specific))) {
+          continue;
+        }
+        if (std::optional<characteristics::Procedure> procedure{
+                characteristics::Procedure::Characterize(
+                    ProcedureDesignator{*specific}, context_.foldingContext(),
+                    /*emitError=*/false)}) {
+          ActualArguments localActuals{actuals};
+          if (specific->has<semantics::ProcBindingDetails>()) {
+            if (!adjustActuals.value()(*specific, localActuals)) {
+              continue;
             }
           }
-          if (!procedure->IsElemental()) {
-            // takes priority over elemental match
-            nonElemental = specific;
-          } else {
-            elemental = specific;
+          tried.push_back(*specific);
+          if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+                  context_, false /* no integer conversions */) &&
+              CheckCompatibleArguments(
+                  *procedure, localActuals, foldingContext_)) {
+            CudaMatchingDistance d{ComputeCudaMatchingDistance(
+                context_, *procedure, localActuals)};
+            if ((procedure->IsElemental() && elemental) ||
+                (!procedure->IsElemental() && nonElemental)) {
+              if (crtMatchingDistance) {
+                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+                if (cmp > 0) {
+                  continue;
+                }
+                if (cmp == 0) {
+                  // 16.9.144(6): a bare NULL() is not allowed as an actual
+                  // argument to a generic procedure if the specific procedure
+                  // cannot be unambiguously distinguished
+                  // Underspecified external procedure actual arguments can
+                  // also lead to ambiguity.
+                  return {
+                      nullptr, true /* due to ambiguity */, std::move(tried)};
+                }
+                // Matching distance is smaller than the previously matched
+                // specific. Let it go through so the current procedure is
+                // picked.
+              }
+            }
+            if (!procedure->IsElemental()) {
+              // takes priority over elemental match
+              nonElemental = specific;
+            } else {
+              elemental = specific;
+            }
+            crtMatchingDistance = std::move(d);
           }
-          crtMatchingDistance = std::move(d);
         }
       }
+      if (!skipDeviceOnly || nonElemental || elemental) {
+        break;
+      }
+      skipDeviceOnly = false;
+      tried.erase(tried.begin() + triedBefore, tried.end());
     }
   }
   // Is there a derived type of the same name?
@@ -4646,6 +4738,15 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
   if (!name->symbol) {
     return false;
   } else if (name->symbol->Rank() == 0) {
+    // The OpenMP special variables in DECLARE REDUCTION combiners and
+    // initializers are data objects, so a parenthesized reference to one
+    // of them can only be an (invalid) array element reference.
+    if (name->symbol->test(Symbol::Flag::OmpInVar) ||
+        name->symbol->test(Symbol::Flag::OmpOutVar) ||
+        name->symbol->test(Symbol::Flag::OmpPrivVar) ||
+        name->symbol->test(Symbol::Flag::OmpOrigVar)) {
+      return true;
+    }
     if (const Symbol *function{
             semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)}) {
       auto &msg{context.Say(funcRef.source,

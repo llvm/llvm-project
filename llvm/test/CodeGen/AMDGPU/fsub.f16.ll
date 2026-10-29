@@ -171,7 +171,7 @@ define <2 x half> @fsub_v2f16_imm_a(<2 x half> %b) {
 ; GFX11-LABEL: fsub_v2f16_imm_a:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x40003c00, v0 neg_lo:[0,1] neg_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0x40003c00 neg_lo:[1,0] neg_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r.val = fsub <2 x half> <half 1.0, half 2.0>, %b
   ret <2 x half> %r.val
@@ -211,7 +211,7 @@ define <2 x half> @fsub_v2f16_imm_b(<2 x half> %a) {
 ; GFX11-LABEL: fsub_v2f16_imm_b:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_f16 v0, 0xbc00c000, v0
+; GFX11-NEXT:    v_pk_add_f16 v0, v0, 0xbc00c000
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %r.val = fsub <2 x half> %a, <half 2.0, half 1.0>
   ret <2 x half> %r.val

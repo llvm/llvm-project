@@ -626,7 +626,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   }
 }
 
-// This function creates the IR intructions for loading and comparing using the
+// This function creates the IR instructions for loading and comparing using the
 // given LoadSize. It loads the number of bytes specified by LoadSize from each
 // source of the memcmp parameters. It then does a subtract to see if there was
 // a difference in the loaded values. If a difference is found, it branches
@@ -961,11 +961,10 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 /// %loadbb3
 ///  %phi.res = phi i32 [ %48, %loadbb3 ], [ %11, %res_block ]
 ///  ret i32 %phi.res
-static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
-                         const DataLayout *DL, ProfileSummaryInfo *PSI,
-                         BlockFrequencyInfo *BFI, DomTreeUpdater *DTU,
-                         const bool IsBCmp) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+static bool expandMemCmp(const ScalarOptions &Opts, CallInst *CI,
+                         const TargetTransformInfo *TTI, const DataLayout *DL,
+                         ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                         DomTreeUpdater *DTU, const bool IsBCmp) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -1064,9 +1063,10 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
     }
   }
 
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChanges = false;
   for (const auto &[CI, Func] : MemCmpCalls) {
-    if (expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
+    if (expandMemCmp(Opts, CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
                      Func == LibFunc_bcmp))
       MadeChanges = true;
   }

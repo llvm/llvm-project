@@ -14,7 +14,6 @@
 #include "FPExceptMatcher.h"
 
 #include "src/__support/macros/config.h"
-#include "test/UnitTest/ExecuteFunction.h" // FunctionCaller
 #include "test/UnitTest/Test.h"
 
 #include "hdr/types/fenv_t.h"
@@ -48,7 +47,7 @@ static void sigfpeHandler([[maybe_unused]] int sig) {
 
 #endif // TARGET_SUPPORTS_SIGNAL_CATCHING
 
-FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
+FPExceptMatcher::FPExceptMatcher(cpp::function<void(void)> func) {
 #if TARGET_SUPPORTS_SIGNAL_CATCHING
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 #endif
@@ -59,8 +58,7 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 #if TARGET_SUPPORTS_SIGNAL_CATCHING
   if (sigsetjmp(jumpBuffer, 1) == 0)
 #endif
-    func->call();
-  delete func;
+    func();
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);

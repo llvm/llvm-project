@@ -932,7 +932,7 @@ define b8 @test_bitinsert_b8_const(b8 %base, i4 %val) {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_and_b16 v0.h, v1.l, 15
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, 0xff87, v0.l
+; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff87
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 3, v0.h
 ; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
@@ -1005,7 +1005,7 @@ define b21 @test_bitinsert_b21_const(b21 %base, i6 %val) {
 ; GFX12-NEXT:    v_and_b32_e32 v1, 63, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 14, v1
-; GFX12-NEXT:    v_and_or_b32 v0, 0x103fff, v0, v1
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0x103fff, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b21 %base, i6 %val, i32 14
   ret b21 %result
@@ -1130,7 +1130,7 @@ define b123 @test_bitinsert_b123_crossword(b123 %base, i32 %val) {
 ; GFX12-NEXT:    v_and_b32_e32 v3, 0x7ffffff, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_or_b32_e32 v1, v1, v5
-; GFX12-NEXT:    v_and_or_b32 v2, 0xf0000000, v2, v4
+; GFX12-NEXT:    v_and_or_b32 v2, v2, 0xf0000000, v4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b123 %base, i32 %val, i32 60
   ret b123 %result
@@ -1233,7 +1233,7 @@ define b32 @test_bitinsert_val_b8_into_b32_const_mid(b32 %base, b8 %val) {
 ; GFX12-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 12, v1
-; GFX12-NEXT:    v_and_or_b32 v0, 0xfff00fff, v0, v1
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0xfff00fff, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b32 %base, b8 %val, i32 12
   ret b32 %result
@@ -1331,7 +1331,7 @@ define b32 @test_bitinsert_val_b1_into_b32_const_top(b32 %base, b1 %val) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_and_or_b32 v0, 0x7fffffff, v0, v1
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0x7fffffff, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b32 %base, b1 %val, i32 31
   ret b32 %result
@@ -1406,7 +1406,7 @@ define b32 @test_bitinsert_val_b21_into_b32_const_top(b32 %base, b21 %val) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 11, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_and_or_b32 v0, 0x7ff, v0, v1
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0x7ff, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b32 %base, b21 %val, i32 11
   ret b32 %result

@@ -55,6 +55,7 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -1504,6 +1505,25 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
   }
 }
 
+void Sema::ActOnReenterFunctionPrototypeParams(Scope *S,
+                                               ArrayRef<ParmVarDecl *> Params) {
+  for (ParmVarDecl *Param : Params)
+    if (Param->getIdentifier()) {
+      S->AddDecl(Param);
+      IdResolver.AddDecl(Param);
+    }
+}
+
+void Sema::ActOnExitFunctionPrototypeParams(Scope *S,
+                                            ArrayRef<ParmVarDecl *> Params) {
+  // Remove in reverse so each name is the most recent one when it is removed.
+  for (ParmVarDecl *Param : llvm::reverse(Params))
+    if (Param->getIdentifier()) {
+      IdResolver.RemoveDecl(Param);
+      S->RemoveDecl(Param);
+    }
+}
+
 void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   // We assume that the caller has already called
   // ActOnReenterTemplateScope so getTemplatedDecl() works.
@@ -1518,14 +1538,7 @@ void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   CurContext = FD;
   S->setEntity(CurContext);
 
-  for (unsigned P = 0, NumParams = FD->getNumParams(); P < NumParams; ++P) {
-    ParmVarDecl *Param = FD->getParamDecl(P);
-    // If the parameter has an identifier, then add it to the scope
-    if (Param->getIdentifier()) {
-      S->AddDecl(Param);
-      IdResolver.AddDecl(Param);
-    }
-  }
+  ActOnReenterFunctionPrototypeParams(S, FD->parameters());
 }
 
 void Sema::ActOnExitFunctionContext() {
@@ -7802,9 +7815,15 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
       break;
     case SC_Register:
       // Local Named register
-      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      if (DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl())) {
+        const auto &TI = Context.getTargetInfo();
+        if (!TI.isValidGCCRegisterName(Label))
+          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+        else if (!TI.validateLocalRegisterVariable(
+                     TI.getNormalizedGCCRegisterName(Label,
+                                                     /*ReturnCanonical=*/true)))
+          Diag(E->getExprLoc(), diag::err_asm_invalid_local_var_reg) << Label;
+      }
       break;
     case SC_Static:
     case SC_Extern:
@@ -11415,17 +11434,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
-    // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
-    // types.
-    if (getLangOpts().getOpenCLCompatibleVersion() >= 200) {
-      if(const PipeType *PipeTy = PT->getAs<PipeType>()) {
-        QualType ElemTy = PipeTy->getElementType();
-        if (ElemTy->isPointerOrReferenceType()) {
-          Diag(Param->getTypeSpecStartLoc(), diag::err_reference_pipe_type);
-          D.setInvalidType();
-        }
-      }
-    }
     // WebAssembly tables can't be used as function parameters.
     if (Context.getTargetInfo().getTriple().isWasm()) {
       if (PT->getUnqualifiedDesugaredType()->isWebAssemblyTableType()) {
@@ -15110,12 +15118,27 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   QualType AttributedType =
       Context.getAttributedType(Attr, MethodType, MethodType);
   TypeLocBuilder TLB;
-  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+  TypeSourceInfo *TSI = MD->getTypeSourceInfo();
+  if (TSI && TSI->getTypeLoc().getType() == MethodType) {
     TLB.pushFullCopy(TSI->getTypeLoc());
+  } else {
+    // The written type-source info can disagree with the method's type. For
+    // example, a deduced 'auto' return type keeps the 'auto' placeholder in its
+    // TypeSourceInfo while the method's type has already been resolved to the
+    // deduced type. Pushing the stale TypeLoc would make the wrapping
+    // AttributedTypeLoc's inner type inconsistent with MethodType. Build a
+    // trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType,
+                    TSI ? TSI->getTypeLoc().getBeginLoc() : MD->getLocation());
+  }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
+  // A trivial TypeLoc has no parameter decls, but AST visitors rely on them.
+  if (FunctionTypeLoc FTL = MD->getFunctionTypeLoc())
+    for (unsigned I = 0, E = MD->getNumParams(); I != E; ++I)
+      FTL.setParam(I, MD->getParamDecl(I));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
@@ -15315,7 +15338,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
                 << Init->getSourceRange();
           }
         }
-        (void)var->checkForConstantInitialization(Notes);
+        EvalProxy SProxy(*this);
+        (void)var->checkForConstantInitialization(Notes, SProxy);
         Notes.clear();
       } else if (CacheCulprit) {
         Notes.emplace_back(CacheCulprit->getExprLoc(),
@@ -15324,7 +15348,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       }
     } else {
       // Evaluate the initializer to see if it's a constant initializer.
-      HasConstInit = var->checkForConstantInitialization(Notes);
+      EvalProxy SProxy(*this);
+      HasConstInit = var->checkForConstantInitialization(Notes, SProxy);
     }
 
     if (HasConstInit) {
@@ -17397,6 +17422,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   }
 
   if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OpenMPSimd) ||
              (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
@@ -19142,6 +19168,12 @@ CreateNewDecl:
       AddAlignmentAttributesForRecord(RD);
       AddMsStructLayoutForRecord(RD);
     }
+
+    // The __interface tag implies __declspec(novtable) according to MSDN:
+    // https://learn.microsoft.com/en-us/cpp/cpp/interface?view=msvc-170
+    // so add the implicit attribute now.
+    if (Kind == TagTypeKind::Interface)
+      RD->addAttr(MSNoVTableAttr::CreateImplicit(Context));
   }
 
   if (ModulePrivateLoc.isValid()) {
@@ -21486,6 +21518,40 @@ void Sema::ActOnPragmaWeakAlias(IdentifierInfo* Name,
   }
 }
 
+/// Whether the definition \p FD is only handed to the ASTConsumer, and thus to
+/// CodeGen, once it is used, so that it is never emitted unless it is used.
+static bool isEmittedOnlyIfUsed(const FunctionDecl *FD) {
+  // Lambda call operators are defined by their lambda expressions, which are
+  // not top-level declarations. Implicit functions and functions defaulted on
+  // their first declaration are defined when they are used.
+  return isLambdaMethod(FD) || FD->isImplicit() ||
+         FD->getCanonicalDecl()->isDefaulted();
+}
+
+/// Whether CodeGen emits \p FD regardless of whether it is used.
+static bool isEmittedRegardlessOfUses(const Sema &S, const FunctionDecl *FD,
+                                      bool Final) {
+  const FunctionDecl *Def = FD->getDefinition();
+  if (!Def || Def->hasSkippedBody())
+    return false;
+  // Immediate functions are never emitted. Whether an immediate-escalating
+  // function is immediate is only known once its body is complete, so leave
+  // that to the check at the end of the translation unit.
+  const LangOptions &LangOpts = S.getLangOpts();
+  if (Def->isImmediateFunction() ||
+      (!Final && LangOpts.CPlusPlus20 && Def->isImmediateEscalating()))
+    return false;
+  if (isEmittedOnlyIfUsed(Def))
+    return false;
+  // An available externally definition is only emitted to be inlined into its
+  // callers.
+  ASTContext &Ctx = S.getASTContext();
+  if (Ctx.GetGVALinkageForFunction(Def) == GVA_AvailableExternally)
+    return false;
+  return Ctx.shouldEmitCUDADecl(Def) &&
+         (LangOpts.EmitAllDecls || Ctx.DeclMustBeEmitted(Def));
+}
+
 Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
@@ -21559,7 +21625,8 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
         (T == CUDAFunctionTarget::Device || T == CUDAFunctionTarget::Global))
       return FunctionEmissionStatus::CUDADiscarded;
 
-    if (IsEmittedForExternalSymbol())
+    if (IsEmittedForExternalSymbol() ||
+        isEmittedRegardlessOfUses(*this, FD, Final))
       return FunctionEmissionStatus::Emitted;
   }
 

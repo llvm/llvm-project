@@ -500,7 +500,7 @@ struct ReorderCastOpsOnBroadcast
 /// ```
 struct ReorderElementwiseOpsOnTranspose final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1 || op->getNumRegions() != 0)
@@ -1029,7 +1029,7 @@ static Value getBroadcastLikeSource(Value value) {
 /// ```
 struct ReorderElementwiseOpsOnBroadcast final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
@@ -1797,6 +1797,10 @@ struct CanonicalizeContractMatmulToMMT final
                                 PatternRewriter &rewriter) const override {
     if (failed(filter(op)))
       return failure();
+    // The mask is not updated: the rewrite may create ops inside the
+    // vector.mask region or swap the m and n iteration dimensions.
+    if (op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked contraction");
 
     Location loc = op.getLoc();
     Value lhs = op.getLhs();
@@ -2021,7 +2025,7 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
 /// `%cast`.
 struct DropUnitDimFromElementwiseOps final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1 || op->getNumRegions() != 0)

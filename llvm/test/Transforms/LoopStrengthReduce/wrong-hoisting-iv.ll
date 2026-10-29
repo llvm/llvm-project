@@ -200,9 +200,8 @@ define void @test2() {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[VAL14:%.*]] = add i32 [[VAL8]], [[VAL1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[VAL1]], [[VAL8]]
 ; CHECK-NEXT:    [[VAL15:%.*]] = select i1 false, i32 [[VAL14]], i32 [[VAL8]]
-; CHECK-NEXT:    [[VAL16]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[VAL16]] = add i32 [[VAL14]], 1
 ; CHECK-NEXT:    [[VAL17:%.*]] = fcmp olt double 0.000000e+00, 2.270000e+02
 ; CHECK-NEXT:    br i1 [[VAL17]], label [[BB6]], label [[BB4:%.*]]
 ;

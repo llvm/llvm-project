@@ -1836,6 +1836,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
+            "lib/Driver/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -3167,6 +3168,7 @@ cc_library(
         ":cir_dialect",
         ":cir_openacc_support",
         ":cir_openmp_support",
+        "//mlir:ArithDialect",
         "//mlir:DLTIDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",
@@ -3204,6 +3206,7 @@ cc_library(
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:ABI",
@@ -3381,6 +3384,7 @@ cc_library(
         ":cir_transforms",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",

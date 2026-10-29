@@ -2891,6 +2891,24 @@ LLVM_C_ABI void LLVMSetUnnamedAddress(LLVMValueRef Global,
                                       LLVMUnnamedAddr UnnamedAddr);
 
 /**
+ * Returns whether the global value is marked as dso_local, i.e. whether it
+ * will resolve to a symbol within the same linkage unit.
+ *
+ * @see llvm::GlobalValue::isDSOLocal()
+ */
+LLVM_C_ABI LLVMBool LLVMIsDSOLocal(LLVMValueRef Global);
+
+/**
+ * Sets whether the global value is marked as dso_local.
+ *
+ * Note that globals with local linkage or non-default visibility are always
+ * implicitly dso_local.
+ *
+ * @see llvm::GlobalValue::setDSOLocal()
+ */
+LLVM_C_ABI void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal);
+
+/**
  * Returns the "value type" of a global value.  This differs from the formal
  * type of a global value which is always a pointer type.
  *
@@ -4611,11 +4629,16 @@ LLVM_C_ABI const unsigned *LLVMGetIndices(LLVMValueRef Inst);
  * @{
  */
 
-LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C),
+    "Use LLVMCreateBuilderForModule instead");
 LLVM_C_ABI
 LLVM_ATTRIBUTE_C_DEPRECATED(LLVMBuilderRef LLVMCreateBuilder(void),
                             "Use of the global context is deprecated, use "
-                            "LLVMCreateBuilderInContext instead");
+                            "LLVMCreateBuilderForModule instead");
+
+LLVM_C_ABI LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M);
 /**
  * Set the builder position before Instr but after any attached debug records,
  * or if Instr is null set the position to the end of Block.

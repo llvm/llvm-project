@@ -928,12 +928,13 @@ LogicalResult LoadOp::verify() {
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
                    bool isNonTemporal, bool isInvariant, bool isInvariantGroup,
-                   AtomicOrdering ordering, StringRef syncscope) {
+                   bool isNoundef, AtomicOrdering ordering,
+                   StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr,
+        /*dereferenceable=*/nullptr, isNoundef, /*range=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
@@ -2182,7 +2183,7 @@ namespace {
 ///   ...
 ///   %e999 = llvm.extractvalue %i999[999]
 struct ResolveExtractValueSource : public OpRewritePattern<InsertValueOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertValueOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -3180,9 +3181,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        FunctionEntryCountAttr::get(
-                            builder.getContext(), *functionEntryCount,
-                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
+                        FunctionEntryCountAttr::get(builder.getContext(),
+                                                    *functionEntryCount,
+                                                    ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -3848,22 +3849,19 @@ OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
                         AtomicBinOp binOp, Value ptr, Value val,
                         AtomicOrdering ordering, StringRef syncscope,
-                        unsigned alignment, bool isVolatile) {
+                        unsigned alignment, bool isVolatile,
+                        bool ignoreDenormalMode) {
   build(builder, state, val.getType(), binOp, ptr, val, ordering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        ignoreDenormalMode,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
-  if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
-      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
-      getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum ||
-      getBinOp() == AtomicBinOp::fminimumnum ||
-      getBinOp() == AtomicBinOp::fmaximumnum) {
+  if (isFloatingPointOperation()) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -3885,6 +3883,10 @@ LogicalResult AtomicRMWOp::verify() {
         intBitWidth != 64)
       return emitOpError("expected LLVM IR integer type");
   }
+
+  if (getIgnoreDenormalMode() && !isFloatingPointOperation())
+    return emitOpError(
+        "expected floating-point operation with 'ignore_denormal_mode'");
 
   if (static_cast<unsigned>(getOrdering()) <
       static_cast<unsigned>(AtomicOrdering::monotonic))
@@ -4664,6 +4666,34 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
   // not speculatable.
   // X / 0 => UB
   // INT_MIN / -1 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// URemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability URemOp::getSpeculatability() {
+  // urem(x, 0) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SRemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability SRemOp::getSpeculatability() {
+  // srem(x, 0) => UB
+  // srem(INT_MIN, -1) => UB
   Value divisor = getRhs();
   if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
       matchPattern(divisor, m_IntRangeWithoutNegOneS()))

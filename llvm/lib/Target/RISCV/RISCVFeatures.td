@@ -507,7 +507,7 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
-                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
+                  AssemblerPredicate<(none_of FeatureStdExtZbb)>;
 
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
@@ -530,7 +530,7 @@ def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
 def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
-                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
+                   AssemblerPredicate<(none_of FeatureStdExtZbkb)>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<1, 0, "Crossbar permutation instructions">,
@@ -1994,7 +1994,7 @@ def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
+             AssemblerPredicate<(none_of Feature64Bit),
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
@@ -2255,6 +2255,10 @@ def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
+
+def TuneAvoidVXRM
+    : SubtargetFeature<"avoid-vxrm", "AvoidVXRM",
+                       "true", "Instructions that use VXRM should be avoided">;
 
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).

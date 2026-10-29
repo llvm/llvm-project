@@ -56,6 +56,7 @@ class GlobalValue;
 class InstCombiner;
 class OptimizationRemarkEmitter;
 class InterleavedAccessInfo;
+class ICmpInst;
 class IntrinsicInst;
 class LoadInst;
 class Loop;
@@ -640,6 +641,8 @@ public:
   /// operand index that collectFlatAddressOperands returned for the intrinsic.
   /// \returns nullptr if the intrinsic was not handled. Otherwise, returns the
   /// new value (which may be the original \p II with modified operands).
+  /// If a different value is returned, the caller replaces all uses of \p II
+  /// and erases it, including any side effects of the original call.
   LLVM_ABI Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                    Value *OldV,
                                                    Value *NewV) const;
@@ -869,6 +872,12 @@ public:
   /// against the immediate without having to materialize the immediate into a
   /// register.
   LLVM_ABI bool isLegalICmpImmediate(int64_t Imm) const;
+
+  /// Return true if replacing the relational loop exit comparison \p Cond
+  /// with an equality comparison against \p PostIncExitValue is profitable.
+  LLVM_ABI bool
+  preferLoopExitWithEqualityComparison(const ICmpInst &Cond,
+                                       const APInt &PostIncExitValue) const;
 
   /// Return true if the addressing mode represented by AM is legal for
   /// this target, for a load/store of the specified type.
@@ -1130,10 +1139,13 @@ public:
 
   /// Stores information about the uses of a build vector
   struct BuildVectorUseOp {
-    unsigned Opcode;
-    int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
-        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+    unsigned Opcode = 0;
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    int OperandIndex = -1;
+    BuildVectorUseOp(unsigned Opcode, Intrinsic::ID IntrinsicID,
+                     int OperandIndex)
+        : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex) {
+    }
   };
 
   /// Calculates a VectorInstrContext from \p I.
@@ -2157,11 +2169,6 @@ public:
 
   /// \return The maximum number of function arguments the target supports.
   LLVM_ABI unsigned getMaxNumArgs() const;
-
-  /// \return For an array of given Size, return alignment boundary to
-  /// pad to. Default is no padding.
-  LLVM_ABI unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                                Type *ArrayType) const;
 
   /// @}
 

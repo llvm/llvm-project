@@ -1,4 +1,5 @@
-// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN: cir-opt %s -split-input-file -verify-diagnostics \
+// RUN:   -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:   | FileCheck %s
 
 !s8i = !cir.int<s, 8>
@@ -303,7 +304,8 @@ module attributes {
   // CHECK-NEXT:    %[[COERCED:.*]] = cir.load %[[SLOT]] : !cir.ptr<!s64i>, !s64i
   // CHECK-NEXT:    cir.return %[[COERCED]] : !s64i
 
-  // A volatile load happens as written, so its value is stored into the slot.
+  // A volatile load stays volatile as a volatile copy into the slot, even
+  // from an alloca that could otherwise be read in place.
   cir.func @returns_volatile() -> !rec_Pair64
       attributes { test_classify = #ret_s64 } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
@@ -314,27 +316,9 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @returns_volatile() -> !s64i
   // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_Pair64>
   // CHECK-NEXT:    %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
-  // CHECK-NEXT:    %[[REC:.*]] = cir.load volatile %[[RETVAL]] : !cir.ptr<!rec_Pair64>, !rec_Pair64
-  // CHECK-NEXT:    cir.store %[[REC]], %[[SLOT]] : !rec_Pair64, !cir.ptr<!rec_Pair64>
+  // CHECK-NEXT:    cir.copy %[[RETVAL]] align(8) to %[[SLOT]] align(8) volatile : !cir.ptr<!rec_Pair64>
   // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Pair64> -> !cir.ptr<!s64i>
-  // CHECK-NEXT:    %[[COERCED:.*]] = cir.load %[[VIEW]] : !cir.ptr<!s64i>, !s64i
-  // CHECK-NEXT:    cir.return %[[COERCED]] : !s64i
-
-  // An atomic load has to happen as written too.
-  cir.func @returns_atomic() -> !rec_Pair64
-      attributes { test_classify = #ret_s64 } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
-    %1 = cir.load atomic(seq_cst) %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
-    cir.return %1 : !rec_Pair64
-  }
-
-  // CHECK-LABEL: cir.func{{.*}} @returns_atomic() -> !s64i
-  // CHECK-NEXT:    %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_Pair64>
-  // CHECK-NEXT:    %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
-  // CHECK-NEXT:    %[[REC:.*]] = cir.load atomic(seq_cst) %[[RETVAL]] : !cir.ptr<!rec_Pair64>, !rec_Pair64
-  // CHECK-NEXT:    cir.store %[[REC]], %[[SLOT]] : !rec_Pair64, !cir.ptr<!rec_Pair64>
-  // CHECK-NEXT:    %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Pair64> -> !cir.ptr<!s64i>
-  // CHECK-NEXT:    %[[COERCED:.*]] = cir.load %[[VIEW]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    %[[COERCED:.*]] = cir.load align(8) %[[VIEW]] : !cir.ptr<!s64i>, !s64i
   // CHECK-NEXT:    cir.return %[[COERCED]] : !s64i
 
   // A record read through a non-alloca pointer has its bytes copied.
@@ -364,5 +348,33 @@ module attributes {
   // CHECK-NEXT:    cir.copy %arg0 align(32) to %[[SLOT_REC]] align(32) : !cir.ptr<!rec_Vec3>
   // CHECK-NEXT:    %[[COERCED:.*]] = cir.load align(32) %[[SLOT]] : !cir.ptr<!rec_TwoI64>, !rec_TwoI64
   // CHECK-NEXT:    cir.return %[[COERCED]] : !rec_TwoI64
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Pair64 = !cir.struct<"Pair64" {data !s64i, data !s64i}>
+
+#ret_s64 = {
+  return = { kind = "direct", coerced_type = !s64i },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // An atomic load has to happen as written, and a copy cannot keep it
+  // atomic.
+  cir.func @returns_atomic() -> !rec_Pair64
+      attributes { test_classify = #ret_s64 } {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Pair64>
+    %1 = cir.load atomic(seq_cst) %0 : !cir.ptr<!rec_Pair64>, !rec_Pair64
+    // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
+    cir.return %1 : !rec_Pair64
+  }
 
 }

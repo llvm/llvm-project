@@ -51,24 +51,22 @@ TEST(SPSSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
 }
 
 TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
-  using SPSTag = SPSSequence<SPSTuple<SPSString, bool>>;
-  blobSerializationRoundTrip<SPSTag, SymbolLookupSet>(
+  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
       SymbolLookupSet(), seqEqual<SymbolLookupSet>);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupSet>(
+  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
       SymbolLookupSet({{"foo", SymbolLookupFlags::RequiredSymbol},
                        {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
       seqEqual<SymbolLookupSet>);
 }
 
 TEST(SPSSymbolLookupSetTest, SymbolLookupResultSerialization) {
-  using SPSTag = SPSSequence<SPSOptional<SPSExecutorAddr>>;
   int X = 0;
   SymbolLookupResult R;
   R.push_back(&X);
   R.push_back(nullptr);
   R.push_back(std::nullopt);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupResult>(
+  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
       SymbolLookupResult(), seqEqual<SymbolLookupResult>);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupResult>(
+  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
       R, seqEqual<SymbolLookupResult>);
 }

@@ -994,9 +994,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v1, v4, v0
+; GFX10-NEXT:    v_mad_u16 v0, v1, v1, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -1082,9 +1081,8 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v1, v4, v0
+; GFX10-NEXT:    v_mad_u16 v0, v1, v1, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -1168,9 +1166,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v1, v4, v0
+; GFX10-NEXT:    v_mad_u16 v0, v1, v1, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -1313,7 +1310,7 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-GISEL-LABEL: atomic_load_f32x2_monotonic_agent_offset_max:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc dlc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1457,7 +1454,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-GISEL-LABEL: atomic_load_i16x2_monotonic_agent_offset_max:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)

@@ -58,6 +58,7 @@ class TestTypeGetModule(TestBase):
         self.assertTrue(result.IsValid())
         return result
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
         target = lldbutil.run_to_breakpoint_make_target(self)

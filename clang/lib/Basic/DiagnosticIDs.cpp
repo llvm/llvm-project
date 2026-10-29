@@ -65,6 +65,17 @@ enum DiagnosticClass {
   CLASS_TRAP = DiagnosticIDs::CLASS_TRAP,
 };
 
+#if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
+// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
+// and give the `pack` pragma push semantics.
+#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
+#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
+#else
+#define BEGIN_TWO_BYTE_PACK()
+#define END_TWO_BYTE_PACK()
+#endif
+
+BEGIN_TWO_BYTE_PACK()
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
@@ -129,6 +140,11 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
+END_TWO_BYTE_PACK()
+
+#undef BEGIN_TWO_BYTE_PACK
+#undef END_TWO_BYTE_PACK
+
 static_assert(sizeof(StaticDiagInfoRec) == 10);
 static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
               "too many diagnostic groups for StaticDiagInfoRec");
@@ -960,12 +976,18 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
     return false;
 
   // All ARC errors are currently considered recoverable, with the exception of
-  // err_arc_may_not_respond. This specific error is treated as unrecoverable
-  // because sending a message with an unknown selector could lead to crashes
-  // within CodeGen if the resulting expression is used to initialize a C++
-  // auto variable, where type deduction is required.
+  // the following errors:
+  // - err_arc_may_not_respond: sending a message with an unknown selector could
+  //   lead to crashes within CodeGen if the resulting expression is used to
+  //   initialize a C++ auto variable, where type deduction is required.
+  // - err_arc_atomic_ownership: CodeGen hits llvm_unreachable on the invalid
+  //   atomic builtin call.
+  // - err_arc_bridge_cast_incompatible: the failed cast leaves a
+  //   value-dependent RecoveryExpr that crashes CodeGen when it is used in a
+  //   condition or comparison.
   if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond &&
-      DiagID != diag::err_arc_atomic_ownership)
+      DiagID != diag::err_arc_atomic_ownership &&
+      DiagID != diag::err_arc_bridge_cast_incompatible)
     return false;
 
   if (isCodegenABICheckDiagnostic(DiagID))

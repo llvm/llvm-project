@@ -58,6 +58,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
   initializeSPIRVPostLegalizerLegacyPass(PR);
+  initializeSPIRVPrepareModuleAnalysisLegacyPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
@@ -101,9 +102,6 @@ public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM), TM(TM) {}
 
-  SPIRVTargetMachine &getSPIRVTargetMachine() const {
-    return getTM<SPIRVTargetMachine>();
-  }
   void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
@@ -119,6 +117,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+  void addPreEmitPass2() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -155,6 +154,10 @@ void SPIRVPassConfig::addPostRegAlloc() {
   disablePass(&MachineBlockPlacementID);
 
   TargetPassConfig::addPostRegAlloc();
+}
+
+void SPIRVPassConfig::addPreEmitPass2() {
+  addPass(createSPIRVPrepareModuleAnalysisLegacyPass());
 }
 
 TargetTransformInfo

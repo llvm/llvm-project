@@ -118,9 +118,16 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
                        : 0;
   uint64_t highVA = callVA + target->forwardBranchRange;
   auto *funcSym = cast<Symbol *>(r.referent);
-  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
+  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.getAddend());
   // Check if the referent is reachable with a simple call instruction.
   return lowVA <= funcVA && funcVA <= highVA;
+}
+Defined *TextOutputSection::findThunkInRange(const ConcatInputSection &isec,
+                                             const Relocation &r) const {
+  auto it = thunkMap.find(ThunkKey(r));
+  if (it == thunkMap.end())
+    return nullptr;
+  return getThunkInRange(isec, r, it->second);
 }
 
 Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
@@ -145,12 +152,13 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
   r.referent = thunk;
   // The thunk itself bakes in the addend, so the call-site reloc must
   // branch to the thunk start with no extra offset.
-  r.addend = 0;
+  r.setAddend(0);
   ++thunkCallCount;
 }
 
 void TextOutputSection::createThunk(const ConcatInputSection &isec,
-                                    Relocation &r, ThunkInfo &thunkInfo) {
+                                    Relocation &r) {
+  auto &thunkInfo = thunkMap[r];
   assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
@@ -168,8 +176,8 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   assert(thunkInfo.isec->live);
 
   std::string addendSuffix;
-  if (r.addend != 0)
-    addendSuffix = "+" + std::to_string(r.addend);
+  if (r.getAddend() != 0)
+    addendSuffix = "+" + std::to_string(r.getAddend());
   size_t thunkSize = target->thunkSize;
   auto *funcSym = cast<Symbol *>(r.referent);
   StringRef thunkName =
@@ -190,7 +198,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   }
   thunkInfo.sym->used = true;
   thunkInfo.sym->branchExtensionThunk = true;
-  target->populateThunk(thunkInfo.isec, funcSym, r.addend);
+  target->populateThunk(thunkInfo.isec, funcSym, r.getAddend());
   updateBranchTargetToThunk(r, thunkInfo.sym);
   finalizeOne(thunkInfo.isec);
   thunks.push_back(thunkInfo.isec);
@@ -241,7 +249,7 @@ bool TextOutputSection::isTargetStubsAndInRange(
   if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
                                  ObjCStubsSection::isObjCStubSymbol(funcSym)))
     return false;
-  if (r.addend)
+  if (r.getAddend())
     return false;
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   return *estimatedStubsEnd <= highVA;
@@ -268,12 +276,11 @@ void TextOutputSection::finalize() {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
         continue;
       }
-      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*callerIsec, *r)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
         branchesToProcess.pop_front();
         continue;
@@ -289,7 +296,7 @@ void TextOutputSection::finalize() {
       if (nextEnd + slop <= highVA)
         break;
 
-      createThunk(*callerIsec, *r, thunkInfo);
+      createThunk(*callerIsec, *r);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
@@ -313,8 +320,7 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      auto &thunkInfo = thunkMap[r];
-      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
+      if (auto *thunk = findThunkInRange(*isec, r)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
@@ -331,10 +337,8 @@ void TextOutputSection::finalize() {
   // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
-    ThunkKey thunkKey(*r);
-    auto &thunkInfo = thunkMap[thunkKey];
-    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
-      branchTargets.insert(thunkKey);
+    if (!findThunkInRange(*callerIsec, *r))
+      branchTargets.insert(ThunkKey(*r));
   }
 
   auto estimatedStubsEnd = estimateStubsEndVA(branchTargets.size());
@@ -349,12 +353,11 @@ void TextOutputSection::finalize() {
   for (auto [isec, r] : branchesToProcess) {
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    auto &thunkInfo = thunkMap[*r];
-    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
+    if (auto *thunk = findThunkInRange(*isec, *r)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
-    createThunk(*isec, *r, thunkInfo);
+    createThunk(*isec, *r);
   }
 
   if (!thunks.empty())

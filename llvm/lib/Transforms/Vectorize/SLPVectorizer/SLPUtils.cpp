@@ -7,28 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPUtils.h"
+#include "SLPMemoryUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 #include <algorithm>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -44,6 +51,21 @@ bool isConstant(Value *V) {
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   const auto *CI = dyn_cast<ConstantInt>(V);
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+}
+
+bool isUndefTolerantBinOp(const Value *V) {
+  const BinaryOperator *BO;
+  return match(V, m_BinOp(BO)) && BO->getType()->isIntOrIntVectorTy() &&
+         !BO->isShift() && !BO->isIntDivRem();
+}
+
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V) {
+  if (!isUndefTolerantBinOp(V))
+    return nullptr;
+  for (const Value *Op : cast<BinaryOperator>(V)->operands())
+    if (const auto *LI = dyn_cast<LoadInst>(Op))
+      return LI;
+  return nullptr;
 }
 
 unsigned getReassocCombineOpcode(unsigned Opcode) {
@@ -165,8 +187,9 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
+  // The trunc X to i1 lanes of a compare have the single operand X.
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    return Cmp->isCommutative();
+    return isa<CmpInst>(ValWithUses) && Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub && ValWithUses->hasUseList() &&
@@ -458,11 +481,11 @@ bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-         all_of(make_isa_range<Instruction>(I->operands()),
+  return all_of(make_isa_range<Instruction>(I->operands()),
                 [I](Instruction *IO) {
                   return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-                });
+                }) &&
+         !mayHaveNonDefUseDependency(*I);
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -470,13 +493,12 @@ bool isUsedOutsideBlock(Value *V) {
   if (!I)
     return true;
   // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
+  return !I->hasNUsesOrMore(UsesLimit) && all_of(I->users(), [I](User *U) {
+    auto *IU = dyn_cast<Instruction>(U);
+    if (!IU)
+      return true;
+    return IU->getParent() != I->getParent() || isa<PHINode>(IU);
+  }) && !I->mayReadOrWriteMemory();
 }
 
 bool doesNotNeedToBeScheduled(Value *V) {
@@ -584,29 +606,27 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
 /// ShuffleVectorInst/getShuffleCost?
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC) {
+                     AssumptionCache *AC, SLPAnalysisCache &Cache) {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
-  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
-    auto *EI = dyn_cast<ExtractElementInst>(V);
-    if (!EI)
-      return S;
-    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VTy)
-      return S;
-    return std::max(S, VTy->getNumElements());
-  });
-
+  unsigned Size = 0;
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
-                               [&](ExtractElementInst *EE) {
-                                 Value *Vec = EE->getVectorOperand();
-                                 if (isa<UndefValue>(Vec))
-                                   return false;
-                                 return isGuaranteedNotToBePoison(Vec, AC);
-                               });
+  // The poison analysis is expensive, it is required only for the undef
+  // vectors.
+  std::optional<bool> HasNonUndefVec;
+  auto IsNonUndefVecPresent = [&]() {
+    if (!HasNonUndefVec)
+      HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                              [&](ExtractElementInst *EE) {
+                                Value *Vec = EE->getVectorOperand();
+                                if (isa<UndefValue>(Vec))
+                                  return false;
+                                return Cache.isGuaranteedNotToBePoison(Vec, AC);
+                              });
+    return *HasNonUndefVec;
+  };
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -639,7 +659,9 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
     }
-    if (isUndefVector(Vec).all() && HasNonUndefVec)
+    // The width is defined only by the lanes that are present in the mask.
+    Size = std::max(Size, getNumElements(Vec->getType()));
+    if (isUndefVector(Vec).all() && IsNonUndefVecPresent())
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
     // in all extractelement instructions.
@@ -647,23 +669,31 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       Vec1 = Vec;
     } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-      Mask[I] += Size;
     } else {
       return std::nullopt;
     }
+  }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
+  for (auto [I, Idx] : enumerate(Mask)) {
+    if (Idx == PoisonMaskElem)
+      continue;
+    auto *Vec = cast<ExtractElementInst>(VL[I])->getVectorOperand();
+    if (Vec == Vec2)
+      Idx += Size;
+    else if (Vec != Vec1)
+      continue;
     if (CommonShuffleMode == Permute)
       continue;
     // If the extract index is not the same as the operation number, it is a
     // permutation.
-    if (Mask[I] % Size != I) {
+    if (Idx % Size != I) {
       CommonShuffleMode = Permute;
       continue;
     }
     CommonShuffleMode = Select;
   }
-  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
-                               getNumElements(Vec2->getType())))
-    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
@@ -1458,7 +1488,7 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 }
 
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth, unsigned &NumInsts) {
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts) {
   NumInsts = 0;
   auto *VecTy = cast<FixedVectorType>(X->getType());
   unsigned BitWidth = VecTy->getScalarSizeInBits();
@@ -1488,19 +1518,21 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   }
   unsigned InBytes = NumElts * (ShiftWidth / 8);
   auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
-  SmallVector<int> Mask =
-      getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
-  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
-  // A plain byte reversal of the shifted lanes is a bswap.
-  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-    NumInsts += 2;
-    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
-                                        Builder.CreateBitCast(Y, IntTy));
-  }
-  // An identity byte order needs no shuffle.
-  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
-    ++NumInsts;
-    return Builder.CreateBitCast(Y, IntTy);
+  SmallVector<int> Mask = getBitPackMask(
+      Info, ResultTy->getScalarSizeInBits() / 8, NumElts, ShiftWidth / 8);
+  // Fields in lane order, possibly reversed, are a truncation of the shifted
+  // lanes. A reversal of byte fields is a bswap.
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  if (IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts))) {
+    Value *Fields = Builder.CreateTrunc(
+        Y, Y->getType()->getWithNewBitWidth(Info.FieldWidth));
+    NumInsts += 1 + (Info.FieldWidth != ShiftWidth) + IsReversed;
+    if (IsReversed && Info.FieldWidth == 8)
+      return Builder.CreateUnaryIntrinsic(
+          Intrinsic::bswap, Builder.CreateBitCast(Fields, ResultTy));
+    if (IsReversed)
+      Fields = Builder.CreateVectorReverse(Fields);
+    return Builder.CreateBitCast(Fields, ResultTy);
   }
   Value *Packed = Builder.CreateShuffleVector(
       Builder.CreateBitCast(Y, ByteTy),
@@ -1509,7 +1541,7 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
           : PoisonValue::get(ByteTy),
       Mask);
   NumInsts += 3;
-  return Builder.CreateBitCast(Packed, IntTy);
+  return Builder.CreateBitCast(Packed, ResultTy);
 }
 
 void redirectDbgValues(Instruction &From, Value &To) {
@@ -1545,6 +1577,96 @@ void redirectDbgValues(Instruction &From, Value &To) {
     NewDVR->replaceVariableLocationOp(&From, &To);
     ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
   }
+}
+
+bool isFirstInsertElement(const InsertElementInst *IE1,
+                          const InsertElementInst *IE2) {
+  if (IE1 == IE2)
+    return false;
+  const auto *I1 = IE1;
+  const auto *I2 = IE2;
+  const InsertElementInst *PrevI1;
+  const InsertElementInst *PrevI2;
+  unsigned Idx1 = *getElementIndex(IE1);
+  unsigned Idx2 = *getElementIndex(IE2);
+  do {
+    if (I2 == IE1)
+      return true;
+    if (I1 == IE2)
+      return false;
+    PrevI1 = I1;
+    PrevI2 = I2;
+    if (I1 && (I1 == IE1 || I1->hasOneUse()) &&
+        getElementIndex(I1).value_or(Idx2) != Idx2)
+      I1 = dyn_cast<InsertElementInst>(I1->getOperand(0));
+    if (I2 && ((I2 == IE2 || I2->hasOneUse())) &&
+        getElementIndex(I2).value_or(Idx1) != Idx1)
+      I2 = dyn_cast<InsertElementInst>(I2->getOperand(0));
+  } while ((I1 && PrevI1 != I1) || (I2 && PrevI2 != I2));
+  llvm_unreachable("Two different buildvectors not expected.");
+}
+
+DebugLoc getDebugLocFromPHI(const PHINode &PN) {
+  if (DebugLoc DL = PN.getDebugLoc())
+    return DL;
+  return DebugLoc::getUnknown();
+}
+
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
+    return cast<FixedVectorType>(IE->getType())->getNumElements();
+
+  unsigned AggregateSize = 1;
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  do {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      for (auto *Elt : ST->elements())
+        if (Elt != ST->getElementType(0)) // check homogeneity
+          return std::nullopt;
+      AggregateSize *= ST->getNumElements();
+      CurrentType = ST->getElementType(0);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      AggregateSize *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
+      AggregateSize *= VT->getNumElements();
+      return AggregateSize;
+    } else if (CurrentType->isSingleValueType()) {
+      return AggregateSize;
+    } else {
+      return std::nullopt;
+    }
+  } while (true);
+}
+
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL) {
+  assert(L && "Expected valid loop");
+  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
+    return all_of(make_isa_range<Instruction>(VL),
+                  [L](Instruction *I) { return L->isLoopInvariant(I); });
+  };
+  while (L && IsLoopInvariant(L, VL))
+    L = L->getParentLoop();
+  return L;
+}
+
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount) {
+  if (LoopAwareTripCount == 0)
+    return 1;
+  unsigned Scale = SE.getSmallConstantTripCount(L);
+  if (Scale == 0)
+    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
+  if (Scale != 0) {
+    // Multiple exiting blocks - choose the minimum between trip count (scale)
+    // and LoopAwareTripCount, since the multiple exit loops can be terminated
+    // early.
+    if (!L->getExitingBlock())
+      return std::min<unsigned>(LoopAwareTripCount, Scale);
+    return Scale;
+  }
+  return LoopAwareTripCount;
 }
 
 } // namespace llvm::slpvectorizer

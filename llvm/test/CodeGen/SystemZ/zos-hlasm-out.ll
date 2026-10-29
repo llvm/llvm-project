@@ -5,6 +5,9 @@
 @.str = private unnamed_addr constant [10 x i8] c"Hello %s\0A\00", align 2
 @Greeting = global ptr @.str, align 8
 @.str.1 = private unnamed_addr constant [6 x i8] c"World\00", align 2
+@zeros = global [16 x i8] zeroinitializer, align 8
+@padded = global { i8, i64 } { i8 1, i64 2 }, align 8
+@splat = global [8 x i8] c"!!!!!!!!", align 1
 
 ; Function Attrs: noinline nounwind optnone
 define void @foo() {
@@ -13,9 +16,9 @@ define void @foo() {
 ; CHECK: DC XL1'E7'
 ; CHECK: DC XL1'22'
 ; CHECK: DC XL1'04'
-; CHECK: DC AD(CELQSTRT-L#PPA2)
+; CHECK: DC A(CELQSTRT-L#PPA2)
 ; CHECK: DC XL4'00000000'
-; CHECK: DC AD(L#DVS-L#PPA2)
+; CHECK: DC A(L#DVS-L#PPA2)
 ; CHECK: DC XL4'00000000'
 ; CHECK: DC XL1'81'
 ; CHECK: DC XL1'00'
@@ -28,20 +31,28 @@ define void @foo() {
 ; CHECK: DS 0B
 ; CHECK-LABEL: L#.str.1 DS 0H
 ; CHECK: DC XL6'576F726C6400'
+; CHECK-LABEL: zeros XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC 16XL1'00'
+; CHECK-LABEL: padded XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC XL1'01'
+; CHECK-NEXT: DC 7XL1'00'
+; CHECK-NEXT: DC XL8'0000000000000002'
+; CHECK-LABEL: splat XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC 8XL1'21'
 ; CHECK-LABEL: L#PPA1_foo_0 DS 0H    
 ; CHECK: DC XL1'02'
 ; CHECK: DC XL1'CE'
 ; CHECK: DC XL2'0300'
-; CHECK: DC AD(L#PPA2-L#PPA1_foo_0)
+; CHECK: DC A(L#PPA2-L#PPA1_foo_0)
 ; CHECK: DC XL1'80'
 ; CHECK: DC XL1'80'
 ; CHECK: DC XL1'00'
 ; CHECK: DC XL1'81'
 ; CHECK: DC XL2'0000'
-; CHECK: DC AD(L#foo_end_0-L#EPM_foo_0)
+; CHECK: DC A(L#foo_end_0-L#EPM_foo_0)
 ; CHECK: DC XL2'0003'
 ; CHECK: DC XL3'869696'
-; CHECK: DC AD(L#EPM_foo_0-L#PPA1_foo_0)
+; CHECK: DC A(L#EPM_foo_0-L#PPA1_foo_0)
 ; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdi
 ; CHECK:                in#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)

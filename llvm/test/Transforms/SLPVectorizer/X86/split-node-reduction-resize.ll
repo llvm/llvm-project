@@ -52,4 +52,46 @@ define i32 @test(i8 %a0, i8 %b0) {
   ret i32 %s14
 }
 
+define i32 @gather_root(i64 %x) {
+; CHECK-LABEL: define i32 @gather_root(
+; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %t0 = trunc i64 %x to i8
+  %s1 = lshr i64 %x, 8
+  %t1 = trunc i64 %s1 to i8
+  %s2 = lshr i64 %x, 16
+  %t2 = trunc i64 %s2 to i8
+  %s3 = lshr i64 %x, 24
+  %t3 = trunc i64 %s3 to i8
+  %s4 = lshr i64 %x, 32
+  %t4 = trunc i64 %s4 to i8
+  %s5 = lshr i64 %x, 40
+  %t5 = trunc i64 %s5 to i8
+  %s6 = lshr i64 %x, 48
+  %t6 = trunc i64 %s6 to i8
+  %s7 = lshr i64 %x, 56
+  %t7 = trunc i64 %s7 to i8
+  %z0 = zext i8 %t0 to i32
+  %z1 = zext i8 %t1 to i32
+  %z2 = zext i8 %t2 to i32
+  %z3 = zext i8 %t3 to i32
+  %z4 = zext i8 %t4 to i32
+  %z5 = zext i8 %t5 to i32
+  %z6 = zext i8 %t6 to i32
+  %z7 = zext i8 %t7 to i32
+  %m0 = call i32 @llvm.umax.i32(i32 %z0, i32 %z1)
+  %m1 = call i32 @llvm.umax.i32(i32 %m0, i32 %z2)
+  %m2 = call i32 @llvm.umax.i32(i32 %m1, i32 %z3)
+  %m3 = call i32 @llvm.umax.i32(i32 %m2, i32 %z4)
+  %m4 = call i32 @llvm.umax.i32(i32 %m3, i32 %z5)
+  %m5 = call i32 @llvm.umax.i32(i32 %m4, i32 %z6)
+  %m6 = call i32 @llvm.umax.i32(i32 %m5, i32 %z7)
+  ret i32 %m6
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.umax.i32(i32, i32)
