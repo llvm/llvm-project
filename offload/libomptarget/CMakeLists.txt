@@ -21,6 +21,7 @@ add_library(omptarget SHARED
   ../libompaccsupport/Mapping.cpp
   ../libompaccsupport/OmpAccError.cpp
   ../libompaccsupport/Program.cpp
+  ../plugins-nextgen/common/src/RecordReplay.cpp
 
   KernelLanguage/API.cpp
 )

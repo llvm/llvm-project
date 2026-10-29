@@ -225,13 +225,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin,
       return Err;
   LoadedImages.clear();
 
-  if (RecordReplay) {
-    if (auto Err = RecordReplay->deinit())
-      return Err;
-    delete RecordReplay;
-    RecordReplay = nullptr;
-  }
-
   return deinitImpl();
 }
 Expected<DeviceImageTy *>
@@ -597,9 +590,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   void *Alloc = nullptr;
 
   // TODO Check alignment.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->allocate(Size);
-
   auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
@@ -643,10 +633,6 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   auto ProfTimer = Profiler.getScopedDataDeleteTimer(this, TgtPtr);
-
-  // Free is a noop when recording or replaying.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->deallocate(TgtPtr);
 
   // Keep track of the deallocation stack if we track allocation traces.
   if (OMPX_TrackAllocationTraces) {
@@ -818,12 +804,6 @@ Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
                                            int64_t Size, void *HostPtr,
                                            TargetAllocTy Kind, size_t Alignment,
                                            GenericProfilerTy *ProfilerPtr) {
-  // Record-replay hands out interior pointers into a preallocated slab so
-  // recorded kernels can re-execute at their original addresses; the MM pool
-  // must be bypassed for those allocations to reach the RR bump allocator.
-  if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
-    return Device.dataAlloc(Size, HostPtr, Kind, Alignment, ProfilerPtr);
-
   MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
                             ? getHostMemoryManager()
                             : getDeviceMemoryManagerFor(Device, Kind);
@@ -846,11 +826,6 @@ Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
 Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
                                   TargetAllocTy Kind,
                                   GenericProfilerTy *ProfilerPtr) {
-  // Symmetric with allocate: record-replay allocations never entered the MM
-  // pool, so route their free through dataDelete's RR shortcut.
-  if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
-    return Device.dataDelete(Ptr, Kind, ProfilerPtr);
-
   MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
                             ? getHostMemoryManager()
                             : getDeviceMemoryManagerFor(Device, Kind);
@@ -1157,23 +1132,6 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
-}
-
-int32_t GenericPluginTy::initialize_record_replay(
-    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
-    bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
-    const char *OutputDirPath) {
-  GenericDeviceTy &Device = getDevice(DeviceId);
-
-  if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
-                                         SaveOutput, EmitReport, ReportFilename,
-                                         OutputDirPath)) {
-    REPORT() << "Failure to initialize RR with " << MemorySize
-             << " bytes on device " << DeviceId << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
 }
 
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
