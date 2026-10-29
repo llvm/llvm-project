@@ -99,13 +99,13 @@ fsqrt	d0, d1
 # CHECK-NEXT:  1      4     0.50                        fnmsub	s0, s1, s2, s3
 # CHECK-NEXT:  1      2     0.50                        fneg	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fneg	d0, d1
-# CHECK-NEXT:  1      3     1.00                        frinta	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frinti	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frintm	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frintn	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frintp	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frintx	s0, s1
-# CHECK-NEXT:  1      3     1.00                        frintz	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frinta	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frinti	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frintm	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frintn	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frintp	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frintx	s0, s1
+# CHECK-NEXT:  1      2     1.00                        frintz	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fcsel	s0, s1, s2, pl
 # CHECK-NEXT:  1      2     0.50                        fcsel	d0, d1, d2, pl
 # CHECK-NEXT:  7      7     7.00                        fsqrt	h0, h1

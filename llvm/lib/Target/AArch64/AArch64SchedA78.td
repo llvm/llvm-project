@@ -1120,8 +1120,8 @@ def : WriteRes<WriteFMul, [A78UnitV]> { let Latency = 3; }
 def : InstRW<[A78Wr_FMA, ReadDefault, ReadDefault, A78Rd_FMA], (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
 
 // FP round to integral
-def : InstRW<[A78Write_3c_1V0], (instregex "^FRINT[AIMNPXZ][HSD]r$",
-                                          "^FRINT(32|64)[XZ][SD]r$")>;
+def : InstRW<[A78Write_2c_1V0], (instregex "^FRINT[AIMNPXZ][HSD]r$",
+                                           "^FRINT(32|64)[XZ][SD]r$")>;
 
 // FP miscellaneous instructions
 // -----------------------------------------------------------------------------
