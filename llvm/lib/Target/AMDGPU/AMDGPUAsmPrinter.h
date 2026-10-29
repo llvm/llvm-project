@@ -159,6 +159,8 @@ public:
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  DwarfDebug *createDwarfDebug() override;
+
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
   bool IsTargetStreamerInitialized;
