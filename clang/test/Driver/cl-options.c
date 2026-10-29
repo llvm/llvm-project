@@ -816,6 +816,11 @@
 // CLANG-NOT: "--dependent-lib=libcmt"
 // CLANG-NOT: "-vectorize-slp"
 
+// Validate that -o determines the default dependency file and target.
+// RUN: %clang_cl /clang:-MD -c -o out.o -### -- %s 2>&1 | FileCheck --check-prefix=DEPFILE-O %s
+// DEPFILE-O: "-dependency-file" "out.d"
+// DEPFILE-O-SAME: "-MT" "out.o"
+
 // Cover PR42501: clang-cl /clang: pass-through causes read-after-free with aliased options.
 // RUN: %clang_cl /clang:-save-temps /clang:-Wl,test1,test2 -### -- %s 2>&1 | FileCheck -check-prefix=SAVETEMPS %s
 // SAVETEMPS: "-save-temps=cwd"

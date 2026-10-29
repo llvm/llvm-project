@@ -873,7 +873,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
       // If user provided -o, that is the dependency target, except
       // when we are only generating a dependency file.
-      Arg *OutputOpt = Args.getLastArg(options::OPT_o, options::OPT__SLASH_Fo);
+      Arg *OutputOpt = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o,
+                                       options::OPT__SLASH_Fo);
       if (OutputOpt && Output.getType() != types::TY_Dependencies) {
         DepTarget = OutputOpt->getValue();
       } else {
@@ -9253,7 +9254,7 @@ const char *Clang::getDependencyFileName(const ArgList &Args,
                                          const InputInfoList &Inputs) {
   // FIXME: Think about this more.
 
-  if (Arg *OutputOpt = Args.getLastArg(options::OPT_o)) {
+  if (Arg *OutputOpt = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o)) {
     SmallString<128> OutputFilename(OutputOpt->getValue());
     llvm::sys::path::replace_extension(OutputFilename, llvm::Twine('d'));
     return Args.MakeArgString(OutputFilename);
