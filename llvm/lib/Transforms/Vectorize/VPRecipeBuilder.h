@@ -76,8 +76,8 @@ public:
 
   /// Returns the CompressedPtrInfo for \p VPI if it is a compressed load or
   /// store (as determined by LoopVectorizationLegality), otherwise
-  /// nullptr.
-  const CompressedPtrInfo *getCompressedPtrInfo(VPInstruction *VPI);
+  /// std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(VPInstruction *VPI);
 
   /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
   /// \p VPI. \p VPI must be a compressed memory operation.
