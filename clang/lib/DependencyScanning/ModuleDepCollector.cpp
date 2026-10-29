@@ -881,7 +881,6 @@ void ModuleDepCollector::addAllModuleDeps(serialization::ModuleFile &MF,
                                           ModuleDeps &MD) {
   auto &MDC = *this;
 
-  llvm::DenseSet<const Module *> Seen;
   for (serialization::ModuleFile *Import : MF.Imports) {
     if (MDC.isPrebuiltModule(Import)) {
       MD.PrebuiltModuleDeps.push_back(createPrebuiltModuleDep(Import));

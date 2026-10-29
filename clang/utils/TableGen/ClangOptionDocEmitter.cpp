@@ -64,8 +64,6 @@ static bool isOptionVisible(const Record *Option, const Record *DocInfo) {
 // Reorganize the records into a suitable form for emitting documentation.
 Documentation extractDocumentation(const RecordKeeper &Records,
                                    const Record *DocInfo) {
-  Documentation Result;
-
   // Build the tree of groups. The root in the tree is the fake option group
   // (Record*)nullptr, which contains all top-level groups and options.
   std::map<const Record *, std::vector<const Record *>> OptionsInGroup;
