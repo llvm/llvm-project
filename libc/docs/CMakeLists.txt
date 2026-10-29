@@ -24,6 +24,7 @@ if(LLVM_ENABLE_SPHINX)
         fcntl
         fenv
         float
+        ftw
         glob
         inttypes
         libgen

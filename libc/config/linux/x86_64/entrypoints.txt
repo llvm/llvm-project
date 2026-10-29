@@ -1383,6 +1383,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
+    # ftw.h entrypoints
+    libc.src.ftw.nftw
+
     # pthread.h entrypoints
     libc.src.pthread.__pthread_cleanup_pop
     libc.src.pthread.__pthread_cleanup_push

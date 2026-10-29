@@ -1389,3 +1389,19 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.idtype_t
 )
+
+add_proxy_header_library(
+  ino_t
+  HDRS
+    ino_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ino_t
+)
+
+add_proxy_header_library(
+  struct_FTW
+  HDRS
+    struct_FTW.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_FTW
+)

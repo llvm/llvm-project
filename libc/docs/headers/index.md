@@ -17,6 +17,7 @@ errno
 fcntl
 fenv
 float
+ftw
 glob
 inttypes
 libgen

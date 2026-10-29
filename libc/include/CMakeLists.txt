@@ -901,6 +901,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  ftw
+  ../libc/include/ftw.yaml
+  ftw.h
+  DEPENDS
+    .sys_stat
+    .llvm_libc_common_h
+    .llvm-libc-macros.ftw_macros
+    .llvm-libc-types.struct_FTW
+)
+
+add_header_macro(
   sys_select
   ../libc/include/sys/select.yaml
   sys/select.h
