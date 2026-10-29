@@ -1565,9 +1565,9 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   if (unsigned targetAS =
           getTargetInfo().getTargetAddressSpace(clang::LangAS::Default))
     eltAS = cir::TargetAddressSpaceAttr::get(&getContext(), targetAS);
-  cir::PointerType eltTy = builder.getVoidPtrTy(eltAS);
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(eltAS);
   mlir::Attribute entry = cir::GlobalViewAttr::get(
-      eltTy, mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
+      voidPtrTy, mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
 
   mlir::StringAttr usedName = builder.getStringAttr("llvm.used");
   cir::GlobalOp used =
@@ -1581,7 +1581,7 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
   elements.push_back(entry);
 
-  cir::ArrayType arrayTy = cir::ArrayType::get(eltTy, elements.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, elements.size());
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&getContext(), elements));
 

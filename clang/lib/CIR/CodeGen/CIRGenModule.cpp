@@ -1518,17 +1518,17 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType eltTy = builder.getVoidPtrTy(
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(
       cgm.getTypes().getPointerAddressSpace(cgm.getASTContext().VoidTy));
 
   llvm::SmallVector<mlir::Attribute> usedArray;
   usedArray.resize(list.size());
   for (auto [i, op] : llvm::enumerate(list)) {
     usedArray[i] = cir::GlobalViewAttr::get(
-        eltTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
+        voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
   }
 
-  cir::ArrayType arrayTy = cir::ArrayType::get(eltTy, usedArray.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, usedArray.size());
 
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
