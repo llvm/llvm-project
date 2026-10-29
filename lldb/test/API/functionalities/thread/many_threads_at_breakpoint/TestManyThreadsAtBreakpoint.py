@@ -14,6 +14,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 @requireThreadSupport
+@skipIfWindows  # On Windows, lldb reports only some of the threads at the breakpoint.
 class ManyThreadsAtBreakpointTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
