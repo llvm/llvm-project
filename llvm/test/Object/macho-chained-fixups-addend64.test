@@ -1,0 +1,11 @@
+// Mach-O object using chained fixups, containing an import with a 64-bit addend.
+
+RUN: yaml2obj %p/Inputs/MachO/chained-fixups-addend64.yaml | \
+RUN: llvm-objdump --macho --chained-fixups - | \
+RUN: FileCheck %s
+
+CHECK:      dyld chained import addend64[0]
+CHECK-NEXT: lib_ordinal = 1 (libfoo)
+CHECK-NEXT: weak_import = 0
+CHECK-NEXT: name_offset = 1 (_foo)
+CHECK-NEXT: addend = 9876543210
