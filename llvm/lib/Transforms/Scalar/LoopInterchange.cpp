@@ -28,6 +28,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -468,6 +469,11 @@ public:
     /// The memory Location.
     Value *MemRef;
     Type *ElemTy;
+    /// The instructions computing MemRef that do not dominate the inner
+    /// loop. reduction2Memory() hoists these into the inner loop preheader
+    /// so that the address is available to the load and store it places inside
+    /// the inner loop. Empty when MemRef is already available there.
+    SmallVector<Instruction *, 4> AddressInstsToHoist;
   };
 
   ArrayRef<InnerReduction> getInnerReductions() const {
@@ -477,6 +483,13 @@ public:
 private:
   bool tightlyNested(Loop *Outer, Loop *Inner);
   bool containsUnsafeInstructions(BasicBlock *BB, Instruction *Skip);
+
+  /// Collect into \p AddressInsts the instructions computing \p MemRef that
+  /// do not already dominate the header of \p InnerL.
+  /// Return false if any of them cannot be hoisted out.
+  bool collectAddressInstsToHoist(Value *MemRef, Loop *InnerL,
+                                  SmallVectorImpl<Instruction *> &AddressInsts,
+                                  SmallPtrSetImpl<Instruction *> &Visited);
 
   /// Traverse all PHI nodes in the header of each loop in the loop nest
   /// starting from \p OuterLoop, and perform the following checks:
@@ -830,6 +843,25 @@ struct LoopInterchange {
 };
 
 } // end anonymous namespace
+
+bool LoopInterchangeLegality::collectAddressInstsToHoist(
+    Value *MemRef, Loop *InnerL, SmallVectorImpl<Instruction *> &AddressInsts,
+    SmallPtrSetImpl<Instruction *> &Visited) {
+  auto *I = dyn_cast<Instruction>(MemRef);
+  if (!I || DT->dominates(I, InnerL->getHeader()) || !Visited.insert(I).second)
+    return true;
+  if (Visited.size() > Opts.loop_interchange_max_address_insts_to_hoist ||
+      InnerL->contains(I) || I->mayHaveSideEffects() ||
+      I->mayReadFromMemory() || !isSafeToSpeculativelyExecute(I))
+    return false;
+
+  for (Value *Op : I->operands())
+    if (!collectAddressInstsToHoist(Op, InnerL, AddressInsts, Visited))
+      return false;
+
+  AddressInsts.push_back(I);
+  return true;
+}
 
 bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
                                                          Instruction *Skip) {
@@ -1297,20 +1329,22 @@ bool LoopInterchangeLegality::isInnerReduction(
   Value *MemRef = LcssaStore->getOperand(1);
   Type *ElemTy = LcssaStore->getOperand(0)->getType();
 
-  // LcssaStore stores the reduction result in BB.
-  // When the reduction is initialized from a constant value, we need to load
-  // from the memory object into the target basic block of the inner loop. This
-  // means the memory reference was used prematurely. So we must ensure that the
-  // memory reference does not dominate the target basic block.
-  // TODO: Move the memory reference definition into the loop header.
-  if (!DT->dominates(dyn_cast<Instruction>(MemRef), L->getHeader())) {
-    LLVM_DEBUG(dbgs() << "Only supported when memory reference dominate "
-                         "the inner loop.\n");
+  // LcssaStore stores the reduction result in BB. When the reduction is
+  // initialized from a constant value, we need to load from the memory object
+  // into the target basic block of the inner loop, so the address has to be
+  // available there. In cases where the final GEP is present next to
+  // the store instead, in the inner loop's exit block, collect the computation
+  // producing the address so that reduction2Memory() can hoist it.
+  SmallVector<Instruction *, 4> AddressInstsToHoist;
+  SmallPtrSet<Instruction *, 8> Visited;
+  if (!collectAddressInstsToHoist(MemRef, L, AddressInstsToHoist, Visited)) {
+    LLVM_DEBUG(dbgs() << "Only supported when the memory reference can be "
+                         "computed before the inner loop.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
-             << "Only supported when memory reference dominate the inner "
-                "loop.";
+             << "Only supported when the memory reference can be computed "
+                "before the inner loop.";
     });
     return false;
   }
@@ -1324,6 +1358,7 @@ bool LoopInterchangeLegality::isInnerReduction(
   SR.LcssaStore = LcssaStore;
   SR.MemRef = MemRef;
   SR.ElemTy = ElemTy;
+  SR.AddressInstsToHoist = std::move(AddressInstsToHoist);
 
   InnerReductions.push_back(SR);
   return true;
@@ -2177,6 +2212,17 @@ void LoopInterchangeTransform::reduction2Memory() {
          "So far we only support at most one reduction.");
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
+
+  // Make the store address available inside the inner loop.
+  if (!SR.AddressInstsToHoist.empty()) {
+    BasicBlock::iterator InsertPt =
+        InnerLoop->getLoopPreheader()->getTerminator()->getIterator();
+    for (Instruction *I : SR.AddressInstsToHoist) {
+      LLVM_DEBUG(dbgs() << "Hoisting address computation: " << *I << "\n");
+      I->moveBefore(InsertPt);
+    }
+  }
+
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   IRBuilder<> Builder(InnerLoopHeader->getFirstNonPHIIt());
 

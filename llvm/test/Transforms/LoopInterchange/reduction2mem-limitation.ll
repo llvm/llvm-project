@@ -273,21 +273,14 @@ exit:
 ;   s[i] = r;
 ; }
 
-; CHECK: --- !Missed
+; CHECK: ---  !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Name:            Interchanged
 ; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supported when memory reference dominate the inner loop.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_05
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
+; CHECK-NEXT:   - String:         Loop interchanged with enclosing loop.
 
 ; IR-LABEL: @reduction_05(
-; IR-NOT: split
 define void @reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
 entry:
   br label %outerloop_header
@@ -338,7 +331,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_06
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supported when memory reference dominate the inner loop.
+; CHECK-NEXT:   - String:          Only supported when the memory reference can be computed before the inner loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
