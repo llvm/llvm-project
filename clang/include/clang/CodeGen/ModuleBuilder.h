@@ -113,6 +113,11 @@ public:
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.
   llvm::Module* StartModule(llvm::StringRef ModuleName, llvm::LLVMContext &C);
+
+  /// Clear any CodeGen state associated with \p GD’s mangled name so that a
+  /// new declaration using the same name is treated as if CodeGen has
+  /// never seen it before.
+  void forgetDecl(GlobalDecl GD);
 };
 
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.
