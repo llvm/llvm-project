@@ -99,8 +99,13 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
       if (MI.getOpcode() == AArch64::SEH_StartProc)
         reportFatalInternalError(
             "AArch64 Windows unwind range insertion cannot be run twice");
-      if (MI.getOpcode() == AArch64::SEH_PrologEnd)
+      if (MI.getOpcode() == AArch64::SEH_PrologEnd) {
+        if (PrologueBlock)
+          reportFatalInternalError(
+              "AArch64 Windows unwind range insertion does "
+              "not support multiple prologues");
         PrologueBlock = &MBB;
+      }
       if (MI.getOpcode() == AArch64::SEH_EpilogEnd)
         EpilogueBlocks.insert(&MBB);
     }
