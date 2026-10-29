@@ -2034,7 +2034,7 @@ bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
 
 bool LoopVectorizationCostModel::isLegalExpandLoadOrCompressStore(
     Instruction *I, ElementCount VF) const {
-  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  assert((isa<LoadInst, StoreInst>(I)) && "Expected load or store");
   return Config.isLegalExpandLoadOrCompressStore(
       isa<LoadInst>(I), getLoadStoreType(I), getLoadStoreAlignment(I), VF);
 }

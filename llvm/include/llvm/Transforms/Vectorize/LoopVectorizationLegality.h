@@ -508,7 +508,7 @@ public:
     return std::nullopt;
   }
 
-  /// Returns the true for \p I if it corresponds to a compressed load or store
+  /// Returns true for \p I if it corresponds to a compressed load or store
   /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
   bool isCompressedLoadOrStore(Instruction *I) {
     return isa<LoadInst, StoreInst>(I) &&

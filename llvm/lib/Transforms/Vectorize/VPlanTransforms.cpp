@@ -6468,10 +6468,10 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
     // Obtain the mask for the conditional update from the VPBlendRecipe.
     VPValue *Mask = nullptr;
     auto *BlendR = cast<VPBlendRecipe>(CondIndPhi.getBackedgeValue());
-    for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
-      if (VPValue *IncomingValue = BlendR->getIncomingValue(I);
+    for (unsigned ValIdx : seq(BlendR->getNumIncomingValues()))
+      if (VPValue *IncomingValue = BlendR->getIncomingValue(ValIdx);
           IncomingValue != &CondIndPhi) {
-        Mask = BlendR->getMask(I);
+        Mask = BlendR->getMask(ValIdx);
         break;
       }
     assert(Mask && "Expected mask for conditional induction update");
@@ -6499,7 +6499,8 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
     Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
 
     Type *UpdateType = CondIndPhi.getScalarType();
-    assert(!UpdateType->isPointerTy() && "ptr types are not supported yet");
+    if (UpdateType->isPointerTy())
+      UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
 
     DebugLoc DL = CondIndPhi.getDebugLoc();
     auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
@@ -6512,7 +6513,9 @@ bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
     VPValue *Offset = Builder.createOverflowingOp(
         Instruction::Mul, {Step, HandledLanes}, {false, false}, DL);
     VPValue *Update =
-        Builder.createAdd(&CondIndPhi, Offset, DL, "conditional.step");
+        CondIndPhi.getScalarType()->isPointerTy()
+            ? Builder.createPtrAdd(&CondIndPhi, Offset, DL, "conditional.step")
+            : Builder.createAdd(&CondIndPhi, Offset, DL, "conditional.step");
     BackedgeValue->replaceAllUsesWith(Update);
   }
 

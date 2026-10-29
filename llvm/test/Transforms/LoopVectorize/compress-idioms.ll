@@ -621,3 +621,78 @@ for.inc:
 exit:
   ret void
 }
+
+; Test vectorizing a conditional ptr induction without any compressed memops.
+define void @conditional_pointer_induction_with_no_compressed_memops(ptr %start, ptr %cond) {
+; CHECK-IC1-LABEL: define void @conditional_pointer_induction_with_no_compressed_memops(
+; CHECK-IC1-SAME: ptr [[START:%.*]], ptr [[COND:%.*]]) {
+; CHECK-IC1-NEXT:  [[ENTRY:.*:]]
+; CHECK-IC1-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-IC1:       [[VECTOR_PH]]:
+; CHECK-IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-IC1:       [[VECTOR_BODY]]:
+; CHECK-IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-IC1-NEXT:    [[CONDITIONAL_IV:%.*]] = phi ptr [ [[START]], %[[VECTOR_PH]] ], [ [[CONDITIONAL_STEP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-IC1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; CHECK-IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-IC1-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-IC1-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
+; CHECK-IC1-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
+; CHECK-IC1-NEXT:    [[TMP4:%.*]] = mul i64 40, [[TMP3]]
+; CHECK-IC1-NEXT:    [[CONDITIONAL_STEP1]] = getelementptr i8, ptr [[CONDITIONAL_IV]], i64 [[TMP4]]
+; CHECK-IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-IC1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-IC1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-IC1:       [[MIDDLE_BLOCK]]:
+; CHECK-IC1-NEXT:    br label %[[EXIT:.*]]
+; CHECK-IC1:       [[EXIT]]:
+; CHECK-IC1-NEXT:    ret void
+;
+; CHECK-TF-LABEL: define void @conditional_pointer_induction_with_no_compressed_memops(
+; CHECK-TF-SAME: ptr [[START:%.*]], ptr [[COND:%.*]]) {
+; CHECK-TF-NEXT:  [[ENTRY:.*:]]
+; CHECK-TF-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-TF:       [[VECTOR_PH]]:
+; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-TF:       [[VECTOR_BODY]]:
+; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NEXT:    [[CONDITIONAL_IV:%.*]] = phi ptr [ [[START]], %[[VECTOR_PH]] ], [ [[CONDITIONAL_STEP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; CHECK-TF-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-TF-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
+; CHECK-TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
+; CHECK-TF-NEXT:    [[TMP4:%.*]] = mul i64 40, [[TMP3]]
+; CHECK-TF-NEXT:    [[CONDITIONAL_STEP1]] = getelementptr i8, ptr [[CONDITIONAL_IV]], i64 [[TMP4]]
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-TF-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-TF:       [[MIDDLE_BLOCK]]:
+; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
+; CHECK-TF:       [[EXIT]]:
+; CHECK-TF-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %conditional.ptr = phi ptr [ %start, %entry ], [ %conditional.ptr.next, %latch ]
+  %cond.ptr = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %cond.val = load i32, ptr %cond.ptr, align 4
+  %cmp = icmp eq i32 %cond.val, 1
+  br i1 %cmp, label %if.then, label %latch
+
+if.then:
+  %conditional.step = getelementptr i8, ptr %conditional.ptr, i64 40
+  br label %latch
+
+latch:
+  %conditional.ptr.next = phi ptr [ %conditional.step, %if.then ], [ %conditional.ptr, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
