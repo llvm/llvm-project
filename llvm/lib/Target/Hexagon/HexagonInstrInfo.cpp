@@ -990,6 +990,11 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(Hexagon::STriw_ctr))
       .addFrameIndex(FI).addImm(0)
       .addReg(SrcReg, KillFlag).addMemOperand(MMO);
+  } else if (Hexagon::CircRegsRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::STriw_circ))
+        .addFrameIndex(FI)
+        .addReg(SrcReg, KillFlag)
+        .addMemOperand(MMO);
   } else if (Hexagon::HvxQRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::PS_vstorerq_ai))
       .addFrameIndex(FI).addImm(0)
@@ -1033,6 +1038,10 @@ void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   } else if (Hexagon::ModRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::LDriw_ctr), DestReg)
       .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
+  } else if (Hexagon::CircRegsRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LDriw_circ), DestReg)
+        .addFrameIndex(FI)
+        .addMemOperand(MMO);
   } else if (Hexagon::HvxQRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::PS_vloadrq_ai), DestReg)
       .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
@@ -1063,14 +1072,16 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
 
   auto RealCirc = [&](unsigned Opc, bool HasImm, unsigned MxOp) {
-    Register Mx = MI.getOperand(MxOp).getReg();
-    Register CSx = (Mx == Hexagon::M0 ? Hexagon::CS0 : Hexagon::CS1);
-    BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrrcr), CSx)
-        .add(MI.getOperand((HasImm ? 5 : 4)));
-    auto MIB = BuildMI(MBB, MI, DL, get(Opc)).add(MI.getOperand(0))
-        .add(MI.getOperand(1)).add(MI.getOperand(2)).add(MI.getOperand(3));
-    if (HasImm)
-      MIB.add(MI.getOperand(4));
+    Register M_CSx = MI.getOperand(MxOp).getReg();
+    Register Mx = HRI.getSubReg(M_CSx, Hexagon::isub_hi);
+    unsigned CSOp = HasImm ? 5 : 4;
+    auto MIB = BuildMI(MBB, MI, DL, get(Opc));
+    for (unsigned i = 0; i != CSOp; ++i)
+      if (i == MxOp)
+        MIB.addReg(Mx);
+      else
+        MIB.add(MI.getOperand(i));
+    Register CSx = (M_CSx == Hexagon::CS_M0 ? Hexagon::CS0 : Hexagon::CS1);
     MIB.addReg(CSx, RegState::Implicit);
     MBB.erase(MI);
     return true;
