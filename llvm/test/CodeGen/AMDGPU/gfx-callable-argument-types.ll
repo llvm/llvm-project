@@ -5541,24 +5541,24 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() #0 {
 ; GFX9-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
 ; GFX9-NEXT:    v_perm_b32 v0, v20, v21, s34
 ; GFX9-NEXT:    v_perm_b32 v1, v22, v23, s34
-; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s34
-; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s34
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
 ; GFX9-NEXT:    v_perm_b32 v0, v16, v17, s34
 ; GFX9-NEXT:    v_perm_b32 v4, v18, v19, s34
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v13, s34
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v15, s34
-; GFX9-NEXT:    v_lshl_or_b32 v8, v10, 16, v8
+; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s34
+; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s34
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
-; GFX9-NEXT:    v_mov_b32_e32 v10, 16
-; GFX9-NEXT:    v_mov_b32_e32 v11, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 16
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_lshl_or_b32 v9, v13, 16, v12
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-NEXT:    global_store_dwordx4 v[10:11], v[0:3], off
-; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX9-NEXT:    v_lshl_or_b32 v8, v10, 16, v8
+; GFX9-NEXT:    v_mov_b32_e32 v10, 0
+; GFX9-NEXT:    v_mov_b32_e32 v11, 0
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[0:3], off
+; GFX9-NEXT:    global_store_dwordx4 v[10:11], v[6:9], off
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s34, v40, 2
@@ -8231,6 +8231,8 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v28, 0
+; GFX9-NEXT:    s_mov_b32 s37, external_void_func_v32i32@abs32@hi
+; GFX9-NEXT:    s_mov_b32 s36, external_void_func_v32i32@abs32@lo
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v28, s[34:35]
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v28, s[34:35] offset:16
@@ -8241,9 +8243,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX9-NEXT:    global_load_dwordx4 v[24:27], v28, s[34:35] offset:96
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_dwordx4 v[28:31], v28, s[34:35] offset:112
-; GFX9-NEXT:    s_mov_b32 s35, external_void_func_v32i32@abs32@hi
-; GFX9-NEXT:    s_mov_b32 s34, external_void_func_v32i32@abs32@lo
-; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[36:37]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
