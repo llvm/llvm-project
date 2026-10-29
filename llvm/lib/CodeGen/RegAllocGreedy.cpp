@@ -2412,7 +2412,7 @@ BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
     return BlockFrequency::max();
 
   // This logic is intentionally narrow: handle a single concrete value
-  // whose def can be cheaply rematerialized at every use.
+  // whose def can be rematerialized at every use.
   if (!VirtReg.containsOneValue())
     return BlockFrequency::max();
   const VNInfo *OnlyVNI = VirtReg.getValNumInfo(0);
@@ -2420,8 +2420,7 @@ BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
     return BlockFrequency::max();
 
   MachineInstr *DefMI = LIS->getInstructionFromIndex(OnlyVNI->def);
-  if (!DefMI || !TII->isReMaterializable(*DefMI) ||
-      !TII->isAsCheapAsAMove(*DefMI))
+  if (!DefMI || !TII->isReMaterializable(*DefMI))
     return BlockFrequency::max();
 
   // Only consider live ranges with register-mask interference. This limits the
@@ -2492,14 +2491,16 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
   }
   if (Stage < RS_Split) {
     // We choose pre-splitting over using the CSR for the first time if
-    // the cost of splitting is lower than CSRCost.
+    // the cost of splitting is lower than both CSRCost and the cost of
+    // rematerializing at every use.
     SA->analyze(&VirtReg);
     unsigned NumCands = 0;
-    BlockFrequency BestCost = CSRCost; // Don't modify CSRCost.
+    BlockFrequency RematCost = calcRematCost(VirtReg, Order);
+    BlockFrequency BestCost = std::min(CSRCost, RematCost);
     unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                  NumCands, true /*IgnoreCSR*/);
     if (BestCand == NoCand) {
-      if (calcRematCost(VirtReg, Order) < CSRCost) {
+      if (RematCost < CSRCost) {
         CostPerUseLimit = 1;
         return MCRegister();
       }
