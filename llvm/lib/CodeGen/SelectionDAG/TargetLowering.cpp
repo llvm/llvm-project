@@ -12510,37 +12510,39 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
 }
 
 static SDValue clampDynamicVectorIndex(SelectionDAG &DAG, SDValue Idx,
-                                       EVT VecVT, const SDLoc &dl,
+                                       EVT VecVT, const SDLoc &DL,
                                        ElementCount SubEC) {
   assert(!(SubEC.isScalable() && VecVT.isFixedLengthVector()) &&
          "Cannot index a scalable vector within a fixed-width vector");
-
-  unsigned NElts = VecVT.getVectorMinNumElements();
-  unsigned NumSubElts = SubEC.getKnownMinValue();
+  ElementCount NElts = VecVT.getVectorElementCount();
   EVT IdxVT = Idx.getValueType();
 
-  if (VecVT.isScalableVector() && !SubEC.isScalable()) {
-    // If this is a constant index and we know the value plus the number of the
-    // elements in the subvector minus one is less than the minimum number of
-    // elements then it's safe to return Idx.
-    if (auto *IdxCst = dyn_cast<ConstantSDNode>(Idx))
-      if (IdxCst->getZExtValue() + (NumSubElts - 1) < NElts)
-        return Idx;
-    SDValue VS =
-        DAG.getVScale(dl, IdxVT, APInt(IdxVT.getFixedSizeInBits(), NElts));
-    unsigned SubOpcode = NumSubElts <= NElts ? ISD::SUB : ISD::USUBSAT;
-    SDValue Sub = DAG.getNode(SubOpcode, dl, IdxVT, VS,
-                              DAG.getConstant(NumSubElts, dl, IdxVT));
-    return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx, Sub);
+  // Attempt to prove all accessed lanes sit within VecVT.
+  ElementCount IdxAsEC;
+  if (sd_match(Idx, m_ElementCount(IdxAsEC))) {
+    if (SubEC.isScalar() && ElementCount::isKnownLT(IdxAsEC, NElts))
+      return Idx;
+    // Calculate end index as TypeSize to remove possibility of overflow.
+    if (IdxAsEC.isScalable() == SubEC.isScalable() &&
+        TypeSize::isKnownLE(TypeSize(IdxAsEC) + TypeSize(SubEC),
+                            TypeSize(NElts)))
+      return Idx;
   }
-  if (isPowerOf2_32(NElts) && NumSubElts == 1) {
-    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(), Log2_32(NElts));
-    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
-                       DAG.getConstant(Imm, dl, IdxVT));
+
+  // Can we mask Idx rather than clamp it.
+  if (SubEC.isScalar() && NElts.isPowerOf2()) {
+    SDValue EC = DAG.getElementCount(DL, IdxVT, NElts);
+    SDValue Mask =
+        DAG.getNode(ISD::SUB, DL, IdxVT, EC, DAG.getConstant(1, DL, IdxVT));
+    return DAG.getNode(ISD::AND, DL, IdxVT, Idx, Mask);
   }
-  unsigned MaxIndex = NumSubElts < NElts ? NElts - NumSubElts : 0;
-  return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
-                     DAG.getConstant(MaxIndex, dl, IdxVT));
+
+  unsigned SubOpcode =
+      ElementCount::isKnownLE(SubEC, NElts) ? ISD::SUB : ISD::USUBSAT;
+  SDValue MaxSafeIndex =
+      DAG.getNode(SubOpcode, DL, IdxVT, DAG.getElementCount(DL, IdxVT, NElts),
+                  DAG.getElementCount(DL, IdxVT, SubEC));
+  return DAG.getNode(ISD::UMIN, DL, IdxVT, Idx, MaxSafeIndex);
 }
 
 SDValue
@@ -12569,6 +12571,9 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
          "Converting bits to bytes lost precision");
   assert(SubVecVT.getVectorElementType() == EltVT &&
          "Sub-vector must be a vector with matching element type");
+  assert((SubVecVT.getVectorElementCount().isScalar() ||
+          isa<ConstantSDNode>(Index)) &&
+         "Subvector Index must be constant!");
 
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
@@ -12576,15 +12581,13 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   if (!DAG.isGuaranteedNotToBePoison(Index))
     Index = DAG.getFreeze(Index);
 
-  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
-                                  SubVecVT.getVectorElementCount());
-
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())
     Index =
-        DAG.getNode(ISD::MUL, dl, IdxVT, Index,
-                    DAG.getVScale(dl, IdxVT, APInt(IdxVT.getSizeInBits(), 1)));
+        DAG.getVScale(dl, IdxVT, cast<ConstantSDNode>(Index)->getAPIntValue());
 
+  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
+                                  SubVecVT.getVectorElementCount());
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
   return DAG.getMemBasePlusOffset(VecPtr, Index, dl, PtrArithFlags);
