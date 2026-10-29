@@ -8,11 +8,6 @@
 
 # `DO CONCURRENT` isn't necessarily concurrent
 
-```{contents}
----
-local:
----
-```
 
 A variant form of Fortran's primary looping construct was
 added to the Fortran 2008 language standard with the apparent

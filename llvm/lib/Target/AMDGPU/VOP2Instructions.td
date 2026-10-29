@@ -283,7 +283,7 @@ multiclass VOP2bInst <string opName,
       let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
         def _e32 : VOP2_Pseudo <opName, P, VOPPatOrNull<node,P>.ret>,
                    Commutable_REV<revOp#"_e32", !eq(revOp, opName)> {
-          let usesCustomInserter = true;
+          let usesCustomInserter = useSGPRInput;
         }
 
         if P.HasExtSDWA then
@@ -1395,6 +1395,13 @@ class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
                      $src)
 >;
 
+class ZExt_i16_i1_Pat_t16 <SDNode ext> : GCNPat <
+  (i16 (ext i1:$src)),
+  (V_CNDMASK_B16_t16_e64 0/*src0mod*/, 0/*src0*/,
+                     0/*src1mod*/, 1/*src1*/,
+                     $src)
+>;
+
 let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (and i16:$src0, i16:$src1),
@@ -1455,15 +1462,30 @@ defm : Arithmetic_i16_0Hi_Pats<cashr_rev_16, V_ASHRREV_I16_e64>;
 
 }  // End Predicates = [Has16BitInsts, isGFX8GFX9]
 
-let Predicates = [Has16BitInsts] in {
+let OtherPredicates = [Has16BitInsts] in {
 
+let True16Predicate = NotUseRealTrue16Insts in {
 def : ZExt_i16_i1_Pat<zext>;
 def : ZExt_i16_i1_Pat<anyext>;
+}
 
+let True16Predicate = UseRealTrue16Insts in {
+def : ZExt_i16_i1_Pat_t16<zext>;
+def : ZExt_i16_i1_Pat_t16<anyext>;
+}
+
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <
   (i16 (sext i1:$src)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), $src)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i16 (sext i1:$src)),
+  (V_CNDMASK_B16_t16_e64 /*src0mod*/0, /*src0*/0,
+                     /*src1mod*/0, /*src1*/-1, $src)
 >;
 
 } // End Predicates = [Has16BitInsts]
@@ -2814,38 +2836,9 @@ defm V_LDEXP_F16          : VOP2_Real_e32e64_vi <0x33>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
 
-// Aliases to simplify matching of floating-point instructions that
-// are VOP2 on SI and VOP3 on VI.
-class SI2_VI3Alias <string name, VOP3_Real inst> : InstAlias <
-  name#" $dst, $src0, $src1",
-  !if(inst.Pfl.HasOMod,
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0),
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0))
->, PredicateControl {
-  let UseInstAsmMatchConverter = 0;
-  let AsmVariantName = AMDGPUAsmVariants.VOP3;
-}
-
-def : SI2_VI3Alias <"v_ldexp_f32", V_LDEXP_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkaccum_u8_f32", V_CVT_PKACCUM_U8_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_i16_f32", V_CVT_PKNORM_I16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
-
 defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 } // End SubtargetPredicate = isGFX8GFX9
-
-let SubtargetPredicate = isGFX9Only in {
-
-defm : VOP2bInstAliases<V_ADD_U32_e32,     V_ADD_CO_U32_e32_gfx9,     "v_add_co_u32">;
-defm : VOP2bInstAliases<V_ADDC_U32_e32,    V_ADDC_CO_U32_e32_gfx9,    "v_addc_co_u32">;
-defm : VOP2bInstAliases<V_SUB_U32_e32,     V_SUB_CO_U32_e32_gfx9,     "v_sub_co_u32">;
-defm : VOP2bInstAliases<V_SUBB_U32_e32,    V_SUBB_CO_U32_e32_gfx9,    "v_subb_co_u32">;
-defm : VOP2bInstAliases<V_SUBREV_U32_e32,  V_SUBREV_CO_U32_e32_gfx9,  "v_subrev_co_u32">;
-defm : VOP2bInstAliases<V_SUBBREV_U32_e32, V_SUBBREV_CO_U32_e32_gfx9, "v_subbrev_co_u32">;
-
-} // End SubtargetPredicate = isGFX9Only
 
 let SubtargetPredicate = HasDLInsts in {
 
@@ -2881,15 +2874,14 @@ let DecoderNamespace = "GFX90A" in {
           let DecoderNamespace = "GFX9";
         }
   }
-} // End AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A"
+} // End DecoderNamespace = "GFX90A"
 
 let SubtargetPredicate = HasFmacF64Inst, OtherPredicates = [isGFX9Only] in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
 } // End SubtargetPredicate = HasFmacF64Inst
 
-let IsSingle = 1 in {
+let AssemblerPredicate = isGFX90APlus, IsSingle = 1 in
   defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
-}
 
 let SubtargetPredicate = HasFmaakFmamkF32Insts in {
 defm V_FMAMK_F32        : VOP2_Real_MADK_gfx940 <0x17>;
@@ -2930,10 +2922,6 @@ let OtherPredicates = [HasDot4Insts] in {
 let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
-
-let SubtargetPredicate = HasPkFmacF16Inst in {
-defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
 
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16

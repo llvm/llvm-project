@@ -24,8 +24,10 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
@@ -35,7 +37,7 @@ static bool isAligned(const Value *Base, Align Alignment,
 static bool isDereferenceableAndAlignedPointerViaAssumption(
     const Value *Ptr, Align Alignment, const SimplifyQuery &SQ, bool IgnoreFree,
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
-  if (!SQ.CxtI)
+  if (!SQ.CtxI)
     return false;
   // Look through assumes to see if both dereferenceability and alignment can
   // be proven by an assume if needed.
@@ -45,7 +47,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-        if (!isValidAssumeForContext(Assume, SQ.CxtI, SQ.DT))
+        if (!isValidAssumeForContext(Assume, SQ.CtxI, SQ.DT))
           return false;
         if (RK.AttrKind == Attribute::Alignment) {
           IsAligned |= RK.ArgValue >= Alignment.value();
@@ -54,7 +56,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
           // Dereferenceable information from assumptions is only valid if the
           // value cannot be freed between the assumption and use.
           if (!IsDerefable &&
-              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
+              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CtxI, SQ.DT)) &&
               CheckSize(RK))
             IsDerefable = true;
         }
@@ -149,7 +151,7 @@ static bool isDereferenceableAndAlignedPointer(
         DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
       }
 
-      if (!SQ.CxtI || !willNotFreeBetween(DefI, SQ.CxtI))
+      if (!SQ.CtxI || !willNotFreeBetween(DefI, SQ.CtxI, SQ.DT))
         return false;
     }
 
@@ -162,7 +164,7 @@ static bool isDereferenceableAndAlignedPointer(
     // We don't bother handling allocas here, as they aren't speculatable
     // anyway.
     if (I && !isa<AllocaInst>(I))
-      return SQ.CxtI && isValidAssumeForContext(I, SQ.CxtI, SQ.DT);
+      return SQ.CtxI && isValidAssumeForContext(I, SQ.CtxI, SQ.DT);
     return true;
   };
   if (IsKnownDeref()) {
@@ -356,7 +358,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  auto LoopGuards = ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
 
   auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
@@ -371,12 +373,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(
-        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
-
   APInt MaxPtrDiff =
-      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
@@ -434,8 +432,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                    SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
-                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
@@ -455,15 +453,16 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                        const APInt &Size,
-                                       const SimplifyQuery &SQ) {
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ)) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, IgnoreFree)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
-    if (!SQ.CxtI || !suppressSpeculativeLoadForSanitizers(*SQ.CxtI))
+    if (!SQ.CtxI || !suppressSpeculativeLoadForSanitizers(*SQ.CtxI))
       return true;
   }
 
-  if (!SQ.CxtI)
+  if (!SQ.CtxI)
     return false;
 
   if (Size.getBitWidth() > 64)
@@ -475,7 +474,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
   // from/to.  If so, the previous load or store would have already trapped,
   // so there is no harm doing an extra load (also, CSE will later eliminate
   // the load entirely).
-  auto BBI = SQ.CxtI->getIterator(), E = SQ.CxtI->getParent()->begin();
+  auto BBI = SQ.CtxI->getIterator(), E = SQ.CtxI->getParent()->begin();
 
   // We can at least always strip pointer casts even though we can't use the
   // base here.
@@ -486,7 +485,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 
     // If we see a free or a call which may write to memory (i.e. which might do
     // a free) the pointer could be marked invalid.
-    if (isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
+    if (!IgnoreFree && isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
         !isa<LifetimeIntrinsic>(BBI))
       return false;
 
@@ -528,13 +527,14 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 }
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                       const SimplifyQuery &SQ) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
   TypeSize TySize = SQ.DL.getTypeStoreSize(Ty);
   if (TySize.isScalable())
     return false;
   APInt Size(SQ.DL.getIndexTypeSizeInBits(V->getType()),
              TySize.getFixedValue());
-  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ);
+  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ, IgnoreFree);
 }
 
 /// DefMaxInstsToScan - the default number of maximum instructions
@@ -722,10 +722,10 @@ Value *llvm::findAvailablePtrLoadStore(
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
-    // We must ignore debug info directives when counting (otherwise they
+    // We must ignore pseudo probes when counting (otherwise they
     // would affect codegen).
     Instruction *Inst = &*--ScanFrom;
-    if (Inst->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     // Restore ScanFrom to expected value in case next test succeeds
@@ -813,7 +813,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     if (MaxInstsToScan-- == 0)
@@ -957,6 +957,10 @@ bool llvm::isReadOnlyLoop(
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
+      // Pseudo-probes are placeholders with side effects but
+      // no real memory access, and do not affect dereferenceability.
+      if (isa<PseudoProbeInst>(I))
+        continue;
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           NonDereferenceableAndAlignedLoads.push_back(LI);
@@ -1000,6 +1004,34 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
     // members past this point.
     Expr.BasePtr = GEP->getPointerOperand();
     Expr.Flags = Expr.Flags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+
+    // Try to look through mul and shl
+    APInt IndexScale(BitWidth, 1);
+    if (auto *BO = dyn_cast_or_null<BinaryOperator>(VarIndex)) {
+      Value *UnscaledIndex = nullptr;
+      const APInt *Constant;
+      bool FoundIndexScale = true;
+      if (match(BO, m_Mul(m_Value(UnscaledIndex), m_APInt(Constant)))) {
+        IndexScale *= *Constant;
+      } else if (match(BO, m_Shl(m_Value(UnscaledIndex), m_APInt(Constant))) &&
+                 Constant->ult(BitWidth)) {
+        IndexScale <<= *Constant;
+      } else {
+        FoundIndexScale = false;
+      }
+
+      if (FoundIndexScale) {
+        // If we do not have nuw or nsw on the mul/shl we need to update the
+        // flags
+        if (!BO->hasNoSignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedSignedWrap();
+        if (!BO->hasNoUnsignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedWrap();
+
+        VarIndex = UnscaledIndex;
+      }
+    }
+
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
          GTI != GTE; ++GTI) {
       Value *Index = GTI.getOperand();
@@ -1015,17 +1047,18 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         // Truncate if type size exceeds index space.
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
-                          /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+                          /*implicitTrunc=*/true);
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 
-      // FIXME: Also look through a mul/shl in the index.
       assert(Expr.Index == nullptr && "Shouldn't have index yet");
-      Expr.Index = Index;
+      Expr.Index = VarIndex;
       // Truncate if type size exceeds index space.
       Expr.Scale = APInt(BitWidth, GTI.getSequentialElementStride(DL),
-                         /*isSigned=*/false, /*implicitTrunc=*/true);
+                         /*isSigned=*/false, /*implicitTrunc=*/true) *
+                   IndexScale;
     }
   }
 

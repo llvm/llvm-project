@@ -163,7 +163,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // both operators can be overloaded in C++, and could result in ambiguity in
   // how the expression is handled. Additionally, `*` and `&` are not supported.
   const bool try_variable_path =
-      expr.find_first_of("*&->[]") == StringRef::npos;
+      !expr.contains("->") && expr.find_first_of("*&[]") == StringRef::npos;
   if (frame && try_variable_path) {
     VariableSP var_sp;
     Status status;

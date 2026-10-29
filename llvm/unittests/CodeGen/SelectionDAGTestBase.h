@@ -52,7 +52,7 @@ protected:
     SMDiagnostic SMError;
     M = parseAssemblyString(Assembly, SMError, Context);
     ASSERT_TRUE(M && "Could not parse module!");
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     F = M->getFunction("f");
     ASSERT_TRUE(F && "Could not get function f!");

@@ -687,16 +687,16 @@ public:
 
   /// Return a range corresponding to the dialect attributes for this operation.
   dialect_attr_range getDialectAttrs() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return {dialect_attr_iterator(attrs.begin(), attrs.end()),
             dialect_attr_iterator(attrs.end(), attrs.end())};
   }
   dialect_attr_iterator dialect_attr_begin() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.begin(), attrs.end());
   }
   dialect_attr_iterator dialect_attr_end() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.end(), attrs.end());
   }
 

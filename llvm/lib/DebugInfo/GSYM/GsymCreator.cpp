@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -155,7 +156,25 @@ void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   std::swap(Funcs, TopLevelFuncs);
 }
 
-llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
+/// Find the end address of the section that contains \a Addr.
+///
+/// \returns The address of the first byte past the end of the section that
+///          contains \a Addr, or std::nullopt if no section contains \a Addr.
+static std::optional<uint64_t>
+getSectionEndAddress(const object::ObjectFile &Obj, uint64_t Addr) {
+  for (const object::SectionRef &Sect : Obj.sections()) {
+    const uint64_t SectSize = Sect.getSize();
+    if (SectSize == 0)
+      continue;
+    const uint64_t SectAddr = Sect.getAddress();
+    if (Addr >= SectAddr && Addr < SectAddr + SectSize)
+      return SectAddr + SectSize;
+  }
+  return std::nullopt;
+}
+
+llvm::Error GsymCreator::finalize(OutputAggregator &Out,
+                                  const object::ObjectFile *Obj) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
@@ -265,9 +284,19 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
     // help ensure we don't cause lookups to always return the last symbol that
     // has no size when doing lookups.
     if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
-      if (auto Range =
-              ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
-        Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
+      const uint64_t StartAddr = Funcs.back().Range.start();
+      if (auto Range = ValidTextRanges->getRangeThatContains(StartAddr)) {
+        uint64_t EndAddr = Range->end();
+        // A valid text range can be made up of more than one section, so
+        // stopping at the end of the range can make the function extend past
+        // the end of the section that it actually lives in. Limit the size to
+        // the end of the containing section when we have an object file to
+        // look the section up in.
+        if (Obj) {
+          if (auto SectEndAddr = getSectionEndAddress(*Obj, StartAddr))
+            EndAddr = std::min(EndAddr, *SectEndAddr);
+        }
+        Funcs.back().Range = {StartAddr, EndAddr};
       }
     }
     Out << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "

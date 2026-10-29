@@ -23,7 +23,7 @@
 //     up the OS's collation files.
 
 // https://llvm.org/PR41018
-// XFAIL: windows-dll && msvc
+// XFAIL: windows-dll && msvc && (clang-21 || clang-22)
 
 #include <locale>
 #include <string>

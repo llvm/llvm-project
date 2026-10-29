@@ -63,8 +63,7 @@ def main(argv):
         help='The testing configuration to use, which determines the Standard Library being tested. This has '
              'the same meaning as the LIBCXX_TEST_CONFIG CMake option: either an absolute path to a Lit '
              'configuration file, or a path relative to the libcxx/test/configs directory of the test suite '
-             'being used. Note that when --test-suite-commit is used, a relative path is resolved against '
-             'that older version of the test suite, so an absolute path is usually what you want.')
+             'being used.')
     parser.add_argument('--compiler', type=pathlib.Path, required=True,
         help='Path to the compiler to use to run the tests.')
     parser.add_argument('--test-suite-commit', type=str, required=False,

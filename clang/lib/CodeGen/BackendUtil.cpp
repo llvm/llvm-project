@@ -66,14 +66,20 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
+#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -94,9 +100,13 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/DynamicDebugging.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -111,7 +121,7 @@ using namespace llvm;
 namespace llvm {
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
-    "sanitizer-early-opt-ep", cl::Optional,
+    "sanitizer-early-opt-ep",
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 // Experiment to mark cold functions as optsize/minsize/optnone.
@@ -128,19 +138,19 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                           "Mark cold functions with minsize."),
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
-
-LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
-    ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
 // Path and name of file used for profile generation
-static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
-  std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? llvm::driver::getDefaultProfileGenName()
-                             : CodeGenOpts.InstrProfileOutput;
+static std::string
+getProfileGenName(const cl::LibraryOptionsContext &LibraryOptions,
+                  const CodeGenOptions &CodeGenOpts) {
+  std::string FileName =
+      CodeGenOpts.InstrProfileOutput.empty()
+          ? llvm::driver::getDefaultProfileGenName(LibraryOptions)
+          : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
   return FileName;
@@ -385,17 +395,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.MCOptions.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
 
-  if (CodeGenOpts.hasSjLjExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-  if (CodeGenOpts.hasSEHExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
-  if (CodeGenOpts.hasDWARFExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
-  if (CodeGenOpts.hasWasmExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
-  if (CodeGenOpts.hasEmscriptenExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Emscripten;
-
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
@@ -418,7 +417,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
   }
 
-  Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
+  if (CodeGenOpts.SplitMachineFunctions)
+    Options.FunctionSplitting = llvm::FunctionSplittingMode::All;
   Options.EnableStaticDataPartitioning =
       CodeGenOpts.PartitionStaticDataSections;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
@@ -443,7 +443,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
   Options.ObjectFilenameForDebug =
       CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
-  Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
   Options.VecLib =
@@ -513,6 +512,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
   Options.MisExpect = CodeGenOpts.MisExpect;
+  Options.VerifyArgABICompliance = true;
 
   return true;
 }
@@ -522,10 +522,11 @@ getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   if (CodeGenOpts.CoverageNotesFile.empty() &&
       CodeGenOpts.CoverageDataFile.empty())
     return std::nullopt;
-  // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
-  // LLVM's -default-gcov-version flag is set to something invalid.
+  // Not using GCOVProfilerPass's default options allows us to avoid exiting
+  // if LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
   Options.EmitNotes = !CodeGenOpts.CoverageNotesFile.empty();
+  Options.UseAbsolutePathsInNotes = CodeGenOpts.UseAbsolutePathsInNotesFile;
   Options.EmitData = !CodeGenOpts.CoverageDataFile.empty();
   llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
@@ -599,6 +600,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   llvm::TargetOptions Options;
   if (!initTargetOptions(CI, Diags, Options))
     return;
+  Options.MCOptions.LibraryOptions =
+      &TheModule->getContext().getLibraryOptions();
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
   if (TM)
@@ -764,7 +767,8 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 }
 
-void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
+void addLowerAllowCheckPass(const cl::LibraryOptionsContext &LibraryOptions,
+                            const CodeGenOptions &CodeGenOpts,
                             const LangOptions &LangOpts, PassBuilder &PB) {
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
@@ -779,8 +783,9 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
       SanitizerKind::KernelMemory | SanitizerKind::HWAddress |
       SanitizerKind::KernelHWAddress);
 
-  // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+  // TODO: remove isRequested()
+  if (LowerAllowCheckPass::isRequested(LibraryOptions) ||
+      ScaledCutoffs.has_value() ||
       CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value() ||
       LowerAllowSanitize) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
@@ -789,7 +794,7 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
             ModulePassManager &MPM, OptimizationLevel Level,
             ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
-          // TODO: after removing IsRequested(), make this unconditional
+          // TODO: after removing isRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
           Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
@@ -799,14 +804,48 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
   }
 }
 
+static void addAMDGCNSPIRVSizeOptimizationPasses(ModulePassManager &MPM) {
+  // For AMDGCN flavoured SPIR-V we want to preserve the pristine Clang input
+  // by default, to minimise the risk of SPIR-V target specific transforms
+  // being disruptive for the AMDGPU BE. However, this can yield very large
+  // binaries. Thus, for higher optimisation levels we turn on a minimal set
+  // of size reducing passes. The pass collection here is derived from that
+  // proposed in Jain et al. "An analysis of executable size reduction by LLVM
+  // passes" (https://doi.org/10.1007/s40012-019-00248-5), more specifically
+  // the GF and G0 groups.
+
+  // GF: -lower-expect -simplifycfg -sroa -early-cse
+  MPM.addPass(createModuleToFunctionPassAdaptor(LowerExpectIntrinsicPass()));
+  MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::PreserveCFG)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(EarlyCSEPass()));
+
+  // G0: -forceattrs -inferattrs -ipsccp -globalopt -mem2reg -deadargelim
+  //     -instcombine -simplifycfg -prune-eh (PostOrderFunctionAttrs in NewPM)
+  //     -inline(disabled) -functionattrs (disabled)
+  MPM.addPass(ForceFunctionAttrsPass());
+  MPM.addPass(InferFunctionAttrsPass());
+  MPM.addPass(IPSCCPPass());
+  MPM.addPass(GlobalOptPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(PromotePass()));
+  MPM.addPass(DeadArgumentEliminationPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(InstCombinePass()));
+  MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
+  MPM.addPass(
+      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+}
+
 void EmitAssemblyHelper::RunOptimizationPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS, BackendConsumer *BC) {
+  const cl::LibraryOptionsContext &LibraryOptions =
+      TheModule->getContext().getLibraryOptions();
   std::optional<PGOOptions> PGOOpt;
 
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
-    PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
+    PGOOpt = PGOOptions(getProfileGenName(LibraryOptions, CodeGenOpts), "", "",
                         CodeGenOpts.MemoryProfileUsePath, PGOOptions::IRInstr,
                         PGOOptions::NoCSAction, ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling,
@@ -853,18 +892,18 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
              PGOOpt->Action != PGOOptions::SampleUse &&
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
              " pass");
-      PGOOpt->CSProfileGenFile = getProfileGenName(CodeGenOpts);
+      PGOOpt->CSProfileGenFile = getProfileGenName(LibraryOptions, CodeGenOpts);
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
-      PGOOpt = PGOOptions("", getProfileGenName(CodeGenOpts), "",
-                          /*MemoryProfile=*/"", PGOOptions::NoAction,
-                          PGOOptions::CSIRInstr, ClPGOColdFuncAttr,
-                          CodeGenOpts.DebugInfoForProfiling);
+      PGOOpt = PGOOptions(
+          "", getProfileGenName(LibraryOptions, CodeGenOpts), "",
+          /*MemoryProfile=*/"", PGOOptions::NoAction, PGOOptions::CSIRInstr,
+          ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   }
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&LibraryOptions);
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -895,7 +934,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       (CodeGenOpts.DebugPassManager || DebugPassStructure),
       CodeGenOpts.VerifyEach, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC, CI.getVirtualFileSystemPtr());
+  PassBuilder PB(TheModule->getContext(), TM.get(), PTO, PGOOpt, &PIC,
+                 CI.getVirtualFileSystemPtr());
 
   // Handle the assignment tracking feature options.
   switch (CodeGenOpts.getAssignmentTrackingMode()) {
@@ -1045,7 +1085,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       // Most sanitizers only run during PreLink stage.
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
-      addLowerAllowCheckPass(CodeGenOpts, LangOpts, PB);
+      addLowerAllowCheckPass(LibraryOptions, CodeGenOpts, LangOpts, PB);
 
       PB.registerPipelineStartEPCallback(
           [&](ModulePassManager &MPM, OptimizationLevel Level) {
@@ -1059,6 +1099,23 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
               MPM.addPass(InferFunctionAttrsPass());
             }
           });
+
+      if (CodeGenOpts.CopyProf) {
+        // Early pass: insert callbacks into special member functions before the
+        // inliner removes function boundaries.
+        PB.registerPipelineEarlySimplificationEPCallback(
+            [](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
+              MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfPass()));
+              MPM.addPass(ModuleCopyProfPass());
+            });
+        // Late pass: to reduce runtime overhead, instrument stores only after
+        // optimizations have been run so only useful stores are instrumented.
+        PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                              OptimizationLevel,
+                                              ThinOrFullLTOPhase) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfStoresPass()));
+        });
+      }
     }
 
     if (std::optional<GCOVOptions> Options =
@@ -1098,6 +1155,15 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     } else {
       MPM.addPass(PB.buildPerModuleDefaultPipeline(Level));
     }
+  } else if (mapToLevel(CodeGenOpts) > OptimizationLevel::O0 &&
+             CodeGenOpts.AMDGCNSPIRVSizeOptimization) {
+    if (!TargetTriple.isSPIRV() ||
+        (TargetTriple.getVendor() != llvm::Triple::VendorType::AMD)) {
+      Diags.Report(diag::err_opt_not_valid_on_target)
+          << "fenable-spirv-size-optimization";
+      return;
+    }
+    addAMDGCNSPIRVSizeOptimizationPasses(MPM);
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
@@ -1167,7 +1233,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // This should be done for both clang and flang simultaneously.
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     MPM.printPipeline(outs(), [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
@@ -1216,9 +1282,9 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
-        !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
-        CI.getVirtualFileSystemPtr());
+        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+        !CodeGenOpts.VerifyModule,
+        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });
@@ -1312,6 +1378,9 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(CI, Diags, Conf.Options);
   Conf.SampleProfile = std::move(SampleProfile);
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M->getContext().getLibraryOptions();
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   Conf.PTO.LoopFusion = CGOpts.FuseLoops;
@@ -1327,7 +1396,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = getProfileGenName(CGOpts);
+    Conf.CSIRProfile = getProfileGenName(LibraryOptions, CGOpts);
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);

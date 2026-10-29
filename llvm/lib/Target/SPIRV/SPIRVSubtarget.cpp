@@ -33,17 +33,11 @@ using namespace llvm;
 static cl::opt<bool>
     SPVTranslatorCompat("translator-compatibility-mode",
                         cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::Optional, cl::init(false));
+                        cl::init(false));
 
 static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
-
-// Provides access to the cl::opt<...> `Extensions` variable from outside of the
-// module.
-void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
-  Extensions.insert(AllowList.begin(), AllowList.end());
-}
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
@@ -54,7 +48,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)),
+      PointerSize(TT.getArch() == Triple::spirv32 ? 32 : 64),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {

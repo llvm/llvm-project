@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -39,6 +40,7 @@ class DIExpression;
 class LiveRegMatrix;
 class MachineFunction;
 class MachineInstr;
+class RegisterClassInfo;
 class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
@@ -702,6 +704,13 @@ protected:
     return RCInfos[getNumRegClasses() * HwMode + RC.getID()];
   }
 
+  /// Custom reordering of the allocation order.
+  virtual void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
+
 public:
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
@@ -829,7 +838,7 @@ public:
   /// expect to see generic copy hints added.
   virtual bool
   getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                        SmallVectorImpl<MCPhysReg> &Hints,
+                        SmallSetVector<MCPhysReg, 16> &Hints,
                         const MachineFunction &MF,
                         const VirtRegMap *VRM = nullptr,
                         const LiveRegMatrix *Matrix = nullptr) const;
@@ -843,6 +852,18 @@ public:
                                   MachineFunction &MF) const {
     // Do nothing.
   }
+
+  /// Return true if Reg overlaps one of the anti-hinted register units.
+  bool isAntiHintedReg(MCPhysReg Reg,
+                       const BitVector &AntiHintedRegUnits) const;
+
+  /// Apply anti-hints to the allocation order.
+  void applyRegAllocationAntiHints(
+      Register VirtReg, ArrayRef<MCPhysReg> Order,
+      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
@@ -1130,19 +1151,21 @@ public:
 // also satisfies the above requirement, assuming Reg:0 == Reg.
 //
 class SuperRegClassIterator {
-  const unsigned RCMaskWords;
+  const TargetRegisterClass *RC;
   unsigned SubReg = 0;
   const uint16_t *Idx;
+  /// Offset of the mask of the entry Idx points at. Walked in step with Idx,
+  /// so that advancing costs one load rather than re-locating the offsets.
+  const uint32_t *MaskOff;
   const uint32_t *Mask;
 
 public:
   /// Create a SuperRegClassIterator that visits all the super-register classes
   /// of RC. When IncludeSelf is set, also include the (0, sub-classes) entry.
-  SuperRegClassIterator(const TargetRegisterClass *RC,
-                        const TargetRegisterInfo *TRI,
-                        bool IncludeSelf = false)
-    : RCMaskWords((TRI->getNumRegClasses() + 31) / 32),
-      Idx(RC->getSuperRegIndices()), Mask(RC->getSubClassMask()) {
+  SuperRegClassIterator(const TargetRegisterClass *RC, bool IncludeSelf = false)
+      : RC(RC), Idx(RC->getSuperRegIndices()),
+        MaskOff(RC->getSuperRegClassMaskOffsets()),
+        Mask(RC->getSubClassMask()) {
     if (!IncludeSelf)
       ++*this;
   }
@@ -1161,10 +1184,12 @@ public:
   /// Advance iterator to the next entry.
   void operator++() {
     assert(isValid() && "Cannot move iterator past end.");
-    Mask += RCMaskWords;
     SubReg = *Idx++;
-    if (!SubReg)
+    if (!SubReg) {
       Idx = nullptr;
+      return;
+    }
+    Mask = RC->getSuperRegClassMaskAt(*MaskOff++);
   }
 };
 

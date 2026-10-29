@@ -368,6 +368,14 @@ kmp_taskgraph_region_dep_t *__kmp_region_deplist_add(
   return head;
 }
 
+static bool __kmp_region_deplist_contains(kmp_taskgraph_region_dep_t *list,
+                                          kmp_taskgraph_region_t *region) {
+  for (; list; list = list->next)
+    if (list->region == region)
+      return true;
+  return false;
+}
+
 kmp_taskgraph_region_t *
 __kmp_region_worklist_reverse(kmp_taskgraph_region_t *list) {
   kmp_taskgraph_region_t *last = nullptr;
@@ -524,6 +532,38 @@ static bool __kmp_bitset_equal(kmp_bitset_t *a, kmp_bitset_t *b) {
   return true;
 }
 
+/// Compute a 64-bit hash value for a bitset that is equal whenever
+/// __kmp_bitset_equal is true.
+
+static kmp_uint64 __kmp_bitset_signature(const kmp_bitset_t *bitset) {
+  kmp_uint64 sig = 0;
+  for (kmp_size_t chunk = 0; chunk < bitset->num_chunks; chunk++) {
+    kmp_uint64 bits = bitset->bits[chunk];
+    if (!bits)
+      continue;
+    // Mix the word together with its position, or a set moved wholesale from
+    // one chunk to another would fold to the same signature.
+    kmp_uint64 mixed = (bits ^ chunk) * 0x9e3779b97f4a7c15ull;
+    mixed ^= mixed >> 29;
+    mixed *= 0xbf58476d1ce4e5b9ull;
+    sig ^= mixed ^ (mixed >> 32);
+  }
+  return sig;
+}
+
+/// Pick the hash bucket for a region whose predecessor and successor sets fold
+/// to PRED_SIG and SUCC_SIG.  Regions that are twins land in the same bucket
+/// because their signatures agree; unrelated regions may collide, so bucket
+/// members still have to be filtered.
+
+static kmp_uint32 __kmp_taskgraph_twin_bucket(kmp_uint64 pred_sig,
+                                              kmp_uint64 succ_sig,
+                                              kmp_uint32 mask) {
+  kmp_uint64 hash = pred_sig ^ (succ_sig * 0x9e3779b97f4a7c15ull);
+  hash ^= hash >> 32;
+  return (kmp_uint32)hash & mask;
+}
+
 static bool __kmp_bitset_intersect_p(kmp_bitset_t *a, kmp_bitset_t *b) {
   if (!a || !b)
     return false;
@@ -545,6 +585,16 @@ static kmp_int32 __kmp_bitset_popcount(kmp_bitset_t *bitset) {
     accum += std::__popcount(bitset->bits[c]);
   }
   return accum;
+}
+
+static bool __kmp_bitset_test(kmp_bitset_t *bitset, kmp_size_t bitnum) {
+  if (!bitset)
+    return false;
+  kmp_size_t chunk = bitnum / (8 * sizeof(kmp_uint64));
+  if (bitnum < bitset->bitsize)
+    return (bitset->bits[chunk] & ((kmp_uint64)1 << (bitnum & 63))) != 0;
+  else
+    return false;
 }
 
 static kmp_int32 __kmp_taskgraph_add_dep(kmp_info_t *thread,
@@ -833,6 +883,24 @@ void taskgraph_deps::mutex_dep(kmp_info_t *thread, kmp_dephash_entry_t *info,
   }
   __kmp_bitset_set(node->dn.set_membership, info->set_num);
 }
+
+void __kmp_taskgraph_acquire_locks(kmp_int32 gtid,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_taskgraph_region_t *region) {
+  for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++) {
+    if (__kmp_bitset_test(region->mutexset, i))
+      __kmp_acquire_lock(&taskgraph->node_mutexes[i], gtid);
+  }
+}
+
+void __kmp_taskgraph_release_locks(kmp_int32 gtid,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_taskgraph_region_t *region) {
+  for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++) {
+    if (__kmp_bitset_test(region->mutexset, i))
+      __kmp_release_lock(&taskgraph->node_mutexes[i], gtid);
+  }
+}
 #endif
 
 /// Search for aliased (same base address) dependencies in \c dep_list, and
@@ -945,10 +1013,9 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
       kmp_taskgraph_region_t(taskgraph, alloc_chain, type, num_nodes, parent);
 }
 
-static kmp_int32
-__kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
-                                  kmp_taskgraph_region_t **order_out,
-                                  kmp_int32 *outidx) {
+kmp_int32 __kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
+                                            kmp_taskgraph_region_t **order_out,
+                                            kmp_int32 *outidx) {
   if (region->mark == TASKGRAPH_PERMANENT_MARK)
     return region->level;
 
@@ -1027,6 +1094,33 @@ void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
     kmp_taskgraph_region_dep_t *next = list->next;
     __kmp_region_dep_recycle(recycled, list);
     list = next;
+  }
+}
+
+// Release the dependency lists of every region in the finished region tree.
+//
+// The direct children of an IRREDUCIBLE region keep their lists.  We release
+// those when we free the recorded taskgraph (in
+// __kmp_taskgraph_free_region_metadata).
+static void
+__kmp_taskgraph_free_built_region_deps(kmp_info_t *thread,
+                                       kmp_taskgraph_region_t *region) {
+  if (!region->parent || region->parent->type != TASKGRAPH_REGION_IRREDUCIBLE) {
+    __kmp_region_deplist_free(thread, region->predecessors);
+    __kmp_region_deplist_free(thread, region->successors);
+    region->predecessors = nullptr;
+    region->successors = nullptr;
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_int32 k = 0; k < region->inner.num_children; k++)
+      __kmp_taskgraph_free_built_region_deps(thread, region->inner.children[k]);
+    break;
+  default:
+    break;
   }
 }
 
@@ -1522,6 +1616,8 @@ static bool __kmp_taskgraph_collapse_par_exclusive(
     }
   }
 
+  __kmp_region_deplist_recycle(&taskgraph->recycled_deps, pred_preds);
+
   return changed;
 }
 
@@ -1957,6 +2053,11 @@ static bool __kmp_taskgraph_rewrite_irreducible(
 
   kmp_bitset_t **pred_bitsets = nullptr;
   kmp_bitset_t **succ_bitsets = nullptr;
+  kmp_uint64 *pred_sigs = nullptr;
+  kmp_uint64 *succ_sigs = nullptr;
+  kmp_int32 *bucket_head = nullptr;
+  kmp_int32 *bucket_next = nullptr;
+  kmp_uint32 bucket_mask = 0;
 
   bool regions_combined_p = false;
 
@@ -1999,6 +2100,10 @@ static bool __kmp_taskgraph_rewrite_irreducible(
               thread, sizeof(kmp_bitset_t *) * worklist_length);
           succ_bitsets = (kmp_bitset_t **)__kmp_fast_allocate(
               thread, sizeof(kmp_bitset_t *) * worklist_length);
+          pred_sigs = (kmp_uint64 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_uint64) * worklist_length);
+          succ_sigs = (kmp_uint64 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_uint64) * worklist_length);
 
           for (kmp_int32 i = 0; i < worklist_length; i++) {
             pred_bitsets[i] = __kmp_bitset_alloc(thread, worklist_length);
@@ -2019,15 +2124,47 @@ static bool __kmp_taskgraph_rewrite_irreducible(
                                succ->region->timestamp);
             }
           }
+
+          for (kmp_int32 j = 0; j < worklist_length; j++) {
+            pred_sigs[j] = __kmp_bitset_signature(pred_bitsets[j]);
+            succ_sigs[j] = __kmp_bitset_signature(succ_bitsets[j]);
+          }
+
+          bucket_mask = 1;
+          while (bucket_mask < (kmp_uint32)worklist_length)
+            bucket_mask <<= 1;
+          bucket_mask -= 1;
+          bucket_head = (kmp_int32 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_int32) * (bucket_mask + 1));
+          bucket_next = (kmp_int32 *)__kmp_fast_allocate(
+              thread, sizeof(kmp_int32) * worklist_length);
+          for (kmp_uint32 b = 0; b <= bucket_mask; b++)
+            bucket_head[b] = -1;
+          // Built back to front, so each chain lists its members in increasing
+          // order.  That is what lets the scan below start at bucket_next[i]
+          // and see exactly the candidates after i, in the order it would have
+          // reached them by walking the whole array.
+          for (kmp_int32 j = worklist_length - 1; j >= 0; j--) {
+            kmp_uint32 b = __kmp_taskgraph_twin_bucket(
+                pred_sigs[j], succ_sigs[j], bucket_mask);
+            bucket_next[j] = bucket_head[b];
+            bucket_head[b] = j;
+          }
         }
 
         kmp_taskgraph_region_dep_t *equal_deps_chain = nullptr;
 
         kmp_int32 same_preds_and_succs = 1;
         bool any_mutex_p = __kmp_taskgraph_region_mutex_p(region);
-        // FIXME: We might be able to do a bit better than this by hashing.
-        for (kmp_int32 j = i + 1; j < worklist_length; j++) {
-          if (order[j]->mark != TASKGRAPH_COMBINED &&
+        // Twins share a signature and so share a bucket, and a bucket lists
+        // its members in increasing order, so starting at bucket_next[i]
+        // visits exactly the candidates worth comparing, rather than every
+        // remaining region.  Equal buckets or equal signatures do not imply
+        // equal bitsets, so we still need to do the full __kmp_bitset_equal
+        // comparison when we find a potential match.
+        for (kmp_int32 j = bucket_next[i]; j >= 0; j = bucket_next[j]) {
+          if (pred_sigs[j] == pred_sigs[i] && succ_sigs[j] == succ_sigs[i] &&
+              order[j]->mark != TASKGRAPH_COMBINED &&
               __kmp_bitset_equal(pred_bitsets[j], pred_bitsets[i]) &&
               __kmp_bitset_equal(succ_bitsets[j], succ_bitsets[i])) {
             TGDBG("regions %p and %p share all predecessors/successors\n",
@@ -2136,6 +2273,10 @@ static bool __kmp_taskgraph_rewrite_irreducible(
     }
     __kmp_fast_free(thread, pred_bitsets);
     __kmp_fast_free(thread, succ_bitsets);
+    __kmp_fast_free(thread, pred_sigs);
+    __kmp_fast_free(thread, succ_sigs);
+    __kmp_fast_free(thread, bucket_head);
+    __kmp_fast_free(thread, bucket_next);
   }
 
   // Case 2 made progress: let the build loop re-run the series/parallel
@@ -2265,73 +2406,40 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_build_regions(
   return entryregion;
 }
 
+/// Give every container region the union of its children's mutex sets, so that
+/// __kmp_taskgraph_find_exclusive_regions can ask what the members of an
+/// EXCLUSIVE region hold between them.  BITSIZE is the number of mutex sets in
+/// the graph, i.e. the width of the sets built here.
+
 static void __kmp_taskgraph_gather_mutex_sets(kmp_info_t *thread,
                                               kmp_taskgraph_region_t *region,
-                                              const kmp_bitset_t *held) {
+                                              kmp_size_t bitsize) {
   switch (region->type) {
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_NODE:
+    // A task node already carries its recorded set membership, and has no
+    // children to recurse into.
     return;
-  case TASKGRAPH_REGION_NODE: {
-#ifdef DEBUG_TASKGRAPH
-    if (region->mutexset && __kmp_bitset_subset_p(held, region->mutexset)) {
-      TGDBG("node is mutually exclusive with held: 0x%llx <: 0x%llx\n",
-            (unsigned long long)region->mutexset->bits[0],
-            (unsigned long long)held->bits[0]);
-    }
-#endif
-    return;
-  }
-  case TASKGRAPH_REGION_SEQUENTIAL: {
-    kmp_bitset_t *seq_held = __kmp_bitset_alloc(thread, held->bitsize);
-    __kmp_bitset_clearall(seq_held);
+  // Every kind of container folds the same way: what its members hold between
+  // them does not depend on how it orders them, only on which of them there
+  // are.
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    KMP_DEBUG_ASSERT(!region->mutexset);
+    kmp_bitset_t *combined = __kmp_bitset_alloc(thread, bitsize);
+    __kmp_bitset_clearall(combined);
     for (kmp_int32 child = 0; child < region->inner.num_children; child++) {
       __kmp_taskgraph_gather_mutex_sets(thread, region->inner.children[child],
-                                        held);
+                                        bitsize);
       if (region->inner.children[child]->mutexset)
-        __kmp_bitset_or(seq_held, seq_held,
+        __kmp_bitset_or(combined, combined,
                         region->inner.children[child]->mutexset);
     }
-    region->mutexset = seq_held;
-    return;
-  }
-  case TASKGRAPH_REGION_PARALLEL:
-  case TASKGRAPH_REGION_EXCLUSIVE: {
-    kmp_bitset_t *par_held = __kmp_bitset_alloc(thread, held->bitsize);
-    kmp_bitset_t *conflicts = __kmp_bitset_alloc(thread, held->bitsize);
-    while (true) {
-      __kmp_bitset_clearall(par_held);
-      for (kmp_int32 child = 0; child < region->inner.num_children; child++) {
-        __kmp_bitset_clearall(conflicts);
-        for (kmp_int32 other = 0; other < region->inner.num_children; other++) {
-          if (other != child) {
-            if (!region->inner.children[other]->mutexset)
-              __kmp_taskgraph_gather_mutex_sets(
-                  thread, region->inner.children[other], held);
-            if (region->inner.children[other]->mutexset)
-              __kmp_bitset_or(conflicts, conflicts,
-                              region->inner.children[other]->mutexset);
-          }
-        }
-        __kmp_taskgraph_gather_mutex_sets(thread, region->inner.children[child],
-                                          conflicts);
-        if (region->inner.children[child]->mutexset)
-          __kmp_bitset_or(par_held, par_held,
-                          region->inner.children[child]->mutexset);
-      }
-      if (!region->mutexset) {
-        region->mutexset = par_held;
-      } else if (__kmp_bitset_equal(region->mutexset, par_held)) {
-        TGDBG("par mutexes stabilized, exiting loop\n");
-        break;
-      } else {
-        TGDBG("par mutexes not stable, iterating\n");
-        __kmp_bitset_copy(region->mutexset, par_held);
-        __kmp_bitset_free(thread, par_held);
-      }
-    }
-    __kmp_bitset_free(thread, conflicts);
+    region->mutexset = combined;
     return;
   }
   }
@@ -2585,13 +2693,21 @@ static void __kmp_taskgraph_exclusive_regions(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t **region_p,
     kmp_int32 max_mutex) {
-  kmp_bitset_t *top = __kmp_bitset_alloc(thread, max_mutex);
-  __kmp_bitset_clearall(top);
-  __kmp_taskgraph_gather_mutex_sets(thread, *region_p, top);
+  // No dependence in the graph was a mutexinoutset, so no node carries a mutex
+  // set and there is nothing here to do.  The gather would give each container
+  // an empty set only for the strip to free it again; no EXCLUSIVE region can
+  // exist to be rewritten, since one is built only where
+  // __kmp_taskgraph_region_mutex_p holds and that needs a node set; and the
+  // mutex count comes out zero either way.  Skipping is what keeps recording a
+  // wide graph off the gather's per-container walk.
+  if (max_mutex == 0) {
+    taskgraph->num_mutexes = 0;
+    return;
+  }
+  __kmp_taskgraph_gather_mutex_sets(thread, *region_p, max_mutex);
   __kmp_taskgraph_find_exclusive_regions(thread, taskgraph, alloc_chain,
                                          region_p);
-  kmp_int32 num_mutexes = __kmp_taskgraph_strip_mutex_sets(thread, *region_p);
-  taskgraph->num_mutexes = num_mutexes;
+  taskgraph->num_mutexes = __kmp_taskgraph_strip_mutex_sets(thread, *region_p);
 }
 
 static const char *
@@ -2730,6 +2846,14 @@ bool __kmp_taskgraph_trace() {
     trace_enabled = getenv("KMP_TASKGRAPH_TRACE") != nullptr;
   }
   return trace_enabled;
+}
+
+bool __kmp_taskgraph_check_lifetime() {
+  static int check_enabled = -1;
+  if (check_enabled == -1) {
+    check_enabled = getenv("KMP_TASKGRAPH_CHECK_LIFETIME") != nullptr;
+  }
+  return check_enabled;
 }
 
 /// Build a nested region structure from a "raw" recorded taskgraph, and mark
@@ -2940,8 +3064,18 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_int32 numregions = numnodes + 2;
   kmp_taskgraph_node_t *nodes = taskgraph->record_map;
   kmp_info_t *thread = __kmp_threads[gtid];
-  kmp_dephash_t *hash = __kmp_dephash_create(thread, current_taskdata);
   bool dep_barrier = false;
+
+  // An empty taskgraph isn't useful and causes analysis problems below, so
+  // catch it early.
+  if (numnodes == 0) {
+    taskgraph->root = nullptr;
+    taskgraph->alloc_root = nullptr;
+    KMP_ATOMIC_ST_REL(&taskgraph->status, KMP_TDG_READY);
+    return 0;
+  }
+
+  kmp_dephash_t *hash = __kmp_dephash_create(thread, current_taskdata);
 
   // We need to take special care to align the all_depnodes array to the cache
   // line size, because kmp_depnode_t is marked as 64-byte aligned and
@@ -2961,17 +3095,16 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     int n_mtxs = 0;
     bool dep_all;
 
-    dep_all = __kmp_filter_aliased_deps(nodes[i].u.unresolved.ndeps,
-                                        nodes[i].u.unresolved.dep_list,
+    dep_all = __kmp_filter_aliased_deps(nodes[i].ndeps, nodes[i].dep_list,
                                         nodes[i].task, &n_mtxs);
     kmp_depnode_t *node = &all_depnodes[i];
     __kmp_init_node(node, /*on_stack=*/false);
     node->dn.task = nodes[i].task;
     dep_barrier = !nodes[i].task && nodes[i].taskloop_task;
     if (!dep_all) {
-      __kmp_process_deps<taskgraph_deps>(
-          gtid, node, &hash, dep_barrier, nodes[i].u.unresolved.ndeps,
-          nodes[i].u.unresolved.dep_list, nodes[i].task, next_mutex_set);
+      __kmp_process_deps<taskgraph_deps>(gtid, node, &hash, dep_barrier,
+                                         nodes[i].ndeps, nodes[i].dep_list,
+                                         nodes[i].task, next_mutex_set);
     } else {
       __kmp_process_dep_all<taskgraph_deps>(gtid, node, hash, dep_barrier,
                                             nodes[i].task);
@@ -3012,12 +3145,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           __kmp_region_deplist_add(thread, &taskgraph->recycled_deps, tg_succ,
                                    initial_regions[i].successors);
     }
-    // Handle control flow dependencies.  If a node (e.g. a taskloop task) has
-    // a wait after it corresponding to the end of an implicit taskgroup, join
-    // the task to the wait.  The wait then becomes a barrier; any tasks after
-    // it will depend on the barrier.
-    if (nodes[i].u.unresolved.cfg_successor != -1) {
-      kmp_int32 cfg_succ = nodes[i].u.unresolved.cfg_successor;
+    // Handle control flow dependencies.  If a node (e.g. a taskloop task) has a
+    // wait after it corresponding to the end of an implicit taskgroup, join the
+    // task to the wait.  The wait then becomes a barrier; any tasks after it
+    // will depend on the barrier.
+    if (nodes[i].cfg_successor != -1) {
+      kmp_int32 cfg_succ = nodes[i].cfg_successor;
       initial_regions[i].successors = __kmp_region_deplist_add(
           thread, &taskgraph->recycled_deps, &initial_regions[cfg_succ],
           initial_regions[i].successors);
@@ -3025,9 +3158,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           thread, &taskgraph->recycled_deps, &initial_regions[i],
           initial_regions[cfg_succ].predecessors);
     }
-    if (nodes[i].taskloop_task && !nodes[i].task) {
-      cfg_barrier = &initial_regions[i];
-    } else if (cfg_barrier) {
+    // Check for the TASKGRAPH_REGION_WAIT inserted after a taskloop.
+    bool is_taskgroup_marker = nodes[i].taskloop_task && !nodes[i].task;
+    // Avoid inserting duplicate edges.
+    if (cfg_barrier && !is_taskgroup_marker &&
+        !__kmp_region_deplist_contains(initial_regions[i].predecessors,
+                                       cfg_barrier)) {
       cfg_barrier->successors = __kmp_region_deplist_add(
           thread, &taskgraph->recycled_deps, &initial_regions[i],
           cfg_barrier->successors);
@@ -3035,14 +3171,31 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           thread, &taskgraph->recycled_deps, cfg_barrier,
           initial_regions[i].predecessors);
     }
+    // If we find a post-taskloop WAIT or an undeferred task, record it as a
+    // barrier.
+    if (is_taskgroup_marker || nodes[i].undeferred)
+      cfg_barrier = &initial_regions[i];
   }
 
   __kmp_dephash_free<false>(thread, hash);
+
+  // We don't use the runtime refcounting mechanism for these depnodes, so
+  // free them explicitly here.
+  for (kmp_int32 i = 0; i < numnodes; i++) {
+    kmp_depnode_list_t *succ = all_depnodes[i].dn.successors;
+    while (succ) {
+      kmp_depnode_list_t *next = succ->next;
+      __kmp_fast_free(thread, succ);
+      succ = next;
+    }
+    all_depnodes[i].dn.successors = nullptr;
+  }
+
   __kmp_thread_free(thread, all_depnodes_misaligned);
 
-  // We're done with the "unresolved" data now.
+  // We're done with the dep_list now.
   for (kmp_int32 i = 0; i < numnodes; i++)
-    __kmp_thread_free(thread, nodes[i].u.unresolved.dep_list);
+    __kmp_thread_free(thread, nodes[i].dep_list);
 
   // Use these indices for the virtual entry and exit regions
   kmp_int32 entryregion = numnodes, exitregion = numnodes + 1;
@@ -3115,24 +3268,23 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   taskgraph->root = root_region;
   taskgraph->alloc_root = initial_regions;
 
-  // Free dependency lists and deleted regions.
+  // Free the dependency lists of the regions that made it into the tree.
+  __kmp_taskgraph_free_built_region_deps(thread, root_region);
+
+  // The entry and exit regions don't get added to the region tree, so free
+  // their dependency lists here.
+  __kmp_taskgraph_free_built_region_deps(thread, &initial_regions[entryregion]);
+  __kmp_taskgraph_free_built_region_deps(thread, &initial_regions[exitregion]);
+
+  // Free remaining regions that didn't end up in the region tree.
   kmp_taskgraph_region_t **regp = &taskgraph->alloc_root;
   while (*regp) {
     kmp_taskgraph_region_t *reg = *regp;
-    // The direct children of a carved IRREDUCIBLE region keep their
-    // predecessor / successor lists alive.  They are freed at record teardown
-    // (__kmp_free_taskgraph_record).
-    bool keep_edges =
-        reg->parent && reg->parent->type == TASKGRAPH_REGION_IRREDUCIBLE;
-    if (!keep_edges) {
-      __kmp_region_deplist_free(thread, reg->predecessors);
-      __kmp_region_deplist_free(thread, reg->successors);
-      reg->predecessors = nullptr;
-      reg->successors = nullptr;
-    }
     if (reg->mark == TASKGRAPH_DELETED) {
       kmp_taskgraph_region_t *chain_next = reg->alloc_chain;
       TGDBG("deleted region from alloc chain: %p\n", reg);
+      __kmp_region_deplist_free(thread, reg->predecessors);
+      __kmp_region_deplist_free(thread, reg->successors);
       __kmp_fast_free(thread, reg);
       *regp = chain_next;
     } else {
@@ -3153,8 +3305,8 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   taskgraph->recycled_deps = nullptr;
 
   if (__kmp_taskgraph_trace()) {
-    fprintf(stderr, "Processed taskgraph %p (graph_id %d):\n", taskgraph,
-            taskgraph->graph_id);
+    fprintf(stderr, "Processed taskgraph %p (graph_id %" PRIx64 "):\n",
+            taskgraph, taskgraph->graph_id);
     __kmp_dump_taskgraph_regions(stderr, root_region);
   }
 

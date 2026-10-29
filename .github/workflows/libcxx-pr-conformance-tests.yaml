@@ -39,7 +39,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -57,9 +57,14 @@ jobs:
             cc: 'gcc-16'
             cxx: 'g++-16'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         shell: bash
         run: |
@@ -70,7 +75,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -85,7 +90,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -112,7 +117,7 @@ jobs:
             cc: 'clang-21'
             cxx: 'clang++-21'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -125,7 +130,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -140,7 +145,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
     needs: [ stage2 ]
     continue-on-error: false
     strategy:
@@ -177,7 +182,7 @@ jobs:
           'bootstrapping-build'
         ]
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -190,7 +195,7 @@ jobs:
         env:
           CC: clang-23
           CXX: clang++-23
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -209,13 +214,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          xcode-version: '26.5'
-        - config: generic-cxx23
-          xcode-version: '26.5'
+          xcode-version: '26.6'
+        - config: generic-cxx26
+          xcode-version: '26.6'
         - config: generic-modules
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: apple-configuration
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
         #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
         #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
@@ -227,12 +232,12 @@ jobs:
         #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
         #       coverage.
         - config: apple-system
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: apple-system-hardened
-          xcode-version: '26.5'
-    runs-on: ["self-hosted", "macOS", "apple-runners"]
+          xcode-version: '26.6'
+    runs-on: ["self-hosted", "macOS", "apple-runners", "26.6.2"] # macOS 26.6.2, which has Xcode 26.6
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode
@@ -250,7 +255,7 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: macos-${{ matrix.config }}-results
@@ -280,7 +285,7 @@ jobs:
         - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install dependencies
@@ -293,8 +298,8 @@ jobs:
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
-          powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20261020/llvm-mingw-20261020-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
+          7z x llvm-mingw-*.zip
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
           echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append

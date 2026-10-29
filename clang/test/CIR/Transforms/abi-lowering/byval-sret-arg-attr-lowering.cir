@@ -61,8 +61,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_non_byval(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef{{.*}}})
-  // LLVM: define void @takes_non_byval(ptr nofreeobj noundef align 8 dereferenceable(24) %{{.+}})
+  // CHECK: cir.func{{.*}} @takes_non_byval(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef{{.*}}})
+  // LLVM: define void @takes_non_byval(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(24) %{{.+}})
 
   // The call site's byval operand attribute is converted too.
   cir.func @caller(%s: !rec_Big) attributes { test_classify = #passthrough } {

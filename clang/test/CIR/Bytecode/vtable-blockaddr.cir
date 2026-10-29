@@ -1,0 +1,32 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// A vtable nests arrays of global_views, so under the fallback its printed
+// form repeats the element types at every level. Encoded, each level is a
+// reference instead.
+//
+// Check the attributes are not string-encoded in the blob.
+// NATIVE-NOT: #cir.block_addr_diff<
+// NATIVE-NOT: #cir.vtable<
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+
+module {
+  cir.global external @tgt = #cir.int<0> : !s32i
+
+  cir.global external @vt = #cir.vtable<{
+    #cir.const_array<[#cir.global_view<@tgt> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>,
+    #cir.const_array<[#cir.global_view<@vt, [0 : i32, 2 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>
+  }> : !cir.struct<"VT" {data !cir.array<!cir.ptr<!u8i> x 1>, data !cir.array<!cir.ptr<!u8i> x 1>}>
+
+  cir.global external @bad = #cir.block_addr_diff<@fn, "lbl", "lbl2"> : !s32i
+
+  cir.func @fn() {
+    cir.return
+  }
+}
+
+// CHECK-DAG: #cir.global_view<@tgt> : !cir.ptr<!u8i>
+// CHECK-DAG: #cir.global_view<@vt, [0 : i32, 2 : i32]> : !cir.ptr<!u8i>
+// CHECK-DAG: #cir.block_addr_diff<@fn, "lbl", "lbl2"> : !s32i

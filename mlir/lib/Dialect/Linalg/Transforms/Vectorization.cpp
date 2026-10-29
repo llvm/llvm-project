@@ -66,7 +66,8 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -635,10 +636,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -1951,7 +1954,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unpackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1987,6 +1992,13 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   auto sourceType = source.getType();
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
+
+  // The write is a vector.transfer_write at the slice offsets, which cannot
+  // express a stride.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
 
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
@@ -2203,10 +2215,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;
@@ -2329,7 +2343,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -3063,9 +3079,20 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  Operation *write =
-      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                                       writeIndices, inputVectorSizes.empty());
+  // For a rank-reducing slice the vector need not cover the trailing result
+  // dims, so state which result dim each vector dim writes to.
+  AffineMap writeMap;
+  if (sourceType.getRank() != resultType.getRank()) {
+    SmallVector<AffineExpr> exprs;
+    for (int64_t resultDim : resultDimsForSourceDims)
+      exprs.push_back(rewriter.getAffineDimExpr(resultDim));
+    writeMap = AffineMap::get(resultType.getRank(), /*symbolCount=*/0, exprs,
+                              rewriter.getContext());
+  }
+
+  Operation *write = vector::createWriteOrMaskedWrite(
+      rewriter, loc, read, sliceOp.getDest(), writeIndices,
+      inputVectorSizes.empty(), writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
@@ -4222,7 +4249,7 @@ static FailureOr<Operation *> vectorizeConvolution(
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {

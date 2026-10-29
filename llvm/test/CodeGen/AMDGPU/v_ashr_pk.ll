@@ -37,8 +37,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_ashr_i32 s0, s0, s2
 ; GFX1250-TRUE16-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX1250-TRUE16-NEXT:    v_med3_i32 v1, 0xffffff80, s0, v0
-; GFX1250-TRUE16-NEXT:    v_med3_i32 v0, 0xffffff80, s1, v0
+; GFX1250-TRUE16-NEXT:    v_med3_i32 v1, s0, 0xffffff80, v0
+; GFX1250-TRUE16-NEXT:    v_med3_i32 v0, s1, 0xffffff80, v0
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0x6050400
 ; GFX1250-TRUE16-NEXT:    global_store_b16 v2, v0, s[6:7]
@@ -59,8 +59,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_ashr_i32 s0, s0, s2
 ; GFX1250-FAKE16-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX1250-FAKE16-NEXT:    v_med3_i32 v1, 0xffffff80, s0, v0
-; GFX1250-FAKE16-NEXT:    v_med3_i32 v0, 0xffffff80, s1, v0
+; GFX1250-FAKE16-NEXT:    v_med3_i32 v1, s0, 0xffffff80, v0
+; GFX1250-FAKE16-NEXT:    v_med3_i32 v0, s1, 0xffffff80, v0
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x6050400
 ; GFX1250-FAKE16-NEXT:    global_store_b16 v2, v0, s[6:7]
@@ -77,8 +77,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    s_ashr_i32 s0, s0, s2
 ; GFX13-TRUE16-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX13-TRUE16-NEXT:    v_med3_i32 v1, 0xffffff80, s0, v0
-; GFX13-TRUE16-NEXT:    v_med3_i32 v0, 0xffffff80, s1, v0
+; GFX13-TRUE16-NEXT:    v_med3_i32 v1, s0, 0xffffff80, v0
+; GFX13-TRUE16-NEXT:    v_med3_i32 v0, s1, 0xffffff80, v0
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0x6050400
 ; GFX13-TRUE16-NEXT:    global_store_b16 v2, v0, s[4:5]
@@ -95,8 +95,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-FAKE16-NEXT:    s_ashr_i32 s0, s0, s2
 ; GFX13-FAKE16-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX13-FAKE16-NEXT:    v_med3_i32 v1, 0xffffff80, s0, v0
-; GFX13-FAKE16-NEXT:    v_med3_i32 v0, 0xffffff80, s1, v0
+; GFX13-FAKE16-NEXT:    v_med3_i32 v1, s0, 0xffffff80, v0
+; GFX13-FAKE16-NEXT:    v_med3_i32 v0, s1, 0xffffff80, v0
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x6050400
 ; GFX13-FAKE16-NEXT:    global_store_b16 v2, v0, s[4:5]

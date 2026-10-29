@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+import argparse
+import common
+import datetime
+import json
+import pathlib
+import platform
+import subprocess
+import sys
+import tempfile
+
+
+MONOREPO_ROOT = pathlib.Path(__file__).resolve().parents[4]
+
+def gather_machine_information(args):
+    """
+    Gather the machine information to upload to LNT as part of the submission.
+    """
+    info = {}
+    if platform.system() == 'Darwin':
+        profiler_info = json.loads(subprocess.check_output(['system_profiler', 'SPHardwareDataType', 'SPSoftwareDataType', '-json']).decode())
+        info['hardware'] = profiler_info['SPHardwareDataType'][0]['chip_type']
+        info['os'] = profiler_info['SPSoftwareDataType'][0]['os_version']
+        info['sdk'] = subprocess.check_output(['xcrun', '--show-sdk-version']).decode().strip()
+
+    info['compiler'] = subprocess.check_output([args.compiler, '--version']).decode().strip().splitlines()[0]
+    info['test_suite_commit'] = subprocess.check_output(['git', '-C', MONOREPO_ROOT, 'rev-parse', args.test_suite_commit]).decode().strip()
+    return info
+
+def version_ordinal(version):
+    """
+    Return the ordinal of a GCC version (e.g. 16.2.0) in the libstdcxx LNT test suite. LNT orders commits
+    by their ordinal, so this must sort versions correctly.
+    """
+    parts = version.split('.')
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        raise ValueError(f'expected a GCC version of the form X.Y.Z, got {version!r}')
+    (major, minor, patch) = (int(p) for p in parts)
+    if minor >= 100 or patch >= 100:
+        raise ValueError(f'GCC version {version} cannot be turned into an ordinal')
+    return major * 10000 + minor * 100 + patch
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='run-libstdcxx-benchmarks',
+        description='Run the libc++ benchmark suite against the libstdc++ of the given GCC and produce a LNT JSON '
+                    'report for the libstdcxx LNT test suite. The results are attributed to the version of that GCC.')
+    parser.add_argument('--gcc', type=str, required=True,
+        help='The GCC whose libstdc++ is benchmarked, e.g. g++-16. This is not the compiler used to build the benchmarks.')
+    parser.add_argument('--compiler', type=str, required=True,
+        help='The compiler used to build the benchmarks.')
+    parser.add_argument('--test-suite-commit', type=str, required=True,
+        help='The SHA representing the version of the test suite to use for benchmarking.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The name of the machine for reporting LNT results.')
+    parser.add_argument('--output', type=pathlib.Path, required=True,
+        help='Path where the resulting LNT JSON report is written.')
+    parser.add_argument('lit_options', nargs=argparse.REMAINDER,
+        help='Optional arguments passed to Lit when running the benchmarks (e.g. --filter). Should be provided '
+             'last and separated from other arguments with a `--`.')
+    args = parser.parse_args(argv)
+
+    lit_options = []
+    if args.lit_options:
+        if args.lit_options[0] != '--':
+            sys.exit('error: for clarity, Lit options must be separated from other options by --')
+        lit_options = args.lit_options[1:]
+
+    # The commits of the libstdcxx test suite are versions of libstdc++. Determine it up front, since it
+    # doesn't depend on the results and can fail.
+    version = subprocess.check_output([args.gcc, '-dumpfullversion']).decode().strip()
+    commit = {'value': version, 'ordinal': version_ordinal(version)}
+
+    with tempfile.TemporaryDirectory() as build_dir:
+        build_dir = pathlib.Path(build_dir)
+        # Some benchmarks may fail to build or run, and that's okay: we report the ones that succeeded.
+        subprocess.run([MONOREPO_ROOT / 'libcxx/utils/test-at-commit',
+                        '--git-repo', MONOREPO_ROOT,
+                        '--build-dir', build_dir,
+                        '--test-suite-commit', args.test_suite_commit,
+                        '--test-config', 'stdlib-libstdc++.cfg.in',
+                        '--compiler', args.compiler,
+                        '--',
+                        '-j1', '--test-output=failed',
+                        '--param', f'compiler={args.compiler}',
+                        '--param', f'libstdcxx_compiler={args.gcc}',
+                        '--param', 'enable_werror=False', # don't fail on warnings when running with libstdc++
+                        *lit_options,
+                        build_dir / 'libcxx/test/benchmarks'])
+        measured_at = datetime.datetime.now(datetime.timezone.utc)
+
+        results = subprocess.check_output([MONOREPO_ROOT / 'libcxx/utils/consolidate-benchmarks', build_dir]).decode()
+        tests = common.parse_lnt_results(results.splitlines())
+
+    common.write_lnt_report(args.output, args.machine, gather_machine_information(args), commit, tests, measured_at)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

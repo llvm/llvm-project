@@ -19,15 +19,21 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s64) from %ir.arg.kernarg.offset1, align 16, addrspace 4)
   ; CHECK-NEXT:   $sgpr20 = S_ADD_U32 $sgpr20, killed $sgpr17, implicit-def $scc, implicit-def $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT:   $sgpr21 = S_ADDC_U32 $sgpr21, 0, implicit-def dead $scc, implicit killed $scc, implicit-def $sgpr20_sgpr21_sgpr22_sgpr23
-  ; CHECK-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
   ; CHECK-NEXT:   S_WAITCNT .Lgkmcnt_0
   ; CHECK-NEXT:   S_BITCMP1_B32 killed renamable $sgpr2, 0, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
-  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit killed $scc
   ; CHECK-NEXT:   $vgpr2_vgpr3 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7:
+  ; CHECK-NEXT:   successors: %bb.10(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.10.loop.exit.guard:
   ; CHECK-NEXT:   successors: %bb.11(0x04000000), %bb.1(0x7c000000)
@@ -60,80 +66,62 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT:   renamable $vgpr0 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_ANDN2_B64 killed renamable $sgpr6_sgpr7, $exec, implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.Flow3:
+  ; CHECK-NEXT: bb.2.Flow:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr8_sgpr9 = S_AND_B64 $exec, renamable $sgpr6_sgpr7, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr8_sgpr9, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr8_sgpr9 = S_AND_B64 $exec, renamable $sgpr6_sgpr7, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr8_sgpr9, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; CHECK-NEXT:   renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr20_sgpr21_sgpr22_sgpr23, 0, 0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(5) null`, addrspace 5)
-  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_1
-  ; CHECK-NEXT:   renamable $sgpr8 = V_READFIRSTLANE_B32 killed $vgpr4, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.9.Flow2:
-  ; CHECK-NEXT:   successors: %bb.10(0x04000000), %bb.4(0x7c000000)
-  ; CHECK-NEXT:   liveins: $sgpr8, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   successors: %bb.6(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 killed renamable $sgpr6_sgpr7, $exec, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr6 = S_CSELECT_B32 1, 0, implicit killed $scc
-  ; CHECK-NEXT:   S_CMP_LG_U32 killed renamable $sgpr6, 1, implicit-def $scc
-  ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.10, implicit killed $scc
+  ; CHECK-NEXT:   renamable $vgpr4 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6.bb11:
+  ; CHECK-NEXT:   successors: %bb.7(0x04000000), %bb.4(0x7c000000)
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr4, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr2_sgpr3, implicit-def dead $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit killed $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb6:
-  ; CHECK-NEXT:   successors: %bb.6(0x40000000), %bb.5(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr8, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
+  ; CHECK-NEXT:   successors: %bb.5(0x30000000), %bb.8(0x50000000)
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr4, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CMP_EQ_U32 killed renamable $sgpr8, 0, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_CSELECT_B64 -1, 0, implicit killed $scc
-  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr6_sgpr7, implicit-def dead $scc
+  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
+  ; CHECK-NEXT:   V_CMP_EQ_U32_e32 0, killed $vgpr4, implicit-def $vcc, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.5, implicit killed $vcc
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.6.bb9:
-  ; CHECK-NEXT:   successors: %bb.7(0x80000000)
+  ; CHECK-NEXT: bb.8.bb9:
+  ; CHECK-NEXT:   successors: %bb.6(0x7c000000), %bb.9(0x04000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr1, renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s32) into %ir.arg.load, addrspace 1)
   ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_MOV_B64 -1
-  ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
-  ; CHECK-NEXT:   renamable $sgpr8 = V_READFIRSTLANE_B32 killed $vgpr4, implicit $exec
-  ; CHECK-NEXT:   S_BRANCH %bb.7
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, 0, implicit-def dead $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCZ %bb.6, implicit killed $vcc
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   successors: %bb.7(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr6_sgpr7, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
+  ; CHECK-NEXT: bb.9:
+  ; CHECK-NEXT:   successors: %bb.10(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr8 = S_MOV_B32 0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.7.Flow:
-  ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.9(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr8, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr6_sgpr7, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 killed renamable $sgpr6_sgpr7, $exec, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr6 = S_CSELECT_B32 1, 0, implicit killed $scc
   ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 -1
-  ; CHECK-NEXT:   S_CMP_LG_U32 killed renamable $sgpr6, 1, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_MOV_B64 -1
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.9, implicit killed $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.8.bb11:
-  ; CHECK-NEXT:   successors: %bb.9(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr8, $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_MOV_B64 0
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = S_MOV_B64 $sgpr2_sgpr3
-  ; CHECK-NEXT:   S_BRANCH %bb.9
+  ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_BRANCH %bb.10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.11.DummyReturnBlock:
   ; CHECK-NEXT:   liveins: $sgpr20_sgpr21_sgpr22_sgpr23

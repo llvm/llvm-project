@@ -69,13 +69,10 @@ struct T load_atomic_struct() {
 // CIR: cir.store {{.*}} %[[TMP_ATOMIC_A]], %[[NON_ATOMIC_TMP]] : !u32i, !cir.ptr<!u32i>
 // CIR: %[[VALUE_ADDR:.*]] = cir.get_member %[[NON_ATOMIC_TMP_ADDR]][0] {name = "value_addr"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_T>
 // CIR: cir.copy %[[VALUE_ADDR]] {{.*}} to %[[RET_VAL_ADDR]] {{.*}} : !cir.ptr<!rec_T>
-// CIR: %[[TMP_RET_VAL:.*]] = cir.load %[[RET_VAL_ADDR]] : !cir.ptr<!rec_T>, !rec_T
-// CIR: cir.store %[[TMP_RET_VAL]], %[[RET_ADDR]] : !rec_T, !cir.ptr<!rec_T>
+// CIR: cir.copy %[[RET_VAL_ADDR]] align(1) to %[[RET_ADDR]] align(4) : !cir.ptr<!rec_T>
 // CIR: %[[RET_ADDR_U64:.*]] = cir.cast bitcast %[[RET_ADDR]] : !cir.ptr<!rec_T> -> !cir.ptr<!cir.int<u, 24>>
-// CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR_U64]] : !cir.ptr<!cir.int<u, 24>>, !cir.int<u, 24>
+// CIR: %[[TMP_RET:.*]] = cir.load align(4) %[[RET_ADDR_U64]] : !cir.ptr<!cir.int<u, 24>>, !cir.int<u, 24>
 // CIR: cir.return %[[TMP_RET]] : !cir.int<u, 24>
-
-// The difference between LLVM and OGCG in type from struct.T to i24 is due to missing ABI lowering.
 
 // LLVM: %[[RET_ADDR:.*]] = alloca %struct.T, align 4
 // LLVM: %[[RET_VAL_ADDR:.*]] = alloca %struct.T, align 1
@@ -85,8 +82,7 @@ struct T load_atomic_struct() {
 // LLVM: store i32 %[[TMP_A]], ptr %[[NON_ATOMIC_TMP]], align 4
 // LLVM: %[[NON_ATOMIC_PTR:.*]] = getelementptr inbounds nuw { %struct.T, [1 x i8] }, ptr %[[NON_ATOMIC_TMP]], i32 0, i32 0
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RET_VAL_ADDR]], ptr align 4 %[[NON_ATOMIC_PTR]], i64 3, i1 false)
-// LLVM: %[[TMP_RET_VAL:.*]] = load %struct.T, ptr %[[RET_VAL_ADDR]], align 1
-// LLVM: store %struct.T %[[TMP_RET_VAL]], ptr %[[RET_ADDR]], align 1
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RET_ADDR]], ptr align 1 %[[RET_VAL_ADDR]], i64 3, i1 false)
 // LLVM: %[[TMP_RET:.*]] = load i24, ptr %[[RET_ADDR]], align 4
 // LLVM: ret i24 %[[TMP_RET]]
 

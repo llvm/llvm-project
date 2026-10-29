@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -S < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-parallel-force '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-parallel-force '-passes=polly<no-default-opts>' -S < %s | FileCheck %s -check-prefix=IR
 
 ; Make sure we correctly forward the reference to 'A' to the OpenMP subfunction.
 ;

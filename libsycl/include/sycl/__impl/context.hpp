@@ -27,7 +27,11 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 
+#include <functional>
 #include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -65,13 +69,13 @@ public:
 
   /// Constructs a SYCL context containing all devices in \p plt.
   ///
-  /// \throws an exception with code errc::invalid if \p plt has no devices.
+  /// \throw sycl::exception with sycl::errc::invalid if \p plt has no devices.
   explicit context(const platform &plt, const property_list &propList = {})
       : context(plt.get_devices(), propList) {}
 
   /// Constructs a SYCL context containing all devices in \p plt.
   ///
-  /// \throws an exception with code errc::invalid if \p plt has no devices.
+  /// \throw sycl::exception with sycl::errc::invalid if \p plt has no devices.
   explicit context(const platform &plt, async_handler asyncHandler,
                    const property_list &propList = {})
       : context(plt.get_devices(), asyncHandler, propList) {}
@@ -79,7 +83,7 @@ public:
   /// Constructs a SYCL context associated with each device in \p deviceList.
   /// All devices in \p deviceList must belong to the same platform.
   ///
-  /// \throws an exception with code errc::invalid if \p deviceList is empty.
+  /// \throw sycl::exception with sycl::errc::invalid if \p deviceList is empty.
   explicit context(const std::vector<device> &deviceList,
                    const property_list &propList = {})
       : context(deviceList, detail::defaultAsyncHandler, propList) {}
@@ -87,7 +91,7 @@ public:
   /// Constructs a SYCL context associated with each device in \p deviceList.
   /// All devices in \p deviceList must belong to the same platform.
   ///
-  /// \throws an exception with code errc::invalid if \p deviceList is empty.
+  /// \throw sycl::exception with sycl::errc::invalid if \p deviceList is empty.
   explicit context(const std::vector<device> &deviceList,
                    async_handler asyncHandler,
                    const property_list &propList = {});
@@ -143,7 +147,8 @@ private:
 // context.hpp.
 inline exception::exception(context ctx, std::error_code ec,
                             const std::string &what_arg)
-    : exception(ec, std::make_shared<context>(ctx), what_arg.c_str()) {}
+    : exception(ec, std::make_shared<context>(std::move(ctx)),
+                what_arg.c_str()) {}
 
 inline exception::exception(context ctx, std::error_code ec,
                             const char *what_arg)

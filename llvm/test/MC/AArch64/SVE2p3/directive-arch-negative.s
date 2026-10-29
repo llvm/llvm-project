@@ -5,3 +5,9 @@
 addqp z0.b, z0.b, z0.b
 // CHECK: error: instruction requires: sme2p3 or sve2p3
 // CHECK-NEXT: addqp z0.b, z0.b, z0.b
+
+.arch armv9-a+sve2p3+fpv2
+.arch armv9-a+sve2p3+nofpv2
+fcmtl p15.s, z31.s, z31.s
+// CHECK: error: instruction requires: fpv2
+// CHECK-NEXT: fcmtl p15.s, z31.s, z31.s

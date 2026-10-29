@@ -22,11 +22,13 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
+#include <memory>
 #include <optional>
 
 namespace lldb_private {
@@ -184,7 +186,7 @@ public:
       llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) = 0;
 
-  virtual void ExecuteInterpreterLoop() = 0;
+  virtual llvm::Error ExecuteInterpreterLoop() = 0;
 
   virtual bool ExecuteOneLineWithReturn(
       llvm::StringRef in_string, ScriptReturnType return_type, void *ret_value,
@@ -269,39 +271,41 @@ public:
                                           CommandReturnObject &result);
 
   /// Set the specified text as the callback for the breakpoint.
-  Status SetBreakpointCommandCallback(
+  llvm::Error SetBreakpointCommandCallback(
       std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       const char *callback_text);
 
-  virtual Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                              const char *callback_text,
-                                              bool is_callback) {
-    return Status::FromErrorString("not implemented");
+  virtual llvm::Error
+  SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                               const char *callback_text, bool is_callback) {
+    return llvm::createStringError("not implemented");
   }
 
   /// This one is for deserialization:
-  virtual Status SetBreakpointCommandCallback(
+  virtual llvm::Error SetBreakpointCommandCallback(
       BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    return Status::FromErrorString("not implemented");
+    return llvm::createStringError("not implemented");
   }
 
-  Status SetBreakpointCommandCallbackFunction(
+  llvm::Error SetBreakpointCommandCallbackFunction(
       std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       const char *function_name, StructuredData::ObjectSP extra_args_sp);
 
   /// Set a script function as the callback for the breakpoint.
-  virtual Status
+  virtual llvm::Error
   SetBreakpointCommandCallbackFunction(BreakpointOptions &bp_options,
                                        const char *function_name,
                                        StructuredData::ObjectSP extra_args_sp) {
-    return Status::FromErrorString("not implemented");
+    return llvm::createStringError("not implemented");
   }
 
   /// Set a one-liner as the callback for the watchpoint.
-  virtual void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                            const char *user_input,
-                                            bool is_callback) {}
+  virtual llvm::Error
+  SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                               const char *user_input, bool is_callback) {
+    return llvm::createStringError("not implemented");
+  }
 
   virtual bool GetScriptedSummary(const char *function_name,
                                   lldb::ValueObjectSP valobj,
@@ -378,6 +382,10 @@ public:
                       StructuredData::ObjectSP *module_sp = nullptr,
                       FileSpec extra_search_dir = {},
                       lldb::TargetSP loaded_into_target_sp = {});
+
+  const lldb::ScriptedInstanceRegistrySP &GetScriptedInstanceRegistry() const {
+    return m_instance_registry_sp;
+  }
 
   virtual bool IsReservedWord(const char *word) { return false; }
 
@@ -522,6 +530,10 @@ public:
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
+
+private:
+  lldb::ScriptedInstanceRegistrySP m_instance_registry_sp =
+      std::make_shared<ScriptedInstanceRegistry>();
 };
 
 } // namespace lldb_private

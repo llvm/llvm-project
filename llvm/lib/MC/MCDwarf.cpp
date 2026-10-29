@@ -1697,7 +1697,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
       encodeDwarfRegisterLocation(VRs[0].Register, OSBlock);
       OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
               << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-      encodeULEB128((VRs[0].SizeInBits / 8) * VRs[0].Lane, OSBlock);
+      encodeULEB128(static_cast<uint64_t>(VRs[0].SizeInBits / 8) * VRs[0].Lane,
+                    OSBlock);
     } else {
       for (const auto &VR : VRs) {
         // TODO: Detect when we can merge multiple adjacent pieces, or even
@@ -1706,7 +1707,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
         encodeDwarfRegisterLocation(VR.Register, OSBlock);
         OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
         encodeULEB128(VR.SizeInBits, OSBlock);
-        encodeULEB128(VR.SizeInBits * VR.Lane, OSBlock);
+        encodeULEB128(static_cast<uint64_t>(VR.SizeInBits) * VR.Lane, OSBlock);
       }
     }
 
@@ -1889,6 +1890,7 @@ static unsigned getCIEVersion(bool IsEH, unsigned DwarfVersion) {
     return 3;
   case 4:
   case 5:
+  case 6:
     return 4;
   }
   llvm_unreachable("Unknown version");
@@ -1941,6 +1943,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
       Augmentation += "B";
     if (Frame.IsMTETaggedFrame)
       Augmentation += "G";
+    if (Frame.IsNonHintPAuthFrame)
+      Augmentation += "N";
     Streamer.emitBytes(Augmentation);
   }
   Streamer.emitInt8(0);
@@ -2110,7 +2114,8 @@ struct CIEKey {
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
         IsBKeyFrame(Frame.IsBKeyFrame),
-        IsMTETaggedFrame(Frame.IsMTETaggedFrame), IsEH(IsEH) {}
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame),
+        IsNonHintPAuthFrame(Frame.IsNonHintPAuthFrame), IsEH(IsEH) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -2126,11 +2131,11 @@ struct CIEKey {
 
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
                            IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
-                           IsMTETaggedFrame) <
+                           IsMTETaggedFrame, IsNonHintPAuthFrame) <
            std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
                            Other.LsdaEncoding, Other.IsSignalFrame,
                            Other.IsSimple, Other.RAReg, Other.IsBKeyFrame,
-                           Other.IsMTETaggedFrame);
+                           Other.IsMTETaggedFrame, Other.IsNonHintPAuthFrame);
   }
 
   bool operator==(const CIEKey &Other) const {
@@ -2143,7 +2148,8 @@ struct CIEKey {
            LsdaEncoding == Other.LsdaEncoding &&
            IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
            RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
-           IsMTETaggedFrame == Other.IsMTETaggedFrame;
+           IsMTETaggedFrame == Other.IsMTETaggedFrame &&
+           IsNonHintPAuthFrame == Other.IsNonHintPAuthFrame;
   }
   bool operator!=(const CIEKey &Other) const { return !(*this == Other); }
 
@@ -2155,6 +2161,7 @@ struct CIEKey {
   unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
+  bool IsNonHintPAuthFrame = false;
   bool IsEH = false;
 };
 

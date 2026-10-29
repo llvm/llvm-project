@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "runtime_prefix": "__runtime_bitcodes_",
+    "runtime_bitcodes": [
+      "runtime_bitcodes_state_rt.bc",
+      "runtime_bitcodes_callbacks_rt.bc"
+    ],
+    "inline_runtime": false
+  },
+  "instruction_pre": {
+    "numeric": {
+      "enabled": true,
+      "size": true,
+      "id": true
+    }
+  }
+}

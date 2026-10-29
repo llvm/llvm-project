@@ -19,17 +19,21 @@ class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
 class PredicatedScalarEvolution;
-class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
 
 namespace vputils {
-/// Returns true if only the first lane of \p Def is used.
+/// Returns true if checking whether \p U uses the first lane of \p Op requires
+/// recursively checking \p Op's users.
+bool propagatesFirstLaneUse(const VPUser *U, const VPValue *Op);
+
+/// Returns true if only the first lane of \p Def is used by all users.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
-/// Returns true if only the first part of \p Def is used.
+/// Returns true if only the first part of \p Def is used by all users.
 bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
@@ -44,9 +48,9 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V,
-                                  PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+LLVM_ABI_FOR_TEST const SCEV *
+getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
+                      const Loop *L = nullptr);
 
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
@@ -69,7 +73,7 @@ bool isSingleScalar(const VPValue *VPV);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(const VPValue *V);
+LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
@@ -114,8 +118,7 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
       return GetCalleeIntrinsic(
           VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
-      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
-          ->getZExtValue();
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
     }
   }
   return Intrinsic::not_intrinsic;
@@ -136,21 +139,10 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
-/// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID.
-inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
-  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return ID.getInductionBinOp()->getFastMathFlags();
-
-  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
-          ID.getInductionBinOp()))
-    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
-                                  OBO->hasNoSignedWrap());
-
-  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
-         "Expected int induction");
-  return VPIRFlags::WrapFlagsTy(false, false);
-}
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
@@ -199,13 +191,14 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
-/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
-/// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *createScalarIVSteps(
-    VPlan &Plan, InductionDescriptor::InductionKind Kind,
-    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+/// StartV and step \p Step, truncated to \p ResultTy, inserting recipes via \p
+/// Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Type *ResultTy, VPValue *StartV,
+                    VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
@@ -239,12 +232,7 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 LLVM_ABI_FOR_TEST VPValue *
 reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
 
-/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
-/// the frequency of a block that always executes. Wider than
-/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
-inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
-
-/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+/// Returns \p Freq as a BranchProbability, relative to the full mass.
 BranchProbability getExecutionProbability(BlockFrequency Freq);
 
 /// Computes for each block in \p Blocks, which must be in reverse post-order,
@@ -280,8 +268,10 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
-/// VPExpandSCEVRecipe to be expanded to IR later.
+/// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later. Expansions
+/// are reused across calls to expand(), so the builder's insert point must
+/// only move to positions dominated by all earlier insert points.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
@@ -291,10 +281,18 @@ class VPSCEVExpander {
   /// zero, matching SCEVExpander's SafeUDivMode.
   bool SafeUDivMode = false;
 
+  DenseMap<PointerIntPair<const SCEV *, 1, bool>, VPValue *>
+      InsertedExpressions;
+
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
+
+  VPValue *expandImpl(const SCEV *S);
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)

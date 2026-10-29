@@ -18,6 +18,7 @@
 #endif
 MODULE_PASS("riscv-asm-printer-begin", RISCVAsmPrinterBeginPass())
 MODULE_PASS("riscv-asm-printer-end", RISCVAsmPrinterEndPass())
+MODULE_PASS("riscv-promote-constant", RISCVPromoteConstantPass(this))
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
@@ -33,6 +34,7 @@ FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("riscv-asm-printer", RISCVAsmPrinterPass())
+MACHINE_FUNCTION_PASS("riscv-dead-defs", RISCVDeadRegisterDefinitionsPass())
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-atomics",
                       RISCVExpandPseudoAtomicsPass())
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-post-ra",
@@ -42,8 +44,27 @@ MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-emit",
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-ra",
                       RISCVExpandPseudoPreRAPass())
 MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
+MACHINE_FUNCTION_PASS("riscv-indirect-branch-tracking",
+                      RISCVIndirectBranchTrackingPass())
+MACHINE_FUNCTION_PASS("riscv-insert-read-write-csr",
+                      RISCVInsertReadWriteCSRPass())
+MACHINE_FUNCTION_PASS("riscv-insert-vsetvli", RISCVInsertVSETVLIPass())
+MACHINE_FUNCTION_PASS("riscv-insert-write-vxrm", RISCVInsertWriteVXRMPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("riscv-late-branch-opt", RISCVLateBranchOptPass())
+MACHINE_FUNCTION_PASS("riscv-load-store-opt", RISCVLoadStoreOptPass())
+MACHINE_FUNCTION_PASS("riscv-lpad-setup", RISCVLandingPadSetupPass())
+MACHINE_FUNCTION_PASS("riscv-make-compressible", RISCVMakeCompressiblePass())
+MACHINE_FUNCTION_PASS("riscv-merge-base-offset", RISCVMergeBaseOffsetPass())
+MACHINE_FUNCTION_PASS("riscv-move-merge", RISCVMoveMergePass())
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
+MACHINE_FUNCTION_PASS("riscv-push-pop-opt", RISCVPushPopOptPass())
+MACHINE_FUNCTION_PASS("riscv-qc-relax-marking", RISCVQCRelaxMarkingPass())
+MACHINE_FUNCTION_PASS("riscv-redundant-copy-elimination",
+                      RISCVRedundantCopyEliminationPass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
+MACHINE_FUNCTION_PASS("riscv-vmv0-elimination", RISCVVMV0EliminationPass())
+MACHINE_FUNCTION_PASS("riscv-pre-alloc-zilsd-opt",
+                      RISCVPreAllocZilsdOptPass())
 #undef MACHINE_FUNCTION_PASS

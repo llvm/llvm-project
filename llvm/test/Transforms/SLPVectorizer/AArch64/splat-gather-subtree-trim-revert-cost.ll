@@ -12,24 +12,22 @@ define void @splat_subtree_trim_revert_cost(ptr %p, double %x, double %y) {
 ; CHECK-LABEL: define void @splat_subtree_trim_revert_cost(
 ; CHECK-SAME: ptr [[P:%.*]], double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[Y]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[X]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[A0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[A1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[B0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[A1]])
 ; CHECK-NEXT:    [[A2:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, [[A0]]
-; CHECK-NEXT:    [[C0:%.*]] = tail call double @llvm.fmuladd.f64(double [[A2]], double 0.000000e+00, double [[M0]])
-; CHECK-NEXT:    [[D0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double [[B0]], double [[C0]])
-; CHECK-NEXT:    [[E0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double [[D0]], double 0.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, [[A2]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[P]], i64 736
-; CHECK-NEXT:    store double [[E0]], ptr [[GEP0]], align 8
-; CHECK-NEXT:    [[B1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[A1]])
-; CHECK-NEXT:    [[C1:%.*]] = tail call double @llvm.fmuladd.f64(double [[A2]], double [[Y]], double [[X]])
-; CHECK-NEXT:    [[D1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double [[B1]], double [[C1]])
-; CHECK-NEXT:    [[E1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double [[D1]], double 0.000000e+00)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 744
-; CHECK-NEXT:    store double [[E1]], ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP1]], double [[M0]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP5]], <2 x double> [[TMP0]], <2 x double> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP4]], <2 x double> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP8]], <2 x double> zeroinitializer)
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:

@@ -58,3 +58,20 @@ func.func @uniform_load(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
 // CHECK-NEXT:   %[[bcast:.*]] = vector.broadcast %[[uniform_ld]] : f32 to vector<128xf32>
 // CHECK-NEXT:   affine.for
 // CHECK:          arith.addf %[[bcast]], %{{.*}} : vector<128xf32>
+
+// -----
+
+// CHECK-LABEL: @uniform_multi_result
+func.func @uniform_multi_result(%in : memref<512xi32>, %a : i32, %b : i32) {
+  %sum, %overflow = arith.addui_extended %a, %b : i32, i1
+  affine.for %i = 0 to 512 {
+    %ld = affine.load %in[%i] : memref<512xi32>
+    %add = arith.addi %ld, %sum : i32
+  }
+  return
+}
+
+// CHECK:      %[[sum:.*]], %{{.*}} = arith.addui_extended
+// CHECK-NEXT: %[[bcast:.*]] = vector.broadcast %[[sum]] : i32 to vector<128xi32>
+// CHECK-NEXT: affine.for
+// CHECK:        arith.addi %{{.*}}, %[[bcast]] : vector<128xi32>

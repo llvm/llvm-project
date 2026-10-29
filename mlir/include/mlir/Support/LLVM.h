@@ -56,6 +56,9 @@ template <typename... PT>
 class PointerUnion;
 template <typename T, typename Vector, typename Set, unsigned N>
 class SetVector;
+template <typename KeyT, typename ValueT, typename MapType, typename VectorType,
+          unsigned N>
+class MapVector;
 template <typename T, unsigned N>
 class SmallPtrSet;
 template <typename T>
@@ -123,6 +126,11 @@ using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
 template <typename T, typename Vector = llvm::SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
 using SetVector = llvm::SetVector<T, Vector, Set, N>;
+template <typename KeyT, typename ValueT,
+          typename MapType = DenseMap<KeyT, unsigned>,
+          typename VectorType = llvm::SmallVector<std::pair<KeyT, ValueT>, 0>,
+          unsigned N = 0>
+using MapVector = llvm::MapVector<KeyT, ValueT, MapType, VectorType, N>;
 template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;

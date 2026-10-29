@@ -229,6 +229,7 @@ private:
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_SINT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
@@ -266,8 +267,10 @@ private:
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
+
+  bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
 

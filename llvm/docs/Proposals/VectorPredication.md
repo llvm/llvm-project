@@ -16,7 +16,7 @@ masked loads and stores, are available through intrinsics [^maskedir].
 
 The Vector Predication (VP) extensions is a concrete RFC and prototype
 implementation to achieve native vector predication in LLVM. The VP prototype
-and all related discussions can be found in the VP patch on Phabricator
+and its original discussions are preserved in the archived code review
 [^vprfc].
 
 ## Roadmap
@@ -73,7 +73,7 @@ Result: Native vector predication in IR.
 ## References
 
 [^maskedir]: `llvm.masked.*` intrinsics,
-    <https://llvm.org/docs/LangRef.html#masked-vector-load-and-store-intrinsics>
+    [masked vector load and store intrinsics](../LangRef.md#masked-vector-load-and-store-intrinsics)
 
 [^vprfc]: RFC: Prototype & Roadmap for vector predication in LLVM,
     <https://reviews.llvm.org/D57504>
