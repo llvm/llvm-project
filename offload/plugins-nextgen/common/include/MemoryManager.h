@@ -115,8 +115,6 @@ class MemoryManagerTy {
     void *Ptr;
     /// Pointer to the originally allocated memory
     void *BasePtr;
-    /// Whether the memory this node holds is in a free list.
-    bool IsFree = false;
 
     /// Constructor
     NodeTy(size_t Size, void *Ptr, void *BasePtr)
@@ -319,7 +317,6 @@ public:
       if (Itr != List.end()) {
         NodePtr = &Itr->get();
         List.erase(Itr);
-        NodePtr->IsFree = false;
       }
     }
 
@@ -409,11 +406,6 @@ public:
 
     {
       std::lock_guard<std::mutex> G(FreeListLocks[B]);
-      if (P->IsFree)
-        return error::createOffloadError(
-            error::ErrorCode::INVALID_ARGUMENT,
-            "double free of pooled device memory %p", TgtPtr);
-      P->IsFree = true;
       FreeLists[B].insert(*P);
     }
 
