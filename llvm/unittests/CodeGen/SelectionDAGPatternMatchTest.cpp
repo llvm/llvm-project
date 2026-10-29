@@ -1220,6 +1220,63 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
   }
 }
 
+TEST_F(SelectionDAGPatternMatchTest, ConstantSplatVectorAllZeros) {
+  SDLoc DL;
+  SDValue ScalarZero = DAG->getConstant(0, DL, MVT::i64);
+  EXPECT_FALSE(ISD::isConstantSplatVectorAllZeros(ScalarZero.getNode()));
+
+  // Recognize scalar zero bitcasts to integer and floating-point vectors.
+  for (SDValue Scalar : {ScalarZero, DAG->getConstantFP(0.0, DL, MVT::f64),
+                         DAG->getTargetConstant(0, DL, MVT::i64),
+                         DAG->getTargetConstantFP(0.0, DL, MVT::f64)}) {
+    for (MVT VT : {MVT::v1i64, MVT::v1f64, MVT::v2i32, MVT::v2f32, MVT::v4i16,
+                   MVT::v8i8}) {
+      SDValue Vec = DAG->getBitcast(VT, Scalar);
+      ASSERT_EQ(Vec.getOpcode(), ISD::BITCAST);
+      EXPECT_TRUE(ISD::isConstantSplatVectorAllZeros(Vec.getNode()));
+    }
+  }
+
+  // Stricter BuildVector zero check should reject bitcasted zeros
+  SDValue ScalarBitcast = DAG->getBitcast(MVT::v1i64, ScalarZero);
+  EXPECT_FALSE(ISD::isBuildVectorAllZeros(ScalarBitcast.getNode()));
+
+  // Reject nonzero, negative-zero and nonconstant scalar operands.
+  for (SDValue Scalar :
+       {DAG->getConstant(1, DL, MVT::i64),
+        DAG->getConstantFP(1.0, DL, MVT::f64),
+        DAG->getConstantFP(-0.0, DL, MVT::f64),
+        DAG->getTargetConstant(1, DL, MVT::i64),
+        DAG->getTargetConstantFP(1.0, DL, MVT::f64),
+        DAG->getTargetConstantFP(-0.0, DL, MVT::f64),
+        DAG->getCopyFromReg(DAG->getEntryNode(), DL, Register::index2VirtReg(1),
+                            MVT::i64)}) {
+    SDValue Vec = DAG->getBitcast(MVT::v1i64, Scalar);
+    ASSERT_EQ(Vec.getOpcode(), ISD::BITCAST);
+    EXPECT_FALSE(ISD::isConstantSplatVectorAllZeros(Vec.getNode()));
+  }
+
+  // Check BUILD_VECTOR and SPLAT_VECTOR forms.
+  SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
+  SDValue Undef = DAG->getUNDEF(MVT::i32);
+  for (SDValue Vec : {DAG->getConstant(0, DL, MVT::v2i32),
+                      DAG->getBuildVector(MVT::v2i32, DL, {Zero, Undef})}) {
+    EXPECT_TRUE(ISD::isConstantSplatVectorAllZeros(Vec.getNode()));
+    EXPECT_TRUE(ISD::isBuildVectorAllZeros(Vec.getNode()));
+    SDValue Bitcast = DAG->getBitcast(MVT::v4i16, Vec);
+    EXPECT_TRUE(ISD::isConstantSplatVectorAllZeros(Bitcast.getNode()));
+    EXPECT_TRUE(ISD::isBuildVectorAllZeros(Bitcast.getNode()));
+  }
+
+  SDValue Splat = DAG->getSplatVector(MVT::nxv2i32, DL, Zero);
+  EXPECT_TRUE(ISD::isConstantSplatVectorAllZeros(Splat.getNode()));
+  EXPECT_FALSE(ISD::isBuildVectorAllZeros(Splat.getNode()));
+
+  SDValue AllUndef = DAG->getBuildVector(MVT::v2i32, DL, {Undef, Undef});
+  EXPECT_FALSE(ISD::isConstantSplatVectorAllZeros(AllUndef.getNode()));
+  EXPECT_FALSE(ISD::isBuildVectorAllZeros(AllUndef.getNode()));
+}
+
 TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
   using namespace SDPatternMatch;
 

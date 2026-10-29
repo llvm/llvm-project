@@ -232,9 +232,21 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
 }
 
 bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
+  // If we are bitcasting a 0 to a fixed length vector, we also want to
+  // recognize this.
+  bool IsVectorBitcast = N->getOpcode() == ISD::BITCAST &&
+                         N->getValueType(0).isFixedLengthVector();
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
     N = N->getOperand(0).getNode();
+
+  if (!BuildVectorOnly && IsVectorBitcast) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N))
+      return C->isZero();
+    // Check the bits so that floating-point negative zero does not match.
+    if (auto *C = dyn_cast<ConstantFPSDNode>(N))
+      return C->getValueAPF().bitcastToAPInt().isZero();
+  }
 
   if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
