@@ -8,7 +8,7 @@
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
 
 ; Combining the byte concatenation can produce a v2bf16 SCALAR_TO_VECTOR.
-define i32 @scalar_to_vector_bf16(bfloat %x) {
+define <4 x i8> @scalar_to_vector_bf16(bfloat %x) {
 ; CHECK-LABEL: scalar_to_vector_bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
@@ -20,14 +20,13 @@ define i32 @scalar_to_vector_bf16(bfloat %x) {
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %bytes = bitcast bfloat %x to <2 x i8>
-  %wide = shufflevector <2 x i8> %bytes, <2 x i8> undef,
+  %wide = shufflevector <2 x i8> %bytes, <2 x i8> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %result = bitcast <4 x i8> %wide to i32
-  ret i32 %result
+  ret <4 x i8> %wide
 }
 
 ; The same node can be introduced when expanding an unaligned bfloat load.
-define i32 @scalar_to_vector_bf16_unaligned(ptr addrspace(1) %in) {
+define <4 x i8> @scalar_to_vector_bf16_unaligned(ptr addrspace(1) %in) {
 ; CHECK-LABEL: scalar_to_vector_bf16_unaligned(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -45,10 +44,9 @@ define i32 @scalar_to_vector_bf16_unaligned(ptr addrspace(1) %in) {
 ; CHECK-NEXT:    ret;
   %x = load bfloat, ptr addrspace(1) %in, align 1
   %bytes = bitcast bfloat %x to <2 x i8>
-  %wide = shufflevector <2 x i8> %bytes, <2 x i8> undef,
+  %wide = shufflevector <2 x i8> %bytes, <2 x i8> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %result = bitcast <4 x i8> %wide to i32
-  ret i32 %result
+  ret <4 x i8> %wide
 }
 
 ; Preserve all four bytes when copying through an aligned local array.
