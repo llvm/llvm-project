@@ -1471,9 +1471,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   SDNode *Result = NVPTXLD;
   if (IsB128)
-    Result =
-        CurDAG->getMachineNode(NVPTX::I128toV2I64, DL, LD->getVTList(),
-                               {SDValue(NVPTXLD, 0), SDValue(NVPTXLD, 1)});
+    Result = CurDAG->getMachineNode(NVPTX::I128toV2I64, DL, LD->getVTList(),
+                                    {SDValue(NVPTXLD, 0), SDValue(NVPTXLD, 1)});
 
   ReplaceNode(LD, Result);
   return true;
