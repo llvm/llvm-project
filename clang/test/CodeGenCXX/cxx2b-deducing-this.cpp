@@ -265,6 +265,33 @@ void test() {
 // CHECK: call void @_ZN5P27971C1cEi
 }
 
+// This used to crash because capture is not set as instantiation dependent correctly,
+// and then the <dependent-type> leaks to the codegen step.
+namespace GH125439 {
+void main() {
+  int x = 0;
+  auto f = [x](this auto) { decltype(x) n; (void)x; };
+  f();
+}
+}
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1254394mainEv()
+// CHECK: call void @"_ZZN8GH1254394mainEvE{{.*}}"
+// CHECK-LABEL: define {{.*}} void @"_ZZN8GH1254394mainEvE{{.*}}"
+
+// This used to crash because capture in return type did not see
+// the real type of deduced explicit object parameter during instantiation.
+namespace GH153493 {
+void main() {
+  auto f = [b = 0](this auto&&) -> decltype(b + 0) {
+    return b;
+  };
+  f();
+}
+}
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1534934mainEv()
+// CHECK:       call {{.*}} i32 @"_ZZN8GH1534934mainEv{{.*}}"
+// CHECK-LABEL: define {{.*}} i32 @"_ZZN8GH1534934mainEv{{.*}}"
+
 // This used to crash because we weren’t instantiating a dependent 'this'.
 namespace GH154054 {
 struct S {
@@ -285,11 +312,11 @@ void main() {
 
 // CHECK-LABEL: define {{.*}} i32 @_ZZN8GH1540541S5byvalEvENHUlT_E_clIS2_EEDaS1_(i32 %.coerce)
 // CHECK: entry:
-// CHECK:   %0 = alloca %class.anon.11, align 4
-// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.11, ptr %0, i32 0, i32 0
+// CHECK:   %0 = alloca %class.anon.13, align 4
+// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.13, ptr %0, i32 0, i32 0
 // CHECK:   %coerce.dive1 = getelementptr inbounds nuw %"struct.GH154054::S", ptr %coerce.dive, i32 0, i32 0
 // CHECK:   store i32 %.coerce, ptr %coerce.dive1, align 4
-// CHECK:   %1 = getelementptr inbounds nuw %class.anon.11, ptr %0, i32 0, i32 0
+// CHECK:   %1 = getelementptr inbounds nuw %class.anon.13, ptr %0, i32 0, i32 0
 // CHECK:   %x = getelementptr inbounds nuw %"struct.GH154054::S", ptr %1, i32 0, i32 0
 // CHECK:   %2 = load i32, ptr %x, align 4
 // CHECK:   ret i32 %2
@@ -309,10 +336,10 @@ void f() {
 
 // CHECK-LABEL: define {{.*}} ptr @_ZZN8GH1540541s1fEvENHUlT_E_clIS2_EEDaS1_(i32 %.coerce)
 // CHECK: entry:
-// CHECK:   %0 = alloca %class.anon.12, align 4
-// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.12, ptr %0, i32 0, i32 0
+// CHECK:   %0 = alloca %class.anon.14, align 4
+// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.14, ptr %0, i32 0, i32 0
 // CHECK:   %coerce.dive1 = getelementptr inbounds nuw %"struct.GH154054::s", ptr %coerce.dive, i32 0, i32 0
 // CHECK:   store i32 %.coerce, ptr %coerce.dive1, align 4
-// CHECK:   %1 = getelementptr inbounds nuw %class.anon.12, ptr %0, i32 0, i32 0
+// CHECK:   %1 = getelementptr inbounds nuw %class.anon.14, ptr %0, i32 0, i32 0
 // CHECK:   ret ptr %1
 }

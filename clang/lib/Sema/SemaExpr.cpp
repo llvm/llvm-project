@@ -21252,9 +21252,28 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
       if (MD->getType().isNull())
         continue;
 
-      const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
-      if (!Ty || !MD->isExplicitObjectMemberFunction() ||
-          !Ty->getParamType(0)->isDependentType())
+      if (!MD->isExplicitObjectMemberFunction())
+        continue;
+
+      bool IsDependentObjectParam = [&]() {
+        const ParmVarDecl *ObjectParamDecl = MD->getParamDecl(0);
+        assert(ObjectParamDecl &&
+               "Shall explicit object parameter exist here.");
+
+        QualType ObjectParamType = ObjectParamDecl->getType();
+        if (!ObjectParamType->isDependentType())
+          return false;
+
+        // If we are in the middle of instantiation of signature, try to use
+        // the real type of the deduced explicit object parameter.
+        if (auto *CIS = SemaRef.CurrentInstantiationScope)
+          if (auto *Inst = CIS->getInstantiationOfIfExists(ObjectParamDecl))
+            ObjectParamType = cast<ParmVarDecl>(cast<Decl *>(*Inst))->getType();
+
+        return ObjectParamType->isDependentType();
+      }();
+
+      if (!IsDependentObjectParam)
         continue;
 
       if (auto *C = LSI->CaptureMap.count(D) ? &LSI->getCapture(D) : nullptr) {
