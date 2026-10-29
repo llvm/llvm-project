@@ -1498,7 +1498,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
     LSI->ExplicitParams = FTI.getLParenLoc().isValid();
     if (!FTIHasSingleVoidParameter(FTI)) {
-      Params.reserve(Params.size());
+      Params.reserve(FTI.NumParams);
       for (unsigned I = 0; I < FTI.NumParams; ++I) {
         auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
         Param->setScopeInfo(0, Params.size());

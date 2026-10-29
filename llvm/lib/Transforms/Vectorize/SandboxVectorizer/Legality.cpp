@@ -276,6 +276,23 @@ const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
   return createLegalityResult<Widen>();
 }
 
+const LegalityResult &
+LegalityAnalysis::canVectorizeLSV(BndlRef<Instruction *> Bndl) {
+  // Check if in the same BB.
+  if (LegalityAnalysis::differentBlock(Bndl))
+    return createLegalityResult<Pack>(ResultReason::DiffBBs);
+
+  // Check if instructions repeat.
+  if (!LegalityAnalysis::areUnique(Bndl))
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
+
+  // Check scheduling.
+  if (!Sched.trySchedule(Bndl))
+    createLegalityResult<Pack>(ResultReason::CantSchedule);
+
+  return createLegalityResult<Widen>();
+}
+
 void LegalityAnalysis::clear() {
   Sched.clear();
   IMaps.clear();

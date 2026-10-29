@@ -233,7 +233,7 @@ updateBranches(MachineFunction &MF,
 
 // This function generates the machine basic block clusters of "hot" blocks.
 // Currently, only support one cluster creation.
-// TODO: Support multi-cluster creation and path cloning.
+// TODO: Support multi-cluster creation.
 static SmallVector<BBClusterInfo>
 createBBClusterInfoForFunction(MachineFunction &MF,
                                const BasicBlockMatchingAndInference &BMI) {

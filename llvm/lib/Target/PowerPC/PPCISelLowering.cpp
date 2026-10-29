@@ -8303,8 +8303,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
         LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, LHS);
       Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, LHS, TV, FV);
-      if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-        Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
       return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                          DAG.getNode(ISD::FNEG, dl, MVT::f64, LHS), Sel1, FV);
     case ISD::SETULT:
@@ -8339,8 +8337,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
-    if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-      Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                        DAG.getNode(ISD::FNEG, dl, MVT::f64, Cmp), Sel1, FV);
   case ISD::SETULT:
@@ -13330,6 +13326,10 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+bool PPCTargetLowering::fenceClearsLoadLinkedReservation() const {
+  return !Subtarget.fenceKeepsReservation();
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
                                                        MachineBasicBlock *BB,
                                                        unsigned BinOpcode,
@@ -13514,7 +13514,7 @@ static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
 }
 
 // Sign extend operand OpIdx if the value is not known to be sign extended.
-// Assumes the operand is a register. The flag IsByte controls which intruction
+// Assumes the operand is a register. The flag IsByte controls which instruction
 // is used for the sign extension.
 static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned OpIdx, bool IsByte,
@@ -16505,7 +16505,7 @@ SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
     return SDValue();
 
   LLVM_DEBUG(llvm::dbgs() << "\ncombineBVLoadsSpecialValue: Build vector ("
-                          << VT.getEVTString() << "): ";
+                          << VT << "): ";
              Op->dump());
 
   unsigned NumElems = VT.getVectorNumElements();

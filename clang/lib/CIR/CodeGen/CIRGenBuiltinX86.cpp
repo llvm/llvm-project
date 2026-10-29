@@ -1986,6 +1986,34 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[2], Res,
                          ops[1]);
   }
+  case X86::BI__builtin_ia32_pmovdb512_mask:
+  case X86::BI__builtin_ia32_pmovdw512_mask:
+  case X86::BI__builtin_ia32_pmovqw512_mask: {
+    // These only require AVX512F, but a byte/word select would need AVX512BW,
+    // so use the masked intrinsic unless the mask is all ones.
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(ops[2].getDefiningOp());
+    if (c && c.isAllOnesValue())
+      return builder.createIntCast(ops[0],
+                                   cast<cir::VectorType>(ops[1].getType()));
+
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_pmovdb512_mask:
+      intrinsicName = "x86.avx512.mask.pmov.db.512";
+      break;
+    case X86::BI__builtin_ia32_pmovdw512_mask:
+      intrinsicName = "x86.avx512.mask.pmov.dw.512";
+      break;
+    case X86::BI__builtin_ia32_pmovqw512_mask:
+      intrinsicName = "x86.avx512.mask.pmov.qw.512";
+      break;
+    }
+    return builder.emitIntrinsicCallOp(loc, intrinsicName, ops[1].getType(),
+                                       ops);
+  }
   case X86::BI__builtin_ia32_pblendw128:
   case X86::BI__builtin_ia32_blendpd:
   case X86::BI__builtin_ia32_blendps:

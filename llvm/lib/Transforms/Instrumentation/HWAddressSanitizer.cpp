@@ -351,8 +351,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   const Triple &TargetTriple = M.getTargetTriple();
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (shouldUseStackSafetyAnalysis(Opts, TargetTriple,
                                    Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);

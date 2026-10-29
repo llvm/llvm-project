@@ -144,3 +144,15 @@ TEST_P(olGetHostDeviceInfoTest, InvalidNullPointerPropValue) {
                olGetDeviceInfo(Device, OL_DEVICE_INFO_TYPE, sizeof(DeviceType),
                                nullptr));
 }
+
+using olGetDeviceInfoNativeHandleTest = OffloadDeviceTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetDeviceInfoNativeHandleTest);
+
+TEST_P(olGetDeviceInfoNativeHandleTest, SuccessNativeHandle) {
+  void *Handle = reinterpret_cast<void *>(~0ull);
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetDeviceInfo(
+      Device, OL_DEVICE_INFO_NATIVE_HANDLE, sizeof(Handle), &Handle));
+  // Not all backends report a pointer here; CUDA reports a CUdevice, so the
+  // value may legitimately be zero.
+  ASSERT_NE(Handle, reinterpret_cast<void *>(~0ull));
+}

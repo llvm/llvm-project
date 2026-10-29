@@ -404,6 +404,22 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: getresgid
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: gid_t *
+      - type: gid_t *
+      - type: gid_t *
+  - name: getresuid
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: uid_t *
+      - type: uid_t *
+      - type: uid_t *
   - name: getsid
     standards:
       - posix

@@ -4677,3 +4677,101 @@ func.func @interleave_splat() -> vector<[4]xf32> {
   %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
   return %0 : vector<[4]xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xf32>, %[[B:[^:]+]]: vector<4xf32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_condition(%p: i1, %a: vector<4xf32>, %b: vector<4xf32>) -> vector<4xf32> {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xf32>
+  return %x : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<2x4xi32>, %[[B:[^:]+]]: vector<2x4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_multidimensional(%p: i1, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : i1 to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_scalable(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<[4]xi32>, %[[B:[^:]+]]: vector<[4]xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<[4]xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_scalable(%p: i1, %a: vector<[4]xi32>, %b: vector<[4]xi32>) -> vector<[4]xi32> {
+  %m = vector.broadcast %p : i1 to vector<[4]xi1>
+  %x = arith.select %m, %a, %b : vector<[4]xi1>, vector<[4]xi32>
+  return %x : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<i32>, %[[B:[^:]+]]: vector<i32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_rank_zero(%p: i1, %a: vector<i32>, %b: vector<i32>) -> vector<i32> {
+  %m = vector.broadcast %p : i1 to vector<i1>
+  %x = arith.select %m, %a, %b : vector<i1>, vector<i32>
+  return %x : vector<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[M:.*]] = vector.broadcast %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_broadcast_shared_mask(%p: i1, %a: vector<4xi32>, %b: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  return %x, %m : vector<4xi32>, vector<4xi1>
+}
+
+// -----
+
+// A vector source need not be uniform; do not replace its broadcast mask.
+// CHECK-LABEL: func.func @select_nonuniform_broadcast(
+// CHECK: %[[M:.*]] = vector.broadcast %{{.*}} : vector<4xi1> to vector<2x4xi1>
+// CHECK: arith.select %[[M]], %{{.*}}, %{{.*}} : vector<2x4xi1>, vector<2x4xi32>
+func.func @select_nonuniform_broadcast(%p: vector<4xi1>, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : vector<4xi1> to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_vector(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: vector<4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : vector<4xi32>
+func.func @select_uniform_unselected_poison_vector(%p: i1, %a: vector<4xi32>) -> vector<4xi32> {
+  %bad = ub.poison : vector<4xi32>
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %bad : vector<4xi1>, vector<4xi32>
+  return %x : vector<4xi32>
+}

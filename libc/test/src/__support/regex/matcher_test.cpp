@@ -261,8 +261,8 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_BADRPT);
   }
 
-  const string_view ebrack_patterns[] = {"[",  "[^",    "[abc",
-                                         "[]", "a[[.x", "a[[.x."};
+  const string_view ebrack_patterns[] = {
+      "[", "[^", "[abc", "[]", "a[[.x", "a[[.x.", "a[[:digit:", "a[[:digit"};
   for (string_view pat : ebrack_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -270,7 +270,7 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view erange_patterns[] = {"a[3-1]c", "a[1-3-5]c", "a[1-",
-                                         "a[a-[:digit:]]c"};
+                                         "a[a-[:digit:]]c", "a[[:alpha:]-z]c"};
   for (string_view pat : erange_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -285,17 +285,42 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_ECOLLATE);
   }
 
+  const string_view ectype_patterns[] = {"a[[:notdef:]]b", "a[[:alph:]]b",
+                                         "a[[:]:]]b", "a[[:-:]]b"};
+  for (string_view pat : ectype_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_ECTYPE);
+  }
+
   const string_view bad_patterns[] = {
-      "a+",    "a?",    "a{1}",  "{",     "(",     ")",     "[[:alpha:]]",
-      "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)",
-      R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)", R"(\<)", R"(\>)",
-      R"(\A)", R"(\Z)", R"(\`)", R"(\')", R"(\w)", R"(\W)", R"(\s)",
-      R"(\S)", R"(\d)", R"(\D)"};
+      // Unimplemented quantifiers.
+      "a{1}", "{",
+      // Unimplemented word boundaries.
+      "[[:<:]]", "[[:>:]]",
+      // Unimplemented backreferences.
+      R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
+      R"(\9)",
+      // Unimplemented boundary assertions.
+      R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
     EXPECT_EQ(err.error(), REG_BADPAT);
   }
+
+  ErrorOr<ExprId> empty_pipe = parse_ere("|", REG_EXTENDED, pool);
+  ASSERT_FALSE(empty_pipe.has_value());
+  EXPECT_EQ(empty_pipe.error(), REG_BADPAT);
+
+  ErrorOr<ExprId> unclosed_paren = parse_ere("(", REG_EXTENDED, pool);
+  ASSERT_FALSE(unclosed_paren.has_value());
+  EXPECT_EQ(unclosed_paren.error(), REG_EPAREN);
+
+  ErrorOr<ExprId> literal_close = parse_ere(")", REG_EXTENDED, pool);
+  ASSERT_TRUE(literal_close.has_value());
+  EXPECT_EQ(match(pool, *literal_close, ")"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *literal_close, "x"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
@@ -373,6 +398,41 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   EXPECT_EQ(match(pool, *star_range, ""), MatchResult::Match);
   EXPECT_EQ(match(pool, *star_range, "abcba"), MatchResult::Match);
   EXPECT_EQ(match(pool, *star_range, "abzcba"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> alpha = parse_ere("^[[:alpha:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(alpha.has_value());
+  EXPECT_EQ(match(pool, *alpha, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "HelloWorld"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "Hello1World"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_w = parse_ere(R"(^\w*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_w.has_value());
+  EXPECT_EQ(match(pool, *sh_w, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello_123"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello-123"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_d = parse_ere(R"(^\d*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_d.has_value());
+  EXPECT_EQ(match(pool, *sh_d, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "12345"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "123a45"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg = parse_ere(R"(x\Wy)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_neg.has_value());
+  EXPECT_EQ(match(pool, *sh_neg, "x y"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_neg, "x_y"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg_nl =
+      parse_ere(R"(x\Wy)", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(sh_neg_nl.has_value());
+  EXPECT_EQ(match(pool, *sh_neg_nl, "x\ny", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+
+  ErrorOr<ExprId> multi_class =
+      parse_ere("^[[:alpha:][:blank:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(multi_class.has_value());
+  EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
@@ -418,4 +478,67 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   ErrorOr<ExprId> concat_exhausted = parse_ere("ba", REG_EXTENDED, pool);
   ASSERT_FALSE(concat_exhausted.has_value());
   EXPECT_EQ(concat_exhausted.error(), REG_ESPACE);
+}
+
+TEST(LlvmLibcRegexMatcherTest, AlternationAndGroupingStabilization) {
+  ExprPool pool;
+  ErrorOr<ExprId> ere =
+      parse_ere("(wee|week)(knights|night)", REG_EXTENDED, pool);
+  ASSERT_TRUE(ere.has_value());
+  EXPECT_EQ(match(pool, *ere, "weeknights"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weenight"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeknight"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeknightsxyz"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeks"), MatchResult::NoMatch);
+
+  // Derivative state pool stabilizes after warming up on matches.
+  size_t warm_nodes = pool.size();
+  EXPECT_EQ(match(pool, *ere, "weeknights"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weenight"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+
+  // Parentheses control precedence without adding Group wrapper nodes,
+  // preserving hash-consing deduplication.
+  ErrorOr<ExprId> lit_a = parse_ere("a", REG_EXTENDED, pool);
+  ErrorOr<ExprId> grouped_a = parse_ere("((a))", REG_EXTENDED, pool);
+  ASSERT_TRUE(lit_a.has_value());
+  ASSERT_TRUE(grouped_a.has_value());
+  EXPECT_EQ(*grouped_a, *lit_a);
+
+  ErrorOr<ExprId> ab = parse_ere("a|b", REG_EXTENDED, pool);
+  ErrorOr<ExprId> grouped_ab = parse_ere("(a|b)|(b|a)", REG_EXTENDED, pool);
+  ASSERT_TRUE(ab.has_value());
+  ASSERT_TRUE(grouped_ab.has_value());
+  EXPECT_EQ(*grouped_ab, *ab);
+
+  // Right-to-left alternation folding interns only the 2 base nodes, 4 literal
+  // nodes, and 3 Alt spine nodes (9 total) with zero orphaned Alt nodes.
+  ExprPool alt_pool;
+  ErrorOr<ExprId> multi_alt = parse_ere("a|b|c|d", REG_EXTENDED, alt_pool);
+  ASSERT_TRUE(multi_alt.has_value());
+  EXPECT_EQ(alt_pool.size(), size_t(9));
+}
+
+TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
+  ExprPool pool;
+  // r+ desugars to Concat(r, Star(r)) and r? desugars to Alt(EmptyStr, r),
+  // interning to identical ExprId handles.
+  ErrorOr<ExprId> plus_a = parse_ere("a+", REG_EXTENDED, pool);
+  ErrorOr<ExprId> concat_star_a = parse_ere("aa*", REG_EXTENDED, pool);
+  ASSERT_TRUE(plus_a.has_value());
+  ASSERT_TRUE(concat_star_a.has_value());
+  EXPECT_EQ(*plus_a, *concat_star_a);
+
+  ErrorOr<ExprId> qmark_a = parse_ere("a?", REG_EXTENDED, pool);
+  ErrorOr<ExprId> alt_empty_a = parse_ere("()|a", REG_EXTENDED, pool);
+  ASSERT_TRUE(qmark_a.has_value());
+  ASSERT_TRUE(alt_empty_a.has_value());
+  EXPECT_EQ(*qmark_a, *alt_empty_a);
+
+  ErrorOr<ExprId> ere = parse_ere("a+b?c", REG_EXTENDED, pool);
+  ASSERT_TRUE(ere.has_value());
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  size_t warm_nodes = pool.size();
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
 }

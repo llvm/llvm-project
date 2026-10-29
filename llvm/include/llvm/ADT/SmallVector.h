@@ -1275,7 +1275,9 @@ public:
     this->assign(SizeArg, Value);
   }
 
-  SmallVector(size_t SizeArg, for_overwrite_t) : SmallVectorImpl<T>(N) {
+  template <typename Tag,
+            typename = std::enable_if_t<std::is_same_v<Tag, for_overwrite_t>>>
+  SmallVector(size_t SizeArg, Tag) : SmallVectorImpl<T>(N) {
     this->resize_for_overwrite(SizeArg);
   }
 

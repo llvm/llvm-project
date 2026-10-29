@@ -21,13 +21,24 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -basic-block-section-match-infer -propeller-match-bbid=false | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,HASH
 ;
-; Test 4: Blocks are matched by their base IDs, so the counts of clone #2.1 in
-; the profile apply to block #2, giving the same clusters as Test 2.
+; Test 4: When a cloned block in the profile (#2.1) does not exist in the
+; MachineFunction (e.g., no 'p' directive or rejected cloning), it falls back to
+; the original block (#2), giving the same clusters as Test 2.
 ; RUN: echo 'v1' > %t4
 ; RUN: echo 'f foo' >> %t4
 ; RUN: echo 'g 0:100,1:0,2.1:100 1:0,3:0 2.1:100,3:100 3:100' >> %t4
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t4 -basic-block-section-match-infer -propeller-match-bbid | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,BBID2
+;
+; Test 5: With path cloning ('p 2 3'), block #3 is cloned along #2->#3 as #3.1.
+; Blocks #0, #2 and #3.1 are hot and placed in the main section, while blocks
+; #1 and #3 (original) are cold and placed in the cold section.
+; RUN: echo 'v1' > %t5
+; RUN: echo 'f foo' >> %t5
+; RUN: echo 'p 2 3' >> %t5
+; RUN: echo 'g 0:100,1:0,2:100 1:0,3:0 2:100,3.1:100 3:0 3.1:100' >> %t5
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t5 -basic-block-section-match-infer -propeller-match-bbid | \
+; RUN: FileCheck %s --check-prefixes=CHECK,CLONE
 
 define void @foo(i1 zeroext %0) nounwind {
   %2 = alloca i8, align 1
@@ -70,14 +81,27 @@ declare i32 @baz()
 ; BBID2:                jne     foo.cold
 ; BBID2-NEXT:           # %bb.2:
 ; BBID2-NEXT:           callq   baz@PLT
+; CLONE:                jne     foo.cold
+; CLONE-NEXT:           # %bb.2:
+; CLONE-NEXT:           callq   baz@PLT
+; CLONE-NEXT:           # %bb.4:
+; CLONE-NEXT:           popq    %rax
+; CLONE-NEXT:           retq
 ; BBID1-NEXT:           .LBB0_3:
 ; BBID2-NEXT:           .LBB0_3:
 ; BBID1:                .section        .text.split.foo,"ax",@progbits
 ; BBID2:                .section        .text.split.foo,"ax",@progbits
+; CLONE:                .section        .text.split.foo,"ax",@progbits
 ; BBID1-NEXT:           foo.cold:
 ; BBID2-NEXT:           foo.cold:
+; CLONE-NEXT:           foo.cold:
 ; BBID1-NEXT:           callq   baz@PLT
 ; BBID2-NEXT:           callq   bar@PLT
+; BBID2-NEXT:           jmp     .LBB0_3
+; CLONE-NEXT:           callq   bar@PLT
+; CLONE-NEXT:           # %bb.3:
+; CLONE-NEXT:           popq    %rax
+; CLONE-NEXT:           retq
 ; HASH:                 je      .LBB0_2
 ; HASH:                 callq   bar@PLT
 ; HASH:                 callq   baz@PLT

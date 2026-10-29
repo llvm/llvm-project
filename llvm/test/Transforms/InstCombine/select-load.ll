@@ -89,3 +89,205 @@ entry:
   %l = load i32, ptr %sel, align 8
   ret i32 %l
 }
+
+declare void @use(ptr)
+
+@CA = constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+@CB = constant [4 x i32] [i32 4, i32 5, i32 6, i32 7]
+@EC = external constant [4 x i32]
+@G = global [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+
+; A load of a constant offset from a select of constant globals folds to a
+; select of the loaded constants, even when the select has other users.
+define i32 @const_sel_gep_load(i1 %c) {
+; CHECK-LABEL: @const_sel_gep_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[C]], i32 2, i32 6
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i8, ptr %sel, i64 8
+  %l = load i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Same, with no gep at all.
+define i32 @const_sel_load_no_gep(i1 %c) {
+; CHECK-LABEL: @const_sel_load_no_gep(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[C]], i32 0, i32 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %l = load i32, ptr %sel, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Every load off the shared select folds, and the select itself goes away.
+define i32 @const_sel_shared_by_loads(i1 %c) {
+; CHECK-LABEL: @const_sel_shared_by_loads(
+; CHECK-NEXT:    [[ADD2:%.*]] = select i1 [[C:%.*]], i32 6, i32 18
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep1 = getelementptr i8, ptr %sel, i64 4
+  %gep2 = getelementptr i8, ptr %sel, i64 8
+  %gep3 = getelementptr i8, ptr %sel, i64 12
+  %l1 = load i32, ptr %gep1, align 4
+  %l2 = load i32, ptr %gep2, align 4
+  %l3 = load i32, ptr %gep3, align 4
+  %add1 = add i32 %l1, %l2
+  %add2 = add i32 %add1, %l3
+  ret i32 %add2
+}
+
+; The loaded type need not match the element type of the initializer.
+define i8 @const_sel_narrow_load(i1 %c) {
+; CHECK-LABEL: @const_sel_narrow_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[C]], i8 1, i8 5
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load i8, ptr %gep, align 1
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i8 %l
+}
+
+; Unordered atomic loads are still foldable.
+define i32 @const_sel_unordered_atomic_load(i1 %c) {
+; CHECK-LABEL: @const_sel_unordered_atomic_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[C]], i32 1, i32 5
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load atomic i32, ptr %gep unordered, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Branch weights are carried over to the new select.
+define i32 @const_sel_prof(i1 %c) {
+; CHECK-LABEL: @const_sel_prof(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB, !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[C]], i32 1, i32 5, !prof [[PROF0]]
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB, !prof !0
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Negative test: @G is not a constant global.
+define i32 @nonconst_global_arm(i1 %c) {
+; CHECK-LABEL: @nonconst_global_arm(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @G
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @G
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Negative test: an external constant has no definitive initializer.
+define i32 @external_const_arm(i1 %c) {
+; CHECK-LABEL: @external_const_arm(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @EC
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @EC
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Negative test: volatile load.
+define i32 @volatile_load(i1 %c) {
+; CHECK-LABEL: @volatile_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load volatile i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load volatile i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Negative test: ordered atomic load.
+define i32 @seq_cst_load(i1 %c) {
+; CHECK-LABEL: @seq_cst_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load atomic i32, ptr [[GEP]] seq_cst, align 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i8, ptr %sel, i64 4
+  %l = load atomic i32, ptr %gep seq_cst, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+; Negative test: the gep index is not constant.
+define i32 @variable_index(i1 %c, i64 %i) {
+; CHECK-LABEL: @variable_index(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @CA, ptr @CB
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[SEL]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[SEL]])
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr i32, ptr %sel, i64 %i
+  %l = load i32, ptr %gep, align 4
+  call void @use(ptr %sel)
+  call void @use(ptr %sel)
+  ret i32 %l
+}
+
+!0 = !{!"branch_weights", i32 2, i32 10}

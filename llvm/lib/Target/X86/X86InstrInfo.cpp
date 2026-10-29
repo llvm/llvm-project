@@ -2237,46 +2237,56 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::OP:                                                                \
   case X86::OP##_ND:
 
+#define CASE_SHXD(OP)                                                          \
+  CASE_ND(OP)                                                                  \
+  case X86::OP##_NF:                                                           \
+  case X86::OP##_NF_ND:                                                        \
+  case X86::OP##_EVEX:
+
+  // clang-format off
   switch (Opc) {
-  // SHLD B, C, I <-> SHRD C, B, (BitWidth - I)
-  CASE_ND(SHRD16rri8)
-  CASE_ND(SHLD16rri8)
-  CASE_ND(SHRD32rri8)
-  CASE_ND(SHLD32rri8)
-  CASE_ND(SHRD64rri8)
-  CASE_ND(SHLD64rri8) {
+  // SHLD B, C, I <-> SHRD C, B, (BitWidth - I). All rri8 variants (legacy,
+  // _ND, _NF, _NF_ND, _EVEX) are commutable; swapping only the sources would
+  // change the result, so the opcode and immediate must be updated too.
+  CASE_SHXD(SHRD16rri8)
+  CASE_SHXD(SHLD16rri8)
+  CASE_SHXD(SHRD32rri8)
+  CASE_SHXD(SHLD32rri8)
+  CASE_SHXD(SHRD64rri8)
+  CASE_SHXD(SHLD64rri8) {
     unsigned Size;
     switch (Opc) {
     default:
       llvm_unreachable("Unreachable!");
-#define FROM_TO_SIZE(A, B, S)                                                  \
-  case X86::A:                                                                 \
-    Opc = X86::B;                                                              \
+#define FROM_TO_SUFFIX(A, B, S, SFX)                                           \
+  case X86::A##SFX:                                                            \
+    Opc = X86::B##SFX;                                                         \
     Size = S;                                                                  \
     break;                                                                     \
-  case X86::A##_ND:                                                            \
-    Opc = X86::B##_ND;                                                         \
-    Size = S;                                                                  \
-    break;                                                                     \
-  case X86::B:                                                                 \
-    Opc = X86::A;                                                              \
-    Size = S;                                                                  \
-    break;                                                                     \
-  case X86::B##_ND:                                                            \
-    Opc = X86::A##_ND;                                                         \
+  case X86::B##SFX:                                                            \
+    Opc = X86::A##SFX;                                                         \
     Size = S;                                                                  \
     break;
+#define FROM_TO_SIZE(A, B, S)                                                  \
+  FROM_TO_SUFFIX(A, B, S, )                                                    \
+  FROM_TO_SUFFIX(A, B, S, _ND)                                                 \
+  FROM_TO_SUFFIX(A, B, S, _NF)                                                 \
+  FROM_TO_SUFFIX(A, B, S, _NF_ND)                                              \
+  FROM_TO_SUFFIX(A, B, S, _EVEX)
 
     FROM_TO_SIZE(SHRD16rri8, SHLD16rri8, 16)
     FROM_TO_SIZE(SHRD32rri8, SHLD32rri8, 32)
     FROM_TO_SIZE(SHRD64rri8, SHLD64rri8, 64)
 #undef FROM_TO_SIZE
+#undef FROM_TO_SUFFIX
+#undef CASE_SHXD
     }
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     WorkingMI->getOperand(3).setImm(Size - MI.getOperand(3).getImm());
     break;
   }
+  // clang-format on
   case X86::PFSUBrr:
   case X86::PFSUBRrr:
     // PFSUB  x, y: x = x - y
@@ -3685,6 +3695,15 @@ bool X86InstrInfo::canMakeTailCallConditional(
   if (TailCall.getOpcode() != X86::TCRETURNdi &&
       TailCall.getOpcode() != X86::TCRETURNdi64) {
     // Only direct calls can be done with a conditional branch.
+    return false;
+  }
+
+  if (TailCall.getCFIType()) {
+    // An indirect tail call that was lowered to a direct jump to an indirect
+    // thunk (e.g., __x86_indirect_thunk_r11 for retpolines) still carries a
+    // KCFI type, and must be preceded by a KCFI check of the call target. The
+    // check is emitted later, and cannot be made conditional, so folding the
+    // tail call into a conditional branch would silently drop it.
     return false;
   }
 
@@ -9597,7 +9616,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
         lookupAVX512(MI.getOpcode(), dom, ReplaceableCustomAVX512LogicInstrs);
     assert(table && "Instruction not found in table?");
     // Don't change integer Q instructions to D instructions and
-    // use D intructions if we started with a PS instruction.
+    // use D instructions if we started with a PS instruction.
     if (Domain == 3 && (dom == 1 || table[3] == MI.getOpcode()))
       Domain = 4;
     MI.setDesc(get(table[Domain - 1]));

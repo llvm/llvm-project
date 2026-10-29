@@ -1120,8 +1120,8 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
-/// optionally the result of evaluating the expression.
+/// An expression that occurs in a constant context and
+/// the result of evaluating the expression.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
@@ -5417,6 +5417,17 @@ public:
       if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
+  }
+
+  bool hasZeroInits() const { return InitExprs.empty(); }
+
+  /// Whether getNumInitsWithEmbedExpanded() is 1, without walking the list.
+  bool hasOneInit() const {
+    if (InitExprs.size() != 1)
+      return false;
+    auto *EE =
+        dyn_cast<EmbedExpr>(cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    return !EE || EE->getDataElementCount() == 1;
   }
 
   /// Retrieve the set of initializers.

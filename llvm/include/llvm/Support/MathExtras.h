@@ -457,6 +457,11 @@ constexpr T divideNearest(U Numerator, V Denominator) {
          (Mod > (static_cast<T>(Denominator) - 1) / 2);
 }
 
+/// Returns (\p X * \p Y) / \p Z rounded by round-half-up, like divideNearest.
+/// The product is computed in 128 bits, so it never overflows. Saturates to
+/// the maximum uint64_t value if the result does not fit in 64 bits.
+LLVM_ABI uint64_t mulDivNearest(uint64_t X, uint64_t Y, uint64_t Z);
+
 /// Returns the next integer (mod 2**nbits) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
 ///

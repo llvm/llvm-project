@@ -5524,7 +5524,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
           .addReg(OperandReg)
           .addImm(PPC::sub_32);
       Operand.setReg(DstTmpReg);
-      Operand.setIsKill();
     }
   }
 
@@ -5537,7 +5536,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // instruction, we need to demote the 64-bit defined register back to a
   // 32-bit register
   BuildMI(*MBB, std::next(MI->getIterator()), DL, get(PPC::COPY), SrcReg)
-      .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
+      .addReg(NewDefinedReg, {}, PPC::sub_32);
 }
 
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth

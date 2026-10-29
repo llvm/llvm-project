@@ -88,27 +88,27 @@ ldff1d z0.s, p0/z, [z0.s, #8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1d z0.d, p0/z, [z0.d, #-8]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #-8]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1d z0.d, p0/z, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1d z0.d, p0/z, [z0.d, #249]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #249]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1d z0.d, p0/z, [z0.d, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #256]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1d z0.d, p0/z, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 8 in range [0, 248].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 8 in range [0, 248].
 // CHECK-NEXT: ldff1d z0.d, p0/z, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
