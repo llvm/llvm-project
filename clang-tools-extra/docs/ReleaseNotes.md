@@ -196,6 +196,11 @@ infrastructure are described first, followed by tool-specific sections.
   assignments inside GNU statement expressions unless they form the value of
   the statement expression.
 
+- Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
+  constructor begins with a macro, and fix-its that inserted `private:` into
+  the preceding token, comment or macro argument.
+
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
   emitting empty notes for type aliases when {option}`ModelImplicitConversions`
@@ -284,6 +289,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
+
+- Fixed false positive in {doc}`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
+  or deleted destructor.
 
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string

@@ -174,6 +174,12 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     };
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::StartVertexLocation:
+  case dxbc::PSV::SemanticKind::StartInstanceLocation: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Barycentrics: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};

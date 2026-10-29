@@ -6486,7 +6486,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    const Stmt *LoopOrSwitch = nullptr;
+    if (B->isNamed()) {
+      LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
+      if (!LoopOrSwitch) {
+        Info.FFDiag(S->getBeginLoc(),
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
+        return ESR_Failed;
+      }
+    }
+
+    Info.BreakContinueStack.push_back(LoopOrSwitch);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 
@@ -11430,6 +11443,25 @@ bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
 static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isMetaInfoType());
   return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
+static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info,
+                                                  const CallExpr *E,
+                                                  unsigned BuiltinOp,
+                                                  APValue &Result) {
+  switch (BuiltinOp) {
+  case Builtin::BI__builtin_meta_is_type: {
+    APValue Reflection;
+    if (!EvaluateReflection(E->getArg(0), Reflection, Info))
+      return false;
+    Result = APValue(Info.Ctx.MakeIntValue(
+        Reflection.getReflectionOperandKind() == ReflectionKind::Type,
+        E->getType()));
+    return true;
+  }
+  default:
+    llvm_unreachable("unknown metafunction builtin");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -17202,6 +17234,13 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+  if (Info.Ctx.BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinOp)) {
+    APValue Result;
+    if (!EvaluateReflectionMetafunctionBuiltin(Info, E, BuiltinOp, Result))
+      return false;
+    return Success(Result, E);
+  }
+
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
                             Fn) {
     APValue SourceLHS, SourceRHS;
@@ -20383,7 +20422,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
-  case CK_BitCast:
   case CK_Dependent:
   case CK_LValueBitCast:
   case CK_ARCProduceObject:
@@ -20400,6 +20438,16 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
+
+  case CK_BitCast: {
+    APValue Src;
+    if (!Evaluate(Src, Info, SubExpr))
+      return false;
+    APValue Dst;
+    if (!handleRValueToRValueBitCast(Info, Dst, Src, E))
+      return false;
+    return Success(Dst, E);
+  }
 
   case CK_MemberPointerToBoolean:
   case CK_PointerToBoolean:

@@ -1385,8 +1385,8 @@ defm 64BitLiterals : AMDGPUSubtargetFeature<"64-bit-literals",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
-defm 1024AddressableVGPRs : AMDGPUSubtargetFeature<"1024-addressable-vgprs",
-  "Has 1024 addressable VGPRs"
+defm VGPRMSBs : AMDGPUSubtargetFeature<"vgpr-msbs",
+  "Has MSB registers to address VGPRs that don't fit in the instruction encodings"
 >;
 
 defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixup",
@@ -2197,7 +2197,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
-     FeatureLDSAllocGranularity1280,
+     FeatureLDSAllocGranularity512,
      FeatureLDSEncodingGranularity1280,
      FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
@@ -2485,7 +2485,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
-   Feature1024AddressableVGPRs,
+   FeatureVGPRMSBs,
    Feature64BitLiterals,
    FeatureDLInsts,
    FeatureFmacF64Inst,
@@ -2835,7 +2835,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,
   FeatureLDSAllocGranularity512,

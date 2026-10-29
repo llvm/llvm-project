@@ -1786,6 +1786,10 @@ public:
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
            Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
+    // If the inputs aren't simple (e.g. non-power-of-two element type), just
+    // expand.
+    if (!AccVT.isSimple() || !InputVT.isSimple())
+      return Expand;
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -5785,6 +5789,13 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand MODF node into fractional and integer parts.
+  /// \param N Node to expand
+  /// \param Results Vector to store the resulting fractional and integer parts
+  /// \returns true if the node has been expanded, false if it has not
+  bool expandMODF(SDNode *N, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
 
   /// Expand parallel bit extract (compress).
   /// \param N Node to expand

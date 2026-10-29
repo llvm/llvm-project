@@ -188,6 +188,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinpif);
     TLI.setUnavailable(LibFunc_cospi);
     TLI.setUnavailable(LibFunc_cospif);
+    TLI.setUnavailable(LibFunc_sincos_stret);
+    TLI.setUnavailable(LibFunc_sincosf_stret);
     TLI.setUnavailable(LibFunc_sincospi_stret);
     TLI.setUnavailable(LibFunc_sincospif_stret);
   }
@@ -1120,8 +1122,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-    // Special handling for the sincospi functions that return either
-    // a struct or vector:
+    // Special handling for the sincos and sincospi functions that return
+    // either a struct or vector:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
   case LibFunc_sincospi_stret:
   case LibFunc_sincospif_stret: {
     if (NumParams != 1)

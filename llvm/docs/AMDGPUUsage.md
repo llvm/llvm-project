@@ -3523,7 +3523,8 @@ callable functions (i.e. those that do not correspond to hardware entry points):
 - On entry to a function the dependency counters (`VMcnt`, `LOADcnt` etc.)
   are in an indeterminate state.
 - On return from a function, all dependency counters must be zero except for
-  `VScnt`/`STOREcnt`.
+  `VScnt`/`STOREcnt` or `VMcnt`/`LOADcnt` if the only outstanding
+  operations are `global_inv` or `buffer_inv`.
 
 For entry points, the ABI conventions are dictated by the hardware behavior at
 wave launch and wave termination:
@@ -3916,11 +3917,10 @@ The AMDGPU backend uses the following ELF header:
       See {ref}`amdgpu-generic-processor-versioning`
   :::
 
-  For code object V4 and later, processors with hardwired-on XNACK, such as
-  `gfx1250`, use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4` (zero) because
-  they do not support mode selection. Their XNACK behavior is implied by
-  `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is disabled on
-  these processors.
+  For code object V4 and later use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
+  (zero) because they do not support mode selection. Their XNACK behavior is
+  implied by `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is
+  disabled on these processors.
 
   For code object V4 and later, processors with hardwired-on SRAMECC use
   `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4` (zero) because they do not
@@ -5061,10 +5061,14 @@ mapping.
   -
   - *Reserved for future Scalar Architectural Registers.*
 * - 512
-  - VCC_32
+  - VCC\_32\_LO
   - 32
   - Vector Condition Code Register when executing in wavefront 32 mode.
-* - 513-767
+* - 513
+  - VCC\_32\_HI
+  - 32
+  - General purpose high bits of Vector Condition Code Register when executing in wavefront 32 mode.
+* - 514-767
   - *Reserved*
   -
   - *Reserved for future Vector Architectural Registers when executing in wavefront 32 mode.*
