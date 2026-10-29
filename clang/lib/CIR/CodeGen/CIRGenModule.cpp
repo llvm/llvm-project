@@ -498,7 +498,9 @@ void CIRGenModule::emitDeferred() {
   // emitted that then need those vtables.
   assert(deferredVTables.empty());
 
-  // A host ODR-use requires a device definition even without device-side uses.
+  // Emit CUDA/HIP static device variables referenced by host code only.
+  // Note we should not clear CUDADeviceVarODRUsedByHost since it is still
+  // needed for further handling.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
     llvm::append_range(deferredDeclsToEmit,
                        getASTContext().CUDADeviceVarODRUsedByHost);

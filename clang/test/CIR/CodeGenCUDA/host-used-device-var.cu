@@ -2,7 +2,7 @@
 // RUN:   -emit-cir %s -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir
 // RUN: FileCheck %s --check-prefix=NEG --input-file=%t.cir
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -emit-cir %s -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir
 // RUN: FileCheck %s --check-prefix=NEG --input-file=%t.cir
