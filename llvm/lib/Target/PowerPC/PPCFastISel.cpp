@@ -1717,9 +1717,12 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
       // We still need to worry about properly extending the sign. For example,
       // we could have only a single bit or a constant that needs zero
       // extension rather than sign extension. Make sure we pass the return
-      // value extension property to integer materialization.
-      Register SrcReg =
-          PPCMaterializeInt(CI, MVT::i64, VA.getLocInfo() != CCValAssign::ZExt);
+      // value extension property to integer materialization. A return type
+      // that GetReturnInfo already widened to i64 (e.g. a zeroext i33) is
+      // assigned with LocInfo Full, so also check the return value flags.
+      bool IsZExt =
+          VA.getLocInfo() == CCValAssign::ZExt || Outs[0].Flags.isZExt();
+      Register SrcReg = PPCMaterializeInt(CI, MVT::i64, !IsZExt);
 
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::COPY), RetReg).addReg(SrcReg);
