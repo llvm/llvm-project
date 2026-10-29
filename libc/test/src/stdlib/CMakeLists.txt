@@ -385,6 +385,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  reallocarray_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    reallocarray_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.stdint_proxy
+    libc.src.stdlib.reallocarray
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   realpath_test
   SUITE
     libc-stdlib-tests

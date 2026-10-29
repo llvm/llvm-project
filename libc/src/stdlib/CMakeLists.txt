@@ -416,6 +416,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  reallocarray
+  SRCS
+    reallocarray.cpp
+  HDRS
+    reallocarray.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.realloc
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   srand
   SRCS
     srand.cpp

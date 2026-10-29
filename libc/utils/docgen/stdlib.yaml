@@ -89,6 +89,9 @@ functions:
   realloc:
     c-definition: 7.24.3.7
     in-latest-posix: ''
+  reallocarray:
+    c-definition: 7.24.3.8
+    in-latest-posix: ''
   srand:
     c-definition: 7.24.2.2
     in-latest-posix: ''
