@@ -33,10 +33,7 @@ define i1 @sext_cmp_i8_i32(i8 %a, i8 %b) {
 define i1 @eq_sext_i64_i128(i64 %a, i64 %b) {
 ; CHECK-LABEL: eq_sext_i64_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor x8, x0, x1
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    asr x8, x8, #63
-; CHECK-NEXT:    ccmp xzr, x8, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %sa = sext i64 %a to i128
@@ -48,11 +45,8 @@ define i1 @eq_sext_i64_i128(i64 %a, i64 %b) {
 define i1 @ugt_sext_i64_i128(i64 %a, i64 %b) {
 ; CHECK-LABEL: ugt_sext_i64_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr x8, x0, #63
-; CHECK-NEXT:    asr x9, x1, #63
-; CHECK-NEXT:    cmp x1, x0
-; CHECK-NEXT:    sbcs xzr, x9, x8
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %sa = sext i64 %a to i128
   %sb = sext i64 %b to i128

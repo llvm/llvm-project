@@ -384,25 +384,7 @@ define <8 x i16> @sext_cmp_legal(<8 x i8> %a, <8 x i8> %b) {
 define <16 x i1> @ult_sext_cmp(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: ult_sext_cmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll.8h v2, v0, #0
-; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    sshll2.8h v3, v1, #0
-; CHECK-NEXT:    sshll.8h v1, v1, #0
-; CHECK-NEXT:    sshll.4s v4, v2, #0
-; CHECK-NEXT:    sshll2.4s v2, v2, #0
-; CHECK-NEXT:    sshll.4s v5, v0, #0
-; CHECK-NEXT:    sshll2.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v6, v3, #0
-; CHECK-NEXT:    sshll.4s v7, v1, #0
-; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    sshll.4s v3, v3, #0
-; CHECK-NEXT:    cmhi.4s v0, v6, v0
-; CHECK-NEXT:    cmhi.4s v3, v3, v5
-; CHECK-NEXT:    cmhi.4s v1, v1, v2
-; CHECK-NEXT:    cmhi.4s v2, v7, v4
-; CHECK-NEXT:    uzp1.8h v0, v3, v0
-; CHECK-NEXT:    uzp1.8h v1, v2, v1
-; CHECK-NEXT:    uzp1.16b v0, v1, v0
+; CHECK-NEXT:    cmhi.16b v0, v1, v0
 ; CHECK-NEXT:    ret
   %sa = sext <16 x i8> %a to <16 x i32>
   %sb = sext <16 x i8> %b to <16 x i32>
@@ -413,25 +395,7 @@ define <16 x i1> @ult_sext_cmp(<16 x i8> %a, <16 x i8> %b) {
 define <16 x i1> @eq_zext_cmp(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: eq_zext_cmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    ushll2.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.8h v3, v1, #0
-; CHECK-NEXT:    ushll.8h v1, v1, #0
-; CHECK-NEXT:    ushll.4s v4, v2, #0
-; CHECK-NEXT:    ushll2.4s v2, v2, #0
-; CHECK-NEXT:    ushll.4s v5, v0, #0
-; CHECK-NEXT:    ushll2.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v6, v3, #0
-; CHECK-NEXT:    ushll.4s v7, v1, #0
-; CHECK-NEXT:    ushll2.4s v1, v1, #0
-; CHECK-NEXT:    ushll.4s v3, v3, #0
-; CHECK-NEXT:    cmeq.4s v0, v0, v6
-; CHECK-NEXT:    cmeq.4s v3, v5, v3
-; CHECK-NEXT:    cmeq.4s v1, v2, v1
-; CHECK-NEXT:    cmeq.4s v2, v4, v7
-; CHECK-NEXT:    uzp1.8h v0, v3, v0
-; CHECK-NEXT:    uzp1.8h v1, v2, v1
-; CHECK-NEXT:    uzp1.16b v0, v1, v0
+; CHECK-NEXT:    cmeq.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %za = zext <16 x i8> %a to <16 x i32>
   %zb = zext <16 x i8> %b to <16 x i32>
@@ -444,13 +408,7 @@ define <8 x i1> @ult_sext_cmp_mixed(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: ult_sext_cmp_mixed:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    sshll.4s v3, v1, #0
-; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    sshll.4s v2, v0, #0
-; CHECK-NEXT:    sshll2.4s v0, v0, #0
-; CHECK-NEXT:    cmhi.4s v0, v1, v0
-; CHECK-NEXT:    cmhi.4s v1, v3, v2
-; CHECK-NEXT:    uzp1.8h v0, v1, v0
+; CHECK-NEXT:    cmhi.8h v0, v1, v0
 ; CHECK-NEXT:    xtn.8b v0, v0
 ; CHECK-NEXT:    ret
   %sa = sext <8 x i8> %a to <8 x i32>
