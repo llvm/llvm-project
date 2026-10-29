@@ -2937,7 +2937,7 @@ define i32 @test_predsum_i8x4_i32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i8x4_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsum.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v4i8(<4 x i8> %a, i32 %b)
@@ -2952,7 +2952,7 @@ define i32 @test_predsumu_u8x4_u32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsumu.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v4i8(<4 x i8> %a, i32 %b)
@@ -2967,7 +2967,7 @@ define i32 @test_predsum_i16x2_i32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i16x2_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsum.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v2i16(<2 x i16> %a, i32 %b)
@@ -2982,7 +2982,7 @@ define i32 @test_predsumu_u16x2_u32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u16x2_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsumu.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v2i16(<2 x i16> %a, i32 %b)
@@ -3255,8 +3255,8 @@ define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pabdsumu_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    pabdsumu.b a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.pabdsumu.i32.v4i8(<4 x i8> %a, <4 x i8> %b)
@@ -3271,8 +3271,8 @@ define i32 @test_pabdsumau_u8x4_u32(i32 %rd, <4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pabdsumau_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a2, a2
-; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pack a2, a2, zero
+; RV64-NEXT:    pack a1, a1, zero
 ; RV64-NEXT:    pabdsumau.b a0, a1, a2
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.pabdsumau.i32.v4i8(i32 %rd, <4 x i8> %a, <4 x i8> %b)
@@ -3338,10 +3338,6 @@ define <4 x i8> @test_pnclipp_v4i8(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pnclipp_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    pack a0, a0, a1
 ; RV64-NEXT:    pnclipp.b a0, a0, a0
 ; RV64-NEXT:    ret
@@ -3357,10 +3353,6 @@ define <4 x i8> @test_pnclipup_v4i8(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pnclipup_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    pack a0, a0, a1
 ; RV64-NEXT:    pnclipup.b a0, a0, a0
 ; RV64-NEXT:    ret
@@ -3923,93 +3915,6 @@ define i32 @test_maccsu_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
   ret i32 %r
 }
 
-; Scalar multiply high
-define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulh_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulh a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulh_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mul.w00 a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
-define i32 @test_mulhr_i32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulhr_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulhr a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulhr_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhr.w a0, a0, a1
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhr.i32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
-define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulhu_u32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulhu a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulhu_u32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    mulu.w00 a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
-define i32 @test_mulhru_u32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulhru_u32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulhru a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulhru_u32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhru.w a0, a0, a1
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhru.u32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
-define i32 @test_mulhsu_i32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulhsu_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulhsu a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulhsu_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhsu.w a0, a0, a1
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhsu.i32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
-define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
-; RV32-LABEL: test_mulhrsu_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    mulhrsu a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_mulhrsu_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhrsu.w a0, a0, a1
-; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
-  ret i32 %res
-}
-
 ; Packed multiply high accumulate (v2i16 form)
 define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
 ; CHECK-LABEL: test_pmhacc_b0_v2i16:
@@ -4170,9 +4075,9 @@ define <2 x i16> @test_psati_i16x2_max_width(<2 x i16> %a) {
 define <2 x i16> @test_pusati_u16x2(<2 x i16> %a) {
 ; CHECK-LABEL: test_pusati_u16x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pusati.h a0, a0, 0
+; CHECK-NEXT:    pusati.h a0, a0, 1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 0)
+  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 1)
   ret <2 x i16> %res
 }
 
@@ -4237,16 +4142,254 @@ define <2 x i16> @test_pslide1up_v2i16(<2 x i16> %rd, i16 %rs1) {
 }
 
 define <2 x i16> @test_pslide1down_v2i16(<2 x i16> %rd, i16 %rs1) {
-; RV32-LABEL: test_pslide1down_v2i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    ppairoe.h a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pslide1down_v2i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ppairoe.h a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_pslide1down_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairoe.h a0, a0, a1
+; CHECK-NEXT:    ret
   %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0
   %res = shufflevector <2 x i16> %rd, <2 x i16> %scalar, <2 x i32> <i32 1, i32 2>
   ret <2 x i16> %res
+}
+
+define <4 x i8> @test_pslideupx_v4i8(<4 x i8> %rd, <4 x i8> %rs1, i32 %rs2) {
+; RV32-LABEL: test_pslideupx_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    slx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslideupx_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    andi a2, a2, 24
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <4 x i8> %rd to i32
+  %rs1.bits = bitcast <4 x i8> %rs1 to i32
+  %shamt = shl i32 %rs2, 3
+  %res.bits = call i32 @llvm.fshl.i32(i32 %rd.bits, i32 %rs1.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pslidedownx_v4i8(<4 x i8> %rd, <4 x i8> %rs1, i32 %rs2) {
+; RV32-LABEL: test_pslidedownx_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    srx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslidedownx_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    ori a2, a2, 32
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <4 x i8> %rd to i32
+  %rs1.bits = bitcast <4 x i8> %rs1 to i32
+  %shamt = shl i32 %rs2, 3
+  %res.bits = call i32 @llvm.fshr.i32(i32 %rs1.bits, i32 %rd.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_pslideupx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
+                                       i32 %rs2) {
+; RV32-LABEL: test_pslideupx_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    slx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslideupx_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    andi a2, a2, 16
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <2 x i16> %rd to i32
+  %rs1.bits = bitcast <2 x i16> %rs1 to i32
+  %shamt = shl i32 %rs2, 4
+  %res.bits = call i32 @llvm.fshl.i32(i32 %rd.bits, i32 %rs1.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <2 x i16>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pslidedownx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
+                                         i32 %rs2) {
+; RV32-LABEL: test_pslidedownx_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    srx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslidedownx_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    ori a2, a2, 32
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <2 x i16> %rd to i32
+  %rs1.bits = bitcast <2 x i16> %rs1 to i32
+  %shamt = shl i32 %rs2, 4
+  %res.bits = call i32 @llvm.fshr.i32(i32 %rs1.bits, i32 %rd.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <2 x i16>
+  ret <2 x i16> %res
+}
+
+define i32 @test_pm2adda_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2adda_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2adda.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2adda_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2add.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %mul = call i32 @llvm.riscv.pm2add.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+define i32 @test_pm2adda_x_v2i16_i32(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pm2adda_x_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2adda.hx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2adda_x_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2add.hx a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+                                     <2 x i16> %b) {
+  %mul = call i32 @llvm.riscv.pm2add.x.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pm2addau_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2addau_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2addau.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2addau_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2addu.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %mul = call i32 @llvm.riscv.pm2addu.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pmq2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pmq2adda_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmq2adda.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmq2adda_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmq2add.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+                                    <2 x i16> %b) {
+  %mul = call i32 @llvm.riscv.pmq2add.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pmqr2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pmqr2adda_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmqr2adda.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmqr2adda_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmqr2add.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+                                     <2 x i16> %b) {
+  %mul = call i32 @llvm.riscv.pmqr2add.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pm2suba_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2suba_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2suba.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2suba_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2sub.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %mul = call i32 @llvm.riscv.pm2sub.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pm2suba_x_v2i16_i32(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pm2suba_x_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2suba.hx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2suba_x_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2sub.hx a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+                                     <2 x i16> %b) {
+  %mul = call i32 @llvm.riscv.pm2sub.x.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pm2addasu_v2i16_i32(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pm2addasu_v2i16_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2addasu.h a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2addasu_v2i16_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2addsu.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+                                     <2 x i16> %b) {
+  %mul = call i32 @llvm.riscv.pm2addsu.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  %r = add i32 %rd, %mul
+  ret i32 %r
+}
+
+define i32 @test_pm2adda_v2i16_i32_shared(i32 %rd, <2 x i16> %a,
+; RV32-LABEL: test_pm2adda_v2i16_i32_shared:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2add.h a1, a1, a2
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    sw a1, 0(a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2adda_v2i16_i32_shared:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2add.h a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    sw a1, 0(a3)
+; RV64-NEXT:    ret
+                                          <2 x i16> %b, ptr %p) {
+  %mul = call i32 @llvm.riscv.pm2add.i32.v2i16(<2 x i16> %a, <2 x i16> %b)
+  store i32 %mul, ptr %p
+  %r = add i32 %rd, %mul
+  ret i32 %r
 }

@@ -14,6 +14,7 @@
 #define GPU_OPS
 
 include "mlir/Dialect/DLTI/DLTIBase.td"
+include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
@@ -29,6 +30,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -811,7 +813,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 def GPU_LaunchOp : GPU_Op<"launch", [
       AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
+      GPU_AsyncOpInterface, HasParallelRegion, RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
@@ -1552,7 +1554,8 @@ def GPU_InitializeNamedBarrierOp
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-      IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
+      IsolatedFromAbove, DataLayoutOpInterface, DLTIQueryOpInterface,
+      HasDefaultDLTIDataLayout,
       NoRegionArguments, SymbolTable, SymbolName, SymbolVisibility,
       Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
@@ -1578,6 +1581,11 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     Modules can contain an optional `OffloadingTranslationAttr` attribute. This
     attribute will be used during the `gpu-module-to-binary` pass to specify the
     `OffloadingTranslationAttr` used when creating the `gpu.binary` operation.
+
+    A GPU module may also have an inherent `dlti` attribute implementing
+    `DLTIQueryInterface`. It provides values for scoped DLTI queries on the
+    module and its nested operations. In custom assembly, write it as
+    `dlti = #dlti.map<...>` before the optional attribute dictionary.
 
     ```
     gpu.module @symbol_name {
@@ -1606,12 +1614,14 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
       SymbolNameAttr:$sym_name,
       OptionalAttr<StrAttr>:$sym_visibility,
       OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
-      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler);
+      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler,
+      OptionalAttr<DLTIQueryAttr>:$dlti);
+  let useCustomPropertiesEncoding = 1;
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
     ($sym_visibility^)? $sym_name
     (`<` $offloadingHandler^ `>`)?
-    ($targets^)? attr-dict-with-keyword $bodyRegion
+    ($targets^)? (`dlti` `=` $dlti^)? attr-dict-with-keyword $bodyRegion
   }];
 
   // We need to ensure the block inside the region is properly terminated;

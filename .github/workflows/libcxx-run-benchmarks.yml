@@ -1,0 +1,154 @@
+# This file defines a reusable workflow that runs the libc++ benchmarks at the given commit, using the
+# given machine setup, and uploads the resulting LNT report as an artifact.
+
+name: "[libc++] Run benchmarks"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      commit:
+        description: 'The libc++ commit to benchmark'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The name of the LNT machine to report the results as'
+        required: true
+        type: string
+      setup:
+        description: 'The setup of the machine to benchmark on, as a JSON object (see libcxx/utils/ci/lnt/README.md)'
+        required: true
+        type: string
+      filter:
+        description: 'An optional filter to determine which benchmarks to run'
+        required: false
+        type: string
+      artifact-name:
+        description: 'The name of the artifact to upload the LNT report as'
+        required: true
+        type: string
+
+jobs:
+  run-benchmarks:
+    name: Run benchmarks on ${{ inputs.lnt-machine }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      BENCHMARK_SUITE_VERSION: ${{ fromJSON(inputs.setup).benchmark-suite-version }}
+      CMAKE_CACHE: ${{ fromJSON(inputs.setup).cmake-cache }}
+      COMPILER: ${{ fromJSON(inputs.setup).cxx }}
+      LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
+      LNT_MACHINE: ${{ inputs.lnt-machine }}
+      TEST_CONFIG: ${{ fromJSON(inputs.setup).test-config }}
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
+      INSTALL_DIR: ${{ github.workspace }}/install
+    steps:
+      - name: Checkout the LLVM monorepo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # We benchmark arbitrary historical commits, which requires the full history to be available.
+          fetch-depth: 0
+          fetch-tags: true
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
+
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies via Homebrew
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${COMPILER}" --version
+          python3 --version
+
+      # Build the library.
+      #
+      # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
+      # We still produce an empty report for such commits.
+      - name: Build libc++ at ${{ inputs.commit }}
+        id: build
+        continue-on-error: true
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          # Clean up any stale install directory
+          rm -rf "${INSTALL_DIR}"
+
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
+
+      - name: Run the benchmarks
+        env:
+          COMMIT: ${{ inputs.commit }}
+          FILTER: ${{ inputs.filter }}
+          LIBRARY_BUILD: ${{ steps.build.outcome }}
+        run: |
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the benchmarks..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
+          filter_arg=()
+          if [ -n "${FILTER}" ]; then
+            filter_arg=(--filter "${FILTER}")
+          fi
+
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_params=()
+          for param in "${configured_params[@]}"; do
+            lit_params+=(--param "${param}")
+          done
+
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, producing an empty report.
+          if [ "${LIBRARY_BUILD}" != "success" ]; then
+            echo "::warning::libc++ failed to build at ${COMMIT}, producing an empty report"
+            mkdir -p "${INSTALL_DIR}"
+          fi
+
+          libcxx/utils/ci/lnt/run-benchmarks                            \
+            --verbose                                                   \
+            --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
+            --machine "${LNT_MACHINE}"                                  \
+            --compiler "${COMPILER}"                                    \
+            --benchmark-commit "${COMMIT}"                              \
+            --test-config "${TEST_CONFIG}"                              \
+            --run-parameter "library_build=${LIBRARY_BUILD}"            \
+            --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            "${filter_arg[@]}"                                          \
+            --output "${COMMIT}.json"                                   \
+            -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"
+
+          cat "${COMMIT}.json"
+
+      - name: Upload the LNT report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.commit }}.json
+          if-no-files-found: error

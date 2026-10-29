@@ -415,6 +415,17 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       IntermediateStore = SI;
   }
 
+  // The vectorizer replaces the per-iteration store to the invariant address
+  // with a single store of the final reduced value in the middle block. That is
+  // only correct if the store stores the reduction value itself. If it stores a
+  // value derived from it (e.g. `%other = smax(%phi, 42); store %other`), that
+  // value observes the per-iteration running min/max, so replacing it with the
+  // final reduction value would miscompile. Mirrors the check in
+  // AddReductionVar.
+  if (IntermediateStore &&
+      IntermediateStore->getValueOperand() != BackedgeValue)
+    return {};
+
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
       cast<Instruction>(BackedgeValue), IntermediateStore, RK, FMF, nullptr,
@@ -1177,8 +1188,15 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || isa<PHINode>(Previous))
     return false;
+
+  // Handle recurrences with a loop-invariant latch value.
+  if (!TheLoop->contains(Previous)) {
+    assert(DT->dominates(Previous, Phi) &&
+           "loop-invariant latch value must dominate the header phi");
+    return true;
+  }
 
   // Ensure every user of the phi node (recursively) is dominated by the
   // previous value. The dominance requirement ensures the loop vectorizer will
@@ -1400,7 +1418,7 @@ InductionDescriptor::InductionDescriptor(
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+  assert((!getConstStepValue() || !getConstStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1425,10 +1443,10 @@ InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
                              SE.getOne(Ty));
 }
 
-ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+std::optional<APInt> InductionDescriptor::getConstStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
-    return ConstStep->getValue();
-  return nullptr;
+    return ConstStep->getValue()->getValue();
+  return {};
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1788,4 +1806,12 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   Desc = ConditionalInductionDescriptor(PN, BackedgePHI, StepInst, StartSCEV,
                                         StepSCEV, NoWrapFlags);
   return true;
+}
+
+const SCEV *
+ConditionalInductionDescriptor::getUnconditionalAddRec(ScalarEvolution &SE,
+                                                       const Loop &L) const {
+  assert(L.contains(HeaderPHI) &&
+         "The provided loop does not contain this conditional induction");
+  return SE.getAddRecExpr(getStartSCEV(), getStepSCEV(), &L, SCEV::FlagNone);
 }

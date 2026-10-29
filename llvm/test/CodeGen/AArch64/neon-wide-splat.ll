@@ -12,10 +12,7 @@ define <4 x i16> @shuffle1(<4 x i16> %v) {
 ; CHECK-GI-LABEL: shuffle1:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI0_0
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -33,10 +30,7 @@ define <4 x i16> @shuffle2(<4 x i16> %v) {
 ; CHECK-GI-LABEL: shuffle2:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI1_0
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[0], v0.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -70,9 +64,7 @@ define <4 x i32> @shuffle4(<4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: shuffle4:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -176,18 +168,11 @@ define <8 x i8> @shuffle_not1(<16 x i8> %v) {
 
 ; Block is not a proper lane
 define <4 x i32> @shuffle_not2(<4 x i32> %v) {
-; CHECK-SD-LABEL: shuffle_not2:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.s[3], v0.s[2]
-; CHECK-SD-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shuffle_not2:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shuffle_not2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.s[3], v0.s[2]
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 2>
   ret <4 x i32> %res

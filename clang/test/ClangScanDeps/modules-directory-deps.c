@@ -122,6 +122,34 @@ module UmbHdr {
 
 // FW-SUB: "[[PREFIX]]/frameworks/Inferred.framework/Frameworks/Sub.framework/Headers/Sub.h"
 
+// 7) With -fmodule-file-home-is-cwd the module file has no base directory, so
+//    directories under the working directory are stored relative to it. They
+//    are still reported, and matched, as absolute paths.
+// RUN: sed "s|DIR|%/t|g" %t/home-cdb.json.template > %t/home-cdb.json
+// RUN: clang-scan-deps -compilation-database %t/home-cdb.json \
+// RUN:   -format experimental-full 2>&1 | sed 's:\\\\\?:/:g' \
+// RUN:   | FileCheck %s -DPREFIX=%/t --check-prefix=HOME
+
+// HOME:      "directory-deps": [
+// HOME-NEXT:   "[[PREFIX]]/include/Umb/sub"
+// HOME-NEXT: ]
+// HOME:      "name": "UmbDir"
+
+// RUN: sleep 1
+// RUN: touch %t/include/Umb/sub/d.h
+// RUN: clang-scan-deps -compilation-database %t/home-cdb.json \
+// RUN:   -format experimental-full -invalidated-path=%/t/include/Umb/sub 2>&1 \
+// RUN:   | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix=HOME-FRESH
+
+// HOME-FRESH: "[[PREFIX]]/include/Umb/sub/d.h"
+
+//--- home-cdb.json.template
+[{
+  "file": "DIR/tu.c",
+  "directory": "DIR",
+  "command": "clang -fmodules -fmodules-cache-path=DIR/home-cache -I DIR/include -Xclang -fmodule-file-home-is-cwd -c DIR/tu.c -o DIR/tu.o"
+}]
+
 //--- frameworks/module.modulemap
 framework module * {}
 

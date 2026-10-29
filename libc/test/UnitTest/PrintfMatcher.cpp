@@ -21,8 +21,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
-using printf_core::BasicFormatSection;
 using printf_core::FormatFlags;
+using printf_core::FormatSection;
 using printf_core::LengthModifier;
 
 namespace {
@@ -41,7 +41,7 @@ namespace {
     tlog << #lm << "\n\tbit width: :" << bw;                                   \
     break
 
-template <typename CharT> void display_impl(BasicFormatSection<CharT> form) {
+template <typename CharT> void display_impl(FormatSection<CharT> form) {
   tlog << "Raw String (len " << form.raw_string.size() << "): \"";
   cpp::string raw_string_utf8;
   if constexpr (cpp::is_same_v<CharT, char>) {
@@ -104,11 +104,11 @@ template <typename CharT> void display_impl(BasicFormatSection<CharT> form) {
 
 } // anonymous namespace
 
-void display(const BasicFormatSection<char> &format_section) {
+void display(const FormatSection<char> &format_section) {
   display_impl(format_section);
 }
 
-void display(const BasicFormatSection<wchar_t> &format_section) {
+void display(const FormatSection<wchar_t> &format_section) {
   display_impl(format_section);
 }
 

@@ -48,6 +48,7 @@ struct MissingFeatures {
 
   // Load/store attributes
   static bool opLoadEmitScalarRangeCheck() { return false; }
+  static bool opLoadRangeNoundefMetadata() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -67,18 +68,13 @@ struct MissingFeatures {
   static bool opFuncArmNewAttr() { return false; }
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncColdHotAttr() { return false; }
   static bool opFuncExceptions() { return false; }
   static bool opFuncExtraAttrs() { return false; }
   static bool opFuncCallingConv() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
-  static bool opFuncMinSizeAttr() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncMultiVersioning() { return false; }
-  static bool opFuncNakedAttr() { return false; }
-  static bool opFuncNoDuplicateAttr() { return false; }
   static bool opFuncOperandBundles() { return false; }
-  static bool opFuncOptNoneAttr() { return false; }
   static bool opFuncParameterAttributes() { return false; }
   static bool opFuncReadOnly() { return false; }
   static bool opFuncWillReturn() { return false; }
@@ -89,7 +85,6 @@ struct MissingFeatures {
   static bool opCallPaddingArgs() { return false; }
   static bool opCallBitcastArg() { return false; }
   static bool opCallReturn() { return false; }
-  static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
@@ -124,13 +119,14 @@ struct MissingFeatures {
   static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
-  static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
+  static bool coroGetRetObjManager() { return false; };
+  static bool coroUnwindRegion() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
-  static bool shouldSkipAliasEmission() { return false; }
+  static bool emitModuleLinkOptions() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }
@@ -154,6 +150,7 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
+  static bool atomicAMDGPUAvailableVisibleMMRA() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -188,7 +185,6 @@ struct MissingFeatures {
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmLabelAttr() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
   static bool asmUnwindClobber() { return false; }
@@ -218,10 +214,8 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cudaTextureType() { return false; }
-  static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
-  static bool deadOnReturnAttr() { return false; }
   static bool noaliasOnByvalAttr() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
@@ -243,7 +237,6 @@ struct MissingFeatures {
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
-  static bool fastMathGuard() { return false; }
   // Should be implemented with a moduleOp level attribute and directly
   // mapped to LLVM - those can be set directly for every relevant LLVM IR
   // dialect operation (log10, ...).
@@ -278,6 +271,8 @@ struct MissingFeatures {
   static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool openMPLastprivateConditional() { return false; }
+  static bool openMPNontemporalDecl() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
@@ -301,7 +296,6 @@ struct MissingFeatures {
   static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool thunks() { return false; }
-  static bool tryEmitAsConstant() { return false; }
   static bool typeAwareAllocation() { return false; }
   static bool typeChecks() { return false; }
   static bool useEHCleanupForArray() { return false; }
@@ -319,6 +313,7 @@ struct MissingFeatures {
   // Missing types
   static bool dataMemberType() { return false; }
   static bool matrixType() { return false; }
+  static bool matrixTypeIndexAssumption() { return false; }
   static bool methodType() { return false; }
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }

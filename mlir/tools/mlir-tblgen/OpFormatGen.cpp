@@ -3990,7 +3990,7 @@ OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
 
     Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
     EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-    if (!enumInfo.isBitEnum() || enumInfo.printBitEnumQuoted())
+    if (!enumInfo.isNewStyleBitEnum())
       continue;
 
     auto remaining = elements.drop_front(index + 1);

@@ -86,7 +86,7 @@ typedef lldb::ProtocolServerUP (*ProtocolServerCreateInstance)();
 typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
-    Debugger &debugger);
+    Debugger &debugger, lldb::ScriptLanguage language);
 typedef FileSpec (*ScriptInterpreterGetPath)();
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *ScriptedFrameProviderCreateInstance)(

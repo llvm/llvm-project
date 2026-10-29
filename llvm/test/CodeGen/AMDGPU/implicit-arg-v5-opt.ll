@@ -306,7 +306,6 @@ define i16 @get_grid_dims_i16() #2 {
 
 ; Ignore wrong type
 define half @get_grid_dims_f16() #2 {
-; GCN-half: @get_grid_dims_i16(
 ; GCN-LABEL: @get_grid_dims_f16(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_GRID_DIMS:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 64

@@ -3137,12 +3137,13 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
 
 bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
   // Do not sink MI if it might be used to optimize a redundant compare.
-  // We heuristically only look at the instruction immediately following MI to
-  // avoid potentially searching the entire basic block.
+  // We heuristically only look at the next non-debug instruction to avoid
+  // potentially searching the entire basic block.
   if (isPredicated(MI))
     return true;
-  MachineBasicBlock::const_iterator Next = &MI;
-  ++Next;
+  MachineBasicBlock::const_iterator Next =
+      next_nodbg(MachineBasicBlock::const_iterator(MI), MI.getParent()->end(),
+                 /*SkipPseudoOp=*/false);
   Register SrcReg, SrcReg2;
   int64_t CmpMask, CmpValue;
   bool IsThumb1;
@@ -3284,7 +3285,6 @@ bool ARMBaseInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       .add(condCodeOp());
   UseMI.setDesc(get(NewUseOpc));
   UseMI.getOperand(1).setReg(NewReg);
-  UseMI.getOperand(1).setIsKill();
   UseMI.getOperand(2).ChangeToImmediate(SOImmValV2);
   DefMI.eraseFromParent();
   // FIXME: t2ADDrr should be split, as different rulles apply when writing to SP.
@@ -6061,17 +6061,8 @@ void ARMBaseInstrInfo::mergeOutliningCandidateAttributes(
 
 bool ARMBaseInstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // FIXME: Thumb1 outlining is not handled

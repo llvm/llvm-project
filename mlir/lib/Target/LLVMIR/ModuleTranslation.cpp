@@ -905,8 +905,8 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
   for (Block &bb : llvm::drop_begin(region)) {
     llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb.getNumArguments();
-    assert(numArguments == std::distance(phis.begin(), phis.end()));
+    unsigned numArguments = bb.getNumArguments();
+    assert(numArguments == llvm::range_size(phis));
     for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
@@ -1697,7 +1697,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Check the personality and set it.
   if (func.getPersonality()) {
-    llvm::Type *ty = llvm::PointerType::getUnqual(llvmFunc->getContext());
+    llvm::Type *ty = llvm::PointerType::get(
+        llvmContext, llvmModule->getDataLayout().getProgramAddressSpace());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);
@@ -2139,13 +2140,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
       llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
       if (!imports.empty())
         importGUIDs.insert(imports.begin(), imports.end());
-      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
-      llvmFunc->setMetadata(
-          llvm::LLVMContext::MD_prof,
-          metadataBuilder.createFunctionEntryCount(
-              entryCount.getEntryCount(),
-              entryCount.getCountType() == ProfileCountType::Synthetic,
-              imports.empty() ? nullptr : &importGUIDs));
+      llvmFunc->setEntryCount(entryCount.getEntryCount(),
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.

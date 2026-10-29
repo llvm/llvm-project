@@ -101,13 +101,13 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
 
 TEST(CompilerInstance,
     OpenAccDefaultNoneScalarsStrictDisableOptionUsesDriverTable) {
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+
   CompilerInstance compInst;
   compInst.createDiagnostics();
   compInst.getInvocation().getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
 
   ASSERT_TRUE(compInst.setUpTargetMachine());
   auto &context = compInst.createNewSemanticsContext();

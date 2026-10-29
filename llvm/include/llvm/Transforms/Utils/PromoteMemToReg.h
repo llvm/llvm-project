@@ -26,9 +26,7 @@ class AssumptionCache;
 /// Return true if this alloca is legal for promotion.
 ///
 /// This is true if there are only loads, stores, and lifetime markers
-/// (transitively) using this alloca. This also enforces that there is only
-/// ever one layer of bitcasts or GEPs between the alloca and the lifetime
-/// markers.
+/// using this alloca.
 LLVM_ABI bool isAllocaPromotable(const AllocaInst *AI);
 
 /// Promote the specified list of alloca instructions into scalar

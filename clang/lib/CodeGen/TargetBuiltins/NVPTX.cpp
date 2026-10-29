@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGBuiltin.h"
+#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -362,8 +363,15 @@ static Value *MakeScopedAtomicRMW(CodeGenFunction &CGF, const CallExpr *E,
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   llvm::SyncScope::ID SSID = CGF.getLLVMContext().getOrInsertSyncScopeID(
       *llvm::getAtomicScopeIRString(CGF.getTarget().getTriple(), Scope));
-  return CGF.Builder.CreateAtomicRMW(Kind, Ptr, Val,
-                                     llvm::AtomicOrdering::Monotonic, SSID);
+  llvm::AtomicRMWInst *RMW = CGF.Builder.CreateAtomicRMW(
+      Kind, Ptr, Val, llvm::AtomicOrdering::Monotonic, SSID);
+
+  // CUDA's atomicAdd_block()/atomicAdd_system() reach this through the scoped
+  // add builtins, and are defined in terms of the native atom.add just as the
+  // unscoped atomicAdd() is. The helper ignores everything that is not a
+  // floating-point add, so the other scoped operations are unaffected.
+  addAtomicIgnoreDenormalModeMetadata(CGF, *RMW, /*AllowHalf=*/true);
+  return RMW;
 }
 
 // `Scope` is AtomicScope::Workgroup for _cta builtins and AtomicScope::System
@@ -439,6 +447,14 @@ static Value *MakeFPArith(unsigned IntrinsicID, APFloat::roundingMode RM,
   llvm::Type *Ty = CGF.ConvertType(E->getType());
   return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID, Ty), BuiltinID, E, CGF,
                       {CGF.Builder.getInt32(static_cast<int>(RM))});
+}
+
+static Value *MakeIdp2a(unsigned IntrinsicID, bool IsHi, const CallExpr *E,
+                        CodeGenFunction &CGF) {
+  return CGF.Builder.CreateCall(
+      CGF.CGM.getIntrinsic(IntrinsicID),
+      {CGF.EmitScalarExpr(E->getArg(0)), CGF.EmitScalarExpr(E->getArg(1)),
+       CGF.Builder.getInt1(IsHi), CGF.EmitScalarExpr(E->getArg(2))});
 }
 
 } // namespace
@@ -529,8 +545,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     Address DestAddr = EmitPointerWithAlignment(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
 
-    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
-                                   AtomicOrdering::Monotonic);
+    llvm::AtomicRMWInst *RMW = Builder.CreateAtomicRMW(
+        llvm::AtomicRMWInst::FAdd, DestAddr, Val, AtomicOrdering::Monotonic);
+
+    // CUDA's atomicAdd() is defined in terms of the native atom.add
+    // instruction, whose denormal behavior is fixed by the hardware and need
+    // not agree with the function's denormal mode. Without this the atomic is
+    // expanded into a CAS loop whenever the two disagree.
+    addAtomicIgnoreDenormalModeMetadata(*this, *RMW, /*AllowHalf=*/true);
+    return RMW;
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
@@ -1572,6 +1595,22 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         Intrinsic::nvvm_mbarrier_init, {Ptr->getType()},
         {Ptr, EmitScalarExpr(E->getArg(1)), Builder.getInt32(0)});
   }
+  case NVPTX::BI__nvvm_idp2a_lo_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/true, E, *this);
   default:
     return nullptr;
   }

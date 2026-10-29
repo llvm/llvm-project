@@ -1783,7 +1783,7 @@ def OpenACC_ReductionRecipeOp
 def OpenACC_ParallelOp
     : OpenACC_Op<"parallel",
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
-                  RecursiveMemoryEffects,
+                  HasParallelRegion, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getSuccessorInputs"]>,
@@ -2665,7 +2665,7 @@ def OpenACC_HostDataOp
 def OpenACC_LoopOp
     : OpenACC_Op<
           "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
-                   RecursiveMemoryEffects,
+                   HasParallelRegion, RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
                    DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -3481,6 +3481,9 @@ def OpenACC_RoutineOp
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    /// Return the effective bind name for a given target device type
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getEffectiveBindName(mlir::acc::DeviceType targetDeviceType);
 
     // Add an entry to the 'seq' attribute for each additional device types.
     void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);

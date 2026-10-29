@@ -68,6 +68,8 @@
 #include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
@@ -105,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -4383,12 +4386,45 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!accelerator_target_sp)
     return llvm::createStringError("failed to create accelerator target");
 
+  llvm::scope_exit delete_accelerator_target([&] {
+    debugger.GetTargetList().DeleteTarget(accelerator_target_sp);
+    accelerator_target_sp->Destroy();
+  });
+
   PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
   if (!platform_sp)
     return llvm::createStringErrorV(
         "no platform '{0}' compatible with triple '{1}' for the accelerator "
         "target",
         connect_info.platform_name, connect_info.triple);
+
+  TargetSP native_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+
+  bool created_group = !group_sp;
+  if (created_group) {
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+                       "CPU and accelerator targets");
+  }
+
+  llvm::scope_exit restore_target_group([&] {
+    group_sp->RemoveTarget(accelerator_target_sp);
+    if (created_group) {
+      group_sp->RemoveTarget(native_target_sp);
+      debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+    }
+  });
+
+  if (llvm::Error membership_error =
+          group_sp->AddTarget(native_target_sp, TargetGroup::Role::CPU))
+    return membership_error;
+  if (llvm::Error membership_error = group_sp->AddTarget(
+          accelerator_target_sp, TargetGroup::Role::Accelerator))
+    return membership_error;
+
   ProcessSP process_sp =
       connect_info.synchronous
           ? platform_sp->ConnectProcessSynchronous(
@@ -4403,6 +4439,8 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!process_sp)
     return llvm::createStringError("failed to connect to the accelerator");
 
+  restore_target_group.release();
+  delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
 
   // Broadcast the new-target event so API clients can detect it.

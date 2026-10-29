@@ -148,9 +148,6 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
     // Do checked cast since IR verifier guarantees that the user of an
     // instruction must be an instruction. See `Verifier::visitInstruction`.
     Instruction *UserInst = cast<Instruction>(User);
-    // We can sink debug or pseudo instructions together with Inst.
-    if (UserInst->isDebugOrPseudoInst())
-      continue;
     UserBB = getUserBasicBlock(Use, UserInst);
     // Do not sink if Inst is used in a basic block that is not DestBB.
     // TODO: Sink to the common dominator of all user blocks.
@@ -1020,7 +1017,7 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
                             SamplePGO | Opts.icp_samplepgo, MAM))
     return PreservedAnalyses::all();

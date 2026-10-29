@@ -22,6 +22,9 @@ enum GPUKind : uint8_t;
 namespace AMDGPU {
 enum GPUKind : uint8_t;
 }
+namespace IntelGPU {
+enum GPUKind : uint8_t;
+}
 } // namespace llvm
 
 namespace clang {
@@ -37,15 +40,9 @@ public:
     NVPTX,       // Kind is an llvm::NVPTX::GPUKind.
     AMDGPU,      // Kind is an llvm::AMDGPU::GPUKind.
     AMDGCNSPIRV, // The 'amdgcnspirv' pseudo target.
-    IntelCPU,    // Kind is an IntelArch.
-    IntelGPU,    // Kind is an IntelArch.
+    IntelCPU,    // The 'graniterapids' processor; Kind is unused.
+    IntelGPU,    // Kind is an llvm::IntelGPU::GPUKind.
     Generic,     // The 'generic' processor model.
-  };
-
-  // Intel architectures, which have no TargetParser list yet.
-  enum class IntelArch : uint32_t {
-    GRANITERAPIDS,
-    BMG_G21,
   };
 
 private:
@@ -64,8 +61,13 @@ public:
   static OffloadArch getAMDGPU(llvm::AMDGPU::GPUKind K) {
     return {TargetArch::AMDGPU, static_cast<uint32_t>(K)};
   }
-  static constexpr OffloadArch getIntel(TargetArch V, IntelArch A) {
-    return {V, static_cast<uint32_t>(A)};
+  /// An Intel GPU, named by its entry in the TargetParser device list.
+  static OffloadArch getIntelGPU(llvm::IntelGPU::GPUKind K) {
+    return {TargetArch::IntelGPU, static_cast<uint32_t>(K)};
+  }
+  /// Intel CPU offload, which has a single target, so no kind is needed.
+  static constexpr OffloadArch getIntelCPU() {
+    return {TargetArch::IntelCPU, 0};
   }
   static constexpr OffloadArch getUnused() { return {TargetArch::Unused, 0}; }
   static constexpr OffloadArch getUnknown() { return {TargetArch::Unknown, 0}; }
@@ -97,6 +99,10 @@ public:
   llvm::AMDGPU::GPUKind amdgpuKind() const {
     return static_cast<llvm::AMDGPU::GPUKind>(Kind);
   }
+  /// Which Intel GPU this is; only meaningful when isIntelGPU().
+  llvm::IntelGPU::GPUKind intelGPUKind() const {
+    return static_cast<llvm::IntelGPU::GPUKind>(Kind);
+  }
 
   bool operator==(const OffloadArch &Other) const {
     return V == Other.V && Kind == Other.Kind;
@@ -114,9 +120,6 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // Convert a string to an OffloadArch. Returns an Unknown OffloadArch if the
 // string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
-
-/// Append the canonical names of all NVIDIA and AMDGPU GPUs.
-void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values);
 
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
 llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);

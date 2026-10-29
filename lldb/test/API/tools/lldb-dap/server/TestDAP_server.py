@@ -112,21 +112,31 @@ class TestDAP_server(DAPTestCaseBase):
     def test_connection_timeout_multiple_sessions(self):
         """
         Test launching lldb-dap in server mode with connection timeout and
-        terminating the server after the last debug session.
+        terminating the server only after the last debug session ends.
         """
         self.build()
+        connection_timeout = 1
         adapter = self.start_server(
             connection="listen://localhost:0",
-            connection_timeout=1,
+            connection_timeout=connection_timeout,
         )
         time.sleep(0.25)
         # Should be able to connect to the server.
         session1 = self.create_session(adapter, disconnect_automatically=False)
         self.run_debug_session(session1, "Alice")
-        time.sleep(0.25)
-        # Should be able to connect to the server, because it's still within the connection timeout.
+        # Connect while session1's countdown is running.
         session2 = self.create_session(adapter, disconnect_automatically=False)
-        self.run_debug_session(session2, "Bob")
+        self.launch_to_breakpoint(session2, "Bob")
+
+        # Another session connecting and disconnecting must not start the
+        # countdown while session2 is still active.
+        session3 = self.create_session(adapter, disconnect_automatically=False)
+        self.run_debug_session(session3, "Carol")
+
+        # Wait for longer than the connection timeout.
+        time.sleep(connection_timeout + 1)
+        self.assertTrue(adapter.is_alive, "expected the server to be running")
+        self.continue_to_exit_and_disconnect(session2, "Bob")
 
         # The server shuts down once the connection timeout passes after the
         # last session ends.
@@ -171,6 +181,28 @@ class TestDAP_server(DAPTestCaseBase):
         # Finishing session1 and session2 should not hit any breakpoint.
         session1.continue_to_exit()
         session2.continue_to_exit()
+
+    @skipIfWindows
+    def test_server_does_not_hang_when_logging(self):
+        """
+        A log channel enabled without a log file writes to the debug console.
+        Logging the adapter's own socket writes must not feed back into the
+        console output forever and hang the server.
+        """
+        self.build()
+        adapter = self.start_server(connection="listen://localhost:0")
+        session = self.create_session(adapter, disconnect_automatically=False)
+        self.launch_to_breakpoint(session, "Alice")
+        session.evaluate("`log enable lldb api comm", context="repl")
+
+        # Each request logs more lines, which keep circulating through the
+        # console output. They must not fill it up: every request still gets
+        # its response.
+        pending = [session.do_evaluate("help", context="repl") for _ in range(100)]
+        for response in pending:
+            response.result()
+
+        self.continue_to_exit_and_disconnect(session, "Alice")
 
     def start_server(self, connection: str, connection_timeout: int = 30):
         options = DebugAdapterOptions(

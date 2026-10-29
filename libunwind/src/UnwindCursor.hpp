@@ -41,6 +41,17 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
+#if defined(_LIBUNWIND_TARGET_FREEBSD) && defined(_LIBUNWIND_TARGET_AARCH64)
+#include <errno.h>
+#include <machine/frame.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/ucontext.h>
+#include <sys/user.h>
+#include <unistd.h>
+#define _LIBUNWIND_CHECK_FREEBSD_SIGRETURN 1
+#endif
+
 #if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
     (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <OS.h>
@@ -621,6 +632,7 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  _msContext.ContextFlags |= CONTEXT_SEGMENTS;
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
   _msContext.Rcx = r.getRegister(UNW_X86_64_RCX);
   _msContext.Rdx = r.getRegister(UNW_X86_64_RDX);
@@ -638,6 +650,17 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _msContext.R14 = r.getRegister(UNW_X86_64_R14);
   _msContext.R15 = r.getRegister(UNW_X86_64_R15);
   _msContext.Rip = r.getRegister(UNW_REG_IP);
+  // ARM64EC getcontext leaves these fields zero. Keep the values supplied by
+  // RtlCaptureContext instead of replacing them with uncaptured x86 state.
+#if !defined(__arm64ec__)
+  _msContext.EFlags = static_cast<DWORD>(r.getRegister(UNW_X86_64_RFLAGS));
+  _msContext.SegEs = static_cast<WORD>(r.getRegister(UNW_X86_64_ES));
+  _msContext.SegCs = static_cast<WORD>(r.getRegister(UNW_X86_64_CS));
+  _msContext.SegSs = static_cast<WORD>(r.getRegister(UNW_X86_64_SS));
+  _msContext.SegDs = static_cast<WORD>(r.getRegister(UNW_X86_64_DS));
+  _msContext.SegFs = static_cast<WORD>(r.getRegister(UNW_X86_64_FS));
+  _msContext.SegGs = static_cast<WORD>(r.getRegister(UNW_X86_64_GS));
+#endif
   union {
     v128 v;
     M128A m;
@@ -728,6 +751,7 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
+  if (regNum >= UNW_X86_64_RFLAGS && regNum <= UNW_X86_64_GS) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -761,6 +785,13 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   case UNW_X86_64_R13: return _msContext.R13;
   case UNW_X86_64_R14: return _msContext.R14;
   case UNW_X86_64_R15: return _msContext.R15;
+  case UNW_X86_64_RFLAGS: return _msContext.EFlags;
+  case UNW_X86_64_ES: return _msContext.SegEs;
+  case UNW_X86_64_CS: return _msContext.SegCs;
+  case UNW_X86_64_SS: return _msContext.SegSs;
+  case UNW_X86_64_DS: return _msContext.SegDs;
+  case UNW_X86_64_FS: return _msContext.SegFs;
+  case UNW_X86_64_GS: return _msContext.SegGs;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   case UNW_ARM_R0: return _msContext.R0;
   case UNW_ARM_R1: return _msContext.R1;
@@ -812,6 +843,13 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   case UNW_X86_64_R13: _msContext.R13 = value; break;
   case UNW_X86_64_R14: _msContext.R14 = value; break;
   case UNW_X86_64_R15: _msContext.R15 = value; break;
+  case UNW_X86_64_RFLAGS: _msContext.EFlags = static_cast<DWORD>(value); break;
+  case UNW_X86_64_ES: _msContext.SegEs = static_cast<WORD>(value); break;
+  case UNW_X86_64_CS: _msContext.SegCs = static_cast<WORD>(value); break;
+  case UNW_X86_64_SS: _msContext.SegSs = static_cast<WORD>(value); break;
+  case UNW_X86_64_DS: _msContext.SegDs = static_cast<WORD>(value); break;
+  case UNW_X86_64_FS: _msContext.SegFs = static_cast<WORD>(value); break;
+  case UNW_X86_64_GS: _msContext.SegGs = static_cast<WORD>(value); break;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   case UNW_ARM_R0: _msContext.R0 = value; break;
   case UNW_ARM_R1: _msContext.R1 = value; break;
@@ -1055,7 +1093,8 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+#elif defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                           \
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -1090,6 +1129,8 @@ private:
     if ( compactSaysUseDwarf() )
       return stepWithDwarfFDE(stage2);
 #endif
+    // Compact encodings can't describe signal frames.
+    _isSignalFrame = false;
     R dummy;
     return stepWithCompactEncoding(dummy);
   }
@@ -1375,6 +1416,7 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
@@ -2888,6 +2930,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
 #endif
@@ -3021,6 +3064,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (setInfoForSigReturn())
     return;
@@ -3327,6 +3371,65 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
+#if defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+  // Ask the kernel rather than reading instructions at a possibly invalid PC.
+  // This is only used when no unwind information was found. Keep the result
+  // local to avoid shared mutable state when unwinding from a signal handler.
+  struct kinfo_sigtramp kst = {};
+  size_t len = sizeof(kst);
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_SIGTRAMP, getpid()};
+  const int savedErrno = errno;
+  const int result = sysctl(mib, 4, &kst, &len, nullptr, 0);
+  errno = savedErrno;
+  if (result != 0)
+    return false;
+
+  const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  const pint_t start = reinterpret_cast<pint_t>(kst.ksigtramp_start);
+  const pint_t end = reinterpret_cast<pint_t>(kst.ksigtramp_end);
+  if (pc < start || pc >= end)
+    return false;
+
+  _info = {};
+  _info.start_ip = start;
+  _info.end_ip = end;
+  _isSigReturn = true;
+  return true;
+}
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  // The trampoline leaves SP pointing at the sigframe installed by sendsig().
+  const pint_t sigctx = _registers.getSP() + offsetof(struct sigframe, sf_uc) +
+                        offsetof(ucontext_t, uc_mcontext);
+  const pint_t gprs = sigctx + offsetof(mcontext_t, mc_gpregs);
+  for (int i = 0; i < 30; ++i)
+    _registers.setRegister(
+        UNW_AARCH64_X0 + i,
+        _addressSpace.get64(gprs + offsetof(struct gpregs, gp_x) + i * 8));
+  _registers.setRegister(
+      UNW_AARCH64_LR,
+      _addressSpace.get64(gprs + offsetof(struct gpregs, gp_lr)));
+  _registers.setSP(_addressSpace.get64(gprs + offsetof(struct gpregs, gp_sp)));
+  _registers.setIP(_addressSpace.get64(gprs + offsetof(struct gpregs, gp_elr)));
+
+  if (_addressSpace.get32(sigctx + offsetof(mcontext_t, mc_flags)) &
+      _MC_FP_VALID) {
+    const pint_t fprs = sigctx + offsetof(mcontext_t, mc_fpregs) +
+                        offsetof(struct fpregs, fp_q);
+    for (int i = 0; i < 32; ++i)
+      _registers.setFloatRegister(UNW_AARCH64_V0 + i,
+                                  _addressSpace.getDouble(fprs + i * 16));
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_TARGET_AARCH64)
+#endif // defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN)
+
 #if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn() {
@@ -3426,6 +3529,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();

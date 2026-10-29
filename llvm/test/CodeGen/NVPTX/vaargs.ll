@@ -22,8 +22,8 @@ define i32 @foo(i32 %a, ...) {
 ; CHECK32-EMPTY:
 ; CHECK32-NEXT:  // %bb.0: // %entry
 ; CHECK32-NEXT:    mov.b32 %SPL, __local_depot0;
-; CHECK32-NEXT:    ld.param.b32 %r2, [foo_param_1];
 ; CHECK32-NEXT:    ld.param.b32 %r1, [foo_param_0];
+; CHECK32-NEXT:    ld.param.b32 %r2, [foo_param_1];
 ; CHECK32-NEXT:    add.u32 %r3, %SPL, 0;
 ; CHECK32-NEXT:    cvta.local.u32 %r4, %r3;
 ; CHECK32-NEXT:    add.u32 %r5, %SPL, 16;
@@ -98,8 +98,8 @@ define i32 @foo(i32 %a, ...) {
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0: // %entry
 ; CHECK64-NEXT:    mov.b64 %SPL, __local_depot0;
-; CHECK64-NEXT:    ld.param.b64 %rd1, [foo_param_1];
 ; CHECK64-NEXT:    ld.param.b32 %r1, [foo_param_0];
+; CHECK64-NEXT:    ld.param.b64 %rd1, [foo_param_1];
 ; CHECK64-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK64-NEXT:    cvta.local.u64 %rd3, %rd2;
 ; CHECK64-NEXT:    add.u64 %rd4, %SPL, 24;
@@ -216,30 +216,32 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK32-NEXT:    .reg .b32 %SPL;
 ; CHECK32-NEXT:    .reg .b32 %r<9>;
 ; CHECK32-NEXT:    .reg .b64 %rd<3>;
-; CHECK32:  $L__prototype_0:
-; CHECK32-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _);
+; CHECK32-EMPTY:
+; CHECK32-NEXT:  $L__prototype_0:
+; CHECK32-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _)
+; CHECK32-NEXT:  ;
 ; CHECK32-NEXT:  // %bb.0: // %entry
 ; CHECK32-NEXT:    mov.b32 %SPL, __local_depot1;
-; CHECK32-NEXT:    ld.param.b32 %r2, [test_foo_param_3];
-; CHECK32-NEXT:    ld.param.b64 %rd2, [test_foo_param_2];
-; CHECK32-NEXT:    ld.param.b64 %rd1, [test_foo_param_1];
 ; CHECK32-NEXT:    ld.param.b32 %r1, [test_foo_param_0];
-; CHECK32-NEXT:    add.u32 %r3, %SPL, 0;
-; CHECK32-NEXT:    cvta.local.u32 %r4, %r3;
-; CHECK32-NEXT:    mov.b32 %r5, foo_ptr;
-; CHECK32-NEXT:    cvta.global.u32 %r6, %r5;
-; CHECK32-NEXT:    ld.b32 %r7, [%r6];
-; CHECK32-NEXT:    st.b32 [%r4], %r1;
-; CHECK32-NEXT:    st.b64 [%r4+8], %rd1;
-; CHECK32-NEXT:    st.b64 [%r4+16], %rd2;
-; CHECK32-NEXT:    st.b32 [%r4+24], %r2;
+; CHECK32-NEXT:    ld.param.b64 %rd1, [test_foo_param_1];
+; CHECK32-NEXT:    add.u32 %r2, %SPL, 0;
+; CHECK32-NEXT:    cvta.local.u32 %r3, %r2;
+; CHECK32-NEXT:    ld.param.b64 %rd2, [test_foo_param_2];
+; CHECK32-NEXT:    mov.b32 %r4, foo_ptr;
+; CHECK32-NEXT:    cvta.global.u32 %r5, %r4;
+; CHECK32-NEXT:    ld.b32 %r6, [%r5];
+; CHECK32-NEXT:    ld.param.b32 %r7, [test_foo_param_3];
+; CHECK32-NEXT:    st.b32 [%r3], %r1;
+; CHECK32-NEXT:    st.b64 [%r3+8], %rd1;
+; CHECK32-NEXT:    st.b64 [%r3+16], %rd2;
+; CHECK32-NEXT:    st.b32 [%r3+24], %r7;
 ; CHECK32-NEXT:    { // callseq 1, 0
 ; CHECK32-NEXT:    .param .b32 param0;
 ; CHECK32-NEXT:    .param .b32 param1;
 ; CHECK32-NEXT:    .param .b32 retval0;
-; CHECK32-NEXT:    st.param.b32 [param1], %r3;
+; CHECK32-NEXT:    st.param.b32 [param1], %r2;
 ; CHECK32-NEXT:    st.param.b32 [param0], 4;
-; CHECK32-NEXT:    call (retval0), %r7, (param0, param1), $L__prototype_0;
+; CHECK32-NEXT:    call (retval0), %r6, (param0, param1), $L__prototype_0;
 ; CHECK32-NEXT:    ld.param.b32 %r8, [retval0];
 ; CHECK32-NEXT:    } // callseq 1
 ; CHECK32-NEXT:    st.param.b32 [func_retval0], %r8;
@@ -252,30 +254,32 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK64-NEXT:    .reg .b64 %SPL;
 ; CHECK64-NEXT:    .reg .b32 %r<3>;
 ; CHECK64-NEXT:    .reg .b64 %rd<9>;
-; CHECK64:  $L__prototype_0:
-; CHECK64-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _);
+; CHECK64-EMPTY:
+; CHECK64-NEXT:  $L__prototype_0:
+; CHECK64-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _)
+; CHECK64-NEXT:  ;
 ; CHECK64-NEXT:  // %bb.0: // %entry
 ; CHECK64-NEXT:    mov.b64 %SPL, __local_depot1;
-; CHECK64-NEXT:    ld.param.b64 %rd3, [test_foo_param_3];
-; CHECK64-NEXT:    ld.param.b64 %rd2, [test_foo_param_2];
-; CHECK64-NEXT:    ld.param.b64 %rd1, [test_foo_param_1];
 ; CHECK64-NEXT:    ld.param.b32 %r1, [test_foo_param_0];
-; CHECK64-NEXT:    add.u64 %rd4, %SPL, 0;
-; CHECK64-NEXT:    cvta.local.u64 %rd5, %rd4;
-; CHECK64-NEXT:    mov.b64 %rd6, foo_ptr;
-; CHECK64-NEXT:    cvta.global.u64 %rd7, %rd6;
-; CHECK64-NEXT:    ld.b64 %rd8, [%rd7];
-; CHECK64-NEXT:    st.b32 [%rd5], %r1;
-; CHECK64-NEXT:    st.b64 [%rd5+8], %rd1;
-; CHECK64-NEXT:    st.b64 [%rd5+16], %rd2;
-; CHECK64-NEXT:    st.b64 [%rd5+24], %rd3;
+; CHECK64-NEXT:    ld.param.b64 %rd1, [test_foo_param_1];
+; CHECK64-NEXT:    add.u64 %rd2, %SPL, 0;
+; CHECK64-NEXT:    cvta.local.u64 %rd3, %rd2;
+; CHECK64-NEXT:    ld.param.b64 %rd4, [test_foo_param_2];
+; CHECK64-NEXT:    mov.b64 %rd5, foo_ptr;
+; CHECK64-NEXT:    cvta.global.u64 %rd6, %rd5;
+; CHECK64-NEXT:    ld.b64 %rd7, [%rd6];
+; CHECK64-NEXT:    ld.param.b64 %rd8, [test_foo_param_3];
+; CHECK64-NEXT:    st.b32 [%rd3], %r1;
+; CHECK64-NEXT:    st.b64 [%rd3+8], %rd1;
+; CHECK64-NEXT:    st.b64 [%rd3+16], %rd4;
+; CHECK64-NEXT:    st.b64 [%rd3+24], %rd8;
 ; CHECK64-NEXT:    { // callseq 1, 0
 ; CHECK64-NEXT:    .param .b32 param0;
 ; CHECK64-NEXT:    .param .b64 param1;
 ; CHECK64-NEXT:    .param .b32 retval0;
-; CHECK64-NEXT:    st.param.b64 [param1], %rd4;
+; CHECK64-NEXT:    st.param.b64 [param1], %rd2;
 ; CHECK64-NEXT:    st.param.b32 [param0], 4;
-; CHECK64-NEXT:    call (retval0), %rd8, (param0, param1), $L__prototype_0;
+; CHECK64-NEXT:    call (retval0), %rd7, (param0, param1), $L__prototype_0;
 ; CHECK64-NEXT:    ld.param.b32 %r2, [retval0];
 ; CHECK64-NEXT:    } // callseq 1
 ; CHECK64-NEXT:    st.param.b32 [func_retval0], %r2;

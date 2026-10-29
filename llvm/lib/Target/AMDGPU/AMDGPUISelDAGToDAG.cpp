@@ -66,7 +66,14 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   if (Srl.getOpcode() == ISD::SRL) {
     if (ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
       if (ShiftAmt->getZExtValue() == 16) {
-        Out = stripBitcast(Srl.getOperand(0));
+        SDValue Result = stripBitcast(Srl.getOperand(0));
+        // op_sel can only select the high half of a 32-bit source. If the
+        // shift source is wider (e.g. a 64-bit D16 image sample result), we
+        // cannot fold it directly. Do not assign Out before this check since
+        // the caller may pass the same SDValue for both In and Out.
+        if (Result.getValueSizeInBits() != 32)
+          return false;
+        Out = Result;
         return true;
       }
     }
@@ -355,13 +362,12 @@ bool AMDGPUDAGToDAGISel::widenRegionLoad16(SDNode *N) const {
   if (ExtType == ISD::NON_EXTLOAD)
     ExtType = ISD::EXTLOAD;
 
+  EVT MemVT = Mem->getMemoryVT().changeTypeToInteger();
   SDValue NewLoad =
       Ld ? CurDAG->getExtLoad(ExtType, SL, MVT::i32, Mem->getChain(),
-                              Mem->getBasePtr(), Mem->getMemoryVT(),
-                              Mem->getMemOperand())
-         : CurDAG->getAtomicLoad(ExtType, SL, Mem->getMemoryVT(), MVT::i32,
-                                 Mem->getChain(), Mem->getBasePtr(),
-                                 Mem->getMemOperand());
+                              Mem->getBasePtr(), MemVT, Mem->getMemOperand())
+         : CurDAG->getAtomicLoad(ExtType, SL, MemVT, MVT::i32, Mem->getChain(),
+                                 Mem->getBasePtr(), Mem->getMemOperand());
 
   SDValue Trunc = CurDAG->getNode(ISD::TRUNCATE, SL, MVT::i16, NewLoad);
   SDValue Ops[] = {CurDAG->getBitcast(VT, Trunc), NewLoad.getValue(1)};

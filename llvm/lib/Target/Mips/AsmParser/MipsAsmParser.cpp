@@ -11,6 +11,7 @@
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
@@ -42,7 +43,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -68,9 +68,6 @@ namespace llvm {
 class MCInstrInfo;
 
 } // end namespace llvm
-
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -143,6 +140,7 @@ class MipsAsmParser : public MCTargetAsmParser {
     return static_cast<MipsTargetStreamer &>(TS);
   }
 
+  const MipsMCOptions &CLOpts;
   MipsABIInfo ABI;
   SmallVector<std::unique_ptr<MipsAssemblerOptions>, 2> AssemblerOptions;
   MCSymbol *CurrentFn; // Pointer to the function being parsed. It may be a
@@ -198,6 +196,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool ParseDirective(AsmToken DirectiveID) override;
 
   ParseStatus parseMemOperand(OperandVector &Operands);
+  ParseStatus parseMemOffsetOperand(OperandVector &Operands);
+  const MCExpr *parseMemOffset();
   ParseStatus matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
                                                 StringRef Identifier, SMLoc S);
   ParseStatus matchAnyRegisterWithoutDollar(OperandVector &Operands,
@@ -208,6 +208,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
   const MCExpr *parseRelocExpr();
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   bool searchSymbolAlias(OperandVector &Operands);
 
@@ -522,6 +523,7 @@ public:
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII)
       : MCTargetAsmParser(sti, MII),
+        CLOpts(MIPS_MC::getCLOpts(parser.getContext().getTargetOptions())),
         ABI(MipsABIInfo::computeTargetABI(
             sti.getTargetTriple(),
             parser.getContext().getTargetOptions().getABIName())) {
@@ -579,7 +581,7 @@ public:
   }
 
   bool isJalrRelocAvailable(const MCExpr *JalExpr) {
-    if (!EmitJalrReloc)
+    if (!CLOpts.jalr_reloc)
       return false;
     MCValue Res;
     if (!JalExpr->evaluateAsRelocatable(Res, nullptr))
@@ -1208,24 +1210,24 @@ public:
     addExpr(Inst, Expr);
   }
 
-  void addMemOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 2 && "Invalid number of operands!");
-
-    Inst.addOperand(MCOperand::createReg(AsmParser.getABI().ArePtrs64bit()
-                                             ? getMemBase()->getGPR64Reg()
-                                             : getMemBase()->getGPR32Reg()));
-
-    const MCExpr *Expr = getMemOff();
-    addExpr(Inst, Expr);
+  void addPtrRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(
+        AsmParser.getABI().ArePtrs64bit() ? getGPR64Reg() : getGPR32Reg()));
   }
 
-  void addMicroMipsMemOperands(MCInst &Inst, unsigned N) const {
+  void addMemOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
+    getMemBase()->addPtrRegOperands(Inst, 1);
+    addExpr(Inst, getMemOff());
+  }
 
-    Inst.addOperand(MCOperand::createReg(getMemBase()->getGPRMM16Reg()));
+  bool isSPAsmReg() const { return isGPRAsmReg() && RegIdx.Index == 29; }
+  bool isGPAsmReg() const { return isGPRAsmReg() && RegIdx.Index == 28; }
 
-    const MCExpr *Expr = getMemOff();
-    addExpr(Inst, Expr);
+  bool isSImmPtr() const {
+    return AsmParser.getABI().ArePtrs64bit() ? isScaledSImm<64, 0>()
+                                             : isScaledSImm<32, 0>();
   }
 
   void addRegListOperands(MCInst &Inst, unsigned N) const {
@@ -1300,65 +1302,13 @@ public:
 
   bool isMem() const override { return Kind == k_Memory; }
 
-  bool isConstantMemOff() const {
-    return isMem() && isa<MCConstantExpr>(getMemOff());
-  }
+  bool isMemOperand() const { return isMem() && getMemBase()->isGPRAsmReg(); }
 
   // Allow relocation operators.
-  template <unsigned Bits, unsigned ShiftAmount = 0>
-  bool isMemWithSimmOffset() const {
-    if (!isMem())
-      return false;
-    if (!getMemBase()->isGPRAsmReg())
-      return false;
-    if (isa<MCSpecifierExpr>(getMemOff()) ||
-        (isConstantMemOff() &&
-         isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())))
-      return true;
-    MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
-    return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
-  }
-
-  bool isMemWithPtrSizeOffset() const {
-    if (!isMem())
-      return false;
-    if (!getMemBase()->isGPRAsmReg())
-      return false;
-    const unsigned PtrBits = AsmParser.getABI().ArePtrs64bit() ? 64 : 32;
-    if (isa<MCSpecifierExpr>(getMemOff()) ||
-        (isConstantMemOff() && isIntN(PtrBits, getConstantMemOff())))
-      return true;
-    MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
-    return IsReloc && isIntN(PtrBits, Res.getConstant());
-  }
-
-  bool isMemWithGRPMM16Base() const {
-    return isMem() && getMemBase()->isMM16AsmReg();
-  }
-
-  template <unsigned Bits> bool isMemWithUimmOffsetSP() const {
-    return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
-      && getMemBase()->isRegIdx() && (getMemBase()->getGPR32Reg() == Mips::SP);
-  }
-
-  template <unsigned Bits> bool isMemWithUimmWordAlignedOffsetSP() const {
-    return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
-      && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
-      && (getMemBase()->getGPR32Reg() == Mips::SP);
-  }
-
-  template <unsigned Bits> bool isMemWithSimmWordAlignedOffsetGP() const {
-    return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff())
-      && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
-      && (getMemBase()->getGPR32Reg() == Mips::GP);
-  }
-
-  template <unsigned Bits, unsigned ShiftLeftAmount>
+  template <unsigned Bits, unsigned ShiftLeftAmount, int Bias = 0>
   bool isScaledUImm() const {
-    return isConstantImm() &&
-           isShiftedUInt<Bits, ShiftLeftAmount>(getConstantImm());
+    return isConstantImm() && isShiftedUInt<Bits, ShiftLeftAmount>(
+                                  uint64_t(getConstantImm()) - Bias);
   }
 
   template <unsigned Bits, unsigned ShiftLeftAmount>
@@ -1370,6 +1320,8 @@ public:
     // offset in case of relocations.
     if (Kind != k_Immediate)
       return false;
+    if (isa<MCSpecifierExpr>(getImm()))
+      return true;
     MCValue Res;
     bool Success = getImm()->evaluateAsRelocatable(Res, nullptr);
     return Success && isShiftedInt<Bits, ShiftLeftAmount>(Res.getConstant());
@@ -1385,8 +1337,8 @@ public:
 
     MCRegister R0 = RegList.List->front();
     MCRegister R1 = RegList.List->back();
-    if (!((R0 == Mips::S0 && R1 == Mips::RA) ||
-          (R0 == Mips::S0_64 && R1 == Mips::RA_64)))
+    if (!((R0 == Mips::R16 && R1 == Mips::RA) ||
+          (R0 == Mips::R16_64 && R1 == Mips::RA_64)))
       return false;
 
     MCRegister PrevReg = RegList.List->front();
@@ -1447,10 +1399,6 @@ public:
   const MCExpr *getMemOff() const {
     assert((Kind == k_Memory) && "Invalid access!");
     return Mem.Off;
-  }
-
-  int64_t getConstantMemOff() const {
-    return static_cast<const MCConstantExpr *>(getMemOff())->getValue();
   }
 
   const SmallVectorImpl<MCRegister> &getRegList() const {
@@ -1580,14 +1528,14 @@ public:
   }
 
   bool isMM16AsmReg() const {
-    if (!(isRegIdx() && RegIdx.Kind))
+    if (!isGPRAsmReg())
       return false;
     return ((RegIdx.Index >= 2 && RegIdx.Index <= 7)
             || RegIdx.Index == 16 || RegIdx.Index == 17);
 
   }
   bool isMM16AsmRegZero() const {
-    if (!(isRegIdx() && RegIdx.Kind))
+    if (!isGPRAsmReg())
       return false;
     return (RegIdx.Index == 0 ||
             (RegIdx.Index >= 2 && RegIdx.Index <= 7) ||
@@ -2020,8 +1968,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (!Inst.getOperand(2).isImm())
       return Error(IDLoc, "expected immediate operand kind");
     if (Inst.getOperand(2).getImm() == 0) {
-      if (Inst.getOperand(1).getReg() == Mips::ZERO ||
-          Inst.getOperand(1).getReg() == Mips::ZERO_64)
+      if (Inst.getOperand(1).getReg() == Mips::R0 ||
+          Inst.getOperand(1).getReg() == Mips::R0_64)
         Warning(IDLoc, "dividing zero by zero");
       else
         Warning(IDLoc, "division by zero");
@@ -2046,10 +1994,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::DDIVU:
   case Mips::DIVU_MMR6:
   case Mips::DIV_MMR6:
-    if (Inst.getOperand(SecondOp).getReg() == Mips::ZERO ||
-        Inst.getOperand(SecondOp).getReg() == Mips::ZERO_64) {
-      if (Inst.getOperand(FirstOp).getReg() == Mips::ZERO ||
-          Inst.getOperand(FirstOp).getReg() == Mips::ZERO_64)
+    if (Inst.getOperand(SecondOp).getReg() == Mips::R0 ||
+        Inst.getOperand(SecondOp).getReg() == Mips::R0_64) {
+      if (Inst.getOperand(FirstOp).getReg() == Mips::R0 ||
+          Inst.getOperand(FirstOp).getReg() == Mips::R0_64)
         Warning(IDLoc, "dividing zero by zero");
       else
         Warning(IDLoc, "division by zero");
@@ -2061,8 +2009,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   if ((Opcode == Mips::J || Opcode == Mips::J_MM) && inPicMode()) {
     MCInst BInst;
     BInst.setOpcode(inMicroMipsMode() ? Mips::BEQ_MM : Mips::BEQ);
-    BInst.addOperand(MCOperand::createReg(Mips::ZERO));
-    BInst.addOperand(MCOperand::createReg(Mips::ZERO));
+    BInst.addOperand(MCOperand::createReg(Mips::R0));
+    BInst.addOperand(MCOperand::createReg(Mips::R0));
     BInst.addOperand(Inst.getOperand(0));
     Inst = BInst;
   }
@@ -2087,8 +2035,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     //        of the assembler. We ought to leave it to those later stages.
     const MCSymbol *JalSym = getSingleMCSymbol(JalExpr);
 
-    if (expandLoadAddress(Mips::T9, MCRegister(), Inst.getOperand(0),
-                          !isGP64bit(), IDLoc, Out, STI))
+    if (expandLoadAddress(getABI().getTempReg(9), MCRegister(),
+                          Inst.getOperand(0), !isGP64bit(), IDLoc, Out, STI))
       return true;
 
     MCInst JalrInst;
@@ -2097,7 +2045,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     else
       JalrInst.setOpcode(Mips::JALR);
     JalrInst.addOperand(MCOperand::createReg(Mips::RA));
-    JalrInst.addOperand(MCOperand::createReg(Mips::T9));
+    JalrInst.addOperand(MCOperand::createReg(getABI().getTempReg(9)));
 
     if (isJalrRelocAvailable(JalExpr)) {
       // As an optimization hint for the linker, before the JALR we add:
@@ -2268,14 +2216,14 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       case Mips::MOVEP_MMR6: {
         MCRegister R0 = Inst.getOperand(0).getReg();
         MCRegister R1 = Inst.getOperand(1).getReg();
-        bool RegPair = ((R0 == Mips::A1 && R1 == Mips::A2) ||
-                        (R0 == Mips::A1 && R1 == Mips::A3) ||
-                        (R0 == Mips::A2 && R1 == Mips::A3) ||
-                        (R0 == Mips::A0 && R1 == Mips::S5) ||
-                        (R0 == Mips::A0 && R1 == Mips::S6) ||
-                        (R0 == Mips::A0 && R1 == Mips::A1) ||
-                        (R0 == Mips::A0 && R1 == Mips::A2) ||
-                        (R0 == Mips::A0 && R1 == Mips::A3));
+        bool RegPair = ((R0 == Mips::R5 && R1 == Mips::R6) ||
+                        (R0 == Mips::R5 && R1 == Mips::R7) ||
+                        (R0 == Mips::R6 && R1 == Mips::R7) ||
+                        (R0 == Mips::R4 && R1 == Mips::R21) ||
+                        (R0 == Mips::R4 && R1 == Mips::R22) ||
+                        (R0 == Mips::R4 && R1 == Mips::R5) ||
+                        (R0 == Mips::R4 && R1 == Mips::R6) ||
+                        (R0 == Mips::R4 && R1 == Mips::R7));
         if (!RegPair)
           return Error(IDLoc, "invalid operand for instruction");
         break;
@@ -2940,7 +2888,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
                                             const MCSubtargetInfo *STI) {
   MipsTargetStreamer &TOut = getTargetStreamer();
   bool UseSrcReg =
-      SrcReg.isValid() && SrcReg != Mips::ZERO && SrcReg != Mips::ZERO_64;
+      SrcReg.isValid() && SrcReg != Mips::R0 && SrcReg != Mips::R0_64;
   warnIfNoMacro(IDLoc);
 
   if (inPicMode()) {
@@ -2971,8 +2919,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // symbol in the final relocation is external and not modified with a
     // constant then we must use R_MIPS_CALL16 instead of R_MIPS_GOT16
     // or R_MIPS_CALL16 instead of R_MIPS_GOT_DISP in 64-bit case.
-    if ((DstReg == Mips::T9 || DstReg == Mips::T9_64) && !UseSrcReg &&
-        Res.getConstant() == 0 && !IsLocalSym) {
+    if ((DstReg == getABI().getTempReg(9, false) ||
+         DstReg == getABI().getTempReg(9, true)) &&
+        !UseSrcReg && Res.getConstant() == 0 && !IsLocalSym) {
       if (UseXGOT) {
         const MCExpr *CallHiExpr =
             MCSpecifierExpr::create(SymExpr, Mips::S_CALL_HI16, getContext());
@@ -3257,38 +3206,70 @@ static MCRegister nextReg(MCRegister Reg) {
     return Reg == (unsigned)Mips::F31 ? (unsigned)Mips::F0 : Reg + 1;
   switch (Reg.id()) {
   default: llvm_unreachable("Unknown register in assembly macro expansion!");
-  case Mips::ZERO: return Mips::AT;
-  case Mips::AT:   return Mips::V0;
-  case Mips::V0:   return Mips::V1;
-  case Mips::V1:   return Mips::A0;
-  case Mips::A0:   return Mips::A1;
-  case Mips::A1:   return Mips::A2;
-  case Mips::A2:   return Mips::A3;
-  case Mips::A3:   return Mips::T0;
-  case Mips::T0:   return Mips::T1;
-  case Mips::T1:   return Mips::T2;
-  case Mips::T2:   return Mips::T3;
-  case Mips::T3:   return Mips::T4;
-  case Mips::T4:   return Mips::T5;
-  case Mips::T5:   return Mips::T6;
-  case Mips::T6:   return Mips::T7;
-  case Mips::T7:   return Mips::S0;
-  case Mips::S0:   return Mips::S1;
-  case Mips::S1:   return Mips::S2;
-  case Mips::S2:   return Mips::S3;
-  case Mips::S3:   return Mips::S4;
-  case Mips::S4:   return Mips::S5;
-  case Mips::S5:   return Mips::S6;
-  case Mips::S6:   return Mips::S7;
-  case Mips::S7:   return Mips::T8;
-  case Mips::T8:   return Mips::T9;
-  case Mips::T9:   return Mips::K0;
-  case Mips::K0:   return Mips::K1;
-  case Mips::K1:   return Mips::GP;
-  case Mips::GP:   return Mips::SP;
-  case Mips::SP:   return Mips::FP;
-  case Mips::FP:   return Mips::RA;
-  case Mips::RA:   return Mips::ZERO;
+  case Mips::R0:
+    return Mips::R1;
+  case Mips::R1:
+    return Mips::R2;
+  case Mips::R2:
+    return Mips::R3;
+  case Mips::R3:
+    return Mips::R4;
+  case Mips::R4:
+    return Mips::R5;
+  case Mips::R5:
+    return Mips::R6;
+  case Mips::R6:
+    return Mips::R7;
+  case Mips::R7:
+    return Mips::R8;
+  case Mips::R8:
+    return Mips::R9;
+  case Mips::R9:
+    return Mips::R10;
+  case Mips::R10:
+    return Mips::R11;
+  case Mips::R11:
+    return Mips::R12;
+  case Mips::R12:
+    return Mips::R13;
+  case Mips::R13:
+    return Mips::R14;
+  case Mips::R14:
+    return Mips::R15;
+  case Mips::R15:
+    return Mips::R16;
+  case Mips::R16:
+    return Mips::R17;
+  case Mips::R17:
+    return Mips::R18;
+  case Mips::R18:
+    return Mips::R19;
+  case Mips::R19:
+    return Mips::R20;
+  case Mips::R20:
+    return Mips::R21;
+  case Mips::R21:
+    return Mips::R22;
+  case Mips::R22:
+    return Mips::R23;
+  case Mips::R23:
+    return Mips::R24;
+  case Mips::R24:
+    return Mips::R25;
+  case Mips::R25:
+    return Mips::R26;
+  case Mips::R26:
+    return Mips::R27;
+  case Mips::R27:
+    return Mips::R28;
+  case Mips::R28:
+    return Mips::R29;
+  case Mips::R29:
+    return Mips::R30;
+  case Mips::R30:
+    return Mips::R31;
+  case Mips::R31:
+    return Mips::R0;
   case Mips::D0:   return Mips::F1;
   case Mips::D1:   return Mips::F3;
   case Mips::D2:   return Mips::F5;
@@ -3299,12 +3280,18 @@ static MCRegister nextReg(MCRegister Reg) {
   case Mips::D7:   return Mips::F15;
   case Mips::D8:   return Mips::F17;
   case Mips::D9:   return Mips::F19;
-  case Mips::D10:   return Mips::F21;
-  case Mips::D11:   return Mips::F23;
-  case Mips::D12:   return Mips::F25;
-  case Mips::D13:   return Mips::F27;
-  case Mips::D14:   return Mips::F29;
-  case Mips::D15:   return Mips::F31;
+  case Mips::D10:
+    return Mips::F21;
+  case Mips::D11:
+    return Mips::F23;
+  case Mips::D12:
+    return Mips::F25;
+  case Mips::D13:
+    return Mips::F27;
+  case Mips::D14:
+    return Mips::F29;
+  case Mips::D15:
+    return Mips::F31;
   }
 }
 
@@ -3415,7 +3402,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   uint32_t ImmOp32 = covertDoubleImmToSingleImm(ImmOp64);
 
-  MCRegister TmpReg = Mips::ZERO;
+  MCRegister TmpReg = Mips::R0;
   if (ImmOp32 != 0) {
     TmpReg = getATReg(IDLoc);
     if (!TmpReg)
@@ -3423,8 +3410,8 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (Lo_32(ImmOp64) == 0) {
-    if (TmpReg != Mips::ZERO && loadImmediate(ImmOp32, TmpReg, MCRegister(),
-                                              true, false, IDLoc, Out, STI))
+    if (TmpReg != Mips::R0 && loadImmediate(ImmOp32, TmpReg, MCRegister(), true,
+                                            false, IDLoc, Out, STI))
       return true;
     TOut.emitRR(Mips::MTC1, FirstReg, TmpReg, IDLoc, STI);
     return false;
@@ -3528,7 +3515,7 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
 
   ImmOp64 = convertIntToDoubleImm(ImmOp64);
 
-  MCRegister TmpReg = Mips::ZERO;
+  MCRegister TmpReg = Mips::R0;
   if (ImmOp64 != 0) {
     TmpReg = getATReg(IDLoc);
     if (!TmpReg)
@@ -3538,24 +3525,24 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   if ((Lo_32(ImmOp64) == 0) &&
       !((Hi_32(ImmOp64) & 0xffff0000) && (Hi_32(ImmOp64) & 0x0000ffff))) {
     if (isGP64bit()) {
-      if (TmpReg != Mips::ZERO && loadImmediate(ImmOp64, TmpReg, MCRegister(),
-                                                false, false, IDLoc, Out, STI))
+      if (TmpReg != Mips::R0 && loadImmediate(ImmOp64, TmpReg, MCRegister(),
+                                              false, false, IDLoc, Out, STI))
         return true;
       TOut.emitRR(Mips::DMTC1, FirstReg, TmpReg, IDLoc, STI);
       return false;
     }
 
-    if (TmpReg != Mips::ZERO &&
+    if (TmpReg != Mips::R0 &&
         loadImmediate(Hi_32(ImmOp64), TmpReg, MCRegister(), true, false, IDLoc,
                       Out, STI))
       return true;
 
     if (hasMips32r2()) {
-      TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
+      TOut.emitRR(Mips::MTC1, FirstReg, Mips::R0, IDLoc, STI);
       TOut.emitRRR(Mips::MTHC1_D32, FirstReg, FirstReg, TmpReg, IDLoc, STI);
     } else {
       TOut.emitRR(Mips::MTC1, nextReg(FirstReg), TmpReg, IDLoc, STI);
-      TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
+      TOut.emitRR(Mips::MTC1, FirstReg, Mips::R0, IDLoc, STI);
     }
     return false;
   }
@@ -3597,8 +3584,8 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
   if (Offset.isExpr()) {
     Inst.clear();
     Inst.setOpcode(Mips::BEQ_MM);
-    Inst.addOperand(MCOperand::createReg(Mips::ZERO));
-    Inst.addOperand(MCOperand::createReg(Mips::ZERO));
+    Inst.addOperand(MCOperand::createReg(Mips::R0));
+    Inst.addOperand(MCOperand::createReg(Mips::R0));
     Inst.addOperand(MCOperand::createExpr(Offset.getExpr()));
   } else {
     assert(Offset.isImm() && "expected immediate operand kind");
@@ -3614,8 +3601,8 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
         return Error(IDLoc, "branch to misaligned address");
       Inst.clear();
       Inst.setOpcode(Mips::BEQ_MM);
-      Inst.addOperand(MCOperand::createReg(Mips::ZERO));
-      Inst.addOperand(MCOperand::createReg(Mips::ZERO));
+      Inst.addOperand(MCOperand::createReg(Mips::R0));
+      Inst.addOperand(MCOperand::createReg(Mips::R0));
       Inst.addOperand(MCOperand::createImm(Offset.getImm()));
     }
   }
@@ -3669,12 +3656,12 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   int64_t ImmValue = ImmOp.getImm();
   if (ImmValue == 0) {
     if (IsLikely) {
-      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::ZERO,
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::R0,
                    MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
-      TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+      TOut.emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
     } else
-      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::ZERO, MemOffsetOp, IDLoc,
-              STI);
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::R0, MemOffsetOp, IDLoc,
+                   STI);
   } else {
     warnIfNoMacro(IDLoc);
 
@@ -3689,7 +3676,7 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (IsLikely && MemOffsetOp.isExpr()) {
       TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg,
               MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
-      TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+      TOut.emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
     } else
       TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg, MemOffsetOp, IDLoc, STI);
   }
@@ -3756,7 +3743,7 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         return;
     }
 
-    if (BaseReg != Mips::ZERO && BaseReg != Mips::ZERO_64)
+    if (BaseReg != Mips::R0 && BaseReg != Mips::R0_64)
       TOut.emitRRR(ABI.ArePtrs64bit() ? Mips::DADDu : Mips::ADDu, TmpReg,
                    TmpReg, BaseReg, IDLoc, STI);
     emitInstWithOffset(MCOperand::createImm(int16_t(LoOffset)));
@@ -3808,13 +3795,13 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, 16, IDLoc, STI);
         TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, HiOperand, IDLoc, STI);
         TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, 16, IDLoc, STI);
-        if (BaseReg != Mips::ZERO && BaseReg != Mips::ZERO_64)
+        if (BaseReg != Mips::R0 && BaseReg != Mips::R0_64)
           TOut.emitRRR(Mips::DADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
         emitInstWithOffset(LoOperand);
       } else {
         // Generate the base address in TmpReg.
         TOut.emitRX(Mips::LUi, TmpReg, HiOperand, IDLoc, STI);
-        if (BaseReg != Mips::ZERO)
+        if (BaseReg != Mips::R0)
           TOut.emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
         // Emit the load or store with the adjusted base and offset.
         emitInstWithOffset(LoOperand);
@@ -4051,43 +4038,43 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
     llvm_unreachable("unknown opcode for branch pseudo-instruction");
   }
 
-  bool IsTrgRegZero = (TrgReg == Mips::ZERO);
-  bool IsSrcRegZero = (SrcReg == Mips::ZERO);
+  bool IsTrgRegZero = (TrgReg == Mips::R0);
+  bool IsSrcRegZero = (SrcReg == Mips::R0);
   if (IsSrcRegZero && IsTrgRegZero) {
     // FIXME: All of these Opcode-specific if's are needed for compatibility
     // with GAS' behaviour. However, they may not generate the most efficient
     // code in some circumstances.
     if (PseudoOpcode == Mips::BLT) {
-      TOut.emitRX(Mips::BLTZ, Mips::ZERO, MCOperand::createExpr(OffsetExpr),
+      TOut.emitRX(Mips::BLTZ, Mips::R0, MCOperand::createExpr(OffsetExpr),
                   IDLoc, STI);
       return false;
     }
     if (PseudoOpcode == Mips::BLE) {
-      TOut.emitRX(Mips::BLEZ, Mips::ZERO, MCOperand::createExpr(OffsetExpr),
+      TOut.emitRX(Mips::BLEZ, Mips::R0, MCOperand::createExpr(OffsetExpr),
                   IDLoc, STI);
       Warning(IDLoc, "branch is always taken");
       return false;
     }
     if (PseudoOpcode == Mips::BGE) {
-      TOut.emitRX(Mips::BGEZ, Mips::ZERO, MCOperand::createExpr(OffsetExpr),
+      TOut.emitRX(Mips::BGEZ, Mips::R0, MCOperand::createExpr(OffsetExpr),
                   IDLoc, STI);
       Warning(IDLoc, "branch is always taken");
       return false;
     }
     if (PseudoOpcode == Mips::BGT) {
-      TOut.emitRX(Mips::BGTZ, Mips::ZERO, MCOperand::createExpr(OffsetExpr),
+      TOut.emitRX(Mips::BGTZ, Mips::R0, MCOperand::createExpr(OffsetExpr),
                   IDLoc, STI);
       return false;
     }
     if (PseudoOpcode == Mips::BGTU) {
-      TOut.emitRRX(Mips::BNE, Mips::ZERO, Mips::ZERO,
+      TOut.emitRRX(Mips::BNE, Mips::R0, Mips::R0,
                    MCOperand::createExpr(OffsetExpr), IDLoc, STI);
       return false;
     }
     if (AcceptsEquality) {
       // If both registers are $0 and the pseudo-branch accepts equality, it
       // will always be taken, so we emit an unconditional branch.
-      TOut.emitRRX(Mips::BEQ, Mips::ZERO, Mips::ZERO,
+      TOut.emitRRX(Mips::BEQ, Mips::R0, Mips::R0,
                    MCOperand::createExpr(OffsetExpr), IDLoc, STI);
       Warning(IDLoc, "branch is always taken");
       return false;
@@ -4112,7 +4099,7 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
       // the pseudo-branch will always be taken, so we emit an unconditional
       // branch.
       // This only applies to unsigned pseudo-branches.
-      TOut.emitRRX(Mips::BEQ, Mips::ZERO, Mips::ZERO,
+      TOut.emitRRX(Mips::BEQ, Mips::R0, Mips::R0,
                    MCOperand::createExpr(OffsetExpr), IDLoc, STI);
       Warning(IDLoc, "branch is always taken");
       return false;
@@ -4131,7 +4118,7 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
       // Because only BLEU and BGEU branch on equality, we can use the
       // AcceptsEquality variable to decide when to emit the BEQZ.
       TOut.emitRRX(AcceptsEquality ? Mips::BEQ : Mips::BNE,
-                   IsSrcRegZero ? TrgReg : SrcReg, Mips::ZERO,
+                   IsSrcRegZero ? TrgReg : SrcReg, Mips::R0,
                    MCOperand::createExpr(OffsetExpr), IDLoc, STI);
       return false;
     }
@@ -4174,7 +4161,7 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
 
   TOut.emitRRX(IsLikely ? (AcceptsEquality ? Mips::BEQL : Mips::BNEL)
                         : (AcceptsEquality ? Mips::BEQ : Mips::BNE),
-               ATRegNum, Mips::ZERO, MCOperand::createExpr(OffsetExpr), IDLoc,
+               ATRegNum, Mips::R0, MCOperand::createExpr(OffsetExpr), IDLoc,
                STI);
   return false;
 }
@@ -4219,11 +4206,11 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   if (IsMips64) {
     DivOp = Signed ? Mips::DSDIV : Mips::DUDIV;
-    ZeroReg = Mips::ZERO_64;
+    ZeroReg = Mips::R0_64;
     SubOp = Mips::DSUB;
   } else {
     DivOp = Signed ? Mips::SDIV : Mips::UDIV;
-    ZeroReg = Mips::ZERO;
+    ZeroReg = Mips::R0;
     SubOp = Mips::SUB;
   }
 
@@ -4245,7 +4232,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    if (!NoZeroDivCheck && ImmValue == 0) {
+    if (!CLOpts.mno_check_zero_division && ImmValue == 0) {
       if (UseTraps)
         TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       else
@@ -4257,7 +4244,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       TOut.emitRRR(Mips::OR, RdReg, ZeroReg, ZeroReg, IDLoc, STI);
       return false;
     } else if (isDiv && ImmValue == 1) {
-      TOut.emitRRR(Mips::OR, RdReg, RsReg, Mips::ZERO, IDLoc, STI);
+      TOut.emitRRR(Mips::OR, RdReg, RsReg, Mips::R0, IDLoc, STI);
       return false;
     } else if (isDiv && Signed && ImmValue == -1) {
       TOut.emitRRR(SubOp, RdReg, ZeroReg, RsReg, IDLoc, STI);
@@ -4277,7 +4264,8 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   // break, insert the trap/break and exit. This gives a different result to
   // GAS. GAS has an inconsistency/missed optimization in that not all cases
   // are handled equivalently. As the observed behaviour is the same, we're ok.
-  if (!NoZeroDivCheck && (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
+  if (!CLOpts.mno_check_zero_division &&
+      (RtReg == Mips::R0 || RtReg == Mips::R0_64)) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
@@ -4288,7 +4276,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   // (d)rem(u) $0, $X, $Y is a special case. Like div $zero, $X, $Y, it does
   // not expand to macro sequence.
-  if (isRem && (RdReg == Mips::ZERO || RdReg == Mips::ZERO_64)) {
+  if (isRem && (RdReg == Mips::R0 || RdReg == Mips::R0_64)) {
     TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
     return false;
   }
@@ -4299,7 +4287,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCOperand LabelOp;
 
   TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
-  if (!NoZeroDivCheck) {
+  if (!CLOpts.mno_check_zero_division) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
     } else {
@@ -4514,7 +4502,7 @@ bool MipsAsmParser::expandUxw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   TOut.emitRRI(XWR, DstReg, TmpReg, LxrOffset, IDLoc, STI);
 
   if (DoMove)
-    TOut.emitRRR(Mips::OR, TmpReg, DstReg, Mips::ZERO, IDLoc, STI);
+    TOut.emitRRR(Mips::OR, TmpReg, DstReg, Mips::R0, IDLoc, STI);
 
   return false;
 }
@@ -4865,7 +4853,7 @@ bool MipsAsmParser::expandRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     }
 
     if (Inst.getOpcode() == Mips::ROL) {
-      TOut.emitRRR(Mips::SUBu, TmpReg, Mips::ZERO, TReg, Inst.getLoc(), STI);
+      TOut.emitRRR(Mips::SUBu, TmpReg, Mips::R0, TReg, Inst.getLoc(), STI);
       TOut.emitRRR(Mips::ROTRV, DReg, SReg, TmpReg, Inst.getLoc(), STI);
       return false;
     }
@@ -4896,7 +4884,7 @@ bool MipsAsmParser::expandRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    TOut.emitRRR(Mips::SUBu, ATReg, Mips::ZERO, TReg, Inst.getLoc(), STI);
+    TOut.emitRRR(Mips::SUBu, ATReg, Mips::R0, TReg, Inst.getLoc(), STI);
     TOut.emitRRR(FirstShift, ATReg, SReg, ATReg, Inst.getLoc(), STI);
     TOut.emitRRR(SecondShift, DReg, SReg, TReg, Inst.getLoc(), STI);
     TOut.emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), STI);
@@ -4990,7 +4978,7 @@ bool MipsAsmParser::expandDRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     }
 
     if (Inst.getOpcode() == Mips::DROL) {
-      TOut.emitRRR(Mips::DSUBu, TmpReg, Mips::ZERO, TReg, Inst.getLoc(), STI);
+      TOut.emitRRR(Mips::DSUBu, TmpReg, Mips::R0, TReg, Inst.getLoc(), STI);
       TOut.emitRRR(Mips::DROTRV, DReg, SReg, TmpReg, Inst.getLoc(), STI);
       return false;
     }
@@ -5021,7 +5009,7 @@ bool MipsAsmParser::expandDRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!ATReg)
       return true;
 
-    TOut.emitRRR(Mips::DSUBu, ATReg, Mips::ZERO, TReg, Inst.getLoc(), STI);
+    TOut.emitRRR(Mips::DSUBu, ATReg, Mips::R0, TReg, Inst.getLoc(), STI);
     TOut.emitRRR(FirstShift, ATReg, SReg, ATReg, Inst.getLoc(), STI);
     TOut.emitRRR(SecondShift, DReg, SReg, TReg, Inst.getLoc(), STI);
     TOut.emitRRR(Mips::OR, DReg, DReg, ATReg, Inst.getLoc(), STI);
@@ -5135,10 +5123,10 @@ bool MipsAsmParser::expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   TOut.emitRI(Mips::BGEZ, SecondRegOp, 8, IDLoc, STI);
   if (FirstRegOp != SecondRegOp)
-    TOut.emitRRR(Mips::ADDu, FirstRegOp, SecondRegOp, Mips::ZERO, IDLoc, STI);
+    TOut.emitRRR(Mips::ADDu, FirstRegOp, SecondRegOp, Mips::R0, IDLoc, STI);
   else
     TOut.emitEmptyDelaySlot(false, IDLoc, STI);
-  TOut.emitRRR(Mips::SUB, FirstRegOp, Mips::ZERO, SecondRegOp, IDLoc, STI);
+  TOut.emitRRR(Mips::SUB, FirstRegOp, Mips::R0, SecondRegOp, IDLoc, STI);
 
   return false;
 }
@@ -5225,14 +5213,14 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   TOut.emitR(Mips::MFHI, ATReg, IDLoc, STI);
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
   if (useTraps()) {
-    TOut.emitRRI(Mips::TNE, ATReg, Mips::ZERO, 6, IDLoc, STI);
+    TOut.emitRRI(Mips::TNE, ATReg, Mips::R0, 6, IDLoc, STI);
   } else {
     MCContext &Context = TOut.getContext();
     MCSymbol * BrTarget = Context.createTempSymbol();
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
 
-    TOut.emitRRX(Mips::BEQ, ATReg, Mips::ZERO, LabelOp, IDLoc, STI);
+    TOut.emitRRX(Mips::BEQ, ATReg, Mips::R0, LabelOp, IDLoc, STI);
     if (AssemblerOptions.back()->isReorder())
       TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
@@ -5361,13 +5349,13 @@ bool MipsAsmParser::expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   warnIfNoMacro(IDLoc);
 
-  if (SrcReg != Mips::ZERO && OpReg != Mips::ZERO) {
+  if (SrcReg != Mips::R0 && OpReg != Mips::R0) {
     TOut.emitRRR(Mips::XOR, DstReg, SrcReg, OpReg, IDLoc, STI);
     TOut.emitRRI(Mips::SLTiu, DstReg, DstReg, 1, IDLoc, STI);
     return false;
   }
 
-  MCRegister Reg = SrcReg == Mips::ZERO ? OpReg : SrcReg;
+  MCRegister Reg = SrcReg == Mips::R0 ? OpReg : SrcReg;
   TOut.emitRRI(Mips::SLTiu, DstReg, Reg, 1, IDLoc, STI);
   return false;
 }
@@ -5392,7 +5380,7 @@ bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return false;
   }
 
-  if (SrcReg == Mips::ZERO) {
+  if (SrcReg == Mips::R0) {
     Warning(IDLoc, "comparison is always false");
     TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu,
                  DstReg, SrcReg, SrcReg, IDLoc, STI);
@@ -5442,14 +5430,14 @@ bool MipsAsmParser::expandSne(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   warnIfNoMacro(IDLoc);
 
-  if (SrcReg != Mips::ZERO && OpReg != Mips::ZERO) {
+  if (SrcReg != Mips::R0 && OpReg != Mips::R0) {
     TOut.emitRRR(Mips::XOR, DstReg, SrcReg, OpReg, IDLoc, STI);
-    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::R0, DstReg, IDLoc, STI);
     return false;
   }
 
-  MCRegister Reg = SrcReg == Mips::ZERO ? OpReg : SrcReg;
-  TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, Reg, IDLoc, STI);
+  MCRegister Reg = SrcReg == Mips::R0 ? OpReg : SrcReg;
+  TOut.emitRRR(Mips::SLTu, DstReg, Mips::R0, Reg, IDLoc, STI);
   return false;
 }
 
@@ -5469,11 +5457,11 @@ bool MipsAsmParser::expandSneI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   warnIfNoMacro(IDLoc);
 
   if (ImmValue == 0) {
-    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, SrcReg, IDLoc, STI);
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::R0, SrcReg, IDLoc, STI);
     return false;
   }
 
-  if (SrcReg == Mips::ZERO) {
+  if (SrcReg == Mips::R0) {
     Warning(IDLoc, "comparison is always true");
     if (loadImmediate(1, DstReg, MCRegister(), true, false, IDLoc, Out, STI))
       return true;
@@ -5490,7 +5478,7 @@ bool MipsAsmParser::expandSneI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   if (isUInt<16>(ImmValue)) {
     TOut.emitRRI(Opc, DstReg, SrcReg, ImmValue, IDLoc, STI);
-    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::R0, DstReg, IDLoc, STI);
     return false;
   }
 
@@ -5503,7 +5491,7 @@ bool MipsAsmParser::expandSneI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return true;
 
   TOut.emitRRR(Mips::XOR, DstReg, SrcReg, ATReg, IDLoc, STI);
-  TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
+  TOut.emitRRR(Mips::SLTu, DstReg, Mips::R0, DstReg, IDLoc, STI);
   return false;
 }
 
@@ -5516,13 +5504,13 @@ static unsigned getRegisterForMxtrDSP(MCInst &Inst, bool IsMFDSP) {
     case Mips::MTTLO:
       switch (Inst.getOperand(IsMFDSP ? 1 : 0).getReg().id()) {
         case Mips::AC0:
-          return Mips::ZERO;
+          return Mips::R0;
         case Mips::AC1:
-          return Mips::A0;
+          return Mips::R4;
         case Mips::AC2:
-          return Mips::T0;
+          return Mips::R8;
         case Mips::AC3:
-          return Mips::T4;
+          return Mips::R12;
         default:
           llvm_unreachable("Unknown register for 'mttr' alias!");
     }
@@ -5530,13 +5518,13 @@ static unsigned getRegisterForMxtrDSP(MCInst &Inst, bool IsMFDSP) {
     case Mips::MTTHI:
       switch (Inst.getOperand(IsMFDSP ? 1 : 0).getReg().id()) {
         case Mips::AC0:
-          return Mips::AT;
+          return Mips::R1;
         case Mips::AC1:
-          return Mips::A1;
+          return Mips::R5;
         case Mips::AC2:
-          return Mips::T1;
+          return Mips::R9;
         case Mips::AC3:
-          return Mips::T5;
+          return Mips::R13;
         default:
           llvm_unreachable("Unknown register for 'mttr' alias!");
     }
@@ -5544,19 +5532,19 @@ static unsigned getRegisterForMxtrDSP(MCInst &Inst, bool IsMFDSP) {
     case Mips::MTTACX:
       switch (Inst.getOperand(IsMFDSP ? 1 : 0).getReg().id()) {
         case Mips::AC0:
-          return Mips::V0;
+          return Mips::R2;
         case Mips::AC1:
-          return Mips::A2;
+          return Mips::R6;
         case Mips::AC2:
-          return Mips::T2;
+          return Mips::R10;
         case Mips::AC3:
-          return Mips::T6;
+          return Mips::R14;
         default:
           llvm_unreachable("Unknown register for 'mttr' alias!");
     }
     case Mips::MFTDSP:
     case Mips::MTTDSP:
-      return Mips::S0;
+      return Mips::R16;
     default:
       llvm_unreachable("Unknown instruction for 'mttr' dsp alias!");
   }
@@ -5566,78 +5554,144 @@ static unsigned getRegisterForMxtrDSP(MCInst &Inst, bool IsMFDSP) {
 // operand.
 static unsigned getRegisterForMxtrFP(MCInst &Inst, bool IsMFTC1) {
   switch (Inst.getOperand(IsMFTC1 ? 1 : 0).getReg().id()) {
-    case Mips::F0:  return Mips::ZERO;
-    case Mips::F1:  return Mips::AT;
-    case Mips::F2:  return Mips::V0;
-    case Mips::F3:  return Mips::V1;
-    case Mips::F4:  return Mips::A0;
-    case Mips::F5:  return Mips::A1;
-    case Mips::F6:  return Mips::A2;
-    case Mips::F7:  return Mips::A3;
-    case Mips::F8:  return Mips::T0;
-    case Mips::F9:  return Mips::T1;
-    case Mips::F10: return Mips::T2;
-    case Mips::F11: return Mips::T3;
-    case Mips::F12: return Mips::T4;
-    case Mips::F13: return Mips::T5;
-    case Mips::F14: return Mips::T6;
-    case Mips::F15: return Mips::T7;
-    case Mips::F16: return Mips::S0;
-    case Mips::F17: return Mips::S1;
-    case Mips::F18: return Mips::S2;
-    case Mips::F19: return Mips::S3;
-    case Mips::F20: return Mips::S4;
-    case Mips::F21: return Mips::S5;
-    case Mips::F22: return Mips::S6;
-    case Mips::F23: return Mips::S7;
-    case Mips::F24: return Mips::T8;
-    case Mips::F25: return Mips::T9;
-    case Mips::F26: return Mips::K0;
-    case Mips::F27: return Mips::K1;
-    case Mips::F28: return Mips::GP;
-    case Mips::F29: return Mips::SP;
-    case Mips::F30: return Mips::FP;
-    case Mips::F31: return Mips::RA;
-    default: llvm_unreachable("Unknown register for mttc1 alias!");
+  case Mips::F0:
+    return Mips::R0;
+  case Mips::F1:
+    return Mips::R1;
+  case Mips::F2:
+    return Mips::R2;
+  case Mips::F3:
+    return Mips::R3;
+  case Mips::F4:
+    return Mips::R4;
+  case Mips::F5:
+    return Mips::R5;
+  case Mips::F6:
+    return Mips::R6;
+  case Mips::F7:
+    return Mips::R7;
+  case Mips::F8:
+    return Mips::R8;
+  case Mips::F9:
+    return Mips::R9;
+  case Mips::F10:
+    return Mips::R10;
+  case Mips::F11:
+    return Mips::R11;
+  case Mips::F12:
+    return Mips::R12;
+  case Mips::F13:
+    return Mips::R13;
+  case Mips::F14:
+    return Mips::R14;
+  case Mips::F15:
+    return Mips::R15;
+  case Mips::F16:
+    return Mips::R16;
+  case Mips::F17:
+    return Mips::R17;
+  case Mips::F18:
+    return Mips::R18;
+  case Mips::F19:
+    return Mips::R19;
+  case Mips::F20:
+    return Mips::R20;
+  case Mips::F21:
+    return Mips::R21;
+  case Mips::F22:
+    return Mips::R22;
+  case Mips::F23:
+    return Mips::R23;
+  case Mips::F24:
+    return Mips::R24;
+  case Mips::F25:
+    return Mips::R25;
+  case Mips::F26:
+    return Mips::R26;
+  case Mips::F27:
+    return Mips::R27;
+  case Mips::F28:
+    return Mips::GP;
+  case Mips::F29:
+    return Mips::SP;
+  case Mips::F30:
+    return Mips::FP;
+  case Mips::F31:
+    return Mips::RA;
+  default:
+    llvm_unreachable("Unknown register for mttc1 alias!");
   }
 }
 
 // Map the coprocessor operand the corresponding gpr register operand.
 static unsigned getRegisterForMxtrC0(MCInst &Inst, bool IsMFTC0) {
   switch (Inst.getOperand(IsMFTC0 ? 1 : 0).getReg().id()) {
-    case Mips::COP00:  return Mips::ZERO;
-    case Mips::COP01:  return Mips::AT;
-    case Mips::COP02:  return Mips::V0;
-    case Mips::COP03:  return Mips::V1;
-    case Mips::COP04:  return Mips::A0;
-    case Mips::COP05:  return Mips::A1;
-    case Mips::COP06:  return Mips::A2;
-    case Mips::COP07:  return Mips::A3;
-    case Mips::COP08:  return Mips::T0;
-    case Mips::COP09:  return Mips::T1;
-    case Mips::COP010: return Mips::T2;
-    case Mips::COP011: return Mips::T3;
-    case Mips::COP012: return Mips::T4;
-    case Mips::COP013: return Mips::T5;
-    case Mips::COP014: return Mips::T6;
-    case Mips::COP015: return Mips::T7;
-    case Mips::COP016: return Mips::S0;
-    case Mips::COP017: return Mips::S1;
-    case Mips::COP018: return Mips::S2;
-    case Mips::COP019: return Mips::S3;
-    case Mips::COP020: return Mips::S4;
-    case Mips::COP021: return Mips::S5;
-    case Mips::COP022: return Mips::S6;
-    case Mips::COP023: return Mips::S7;
-    case Mips::COP024: return Mips::T8;
-    case Mips::COP025: return Mips::T9;
-    case Mips::COP026: return Mips::K0;
-    case Mips::COP027: return Mips::K1;
-    case Mips::COP028: return Mips::GP;
-    case Mips::COP029: return Mips::SP;
-    case Mips::COP030: return Mips::FP;
-    case Mips::COP031: return Mips::RA;
-    default: llvm_unreachable("Unknown register for mttc0 alias!");
+  case Mips::COP00:
+    return Mips::R0;
+  case Mips::COP01:
+    return Mips::R1;
+  case Mips::COP02:
+    return Mips::R2;
+  case Mips::COP03:
+    return Mips::R3;
+  case Mips::COP04:
+    return Mips::R4;
+  case Mips::COP05:
+    return Mips::R5;
+  case Mips::COP06:
+    return Mips::R6;
+  case Mips::COP07:
+    return Mips::R7;
+  case Mips::COP08:
+    return Mips::R8;
+  case Mips::COP09:
+    return Mips::R9;
+  case Mips::COP010:
+    return Mips::R10;
+  case Mips::COP011:
+    return Mips::R11;
+  case Mips::COP012:
+    return Mips::R12;
+  case Mips::COP013:
+    return Mips::R13;
+  case Mips::COP014:
+    return Mips::R14;
+  case Mips::COP015:
+    return Mips::R15;
+  case Mips::COP016:
+    return Mips::R16;
+  case Mips::COP017:
+    return Mips::R17;
+  case Mips::COP018:
+    return Mips::R18;
+  case Mips::COP019:
+    return Mips::R19;
+  case Mips::COP020:
+    return Mips::R20;
+  case Mips::COP021:
+    return Mips::R21;
+  case Mips::COP022:
+    return Mips::R22;
+  case Mips::COP023:
+    return Mips::R23;
+  case Mips::COP024:
+    return Mips::R24;
+  case Mips::COP025:
+    return Mips::R25;
+  case Mips::COP026:
+    return Mips::R26;
+  case Mips::COP027:
+    return Mips::R27;
+  case Mips::COP028:
+    return Mips::GP;
+  case Mips::COP029:
+    return Mips::SP;
+  case Mips::COP030:
+    return Mips::FP;
+  case Mips::COP031:
+    return Mips::RA;
+  default:
+    llvm_unreachable("Unknown register for mttc0 alias!");
   }
 }
 
@@ -5766,8 +5820,8 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   // As described by the MIPSR6 spec, daui must not use the zero operand for
   // its source operand.
   case Mips::DAUI:
-    if (Inst.getOperand(1).getReg() == Mips::ZERO ||
-        Inst.getOperand(1).getReg() == Mips::ZERO_64)
+    if (Inst.getOperand(1).getReg() == Mips::R0 ||
+        Inst.getOperand(1).getReg() == Mips::R0_64)
       return Match_RequiresNoZeroRegister;
     return Match_Success;
   // As described by the Mips32r2 spec, the registers Rd and Rs for
@@ -5820,8 +5874,8 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case Mips::BLTZC64:
   case Mips::BEQZC64:
   case Mips::BNEZC64:
-    if (Inst.getOperand(0).getReg() == Mips::ZERO ||
-        Inst.getOperand(0).getReg() == Mips::ZERO_64)
+    if (Inst.getOperand(0).getReg() == Mips::R0 ||
+        Inst.getOperand(0).getReg() == Mips::R0_64)
       return Match_RequiresNoZeroRegister;
     return Match_Success;
   case Mips::BGEC:    case Mips::BGEC_MMR6:
@@ -5836,11 +5890,11 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case Mips::BLTUC64:
   case Mips::BEQC64:
   case Mips::BNEC64:
-    if (Inst.getOperand(0).getReg() == Mips::ZERO ||
-        Inst.getOperand(0).getReg() == Mips::ZERO_64)
+    if (Inst.getOperand(0).getReg() == Mips::R0 ||
+        Inst.getOperand(0).getReg() == Mips::R0_64)
       return Match_RequiresNoZeroRegister;
-    if (Inst.getOperand(1).getReg() == Mips::ZERO ||
-        Inst.getOperand(1).getReg() == Mips::ZERO_64)
+    if (Inst.getOperand(1).getReg() == Mips::R0 ||
+        Inst.getOperand(1).getReg() == Mips::R0_64)
       return Match_RequiresNoZeroRegister;
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;
@@ -5939,6 +5993,10 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         return Error(IDLoc, "too few operands for instruction");
 
       ErrorLoc = Operands[ErrorInfo]->getStartLoc();
+      if (Operands[ErrorInfo]->isMem())
+        ErrorLoc = static_cast<MipsOperand &>(*Operands[ErrorInfo])
+                       .getMemBase()
+                       ->getStartLoc();
       if (ErrorLoc == SMLoc())
         ErrorLoc = IDLoc;
     }
@@ -6003,6 +6061,13 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // operand to avoid confusing the user.
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 6-bit unsigned immediate");
+  case Match_ConstantMemOffset:
+    if (ErrorInfo < Operands.size() &&
+        !static_cast<MipsOperand &>(*Operands[ErrorInfo]).isConstantImm())
+      return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                   "expected immediate operand kind");
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "immediate operand value out of range");
   case Match_UImm5_Lsl2:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected both 7-bit unsigned immediate and multiple of 4");
@@ -6136,7 +6201,8 @@ void MipsAsmParser::ConvertXWPOperands(MCInst &Inst,
   ((MipsOperand &)*Operands[1]).addGPR32ZeroAsmRegOperands(Inst, 1);
   MCRegister NextReg = nextReg(((MipsOperand &)*Operands[1]).getGPR32Reg());
   Inst.addOperand(MCOperand::createReg(NextReg));
-  ((MipsOperand &)*Operands[2]).addMemOperands(Inst, 2);
+  static_cast<MipsOperand &>(*Operands[4]).addPtrRegOperands(Inst, 1);
+  static_cast<MipsOperand &>(*Operands[2]).addImmOperands(Inst, 1);
 }
 
 void
@@ -6249,9 +6315,18 @@ MCRegister MipsAsmParser::getReg(int RC, int RegNo) {
   return getContext().getRegisterInfo()->getRegClass(RC).getRegister(RegNo);
 }
 
-// Parse an expression with optional relocation operator prefixes (e.g. %lo).
-// Some weird expressions allowed by gas are not supported for simplicity,
-// e.g. "%lo foo", "(%lo(foo))", "%lo(foo)+1".
+// Recognize relocation specifiers so the common parser can handle arithmetic
+// around them, such as %lo(8) + symbol.
+bool MipsAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  if (getLexer().isNot(AsmToken::Percent))
+    return getParser().parsePrimaryExpr(Res, EndLoc);
+  Res = parseRelocExpr();
+  EndLoc = getLexer().getLoc();
+  return !Res;
+}
+
+// Parse an expression with optional, possibly nested relocation specifiers.
+// The opening parentheses are required, unlike the GAS form "%lo foo".
 const MCExpr *MipsAsmParser::parseRelocExpr() {
   auto getOp = [](StringRef Op) {
     return StringSwitch<Mips::Specifier>(Op)
@@ -6399,138 +6474,72 @@ ParseStatus MipsAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return (Reg == (unsigned)-1) ? ParseStatus::NoMatch : ParseStatus::Success;
 }
 
+const MCExpr *MipsAsmParser::parseMemOffset() {
+  // An omitted expression, as in ($sp), denotes zero.
+  if (getLexer().is(AsmToken::LParen) &&
+      getLexer().peekTok().is(AsmToken::Dollar))
+    return MCConstantExpr::create(0, getContext());
+
+  const MCExpr *Offset;
+  if (getParser().parseExpression(Offset))
+    return nullptr;
+  int64_t Value;
+  if (Offset->evaluateAsAbsolute(Value))
+    return MCConstantExpr::create(Value, getContext());
+  return Offset;
+}
+
+ParseStatus MipsAsmParser::parseMemOffsetOperand(OperandVector &Operands) {
+  SMLoc S = getLexer().getLoc();
+  const MCExpr *Offset = parseMemOffset();
+  if (!Offset)
+    return ParseStatus::Failure;
+
+  SMLoc E = getLexer().getLoc();
+  Operands.push_back(MipsOperand::CreateImm(Offset, S, E, *this));
+
+  if (getLexer().is(AsmToken::LParen)) {
+    StringRef Mnemonic = static_cast<MipsOperand &>(*Operands[0]).getToken();
+    return parseParenSuffix(Mnemonic, Operands) ? ParseStatus::Failure
+                                                : ParseStatus::Success;
+  }
+
+  // A memory address without an explicit base uses $zero.
+  // FIXME: GAS can expand arbitrary symbolic addresses. Ideally, a pseudo
+  // instruction should handle these instead of supplying a default $zero base.
+  Operands.push_back(MipsOperand::CreateToken("(", E, *this));
+  Operands.push_back(MipsOperand::createGPRReg(
+      0, "0", getContext().getRegisterInfo(), E, E, *this));
+  Operands.push_back(MipsOperand::CreateToken(")", E, *this));
+  return ParseStatus::Success;
+}
+
 ParseStatus MipsAsmParser::parseMemOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  LLVM_DEBUG(dbgs() << "parseMemOperand\n");
-  const MCExpr *IdVal = nullptr;
-  SMLoc S;
-  bool isParenExpr = false;
-  ParseStatus Res = ParseStatus::NoMatch;
-  // First operand is the offset.
-  S = Parser.getTok().getLoc();
+  SMLoc S = Parser.getTok().getLoc();
+  const MCExpr *Address = parseMemOffset();
+  if (!Address)
+    return ParseStatus::Failure;
 
-  if (getLexer().getKind() == AsmToken::LParen) {
-    Parser.Lex();
-    isParenExpr = true;
+  SMLoc E = Parser.getTok().getLoc();
+  if (getLexer().isNot(AsmToken::LParen)) {
+    Operands.push_back(MipsOperand::CreateImm(Address, S, E, *this));
+    return ParseStatus::Success;
   }
 
-  if (getLexer().getKind() != AsmToken::Dollar) {
-    IdVal = parseRelocExpr();
-    if (!IdVal)
-      return ParseStatus::Failure;
-    if (isParenExpr && Parser.parseRParen())
-      return ParseStatus::Failure;
+  Parser.Lex(); // Eat '('.
+  ParseStatus Result = parseAnyRegister(Operands);
+  if (!Result.isSuccess())
+    return Result;
+  if (Parser.parseRParen())
+    return ParseStatus::Failure;
 
-    const AsmToken &Tok = Parser.getTok(); // Get the next token.
-    if (Tok.isNot(AsmToken::LParen)) {
-      MipsOperand &Mnemonic = static_cast<MipsOperand &>(*Operands[0]);
-      if (Mnemonic.getToken() == "la" || Mnemonic.getToken() == "dla") {
-        SMLoc E =
-            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-        Operands.push_back(MipsOperand::CreateImm(IdVal, S, E, *this));
-        return ParseStatus::Success;
-      }
-      if (Tok.is(AsmToken::EndOfStatement)) {
-        SMLoc E =
-            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-
-        // Zero register assumed, add a memory operand with ZERO as its base.
-        // "Base" will be managed by k_Memory.
-        auto Base = MipsOperand::createGPRReg(
-            0, "0", getContext().getRegisterInfo(), S, E, *this);
-        Operands.push_back(
-            MipsOperand::CreateMem(std::move(Base), IdVal, S, E, *this));
-        return ParseStatus::Success;
-      }
-      MCBinaryExpr::Opcode Opcode;
-      // GAS and LLVM treat comparison operators different. GAS will generate -1
-      // or 0, while LLVM will generate 0 or 1. Since a comparsion operator is
-      // highly unlikely to be found in a memory offset expression, we don't
-      // handle them.
-      switch (Tok.getKind()) {
-      case AsmToken::Plus:
-        Opcode = MCBinaryExpr::Add;
-        Parser.Lex();
-        break;
-      case AsmToken::Minus:
-        Opcode = MCBinaryExpr::Sub;
-        Parser.Lex();
-        break;
-      case AsmToken::Star:
-        Opcode = MCBinaryExpr::Mul;
-        Parser.Lex();
-        break;
-      case AsmToken::Pipe:
-        Opcode = MCBinaryExpr::Or;
-        Parser.Lex();
-        break;
-      case AsmToken::Amp:
-        Opcode = MCBinaryExpr::And;
-        Parser.Lex();
-        break;
-      case AsmToken::LessLess:
-        Opcode = MCBinaryExpr::Shl;
-        Parser.Lex();
-        break;
-      case AsmToken::GreaterGreater:
-        Opcode = MCBinaryExpr::LShr;
-        Parser.Lex();
-        break;
-      case AsmToken::Caret:
-        Opcode = MCBinaryExpr::Xor;
-        Parser.Lex();
-        break;
-      case AsmToken::Slash:
-        Opcode = MCBinaryExpr::Div;
-        Parser.Lex();
-        break;
-      case AsmToken::Percent:
-        Opcode = MCBinaryExpr::Mod;
-        Parser.Lex();
-        break;
-      default:
-        return Error(Parser.getTok().getLoc(), "'(' or expression expected");
-      }
-      const MCExpr * NextExpr;
-      if (getParser().parseExpression(NextExpr))
-        return ParseStatus::Failure;
-      IdVal = MCBinaryExpr::create(Opcode, IdVal, NextExpr, getContext());
-    }
-
-    Parser.Lex(); // Eat the '(' token.
-  }
-
-  Res = parseAnyRegister(Operands);
-  if (!Res.isSuccess())
-    return Res;
-
-  if (Parser.getTok().isNot(AsmToken::RParen))
-    return Error(Parser.getTok().getLoc(), "')' expected");
-
-  SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-
-  Parser.Lex(); // Eat the ')' token.
-
-  if (!IdVal)
-    IdVal = MCConstantExpr::create(0, getContext());
-
-  // Replace the register operand with the memory operand.
-  std::unique_ptr<MipsOperand> op(
+  std::unique_ptr<MipsOperand> Base(
       static_cast<MipsOperand *>(Operands.back().release()));
-  // Remove the register from the operands.
-  // "op" will be managed by k_Memory.
   Operands.pop_back();
-  // Add the memory operand.
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(IdVal)) {
-    int64_t Imm;
-    if (IdVal->evaluateAsAbsolute(Imm))
-      IdVal = MCConstantExpr::create(Imm, getContext());
-    else if (BE->getLHS()->getKind() != MCExpr::SymbolRef)
-      IdVal = MCBinaryExpr::create(BE->getOpcode(), BE->getRHS(), BE->getLHS(),
-                                   getContext());
-  }
-
-  Operands.push_back(MipsOperand::CreateMem(std::move(op), IdVal, S, E, *this));
+  E = Base->getEndLoc();
+  Operands.push_back(
+      MipsOperand::CreateMem(std::move(Base), Address, S, E, *this));
   return ParseStatus::Success;
 }
 
@@ -6769,8 +6778,9 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
       } else {
         MCRegister TmpReg = PrevReg + 1;
         while (TmpReg <= Reg) {
-          if ((((TmpReg < Mips::S0) || (TmpReg > Mips::S7)) && !isGP64bit()) ||
-              (((TmpReg < Mips::S0_64) || (TmpReg > Mips::S7_64)) &&
+          if ((((TmpReg < Mips::R16) || (TmpReg > Mips::R23)) &&
+               !isGP64bit()) ||
+              (((TmpReg < Mips::R16_64) || (TmpReg > Mips::R23_64)) &&
                isGP64bit()))
             return Error(E, "invalid register operand");
 
@@ -6783,14 +6793,14 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
       RegRange = false;
     } else {
       if (!PrevReg.isValid() &&
-          ((isGP64bit() && (Reg != Mips::S0_64) && (Reg != Mips::RA_64)) ||
-           (!isGP64bit() && (Reg != Mips::S0) && (Reg != Mips::RA))))
+          ((isGP64bit() && (Reg != Mips::R16_64) && (Reg != Mips::RA_64)) ||
+           (!isGP64bit() && (Reg != Mips::R16) && (Reg != Mips::RA))))
         return Error(E, "$16 or $31 expected");
       if (!(((Reg == Mips::FP || Reg == Mips::RA ||
-              (Reg >= Mips::S0 && Reg <= Mips::S7)) &&
+              (Reg >= Mips::R16 && Reg <= Mips::R23)) &&
              !isGP64bit()) ||
             ((Reg == Mips::FP_64 || Reg == Mips::RA_64 ||
-              (Reg >= Mips::S0_64 && Reg <= Mips::S7_64)) &&
+              (Reg >= Mips::R16_64 && Reg <= Mips::R23_64)) &&
              isGP64bit())))
         return Error(E, "invalid register operand");
       if (PrevReg.isValid() && (Reg != PrevReg + 1) &&
@@ -6817,8 +6827,7 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
 
   SMLoc E = Parser.getTok().getLoc();
   Operands.push_back(MipsOperand::CreateRegList(Regs, S, E, *this));
-  parseMemOperand(Operands);
-  return ParseStatus::Success;
+  return parseMemOffsetOperand(Operands);
 }
 
 /// Sometimes (i.e. load/stores) the operand may be followed immediately by
@@ -6910,30 +6919,22 @@ bool MipsAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Read the remaining operands.
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    // Read the first operand.
-    if (parseOperand(Operands, Name)) {
-      SMLoc Loc = getLexer().getLoc();
-      return Error(Loc, "unexpected token in argument list");
-    }
-    if (getLexer().is(AsmToken::LBrac) && parseBracketSuffix(Name, Operands))
-      return true;
-    // AFAIK, parenthesis suffixes are never on the first operand
-
-    while (getLexer().is(AsmToken::Comma)) {
-      Parser.Lex(); // Eat the comma.
+    do {
+      bool IsFirstOperand = Operands.size() == 1;
       // Parse and remember the operand.
       if (parseOperand(Operands, Name)) {
         SMLoc Loc = getLexer().getLoc();
         return Error(Loc, "unexpected token in argument list");
       }
-      // Parse bracket and parenthesis suffixes before we iterate
+      // Parse suffixes before we iterate. First operands handle parentheses
+      // through their custom parser.
       if (getLexer().is(AsmToken::LBrac)) {
         if (parseBracketSuffix(Name, Operands))
           return true;
-      } else if (getLexer().is(AsmToken::LParen) &&
+      } else if (!IsFirstOperand && getLexer().is(AsmToken::LParen) &&
                  parseParenSuffix(Name, Operands))
         return true;
-    }
+    } while (parseOptionalToken(AsmToken::Comma));
   }
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     SMLoc Loc = getLexer().getLoc();

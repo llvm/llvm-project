@@ -201,7 +201,6 @@ protected:
   Context &Ctx;
   // This is used by eraseFromParent().
   void clearValue() { Val = nullptr; }
-  template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
   LLVM_ABI Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
   /// Disable copies.

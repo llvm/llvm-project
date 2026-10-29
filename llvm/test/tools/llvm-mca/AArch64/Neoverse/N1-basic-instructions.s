@@ -428,10 +428,10 @@
 # CHECK-NEXT:  1      1     0.33                        clz	x26, x4
 # CHECK-NEXT:  1      1     0.33                        cls	w3, w5
 # CHECK-NEXT:  1      1     0.33                        cls	x20, x5
-# CHECK-NEXT:  1      12    5.00                        udiv	w0, w7, w10
-# CHECK-NEXT:  1      20    5.00                        udiv	x9, x22, x4
-# CHECK-NEXT:  1      12    5.00                        sdiv	w12, w21, w0
-# CHECK-NEXT:  1      20    5.00                        sdiv	x13, x2, x1
+# CHECK-NEXT:  1      7     7.00                        udiv	w0, w7, w10
+# CHECK-NEXT:  1      7     7.00                        udiv	x9, x22, x4
+# CHECK-NEXT:  1      7     7.00                        sdiv	w12, w21, w0
+# CHECK-NEXT:  1      7     7.00                        sdiv	x13, x2, x1
 # CHECK-NEXT:  1      1     0.33                        lsl	w11, w12, w13
 # CHECK-NEXT:  1      1     0.33                        lsl	x14, x15, x16
 # CHECK-NEXT:  1      1     0.33                        lsr	w17, w18, w19
@@ -1278,7 +1278,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 502.67 197.67 197.67 293.00 161.00
+# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 510.67 197.67 197.67 293.00 161.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1700,10 +1700,10 @@
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     clz	x26, x4
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     cls	w3, w5
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     cls	x20, x5
-# CHECK-NEXT:  -      -      -      -      -     5.00    -      -      -      -     udiv	w0, w7, w10
-# CHECK-NEXT:  -      -      -      -      -     5.00    -      -      -      -     udiv	x9, x22, x4
-# CHECK-NEXT:  -      -      -      -      -     5.00    -      -      -      -     sdiv	w12, w21, w0
-# CHECK-NEXT:  -      -      -      -      -     5.00    -      -      -      -     sdiv	x13, x2, x1
+# CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -     udiv	w0, w7, w10
+# CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -     udiv	x9, x22, x4
+# CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -     sdiv	w12, w21, w0
+# CHECK-NEXT:  -      -      -      -      -     7.00    -      -      -      -     sdiv	x13, x2, x1
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     lsl	w11, w12, w13
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     lsl	x14, x15, x16
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     lsr	w17, w18, w19
