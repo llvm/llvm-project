@@ -39,7 +39,7 @@ using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
 namespace AMDGPU {
-class AsyncStages;
+enum class AsyncStages : uint32_t;
 } // namespace AMDGPU
 
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;

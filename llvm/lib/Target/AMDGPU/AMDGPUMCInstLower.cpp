@@ -380,7 +380,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         std::string Comment;
         raw_string_ostream OS(Comment);
         OS << " asyncmark(stages="
-           << AMDGPU::AsyncStages::fromMaskOperand(MI->getOperand(0).getImm())
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(0).getImm())
            << ')';
         OutStreamer->emitRawComment(Comment);
       }
@@ -392,7 +392,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         std::string Comment;
         raw_string_ostream OS(Comment);
         OS << " wait_asyncmark(" << MI->getOperand(0).getImm() << ", stages="
-           << AMDGPU::AsyncStages::fromMaskOperand(MI->getOperand(1).getImm())
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(1).getImm())
            << ')';
         OutStreamer->emitRawComment(Comment);
       }
