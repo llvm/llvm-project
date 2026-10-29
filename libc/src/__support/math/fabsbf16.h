@@ -9,34 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FABSBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_FABSBF16_H
 
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
-
-#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
-
-#include "src/__support/FPUtil/BasicOperations.h"
-
-namespace LIBC_NAMESPACE_DECL {
-namespace math {
-
-LIBC_INLINE constexpr __bf16 fabsbf16(__bf16 x) { return fputil::abs(x); }
-
-} // namespace math
-} // namespace LIBC_NAMESPACE_DECL
-
-#else // !defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
-
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE constexpr bfloat16 fabsbf16(bfloat16 x) { return fputil::abs(x); }
 
+#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+LIBC_INLINE constexpr __bf16 fabsbf16(__bf16 x) { return fputil::abs(x); }
+#endif
+
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_BUILTIN_BFLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_FABSBF16_H
