@@ -9675,7 +9675,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   unsigned PrefixStep =
       IsIncrement ? diag::DefaultedPostfixOperatorStep::PrefixIncrement
                   : diag::DefaultedPostfixOperatorStep::PrefixDecrement;
-  UnresolvedSet<16> Fns;
+  UnresolvedSet<2> Fns;
   if (auto *DFI = FD->getDefaultedOrDeletedInfo())
     Fns.assign(DFI->getUnqualifiedLookups().begin(),
                DFI->getUnqualifiedLookups().end());
@@ -9753,7 +9753,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
     assert((S->getEntity() == FD ||
             S->getEntity() == FD->getLexicalDeclContext()) &&
            "lookup scope is not equivalent to the function-body");
-    UnresolvedSet<16> Operators;
+    UnresolvedSet<2> Operators;
     LookupOverloadedOperatorName(IsIncrement ? OO_PlusPlus : OO_MinusMinus, S,
                                  Operators);
     FD->setDefaultedOrDeletedInfo(
@@ -10002,7 +10002,7 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
       Kind == PostfixOperatorKind::Increment ? UO_PreInc : UO_PreDec;
   ExprResult Prefix;
   if (Obj.get()->getType()->isOverloadableType()) {
-    UnresolvedSet<16> Fns;
+    UnresolvedSet<2> Fns;
     if (auto *DFI = FD->getDefaultedOrDeletedInfo())
       Fns.assign(DFI->getUnqualifiedLookups().begin(),
                  DFI->getUnqualifiedLookups().end());
