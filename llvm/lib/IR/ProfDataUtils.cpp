@@ -358,24 +358,26 @@ BlockWaveCountPreserver::BlockWaveCountPreserver(Function &F) : F(F) {
     SmallVector<Metadata *, 6> Operands;
     if (MD)
       Operands.assign(MD->op_begin(), MD->op_end());
+    BlockIndices.try_emplace(&BB, Blocks.size());
     Blocks.push_back({&BB, Term, TrackingMDNodeRef(MD), std::move(Operands),
                       Mapping->BlockIds[Index], Mapping->HasCounts[Index]});
   }
 }
 
 void BlockWaveCountPreserver::invalidate(const BasicBlock &BB) {
-  for (BlockProfile &Block : Blocks)
-    if (Block.Block == &BB) {
-      Block.HasCount = false;
-      Invalidated = true;
-    }
+  auto It = BlockIndices.find(&BB);
+  if (It != BlockIndices.end() && Blocks[It->second].Block == &BB) {
+    Blocks[It->second].HasCount = false;
+    Invalidated = true;
+  }
 }
 
 void BlockWaveCountPreserver::forget(const BasicBlock &BB) {
-  unsigned Size = Blocks.size();
-  llvm::erase_if(Blocks,
-                 [&](const BlockProfile &Block) { return Block.Block == &BB; });
-  Invalidated |= Blocks.size() != Size;
+  auto It = BlockIndices.find(&BB);
+  if (It != BlockIndices.end() && Blocks[It->second].Block == &BB) {
+    Blocks[It->second].Block = nullptr;
+    Invalidated = true;
+  }
 }
 
 void BlockWaveCountPreserver::restore() {
@@ -431,6 +433,148 @@ void BlockWaveCountPreserver::restore() {
   }
 
   writeWaveProfile(F, Table, Ids, HasCounts);
+}
+
+bool BlockWaveCountUpdater::hasProfile() {
+  initialize();
+  return Profile->hasProfile();
+}
+
+BlockWaveCountUpdater::BlockState
+BlockWaveCountUpdater::capture(BasicBlock &BB) {
+  Instruction *Term = BB.getTerminator();
+  MDNode *MD = Term->getMetadata(LLVMContext::MD_wave_profile_block);
+  BlockState State{&BB, Term, TrackingMDNodeRef(MD), {}, {}, {}};
+  if (MD)
+    State.Operands.assign(MD->op_begin(), MD->op_end());
+  for (BasicBlock *Succ : successors(&BB))
+    State.Successors.push_back(Succ);
+  for (Value *Op : Term->operand_values())
+    if (!isa<BasicBlock>(Op))
+      State.Controls.push_back(Op);
+  return State;
+}
+
+void BlockWaveCountUpdater::initialize() {
+  if (Profile)
+    return;
+  Profile.emplace(F);
+  Table.reset(F.getMetadata(LLVMContext::MD_wave_profile));
+  if (Profile->hasProfile())
+    for (BasicBlock &BB : F)
+      Blocks.try_emplace(&BB, capture(BB));
+}
+
+void BlockWaveCountUpdater::invalidateSuccessors(const BlockState &State) {
+  for (const WeakVH &Succ : State.Successors)
+    if (auto *BB = dyn_cast_or_null<BasicBlock>(Succ))
+      Profile->invalidate(*BB);
+}
+
+void BlockWaveCountUpdater::check(BasicBlock &BB) {
+  BlockState Current = capture(BB);
+  auto It = Blocks.find(&BB);
+  if (It == Blocks.end() || It->second.Block != &BB || It->second.Removed) {
+    // An unrecorded new block has no measured event. Do not reinterpret copied
+    // or independently supplied metadata as one of our original identities.
+    ConflictingMetadata |= Current.Metadata.get() != nullptr;
+    if (It != Blocks.end() && !It->second.Removed)
+      invalidateSuccessors(It->second);
+    invalidateSuccessors(Current);
+    Blocks[&BB] = std::move(Current);
+    return;
+  }
+
+  BlockState &Saved = It->second;
+  if (Saved.Terminator != Current.Terminator ||
+      Saved.Metadata != Current.Metadata ||
+      (Saved.Metadata &&
+       !hasWaveProfileOperands(Saved.Metadata, Saved.Operands)) ||
+      Saved.Successors != Current.Successors ||
+      Saved.Controls != Current.Controls) {
+    Profile->invalidate(BB);
+    invalidateSuccessors(Saved);
+    invalidateSuccessors(Current);
+  }
+  Saved = std::move(Current);
+}
+
+void BlockWaveCountUpdater::splitEdge(BasicBlock &Pred, BasicBlock &Succ,
+                                      BasicBlock &NewBB) {
+  if (!hasProfile())
+    return;
+  assert(Pred.getParent() == &F && Succ.getParent() == &F &&
+         NewBB.getParent() == &F && "wave update belongs to another function");
+  check(Pred);
+  auto It = Blocks.find(&NewBB);
+  if (It != Blocks.end() && !It->second.Removed)
+    invalidateSuccessors(It->second);
+  Blocks[&NewBB] = capture(NewBB);
+  for (WeakVH &Target : Blocks.find(&Pred)->second.Successors)
+    if (Target == &Succ)
+      Target = &NewBB;
+  Changed = true;
+}
+
+void BlockWaveCountUpdater::removeBlock(BasicBlock &BB) {
+  if (!hasProfile())
+    return;
+  BasicBlock *Pred = BB.getSinglePredecessor();
+  assert(BB.getParent() == &F && "wave update belongs to another function");
+  assert(Pred && BB.getSingleSuccessor() &&
+         "expected a single-predecessor edge");
+  check(*Pred);
+  check(BB);
+  for (WeakVH &Target : Blocks.find(Pred)->second.Successors)
+    if (Target == &BB)
+      Target = BB.getSingleSuccessor();
+  Blocks.find(&BB)->second.Removed = true;
+  Profile->forget(BB);
+  Changed = true;
+}
+
+void BlockWaveCountUpdater::mergeBlock(BasicBlock &BB, BasicBlock &Pred) {
+  if (!hasProfile())
+    return;
+  assert(BB.getParent() == &F && Pred.getParent() == &F &&
+         "wave update belongs to another function");
+  check(Pred);
+  check(BB);
+  BlockState &SavedPred = Blocks.find(&Pred)->second;
+  BlockState &SavedBB = Blocks.find(&BB)->second;
+  SavedPred.Terminator = SavedBB.Terminator;
+  SavedPred.Metadata.reset();
+  SavedPred.Operands.clear();
+  SavedPred.Successors = SavedBB.Successors;
+  SavedPred.Controls = SavedBB.Controls;
+  SavedBB.Removed = true;
+  Profile->forget(BB);
+  Changed = true;
+}
+
+void BlockWaveCountUpdater::apply() {
+  if (!Changed)
+    return;
+  Changed = false;
+  // A newer profile takes precedence, subject to pending invalidations in the
+  // snapshot. Do not compare its block records against the old graph.
+  if (F.getMetadata(LLVMContext::MD_wave_profile) != Table) {
+    Profile->restore();
+    return;
+  }
+  // Check every block before rebuilding any record, so an unhandled rewrite
+  // cannot acquire fresh edges while retaining an old measured count.
+  for (BasicBlock &BB : F)
+    check(BB);
+  for (const auto &Entry : Blocks) {
+    const BlockState &State = Entry.second;
+    if (!State.Block && !State.Removed)
+      invalidateSuccessors(State);
+  }
+  if (ConflictingMetadata)
+    clearBlockWaveCounts(F);
+  else
+    Profile->restore();
 }
 
 // MD_prof nodes have the following layout

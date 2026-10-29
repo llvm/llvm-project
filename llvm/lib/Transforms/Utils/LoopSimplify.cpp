@@ -61,6 +61,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -114,7 +115,8 @@ static void placeSplitBlockCarefully(BasicBlock *NewBB,
 ///
 BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
                                          LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                         bool PreserveLCSSA) {
+                                         bool PreserveLCSSA,
+                                         BlockWaveCountUpdater *WPU) {
   BasicBlock *Header = L->getHeader();
 
   // Compute the set of predecessors of the loop that are not in the loop.
@@ -135,7 +137,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
   // Split out the loop pre-header.
   BasicBlock *PreheaderBB;
   PreheaderBB = SplitBlockPredecessors(Header, OutsideBlocks, ".preheader", DT,
-                                       LI, MSSAU, PreserveLCSSA);
+                                       LI, MSSAU, PreserveLCSSA, WPU);
   if (!PreheaderBB)
     return nullptr;
 
@@ -212,7 +214,8 @@ static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT,
 static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
                                 DominatorTree *DT, LoopInfo *LI,
                                 ScalarEvolution *SE, bool PreserveLCSSA,
-                                AssumptionCache *AC, MemorySSAUpdater *MSSAU) {
+                                AssumptionCache *AC, MemorySSAUpdater *MSSAU,
+                                BlockWaveCountUpdater *WPU) {
   // Don't try to separate loops without a preheader.
   if (!Preheader)
     return nullptr;
@@ -267,7 +270,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     SE->forgetLoop(L);
 
   BasicBlock *NewBB = SplitBlockPredecessors(Header, OuterLoopPreds, ".outer",
-                                             DT, LI, MSSAU, PreserveLCSSA);
+                                             DT, LI, MSSAU, PreserveLCSSA, WPU);
 
   // Make sure that NewBB is put someplace intelligent, which doesn't mess up
   // code layout too horribly.
@@ -325,7 +328,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 
   // Split edges to exit blocks from the inner loop, if they emerged in the
   // process of separating the outer one.
-  formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA);
+  formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA, WPU);
 
   if (PreserveLCSSA) {
     // Fix LCSSA form for L. Some values, which previously were only used inside
@@ -472,7 +475,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                            BlockWaveCountUpdater *WPU) {
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -532,7 +536,7 @@ ReprocessLoop:
   // Does the loop already have a preheader?  If so, don't insert one.
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    Preheader = InsertPreheaderForLoop(L, DT, LI, MSSAU, PreserveLCSSA);
+    Preheader = InsertPreheaderForLoop(L, DT, LI, MSSAU, PreserveLCSSA, WPU);
     if (Preheader)
       Changed = true;
   }
@@ -541,7 +545,7 @@ ReprocessLoop:
   // predecessors that are inside of the loop.  This check guarantees that the
   // loop preheader/header will dominate the exit blocks.  If the exit block has
   // predecessors from outside of the loop, split the edge now.
-  if (formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA))
+  if (formDedicatedExitBlocks(L, DT, LI, MSSAU, PreserveLCSSA, WPU))
     Changed = true;
 
   if (MSSAU && VerifyMemorySSA)
@@ -556,7 +560,7 @@ ReprocessLoop:
     // common backedge instead.
     if (L->getNumBackEdges() < 8) {
       if (Loop *OuterL = separateNestedLoop(L, Preheader, DT, LI, SE,
-                                            PreserveLCSSA, AC, MSSAU)) {
+                                            PreserveLCSSA, AC, MSSAU, WPU)) {
         ++NumNested;
         // Enqueue the outer loop as it should be processed next in our
         // depth-first nest walk.
@@ -691,7 +695,8 @@ ReprocessLoop:
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                        BlockWaveCountUpdater *WPU) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -704,6 +709,11 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
            "Requested to preserve LCSSA, but it's already broken.");
   }
 #endif
+
+  BlockWaveCountUpdater LocalWPU(*L->getHeader()->getParent());
+  bool OwnWaveUpdates = !WPU;
+  if (!WPU)
+    WPU = &LocalWPU;
 
   // Worklist maintains our depth-first queue of loops in this nest to process.
   SmallVector<Loop *, 4> Worklist;
@@ -719,7 +729,10 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               AC, MSSAU, PreserveLCSSA);
+                               AC, MSSAU, PreserveLCSSA, WPU);
+
+  if (OwnWaveUpdates)
+    WPU->apply();
 
   // Changing exit conditions for blocks may affect exit counts of this loop and
   // any of its parents, so we must invalidate the entire subtree if we've made
@@ -800,9 +813,13 @@ bool LoopSimplify::runOnFunction(Function &F) {
 
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
+  BlockWaveCountUpdater WPU(F);
+
   // Simplify each loop nest in the function.
   for (auto *L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA);
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA, &WPU);
+  WPU.apply();
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -828,12 +845,14 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
+  BlockWaveCountUpdater WPU(F);
 
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
   // after simplifying the loops. MemorySSA is preserved if it exists.
   for (auto *L : *LI)
-    Changed |=
-        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), /*PreserveLCSSA*/ false);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(),
+                            /*PreserveLCSSA*/ false, &WPU);
+  WPU.apply();
 
   if (!Changed)
     return PreservedAnalyses::all();

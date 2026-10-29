@@ -2731,6 +2731,18 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   assert(CalledFunc && !CalledFunc->isDeclaration() &&
          "CanInlineCallSite should have verified direct call to definition");
 
+  // Recursive inlining changes the invocation population of the caller itself.
+  if (Caller == CalledFunc && Caller->getMetadata(LLVMContext::MD_wave_profile))
+    clearBlockWaveCounts(*Caller);
+  if (auto *II = dyn_cast<InvokeInst>(&CB)) {
+    // Newly exposed unwind paths may change the wave populations at either
+    // continuation; do not infer their visits from scalar return counts.
+    II->getNormalDest()->getTerminator()->setMetadata(
+        LLVMContext::MD_wave_profile_block, nullptr);
+    II->getUnwindDest()->getTerminator()->setMetadata(
+        LLVMContext::MD_wave_profile_block, nullptr);
+  }
+
   // Determine if we are dealing with a call in an EHPad which does not unwind
   // to caller.
   bool EHPadForCallUnwindsLocally = false;
@@ -2847,6 +2859,12 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
                               InlinedFunctionInfo);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
+
+    // Callee counts aggregate all its invocations, not this callsite. Imported
+    // blocks remain unmeasured in the caller.
+    for (BasicBlock &BB : make_range(FirstNewBlock, Caller->end()))
+      BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                      nullptr);
 
     // Insert retainRV/clainRV runtime calls.
     objcarc::ARCInstKind RVCallKind = objcarc::getAttachedARCFunctionKind(&CB);
@@ -3404,6 +3422,13 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // We want to clone the entire callee function into the hole between the
   // "starter" and "ender" blocks.  How we accomplish this depends on whether
   // this is an invoke instruction or a call instruction.
+  // Splitting the call block moves its terminator to the continuation, whose
+  // wave population is not the original block-entry event. Drop that
+  // association and let the reader conservatively invalidate its changed
+  // neighborhood.
+  OrigBB->getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                       nullptr);
+
   BasicBlock *AfterCallBB;
   UncondBrInst *CreatedBranchToNormalDest = nullptr;
   if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {

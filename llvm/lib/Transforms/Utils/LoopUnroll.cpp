@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
@@ -68,6 +69,7 @@
 #include <assert.h>
 #include <cmath>
 #include <numeric>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -1054,6 +1056,18 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
+  // Fixed-trip full unrolling preserves surrounding execution events. The
+  // loop bodies and exit can inherit one another's terminators when merged;
+  // discard those identities rather than reusing their aggregate wave counts.
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (CompletelyUnroll && ExitingBlocks.size() == 1 && ExitBlocks.size() == 1 &&
+      SE->getSmallConstantTripCount(L) == ULO.Count) {
+    WaveProfile.emplace(*Header->getParent());
+    for (BasicBlock *BB : L->getBlocks())
+      WaveProfile->forget(*BB);
+    WaveProfile->forget(*ExitBlocks.front());
+  }
+
   using namespace ore;
 
   // Determine whether this loop originated from the vectorizer so we can
@@ -1560,6 +1574,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   IterCounts.reserve(Latches.size() + 1);
   CondLatches.reserve(Latches.size());
   CondLatchNexts.reserve(Latches.size());
+
+  if (WaveProfile)
+    WaveProfile->restore();
 
   // Merge adjacent basic blocks, if possible.
   for (auto [I, Latch] : enumerate(Latches)) {
