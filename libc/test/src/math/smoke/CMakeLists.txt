@@ -2802,6 +2802,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fminf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf80_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.math.fminf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fminbf16_test
   SUITE
     libc-math-smoke-tests
@@ -2883,6 +2898,21 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmaxf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaxf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf80_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.math.fmaxf80
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )

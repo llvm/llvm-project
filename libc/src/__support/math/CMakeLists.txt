@@ -1135,6 +1135,16 @@ add_header_library(
     MISC_MATH_BASIC_OPS_OPT
 )
 
+add_header_library(
+  fminf80
+  HDRS
+    fminf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
 
 add_header_library(
   fminimum
@@ -3897,6 +3907,16 @@ add_header_library(
     libc.src.__support.macros.config
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaxf80
+  HDRS
+    fmaxf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(

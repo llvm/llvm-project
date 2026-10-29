@@ -679,6 +679,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
   EXPECT_FP_EQ(Float80(0.0),
                LIBC_NAMESPACE::shared::copysignf80(Float80(0.0), Float80(0.0)));
   EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::fabsf80(Float80(0.0)));
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::fmaxf80(Float80(0.0), Float80(0.0)));
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::fminf80(Float80(0.0), Float80(0.0)));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
