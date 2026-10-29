@@ -466,7 +466,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   unsigned BitWidth = Ty->getScalarSizeInBits();
 
   const APInt *AC;
-  if (match(Op0, m_APInt(AC))) {
+  if (match(Op0, m_APIntAllowPoison(AC))) {
     assert(!AC->isZero() && "Expected simplify of shifted zero");
 
     // Try to pre-shift a constant shifted by a variable amount added with a
@@ -509,11 +509,14 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
     // C1 << (C2 - X) -> (C1 << C2) >> X
     // C1 >> (C2 - X) -> (C1 >> C2) << X
-    // X must be u<= C2 (checked by NUWSub).
+    // X must be u<= C2 (checked by NUWSub). If C2 is BW-1, a wrapping C2 - X
+    // is u>= BW, so the shift would be poison.
     // Also match (X ^ C2) if equivalent to (C2 - X).
     uint64_t C2;
     Value *X;
-    if (match(Op1, m_NUWSub(m_ConstantInt(C2), m_Value(X))) ||
+    if ((match(Op1, m_Sub(m_ConstantInt(C2), m_Value(X))) &&
+         (C2 == BitWidth - 1 ||
+          cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap())) ||
         (match(Op1, m_Xor(m_Value(X), m_ConstantInt(C2))) &&
          (C2 | computeKnownBits(X, &I).Zero).isAllOnes())) {
       if (I.getOpcode() == Instruction::Shl) {
@@ -1397,11 +1400,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   }
 
   if (match(Op0, m_One())) {
-    // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1
-    if (match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
-      return BinaryOperator::CreateLShr(
-          ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
-
     // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
     // 1 << (cttz X) --> -X & X
     if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
