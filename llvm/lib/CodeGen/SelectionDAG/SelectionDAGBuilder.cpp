@@ -1652,7 +1652,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
   auto *Poison = PoisonValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
