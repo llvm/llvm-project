@@ -5,5 +5,6 @@ add_libc_test(
   COMPILE_OPTIONS
     -Wno-unused-variable # Only signature tests, declared variables are unused.
   DEPENDS
+    libc.src.__support.CPP.functional
     libc.src.__support.OSUtil.osutil
 )

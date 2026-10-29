@@ -446,10 +446,6 @@ struct VPlanTransforms {
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
-  /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
-  /// VPExpandSCEVRecipe there expanding the same SCEV, if any.
-  static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
-
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -493,11 +489,6 @@ struct VPlanTransforms {
       VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
       bool RequiresScalarEpilogue, VPValue *Step,
       std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
-
-  /// Materialize the backedge-taken count to be computed explicitly using
-  /// VPInstructions.
-  static void materializeBackedgeTakenCount(VPlan &Plan,
-                                            VPBasicBlock *VectorPH);
 
   /// Add explicit Unpack recipes to extract scalars from vectors as needed.
   static void materializeUnpacks(VPlan &Plan);
