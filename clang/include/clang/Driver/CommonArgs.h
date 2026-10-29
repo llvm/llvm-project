@@ -155,10 +155,6 @@ void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 
-void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                          const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
-
 void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool as_needed);
 

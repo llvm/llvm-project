@@ -5961,7 +5961,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
-  SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, StrideIntVal);
+  SPtrInfo.StrideVal =
+      ConstantInt::getSigned(StrideTy, StrideIntVal, /*ImplicitTrunc=*/true);
   SPtrInfo.Ty = cast<FixedVectorType>(getWidenedType(NewScalarTy, VecSz));
   return true;
 }
@@ -35077,7 +35078,8 @@ private:
                 Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
                 IsSigned);
           Value *Scale = ConstantVector::getSplat(
-              EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
+              EC, ConstantInt::get(DestTy->getScalarType(), Cnt,
+                                   /*IsSigned=*/false, /*ImplicitTrunc=*/true));
           LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;

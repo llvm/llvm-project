@@ -27,3 +27,6 @@ struct t1 { };
 void f1(t1 x, t1 y) {
     x + y;
 }
+
+#define BAD ;
+int x = BAD;
