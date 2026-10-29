@@ -1,8 +1,11 @@
 ; -spirv-preserve-auxdata: emit NonSemantic.AuxData for attrs/metadata.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; Off by default: no AuxData records at all, even with the extension enabled.
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
@@ -15,6 +18,27 @@
 ; OFF-NOT: OpString "some.md"
 ; OFF-NOT: OpString "spv.was-available-externally"
 
+; Function records forward-reference the function, which requires
+; SPV_KHR_relaxed_extended_instruction; without it they are dropped.
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
+; RUN:   %s -o %t
+; Separate FileCheck runs: NOTs without positive checks scan the whole output.
+; RUN: FileCheck %s --input-file=%t --check-prefix=NORELAXED
+; RUN: FileCheck %s --input-file=%t --check-prefix=NOFWD
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
+; RUN:   %s -o - -filetype=obj | spirv-val %}
+
+; NORELAXED-DAG: OpName %[[#gv:]] "gv"
+; NORELAXED-DAG: %[[#mdname:]] = OpString "some.md"
+; NORELAXED-DAG: %[[#]] = OpExtInst %[[#]] %[[#]] {{.+}} %[[#gv]] %[[#mdname]]
+
+; NOFWD-NOT: SPV_KHR_relaxed_extended_instruction
+; NOFWD-NOT: OpString "my-attr"
+; NOFWD-NOT: OpExtInstWithForwardRefsKHR
+
+; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#akind:]] = OpString "my-attr"
 ; CHECK-DAG: %[[#aval:]]  = OpString "val"
@@ -34,8 +58,9 @@
 ; CHECK-NOT: OpString "spv.was-available-externally"
 
 ; Records emit in module order; numeric metadata becomes OpConstant operands.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fn]] %[[#akind]] %[[#aval]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fn]] %[[#nounwind]]
+; Functions are defined later, so their records are forward references.
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fn]] %[[#akind]] %[[#aval]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fn]] %[[#nounwind]]
 ; CHECK-DAG: %[[#mdconst:]] = OpConstant %[[#i32]] 5
 ; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#gv]] %[[#mdname]] %[[#mdval]]
 ; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#gv]] %[[#numname]] %[[#mdconst]]

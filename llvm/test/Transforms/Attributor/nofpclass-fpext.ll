@@ -42,7 +42,7 @@ define <2 x double> @ret_fpext_v2f32_to_v2f64_nonan(<2 x float> nofpclass(nan) %
 }
 
 define double @ret_fpext_f32_to_f64_noqnan(float nofpclass(qnan) %arg0) {
-; CHECK-LABEL: define nofpclass(qnan sub) double @ret_fpext_f32_to_f64_noqnan
+; CHECK-LABEL: define nofpclass(sub) double @ret_fpext_f32_to_f64_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
 ; CHECK-NEXT:    ret double [[EXT]]
@@ -252,7 +252,7 @@ define <2 x float> @ret_fpext_v2bf16_v2f32_nonan(<2 x bfloat> nofpclass(nan) %ar
 }
 
 define float @ret_fpext_bf16_f32_noqnan(bfloat nofpclass(qnan) %arg0) {
-; CHECK-LABEL: define nofpclass(qnan) float @ret_fpext_bf16_f32_noqnan
+; CHECK-LABEL: define float @ret_fpext_bf16_f32_noqnan
 ; CHECK-SAME: (bfloat nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -382,7 +382,7 @@ define double @ret_fpext_bf16_f64_nonan(bfloat nofpclass(nan) %arg0) {
 }
 
 define double @ret_fpext_bf16_f64_noqnan(bfloat nofpclass(qnan) %arg0) {
-; CHECK-LABEL: define nofpclass(qnan sub) double @ret_fpext_bf16_f64_noqnan
+; CHECK-LABEL: define nofpclass(sub) double @ret_fpext_bf16_f64_noqnan
 ; CHECK-SAME: (bfloat nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to double
 ; CHECK-NEXT:    ret double [[EXT]]
@@ -520,5 +520,229 @@ define double @ret_fpext_bf16_f64_nonorm_sub(bfloat nofpclass(norm sub) %arg0) {
   %ext = fpext bfloat %arg0 to double
   ret double %ext
 }
+
+define float @ret_fpext_bf16_f32__sub(bfloat nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero norm) float @ret_fpext_bf16_f32__sub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__psub(bfloat nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero nsub norm) float @ret_fpext_bf16_f32__psub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__nsub(bfloat nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero psub norm) float @ret_fpext_bf16_f32__nsub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__norm(bfloat nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @ret_fpext_bf16_f32__norm
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define fp128 @ret_fpext_f80_f128__sub(x86_fp80 nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero norm) fp128 @ret_fpext_f80_f128__sub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext x86_fp80 [[ARG0]] to fp128
+; CHECK-NEXT:    ret fp128 [[EXT]]
+;
+  %ext = fpext x86_fp80 %arg0 to fp128
+  ret fp128 %ext
+}
+
+define fp128 @ret_fpext_f80_f128__psub(x86_fp80 nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero nsub norm) fp128 @ret_fpext_f80_f128__psub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext x86_fp80 [[ARG0]] to fp128
+; CHECK-NEXT:    ret fp128 [[EXT]]
+;
+  %ext = fpext x86_fp80 %arg0 to fp128
+  ret fp128 %ext
+}
+
+define fp128 @ret_fpext_f80_f128__nsub(x86_fp80 nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero psub norm) fp128 @ret_fpext_f80_f128__nsub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext x86_fp80 [[ARG0]] to fp128
+; CHECK-NEXT:    ret fp128 [[EXT]]
+;
+  %ext = fpext x86_fp80 %arg0 to fp128
+  ret fp128 %ext
+}
+
+define fp128 @ret_fpext_f80_f128__norm(x86_fp80 nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) fp128 @ret_fpext_f80_f128__norm
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext x86_fp80 [[ARG0]] to fp128
+; CHECK-NEXT:    ret fp128 [[EXT]]
+;
+  %ext = fpext x86_fp80 %arg0 to fp128
+  ret fp128 %ext
+}
+
+; bf16 subnormals stay subnormal in f32, so the conversion is exact but the
+; result is still exposed to the output mode.
+
+define float @ret_fpext_bf16_f32__negnormal_negsubnormal(bfloat nofpclass(nan inf zero psub pnorm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf zero psub pnorm) float @ret_fpext_bf16_f32__negnormal_negsubnormal
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+; Every f32 subnormal is normal in f64, so no subnormal result survives and the
+; output mode cannot reintroduce a zero. The input mode still can, by flushing
+; the source to a zero before the conversion.
+
+define double @ret_fpext_f32_f64__negnormal_negsubnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub pnorm) double @ret_fpext_f32_f64__negnormal_negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_f64__negnormal_negsubnormal__mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf sub pnorm) double @ret_fpext_f32_f64__negnormal_negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_f64__negnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero sub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub pnorm) double @ret_fpext_f32_f64__negnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_f64__negnormal__mode_ftpz_dapz(float nofpclass(nan inf zero sub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub pnorm) double @ret_fpext_f32_f64__negnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_f64__negsubnormal__mode_dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub pnorm) double @ret_fpext_f32_f64__negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_f64__negsubnormal__mode_ftpz_dapz(float nofpclass(nan inf zero psub norm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf sub pnorm) double @ret_fpext_f32_f64__negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+; bf16 and f32 have the exact same exponent range, so a subnormal source stays
+; subnormal in the result. Both the input and the output mode can turn it into
+; a zero.
+
+define float @ret_fpext_bf16_f32__negnormal_negsubnormal__mode_dynamic_dynamic(bfloat nofpclass(nan inf zero psub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fpext_bf16_f32__negnormal_negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__negnormal_negsubnormal__mode_ftpz_dapz(bfloat nofpclass(nan inf zero psub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fpext_bf16_f32__negnormal_negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__negnormal__mode_dynamic_dynamic(bfloat nofpclass(nan inf zero sub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub pnorm) float @ret_fpext_bf16_f32__negnormal__mode_dynamic_dynamic
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__negnormal__mode_ftpz_dapz(bfloat nofpclass(nan inf zero sub pnorm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub pnorm) float @ret_fpext_bf16_f32__negnormal__mode_ftpz_dapz
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__negsubnormal__mode_dynamic_dynamic(bfloat nofpclass(nan inf zero psub norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @ret_fpext_bf16_f32__negsubnormal__mode_dynamic_dynamic
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+
+define float @ret_fpext_bf16_f32__negsubnormal__mode_ftpz_dapz(bfloat nofpclass(nan inf zero psub norm) %arg0) #1 {
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @ret_fpext_bf16_f32__negsubnormal__mode_ftpz_dapz
+; CHECK-SAME: (bfloat nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[ARG0]] to float
+; CHECK-NEXT:    ret float [[EXT]]
+;
+  %ext = fpext bfloat %arg0 to float
+  ret float %ext
+}
+attributes #0 = { denormal_fpenv(dynamic|dynamic) }
+attributes #1 = { denormal_fpenv(positivezero|positivezero) }
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}

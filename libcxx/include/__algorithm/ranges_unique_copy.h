@@ -70,7 +70,7 @@ struct __unique_copy {
              (forward_iterator<_InIter> ||
               (input_iterator<_OutIter> && same_as<iter_value_t<_InIter>, iter_value_t<_OutIter>>) ||
               indirectly_copyable_storable<_InIter, _OutIter>)
-  _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<_InIter, _OutIter>
+  constexpr unique_copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
     return std::__unique_copy<_RangeAlgPolicy>(
         std::move(__first),
@@ -88,7 +88,7 @@ struct __unique_copy {
              (forward_iterator<iterator_t<_Range>> ||
               (input_iterator<_OutIter> && same_as<range_value_t<_Range>, iter_value_t<_OutIter>>) ||
               indirectly_copyable_storable<iterator_t<_Range>, _OutIter>)
-  _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
     return std::__unique_copy<_RangeAlgPolicy>(
         ranges::begin(__range),

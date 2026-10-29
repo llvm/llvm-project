@@ -40,23 +40,23 @@ struct Trivial {
 
 // This CAN be zero-initialized.
 WithMemPtr mpt;
-// CIR-DAG: cir.global external @mpt = #cir.zero : !rec_WithMemPtr {alignment = 8 : i64}
+// CIR-DAG: cir.global external @mpt = #cir.zero : !rec_WithMemPtr align(8)
 // LLVM-DAG: @mpt = global %struct.WithMemPtr zeroinitializer, align 8
 
 WithMemPtr mpt_init{1, 2.0, &Other::func};
-// CIR-BEFORE-DAG: cir.global external @mpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.method<@_ZN5Other4funcEif> : !cir.method<!cir.func<(!cir.ptr<!rec_Other>, !s32i, !cir.float)> in !rec_Other>}> : !rec_WithMemPtr {alignment = 8 : i64}
-// CIR-AFTER-DAG: cir.global external @mpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.const_record<{#cir.global_view<@_ZN5Other4funcEif> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct}> : !rec_WithMemPtr {alignment = 8 : i64}
+// CIR-BEFORE-DAG: cir.global external @mpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.method<@_ZN5Other4funcEif> : !cir.method<!cir.func<(!cir.ptr<!rec_Other>, !s32i, !cir.float)> in !rec_Other>}> : !rec_WithMemPtr align(8)
+// CIR-AFTER-DAG: cir.global external @mpt_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.double, #cir.const_record<{#cir.global_view<@_ZN5Other4funcEif> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct}> : !rec_WithMemPtr align(8)
 // LLVM-DAG: @mpt_init = global %struct.WithMemPtr { i32 1, double 2.000000e+00, { i64, i64 } { i64 ptrtoint (ptr @_ZN5Other4funcEif to i64), i64 0 } }, align 8
 
 // This case has a trivial default constructor, but can't be zero-initialized.
 Trivial t;
-// CIR-BEFORE-DAG: cir.global external @t = #cir.const_record<{#cir.int<0> : !s32i, #cir.fp<0.000000e+00> : !cir.double, #cir.data_member<null> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial {alignment = 8 : i64}
-// CIR-AFTER-DAG: cir.global external @t = #cir.const_record<{#cir.int<0> : !s32i, #cir.fp<0.000000e+00> : !cir.double, #cir.int<-1> : !s64i}> : !rec_Trivial {alignment = 8 : i64} loc(#loc25)
+// CIR-BEFORE-DAG: cir.global external @t = #cir.const_record<{#cir.int<0> : !s32i, #cir.fp<0.000000e+00> : !cir.double, #cir.data_member<null> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial align(8)
+// CIR-AFTER-DAG: cir.global external @t = #cir.const_record<{#cir.int<0> : !s32i, #cir.fp<0.000000e+00> : !cir.double, #cir.int<-1> : !s64i}> : !rec_Trivial align(8) loc(#loc25)
 // LLVM-DAG: @t = global %struct.Trivial { i32 0, double 0.000000e+00, i64 -1 }, align 8
 
 Trivial t_init{1,2.2, &Other::x};
-// CIR-BEFORE-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial {alignment = 8 : i64}
-// CIR-AFTER-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.int<0> : !s64i}> : !rec_Trivial {alignment = 8 : i64}
+// CIR-BEFORE-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial align(8)
+// CIR-AFTER-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.int<0> : !s64i}> : !rec_Trivial align(8)
 // LLVM-DAG: @t_init = global %struct.Trivial { i32 1, double 2.200000e+00, i64 0 }, align 8
 
 extern "C" void local() {

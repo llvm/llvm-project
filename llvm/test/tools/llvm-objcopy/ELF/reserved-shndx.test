@@ -1,0 +1,33 @@
+## Processor-specific values supported for e_machine are preserved.
+# RUN: yaml2obj -DMACHINE=EM_MIPS -DINDEX=SHN_MIPS_SCOMMON %s -o %t.mips
+# RUN: llvm-objcopy %t.mips %t1
+# RUN: llvm-readelf -s %t1 | FileCheck %s --check-prefix=KEEP -DNDX='PRC[0xff03]'
+
+# KEEP: 1: {{.*}} [[NDX]] sym
+
+## Other values are rejected, except SHN_ABS and SHN_COMMON, and a few processor-specific values.
+# RUN: yaml2obj -DINDEX=SHN_HEXAGON_SCOMMON %s -o %t2
+# RUN: not llvm-objcopy %t2 /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DINDEX=65280
+# RUN: yaml2obj -DINDEX=SHN_MIPS_SCOMMON %s -o %t2
+# RUN: not llvm-objcopy %t2 /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DINDEX=65283
+# RUN: yaml2obj -DTYPE=ET_EXEC -DINDEX=SHN_HIPROC %s -o %t2
+# RUN: not llvm-objcopy %t2 /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DINDEX=65311
+## [SHN_LOOS, SHN_HIOS] is OS-specific.
+# RUN: yaml2obj -DINDEX=SHN_LOOS %s -o %t2
+# RUN: not llvm-objcopy %t2 /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DINDEX=65312
+## 0xff40 is in (SHN_HIOS, SHN_ABS), which has no defined meaning.
+# RUN: yaml2obj -DINDEX=0xff40 %s -o %t2
+# RUN: not llvm-objcopy %t2 /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DINDEX=65344
+
+# ERR: error: symbol 'sym' has unsupported value greater than or equal to SHN_LORESERVE: [[INDEX]]
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    [[TYPE=ET_REL]]
+  Machine: [[MACHINE=EM_X86_64]]
+Symbols:
+  - Name:    sym
+    Index:   [[INDEX]]
+    Binding: STB_GLOBAL

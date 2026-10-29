@@ -19,7 +19,9 @@ class PrefixedFrame(ScriptedFrame):
         super().__init__(thread, args)
 
         self.idx = idx
-        self.function_name = prefix + function_name
+        self.function_name = prefix
+        if function_name is not None:
+            self.function_name += function_name
 
     def get_id(self):
         return self.idx

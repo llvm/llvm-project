@@ -26,11 +26,11 @@ func.func @_QMtestPassign1(%arg0: !fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca !fir.array<3xf32> {bindc_name = "ct", uniq_name = "_QMtestFassign1Ect"}
   %2 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %1(%2) {uniq_name = "_QMtestFassign1Ect"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
-  %4:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QMtestFassign1Ei"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %1(%2) uniq_name("_QMtestFassign1Ect") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+  %4:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QMtestFassign1Ei") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %5 = fir.alloca !fir.array<3xf32> {bindc_name = "q", uniq_name = "_QMtestFassign1Eq"}
-  %6:2 = hlfir.declare %5(%2) {uniq_name = "_QMtestFassign1Eq"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
-  %7:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QMtestFassign1Eself"} : (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>)
+  %6:2 = hlfir.declare %5(%2) uniq_name("_QMtestFassign1Eq") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+  %7:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QMtestFassign1Eself") : (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>)
   %8 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
   ^bb0(%arg2: index):
     %22 = hlfir.designate %6#0 (%arg2)  : (!fir.ref<!fir.array<3xf32>>, index) -> !fir.ref<f32>
@@ -40,7 +40,7 @@ func.func @_QMtestPassign1(%arg0: !fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<
     %26 = arith.subf %24, %25 fastmath<contract> : f32
     hlfir.yield_element %26 : f32
   }
-  %9 = hlfir.designate %7#0{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+  %9 = hlfir.designate %7#0{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMtestTmy_type{p:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   %10 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   %11:3 = fir.box_dims %10, %c0 : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
   %12 = arith.addi %11#0, %11#1 : index

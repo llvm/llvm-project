@@ -259,6 +259,16 @@ namespace llvm {
     Null // Do not emit any output.
   };
 
+  /// Specify where the machine verifier runs in the codegen pipeline.
+  enum class MachineVerifierMode {
+    /// Never run the machine verifier.
+    None,
+    /// Run the machine verifier once, at the end of the pipeline.
+    End,
+    /// Run the machine verifier before and after every machine pass.
+    Each
+  };
+
   // Specify what functions should keep the frame pointer.
   enum class FramePointerKind {
     None,

@@ -63,3 +63,10 @@ extern int g0 __attribute__((weak_import));
 
 extern "C" int g1 = 0; // expected-note {{previous definition is here}}
 extern int g1 __attribute__((weak_import)); // expected-warning {{attribute declaration must precede definition}}
+
+extern "C" void *resolver() { return nullptr; }
+
+// Weak and ifunc attributes are incompatible with C++11 attribute syntax.
+[[gnu::weak, gnu::ifunc("resolver")]] void weak_ifunc();
+// expected-error@-1 {{'gnu::ifunc' and 'gnu::weak' attributes are not compatible}}
+// expected-note@-2 {{conflicting attribute is here}}

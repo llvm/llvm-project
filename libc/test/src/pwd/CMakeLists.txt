@@ -1,4 +1,4 @@
-add_custom_target(libc_pwd_unittests)
+add_libc_testsuite(libc-pwd-tests)
 
 if(NOT TARGET libc.src.pwd.pwd_utils)
   return()
@@ -7,7 +7,7 @@ endif()
 add_libc_test(
   pwd_utils_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   SRCS
     pwd_utils_test.cpp
   DEPENDS
@@ -19,7 +19,7 @@ add_libc_test(
 add_libc_test(
   getpwent_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   HDRS
     pwd_test_utils.h
   SRCS
@@ -41,9 +41,35 @@ add_libc_test(
 )
 
 add_libc_test(
+  getpwent_r_test
+  SUITE
+    libc-pwd-tests
+  HDRS
+    pwd_test_utils.h
+  SRCS
+    getpwent_r_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_passwd
+    libc.hdr.types.uid_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.pwd.endpwent
+    libc.src.pwd.getpwent_r
+    libc.src.pwd.pwd_utils
+    libc.src.pwd.setpwent
+    libc.src.stdio.remove
+    libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   getpwnam_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   HDRS
     pwd_test_utils.h
   SRCS
@@ -69,7 +95,7 @@ add_libc_test(
 add_libc_test(
   getpwnam_r_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   HDRS
     pwd_test_utils.h
   SRCS
@@ -92,7 +118,7 @@ add_libc_test(
 add_libc_test(
   getpwuid_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   HDRS
     pwd_test_utils.h
   SRCS
@@ -116,7 +142,7 @@ add_libc_test(
 add_libc_test(
   getpwuid_r_test
   SUITE
-    libc_pwd_unittests
+    libc-pwd-tests
   HDRS
     pwd_test_utils.h
   SRCS

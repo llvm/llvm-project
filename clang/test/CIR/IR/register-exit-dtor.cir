@@ -1,0 +1,75 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+!rec_Ref = !cir.struct<"Ref" {data !cir.ptr<!rec_Tmp>}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZN3TmpC1Ev(!cir.ptr<!rec_Tmp>)
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+
+  cir.global "private" internal @_ZGR3ref_ = #cir.zero : !rec_Tmp
+  cir.global external @ref = #cir.zero : !rec_Ref ctor {
+    %0 = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
+    cir.call @_ZN3TmpC1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    cir.register_exit_dtor @_ZGR3ref_ {
+      %1 = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%1) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+  // CHECK: cir.global external @ref = #cir.zero : !rec_Ref ctor {
+  // CHECK:   %[[TMP:.*]] = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
+  // CHECK:   cir.call @_ZN3TmpC1Ev(%[[TMP]]) : (!cir.ptr<!rec_Tmp>) -> ()
+  // CHECK:   cir.register_exit_dtor @_ZGR3ref_ {
+  // CHECK:     %[[TMP_DTOR:.*]] = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
+  // CHECK:     cir.call @_ZN3TmpD1Ev(%[[TMP_DTOR]]) : (!cir.ptr<!rec_Tmp>) -> ()
+  // CHECK:   }
+  // CHECK: }
+
+  cir.global "private" internal @_ZGR4cond_ = #cir.zero : !rec_Tmp
+  cir.global external @cond = #cir.zero : !rec_Ref ctor {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.if %0 {
+      %1 = cir.get_global @_ZGR4cond_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpC1Ev(%1) : (!cir.ptr<!rec_Tmp>) -> ()
+      cir.register_exit_dtor @_ZGR4cond_ {
+        %2 = cir.get_global @_ZGR4cond_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%2) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+    }
+  }
+  // CHECK: cir.global external @cond = #cir.zero : !rec_Ref ctor {
+  // CHECK:   cir.if %{{.+}} {
+  // CHECK:     cir.call @_ZN3TmpC1Ev
+  // CHECK:     cir.register_exit_dtor @_ZGR4cond_ {
+  // CHECK:       %[[TMP_DTOR:.*]] = cir.get_global @_ZGR4cond_ : !cir.ptr<!rec_Tmp>
+  // CHECK:       cir.call @_ZN3TmpD1Ev(%[[TMP_DTOR]]) : (!cir.ptr<!rec_Tmp>) -> ()
+  // CHECK:     }
+  // CHECK:   }
+  // CHECK: }
+
+  cir.global "private" internal @_ZGRZ1fvE1r_ = #cir.zero : !rec_Tmp
+  cir.global "private" internal dynamic_init_guard<"_ZGVZ1fvE1r"> @_ZZ1fvE1r = #cir.zero : !rec_Ref
+    dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+  cir.func @f() {
+    cir.local_init static_local @_ZZ1fvE1r ctor {
+      %0 = cir.get_global @_ZGRZ1fvE1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpC1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      cir.register_exit_dtor @_ZGRZ1fvE1r_ {
+        %1 = cir.get_global @_ZGRZ1fvE1r_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%1) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK: cir.func @f() {
+  // CHECK:   cir.local_init static_local @_ZZ1fvE1r ctor {
+  // CHECK:     cir.call @_ZN3TmpC1Ev
+  // CHECK:     cir.register_exit_dtor @_ZGRZ1fvE1r_ {
+  // CHECK:       %[[TMP_DTOR:.*]] = cir.get_global @_ZGRZ1fvE1r_ : !cir.ptr<!rec_Tmp>
+  // CHECK:       cir.call @_ZN3TmpD1Ev(%[[TMP_DTOR]]) : (!cir.ptr<!rec_Tmp>) -> ()
+  // CHECK:     }
+  // CHECK:   }
+}

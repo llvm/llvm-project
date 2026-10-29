@@ -20,8 +20,16 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Rematerializer.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+
+struct VGPRThresholdParser : public cl::parser<unsigned> {
+  VGPRThresholdParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value);
+};
+
+extern cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt;
 
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
@@ -35,7 +43,8 @@ enum class GCNSchedStageID : unsigned {
   ClusteredLowOccupancyReschedule = 3,
   PreRARematerialize = 4,
   ILPInitialSchedule = 5,
-  MemoryClauseInitialSchedule = 6
+  MemoryClauseInitialSchedule = 6,
+  LiveIntervalRPReschedule = 7
 };
 
 #ifndef NDEBUG
@@ -77,19 +86,13 @@ protected:
   void getRegisterPressures(bool AtTop, const RegPressureTracker &RPTracker,
                             SUnit *SU, std::vector<unsigned> &Pressure,
                             std::vector<unsigned> &MaxPressure,
-                            GCNDownwardRPTracker &DownwardTracker,
-                            GCNUpwardRPTracker &UpwardTracker,
+                            const GCNDownwardRPTrackerBase &DownwardTracker,
+                            const GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
   std::vector<unsigned> Pressure;
 
   std::vector<unsigned> MaxPressure;
-
-  unsigned SGPRExcessLimit;
-
-  unsigned VGPRExcessLimit;
-
-  unsigned AGPRExcessLimit;
 
   unsigned TargetOccupancy;
 
@@ -102,7 +105,7 @@ protected:
   SmallVectorImpl<GCNSchedStageID>::iterator CurrentStage = nullptr;
 
   // GCN RP Tracker for top-down scheduling
-  mutable GCNDownwardRPTracker DownwardTracker;
+  mutable GCNManualDownwardRPTracker DownwardTracker;
 
   // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
@@ -131,15 +134,23 @@ public:
   // Bias for VGPR limits under a high register pressure.
   const unsigned HighRPVGPRBias = 7;
 
-  unsigned SGPRCriticalLimit;
+  unsigned SGPRExcessLimit = 0;
 
-  unsigned VGPRCriticalLimit;
+  unsigned VGPRExcessLimit = 0;
 
-  unsigned AGPRCriticalLimit;
+  unsigned AGPRExcessLimit = 0;
+
+  unsigned SGPRCriticalLimit = 0;
+
+  unsigned VGPRCriticalLimit = 0;
+
+  unsigned AGPRCriticalLimit = 0;
 
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
+
+  unsigned VGPRThresholdPercent = 0;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 
@@ -164,11 +175,9 @@ public:
     return GCNTrackersOverride.value_or(UseGCNTrackers);
   }
 
-  GCNSchedStageID getNextStage() const;
+  GCNDownwardRPTrackerBase &getDownwardTracker() { return DownwardTracker; }
 
-  GCNDownwardRPTracker *getDownwardTracker() { return &DownwardTracker; }
-
-  GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }
+  GCNUpwardRPTracker &getUpwardTracker() { return UpwardTracker; }
 };
 
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
@@ -266,6 +275,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
   friend class ILPInitialScheduleStage;
+  friend class LiveIntervalRPStage;
   friend class RegionPressureMap;
 
   const GCNSubtarget &ST;
@@ -552,8 +562,9 @@ public:
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
-/// 4. The register has a single non-debug user in a different region from its
-///    defining region.
+/// 4. The register has at least one user outside its defining region. If
+///    rematerialized, one copy is made per using region and the original
+///    register stays if the defining region has users.
 /// 5. The register is not used by or using another register that is going to be
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
@@ -735,6 +746,13 @@ private:
   /// TargetRegions. Returns whether there is any target region.
   bool setObjective();
 
+  /// Determines whether users of rematerialization candidate \p CandIdx are
+  /// compatible with the stage's rematerialization constraints/limitations.
+  /// Registers in \p MarkedRegs have already been deemed rematerializable by
+  /// the stage.
+  bool candidateHasValidUsers(RegisterIdx CandIdx,
+                              const SmallSet<Register, 4> &MarkedRegs) const;
+
   /// In all regions set in \p Regions, saves pressure \p RPSave and clear it as
   /// a target if its RP target has been reached.
   void updateRPTargets(const BitVector &Regions, const GCNRegPressure &RPSave);
@@ -792,6 +810,24 @@ public:
   MemoryClauseInitialScheduleStage(GCNSchedStageID StageID,
                                    GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
+};
+
+// Live interval register pressure stage:
+// estimates register pressure accounting for live interval interference,
+// optionally reschedules the region with tigher register bounds.
+class LiveIntervalRPStage : public GCNSchedStage {
+public:
+  bool initGCNSchedStage() override;
+  bool initGCNRegion() override;
+  void finalizeGCNRegion() override;
+
+  LiveIntervalRPStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+
+private:
+  unsigned SavedVGPRThresholdPercent = 0;
+  unsigned SavedVGPRExcessLimit = 0;
+  unsigned SavedVGPRCriticalLimit = 0;
 };
 
 class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {

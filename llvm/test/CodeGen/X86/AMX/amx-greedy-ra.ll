@@ -26,7 +26,7 @@ define i16 @foo(i32 noundef %t, i16 %row, i16 %col) nounwind {
   ; CHECK-NEXT:   dead [[PTILEZEROV2:%[0-9]+]]:tile = PTDPBSSDV [[COPY1]].sub_16bit, [[COPY]].sub_16bit, [[COPY]].sub_16bit, [[PTILEZEROV2]], [[PTILEZEROV]], [[PTILEZEROV1]]
   ; CHECK-NEXT:   [[LEA64_32r:%[0-9]+]]:gr32 = LEA64_32r [[COPY1]], 1, [[COPY]], 0, $noreg
   ; CHECK-NEXT:   $ax = COPY [[LEA64_32r]].sub_16bit
-  ; CHECK-NEXT:   RET 0, killed $ax
+  ; CHECK-NEXT:   RET 0, $ax
 entry:
   %0 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
   %1 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)

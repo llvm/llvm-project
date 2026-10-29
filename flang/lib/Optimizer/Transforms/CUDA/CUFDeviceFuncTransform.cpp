@@ -170,7 +170,8 @@ class CUFDeviceFuncTransform
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
                                           funcOp.getFunctionType());
     emptyStub.setVisibility(funcOp.getVisibility());
-    emptyStub->setAttrs(funcOp->getAttrs());
+    emptyStub->copyProperties(funcOp->getPropertiesStorage());
+    emptyStub->setDiscardableAttrs(funcOp->getDiscardableAttrDictionary());
     auto entryBlock = emptyStub.addEntryBlock();
     modBuilder.setInsertionPointToEnd(entryBlock);
     // Add a return operation at the end of the stub with the location of the

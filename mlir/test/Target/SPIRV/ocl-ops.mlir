@@ -63,6 +63,14 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %0 = spirv.CL.s_abs %arg0 : i32
     // CHECK: {{%.*}} = spirv.CL.clz {{%.*}} : i32
     %1 = spirv.CL.clz %arg0 : i32
+    // CHECK: {{%.*}} = spirv.CL.ctz {{%.*}} : i32
+    %2 = spirv.CL.ctz %arg0 : i32
+    spirv.Return
+  }
+
+  spirv.func @integer_vec_insts(%arg0 : vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ctz {{%.*}} : vector<3xi32>
+    %0 = spirv.CL.ctz %arg0 : vector<3xi32>
     spirv.Return
   }
 
@@ -98,6 +106,26 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     spirv.Return
   }
 
+  spirv.func @ilogb(%arg0 : f32, %arg1 : vector<3xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ilogb {{%.*}} : f32 -> i32
+    %0 = spirv.CL.ilogb %arg0 : f32 -> i32
+    // CHECK: {{%.*}} = spirv.CL.ilogb {{%.*}} : vector<3xf32> -> vector<3xi32>
+    %1 = spirv.CL.ilogb %arg1 : vector<3xf32> -> vector<3xi32>
+    spirv.Return
+  }
+
+  spirv.func @sincos(%arg0 : f32, %arg1 : vector<3xf32>) "None" {
+    // CHECK: [[COS:%.*]] = spirv.Variable : !spirv.ptr<f32, Function>
+    // CHECK: [[COSVEC:%.*]] = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>
+    %cos = spirv.Variable : !spirv.ptr<f32, Function>
+    %cosvec = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>
+    // CHECK: {{%.*}} = spirv.CL.sincos {{%.*}}, [[COS]] : f32, !spirv.ptr<f32, Function> -> f32
+    %0 = spirv.CL.sincos %arg0, %cos : f32, !spirv.ptr<f32, Function> -> f32
+    // CHECK: {{%.*}} = spirv.CL.sincos {{%.*}}, [[COSVEC]] : vector<3xf32>, !spirv.ptr<vector<3xf32>, Function> -> vector<3xf32>
+    %1 = spirv.CL.sincos %arg1, %cosvec : vector<3xf32>, !spirv.ptr<vector<3xf32>, Function> -> vector<3xf32>
+    spirv.Return
+  }
+
   spirv.func @maxmin(%arg0 : f32, %arg1 : f32, %arg2 : i32, %arg3 : i32) "None" {
     // CHECK: {{%.*}} = spirv.CL.fmax {{%.*}}, {{%.*}} : f32
     %1 = spirv.CL.fmax %arg0, %arg1 : f32
@@ -112,6 +140,16 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %5 = spirv.CL.s_min %arg2, %arg3 : i32
     // CHECK: {{%.*}} = spirv.CL.u_min {{%.*}}, {{%.*}} : i32
     %6 = spirv.CL.u_min %arg2, %arg3 : i32
+    spirv.Return
+  }
+
+  spirv.func @clamp(%arg0 : f32, %arg1 : i32, %arg2 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.fclamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %0 = spirv.CL.fclamp %arg0, %arg0, %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.s_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+    %1 = spirv.CL.s_clamp %arg1, %arg2, %arg2 : i32
+    // CHECK: {{%.*}} = spirv.CL.u_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+    %2 = spirv.CL.u_clamp %arg1, %arg2, %arg2 : i32
     spirv.Return
   }
 }

@@ -1469,7 +1469,7 @@ DEF_TRAVERSE_TYPELOC(DecltypeType, {
 })
 
 DEF_TRAVERSE_TYPELOC(PackIndexingType, {
-  TRY_TO(TraverseType(TL.getPattern()));
+  TRY_TO(TraverseTypeLoc(TL.getPatternLoc()));
   TRY_TO(TraverseStmt(TL.getTypePtr()->getIndexExpr()));
 })
 
@@ -3247,6 +3247,9 @@ DEF_TRAVERSE_STMT(OMPFuseDirective,
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFlattenDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPSplitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3301,9 +3304,6 @@ DEF_TRAVERSE_STMT(OMPBarrierDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTaskwaitDirective,
-                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
-
-DEF_TRAVERSE_STMT(OMPTaskgraphDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTaskgroupDirective,
@@ -3594,6 +3594,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDepthClause(OMPDepthClause *C) {
+  TRY_TO(TraverseStmt(C->getDepth()));
+  return true;
+}
+
+template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPCollapseClause(OMPCollapseClause *C) {
   TRY_TO(TraverseStmt(C->getNumForLoops()));
@@ -3690,13 +3696,6 @@ bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *C) {
-  TRY_TO(TraverseStmt(C->getCondition()));
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPReplayableClause(
-    OMPReplayableClause *C) {
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
@@ -4204,19 +4203,6 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPIsDevicePtrClause(
     OMPIsDevicePtrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPGraphIdClause(OMPGraphIdClause *C) {
-  TRY_TO(TraverseStmt(C->getId()));
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPGraphResetClause(
-    OMPGraphResetClause *C) {
-  TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 

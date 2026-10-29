@@ -112,3 +112,43 @@ TEST(StructuredDataTest, ParseJSONFromFile) {
   object_sp->Dump(S, false);
   EXPECT_EQ("[1,2,3]", S.GetString());
 }
+
+TEST(StructuredDataTest, ParseJSONValue) {
+  llvm::json::Value value = llvm::json::Object{
+      {"array", llvm::json::Array{1, "two", nullptr}},
+      {"bool", true},
+      {"dict", llvm::json::Object{{"key", "val"}}},
+      {"float", 3.5},
+      {"negative", -1},
+      {"null", nullptr},
+      {"string", "value"},
+      {"uint64_max", std::numeric_limits<uint64_t>::max()},
+  };
+  auto object_sp = StructuredData::ParseJSONValue(value);
+  ASSERT_NE(nullptr, object_sp);
+
+  StreamString S;
+  object_sp->Dump(S, /*pretty_print=*/false);
+  EXPECT_EQ(R"({"array":[1,"two",null],"bool":true,"dict":{"key":"val"},)"
+            R"("float":3.5,"negative":-1,"null":null,"string":"value",)"
+            R"("uint64_max":18446744073709551615})",
+            S.GetString());
+
+  StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+  ASSERT_NE(nullptr, dict);
+  EXPECT_EQ(eStructuredDataTypeArray, dict->GetValueForKey("array")->GetType());
+  EXPECT_EQ(eStructuredDataTypeBoolean,
+            dict->GetValueForKey("bool")->GetType());
+  EXPECT_EQ(eStructuredDataTypeDictionary,
+            dict->GetValueForKey("dict")->GetType());
+  EXPECT_EQ(eStructuredDataTypeFloat, dict->GetValueForKey("float")->GetType());
+  EXPECT_EQ(eStructuredDataTypeSignedInteger,
+            dict->GetValueForKey("negative")->GetType());
+  EXPECT_EQ(eStructuredDataTypeNull, dict->GetValueForKey("null")->GetType());
+  EXPECT_EQ(eStructuredDataTypeString,
+            dict->GetValueForKey("string")->GetType());
+  EXPECT_EQ(eStructuredDataTypeUnsignedInteger,
+            dict->GetValueForKey("uint64_max")->GetType());
+  EXPECT_EQ(std::numeric_limits<uint64_t>::max(),
+            dict->GetValueForKey("uint64_max")->GetUnsignedIntegerValue());
+}

@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
-#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -36,19 +35,14 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
-#include "llvm/Transforms/Utils/LowerInvoke.h"
 
 using namespace llvm;
 
 namespace WebAssembly {
 extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEmSjLj;
-extern cl::opt<bool> WasmEnableSjLj;
 } // namespace WebAssembly
 
 using llvm::WebAssembly::WasmDisableExplicitLocals;
-using llvm::WebAssembly::WasmEnableEmSjLj;
-using llvm::WebAssembly::WasmEnableSjLj;
 
 namespace {
 
@@ -118,29 +112,10 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(WebAssemblyOptimizeReturnedPass(), PMW);
 
-  // If exception handling is not enabled and setjmp/longjmp handling is
-  // enabled, we lower invokes into calls and delete unreachable landingpad
-  // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
-  // passes and Emscripten SjLj handling expects all invokes to be lowered
-  // before.
-  bool EnableEmEH = TM.Options.ExceptionModel == ExceptionHandling::Emscripten;
-  bool EnableWasmEH = TM.Options.ExceptionModel == ExceptionHandling::Wasm;
-  if (!EnableEmEH && !EnableWasmEH) {
-    addFunctionPass(LowerInvokePass(), PMW);
-    // The lower invoke pass may create unreachable code. Remove it in order not
-    // to process dead blocks in setjmp/longjmp handling.
-    addFunctionPass(UnreachableBlockElimPass(), PMW);
-  }
-
-  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
-  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
-  // transformation algorithms with Emscripten SjLj, so we run
-  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
-    flushFPMsToMPM(PMW);
-    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EnableEmEH), PMW);
-  }
+  // Wasm SjLj shares Emscripten SjLj's transformation, so it is handled here.
+  // Without Wasm or Emscripten EH, this also lowers invokes.
+  flushFPMsToMPM(PMW);
+  addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
 
   // Expand indirectbr instructions to switches.
   addFunctionPass(IndirectBrExpandPass(TM), PMW);
@@ -152,9 +127,6 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addFunctionPass(WasmEHPreparePass(), PMW);
-
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addFunctionPass(WebAssemblyRefTypeMem2LocalPass(), PMW);
@@ -259,8 +231,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
+  addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,

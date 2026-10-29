@@ -20,9 +20,15 @@ let Component = "CodeGen" in {
 def err_cir_to_cir_transform_failed : Error<
     "CIR-to-CIR transformation failed">, DefaultFatal;
 
+def err_cir_bc_write_failed : Error<
+    "could not write ClangIR bytecode to output stream">, DefaultFatal;
+
 def err_cir_verification_failed_pre_passes : Error<
     "CIR module verification error before running CIR-to-CIR passes">,
     DefaultFatal;
+
+def err_cir_to_llvm_lowering_failed : Error<
+    "lowering ClangIR to LLVM IR failed">, DefaultFatal;
 
 // Diagnostics relayed from MLIR-side passes/verifier through the
 // clang::DiagnosticsEngine. The full message text comes from MLIR.

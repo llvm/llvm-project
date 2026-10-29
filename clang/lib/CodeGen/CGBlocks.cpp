@@ -1094,7 +1094,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       auto *EWC = llvm::dyn_cast_or_null<ExprWithCleanups>(RetExpr);
       if (EWC)
         for (auto &C : EWC->getObjects())
-          if (auto *BD = C.dyn_cast<BlockDecl *>())
+          if (auto *BD = dyn_cast<BlockDecl *>(C))
             if (BD == blockDecl)
               return true;
       return false;
@@ -1588,7 +1588,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     entry_ptr = entry_ptr->getNextNode()->getIterator();
   else
     entry_ptr = entry->end();
-  Builder.SetInsertPoint(entry, entry_ptr);
+  Builder.SetInsertPoint(entry_ptr);
 
   // Emit debug information for all the DeclRefExprs.
   // FIXME: also for 'this'

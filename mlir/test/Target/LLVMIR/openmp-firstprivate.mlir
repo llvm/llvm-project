@@ -27,7 +27,7 @@ omp.private {type = firstprivate} @x.privatizer : f32 copy {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_firstprivate..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 
@@ -70,7 +70,7 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 
 // CHECK: [[PRIV_BB1]]:
 // The 1st `alloc` block directly branches to the 2nd `alloc` block since the
-// only insruction is `llvm.mlir.constant` which gets translated to compile-time
+// only instruction is `llvm.mlir.constant` which gets translated to compile-time
 // constant in LLVM IR.
 // CHECK-NEXT: br label %[[PRIV_BB2:.*]]
 

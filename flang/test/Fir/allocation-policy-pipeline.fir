@@ -41,12 +41,12 @@ func.func @small_copy_in_buffer(%arg0: !fir.box<!fir.array<8xf64>>) {
 }
 
 // SMALL-LABEL:   func.func @copy_in_buffer
-// SMALL:           fir.allocmem !fir.array<100xf64> {bindc_name = ".tmp.copy_in"
+// SMALL:           fir.allocmem !fir.array<100xf64> <{bindc_name = ".tmp.copy_in"
 // SMALL:           fir.freemem
 // SMALL-NOT:       fir.alloca !fir.array<100xf64>
 
 // BIG-LABEL:     func.func @copy_in_buffer
-// BIG:             fir.alloca !fir.array<100xf64> {bindc_name = ".tmp.copy_in"
+// BIG:             fir.alloca !fir.array<100xf64> <{bindc_name = ".tmp.copy_in"
 // BIG-NOT:         fir.allocmem
 // BIG-NOT:         fir.freemem
 // CODEGEN-LABEL: func.func @copy_in_buffer

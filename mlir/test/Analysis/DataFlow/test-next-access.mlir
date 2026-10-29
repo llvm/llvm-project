@@ -418,7 +418,7 @@ func.func @call_and_store_before(%arg0: memref<f32>) {
   // Note that the access after the entire call is "post".
   // CHECK:      name = "call"
   // CHECK-SAME: next_access = {{\[}}["post"], ["post"]]
-  test.call_and_store @callee(%arg0), %arg0 {name = "call", store_before_call = true} : (memref<f32>, memref<f32>) -> ()
+  test.call_and_store @callee(%arg0), %arg0 <store_before_call = true> {name = "call"} : (memref<f32>, memref<f32>) -> ()
   // CHECK:      name = "post"
   // CHECK-SAME: next_access = ["unknown"]
   memref.load %arg0[] {name = "post"} : memref<f32>
@@ -451,7 +451,7 @@ func.func @call_and_store_after(%arg0: memref<f32>) {
   memref.load %arg0[] {name = "caller"} : memref<f32>
   // CHECK:      name = "call"
   // CHECK-SAME: next_access = {{\[}}["post"], ["post"]]
-  test.call_and_store @callee(%arg0), %arg0 {name = "call", store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+  test.call_and_store @callee(%arg0), %arg0 <store_before_call = false> {name = "call"} : (memref<f32>, memref<f32>) -> ()
   // CHECK:      name = "post"
   // CHECK-SAME: next_access = ["unknown"]
   memref.load %arg0[] {name = "post"} : memref<f32>
@@ -472,7 +472,7 @@ func.func @store_with_a_region_before(%arg0: memref<f32>) {
   // CHECK:              name = "region"
   // CHECK-SAME: next_access = {{\[}}["post"]]
   // CHECK-SAME: next_at_entry_point = {{\[}}{{\[}}["post"]]]
-  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = true } {
+  test.store_with_a_region %arg0 <store_before_region = true> attributes {name = "region"} {
     test.store_with_a_region_terminator
   } : memref<f32>
   memref.load %arg0[] {name = "post"} : memref<f32>
@@ -491,7 +491,7 @@ func.func @store_with_a_region_after(%arg0: memref<f32>) {
   // CHECK:      name = "region"
   // CHECK-SAME: next_access = {{\[}}["post"]]
   // CHECK-SAME: next_at_entry_point = {{\[}}{{\[}}["region"]]]
-  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = false } {
+  test.store_with_a_region %arg0 <store_before_region = false> attributes {name = "region"} {
     test.store_with_a_region_terminator
   } : memref<f32>
   memref.load %arg0[] {name = "post"} : memref<f32>
@@ -515,7 +515,7 @@ func.func @store_with_a_region_before_containing_a_load(%arg0: memref<f32>) {
   // CHECK:      name = "region"
   // CHECK-SAME: next_access = {{\[}}["post"]]
   // CHECK-SAME: next_at_entry_point = {{\[}}{{\[}}["inner"]]]
-  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = true } {
+  test.store_with_a_region %arg0 <store_before_region = true> attributes {name = "region"} {
     // CHECK:      name = "inner"
     // CHECK-SAME: next_access = {{\[}}["post"]]
     memref.load %arg0[] {name = "inner"} : memref<f32>
@@ -544,7 +544,7 @@ func.func @store_with_a_region_after_containing_a_load(%arg0: memref<f32>) {
   // CHECK:      name = "region"
   // CHECK-SAME: next_access = {{\[}}["post"]]
   // CHECK-SAME: next_at_entry_point = {{\[}}{{\[}}["inner"]]]
-  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = false } {
+  test.store_with_a_region %arg0 <store_before_region = false> attributes {name = "region"} {
     // CHECK:      name = "inner"
     // CHECK-SAME: next_access = {{\[}}["region"]]
     memref.load %arg0[] {name = "inner"} : memref<f32>

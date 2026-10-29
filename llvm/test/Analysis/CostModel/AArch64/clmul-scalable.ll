@@ -8,15 +8,15 @@
 
 define void @clmul_scalable() {
 ; SVE-LABEL: 'clmul_scalable'
-; SVE-NEXT:  Cost Model: Found costs of 24 for: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-; SVE-NEXT:  Cost Model: Found costs of 48 for: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; SVE-NEXT:  Cost Model: Found costs of 13 for: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; SVE-NEXT:  Cost Model: Found costs of 26 for: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 43 for: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 192 for: %c64 = call <vscale x 2 x i64> @llvm.clmul.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SVE-AES-LABEL: 'clmul_scalable'
-; SVE-AES-NEXT:  Cost Model: Found costs of 24 for: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-; SVE-AES-NEXT:  Cost Model: Found costs of 48 for: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; SVE-AES-NEXT:  Cost Model: Found costs of 13 for: %c8 = call <vscale x 16 x i8> @llvm.clmul.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; SVE-AES-NEXT:  Cost Model: Found costs of 26 for: %c16 = call <vscale x 8 x i16> @llvm.clmul.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; SVE-AES-NEXT:  Cost Model: Found costs of 43 for: %c32 = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; SVE-AES-NEXT:  Cost Model: Found costs of 3 for: %c64 = call <vscale x 2 x i64> @llvm.clmul.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; SVE-AES-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void

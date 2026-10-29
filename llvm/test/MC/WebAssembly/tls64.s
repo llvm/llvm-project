@@ -42,6 +42,7 @@ tls2:
 #      CHECK-OBJ:  - Type:            CUSTOM
 # CHECK-OBJ-NEXT:    Name:            linking
 # CHECK-OBJ-NEXT:    Version:         2
+# CHECK-OBJ-NEXT:    TargetArch:      wasm64
 # CHECK-OBJ-NEXT:    SymbolTable:
 # CHECK-OBJ-NEXT:      - Index:           0
 # CHECK-OBJ-NEXT:        Kind:            FUNCTION

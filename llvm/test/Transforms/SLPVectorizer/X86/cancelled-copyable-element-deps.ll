@@ -12,7 +12,7 @@ define void @test(double %fneg, i1 %tobool.not, i1 %tobool31.not) {
 ; CHECK-NEXT:    [[TMP2]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[FNEG]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> <double 0.000000e+00, double undef>, <6 x i32> <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> <double 0.000000e+00, double poison>, <6 x i32> <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    br label %[[R]]
 ; CHECK:       [[R]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <6 x double> [ [[TMP0]], %[[P]] ], [ [[TMP5]], %[[IF_END:.*]] ]

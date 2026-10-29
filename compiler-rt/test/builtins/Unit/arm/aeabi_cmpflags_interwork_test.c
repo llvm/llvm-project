@@ -6,6 +6,9 @@
 // ARMv4T Thumb code can not read status register. These helpers call
 // the EABI comparison functions and turn Z/C flags into numbers:
 // -1 for less, 0 for equal, and 1 for greater or unordered
+//
+// We need to return through LR so BTI does not need a landing pad.
+// But as thumb-1 cannot pop into LR, we go through r3.
 __asm__(".globl call_aeabi_cfcmple\n"
         ".thumb_func\n"
         "call_aeabi_cfcmple:\n"
@@ -24,7 +27,8 @@ __asm__(".globl call_aeabi_cfcmple\n"
         "3:\n"
         "  pop {r4}\n"
         "  pop {r3}\n"
-        "  bx r3\n"
+        "  mov lr, r3\n"
+        "  bx lr\n"
 
         ".globl call_aeabi_cdcmple\n"
         ".thumb_func\n"
@@ -44,7 +48,8 @@ __asm__(".globl call_aeabi_cfcmple\n"
         "3:\n"
         "  pop {r4}\n"
         "  pop {r3}\n"
-        "  bx r3\n");
+        "  mov lr, r3\n"
+        "  bx lr\n");
 
 extern int call_aeabi_cfcmple(float, float);
 extern int call_aeabi_cdcmple(double, double);

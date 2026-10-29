@@ -48,7 +48,7 @@ public:
       const lldb_private::ArchSpec &process_host_arch) override;
 
 protected:
-  llvm::StringRef GetDeviceSupportDirectoryName() override;
+  llvm::SmallVector<llvm::StringRef> GetDeviceSupportDirectoryNames() override;
   llvm::StringRef GetPlatformName() override;
 };
 

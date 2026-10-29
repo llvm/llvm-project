@@ -186,35 +186,6 @@ static inline unsigned getArithExtendImm(AArch64_AM::ShiftExtendType ET,
   return (getExtendEncoding(ET) << 3) | (Imm & 0x7);
 }
 
-/// getMemDoShift - Extract the "do shift" flag value for load/store
-/// instructions.
-static inline bool getMemDoShift(unsigned Imm) {
-  return (Imm & 0x1) != 0;
-}
-
-/// getExtendType - Extract the extend type for the offset operand of
-/// loads/stores.
-static inline AArch64_AM::ShiftExtendType getMemExtendType(unsigned Imm) {
-  return getExtendType((Imm >> 1) & 0x7);
-}
-
-/// getExtendImm - Encode the extend type and amount for a load/store inst:
-///   doshift:     should the offset be scaled by the access size
-///   shifter: 000 ==> uxtb
-///            001 ==> uxth
-///            010 ==> uxtw
-///            011 ==> uxtx
-///            100 ==> sxtb
-///            101 ==> sxth
-///            110 ==> sxtw
-///            111 ==> sxtx
-///   {3-1}  = shifter
-///   {0}  = doshift
-static inline unsigned getMemExtendImm(AArch64_AM::ShiftExtendType ET,
-                                       bool DoShift) {
-  return (getExtendEncoding(ET) << 1) | unsigned(DoShift);
-}
-
 static inline uint64_t ror(uint64_t elt, unsigned size) {
   return ((elt & 1) << (size-1)) | (elt >> 1);
 }

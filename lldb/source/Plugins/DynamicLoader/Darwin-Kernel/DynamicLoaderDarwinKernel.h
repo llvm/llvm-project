@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_DYNAMICLOADER_DARWIN_KERNEL_DYNAMICLOADERDARWINKERNEL_H
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,7 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "lldb/Core/Progress.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -138,8 +140,37 @@ protected:
 
     bool LoadImageAtFileAddress(lldb_private::Process *process);
 
-    bool LoadImageUsingMemoryModule(lldb_private::Process *process,
-                                    lldb_private::Progress *progress = nullptr);
+    /// Determine what the search for this binary needs: its UUID, and whether
+    /// the Target or the shared module list already has it. For the kernel,
+    /// the UUID is read from process memory and any kernel with a different
+    /// UUID is removed from the Target.
+    ///
+    /// \param request Set to the search to run, or left empty if none is
+    ///   needed.
+    ///
+    /// \return Whether the binary can be loaded.
+    bool
+    PrepareSearch(lldb_private::Process *process,
+                  std::optional<lldb_private::SymbolLocator::Request> &request);
+
+    /// Add the module to the Target and set its load addresses.
+    ///
+    /// The order of the calls determines the order of the Target's modules.
+    ///
+    /// \param located The search result, or empty if PrepareSearch requested
+    ///   no search.
+    bool LoadLocatedImage(
+        lldb_private::Process *process,
+        std::optional<llvm::Expected<lldb_private::SymbolLocator::Result>>
+            located);
+
+    /// Load this binary on its own: PrepareSearch, then the search, then
+    /// LoadLocatedImage.
+    bool LoadImageUsingMemoryModule(lldb_private::Process *process);
+
+    /// Searches for the kernel and sets the module, without SymbolLocator.
+    void FindKernel(lldb_private::Target &target,
+                    lldb_private::ModuleSpec module_spec);
 
     bool IsLoaded() { return m_load_process_stop_id != UINT32_MAX; }
 

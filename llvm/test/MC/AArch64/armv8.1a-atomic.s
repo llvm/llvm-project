@@ -75,7 +75,7 @@
 //CHECK-ERROR:   casal  x0, w1, [x2]
 //CHECK-ERROR:              ^
 
-  // LD<OP> intructions
+  // LD<OP> instructions
   ldadda x0, x1, [x2]
   ldclrl x0, x1, [x2]
   ldeoral x0, x1, [x2]
@@ -95,7 +95,7 @@
 //CHECK: ldumin     w0, w1, [x2]  // encoding: [0x41,0x70,0x20,0xb8]
 //CHECK: ldsminb    w2, w3, [x5]  // encoding: [0xa3,0x50,0x22,0x38]
 
-  // ST<OP> intructions: aliases to LD<OP>
+  // ST<OP> instructions: aliases to LD<OP>
   stADDlb w0, [x2]
   stclrlh w0, [x2]
   steorl  w0, [x2]

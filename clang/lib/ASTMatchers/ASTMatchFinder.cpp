@@ -1049,13 +1049,15 @@ private:
     const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     auto &Matchers = this->Matchers->DeclOrStmt;
+    // traverseIgnored() only ever replaces expressions.
+    const bool IsExpr = DynNode.get<Expr>() != nullptr;
     for (unsigned short I : Filter) {
       auto &MP = Matchers[I];
       if (EnableCheckProfiling)
         Timer.setBucket(&TimeByBucket[MP.second->getID()]);
       BoundNodesTreeBuilder Builder;
 
-      {
+      if (IsExpr) {
         TraversalKindScope RAII(getASTContext(), MP.first.getTraversalKind());
         if (getASTContext().getParentMapContext().traverseIgnored(DynNode) !=
             DynNode)
