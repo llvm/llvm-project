@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 struct A {
   unsigned x : 1;
@@ -14,22 +14,23 @@ constexpr unsigned f1() {
   a.x = 0;
   return r;
 }
-static_assert(f1() == 7); // expected-error {{static assertion failed due to requirement 'f1() == 7'}}
-                           // expected-note@-1 {{expression evaluates to '0 == 7'}}
+static_assert(f1() == 7); // expected-error {{static assertion failed due to requirement 'f1() == 7'}} \
+                          // expected-note {{expression evaluates to '0 == 7'}}
 
 // FIXME: the temporary's lifetime should expire at the end of the
 // full-expression; reading through p after that point must be rejected.
-// Currently a different Sema error fires due to the direct bit-field binding.
-constexpr auto &q(auto &&a) { return a; } // expected-error {{non-const lvalue reference to type 'unsigned int' cannot bind to a temporary of type 'unsigned int'}}
+// Currently no diagnostic is produced because the reference aliases a.x.
+// This test uses -std=c++20: since C++23 (P2266), 'return a;' in q() is an
+// xvalue and cannot bind to the 'auto &' return type, regardless of bit-fields.
+constexpr auto &q(auto &&a) { return a; }
 constexpr unsigned f2() {
   A a{0};
   unsigned *p;
-  *(p = &q(static_cast<unsigned &&>(a.x))) = 1; // expected-note {{in instantiation of function template specialization 'q<unsigned int>' requested here}}
-  // expected-note@-1 {{subexpression not valid in a constant expression}}
-  return *p;
+  *(p = &q(static_cast<unsigned &&>(a.x))) = 1; // FIXME-expected-note {{temporary created here}}
+  return *p; // FIXME-expected-note {{read of object outside its lifetime}}
 }
-static_assert(f2() == 1); // expected-error {{static assertion expression is not an integral constant expression}}
-                           // expected-note@-1 {{in call to 'f2()'}}
+static_assert(f2() == 1); // FIXME-expected-error {{static assertion expression is not an integral constant expression}} \
+                          // FIXME-expected-note {{in call to 'f2()'}}
 
 // FIXME: cv-qualification from static_cast<const T&&> must be preserved on the
 // materialized temporary; const_cast cannot enable modification through it.
@@ -44,3 +45,7 @@ constexpr unsigned f3() { // FIXME-expected-error {{never produces a constant ex
   r = 0; // FIXME-expected-note {{modification of object of const-qualified type 'const unsigned int'}}
   return a.x;
 }
+// FIXME: this should be rejected once the const-qualified temporary is
+// materialized. Currently it is accepted because the modification goes through
+// the bit-field itself.
+static_assert(f3() == 0);
