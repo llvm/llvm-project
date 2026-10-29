@@ -7955,8 +7955,9 @@ static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
-bool AArch64TTIImpl::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
+                                                SmallVectorImpl<Use *> &Ops,
+                                                const LoopInfo *LI) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::aarch64_neon_smull:
@@ -8093,6 +8094,9 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     auto *SI = cast<StoreInst>(I);
     auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
     if (!SI->isSimple() || !II)
+      break;
+
+    if (LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
       break;
 
     unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
