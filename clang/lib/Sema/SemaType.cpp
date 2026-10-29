@@ -1970,11 +1970,35 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   return Context.getRValueReferenceType(T);
 }
 
+static bool checkOpenCLPipePacketType(Sema &S, QualType T, SourceLocation Loc) {
+  if (T->isPointerType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*pointer*/ 0 << T;
+  if (T->isReferenceType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*reference*/ 1 << T;
+  if (T->isBlockPointerType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*block pointer*/ 2 << T;
+  if (!T->isObjectType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*non-object*/ 3 << T;
+  if (!T->isDependentType() && !S.isCompleteType(Loc, T))
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*incomplete*/ 4 << T;
+
+  return false;
+}
+
 QualType Sema::BuildReadPipeType(QualType T, SourceLocation Loc) {
+  if (checkOpenCLPipePacketType(*this, T, Loc))
+    return QualType();
   return Context.getReadPipeType(T);
 }
 
 QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
+  if (checkOpenCLPipePacketType(*this, T, Loc))
+    return QualType();
   return Context.getWritePipeType(T);
 }
 
@@ -5498,8 +5522,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     case DeclaratorChunk::Pipe: {
       T = S.BuildReadPipeType(T, DeclType.Loc);
-      processTypeAttrs(state, T, TAL_DeclSpec,
-                       D.getMutableDeclSpec().getAttributes());
+      if (!T.isNull())
+        processTypeAttrs(state, T, TAL_DeclSpec,
+                         D.getMutableDeclSpec().getAttributes());
       break;
     }
     }

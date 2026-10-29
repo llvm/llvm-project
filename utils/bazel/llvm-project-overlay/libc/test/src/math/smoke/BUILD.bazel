@@ -308,6 +308,14 @@ math_test(name = "cos")
 math_test(name = "cosf")
 
 math_test(
+    name = "cosh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_cosh_double_eval",
+    ],
+)
+
+math_test(
     name = "coshf",
     deps = [
         "//libc:__support_cpp_array",
@@ -2243,6 +2251,14 @@ math_test(name = "sincos")
 math_test(name = "sincosf")
 
 math_test(
+    name = "sinh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_sinh_double_eval",
+    ],
+)
+
+math_test(
     name = "sinhf",
     deps = [
         "//libc:__support_cpp_array",
@@ -2254,6 +2270,14 @@ math_test(name = "sinpif")
 math_test(name = "tan")
 
 math_test(name = "tanf")
+
+math_test(
+    name = "tanh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_tanh_double_eval",
+    ],
+)
 
 math_test(name = "tanhf")
 

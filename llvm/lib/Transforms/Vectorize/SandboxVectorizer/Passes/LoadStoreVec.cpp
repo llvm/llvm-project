@@ -74,7 +74,10 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
   Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  auto *VecL =
+      LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  Utils::propagateMetadata(VecL, Loads);
+  return VecL;
 }
 
 Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
@@ -269,7 +272,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
-  StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
