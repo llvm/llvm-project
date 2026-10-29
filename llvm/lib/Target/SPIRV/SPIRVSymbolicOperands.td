@@ -410,6 +410,7 @@ defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_rounded_divide_sqrt : ExtensionOperand<143, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -641,6 +642,7 @@ defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tensor_float32_conversion], []>;
 defm MaskedGatherScatterINTEL : CapabilityOperand<6427, 0, 0, [SPV_INTEL_masked_gather_scatter], []>;
+defm RoundedDivideSqrtINTEL : CapabilityOperand<6265, 0, 0, [SPV_INTEL_rounded_divide_sqrt], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm WeakLinkageAMD : CapabilityOperand<5181, 0, 0, [SPV_AMD_weak_linkage], [Linkage]>;

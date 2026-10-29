@@ -1158,6 +1158,32 @@ static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
   Reqs.addExtension(Ext);
 }
 
+// Returns true if the target of an OpDecorate is an OpFDiv or an OpenCL.std
+// sqrt extended instruction, i.e. an instruction whose FPRoundingMode
+// decoration requires SPV_INTEL_rounded_divide_sqrt.
+static bool isRoundedDivideSqrtTarget(const MachineInstr &MI) {
+  if (!MI.getOperand(0).isReg())
+    return false;
+  const MachineInstr *Def =
+      MI.getMF()->getRegInfo().getVRegDef(MI.getOperand(0).getReg());
+  if (!Def)
+    return false;
+  switch (Def->getOpcode()) {
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFDivV:
+  case SPIRV::OpStrictFDivS:
+  case SPIRV::OpStrictFDivV:
+    return true;
+  default:
+    break;
+  }
+  return Def->getOpcode() == SPIRV::OpExtInst &&
+         Def->getOperand(2).getImm() ==
+             static_cast<int64_t>(SPIRV::InstructionSet::OpenCL_std) &&
+         Def->getOperand(3).getImm() ==
+             static_cast<int64_t>(SPIRV::OpenCLExtInst::sqrt);
+}
+
 // Add the required capabilities from a decoration instruction (including
 // BuiltIns).
 static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
@@ -1223,6 +1249,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
       Reqs.addRequirements(SPIRV::Capability::FloatControls2);
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+    }
+  } else if (Dec == SPIRV::Decoration::FPRoundingMode) {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_rounded_divide_sqrt) &&
+        isRoundedDivideSqrtTarget(MI)) {
+      Reqs.addRequirements(SPIRV::Capability::RoundedDivideSqrtINTEL);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_rounded_divide_sqrt);
     }
   }
 }
