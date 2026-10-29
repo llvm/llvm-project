@@ -1,9 +1,16 @@
 // RUN: %clangxx_asan %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -fno-sanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -fsanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always %s -o %t && %run %t
 // http://code.google.com/p/address-sanitizer/issues/detail?id=147 (not fixed).
 // BROKEN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
 
 // MSVC doesn't support GCC style inline ASM
 // UNSUPPORTED: msvc
+
+// FIXME: Fails on Android: __cxa_throw interceptor does not run when
+// libclang_rt.asan links static libc++abi.a.
+// XFAIL: android
 
 #include "defines.h"
 #include <stdio.h>
