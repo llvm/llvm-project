@@ -1095,6 +1095,12 @@ public:
     return false;
   }
 
+  /// Whether the greedy allocator should drop the SlotIndexes entries of
+  /// erased instructions before allocating. Lets targets opt in one at a time.
+  virtual bool shouldCompactSlotIndexes(const MachineFunction &MF) const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   /// Debug information queries.
 

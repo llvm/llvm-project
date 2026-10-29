@@ -10,7 +10,8 @@ define void @zext_index_used_by_icmp(ptr noalias %p, ptr noalias %q, ptr %big, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PA0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> poison, ptr [[BASE]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x ptr> [[TMP2]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i8> [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <8 x i8> [[TMP1]], splat (i8 -6)
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i1> [[TMP7]] to <8 x i64>
@@ -131,7 +132,8 @@ define void @sext_index_used_by_icmp(ptr noalias %p, ptr noalias %q, ptr %big, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PA0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> poison, ptr [[BASE]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x ptr> [[TMP2]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i8> [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i8> [[TMP1]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <8 x i64> [[TMP7]], splat (i64 250)
@@ -253,7 +255,8 @@ define void @zext_i32_index_used_by_icmp(ptr noalias %p, ptr noalias %q, ptr %bi
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PA0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> poison, ptr [[BASE]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x ptr> [[TMP2]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i8> [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[TMP3]], <8 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <8 x i8> [[TMP1]], splat (i8 -6)
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i1> [[TMP7]] to <8 x i64>
@@ -375,7 +378,8 @@ define void @xor_index_used_by_icmp(ptr noalias %p, ptr noalias %q, ptr %big, pt
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <16 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x ptr> poison, ptr [[BASE]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x ptr> [[TMP3]], <16 x ptr> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, <16 x ptr> [[TMP4]], <16 x i8> [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[TMP2]] to <16 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, <16 x ptr> [[TMP4]], <16 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 [[TMP6]], <16 x i1> splat (i1 true), <16 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <16 x i8> [[TMP2]], splat (i8 -6)
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <16 x i1> [[TMP8]] to <16 x i64>

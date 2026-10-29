@@ -731,8 +731,17 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 
 void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
                                         const DIType *Ty, const DIE &TyDIE) {
-  if (Ty->getName().empty())
-    return;
+  // A type's name may be encoded in the type's specification
+  // (DW_AT_specification), so search up the specification chain until the name
+  // is found.
+  const DIType *NameSource = Ty;
+  while (NameSource->getName().empty()) {
+    auto *CT = dyn_cast<DICompositeType>(NameSource);
+    NameSource = CT ? CT->getSpecification() : nullptr;
+    if (!NameSource)
+      return;
+  }
+  StringRef Name = NameSource->getName();
   if (Ty->isForwardDecl())
     return;
 
@@ -746,16 +755,19 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
       Flags = dwarf::DW_FLAG_type_implementation;
   }
 
-  DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
-                   Flags);
+  DD->addAccelType(*this, CUNode->getNameTableKind(), Name, TyDIE, Flags);
 
   if (auto *CT = dyn_cast<DICompositeType>(Ty))
-    if (Ty->getName() != CT->getIdentifier() &&
+    if (Name != CT->getIdentifier() &&
         CT->getRuntimeLang() == dwarf::DW_LANG_Swift)
       DD->addAccelType(*this, CUNode->getNameTableKind(), CT->getIdentifier(),
                        TyDIE, Flags);
 
-  addGlobalType(Ty, TyDIE, Context);
+  // The inherited name is deliberately not used for the global type lookup
+  // tables: they are keyed by name and the specification already owns the
+  // entry.
+  if (!Ty->getName().empty())
+    addGlobalType(Ty, TyDIE, Context);
 }
 
 void DwarfUnit::addGlobalType(const DIType *Ty, const DIE &TyDIE,

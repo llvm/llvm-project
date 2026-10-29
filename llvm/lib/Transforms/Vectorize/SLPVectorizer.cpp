@@ -25515,6 +25515,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<Value *> OpVecs;
       for (int J = 1, N = GEP0->getNumOperands(); J < N; ++J) {
         Value *OpVec = vectorizeOperand(E, J);
+        // GEP sign-extends narrow indices, so extend the demoted index back to
+        // its original type.
+        auto *IdxVecTy = getWidenedType(E->getOperand(J).front()->getType(),
+                                        E->Scalars.size());
+        if (OpVec->getType() != IdxVecTy)
+          OpVec =
+              Builder.CreateIntCast(OpVec, IdxVecTy, GetOperandSignedness(J));
         OpVecs.push_back(OpVec);
       }
 
