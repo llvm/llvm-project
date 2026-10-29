@@ -30405,10 +30405,19 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
     }
   }
 
+  if (Opcode != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  // scalar_to_vector (extract_vector_elt X, 0) --> extract_subvector X, 0
+  // X can be scalable.
+  if (VT.getVectorElementCount().isScalar() &&
+      isNullConstant(Scalar.getOperand(1)) &&
+      Scalar.getOperand(0).getValueType().getVectorElementType() == VecEltVT)
+    return DAG.getExtractSubvector(SDLoc(N), VT, Scalar.getOperand(0), 0);
+
   // Replace a SCALAR_TO_VECTOR(EXTRACT_VECTOR_ELT(V,C0)) pattern
   // with a VECTOR_SHUFFLE and possible truncate.
-  if (Opcode != ISD::EXTRACT_VECTOR_ELT ||
-      !Scalar.getOperand(0).getValueType().isFixedLengthVector())
+  if (!Scalar.getOperand(0).getValueType().isFixedLengthVector())
     return SDValue();
 
   // If we have an implicit truncate, truncate here if it is legal.

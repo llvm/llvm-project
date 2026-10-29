@@ -19,6 +19,7 @@ def TosaOpInterface : OpInterface<"TosaOp"> {
   let description = [{
     Implemented by ops that correspond to the Tosa specification.
   }];
+  let cppNamespace = "::mlir::tosa";
 }
 
 #endif

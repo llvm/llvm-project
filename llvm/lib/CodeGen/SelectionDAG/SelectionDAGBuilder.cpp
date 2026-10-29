@@ -10548,7 +10548,7 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     //
     // Due to current llvm inline asm architecture designed to not "recognize"
     // the asm code, there are quite troubles for us to treat mem addressing
-    // differently for same value/adress used in different instuctions.
+    // differently for same value/adress used in different instructions.
     // For example, in pic model, call a func may in plt way or direclty
     // pc-related, but lea/mov a function adress may use got.
     //

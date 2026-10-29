@@ -1538,6 +1538,46 @@ TEST(RenameTest, ProtobufSymbolIsExcluded) {
               testing::HasSubstr("not a supported kind"));
 }
 
+TEST(RenameTest, ExportedSymbols) {
+  // Symbols whose parent is an ExportDecl must be indexable, or rename rejects
+  // them as "not eligible for indexing".
+  const char *Tests[] = {
+      R"cpp(
+        export module m;
+        export int [[f^un]]() { return 32; }
+        int x = [[fun]]();
+      )cpp",
+      R"cpp(
+        export module m;
+        export {
+          struct [[S^truct]] {};
+        }
+        [[Struct]] s;
+      )cpp",
+      R"cpp(
+        export module m;
+        namespace ns {
+        export int [[V^ar]];
+        }
+        int y = ns::[[Var]];
+      )cpp",
+  };
+
+  for (const char *Test : Tests) {
+    SCOPED_TRACE(Test);
+    Annotations Code(Test);
+    TestTU TU = TestTU::withCode(Code.code());
+    TU.Filename = "test.cppm";
+    TU.ExtraArgs = {"-std=c++20", "-xc++-module"};
+    auto AST = TU.build();
+    auto Results =
+        rename({Code.point(), "newName", AST, testPath(TU.Filename)});
+
+    ASSERT_TRUE(bool(Results)) << llvm::toString(Results.takeError());
+    EXPECT_EQ(Results->LocalChanges, Code.ranges());
+  }
+}
+
 TEST(RenameTest, PrepareRename) {
   Annotations FooH("void func();");
   Annotations FooCC(R"cpp(

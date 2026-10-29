@@ -879,13 +879,13 @@ public:
     return owningProc.labelEvaluationMap.lookup(label);
   }
 
-  fir::ExtendedValue
-  genExprAddr(const Fortran::lower::SomeExpr &expr,
-              Fortran::lower::StatementContext &context,
-              mlir::Location *locPtr = nullptr) override final {
+  fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 Fortran::lower::StatementContext &context,
+                                 mlir::Location *locPtr = nullptr,
+                                 bool allowCoarray = false) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
@@ -903,11 +903,12 @@ public:
                                               context);
   }
 
-  fir::ExtendedValue
-  genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
-             Fortran::lower::StatementContext &stmtCtx) override final {
+  fir::ExtendedValue genExprBox(mlir::Location loc,
+                                const Fortran::lower::SomeExpr &expr,
+                                Fortran::lower::StatementContext &stmtCtx,
+                                bool allowCoarray = false) override final {
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
@@ -4595,6 +4596,11 @@ private:
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
               *std::get<Fortran::parser::Name>(assoc.t).symbol;
+          if (Fortran::evaluate::IsCoarray(sym) ||
+              Fortran::evaluate::IsCoarray(
+                  Fortran::semantics::GetAssociationRoot(sym)))
+            TODO(toLocation(),
+                 "coarray: associating coarray entity in associate construct.");
           const Fortran::lower::SomeExpr &selector =
               *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
           addSymbol(sym, genAssociateSelector(selector, stmtCtx));
@@ -5034,6 +5040,12 @@ private:
           for (auto &symbol : typeCaseScopes[typeGuardIdx]->GetSymbols()) {
             if (symbol->GetUltimate()
                     .detailsIf<Fortran::semantics::AssocEntityDetails>()) {
+              if (Fortran::evaluate::IsCoarray(*symbol) ||
+                  Fortran::evaluate::IsCoarray(
+                      Fortran::semantics::GetAssociationRoot(symbol)))
+                TODO(loc, "coarray: associating coarray entity in select type "
+                          "construct.");
+
               addSymbol(symbol, exv);
               break;
             }
