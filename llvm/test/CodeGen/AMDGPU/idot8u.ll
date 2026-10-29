@@ -416,14 +416,14 @@ define amdgpu_kernel void @udot8_acc16(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -462,14 +462,14 @@ define amdgpu_kernel void @udot8_acc16(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-DL-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-DL-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-DL-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
 ;
@@ -734,14 +734,14 @@ define amdgpu_kernel void @udot8_acc8(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -780,14 +780,14 @@ define amdgpu_kernel void @udot8_acc8(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-DL-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-DL-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-DL-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
 ;
@@ -1054,14 +1054,14 @@ define amdgpu_kernel void @udot8_acc4(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
@@ -1101,14 +1101,14 @@ define amdgpu_kernel void @udot8_acc4(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-DL-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-DL-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-DL-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GFX9-DL-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
@@ -1361,14 +1361,14 @@ define amdgpu_kernel void @udot8_CommutationInsideMAD(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
@@ -1408,14 +1408,14 @@ define amdgpu_kernel void @udot8_CommutationInsideMAD(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_bfe_u32 v17, v2, 4, 4
 ; GFX9-DL-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v1, v2, v3
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v10, v17, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v9, v16, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v8, v15, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v7, v14, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v6, v13, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v5, v12, v1
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v1, v4, v11, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v1, v2, v3
+; GFX9-DL-NEXT:    v_mad_u16 v1, v10, v17, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v9, v16, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v8, v15, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v7, v14, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v6, v13, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v5, v12, v1
+; GFX9-DL-NEXT:    v_mad_u16 v1, v4, v11, v1
 ; GFX9-DL-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GFX9-DL-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
@@ -2589,9 +2589,9 @@ define amdgpu_kernel void @udot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_add_u16_e32 v1, v1, v8
 ; GFX9-NEXT:    v_add_u16_e32 v1, v1, v6
 ; GFX9-NEXT:    v_add_u16_e32 v0, v1, v0
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v9, v16, v0
+; GFX9-NEXT:    v_mad_u16 v0, v9, v16, v0
 ; GFX9-NEXT:    v_add_u16_e32 v0, v0, v10
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v11, v2, v0
+; GFX9-NEXT:    v_mad_u16 v0, v11, v2, v0
 ; GFX9-NEXT:    v_add_u16_e32 v0, v0, v7
 ; GFX9-NEXT:    global_store_byte v3, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -2654,9 +2654,9 @@ define amdgpu_kernel void @udot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_add_u16_e32 v1, v1, v8
 ; GFX9-DL-NEXT:    v_add_u16_e32 v1, v1, v6
 ; GFX9-DL-NEXT:    v_add_u16_e32 v0, v1, v0
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v0, v9, v16, v0
+; GFX9-DL-NEXT:    v_mad_u16 v0, v9, v16, v0
 ; GFX9-DL-NEXT:    v_add_u16_e32 v0, v0, v10
-; GFX9-DL-NEXT:    v_mad_legacy_u16 v0, v11, v2, v0
+; GFX9-DL-NEXT:    v_mad_u16 v0, v11, v2, v0
 ; GFX9-DL-NEXT:    v_add_u16_e32 v0, v0, v7
 ; GFX9-DL-NEXT:    global_store_byte v3, v0, s[0:1]
 ; GFX9-DL-NEXT:    s_endpgm

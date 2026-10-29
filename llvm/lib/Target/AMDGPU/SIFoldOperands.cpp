@@ -1911,6 +1911,41 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
   return std::nullopt;
 }
 
+// Operands of an op_sel instruction that are not present in the equivalent
+// legacy instruction, in operand order.
+static constexpr AMDGPU::OpName OpSelOnlyOpNames[] = {
+    AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
+    AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::op_sel};
+
+// If MI is an op_sel instruction on GFX9 that does not use op_sel, return the
+// opcode of the equivalent legacy instruction, which zeros the high 16 bits of
+// the destination. Otherwise return 0.
+static unsigned getZeroHi16LegacyOpcode(const GCNSubtarget &ST,
+                                        const MachineInstr &MI) {
+  if (ST.getGeneration() != AMDGPUSubtarget::GFX9)
+    return 0;
+
+  unsigned LegacyOpc;
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_MAD_U16_gfx9_e64:
+    LegacyOpc = AMDGPU::V_MAD_U16_e64;
+    break;
+  case AMDGPU::V_MAD_I16_gfx9_e64:
+    LegacyOpc = AMDGPU::V_MAD_I16_e64;
+    break;
+  default:
+    return 0;
+  }
+
+  for (AMDGPU::OpName OpName : OpSelOnlyOpNames) {
+    if (MI.getOperand(AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName))
+            .getImm() != 0)
+      return 0;
+  }
+
+  return LegacyOpc;
+}
+
 // Eliminate redundant 32-bit AND operations by detecting when ChildMI's mask
 // contains ParentMI's mask.
 //
@@ -1920,7 +1955,8 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
 //
 // This also handles cases where ParentMI implicitly zeros high bits (e.g., f16
 // operations that write 16-bit results into 32-bit registers), making a
-// subsequent AND with 0xffff redundant.
+// subsequent AND with 0xffff redundant. On GFX9, ParentMI may be switched to a
+// legacy opcode that zeros the high bits for this purpose.
 bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   // Ensure implicit defs (e.g., $scc) are not live.
   if (!ChildMI.allImplicitDefsAreDead())
@@ -1938,12 +1974,17 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
     return false;
 
   int64_t ParentMask = 0;
+  unsigned LegacyOpc = 0;
   std::optional<ANDMaskResult> ParentResult = getANDMaskRegOperand(*ParentMI);
   if (ParentResult) {
     // Parent is an AND - extract its mask.
     ParentMask = ParentResult->Mask;
   } else if (ST->zeroesHigh16BitsOfDest(ParentMI->getOpcode())) {
     // Parent instruction implicitly zeros high 16 bits.
+    ParentMask = 0xffff;
+  } else if ((LegacyOpc = getZeroHi16LegacyOpcode(*ST, *ParentMI))) {
+    // Parent instruction can be switched to a legacy opcode that implicitly
+    // zeros high 16 bits.
     ParentMask = 0xffff;
   } else {
     return false;
@@ -1961,6 +2002,13 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   // VGPR does not accept it.
   if (!Dst.isVirtual() || !MRI->constrainRegClass(Src, MRI->getRegClass(Dst)))
     return false;
+
+  if (LegacyOpc) {
+    unsigned Opc = ParentMI->getOpcode();
+    for (AMDGPU::OpName OpName : reverse(OpSelOnlyOpNames))
+      ParentMI->removeOperand(AMDGPU::getNamedOperandIdx(Opc, OpName));
+    TII->mutateAndCleanupImplicit(*ParentMI, TII->get(LegacyOpc));
+  }
 
   MRI->replaceRegWith(Dst, Src);
 

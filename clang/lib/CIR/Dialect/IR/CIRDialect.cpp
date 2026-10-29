@@ -807,7 +807,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 
 MutableOperandRange
 cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
-  // The eh_token operand is not forwarded to the parent region.
+  // The eh_token operand is not modeled as forwarded to any successor.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
@@ -5147,18 +5147,30 @@ LogicalResult cir::TypeInfoAttr::verify(
 void cir::TryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  // The `try` and the `catchers` region branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
+  if (point.isParent()) {
+    regions.emplace_back(&getTryRegion());
+  } else {
+    // A handler exit leaves the operation.
+    mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+    if (term->getParentRegion() != &getTryRegion()) {
+      regions.emplace_back(getOperation());
+      return;
+    }
+    // A cir.resume ending the try region unwinds into a handler, so it leaves
+    // the operation only when there is none. Every other exit can leave it.
+    if (!isa<cir::ResumeOp>(term) || getHandlerRegions().empty())
+      regions.emplace_back(getOperation());
   }
 
-  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
-
+  // Most handlers are entered by an unwind out of a call in the try region,
+  // which is not a branch point, so the handlers are successors of the parent
+  // and of every exit from the try region to stand in for it.
+  //
   // TODO(CIR): If we know a target function never throws a specific type, we
   // can remove the catch handler.
-  for (mlir::Region &handlerRegion : this->getHandlerRegions())
-    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
+  regions.reserve(regions.size() + getHandlerRegions().size());
+  for (mlir::Region &handlerRegion : getHandlerRegions())
+    regions.emplace_back(&handlerRegion);
 }
 
 /// Verify that each cir.init_catch_param in \p handlerRegion, outside any
