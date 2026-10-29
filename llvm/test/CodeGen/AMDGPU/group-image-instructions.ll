@@ -25,10 +25,10 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    v_interp_p10_f32 v0, v3, v0, v3 wait_exp:0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0xf
-; GFX11-NEXT:    s_buffer_load_b64 s[22:23], s[12:15], 0x10
-; GFX11-NEXT:    s_buffer_load_b64 s[20:21], s[12:15], 0x20
-; GFX11-NEXT:    s_buffer_load_b64 s[18:19], s[12:15], 0x30
-; GFX11-NEXT:    s_buffer_load_b64 s[16:17], s[12:15], 0x40
+; GFX11-NEXT:    s_buffer_load_b64 s[16:17], s[12:15], 0x10
+; GFX11-NEXT:    s_buffer_load_b64 s[18:19], s[12:15], 0x20
+; GFX11-NEXT:    s_buffer_load_b64 s[20:21], s[12:15], 0x30
+; GFX11-NEXT:    s_buffer_load_b64 s[22:23], s[12:15], 0x40
 ; GFX11-NEXT:    s_buffer_load_b64 s[24:25], s[12:15], 0x50
 ; GFX11-NEXT:    s_buffer_load_b64 s[26:27], s[12:15], 0x60
 ; GFX11-NEXT:    s_buffer_load_b64 s[28:29], s[12:15], 0x70
@@ -45,14 +45,14 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    v_interp_p2_f32 v0, v3, v1, v0 wait_exp:7
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f32_e32 v5, s23, v36
-; GFX11-NEXT:    v_add_f32_e32 v4, s22, v0
-; GFX11-NEXT:    v_add_f32_e32 v8, s20, v0
-; GFX11-NEXT:    v_add_f32_e32 v9, s21, v36
-; GFX11-NEXT:    v_add_f32_e32 v12, s18, v0
-; GFX11-NEXT:    v_add_f32_e32 v13, s19, v36
-; GFX11-NEXT:    v_add_f32_e32 v16, s16, v0
-; GFX11-NEXT:    v_add_f32_e32 v17, s17, v36
+; GFX11-NEXT:    v_add_f32_e32 v5, s17, v36
+; GFX11-NEXT:    v_add_f32_e32 v4, s16, v0
+; GFX11-NEXT:    v_add_f32_e32 v8, s18, v0
+; GFX11-NEXT:    v_add_f32_e32 v9, s19, v36
+; GFX11-NEXT:    v_add_f32_e32 v12, s20, v0
+; GFX11-NEXT:    v_add_f32_e32 v13, s21, v36
+; GFX11-NEXT:    v_add_f32_e32 v16, s22, v0
+; GFX11-NEXT:    v_add_f32_e32 v17, s23, v36
 ; GFX11-NEXT:    v_add_f32_e32 v20, s24, v0
 ; GFX11-NEXT:    v_add_f32_e32 v21, s25, v36
 ; GFX11-NEXT:    v_add_f32_e32 v24, s26, v0

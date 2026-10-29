@@ -204,11 +204,38 @@ define void @constantOffsetHeuristic_i8_i8(ptr %mem, i8 %val) {
 }
 
 ; CHECK-LABEL: different_large_bitwidths
-; MayAlias: ptr %p1, ptr %p2
+; CHECK: MayAlias:	i8* %p1, i8* %p2
 define void @different_large_bitwidths(ptr %a, i64 %i, i128 %j) {
   %p1 = getelementptr i8, ptr %a, i64 %i
   %p2 = getelementptr i8, ptr %a, i128 %j
   load i8, ptr %p1
   load i8, ptr %p2
+  ret void
+}
+
+; CHECK-LABEL: constant_offset_heuristic_wrapping_scale
+; CHECK: MayAlias:	i64* %p, i64* %q
+; Pointer arithmetic is computed in the 32‑bit index width, as per datalayout.
+; The index difference between %p and %q is 2, though, 2 * 2147483647 wraps to -2.
+; For %idx = 0, %q is %base - 2 and the two accesses overlap.
+define void @constant_offset_heuristic_wrapping_scale(ptr %base, i16 %idx) {
+  %idx.1 = add i16 %idx, 2
+  %p = getelementptr [2147483647 x i8], ptr %base, i16 %idx
+  %q = getelementptr [2147483647 x i8], ptr %base, i16 %idx.1
+  load i64, ptr %p
+  load i64, ptr %q
+  ret void
+}
+
+; CHECK-LABEL: constant_offset_heuristic_wrapping_scale_one_nusw
+; CHECK: MayAlias:	i64* %p, i64* %q
+; Same as above, with %p index being nusw. %q index may still wrap, so both indices
+; need to be checked.
+define void @constant_offset_heuristic_wrapping_scale_one_nusw(ptr %base, i16 %idx) {
+  %idx.1 = add i16 %idx, 2
+  %p = getelementptr nusw [2147483647 x i8], ptr %base, i16 %idx
+  %q = getelementptr [2147483647 x i8], ptr %base, i16 %idx.1
+  load i64, ptr %p
+  load i64, ptr %q
   ret void
 }

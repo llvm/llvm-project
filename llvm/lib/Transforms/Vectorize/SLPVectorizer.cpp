@@ -25515,6 +25515,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<Value *> OpVecs;
       for (int J = 1, N = GEP0->getNumOperands(); J < N; ++J) {
         Value *OpVec = vectorizeOperand(E, J);
+        // GEP sign-extends narrow indices, so extend the demoted index back to
+        // its original type.
+        auto *IdxVecTy = getWidenedType(E->getOperand(J).front()->getType(),
+                                        E->Scalars.size());
+        if (OpVec->getType() != IdxVecTy)
+          OpVec =
+              Builder.CreateIntCast(OpVec, IdxVecTy, GetOperandSignedness(J));
         OpVecs.push_back(OpVec);
       }
 
@@ -33045,34 +33052,38 @@ public:
     bool AnyBoolLogicOp = any_of(ReductionOps.back(), [](Value *V) {
       return isBoolLogicOp(cast<Instruction>(V));
     });
+    // A logical and/or op masks the poison of its second operand by the first
+    // one, so the poison of a reduced value is masked by all the values
+    // preceding it in the reduction. Only the non-poisonous parts (e.g. the
+    // frozen vector reductions) are combined out of order, the poisonous
+    // scalars are left for the scalar remainder, which is combined after them
+    // in the original order.
+    auto NeedsOrigOrder = [&](Value *V) {
+      return AnyBoolLogicOp && !isGuaranteedNotToBePoison(V, AC);
+    };
+    // In-order positions of the first occurrences of the reduced values,
+    // collected before the vectorization changes the reduction operations.
+    SmallDenseMap<Value *, unsigned> RdxValPos;
+    if (AnyBoolLogicOp) {
+      SmallPtrSet<Value *, 16> RdxOps(llvm::from_range, ReductionOps.front());
+      SmallVector<Value *> Worklist(1, ReductionRoot);
+      while (!Worklist.empty()) {
+        Value *V = Worklist.pop_back_val();
+        if (!RdxOps.contains(V)) {
+          RdxValPos.try_emplace(V, RdxValPos.size());
+          continue;
+        }
+        auto *I = cast<Instruction>(V);
+        Worklist.push_back(getRdxOperand(I, 1));
+        Worklist.push_back(getRdxOperand(I, 0));
+      }
+    }
     // Return new VectorizedTree, based on previous value.
     auto GetNewVectorizedTree = [&](Value *VectorizedTree, Value *Res) {
       if (VectorizedTree) {
         // Update the final value in the reduction.
         Builder.SetCurrentDebugLocation(
             cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
-        if (AnyBoolLogicOp) {
-          auto It = ReducedValsToOps.find(VectorizedTree);
-          auto It1 = ReducedValsToOps.find(Res);
-          if ((It == ReducedValsToOps.end() && It1 == ReducedValsToOps.end()) ||
-              isGuaranteedNotToBePoison(VectorizedTree, AC) ||
-              (It != ReducedValsToOps.end() &&
-               any_of(It->getSecond(), [&](Instruction *I) {
-                 return isBoolLogicOp(I) &&
-                        getRdxOperand(I, 0) == VectorizedTree;
-               }))) {
-            ;
-          } else if (isGuaranteedNotToBePoison(Res, AC) ||
-                     (It1 != ReducedValsToOps.end() &&
-                     any_of(It1->getSecond(), [&](Instruction *I) {
-                       return isBoolLogicOp(I) && getRdxOperand(I, 0) == Res;
-                     }))) {
-            std::swap(VectorizedTree, Res);
-          } else {
-            VectorizedTree = Builder.CreateFreeze(VectorizedTree);
-          }
-        }
-
         return createOp(Builder, RdxKind, VectorizedTree, Res, "op.rdx",
                         ReductionOps);
       }
@@ -33359,7 +33370,8 @@ public:
 
       // Emit code for constant values.
       if (Candidates.size() > 1 && allConstant(Candidates)) {
-        if (RK == ReductionOrdering::Ordered)
+        if (RK == ReductionOrdering::Ordered ||
+            any_of(Candidates, NeedsOrigOrder))
           continue;
         Value *Res = Candidates.front();
         Value *OrigV = TrackedToOrig.front();
@@ -33458,6 +33470,9 @@ public:
                                              /*IsSigned=*/true,
                                              /*ReducedInTree=*/false,
                                              GroupNegated});
+          } else if (NeedsOrigOrder(Candidates.front())) {
+            // Left for the scalar remainder.
+            Cnt = 0;
           } else {
             Value *RedVal =
                 emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
@@ -33912,6 +33927,8 @@ public:
       if (OptReusedScalars && !AnyVectorized) {
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
           Value *RdxVal = TrackedVals.at(P.first);
+          if (NeedsOrigOrder(RdxVal))
+            continue;
           Value *RedVal = emitScaleForReusedOps(RdxVal, Builder, P.second);
           AddReducedPart(P.first, RedVal, GroupNegated);
           VectorizedVals.try_emplace(P.first, P.second);
@@ -33940,6 +33957,20 @@ public:
     SmallVector<std::pair<Instruction *, Value *>> LeftoverReductions;
     LoopAcc.collectLeftovers(VectorizedVals, ReducedVals, ReducedValsToOps,
                              LeftoverReductions);
+    // Restore the original order of the scalar remainder of the logical
+    // reduction and drop the repeated values, they do not change the result.
+    // The booleanized leaves have no positions, they are not poison.
+    bool HasRepeatedLeftovers = false;
+    if (AnyBoolLogicOp) {
+      stable_sort(LeftoverReductions, [&](const auto &P1, const auto &P2) {
+        return RdxValPos.lookup(P1.second) < RdxValPos.lookup(P2.second);
+      });
+      auto *It = unique(LeftoverReductions, [](const auto &P1, const auto &P2) {
+        return P1.second == P2.second;
+      });
+      HasRepeatedLeftovers = It != LeftoverReductions.end();
+      LeftoverReductions.erase(It, LeftoverReductions.end());
+    }
 
     // The accumulator form requires a single vectorized slice and no
     // leftover reduced values; the latter would have to be folded into the
@@ -33999,7 +34030,8 @@ public:
       return nullptr;
     }
 
-    if (!VectorizedTree && NegExtraReductions.empty()) {
+    if (!VectorizedTree && NegExtraReductions.empty() &&
+        !HasRepeatedLeftovers) {
       if (!CheckForReusedReductionOps) {
         for (ReductionOpsType &RdxOps : ReductionOps)
           for (Value *RdxOp : RdxOps)
@@ -34008,56 +34040,6 @@ public:
       return nullptr;
     }
 
-    // Reorder operands of bool logical op in the natural order to avoid
-    // possible problem with poison propagation. If not possible to reorder
-    // (both operands are originally RHS), emit an extra freeze instruction
-    // for the LHS operand.
-    // I.e., if we have original code like this:
-    // RedOp1 = select i1 ?, i1 LHS, i1 false
-    // RedOp2 = select i1 RHS, i1 ?, i1 false
-
-    // Then, we swap LHS/RHS to create a new op that matches the poison
-    // semantics of the original code.
-
-    // If we have original code like this and both values could be poison:
-    // RedOp1 = select i1 ?, i1 LHS, i1 false
-    // RedOp2 = select i1 ?, i1 RHS, i1 false
-
-    // Then, we must freeze LHS in the new op.
-    auto FixBoolLogicalOps =
-        [&, VectorizedTree](Value *&LHS, Value *&RHS, Instruction *RedOp1,
-                            Instruction *RedOp2, bool InitStep) {
-          if (!AnyBoolLogicOp)
-            return;
-          if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
-                                        getRdxOperand(RedOp1, 0) == LHS ||
-                                        isGuaranteedNotToBePoison(LHS, AC)))
-            return;
-          bool NeedFreeze = LHS != VectorizedTree;
-          if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
-                                        getRdxOperand(RedOp2, 0) == RHS ||
-                                        isGuaranteedNotToBePoison(RHS, AC))) {
-            // If RedOp2 was used as a second operand - do not swap.
-            if ((InitStep || RHS != VectorizedTree) &&
-                getRdxOperand(RedOp2, 0) == RHS &&
-                ((isBoolLogicOp(RedOp1) &&
-                  getRdxOperand(RedOp1, 1) == RedOp2) ||
-                 any_of(ReductionOps, [&](ArrayRef<Value *> Ops) {
-                   return any_of(make_isa_range<Instruction>(Ops),
-                                 [&](Instruction *OpI) {
-                                   return isBoolLogicOp(OpI) &&
-                                          getRdxOperand(OpI, 1) == RedOp2;
-                                 });
-                 }))) {
-              NeedFreeze = false;
-            } else {
-              std::swap(LHS, RHS);
-              return;
-            }
-          }
-          if (NeedFreeze)
-            LHS = Builder.CreateFreeze(LHS);
-        };
     // Leftover narrow values need the same mask/zext/shift as the vectorized
     // ones.
     auto WidenNarrowedVal = [&](Value *OrigV, Value *&V) {
@@ -34073,8 +34055,7 @@ public:
     // Finish the reduction.
     // Need to add extra arguments and not vectorized possible reduction values.
     // Try to avoid dependencies between the scalar remainders after reductions.
-    auto FinalGen = [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
-                        bool InitStep) {
+    auto FinalGen = [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals) {
       unsigned Sz = InstVals.size();
       SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 + Sz % 2);
       for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
@@ -34092,11 +34073,6 @@ public:
           StableRdxVal2 = It2->second;
         WidenNarrowedVal(RdxVal1, StableRdxVal1);
         WidenNarrowedVal(RdxVal2, StableRdxVal2);
-        // To prevent poison from leaking across what used to be sequential,
-        // safe, scalar boolean logic operations, the reduction operand must be
-        // frozen.
-        FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
-                          RedOp, InitStep);
         Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
                                    StableRdxVal2, "op.rdx", ReductionOps);
         ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
@@ -34116,12 +34092,10 @@ public:
     // combining them pairwise.
     auto CombineReds =
         [&](SmallVectorImpl<std::pair<Instruction *, Value *>> &Reds) {
-          bool InitStep = true;
           while (Reds.size() > 1) {
             SmallVector<std::pair<Instruction *, Value *>> NewReds =
-                FinalGen(Reds, InitStep);
+                FinalGen(Reds);
             Reds.swap(NewReds);
-            InitStep = false;
           }
           Value *RdxVal = Reds.front().second;
           auto It = TrackedVals.find(RdxVal);
