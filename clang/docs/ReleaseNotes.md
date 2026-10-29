@@ -1053,7 +1053,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
-- The Clang Static Analyzer's emitted diagnostics (warnings, notes) now consistently have one space after sentence endings (#GH228777). The RFC for this change can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
+- The diagnostics of the Clang Static Analyzer no longer have two spaces after a sentence ending (#GH228777). The RFC for this change can be found here: https://discourse.llvm.org/t/rfc-standardization-of-reports-sentence-spacing/92428
 
 (release-notes-sanitizers)=
 
