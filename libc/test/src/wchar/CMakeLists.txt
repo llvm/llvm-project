@@ -741,7 +741,27 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_STRERROR")
+endif()
+
+add_fp_unittest(
   swprintf_test
   SUITE
     libc-wchar-tests
@@ -751,6 +771,14 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+    libc.include.inttypes
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.printf_core.printf_config
     libc.src.wchar.swprintf
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+  COMPILE_OPTIONS
+    ${swprintf_test_copts}
 )

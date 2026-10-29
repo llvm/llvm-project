@@ -520,6 +520,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.swprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -1572,9 +1573,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
-
-      # wchar.h entrypoints
-      libc.src.wchar.swprintf
     )
   endif()
 endif()
