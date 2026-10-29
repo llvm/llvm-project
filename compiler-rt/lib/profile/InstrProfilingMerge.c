@@ -90,6 +90,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
     if (SrcData->NameRef != DstData->NameRef ||
         SrcData->FuncHash != DstData->FuncHash ||
         SrcData->NumCounters != DstData->NumCounters ||
+        SrcData->NumWaveCounters != DstData->NumWaveCounters ||
         SrcData->NumBitmapBytes != DstData->NumBitmapBytes)
       return 1;
   }
