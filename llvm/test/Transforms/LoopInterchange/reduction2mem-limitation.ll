@@ -322,3 +322,65 @@ outerloop_latch:
 exit:
   ret void
 }
+
+; 6. The store address cannot be computed before the inner loop: it depends on
+;    a value the inner loop produces, so it is not the same address for every
+;    iteration that has to accumulate into it.
+; for (int i = 0; i < 100; i++) {
+;   r = 0;
+;   for (j = 0; j < 100; j++)
+;     r = r + a[j][i] * b[j][i];
+;   s[i + j] = r;
+; }
+
+; CHECK: --- !Missed
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_06
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          Only supported when memory reference dominate the inner loop.
+; CHECK: --- !Missed
+; CHECK-NEXT: Pass:            loop-interchange
+; CHECK-NEXT: Name:            UnsupportedPHIInner
+; CHECK-NEXT: Function:        reduction_06
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
+
+; IR-LABEL: @reduction_06(
+; IR-NOT: split
+define void @reduction_06(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
+entry:
+  br label %outerloop_header
+
+outerloop_header:
+  %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
+  %invariant.gep.us = getelementptr inbounds nuw double, ptr %a, i64 %index_i
+  %invariant.gep32.us = getelementptr inbounds nuw double, ptr %b, i64 %index_i
+  br label %innerloop
+
+innerloop:
+  %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
+  %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
+  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %0 = load double, ptr %addr_a_j_i, align 8
+  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %1 = load double, ptr %addr_b_j_i, align 8
+  %mul = fmul fast double %1, %0
+  %add = fadd fast double %mul, %reduction
+  %index_j.next = add nuw nsw i64 %index_j, 1
+  %cond1 = icmp eq i64 %index_j.next, 100
+  br i1 %cond1, label %outerloop_latch, label %innerloop
+
+outerloop_latch:
+  %lcssa = phi double [ %add, %innerloop ]
+  %jl = phi i64 [ %index_j, %innerloop ]
+  %skew = add nsw i64 %index_i, %jl
+  %addr_s = getelementptr inbounds nuw double, ptr %s, i64 %skew
+  store double %lcssa, ptr %addr_s, align 8
+  %index_i.next = add nuw nsw i64 %index_i, 1
+  %cond2 = icmp eq i64 %index_i.next, 100
+  br i1 %cond2, label %exit, label %outerloop_header
+
+exit:
+  ret void
+}
