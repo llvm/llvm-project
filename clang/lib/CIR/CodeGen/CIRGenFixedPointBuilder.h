@@ -49,8 +49,6 @@ struct CIRGenFixedPointBuilder {
 
   mlir::Value createFloatingToFixed(mlir::Value src,
                                     const llvm::FixedPointSemantics &dstSema) {
-
-    bool useSigned = dstSema.isSigned() || dstSema.hasUnsignedPadding();
     mlir::Value result = src;
     mlir::Type opTy = getAccommodatingFloatType(src.getType(), dstSema);
 
@@ -70,15 +68,14 @@ struct CIRGenFixedPointBuilder {
     cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
     result = builder.createFMul(loc, result, fpConst);
 
-    cir::IntType resultTy = cir::IntType::get(
-        builder.getContext(), dstSema.getWidth(), dstSema.isSigned());
-
+    cir::IntType opIntTy = getOpIntType(dstSema);
     if (dstSema.isSaturated()) {
       result = builder.emitIntrinsicCallOp(
-          loc, useSigned ? "fptosi.sat" : "fptoui.sat", resultTy, result);
+          loc, opIntTy.isSigned() ? "fptosi.sat" : "fptoui.sat", opIntTy,
+          result);
     } else {
-      result = builder.createCast(loc, cir::CastKind::float_to_int, result,
-                                  resultTy);
+      result =
+          builder.createCast(loc, cir::CastKind::float_to_int, result, opIntTy);
     }
 
     // When saturating unsigned-with-padding using signed operations, we may
@@ -86,7 +83,9 @@ struct CIRGenFixedPointBuilder {
     if (dstSema.isSaturated() && dstSema.hasUnsignedPadding())
       result = clampNegativeToZero(result);
 
-    return result;
+    cir::IntType dstIntTy = cir::IntType::get(
+        builder.getContext(), dstSema.getWidth(), dstSema.isSigned());
+    return builder.createIntCast(result, dstIntTy);
   }
 
   mlir::Value createFixedToInteger(mlir::Value src,
@@ -344,9 +343,9 @@ private:
         result = builder.createSelect(loc, tooLow, min, result);
       }
 
-      // Resize the integer part to get the final destination size.
-      if (resultWidth != dstWidth)
-        result = builder.createIntCast(result, dstIntTy);
+      // Unlike LLVM integers, CIR integers carry signedness, so the cast is
+      // needed even when only the signedness differs.
+      result = builder.createIntCast(result, dstIntTy);
     }
     return result;
   }
