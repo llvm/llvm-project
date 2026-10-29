@@ -8144,21 +8144,29 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
                                              BuildFnTy &MatchInfo) const {
   // fold ((A-C1)+C2) -> (A+(C2-C1))
   const GAdd *Add = cast<GAdd>(&MI);
+  // G_ADD is commutative, so the G_SUB can be either operand.
+  Register SubReg = Add->getLHSReg();
+  Register C2Reg = Add->getRHSReg();
   Register A, C1Reg;
-  if (!mi_match(Add->getLHSReg(), MRI, m_GSub(m_Reg(A), m_Reg(C1Reg))))
+  if (!mi_match(SubReg, MRI, m_GSub(m_Reg(A), m_Reg(C1Reg)))) {
+    std::swap(SubReg, C2Reg);
+    if (!mi_match(SubReg, MRI, m_GSub(m_Reg(A), m_Reg(C1Reg))))
+      return false;
+  }
+
+  if (!MRI.hasOneNonDBGUse(SubReg))
     return false;
 
-  if (!MRI.hasOneNonDBGUse(Add->getLHSReg()))
+  std::optional<APInt> C2 = getIConstantVRegVal(C2Reg, MRI);
+  std::optional<APInt> C1 = getIConstantVRegVal(C1Reg, MRI);
+  if (!C1 || !C2)
     return false;
-
-  APInt C2 = getIConstantFromReg(Add->getRHSReg(), MRI);
-  APInt C1 = getIConstantFromReg(C1Reg, MRI);
 
   Register Dst = Add->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto Const = B.buildConstant(DstTy, C2 - C1);
+    auto Const = B.buildConstant(DstTy, *C2 - *C1);
     B.buildAdd(Dst, A, Const);
   };
 
