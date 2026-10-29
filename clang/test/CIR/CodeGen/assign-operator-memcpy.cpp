@@ -127,3 +127,34 @@ ContainsTrivialArray::operator=(const ContainsTrivialArray &) = default;
 
 // OGCG-LABEL: define {{.*}} @_ZN20ContainsTrivialArrayaSERKS_(
 // OGCG:         call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 80, i1 false)
+
+struct HasPadding {
+  int a;
+  long b[32];
+  int c;
+};
+// FIXME: CIR zeroes the temporary member by member (leaving its padding
+// uninitialized) and the assignment operator copies 268 bytes (up to the end of
+// the last field), not the 272 of the object, so the tail padding is not copied
+// either. Update the CIR and LLVM checks when this is fixed.
+
+// CIR-LABEL: cir.func {{.*}} @_Z11resetPaddedP10HasPadding(
+// CIR-NOT:     cir.libc.memset %{{.*}} bytes
+// CIR:         cir.get_member %{{.*}}[0] {name = "a"}
+// CIR:         cir.libc.memset %{{.*}} bytes at
+// CIR:         cir.get_member %{{.*}}[2] {name = "c"}
+// CIR:         cir.call @_ZN10HasPaddingaSEOS_(
+// CIR-LABEL: cir.func {{.*}} @_ZN10HasPaddingaSEOS_(
+// CIR:         %[[SIZE_PADDED:.*]] = cir.const #cir.int<268> : !u64i
+// CIR:         cir.libc.memcpy %[[SIZE_PADDED]] bytes from
+
+// LLVM-LABEL: define {{.*}} @_Z11resetPaddedP10HasPadding(
+// LLVM:         call void @llvm.memset.p0.i64({{.*}}, i64 256, i1 false)
+// LLVM:         call {{.*}} @_ZN10HasPaddingaSEOS_(
+// LLVM-LABEL: define {{.*}} @_ZN10HasPaddingaSEOS_(
+// LLVM:         call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 268, i1 false)
+
+// OGCG-LABEL: define {{.*}} @_Z11resetPaddedP10HasPadding(
+// OGCG:         call void @llvm.memset.p0.i64({{.*}}, i64 272, i1 false)
+// OGCG:         call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 272, i1 false)
+void resetPadded(HasPadding *p) { *p = {}; }
