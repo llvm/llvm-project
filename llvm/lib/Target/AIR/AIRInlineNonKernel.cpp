@@ -58,7 +58,7 @@ static cl::opt<unsigned> KeepFunctionCost(
 static cl::opt<unsigned> KeepFunctionMinSize(
     "air-keep-function-min-size",
     cl::desc("Inline every function smaller than this (instructions)"),
-    cl::init(300));
+    cl::init(100));
 
 namespace {
 using Count = uint64_t;
