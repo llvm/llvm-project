@@ -1328,6 +1328,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   link-time failures. `dynamic_cast<void*>` is still allowed because it does not
   use RTTI.
 
+- The HIP math header now provides `__exp2f`, a fast `exp2` intrinsic that
+  lowers to a single `v_exp_f32` without the denormal handling that `exp2f`
+  adds, so results in the denormal range may be flushed to zero. CUDA has no
+  `__exp2f`, so it is a HIP-only extension.
+
 #### CUDA Support
 
 - Fixed missing diagnostics for wrong-side functions reached through constructor
