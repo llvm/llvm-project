@@ -1652,7 +1652,7 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
   if (!nextTransposeOp)
     return failure();
 
-  if (nextTransposeOp.getPermutation().empty())
+  if (nextTransposeOp.getResultVectorType().getRank() == 0)
     return success();
 
   AffineMap m = inversePermutation(AffineMap::getPermutationMap(
