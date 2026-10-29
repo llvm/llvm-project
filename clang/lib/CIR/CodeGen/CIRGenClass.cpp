@@ -24,6 +24,168 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+/// TODO(cir): a lot of what we see under this namespace is a strong candidate
+/// to be shared between LLVM and CIR codegen.
+
+/// RAII object to indicate that codegen is copying the value representation
+/// instead of the object representation. Useful when copying a struct or
+/// class which has uninitialized members and we're only performing
+/// lvalue-to-rvalue conversion on the object but not its members.
+class CopyingValueRepresentation {
+public:
+  explicit CopyingValueRepresentation(CIRGenFunction &CGF)
+      : CGF(CGF), OldSanOpts(CGF.sanOpts) {
+    CGF.sanOpts.set(SanitizerKind::Bool, false);
+    CGF.sanOpts.set(SanitizerKind::Enum, false);
+  }
+  ~CopyingValueRepresentation() { CGF.sanOpts = OldSanOpts; }
+
+private:
+  CIRGenFunction &CGF;
+  SanitizerSet OldSanOpts;
+};
+
+class FieldMemcpyizer {
+public:
+  FieldMemcpyizer(CIRGenFunction &CGF, const CXXMethodDecl *MethodDecl,
+                  const VarDecl *SrcRec)
+      : CGF(CGF), MethodDecl(MethodDecl), ClassDecl(MethodDecl->getParent()),
+        SrcRec(SrcRec),
+        RecLayout(CGF.getContext().getASTRecordLayout(ClassDecl)),
+        FirstField(nullptr), LastField(nullptr), FirstFieldOffset(0),
+        LastFieldOffset(0), LastAddedFieldIndex(0) {}
+
+  bool isMemcpyableField(FieldDecl *F) const {
+    // Never memcpy fields when we are adding poised paddings.
+    if (CGF.getContext().getLangOpts().SanitizeAddressFieldPadding)
+      return false;
+    Qualifiers Qual = F->getType().getQualifiers();
+    if (Qual.hasVolatile() || Qual.hasObjCLifetime())
+      return false;
+    return true;
+  }
+
+  void addMemcpyableField(FieldDecl *F) {
+    //assert(!cir::MissingFeatures::isEmptyFieldForLayout());
+    if (F->isZeroSize(CGF.getContext()))
+      return;
+    if (!FirstField)
+      addInitialField(F);
+    else
+      addNextField(F);
+  }
+
+  CharUnits getMemcpySize(uint64_t FirstByteOffset) const {
+    ASTContext &astContext = CGF.getContext();
+    unsigned LastFieldSize =
+        LastField->isBitField()
+            ? LastField->getBitWidthValue()
+            : astContext.toBits(
+                  astContext.getTypeInfoDataSizeInChars(LastField->getType())
+                      .Width);
+    uint64_t MemcpySizeBits = LastFieldOffset + LastFieldSize -
+                              FirstByteOffset + astContext.getCharWidth() - 1;
+    CharUnits MemcpySize = astContext.toCharUnitsFromBits(MemcpySizeBits);
+    return MemcpySize;
+  }
+
+  void emitMemcpy() {
+    // Give the subclass a chance to bail out if it feels the memcpy isn't worth
+    // it (e.g. Hasn't aggregated enough data).
+    if (!FirstField) {
+      return;
+    }
+
+    uint64_t firstByteOffset;
+    if (FirstField->isBitField()) {
+      const CIRGenRecordLayout &rl =
+          CGF.getTypes().getCIRGenRecordLayout(FirstField->getParent());
+      const CIRGenBitFieldInfo &bfInfo = rl.getBitFieldInfo(FirstField);
+      // FirstFieldOffset is not appropriate for bitfields,
+      // we need to use the storage offset instead.
+      firstByteOffset = CGF.getContext().toBits(bfInfo.storageOffset);
+    } else {
+      firstByteOffset = FirstFieldOffset;
+    }
+
+    CharUnits memcpySize = getMemcpySize(firstByteOffset);
+    QualType recordTy = CGF.getContext().getTagType(
+        ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, ClassDecl,
+        /*OwnsTag=*/false);
+    Address thisPtr = CGF.loadCXXThisAddress();
+    LValue destLv = CGF.makeAddrLValue(thisPtr, recordTy);
+    LValue dest = CGF.emitLValueForFieldInitialization(destLv, FirstField,
+                                                       FirstField->getName());
+    cir::LoadOp srcPtr = CGF.getBuilder().createLoad(
+        CGF.getLoc(MethodDecl->getLocation()), CGF.getAddrOfLocalVar(SrcRec));
+    LValue srcLv = CGF.makeNaturalAlignAddrLValue(srcPtr, recordTy);
+    LValue src = CGF.emitLValueForFieldInitialization(srcLv, FirstField,
+                                                      FirstField->getName());
+
+    emitMemcpyIR(dest.isBitField() ? dest.getBitFieldAddress()
+                                   : dest.getAddress(),
+                 src.isBitField() ? src.getBitFieldAddress() : src.getAddress(),
+                 memcpySize);
+    reset();
+  }
+
+  void reset() { FirstField = nullptr; }
+
+protected:
+  CIRGenFunction &CGF;
+  const CXXMethodDecl *MethodDecl;
+  const CXXRecordDecl *ClassDecl;
+
+private:
+  void emitMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
+    mlir::Location loc = CGF.getLoc(MethodDecl->getLocation());
+    CIRGenBuilderTy &builder = CGF.getBuilder();
+    mlir::Value sizeOp =
+        builder.getConstInt(loc, CGF.sizeTy, Size.getQuantity());
+    builder.createMemCpy(loc, DestPtr.withElementType(builder, CGF.voidTy),
+                         SrcPtr.withElementType(builder, CGF.voidTy), sizeOp);
+  }
+
+  void addInitialField(FieldDecl *F) {
+    FirstField = F;
+    LastField = F;
+    FirstFieldOffset = RecLayout.getFieldOffset(F->getFieldIndex());
+    LastFieldOffset = FirstFieldOffset;
+    LastAddedFieldIndex = F->getFieldIndex();
+  }
+
+  void addNextField(FieldDecl *F) {
+    // For the most part, the following invariant will hold:
+    //   F->getFieldIndex() == LastAddedFieldIndex + 1
+    // The one exception is that Sema won't add a copy-initializer for an
+    // unnamed bitfield, which will show up here as a gap in the sequence.
+    assert(F->getFieldIndex() >= LastAddedFieldIndex + 1 &&
+           "Cannot aggregate fields out of order.");
+    LastAddedFieldIndex = F->getFieldIndex();
+
+    // The 'first' and 'last' fields are chosen by offset, rather than field
+    // index. This allows the code to support bitfields, as well as regular
+    // fields.
+    uint64_t FOffset = RecLayout.getFieldOffset(F->getFieldIndex());
+    if (FOffset < FirstFieldOffset) {
+      FirstField = F;
+      FirstFieldOffset = FOffset;
+    } else if (FOffset >= LastFieldOffset) {
+      LastField = F;
+      LastFieldOffset = FOffset;
+    }
+  }
+
+  const VarDecl *SrcRec;
+  const ASTRecordLayout &RecLayout;
+  FieldDecl *FirstField;
+  FieldDecl *LastField;
+  uint64_t FirstFieldOffset, LastFieldOffset;
+  unsigned LastAddedFieldIndex;
+};
+}
+
 /// Return the smallest possible amount of storage that might be allocated
 /// starting from the beginning of an object of a particular class.
 ///
