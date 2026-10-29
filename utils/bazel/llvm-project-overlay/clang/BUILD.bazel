@@ -269,6 +269,13 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsMetaTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsMeta.td"],
+    includes = ["include"],
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+td_library(
     name = "BuiltinsAArch64BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsAArch64Base.td"],
     includes = ["include"],
@@ -484,7 +491,10 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/Builtins.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Builtins.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsMetaTdFiles",
+    ],
 )
 
 gentbl_cc_library(
