@@ -57,10 +57,8 @@ consteval void test_pass() {
   static_assert(meta_is_type(^^intptr_t));
   static_assert(meta_is_type(^^uintptr_t));
   static_assert(meta_is_type(^^size_t));
-#ifdef __SIZEOF_INT128__
   static_assert(meta_is_type(^^__int128_t));
   static_assert(meta_is_type(^^__uint128_t));
-#endif
 
   static_assert(meta_is_type(^^const int));
   static_assert(meta_is_type(^^volatile int));
