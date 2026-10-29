@@ -97,6 +97,11 @@ infrastructure are described first, followed by tool-specific sections.
   operator call such as `stream << 42;`), which it previously refused to
   extract.
 
+- The `Extract to function` tweak is now also available in C files, where
+  it previously always refused to apply. Captured variables are passed by
+  value when possible, and otherwise via a pointer parameter, since C has
+  no references.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -111,6 +116,13 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
   C++20 concepts.
   ([#206875](https://github.com/llvm/llvm-project/issues/206875))
+
+- `clangd-indexer` now reads clangd configuration files (`.clangd` and the
+  user config) by default. Pass `--enable-config=false` to restore the previous
+  behavior.
+
+- Added support for loading dynamic plugins via the `-load` command-line
+  option.
 
 ### Improvements to clang-doc
 
@@ -127,12 +139,22 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
   Detects malformed regex patterns defined in a single string literal.
+
+- New {doc}`modernize-use-if-consteval
+  <clang-tidy/checks/modernize/use-if-consteval>` check.
+
+  Replaces direct `std::is_constant_evaluated()` checks in `if` statements
+  with C++23's `if consteval` syntax.
 
 - New {doc}`modernize-use-to-underlying
   <clang-tidy/checks/modernize/use-to-underlying>` check.
@@ -161,6 +183,21 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Improved {doc}`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments inside GNU statement expressions unless they form the value of
+  the statement expression.
+
+- Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
+  constructor begins with a macro, and fix-its that inserted `private:` into
+  the preceding token, comment or macro argument.
+
+- Improved {doc}`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
+  emitting empty notes for type aliases when {option}`ModelImplicitConversions`
+  is enabled.
 
 - Improved {doc}`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
@@ -194,6 +231,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
+  positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
+  value or returned by `bsl::make_optional`.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.
@@ -204,6 +246,13 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
+
+- Improved {doc}`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines/virtual-class-destructor>` check by
+  emitting the diagnostic and its fix-it notes at the destructor's location
+  instead of the class name, whenever the destructor is user-declared. The
+  diagnostics are still emitted at the class name for implicitly declared
+  destructors.
 
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
@@ -217,9 +266,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-    
+
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
+
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -229,6 +282,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
+
+- Fixed false positive in {doc}`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
+  or deleted destructor.
 
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
@@ -244,6 +301,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
 
+- Improved {doc}`modernize-use-equals-default
+  <clang-tidy/checks/modernize/use-equals-default>` check to also capture
+  default constructor with explicit default-initialization of parents.
+
 - Fixed a crash in {doc}`modernize-use-noexcept
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
@@ -252,9 +313,21 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
+
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
+
+  - Preserved used callable results when replacing `std::for_each` and
+    structured binding results when replacing algorithms such as
+    `std::equal_range`.
+
+  - Kept diagnostics but suppressed unsafe fix-its when no safe
+    result-preserving rewrite is available.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
@@ -263,6 +336,25 @@ infrastructure are described first, followed by tool-specific sections.
   copied as written rather than with its parentheses stripped, and no fix is
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
+
+- Improved {doc}`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based `for` loops.
+
+- Improved {doc}`performance-no-automatic-move
+  <clang-tidy/checks/performance/no-automatic-move>` check by no longer
+  warning when returning a variable captured by a lambda or a block, which is
+  never implicitly moved from.
+
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
+
+- Improved {doc}`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
+  avoid offering fix-its for string literals originating from macro
+  expansions.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
@@ -319,8 +411,18 @@ infrastructure are described first, followed by tool-specific sections.
   `atomic_compare_exchange_strong()`.
 
 - Improved {doc}`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive on the required parentheses of `typeof` and
+    `typeof_unqual` operands.
+
+  - Fixed false positives and incorrect fixes caused by synthetic parentheses
+    in reference non-type template parameter uses, `__builtin_dump_struct` calls,
+    and OpenMP `linear` clauses.
+
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
@@ -340,7 +442,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-    
+
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
@@ -354,6 +456,10 @@ infrastructure are described first, followed by tool-specific sections.
   {doc}`fuchsia-temporary-objects <clang-tidy/checks/fuchsia/temporary-objects>`.
 
 #### Miscellaneous
+
+- Fixed {program}`clang-tidy` adding an unwanted blank line when automatically
+  inserting a missing `#include`, which stopped {program}`clang-format` and
+  the `llvm-include-order` check from being able to sort it correctly afterwards.
 
 ### Improvements to include-fixer
 

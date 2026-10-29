@@ -1,9 +1,9 @@
-add_custom_target(libc_fenv_unittests)
+add_libc_testsuite(libc-fenv-tests)
 
 add_libc_test(
   rounding_mode_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     rounding_mode_test.cpp
   DEPENDS
@@ -15,7 +15,7 @@ add_libc_test(
 add_libc_test(
   exception_status_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     exception_status_test.cpp
   DEPENDS
@@ -30,7 +30,7 @@ add_libc_test(
 add_libc_test(
   getenv_and_setenv_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     getenv_and_setenv_test.cpp
   DEPENDS
@@ -46,7 +46,7 @@ add_libc_test(
 add_libc_test(
   exception_flags_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     exception_flags_test.cpp
   DEPENDS
@@ -60,7 +60,7 @@ add_libc_test(
 add_libc_test(
   feupdateenv_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     feupdateenv_test.cpp
   DEPENDS
@@ -73,7 +73,7 @@ add_libc_test(
 add_libc_test(
   feclearexcept_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     feclearexcept_test.cpp
   DEPENDS
@@ -85,7 +85,7 @@ add_libc_test(
 add_libc_test(
   feenableexcept_test
   SUITE
-    libc_fenv_unittests
+    libc-fenv-tests
   SRCS
     feenableexcept_test.cpp
   DEPENDS
@@ -105,7 +105,7 @@ if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
   add_fp_unittest(
     enabled_exceptions_test
     SUITE
-      libc_fenv_unittests
+      libc-fenv-tests
     SRCS
       enabled_exceptions_test.cpp
     DEPENDS
@@ -121,7 +121,7 @@ if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
   add_fp_unittest(
     feholdexcept_test
     SUITE
-      libc_fenv_unittests
+      libc-fenv-tests
     SRCS
       feholdexcept_test.cpp
     DEPENDS

@@ -1032,7 +1032,7 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // If the size of the ivar is not a power of two, give up.  We don't
   // want to get into the business of doing compare-and-swaps.
-  if (!IvarSize.isPowerOfTwo()) {
+  if (!IvarSize.isZero() && !IvarSize.isPowerOfTwo()) {
     Kind = CopyStruct;
     return;
   }

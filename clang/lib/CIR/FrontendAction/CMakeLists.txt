@@ -13,6 +13,8 @@ add_clang_library(clangCIRFrontendAction
   DEPENDS
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   MLIRBuiltinOpsIncGen
 
   LINK_LIBS
@@ -26,6 +28,7 @@ add_clang_library(clangCIRFrontendAction
   clangCodeGenUtils
   CIRRegisterAllDialects
   MLIRCIR
+  MLIRBytecodeWriter
   MLIRIR
   MLIRParser
   )

@@ -17,6 +17,7 @@ enum class Mode { A, B };
 
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/LibraryOptions.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -30,12 +31,16 @@ namespace {
 
 // The struct -gen-opt-parser-defs generates: every spelling sets its member.
 TEST(LibraryOptionsTest, Apply) {
+  BumpPtrAllocator Alloc;
   TestLibraryOptions O;
   EXPECT_FALSE(O.enable);
   EXPECT_EQ(O.count, 3u);
   EXPECT_EQ(O.limit, std::nullopt);
+  EXPECT_THAT(O.list, testing::IsEmpty());
   EXPECT_EQ(O.mode, test::Mode::A);
+  EXPECT_THAT(O.modes, testing::IsEmpty());
   EXPECT_EQ(O.override, BoolOrDefault::Default);
+  EXPECT_EQ(O.print, std::nullopt);
   EXPECT_EQ(O.ratio, 0.5);
   EXPECT_EQ(O.tristate, BoolOrDefault::Default);
   EXPECT_EQ(O.Path, "p");
@@ -46,7 +51,7 @@ TEST(LibraryOptionsTest, Apply) {
         Argv, MissingIndex, MissingCount);
     std::vector<bool> Applied;
     for (const opt::Arg *A : Args)
-      Applied.push_back(O.apply(*A));
+      Applied.push_back(O.apply(*A, Alloc));
     return Applied;
   };
   EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-limit=0",
@@ -71,16 +76,34 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.tristate, BoolOrDefault::True);
   EXPECT_THAT(Apply({"-lib-tristate=Default"}), testing::Each(true));
   EXPECT_EQ(O.tristate, BoolOrDefault::Default);
+  EXPECT_THAT(Apply({"-lib-print=a"}), testing::Each(true));
+  EXPECT_EQ(O.print, test::Mode::A);
+  EXPECT_THAT(Apply({"-lib-print"}), testing::Each(true));
+  EXPECT_EQ(O.print, test::Mode::B);
+
+  // Each occurrence of a list appends its comma-separated values.
+  EXPECT_THAT(Apply({"-lib-list=1,2", "-lib-list", "3"}), testing::Each(true));
+  EXPECT_THAT(O.list, testing::ElementsAre(1u, 2u, 3u));
+  EXPECT_THAT(Apply({"-lib-modes=b,a", "-lib-modes", "b"}),
+              testing::Each(true));
+  EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
+                                            test::Mode::B));
 
   // A rejected value leaves the member unchanged.
-  EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x",
-                     "-lib-mode=c", "-lib-override=y", "-lib-ratio=y"}),
-              testing::Each(false));
+  EXPECT_THAT(
+      Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x", "-lib-list=4,x",
+             "-lib-list=", "-lib-mode=c", "-lib-modes=a,c", "-lib-override=y",
+             "-lib-print=c", "-lib-ratio=y"}),
+      testing::Each(false));
   EXPECT_TRUE(O.enable);
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
+  EXPECT_THAT(O.list, testing::ElementsAre(1u, 2u, 3u));
   EXPECT_EQ(O.mode, test::Mode::B);
+  EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
+                                            test::Mode::B));
   EXPECT_EQ(O.override, BoolOrDefault::False);
+  EXPECT_EQ(O.print, test::Mode::B);
   EXPECT_EQ(O.ratio, 0.25);
 }
 
@@ -93,10 +116,7 @@ TEST(LibraryOptionsTest, BoolOrDefault) {
 
 // What cl:: sees of the struct, without cl::.
 TEST(LibraryOptionsTest, Parser) {
-  opt::LibraryOptionsParser P(
-      TestLibraryOptions::optTable,
-      [](const opt::Arg &A) { return TestLibraryOptions::Global.apply(A); },
-      [] { TestLibraryOptions::Global = TestLibraryOptions(); });
+  opt::LibraryOptionsParser P(std::in_place_type<TestLibraryOptions>);
 
   std::vector<std::string> Rows;
   P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
@@ -104,15 +124,21 @@ TEST(LibraryOptionsTest, Parser) {
   });
   EXPECT_THAT(Rows,
               testing::ElementsAre(
-                  "lib-count|=<value>|An unsigned", "lib-enable||A bool",
-                  "lib-limit|=<value>|An optional", "lib-mode|=<a|b>|An enum",
-                  "lib-override||An optional bool",
-                  "lib-path|=<value>|A string", "lib-ratio|=<value>|A double",
+                  "lib-count|=<value>|An unsigned", "lib-disable||",
+                  "lib-enable||A bool", "lib-in-build||Available",
+                  "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
+                  "lib-mode-b||", "lib-modes|=<a|b>|An enum list",
+                  "lib-mode|=<a|b>|An enum", "lib-number|=<value>|",
+                  "lib-old-mode|=<value>|", "lib-override||An optional bool",
+                  "lib-path|=<value>|A string",
+                  "lib-print|[=<a|b>]|A flag or enum",
+                  "lib-ratio|=<value>|A double",
                   "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
+  BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
-    std::string Err = toString(P.parse(Argv, Consumed));
+    std::string Err = toString(P.parse(P.global(), Argv, Consumed, Alloc));
     return std::to_string(Consumed) + " " + Err;
   };
   EXPECT_EQ(Parse({"-lib-count", "5"}), "2 ");
@@ -123,10 +149,26 @@ TEST(LibraryOptionsTest, Parser) {
             "1 option '-lib-count' requires an argument");
   EXPECT_EQ(Parse({"-lib-other"}), "1 unknown argument '-lib-other'");
   EXPECT_EQ(Parse({"-lib-counts=1"}), "1 unknown argument '-lib-counts=1'");
+  EXPECT_EQ(Parse({"-lib-in-build"}), "1 ");
+  EXPECT_TRUE(TestLibraryOptions::Global.in_build);
+  EXPECT_EQ(Parse({"-lib-not-in-build"}),
+            "1 unknown argument '-lib-not-in-build'");
   EXPECT_EQ(Parse({"-lib-enable", "0"}), "1 ");
+  EXPECT_EQ(Parse({"-lib-print", "a"}), "1 ");
   EXPECT_EQ(Parse({"-lib-count", "x"}),
             "2 invalid value 'x' in '-lib-count=x'");
   EXPECT_EQ(Parse({"-lib-enable=x"}), "1 invalid value 'x' in '-lib-enable=x'");
+  EXPECT_EQ(Parse({"-lib-disable"}), "1 ");
+  EXPECT_FALSE(TestLibraryOptions::Global.enable);
+  EXPECT_EQ(Parse({"-lib-disable=1"}), "1 unknown argument '-lib-disable=1'");
+  EXPECT_EQ(Parse({"-lib-number", "6"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.count, 6u);
+  EXPECT_EQ(Parse({"-lib-mode-b"}), "1 ");
+  EXPECT_EQ(TestLibraryOptions::Global.mode, test::Mode::B);
+  EXPECT_EQ(Parse({"-lib-old-mode", "a"}), "2 ");
+  EXPECT_EQ(TestLibraryOptions::Global.mode, test::Mode::A);
+  EXPECT_EQ(Parse({"-lib-old-mode=c"}),
+            "1 invalid value 'c' in '-lib-old-mode=c'");
   P.reset();
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
 }
@@ -137,10 +179,12 @@ TEST(LibraryOptionsTest, Register) {
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
   const TestLibraryOptions &G = TestLibraryOptions::Global;
   std::string Path = "-lib-path=q";
-  const char *Args[] = {"prog", "-lib-count", "5", "-lib-enable", Path.c_str()};
+  const char *Args[] = {"prog",        "-lib-count", "5",
+                        "-lib-enable", Path.c_str(), "-lib-list=1,2"};
   EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
   EXPECT_EQ(G.count, 5u);
   EXPECT_TRUE(G.enable);
+  EXPECT_THAT(G.list, testing::ElementsAre(1u, 2u));
   // A StringRef member does not refer to the caller's argument.
   Path.assign(Path.size(), 'x');
   EXPECT_EQ(G.Path, "q");
@@ -148,6 +192,56 @@ TEST(LibraryOptionsTest, Register) {
   EXPECT_EQ(G.count, 3u);
   EXPECT_FALSE(G.enable);
   EXPECT_EQ(G.Path, "p");
+  EXPECT_THAT(G.list, testing::IsEmpty());
+  // Options parse again after a reset frees their storage.
+  const char *Again[] = {"prog", "-lib-path=r", "-lib-list=3", "-lib-list=4"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(std::size(Again), Again, "", &nulls()));
+  EXPECT_EQ(G.Path, "r");
+  EXPECT_THAT(G.list, testing::ElementsAre(3u, 4u));
+  cl::ResetCommandLineParser();
+}
+
+// parseCommandLineOptions sets the options of a library that is not
+// per-context in its Global.
+TEST(LibraryOptionsTest, ParseIntoGlobal) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  cl::LibraryOptionsContext V;
+  const char *Args[] = {"prog", "-lib-count=5"};
+  EXPECT_TRUE(cl::parseCommandLineOptions(V, Args, "", &nulls()));
+  EXPECT_EQ(TestLibraryOptions::Global.count, 5u);
+  cl::ResetCommandLineParser();
+}
+
+// Values that override Global, as an LLVMContext holds them.
+TEST(LibraryOptionsTest, Values) {
+  cl::ResetCommandLineParser();
+  opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
+  opt::LibraryOptionsParser L{std::in_place_type<TestLibraryOptions>};
+  auto Parse = [&](cl::LibraryOptionsContext &V, ArrayRef<const char *> Args) {
+    unsigned N;
+    return toString(V.parse(L, Args, N));
+  };
+  cl::LibraryOptionsContext V;
+  std::string Path = "-lib-path=q";
+  EXPECT_EQ(Parse(V, {"-lib-count", "7"}), "");
+  EXPECT_EQ(Parse(V, Path.c_str()), "");
+  EXPECT_EQ(Parse(V, "--lib-list=1,2"), "");
+  Path.assign(Path.size(), ' ');
+  EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
+  EXPECT_EQ(Parse(V, "-lib-count=x"), "invalid value 'x' in '-lib-count=x'");
+
+  // assign() replays the arguments, which outlive the caller's, and discards
+  // the earlier values.
+  cl::LibraryOptionsContext Copy;
+  EXPECT_EQ(Parse(Copy, "-lib-list=9"), "");
+  Copy.assign(V);
+  const TestLibraryOptions &C = Copy.get<TestLibraryOptions>();
+  EXPECT_EQ(C.count, 7u);
+  EXPECT_EQ(C.Path, "q");
+  EXPECT_THAT(C.list, testing::ElementsAre(1u, 2u));
+  EXPECT_EQ(Copy.args().size(), V.args().size());
   cl::ResetCommandLineParser();
 }
 

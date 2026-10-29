@@ -905,8 +905,8 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
   for (Block &bb : llvm::drop_begin(region)) {
     llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb.getNumArguments();
-    assert(numArguments == std::distance(phis.begin(), phis.end()));
+    unsigned numArguments = bb.getNumArguments();
+    assert(numArguments == llvm::range_size(phis));
     for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
@@ -1017,7 +1017,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   }
   for (unsigned overloadedOperandIdx : overloadedOperands)
     overloadedTypes.push_back(args[overloadedOperandIdx]->getType());
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Module *module = builder.getModule();
   llvm::Function *llvmIntr = llvm::Intrinsic::getOrInsertDeclaration(
       module, intrinsic, overloadedTypes);
 
@@ -1386,8 +1386,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
       [[maybe_unused]] int numConstantsHit = 0;
       [[maybe_unused]] int numConstantsErased = 0;
@@ -1478,8 +1477,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if ((ctorOp && ctorOp.getCtors().empty()) ||
         (dtorOp && dtorOp.getDtors().empty())) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
       llvm::Type *eltTy = llvm::StructType::get(
           builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
       llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
@@ -1522,8 +1520,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     Block &initializer = op.getInitializerBlock();
     llvm::IRBuilder<llvm::TargetFolder> builder(
-        llvmModule->getContext(),
-        llvm::TargetFolder(llvmModule->getDataLayout()));
+        *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
     for (mlir::Operation &op : initializer.without_terminator()) {
       if (failed(convertOperation(op, builder)))
@@ -1700,7 +1697,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Check the personality and set it.
   if (func.getPersonality()) {
-    llvm::Type *ty = llvm::PointerType::getUnqual(llvmFunc->getContext());
+    llvm::Type *ty = llvm::PointerType::get(
+        llvmContext, llvmModule->getDataLayout().getProgramAddressSpace());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);
@@ -1780,7 +1778,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // converted before uses.
   auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
-    CapturingIRBuilder builder(llvmContext,
+    CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
@@ -2142,13 +2140,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
       llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
       if (!imports.empty())
         importGUIDs.insert(imports.begin(), imports.end());
-      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
-      llvmFunc->setMetadata(
-          llvm::LLVMContext::MD_prof,
-          metadataBuilder.createFunctionEntryCount(
-              entryCount.getEntryCount(),
-              entryCount.getCountType() == ProfileCountType::Synthetic,
-              imports.empty() ? nullptr : &importGUIDs));
+      llvmFunc->setEntryCount(entryCount.getEntryCount(),
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.
@@ -2740,7 +2733,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
 
   ModuleTranslation translator(module, std::move(llvmModule), fs);
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
-      llvmContext,
+      *translator.getLLVMModule(),
       llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
 
   // Convert module before functions and operations inside, so dialect

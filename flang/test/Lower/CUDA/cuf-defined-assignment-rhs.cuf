@@ -20,7 +20,7 @@ contains
 end module
 
 ! CHECK-LABEL: func.func @_QMdefined_assignment_device_rhsPassign_t(
-! CHECK-SAME: %[[HOST_T_ARG:.*]]: !fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}> {{.*}}, %[[DEV_X_ARG:.*]]: !fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "dev_x"})
+! CHECK-SAME: %[[HOST_T_ARG:.*]]: !fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}> {{.*}}, %[[DEV_X_ARG:.*]]: !fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "dev_x", fir.fortran_attrs = #fir.var_attrs<intent_in>})
 ! CHECK: %[[DEV_X:.*]]:2 = hlfir.declare %[[DEV_X_ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {{.*}}data_attr(#cuf.cuda<device>)
 ! CHECK: %[[HOST_T:.*]]:2 = hlfir.declare %[[HOST_T_ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}}
 ! CHECK: %[[X_COMPONENT:.*]] = hlfir.designate %[[HOST_T]]#0{"x"}

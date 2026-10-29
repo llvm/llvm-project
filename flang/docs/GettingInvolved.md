@@ -73,7 +73,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 -   Join [OpenMP in Flang Technical Call](https://bit.ly/39eQW3o)
 -   Time: Biweekly call on Thursdays 7:30 AM Pacific time. Please check the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org) for the next scheduled call.
 -   Meeting minutes are [here](https://docs.google.com/document/d/1yA-MeJf6RYY-ZXpdol0t7YoDoqtwAyBhFLr5thu5pFI).
--   Status tracking [page](https://flang.llvm.org/docs/OpenMPSupport.html).
+-   Status tracking [page](OpenMPSupport.md).
 
 ### OpenMP in LLVM Technical Call
 

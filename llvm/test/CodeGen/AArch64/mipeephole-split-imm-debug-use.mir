@@ -1,0 +1,48 @@
+# RUN: llc -run-pass=aarch64-mi-peephole-opt -o - -mtriple=aarch64-unknown-linux -verify-machineinstrs %s | FileCheck %s
+
+# Debug uses of the MOV and SUBREG_TO_REG do not stop the immediate from being
+# split. They describe the immediate instead, except for an indirect one, which
+# becomes undef.
+
+--- |
+  define void @addl() !dbg !4 { ret void }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !DISubroutineType(types: !{null})
+  !4 = distinct !DISubprogram(name: "addl", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !{!5, !6, !8})
+  !5 = !DILocalVariable(name: "x", scope: !4, file: !2)
+  !6 = !DILocalVariable(name: "y", scope: !4, file: !2)
+  !7 = !DILocation(line: 1, scope: !4)
+  !8 = !DILocalVariable(name: "z", scope: !4, file: !2)
+...
+
+# CHECK-DAG:   ![[X:[0-9]+]] = !DILocalVariable(name: "x"
+# CHECK-DAG:   ![[Y:[0-9]+]] = !DILocalVariable(name: "y"
+# CHECK-DAG:   ![[Z:[0-9]+]] = !DILocalVariable(name: "z"
+# CHECK-LABEL: name: addl
+# CHECK-NOT:   MOVi32imm
+# CHECK-NOT:   SUBREG_TO_REG
+# CHECK:       DBG_VALUE 1121757, $noreg, ![[X]], !DIExpression()
+# CHECK-NEXT:  DBG_VALUE $noreg, 0, ![[Z]], !DIExpression()
+# CHECK-NEXT:  DBG_VALUE 1121757, $noreg, ![[Y]], !DIExpression()
+# CHECK-NEXT:  [[TMP:%[0-9]+]]:gpr64sp = ADDXri %x, 273, 12
+# CHECK-NEXT:  ADDXri [[TMP]], 3549, 0
+---
+name: addl
+body: |
+  bb.0:
+    liveins: $x0
+    %x:gpr64 = COPY $x0
+    %imm:gpr32 = MOVi32imm 1121757
+    DBG_VALUE %imm, $noreg, !5, !DIExpression(), debug-location !7
+    DBG_VALUE %imm, 0, !8, !DIExpression(), debug-location !7
+    %ext:gpr64 = SUBREG_TO_REG %imm, %subreg.sub_32
+    DBG_VALUE %ext, $noreg, !6, !DIExpression(), debug-location !7
+    %sum:gpr64 = ADDXrr %x, %ext
+    $x0 = COPY %sum
+    RET_ReallyLR implicit $x0
+...

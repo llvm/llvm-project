@@ -1,5 +1,5 @@
 ;; Test RISC-V 32 bit:
-; RUN: llc -emit-call-site-info -stop-after=livedebugvalues -mtriple=riscv32-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK32
+; RUN: llc -emit-call-site-info -stop-after=live-debug-values -mtriple=riscv32-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK32
 
 ;; Built from source:
 ;; extern long fn1(long,long,long);

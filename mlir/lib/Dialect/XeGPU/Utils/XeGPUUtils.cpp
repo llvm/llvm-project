@@ -747,8 +747,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -821,7 +828,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;
@@ -864,10 +871,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;

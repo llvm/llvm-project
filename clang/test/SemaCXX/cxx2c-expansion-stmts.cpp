@@ -14,6 +14,11 @@ struct S {
   constexpr S(int x) : x{x} {}
 };
 
+struct AggregateWithDefaultInit {
+  int x;
+  int y = 0;
+};
+
 void g(int); // #g
 template <int n> constexpr int tg() { return n; }
 
@@ -31,6 +36,7 @@ void f1() {
   template for (int x : {1, 2, 3}) g(x);
   template for (S x : {1, 2, 3}) g(x.x);
   template for (constexpr S x : {1, 2, 3}) tg<x.x>();
+  template for (AggregateWithDefaultInit x : {AggregateWithDefaultInit(1)}) {}
 
   template for (int x : {"1", S(1), {1, 2}}) { // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'}} \
                                                   expected-error {{no viable conversion from 'S' to 'int'}} \

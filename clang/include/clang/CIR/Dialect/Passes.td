@@ -72,7 +72,7 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def GotoSolver : Pass<"cir-goto-solver"> {
+def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{
     This pass transforms CIR and replaces goto-s with branch
@@ -225,10 +225,12 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
 
     Two driver modes select how each function's classification is computed:
 
-    - `target=<name>` selects an ABI target.  Currently only `"test"` (the
-      MLIR test target in `mlir/lib/ABI/Targets/Test/`) is supported.  Real
-      targets (x86_64, AArch64, ...) will be added once the LLVM ABI library
-      ships them.
+    - `target=<name>` selects an ABI target.  The clang pipeline picks the
+      target from the module triple.  Supported targets:
+      - `"x86_64"`: System V.
+      - `"amdgpu"`: AMDGPU.
+      - `"test"`: the MLIR test target in `mlir/lib/ABI/Targets/Test/`.
+      Other targets will be added as the LLVM ABI library ships them.
     - `classification-attr=<name>` reads a `DictionaryAttr` named `<name>`
       from each `cir.func` and parses it via the test-target injection
       helper.  Used by tests to inject arbitrary classifications without
@@ -246,7 +248,9 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
              clEnumValN(cir::CallConvTarget::Test, "test",
                         "MLIR test ABI target"),
              clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
-                        "x86_64 System V")
+                        "x86_64 System V"),
+             clEnumValN(cir::CallConvTarget::AMDGPU, "amdgpu",
+                        "AMDGPU")
            )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",

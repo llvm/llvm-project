@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgpu11.00--amdpal -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL %s
 ; RUN: llc -mtriple=amdgpu11.00--amdpal -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
-; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgpu8.02 -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
+; RUN: llc -mtriple=amdgpu8.02 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu9.08 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
 ; RUN: llc -mtriple=amdgpu9.08 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX908-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu6.00 -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
@@ -44,21 +44,23 @@ entry:
 ; CHECK-LABEL: {{^}}global_extload_v16f16_to_v16f64:
 ; TONGA:    NumSgprs: 96
 ; TONGA-GCNTRACKERS:    NumSgprs: 96
-; TONGA:    NumVgprs: 21
-; TONGA-GCNTRACKERS:    NumVgprs: 23
+; TONGA:    NumVgprs: 22
+; TONGA-GCNTRACKERS:    NumVgprs: 22
 ; TONGA:    Occupancy: 8
 ; TONGA-GCNTRACKERS:    Occupancy: 8
 
 
 define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out, ptr addrspace(1) %in)  {
-  %val = load <16 x half>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <16 x half>, ptr addrspace(1) %in.tid
   %cvt = fpext <16 x half> %val to <16 x double>
   store <16 x double> %cvt, ptr addrspace(1) %out
   ret void
 }
 
 ; CHECK-LABEL: {{^}}constant_zextload_v64i16_to_v64i32:
-; GENERIC:    NumSgprs: 69
+; GENERIC:    NumSgprs: 71
 ; GENERIC-GCNTRACKERS:    NumSgprs: 45
 ; GENERIC:    NumVgprs: 20
 ; GENERIC-GCNTRACKERS:    NumVgprs: 20
@@ -76,7 +78,7 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 ; GFX908:    NumSgprs: 64
 ; GFX908-GCNTRACKERS:    NumSgprs: 64
 ; GFX908:    NumVgprs: 41
-; GFX908-GCNTRACKERS:    NumVgprs: 39
+; GFX908-GCNTRACKERS:    NumVgprs: 40
 ; GFX908:    Occupancy: 5
 ; GFX908-GCNTRACKERS:    Occupancy: 6
 

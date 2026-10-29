@@ -1,0 +1,153 @@
+// RUN: cir-opt %s --split-input-file --cir-to-llvm | FileCheck %s
+
+// Only the pointer's own address space is needed for an opaque LLVM pointer.
+// Language address spaces in its pointee do not prevent pointer conversion.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @nested_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @nested_language_address_space(%arg0: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
+!outer = !cir.ptr<!langptr, target_address_space(3)>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @outer_target_address_space
+  // CHECK-SAME: %[[ARG:.*]]: !llvm.ptr<3>) -> !llvm.ptr<3>
+  cir.func @outer_target_address_space(%ptr: !outer) -> !outer {
+    // CHECK: llvm.return %[[ARG]] : !llvm.ptr<3>
+    cir.return %ptr : !outer
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Node = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>, data !cir.ptr<!s32i, lang_address_space(offload_global)>}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @recursive_struct_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @recursive_struct_language_address_space(%arg0: !cir.ptr<!rec_Node>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_U = !cir.union<"U" {data !s32i, data !cir.ptr<!s32i, lang_address_space(offload_global)>}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @union_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @union_language_address_space(%arg0: !cir.ptr<!rec_U>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @function_and_array_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @function_and_array_language_address_space(
+      %arg0: !cir.ptr<!cir.func<(!cir.ptr<!cir.array<!cir.ptr<!s32i, lang_address_space(offload_constant)> x 4>>)>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @data_member_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @data_member_language_address_space(
+      %arg0: !cir.ptr<!cir.data_member<!cir.ptr<!s32i, lang_address_space(offload_global)> in !rec_Foo>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @method_language_address_space
+  // CHECK-SAME: !llvm.ptr
+  cir.func @method_language_address_space(
+      %arg0: !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!s32i, lang_address_space(offload_global)>)> in !rec_Foo>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
+!ptr = !cir.ptr<!langptr>
+
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+  // The stored pointer has a known layout even though its pointee does not.
+  // CHECK-LABEL: llvm.func @copy_opaque_pointers
+  cir.func @copy_opaque_pointers(%src: !cir.ptr<!ptr>, %dst: !cir.ptr<!ptr>) {
+    // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(8 : i64)
+    // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]])
+    cir.copy %src to %dst : !cir.ptr<!ptr>
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @diff_opaque_pointers
+  cir.func @diff_opaque_pointers(%lhs: !cir.ptr<!ptr>, %rhs: !cir.ptr<!ptr>) -> !s64i {
+    // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(8 : i64)
+    // CHECK: llvm.sdiv exact %{{.*}}, %[[SIZE]] : i64
+    %diff = cir.ptr_diff %lhs, %rhs : !cir.ptr<!ptr> -> !s64i
+    cir.return %diff : !s64i
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Base = !cir.struct<"Base" {data !s32i}>
+!rec_Derived = !cir.struct<"Derived" {data !cir.ptr<!s32i, lang_address_space(offload_global)>, data !rec_Base}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: llvm.func @derived_class_addr_language_address_space
+  cir.func @derived_class_addr_language_address_space() {
+    %base = cir.alloca "base" align(4) : !cir.ptr<!rec_Base>
+    // CHECK: llvm.getelementptr inbounds {{.*}}[-4] : (!llvm.ptr) -> !llvm.ptr, i8
+    %derived = cir.derived_class_addr nonnull %base [4] : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!langptr = !cir.ptr<!s32i, lang_address_space(offload_global)>
+!fn = !cir.func<() -> !langptr>
+!fnptr = !cir.ptr<!fn>
+!fnptrptr = !cir.ptr<!fnptr>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: llvm.func @virtual_fn_addr_language_address_space
+  cir.func @virtual_fn_addr_language_address_space(%vptr: !cir.vptr) {
+    // CHECK: llvm.getelementptr {{.*}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    %0 = cir.vtable.get_virtual_fn_addr %vptr[0] : !cir.vptr -> !fnptrptr
+    cir.return
+  }
+}

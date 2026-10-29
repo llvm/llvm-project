@@ -196,7 +196,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_target_session_name(
           llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
-          std::make_unique<StackFrameRecognizerManager>()) {
+          std::make_unique<StackFrameRecognizerManager>()),
+      m_target_groups(debugger, debugger.GetTargetGroupList().m_mutex) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
@@ -387,6 +388,7 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
 }
 
 void Target::Destroy() {
+  m_target_groups.RemoveTarget(shared_from_this());
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_valid = false;
   DeleteCurrentProcess();
@@ -409,6 +411,18 @@ void Target::Destroy() {
   m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
+}
+
+std::vector<TargetGroupSP> Target::GetTargetGroups() const {
+  return m_target_groups.GetGroups();
+}
+
+void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
+  m_target_groups.Add(group_sp);
+}
+
+void Target::RemoveTargetGroup(const TargetGroup *group) {
+  m_target_groups.Remove(group);
 }
 
 llvm::StringRef Target::GetABIName() const {
@@ -2468,7 +2482,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool invoke_symbol_locators) {
   ModuleSP module_sp;
 
   Status error;
@@ -2528,16 +2543,16 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // suitable image.
       if (m_image_search_paths.GetSize()) {
         ModuleSpec transformed_spec(module_spec);
-        ConstString transformed_dir;
+        std::string transformed_dir;
         if (m_image_search_paths.RemapPath(
-                ConstString(module_spec.GetFileSpec().GetDirectory()),
-                transformed_dir)) {
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
           transformed_spec.SetTarget(shared_from_this());
-          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &old_modules, &did_create_module);
+          error = ModuleList::GetSharedModule(
+              transformed_spec, module_sp, &old_modules, &did_create_module,
+              /*invoke_locate_callback=*/true, invoke_symbol_locators);
         }
       }
     }
@@ -2553,11 +2568,12 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(
+            module_spec, module_sp, &old_modules, &did_create_module,
+            /*invoke_locate_callback=*/true, invoke_symbol_locators);
       }
 
-      if (!module_sp) {
+      if (!module_sp && invoke_symbol_locators) {
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {

@@ -1263,9 +1263,8 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
                                                FuncInfo.getScratchRSrcReg());
 
-    auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
-                             ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                             : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+    Register CalleeRSrcReg =
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CalleeCC);
 
     MIRBuilder.buildCopy(CalleeRSrcReg, ScratchRSrcReg);
     CallInst.addReg(CalleeRSrcReg, RegState::Implicit);
@@ -1353,6 +1352,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (FuncInfo->isWholeWaveFunction())
     addOriginalExecToReturn(MF, MIB);
@@ -1462,8 +1463,10 @@ bool AMDGPUCallLowering::lowerTailCall(
 
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
-  if (!ST.hasFlatScratchEnabled())
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  if (!ST.hasFlatScratchEnabled()) {
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(Info.CallConv));
+  }
 
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
@@ -1485,12 +1488,17 @@ bool AMDGPUCallLowering::lowerTailCall(
   // sequence start and end here.
   if (!IsSibCall) {
     MIB->getOperand(CalleeIdx + 2).setImm(FPDiff);
-    CallSeqStart.addImm(NumBytes).addImm(0);
+    CallSeqStart.addImm(NumBytes)
+                .addImm(0)
+                .setOperandDead(2); // $scc
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
     // parameters so that when SP is reset, they will be in the correct
     // location.
-    MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN).addImm(NumBytes).addImm(0);
+    MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN)
+        .addImm(NumBytes)
+        .addImm(0)
+        .setOperandDead(2); // $scc
   }
 
   // Now we can add the actual call instruction to the correct basic block.
@@ -1645,8 +1653,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       getAssignFnsForCC(Info.CallConv, TLI);
 
   MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKUP)
-    .addImm(0)
-    .addImm(0);
+      .addImm(0)
+      .addImm(0)
+      .setOperandDead(2); // $scc
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
@@ -1658,6 +1667,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;
@@ -1684,8 +1695,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
   if (!ST.hasFlatScratchEnabled()) {
-    const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(Info.CallConv));
   }
 
   // Do the actual argument marshalling.
@@ -1740,8 +1751,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   uint64_t CalleePopBytes = NumBytes;
 
   MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN)
-            .addImm(0)
-            .addImm(CalleePopBytes);
+      .addImm(0)
+      .addImm(CalleePopBytes)
+      .setOperandDead(2); // $scc
 
   if (!Info.CanLowerReturn) {
     insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,

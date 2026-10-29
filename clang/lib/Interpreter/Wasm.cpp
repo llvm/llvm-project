@@ -12,8 +12,10 @@
 
 #include "Wasm.h"
 
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -61,7 +63,39 @@ bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 namespace clang {
 
-WasmIncrementalExecutor::WasmIncrementalExecutor(llvm::Error &Err) {
+std::unique_ptr<IncrementalExecutorBuilder>
+IncrementalExecutorBuilder::createDefault() {
+  return std::make_unique<WasmIncrementalExecutorBuilder>();
+}
+
+llvm::Error
+WasmIncrementalExecutorBuilder::configure(IncrementalCompilerBuilder &CB,
+                                          const Options &Opts) {
+  if (Opts.IsOutOfProcess)
+    return llvm::createStringError("Out-of-process execution is not supported "
+                                   "by the WebAssembly executor");
+  return llvm::Error::success();
+}
+
+llvm::Expected<llvm::Triple>
+WasmIncrementalExecutorBuilder::getHostJITTriple() const {
+  return llvm::Triple(llvm::sys::getProcessTriple());
+}
+
+llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+WasmIncrementalExecutorBuilder::createExecutor(
+    llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI) {
+  llvm::Error Err = llvm::Error::success();
+  std::unique_ptr<IncrementalExecutor> Executor =
+      std::make_unique<WasmIncrementalExecutor>(Err, LLVMArgs);
+  if (Err)
+    return std::move(Err);
+  return std::move(Executor);
+}
+
+WasmIncrementalExecutor::WasmIncrementalExecutor(
+    llvm::Error &Err, std::vector<std::string> LLVMArgs)
+    : StoredLLVMArgs(std::move(LLVMArgs)) {
   llvm::ErrorAsOutParameter EAO(&Err);
 
   if (Err)
@@ -141,6 +175,22 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   // process state. Do not allow another incremental link in that case.
   if (!Result.canRunAgain)
     lld::exitLld(Result.retCode);
+
+  // lld::wasm::linkerMain calls cl::ResetAllOptionOccurrences() which wipes
+  // all global LLVM cl options, including mllvm flags set by the frontend
+  // (e.g. -wasm-enable-eh, -wasm-enable-sjlj). Re-apply them so the next
+  // Parse() call's WebAssemblyTargetMachine creation finds the correct state.
+  //
+  // FIXME: Remove this once library command-line options no longer rely on
+  // process-global cl::opt state. See:
+  // https://discourse.llvm.org/t/rfc-declare-library-command-line-options-in-tablegen-one-struct-per-library/91877
+  if (!StoredLLVMArgs.empty()) {
+    std::vector<const char *> ArgPtrs;
+    ArgPtrs.push_back("clang-repl (restoring LLVM options)");
+    for (const std::string &Arg : StoredLLVMArgs)
+      ArgPtrs.push_back(Arg.c_str());
+    llvm::cl::ParseCommandLineOptions(ArgPtrs.size(), ArgPtrs.data());
+  }
 
   if (Result.retCode)
     return llvm::make_error<llvm::StringError>(

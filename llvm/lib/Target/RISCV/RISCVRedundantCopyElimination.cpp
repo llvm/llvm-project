@@ -28,27 +28,28 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-copyelim"
+#define DEBUG_TYPE "riscv-redundant-copy-elimination"
 
 STATISTIC(NumCopiesRemoved, "Number of copies removed.");
 
 namespace {
-class RISCVRedundantCopyElimination : public MachineFunctionPass {
-  const MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-
+class RISCVRedundantCopyEliminationLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {}
+  RISCVRedundantCopyEliminationLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
@@ -60,19 +61,17 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool optimizeBlock(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
 
-char RISCVRedundantCopyElimination::ID = 0;
+char RISCVRedundantCopyEliminationLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVRedundantCopyElimination, "riscv-copyelim",
+INITIALIZE_PASS(RISCVRedundantCopyEliminationLegacy, "riscv-copyelim",
                 "RISC-V Redundant Copy Elimination", false, false)
 
 static bool
@@ -109,10 +108,12 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   return false;
 }
 
-// Match "addi rd, x0, imm" or "qc.li rd, imm", returning the defined
-// register and the materialized immediate. Reg is invalid if MI isn't a
-// match.
-static RegImmPair matchRegImmediate(const MachineInstr &MI) {
+// Match copy from x0, "addi rd, x0, imm", or "qc.li rd, imm", returning the
+// defined register and the known value. Reg is invalid if MI isn't a match.
+static RegImmPair matchRegKnownVal(const MachineInstr &MI) {
+  if (MI.isCopy() && MI.getOperand(0).isReg() && MI.getOperand(1).isReg() &&
+      MI.getOperand(1).getReg() == RISCV::X0)
+    return RegImmPair(MI.getOperand(0).getReg(), 0);
   if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(0).isReg() &&
       MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
       MI.getOperand(2).isImm())
@@ -134,8 +135,8 @@ getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
     MachineInstr &MI = *--I;
     if (!MI.modifiesRegister(Reg, TRI))
       continue;
-    // The last modification must define Reg itself to a known immediate.
-    RegImmPair Match = matchRegImmediate(MI);
+    // The last modification must define Reg itself to a known value.
+    RegImmPair Match = matchRegKnownVal(MI);
     if (Match.Reg == Reg)
       return Match.Imm;
     return std::nullopt;
@@ -143,7 +144,10 @@ getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
   return std::nullopt;
 }
 
-bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
+static bool optimizeBlockForRedundantCopies(MachineBasicBlock &MBB,
+                                            const MachineRegisterInfo *MRI,
+                                            const TargetRegisterInfo *TRI,
+                                            const TargetInstrInfo *TII) {
   // Check if the current basic block has a single predecessor.
   if (MBB.pred_size() != 1)
     return false;
@@ -202,26 +206,11 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr *MI = &*I;
     ++I;
-    bool RemoveMI = false;
-    if (IsZeroCopy) {
-      if (MI->isCopy() && MI->getOperand(0).isReg() &&
-          MI->getOperand(1).isReg()) {
-        Register DefReg = MI->getOperand(0).getReg();
-        Register SrcReg = MI->getOperand(1).getReg();
-
-        if (SrcReg == RISCV::X0 && TargetReg == DefReg &&
-            !MRI->isReserved(DefReg))
-          RemoveMI = true;
-      }
-    } else {
-      // Compare with non-zero immediate or a known register value:
-      // remove redundant addi rd,x0,imm or qc.li rd,imm as applicable.
-      RegImmPair Match = matchRegImmediate(*MI);
-      if (Match.Reg && TargetReg == Match.Reg && Match.Imm == CompareImm)
-        RemoveMI = true;
-    }
-
-    if (RemoveMI) {
+    // Compare with non-zero immediate or a known register value:
+    // remove redundant copy, addi rd,x0,imm, or qc.li rd,imm as applicable.
+    RegImmPair Match = matchRegKnownVal(*MI);
+    if (Match.Reg && TargetReg == Match.Reg && Match.Imm == CompareImm &&
+        !MRI->isReserved(Match.Reg)) {
       LLVM_DEBUG(dbgs() << "Remove redundant Copy: ");
       LLVM_DEBUG(MI->print(dbgs()));
 
@@ -270,21 +259,37 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   return true;
 }
 
-bool RISCVRedundantCopyElimination::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  TII = MF.getSubtarget().getInstrInfo();
-  TRI = MF.getSubtarget().getRegisterInfo();
-  MRI = &MF.getRegInfo();
+static bool runRedundantCopyElimination(MachineFunction &MF) {
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
-    Changed |= optimizeBlock(MBB);
+    Changed |= optimizeBlockForRedundantCopies(MBB, MRI, TRI, TII);
 
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVRedundantCopyEliminationPass() {
-  return new RISCVRedundantCopyElimination();
+FunctionPass *llvm::createRISCVRedundantCopyEliminationLegacyPass() {
+  return new RISCVRedundantCopyEliminationLegacy();
+}
+
+bool RISCVRedundantCopyEliminationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runRedundantCopyElimination(MF);
+}
+
+PreservedAnalyses
+RISCVRedundantCopyEliminationPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  bool Changed = runRedundantCopyElimination(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<MachineRegisterClassAnalysis>();
 }

@@ -568,10 +568,6 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
-  return AMDGPU_AllAllocatableSRegs_RegMask;
-}
-
 unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
                                               unsigned NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());
@@ -976,16 +972,16 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   if (ST.hasFlatScratchEnabled()) {
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
-        .addReg(OffsetReg, RegState::Kill)
+        .addReg(OffsetReg)
         .addReg(FIReg)
         .setOperandDead(3); // scc
     return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
-    .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg)
-    .addImm(0); // clamp bit
+      .addReg(OffsetReg)
+      .addReg(FIReg)
+      .addImm(0); // clamp bit
 
   return BaseReg;
 }
@@ -4584,18 +4580,18 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
   return Def;
 }
 
-MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
+MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
+    if (MCRegister Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
-      return Super;
+  if (MCRegister Super =
+          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass)) {
+    return Super;
   }
 
   return AMDGPU::NoRegister;

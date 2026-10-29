@@ -70,7 +70,7 @@ protected:
 
 public:
   MemorySSATest()
-      : M("MemorySSATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+      : M("MemorySSATest", C), B(M), DL(DLString), TLII(M.getTargetTriple()),
         TLI(TLII), F(nullptr) {}
 };
 
@@ -896,7 +896,7 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -935,7 +935,7 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   //
   // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
   // `2` after `1` is removed.
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -980,7 +980,7 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   //
   // And be sure that MSSA's caching handles the removal of def `1`
   // appropriately.
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -1130,7 +1130,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // should both be clobbered by the lifetime.start call if they're dominated by
   // it.
 
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -1188,7 +1188,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
 }
 
 TEST_F(MemorySSATest, DefOptimizationsAreInvalidatedOnMoving) {
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getInt1Ty()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 

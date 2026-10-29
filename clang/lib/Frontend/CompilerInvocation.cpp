@@ -577,6 +577,12 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
 
+  if (T.isWasm() &&
+      (CodeGenOpts.hasSjLjExceptions() || CodeGenOpts.hasSEHExceptions() ||
+       CodeGenOpts.hasDWARFExceptions()))
+    Diags.Report(diag::err_fe_invalid_exception_model)
+        << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
+
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
 
@@ -635,6 +641,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fdx-rootsignature-define" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_fdx_semantic_signature_packing_mode_EQ) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-semantic-signature-packing-mode" << GetInputKindName(IK);
+
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
@@ -653,6 +663,16 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
       Warnings.insert(Warnings.begin(), "vector-conversion");
     if (!llvm::is_contained(Warnings, "matrix-conversion"))
       Warnings.insert(Warnings.begin(), "matrix-conversion");
+
+    // HLSL booleans in memory are i32; any non-zero value is true.
+    // Use icmp-ne rather than truncation to avoid InstCombine rewriting
+    // trunc i32 to i1 into an illegal wide <N x i1> bitcast (issue #140824).
+    if (Args.hasArg(OPT_load_bool_from_mem) &&
+        CodeGenOpts.getLoadBoolFromMem() !=
+            CodeGenOptions::BoolFromMem::NonZero)
+      Diags.Report(diag::warn_hlsl_bool_from_mem)
+          << Args.getLastArg(OPT_load_bool_from_mem)->getValue();
+    CodeGenOpts.setLoadBoolFromMem(CodeGenOptions::BoolFromMem::NonZero);
   }
 
   // When these options are used, the compiler is allowed to apply
@@ -2816,6 +2836,7 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
       {frontend::EmitCIR, OPT_emit_cir},
+      {frontend::EmitCIRBC, OPT_emit_cir_bc},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
@@ -3179,7 +3200,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_emit_cir, OPT_emit_cir_bc))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR
@@ -4748,6 +4769,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::EmitAssembly:
   case frontend::EmitBC:
   case frontend::EmitCIR:
+  case frontend::EmitCIRBC:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:
@@ -4789,6 +4811,7 @@ static bool isCodeGenAction(frontend::ActionKind Action) {
   case frontend::EmitAssembly:
   case frontend::EmitBC:
   case frontend::EmitCIR:
+  case frontend::EmitCIRBC:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:
@@ -5239,6 +5262,16 @@ bool CompilerInvocation::CreateFromArgsImpl(
           llvm::driver::ProfileInstrKind::ProfileNone)
     Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
+  llvm::TimeTraceCompression TimeTraceCompress =
+      Res.getFrontendOpts().TimeTraceCompress;
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Infer &&
+      !Res.getFrontendOpts().TimeTracePath.empty())
+    TimeTraceCompress = llvm::inferTimeTraceCompressionFromPath(
+        Res.getFrontendOpts().TimeTracePath);
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Zstd &&
+      !llvm::compression::zstd::isAvailable())
+    Diags.Report(diag::err_drv_time_trace_compression_unavailable) << "zstd";
+
   FixupInvocation(Res, Diags, Args, DashX);
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -5347,6 +5380,8 @@ std::string CompilerInvocation::computeContextHash() const {
 
       HBuilder.add(UserEntry);
     }
+
+    HBuilder.addRange(getFrontendOpts().ModuleMapFiles);
 
     HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
@@ -5553,6 +5588,7 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  getHeaderSearchOpts().ModulesValidateDirectoryDependencies = false;
   getHeaderSearchOpts().BuildSessionTimestamp = 0;
   // The specific values we canonicalize to for pruning don't affect behaviour,
   /// so use the default values so they may be dropped from the command-line.

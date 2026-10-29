@@ -105,7 +105,8 @@ define void @test_f16_arg(half %arg) {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(i32) = ARGUMENT_i32 0, implicit $arguments
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[ARGUMENT_i32_]](i32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ARGUMENT_i32_]](i32)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
   ; CHECK-NEXT:   RETURN implicit-def $arguments
   ret void
 }

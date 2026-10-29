@@ -196,8 +196,9 @@ static void emitOpenCLVersionMetadata(mlir::ModuleOp module,
   mlir::MLIRContext *ctx = module.getContext();
   LLVMMetadataNodeBuilder metadataBuilder(ctx);
 
-  unsigned versionMetadata[] = {static_cast<unsigned>(version.getMajor()),
-                                static_cast<unsigned>(version.getMinor())};
+  unsigned versionMetadata[] = {
+      static_cast<unsigned>(version.getMajorVersion()),
+      static_cast<unsigned>(version.getMinorVersion())};
   createOpenCLVersionNamedMetadata(module, metadataName,
                                    metadataBuilder.getI32Node(versionMetadata));
 }

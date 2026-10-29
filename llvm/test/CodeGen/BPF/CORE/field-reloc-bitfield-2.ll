@@ -39,12 +39,12 @@ entry:
 }
 
 ; CHECK:             r1 = 2
-; CHECK:             r0 = 1
-; CHECK-ALU64:       r0 += r1
-; CHECK-ALU32:       w0 += w1
-; CHECK-EL:          r1 = 56
-; CHECK-ALU64:       r0 += r1
-; CHECK-ALU32:       w0 += w1
+; CHECK:             r2 = 1
+; CHECK-ALU64:       r2 += r1
+; CHECK-ALU32:       w2 += w1
+; CHECK-EL:          r0 = 56
+; CHECK-ALU64:       r0 += r2
+; CHECK-ALU32:       w0 += w2
 ; CHECK:             exit
 
 ; CHECK:             .long   1                       # BTF_KIND_STRUCT(id = 2)

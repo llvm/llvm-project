@@ -313,3 +313,49 @@ define i64 @lshr_i64_sub64(i64 %x, i64 %amt) {
   %r = lshr i64 %x, %sub
   ret i64 %r
 }
+
+; Test SUB N-X where N == -1 mod size generates MVN.
+define i32 @shl_i32_sub63(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 63, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub63(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 63, %amt
+  %r = lshr i64 %x, %sub
+  ret i64 %r
+}
+
+; Test rotate with masked/modified shift amount.
+define i32 @rotr_i32_and(i32 %x, i32 %amt) {
+; CHECK-LABEL: rotr_i32_and:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ror w0, w0, w1
+; CHECK-NEXT:    ret
+  %m = and i32 %amt, 31
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %m)
+  ret i32 %r
+}
+
+define i32 @rotr_i32_sub(i32 %x, i32 %amt) {
+; CHECK-LABEL: rotr_i32_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ror w0, w0, w8
+; CHECK-NEXT:    ret
+  %s = sub i32 64, %amt
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %s)
+  ret i32 %r
+}
+

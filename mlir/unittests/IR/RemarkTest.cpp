@@ -13,11 +13,13 @@
 #include "mlir/IR/Remarks.h"
 #include "mlir/Remark/RemarkStreamer.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -793,4 +795,69 @@ TEST(Remark, TestRemarkLinking) {
   EXPECT_THAT(errOut, HasSubstr("vectorized loop"));
 }
 
+TEST(Remark, TestNestedLocation) {
+  MLIRContext context;
+  Location fileLoc = FileLineColLoc::get(&context, "test.mlir", 42, 7);
+  Location otherLoc = FileLineColLoc::get(&context, "other.mlir", 9, 3);
+  Location nameLoc = NameLoc::get(StringAttr::get(&context, "name"), fileLoc);
+  Location fusedLoc = FusedLoc::get(&context, {nameLoc, otherLoc});
+  Location callSiteLoc = CallSiteLoc::get(nameLoc, otherLoc);
+
+  std::pair<const char *, Location> cases[] = {{"NameLoc", nameLoc},
+                                               {"FusedLoc", fusedLoc},
+                                               {"CallSiteLoc", callSiteLoc}};
+  for (auto [kind, loc] : cases) {
+    SCOPED_TRACE(kind);
+    remark::detail::OptRemarkPass remark(loc, remark::RemarkOpts::name("R"));
+
+    llvm::remarks::Remark llvmRemark = remark.generateRemark();
+    ASSERT_TRUE(llvmRemark.Loc.has_value());
+    EXPECT_EQ(llvmRemark.Loc->SourceFilePath, "test.mlir");
+    EXPECT_EQ(llvmRemark.Loc->SourceLine, 42u);
+    EXPECT_EQ(llvmRemark.Loc->SourceColumn, 7u);
+
+    std::string printed;
+    llvm::raw_string_ostream os(printed);
+    remark.print(os, /*printLocation=*/true);
+    EXPECT_THAT(printed, HasSubstr(" @\"test.mlir\":42:7"));
+  }
+
+  // Without a file location inside, the remark has no source location.
+  remark::detail::OptRemarkPass remark(
+      NameLoc::get(StringAttr::get(&context, "name")),
+      remark::RemarkOpts::name("R"));
+  EXPECT_EQ(remark.generateRemark().Loc->SourceFilePath, "<unknown file>");
+  std::string printed;
+  llvm::raw_string_ostream os(printed);
+  remark.print(os, /*printLocation=*/true);
+  EXPECT_THAT(printed, Not(HasSubstr(" @")));
+}
+
+TEST(Remark, TestLLVMStreamerErrors) {
+  llvm::SmallString<64> dir;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("remarks", dir));
+  llvm::scope_exit removeDir([&] { llvm::sys::fs::remove_directories(dir); });
+  llvm::SmallString<64> missingPath(dir);
+  llvm::sys::path::append(missingPath, "missing", "out.yaml");
+  llvm::SmallString<64> filePath(dir);
+  llvm::sys::path::append(filePath, "out.yaml");
+  std::string noSuchFile =
+      std::make_error_code(std::errc::no_such_file_or_directory).message();
+
+  // A file that cannot be opened.
+  auto missing = remark::detail::LLVMRemarkStreamer::createToFile(
+      missingPath, llvm::remarks::Format::YAML);
+  ASSERT_FALSE(static_cast<bool>(missing));
+  EXPECT_EQ(llvm::toString(missing.takeError()), "cannot open output file '" +
+                                                     missingPath.str().str() +
+                                                     "': " + noSuchFile);
+
+  // A serializer that cannot be created: the file is not left behind.
+  auto badFormat = remark::detail::LLVMRemarkStreamer::createToFile(
+      filePath, llvm::remarks::Format::Unknown);
+  ASSERT_FALSE(static_cast<bool>(badFormat));
+  EXPECT_THAT(llvm::toString(badFormat.takeError()),
+              StartsWith("'" + filePath.str().str() + "': "));
+  EXPECT_FALSE(llvm::sys::fs::exists(filePath));
+}
 } // namespace

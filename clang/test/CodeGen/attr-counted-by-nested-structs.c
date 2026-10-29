@@ -43,7 +43,7 @@ struct quad_nested {
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SINGLE_NESTED:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[BUF1:%.*]] = getelementptr inbounds nuw [[STRUCT_SINGLE_NESTED]], ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_FLEX:%.*]], ptr [[BUF1]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF1]], i64 0
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[COUNT:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNT]], 1
@@ -66,7 +66,7 @@ unsigned test_size_of_single_nested(struct single_nested *p) {
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_DOUBLE_NESTED:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[BUF1:%.*]] = getelementptr inbounds nuw [[STRUCT_DOUBLE_NESTED]], ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_SINGLE_NESTED:%.*]], ptr [[BUF1]], i32 0, i32 1, i32 0
+// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF1]], i64 4
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[COUNT:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNT]], 1
@@ -89,7 +89,7 @@ unsigned test_size_of_double_nested(struct double_nested *p) {
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE_NESTED:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[BUF1:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE_NESTED]], ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_DOUBLE_NESTED:%.*]], ptr [[BUF1]], i32 0, i32 1, i32 1, i32 0
+// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF1]], i64 8
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[COUNT:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNT]], 1
@@ -112,7 +112,7 @@ unsigned test_size_of_triple_nested(struct triple_nested *p) {
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_QUAD_NESTED:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[BUF1:%.*]] = getelementptr inbounds nuw [[STRUCT_QUAD_NESTED]], ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_TRIPLE_NESTED:%.*]], ptr [[BUF1]], i32 0, i32 1, i32 1, i32 1, i32 0
+// CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[BUF1]], i64 12
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[COUNT:%.*]] = zext i32 [[COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNT]], 1

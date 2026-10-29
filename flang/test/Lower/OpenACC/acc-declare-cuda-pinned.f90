@@ -4,13 +4,14 @@ program declare_pinned
   real, allocatable :: a
   !$acc declare device_resident(a)
   allocate(a)
+  deallocate(a)
 end program
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: %[[A_ALLOC:.*]] = cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}data_attr(pinned)
+! CHECK: %[[A_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<f32>> <{bindc_name = "a", uniq_name = "_QFEa"}>
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ALLOC]]
 ! CHECK: cuf.allocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<postAlloc = @{{.*}}_acc_declare_post_alloc>} -> i32
-! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<postDealloc = @{{.*}}_acc_declare_post_dealloc>} -> i32
+! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<preDealloc = @_QFEa_acc_declare_pre_dealloc, postDealloc = @_QFEa_acc_declare_post_dealloc>} -> i32
 
 ! CHECK-LABEL: func.func private @{{.*}}_acc_declare_post_alloc(
 ! CHECK-SAME: %[[POST_ALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>)

@@ -676,7 +676,7 @@ namespace {
 class ConvertConv2DNhwcHwcf final
     : public OpRewritePattern<linalg::Conv2DNhwcHwcfOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
                                 PatternRewriter &rewriter) const override {
@@ -702,7 +702,7 @@ public:
 class ConvertConv2DNchwFchw final
     : public OpRewritePattern<linalg::Conv2DNchwFchwOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::Conv2DNchwFchwOp convOp,
                                 PatternRewriter &rewriter) const override {
@@ -715,7 +715,7 @@ public:
 class ConvertConv2DNhwcFhwc final
     : public OpRewritePattern<linalg::Conv2DNhwcFhwcOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcFhwcOp convOp,
                                 PatternRewriter &rewriter) const override {

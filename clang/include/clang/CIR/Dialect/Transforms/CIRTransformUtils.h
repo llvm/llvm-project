@@ -16,6 +16,16 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace cir {
+/// Helper type for lowering global ctor/dtors, that contain all the values
+/// needed for transforming the values between IRs.
+struct GlobalCtorDtorEntry {
+  GlobalCtorDtorEntry(llvm::StringRef name, uint32_t priority,
+                      llvm::StringRef associated = "")
+      : name(name), priority(priority), associated(associated) {}
+  std::string name;
+  uint32_t priority;
+  std::string associated;
+};
 
 /// Replace a `cir::CallOp` with a `cir::TryCallOp` whose unwind destination
 /// is \p unwindDest. The call's parent block is split immediately after the
@@ -33,10 +43,10 @@ mlir::Block *replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
                                     mlir::RewriterBase &rewriter);
 
 /// Replace a `cir::ThrowOp` with a `cir::TryThrowOp` whose unwind
-/// destination is \p unwindDest. The throw's parent block is split
-/// immediately after the throw; the resulting suffix block (which should
-/// contain the `cir.unreachable` that follows every throw) becomes the
-/// try_throw's normal destination and is returned to the caller.
+/// destination is \p unwindDest. The try_throw's normal destination is a new
+/// block, inserted right after the throw's block, that holds only a
+/// `cir.unreachable`; it is returned to the caller. The ops that followed the
+/// throw in its block (typically a `cir.unreachable`) are erased.
 ///
 /// All attributes of the original throw other than the operand segment
 /// sizes (which `TryThrowOp::create` sets itself) are copied onto the new

@@ -80,7 +80,7 @@ define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
 ; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]}}, a10
 
 ; GFX908: NumVgprs: 10
-; GFX908: ScratchSize: 12
+; GFX908: ScratchSize: 20
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 11
 define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %p) #0 {
@@ -96,12 +96,15 @@ define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %
   %v3 = load volatile i64, ptr addrspace(1) %p3
   %v4 = load volatile i64, ptr addrspace(1) %p4
   %v5 = load volatile i64, ptr addrspace(1) %p5
+  ; Live across the asm so the spill always overflows a1-a10 into memory.
+  %v6 = load volatile i64, ptr addrspace(1) %p
   call void asm sideeffect "", "v,v,v,v,v"(i64 %v1, i64 %v2, i64 %v3, i64 %v4, i64 %v5)
   store volatile i64 %v1, ptr addrspace(1) %p2
   store volatile i64 %v2, ptr addrspace(1) %p3
   store volatile i64 %v3, ptr addrspace(1) %p4
   store volatile i64 %v4, ptr addrspace(1) %p5
   store volatile i64 %v5, ptr addrspace(1) %p1
+  store volatile i64 %v6, ptr addrspace(1) %p
   ret void
 }
 

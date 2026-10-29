@@ -525,6 +525,15 @@ public:
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 
+  // Builtin address spaces use AMDGPU numbering, where 0 is flat.
+  LangAS getOpenCLBuiltinAddressSpace(unsigned AS) const override {
+    return AS == 0 ? LangAS::opencl_generic : getLangASFromTargetAS(AS);
+  }
+
+  LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
+    return AS == 0 ? LangAS::Default : getLangASFromTargetAS(AS);
+  }
+
   // This is only needed for validating arguments passed to
   // __builtin_amdgcn_processor_is
   bool isValidCPUName(StringRef Name) const override;

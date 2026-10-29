@@ -203,3 +203,101 @@ func.func @test_optional_ptr_f64() {
   %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
+
+// -----
+
+// Whole scalar POINTER: copy the pointee only when base_addr is non-null.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_ptr_scalar : !fir.ref<!fir.box<!fir.ptr<f64>>> init {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.ptr<f64>>>, %[[DST:.*]]: !fir.ref<!fir.box<!fir.ptr<f64>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.ptr<f64>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<f64>>) -> !fir.ptr<f64>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_ptr_scalar() {
+  %0 = fir.alloca !fir.box<!fir.ptr<f64>> {test.var = "box_ptr_scalar"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole array POINTER: same association guard around the array assignment.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_ptr_array : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> init {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_ptr_array() {
+  %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {test.var = "box_ptr_array"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole scalar ALLOCATABLE: copy only when allocated.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_heap_scalar : !fir.ref<!fir.box<!fir.heap<f64>>> init {
+// CHECK:   fir.if {{.*}} -> (!fir.heap<f64>) {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<f64>>) -> !fir.heap<f64>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_heap_scalar() {
+  %0 = fir.alloca !fir.box<!fir.heap<f64>> {test.var = "box_heap_scalar"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole array ALLOCATABLE: same allocation guard around the array assignment.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_heap_array : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> init {
+// CHECK:   fir.if {{.*}} -> (!fir.heap<!fir.array<?xf32>>) {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_heap_array() {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {test.var = "box_heap_array"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}

@@ -7,9 +7,20 @@
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.logical<4> <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i1, !fir.heap<!fir.logical<4>>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<!fir.logical<4>>) -> !fir.box<!fir.heap<!fir.logical<4>>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.heap<!fir.logical<4>>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<!fir.logical<4>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.logical<4> <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i1, !fir.heap<!fir.logical<4>>
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.logical<4>>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.logical<4>>
+! CHECK:           }
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<!fir.logical<4>>) -> !fir.box<!fir.heap<!fir.logical<4>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.logical<4>>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
@@ -30,7 +41,12 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.logical<4>>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
@@ -134,21 +150,21 @@
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
 ! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[IS_ASSOCIATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
-! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] -> (!fir.heap<!fir.array<?xf32>>) {
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] weights([1, 0]) -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:             %[[CONSTANT_2:.*]] = arith.constant 0 : index
+! CHECK:             %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:             %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
+! CHECK:             %[[CONSTANT_3:.*]] = arith.constant 1 : index
+! CHECK:             fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:             }
 ! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:           } else {
 ! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 ! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.array<?xf32>>
-! CHECK:           }
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
-! CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
 ! CHECK:           }
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_4]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -158,7 +174,7 @@
 ! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:           acc.yield %[[ALLOCA_0]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.heap<!fir.array<?xf32>>
+! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
@@ -193,12 +209,15 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 
 ! CHECK-LABEL:   } destroy {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?xf32>>):
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[PRIVATE_ALLOC]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
+! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
 ! CHECK:           fir.if %[[IS_ALLOCATED]] {
-! CHECK:             fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:             %[[CONVERT_1:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:             fir.freemem %[[CONVERT_1]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
@@ -211,22 +230,33 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
-! CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<!fir.array<?xf32>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:             %[[CONSTANT_2:.*]] = arith.constant 0 : index
+! CHECK:             %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:             %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
+! CHECK:             %[[CONSTANT_3:.*]] = arith.constant 1 : index
+! CHECK:             fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:             }
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:           }
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_3:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_2]]#0, %[[BOX_DIMS_3]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -267,7 +297,12 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
@@ -564,18 +599,18 @@
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.ptr<i32>) -> i64
 ! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[IS_ASSOCIATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
-! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] -> (!fir.heap<i32>) {
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] weights([1, 0]) -> (!fir.heap<i32>) {
 ! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
 ! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<i32>
 ! CHECK:           } else {
 ! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<i32>
 ! CHECK:           }
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[PRIVATE_ALLOC]] temporary_lhs : i32, !fir.heap<i32>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:           acc.yield %[[ALLOCA_0]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.heap<i32>
+! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
@@ -587,12 +622,15 @@
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 
 ! CHECK-LABEL:   } destroy {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<i32>):
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[PRIVATE_ALLOC]] : (!fir.heap<i32>) -> i64
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
+! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<i32>) -> i64
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
 ! CHECK:           fir.if %[[IS_ALLOCATED]] {
-! CHECK:             fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<i32>
+! CHECK:             %[[CONVERT_1:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<i32>) -> !fir.heap<i32>
+! CHECK:             fir.freemem %[[CONVERT_1]] : !fir.heap<i32>
 ! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
@@ -602,9 +640,20 @@
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.heap<i32>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<i32>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<i32>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<i32>
+! CHECK:           }
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -622,7 +671,12 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<i32>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<i32>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 

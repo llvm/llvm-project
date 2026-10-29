@@ -52,14 +52,19 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AtomicScope.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -998,6 +1003,32 @@ private:
   }
 };
 
+// Use the max outlined entry count. Instrumentation counts should already
+// match across merged callbacks, but sample profiles can differ. Returns
+// nullopt when no callback entry count is available.
+static std::optional<uint64_t>
+getMergedWrapperEntryCount(ArrayRef<CallInst *> ForkCalls,
+                           unsigned CallbackOpNo) {
+  std::optional<uint64_t> EntryCount;
+  for (CallInst *CI : ForkCalls) {
+    auto *Callback = dyn_cast<Function>(
+        CI->getArgOperand(CallbackOpNo)->stripPointerCasts());
+    if (!Callback)
+      continue;
+    if (std::optional<uint64_t> EC = Callback->getEntryCount())
+      // Each callback runs once per wrapper entry, so the counts should match.
+      // The Sample profiles can disagree slightly, so take the largest.
+      EntryCount = EntryCount ? std::max(*EntryCount, *EC) : *EC;
+  }
+  return EntryCount;
+}
+
+static bool moduleHasSampleProfile(const Module &M) {
+  std::unique_ptr<ProfileSummary> Summary(
+      ProfileSummary::getFromMD(M.getProfileSummary(/*IsCS=*/false)));
+  return Summary && Summary->getKind() == ProfileSummary::PSK_Sample;
+}
+
 struct OpenMPOpt {
 
   using OptimizationRemarkGetter =
@@ -1336,6 +1367,15 @@ private:
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
+      std::optional<uint64_t> WrapperCount =
+          getMergedWrapperEntryCount(MergableCIs, CallbackCalleeOperand);
+      // Leave the wrapper unprofiled when no callback has an entry count.
+      if (WrapperCount)
+        OutlinedFn->setEntryCount(*WrapperCount);
+      // Only sample PGO treats a profiled caller with no callsite weight as
+      // cold. Instrumentation profiles derive that count from the entry count.
+      const bool SampleProfile =
+          moduleHasSampleProfile(*OriginalFn->getParent());
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
@@ -1354,6 +1394,12 @@ private:
             CallInst::Create(FT, Callee, Args, "", CI->getIterator());
         if (CI->getDebugLoc())
           NewCI->setDebugLoc(CI->getDebugLoc());
+        // Each body runs once per wrapper entry. Without a callsite weight,
+        // sample PGO treats these calls as cold.
+        if (WrapperCount && SampleProfile) {
+          setFittedBranchWeights(*NewCI, {*WrapperCount},
+                                 /*IsExpected=*/false);
+        }
 
         // Forward parameter attributes from the callback to the callee.
         for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
@@ -1794,7 +1840,7 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =
@@ -2593,8 +2639,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
       // Go through all predecessors and add terminators for analysis.
       for (const BasicBlock *Pred : predecessors(CurrBB))
-        if (const Instruction *Terminator = Pred->getTerminator())
-          Worklist.push_back(Terminator);
+        Worklist.push_back(Pred->getTerminator());
     }
 
     return ReplVal;
@@ -3776,6 +3821,36 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   static const char ID;
 };
 
+// Fences stronger than a workgroup order memory the SPMD barrier does not.
+static bool isStrictFence(const Instruction &I) {
+  const auto *FI = dyn_cast<FenceInst>(&I);
+  if (!FI)
+    return false;
+  SyncScope::ID SS = FI->getSyncScopeID();
+  if (SS == SyncScope::SingleThread)
+    return false;
+  if (SS == SyncScope::System)
+    return true;
+  std::optional<StringRef> Name = FI->getContext().getSyncScopeName(SS);
+  if (!Name)
+    return true;
+  auto Parsed =
+      parseAtomicScopeIRString(FI->getModule()->getTargetTriple(), *Name);
+  if (!Parsed)
+    return true;
+  switch (Parsed->first) {
+  case AtomicScope::Single:
+  case AtomicScope::Wavefront:
+  case AtomicScope::Workgroup:
+    return false;
+  case AtomicScope::Cluster:
+  case AtomicScope::Device:
+  case AtomicScope::System:
+    return true;
+  }
+  return true;
+}
+
 /// The function kernel info abstract attribute, basically, what can we say
 /// about a function with regards to the KernelInfoState.
 struct AAKernelInfoFunction : AAKernelInfo {
@@ -4230,7 +4305,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
         Instruction *I = &*IP;
         if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
           continue;
-        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+        // Nothing tracked is sunk across a strict fence.
+        if (isStrictFence(*I) || !I->user_empty() ||
+            !SPMDCompatibilityTracker.contains(I)) {
           LastEffect = nullptr;
           continue;
         }
@@ -4257,6 +4334,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
       Instruction *GuardedRegionStart = nullptr, *GuardedRegionEnd = nullptr;
       for (Instruction &I : *BB) {
+        // A strict fence splits a guarded region so it stays outside it.
+        if (isStrictFence(I)) {
+          if (SPMDCompatibilityTracker.contains(&I))
+            CalleeAAFunction.getGuardedInstructions().insert(&I);
+          if (GuardedRegionStart) {
+            GuardedRegions.push_back(
+                std::make_pair(GuardedRegionStart, GuardedRegionEnd));
+            GuardedRegionStart = nullptr;
+            GuardedRegionEnd = nullptr;
+          }
+          continue;
+        }
+
         // If instruction I needs to be guarded update the guarded region
         // bounds.
         if (SPMDCompatibilityTracker.contains(&I)) {
@@ -4391,11 +4481,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Changed = ChangeStatus::CHANGED;
 
     // Do not use instruction guards when no parallel is present inside
-    // the target region.
-    if (mayContainParallelRegion())
+    // the target region. Instead, only the main thread of each team executes
+    // the user code, so there is no need to launch more threads.
+    if (mayContainParallelRegion()) {
       insertInstructionGuardsHelper(A);
-    else
+    } else {
       forceSingleThreadPerWorkgroupHelper(A);
+      setMaxThreadsOfKernelEnvironment(
+          ConstantInt::get(Type::getInt32Ty(Kernel->getContext()), 1));
+    }
 
     // Adjust the global exec mode flag that tells the runtime what mode this
     // kernel is executed in.

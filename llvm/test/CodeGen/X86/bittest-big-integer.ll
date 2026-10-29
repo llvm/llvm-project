@@ -1558,7 +1558,6 @@ define i32 @blsr_u512(ptr %word) nounwind {
 ; X86-NEXT:    subl $-128, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB26_20: # %cond.false
-; X86-NEXT:    addl $256, %eax # imm = 0x100
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
@@ -1633,6 +1632,7 @@ define i32 @blsr_u512(ptr %word) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    addl $256, %eax # imm = 0x100
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    movl %ebx, %ecx
 ; X86-NEXT:    jne .LBB26_40

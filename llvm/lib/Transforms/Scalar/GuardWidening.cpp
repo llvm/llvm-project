@@ -39,6 +39,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GuardWidening.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
@@ -68,12 +68,6 @@ using namespace llvm;
 STATISTIC(GuardsEliminated, "Number of eliminated guards");
 STATISTIC(CondBranchEliminated, "Number of eliminated conditional branches");
 STATISTIC(FreezeAdded, "Number of freeze instruction introduced");
-
-static cl::opt<bool>
-    WidenBranchGuards("guard-widening-widen-branch-guards", cl::Hidden,
-                      cl::desc("Whether or not we should widen guards  "
-                               "expressed as branches by widenable conditions"),
-                      cl::init(true));
 
 // Get the condition of \p I. It can either be a guard or a conditional branch.
 static Value *getCondition(Instruction *I) {
@@ -131,6 +125,7 @@ findInsertionPointForWideCondition(Instruction *WCOrGuard) {
 namespace {
 
 class GuardWideningImpl {
+  const ScalarOptions &Opts;
   DominatorTree &DT;
   PostDominatorTree *PDT;
   LoopInfo &LI;
@@ -318,11 +313,12 @@ class GuardWideningImpl {
   }
 
 public:
-  explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree *PDT,
-                             LoopInfo &LI, AssumptionCache &AC,
-                             MemorySSAUpdater *MSSAU, DomTreeNode *Root,
+  explicit GuardWideningImpl(const ScalarOptions &Opts, DominatorTree &DT,
+                             PostDominatorTree *PDT, LoopInfo &LI,
+                             AssumptionCache &AC, MemorySSAUpdater *MSSAU,
+                             DomTreeNode *Root,
                              std::function<bool(BasicBlock *)> BlockFilter)
-      : DT(DT), PDT(PDT), LI(LI), AC(AC), MSSAU(MSSAU), Root(Root),
+      : Opts(Opts), DT(DT), PDT(PDT), LI(LI), AC(AC), MSSAU(MSSAU), Root(Root),
         BlockFilter(BlockFilter) {}
 
   /// The entry point for this pass.
@@ -330,10 +326,11 @@ public:
 };
 } // namespace
 
-static bool isSupportedGuardInstruction(const Instruction *Insn) {
+static bool isSupportedGuardInstruction(const ScalarOptions &Opts,
+                                        const Instruction *Insn) {
   if (isGuard(Insn))
     return true;
-  if (WidenBranchGuards && isGuardAsWidenableBranch(Insn))
+  if (Opts.guard_widening_widen_branch_guards && isGuardAsWidenableBranch(Insn))
     return true;
   return false;
 }
@@ -350,7 +347,7 @@ bool GuardWideningImpl::run() {
     auto &CurrentList = GuardsInBlock[BB];
 
     for (auto &I : *BB)
-      if (isSupportedGuardInstruction(&I))
+      if (isSupportedGuardInstruction(Opts, &I))
         CurrentList.push_back(cast<Instruction>(&I));
 
     for (auto *II : CurrentList)
@@ -361,7 +358,7 @@ bool GuardWideningImpl::run() {
   for (auto *I : EliminatedGuardsAndBranches)
     if (!WidenedGuards.count(I)) {
       assert(isa<ConstantInt>(getCondition(I)) && "Should be!");
-      if (isSupportedGuardInstruction(I))
+      if (isSupportedGuardInstruction(Opts, I))
         eliminateGuard(I, MSSAU);
       else {
         assert(isa<CondBrInst>(I) &&
@@ -604,7 +601,7 @@ static std::optional<BasicBlock::iterator>
 getFreezeInsertPt(Value *V, const DominatorTree &DT) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
-    return DT.getRoot()->getFirstNonPHIOrDbgOrAlloca()->getIterator();
+    return DT.getRoot()->getFirstNonPHIOrAlloca()->getIterator();
 
   std::optional<BasicBlock::iterator> Res = I->getInsertionPointAfterDef();
   // If there is no place to add freeze - return nullptr.
@@ -995,7 +992,8 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAA)
     MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAA->getMSSA());
-  if (!GuardWideningImpl(DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
+  const ScalarOptions &Opts = getScalarOptions(F);
+  if (!GuardWideningImpl(Opts, DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
                          DT.getRootNode(), [](BasicBlock *) { return true; })
            .run())
     return PreservedAnalyses::all();
@@ -1018,7 +1016,8 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  if (!GuardWideningImpl(AR.DT, nullptr, AR.LI, AR.AC,
+  const ScalarOptions &Opts = getScalarOptions(L);
+  if (!GuardWideningImpl(Opts, AR.DT, nullptr, AR.LI, AR.AC,
                          MSSAU ? MSSAU.get() : nullptr, AR.DT.getNode(RootBB),
                          BlockFilter)
            .run())

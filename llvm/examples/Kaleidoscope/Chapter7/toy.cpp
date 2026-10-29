@@ -1124,10 +1124,11 @@ static void InitializeModuleAndManagers() {
   // Open a new context and module.
   TheContext = std::make_unique<LLVMContext>();
   TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
+  TheModule->setTargetTriple(TheJIT->getTargetTriple());
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();
@@ -1153,7 +1154,7 @@ static void InitializeModuleAndManagers() {
   TheFPM->addPass(SimplifyCFGPass());
 
   // Register analysis passes used in these transform passes.
-  PassBuilder PB;
+  PassBuilder PB(*TheContext);
   PB.registerModuleAnalyses(*TheMAM);
   PB.registerFunctionAnalyses(*TheFAM);
   PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);

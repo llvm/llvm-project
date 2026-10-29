@@ -9,17 +9,17 @@ define void @store_i64_inline(ptr addrspace(3) %ptr) {
     ; NOVMOV-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
     ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; NOVMOV-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX942-LABEL: name: store_i64_inline
     ; GFX942: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 -1, implicit $exec
-    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX1250-LABEL: name: store_i64_inline
     ; GFX1250: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 -1, implicit $exec
-    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
   store volatile i64 -1, ptr addrspace(3) %ptr, align 8
   ret void
 }
@@ -29,19 +29,19 @@ define void @store_i64_u32_lit(ptr addrspace(3) %ptr) {
     ; NOVMOV: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; NOVMOV-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; NOVMOV-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234567890
-    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; NOVMOV-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX942-LABEL: name: store_i64_u32_lit
     ; GFX942: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 1234567890, implicit $exec
-    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX1250-LABEL: name: store_i64_u32_lit
     ; GFX1250: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 1234567890, implicit $exec
-    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
   store volatile i64 1234567890, ptr addrspace(3) %ptr, align 8
   ret void
 }
@@ -51,22 +51,22 @@ define void @store_i64_lit64(ptr addrspace(3) %ptr) {
     ; NOVMOV: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; NOVMOV-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 305419896
     ; NOVMOV-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1698898192
-    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; NOVMOV-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX942-LABEL: name: store_i64_lit64
     ; GFX942: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 305419896
     ; GFX942-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1698898192
-    ; GFX942-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; GFX942-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; GFX942-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
-    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX1250-LABEL: name: store_i64_lit64
     ; GFX1250: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 1311768467463790320, implicit $exec
-    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
   store volatile i64 1311768467463790320, ptr addrspace(3) %ptr, align 8
   ret void
 }
@@ -76,19 +76,19 @@ define void @store_f64_inline(ptr addrspace(3) %ptr) {
     ; NOVMOV: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; NOVMOV-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1072693248
     ; NOVMOV-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; NOVMOV-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX942-LABEL: name: store_f64_inline
     ; GFX942: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 4607182418800017408, implicit $exec
-    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX1250-LABEL: name: store_f64_inline
     ; GFX1250: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 4607182418800017408, implicit $exec
-    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
   store volatile double 1.000000e+00, ptr addrspace(3) %ptr, align 8
   ret void
 }
@@ -98,22 +98,22 @@ define void @store_f64_lit64(ptr addrspace(3) %ptr) {
     ; NOVMOV: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; NOVMOV-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1074340347
     ; NOVMOV-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1413754136
-    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; NOVMOV-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; NOVMOV-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; NOVMOV-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX942-LABEL: name: store_f64_lit64
     ; GFX942: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1074340347
     ; GFX942-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1413754136
-    ; GFX942-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+    ; GFX942-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; GFX942-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
-    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX942-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
     ;
     ; GFX1250-LABEL: name: store_f64_lit64
     ; GFX1250: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX1250-NEXT: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 4614256656552045848, implicit $exec
-    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], killed [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
+    ; GFX1250-NEXT: DS_WRITE_B64_gfx9 [[COPY]], [[V_MOV_B64_e32_]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.ptr, addrspace 3)
   store volatile double 0x400921FB54442D18, ptr addrspace(3) %ptr, align 8
   ret void
 }
