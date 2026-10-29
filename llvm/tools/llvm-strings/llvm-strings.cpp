@@ -42,6 +42,10 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
+#ifdef __APPLE__
+#include <iconv.h>
+#endif
+
 using namespace llvm;
 using namespace llvm::object;
 
@@ -108,12 +112,12 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // problems on most platforms, thus we introduce wrappers. On Windows,
 // mbrtoc32() ignores the locale and only converts UTF-8, but wchar_t is UTF-16
 // and is close enough, as long as we make sure to avoid it for UTF-8 locales.
-// On Apple, <uchar.h> is not available, but wchar_t is UTF-32 and is a full
-// substitute.
+// On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
+// implement mbrtoc() and crtomb() through iconv().
 // On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character.
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32)
 using char_t = wchar_t;
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
@@ -122,8 +126,69 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     Result = (size_t)-3;
   return Result;
 }
-static size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
+static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::wcrtomb(S, Ch, MBState);
+}
+#elif defined(__APPLE__)
+using char_t = char32_t;
+static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
+                     std::mbstate_t *MBState) {
+  static struct IconvHandle {
+    IconvHandle() : Value(iconv_open("UCS-4-INTERNAL", nl_langinfo(CODESET))) {
+      if (Value == (iconv_t)-1)
+        report_fatal_error("failed to open iconv");
+    }
+    ~IconvHandle() { iconv_close(Value); }
+
+    iconv_t Value;
+  } CD;
+
+  wchar_t WCh;
+  size_t BytesRead = mbrtowc(&WCh, S, N, MBState);
+  if (BytesRead != (size_t)-2 && BytesRead != (size_t)-1) {
+    char Cvt[MB_LEN_MAX];
+    std::mbstate_t CvtMBState{};
+    const size_t BytesWritten = wcrtomb(Cvt, WCh, &CvtMBState);
+    char *PIn = Cvt;
+    size_t NIn = BytesWritten;
+    char *POut = reinterpret_cast<char *>(Ch);
+    size_t NOut = sizeof(char_t);
+    const size_t NumErrors = iconv(CD.Value, &PIn, &NIn, &POut, &NOut);
+    // mbrtowc() may be lenient and accept invalid characters that iconv()
+    // rejects.
+    if (NIn == BytesWritten)
+      return (size_t)-1;
+    if (NumErrors || NIn || NOut)
+      llvm_unreachable("internal error: iconv failed on valid character");
+  }
+  return BytesRead;
+}
+static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
+  static struct IconvHandle {
+    IconvHandle() : Value(iconv_open(nl_langinfo(CODESET), "UCS-4-INTERNAL")) {
+      if (Value == (iconv_t)-1)
+        report_fatal_error("failed to open iconv");
+    }
+    ~IconvHandle() { iconv_close(Value); }
+
+    iconv_t Value;
+  } CD;
+
+  char Cvt[MB_LEN_MAX];
+  std::mbstate_t CvtMBState{};
+  char *PIn = reinterpret_cast<char *>(Ch);
+  size_t NIn = sizeof(char_t);
+  char *POut = Cvt;
+  size_t NOut = MB_LEN_MAX;
+  const size_t NumErrors = iconv(CD.Value, &PIn, &NIn, &POut, &NOut);
+  if (NumErrors == (size_t)-1 || NIn)
+    llvm_unreachable("internal error: iconv failed on valid character");
+  if (NumErrors)
+    return (size_t)-1;
+  wchar_t WCh;
+  if (mbrtowc(&WCh, Cvt, PIn - Cvt, &CvtMBState) != size_t(PIn - Cvt))
+    llvm_unreachable("internal error: mbrtowc failed on valid character");
+  return wcrtomb(S, WCh, MBState);
 }
 #else
 using char_t = char32_t;
@@ -134,7 +199,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
     Result = (size_t)-3;
   return Result;
 }
-static size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
+static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::c32rtomb(S, Ch, MBState);
 }
 #endif
