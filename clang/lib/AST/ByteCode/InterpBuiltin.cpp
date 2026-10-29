@@ -4789,8 +4789,29 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *) {
+  const Reflect &R = S.Stk.pop<Reflect>();
+  S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
+  return true;
+}
+
+static bool InterpretReflectionBuiltin(InterpState &S, CodePtr OpPC,
+                                       const CallExpr *Call,
+                                       uint32_t BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__builtin_meta_is_type(S, OpPC, Call);
+  default:
+    llvm_unreachable("unknown metafunction builtin");
+  }
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
+  if (S.getASTContext().BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinID))
+    return InterpretReflectionBuiltin(S, OpPC, Call, BuiltinID);
+
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
