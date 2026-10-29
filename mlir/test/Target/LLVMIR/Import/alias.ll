@@ -1,4 +1,5 @@
 ; RUN: mlir-translate --import-llvm %s -split-input-file | FileCheck %s
+; RUN: mlir-translate --import-llvm --mlir-to-llvmir %s -split-input-file | FileCheck %s --check-prefix=ROUNDTRIP
 
 @foo_alias = alias ptr, ptr @callee
 
@@ -66,6 +67,21 @@ entry:
 @glob2 = weak_odr hidden alias [32 x i32], inttoptr (i64 add (i64 ptrtoint (ptr @glob.private2 to i64), i64 1234) to ptr)
 
 ; CHECK: llvm.mlir.alias weak_odr hidden @glob2 {dso_local} : !llvm.array<32 x i32> {
+
+; // -----
+
+@dso_alias = dso_local alias void (), ptr @dso_target
+@preemptible_alias = alias void (), ptr @dso_target
+
+define void @dso_target() {
+  ret void
+}
+
+; CHECK: llvm.mlir.alias external @dso_alias {dso_local} : !llvm.func<void ()> {
+; CHECK: llvm.mlir.alias external @preemptible_alias : !llvm.func<void ()> {
+
+; ROUNDTRIP: @dso_alias = dso_local alias void (), ptr @dso_target
+; ROUNDTRIP: @preemptible_alias = alias void (), ptr @dso_target
 
 ; // -----
 

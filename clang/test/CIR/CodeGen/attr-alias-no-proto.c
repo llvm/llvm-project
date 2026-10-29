@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -std=c11 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// LLVM: @noproto_used = alias i32 (), ptr @noproto_used_target
-// LLVM: @noproto_args = alias i32 (), ptr @noproto_args_target
-// LLVM: @noproto_args2 = alias i32 (i32, i32, i32), ptr @noproto_args_target2
+// LLVM: @noproto_used = dso_local alias i32 (), ptr @noproto_used_target
+// LLVM: @noproto_args = dso_local alias i32 (), ptr @noproto_args_target
+// LLVM: @noproto_args2 = dso_local alias i32 (i32, i32, i32), ptr @noproto_args_target2
 
 // FIXME(cir): we list no-proto for the alias in CIR, but perhaps lowering is
 // missing it? We should be able to combine LLVM/OGCG check lines in this file.
