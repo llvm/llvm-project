@@ -162,6 +162,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::vector_extract:
   case Intrinsic::masked_compressstore:
     return (ScalarOpdIdx == 1);
+  case Intrinsic::speculative_load:
+    return true;
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
@@ -202,6 +204,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
   case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::speculative_load:
   case Intrinsic::masked_expandload:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:

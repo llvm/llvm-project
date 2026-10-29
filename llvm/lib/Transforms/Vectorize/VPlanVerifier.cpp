@@ -320,11 +320,31 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
+    if (const auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R)) {
+      if (!verifyVPlanIsValid(Oracle->getOraclePlan())) {
+        errs() << "Invalid speculative-load oracle plan!\n";
+        return false;
+      }
+    }
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
       switch (VPI->getOpcode()) {
+      case Instruction::Ret:
+        if (&R != &VPBB->back() || VPBB->getParent() ||
+            VPBB->getNumSuccessors() != 0) {
+          errs() << "Return must terminate a top-level block without "
+                    "successors!\n";
+          return false;
+        }
+        break;
       case VPInstruction::LastActiveLane:
         if (!verifyLastActiveLaneRecipe(*VPI))
           return false;
+        break;
+      case VPInstruction::LiveIn:
+        if (VPBB != VPBB->getPlan()->getEntry()) {
+          errs() << "Live-in must be in the plan's entry block!\n";
+          return false;
+        }
         break;
       default:
         break;

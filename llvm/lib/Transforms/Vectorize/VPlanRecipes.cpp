@@ -13,11 +13,13 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
+#include "VPlanCFG.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VectorizeOptions.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -86,6 +88,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
   case VPExpandSCEVSC:
+  case VPSpeculativeLoadOracleSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -148,6 +151,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPSpeculativeLoadOracleSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -186,10 +190,11 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
   case VPExpandSCEVSC:
+  case VPSpeculativeLoadOracleSC:
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
-    return mayWriteToMemory() ||
+    return mayWriteToMemory() || VPI->getOpcode() == Instruction::Ret ||
            VPI->getOpcode() == VPInstruction::BranchOnCount ||
            VPI->getOpcode() == VPInstruction::BranchOnCond ||
            VPI->getOpcode() == VPInstruction::BranchOnTwoConds;
@@ -502,6 +507,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
       AssertOperandType(Idx, Op0Ty);
     return Type::getVoidTy(Ctx);
+  case Instruction::Ret:
   case VPInstruction::WideVectorStore:
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
@@ -647,8 +653,10 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   switch (Opcode) {
   case VPInstruction::StepVector:
   case VPInstruction::IncomingAliasMask:
+  case VPInstruction::LiveIn:
     return 0;
   case Instruction::Alloca:
+  case Instruction::Ret:
   case Instruction::Freeze:
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
@@ -909,6 +917,12 @@ Value *VPInstruction::generate(VPTransformState &State,
         Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
         {AVL, VFArg, Builder.getTrue()});
     return EVL;
+  }
+  case Instruction::Ret: {
+    auto *Ret = Builder.CreateRet(State.get(getOperand(0), /*IsScalar=*/true));
+    // Remove the temporary unreachable terminator.
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+    return Ret;
   }
   case VPInstruction::BranchOnCond: {
     assert(GenerateSingleScalar &&
@@ -1652,6 +1666,7 @@ bool VPInstruction::isSingleScalar() const {
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Intrinsic:
+  case VPInstruction::LiveIn:
     return true;
   default:
     return Instruction::isCast(getOpcode());
@@ -1730,6 +1745,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
       Instruction::isUnaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::Ret:
   case Instruction::ExtractValue:
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
@@ -1755,6 +1771,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::IncomingAliasMask:
+  case VPInstruction::LiveIn:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
@@ -1802,6 +1819,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ExtractLastActive:
     return Op == getOperand(0);
   case Instruction::PHI:
+  case Instruction::Ret:
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
@@ -1871,6 +1889,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::WideActiveLaneMask:
     O << "wide active lane mask";
+    break;
+  case VPInstruction::LiveIn:
+    O << "live-in";
     break;
   case VPInstruction::WideVectorLoad:
     O << "wide vector load";
@@ -3767,6 +3788,73 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
                                             Ctx.CostKind);
 }
+
+VPSpeculativeLoadOracleRecipe::VPSpeculativeLoadOracleRecipe(
+    std::unique_ptr<VPlan> Oracle)
+    : VPSingleDefRecipe(VPRecipeBase::VPSpeculativeLoadOracleSC, {},
+                        PointerType::getUnqual(Oracle->getContext())),
+      OraclePlan(std::move(Oracle)) {}
+
+VPSpeculativeLoadOracleRecipe *VPSpeculativeLoadOracleRecipe::clone() {
+  return new VPSpeculativeLoadOracleRecipe(
+      std::unique_ptr<VPlan>(OraclePlan->duplicate()));
+}
+
+void VPSpeculativeLoadOracleRecipe::execute(VPTransformState &State) {
+  VPlan &Plan = *OraclePlan;
+  LLVMContext &Ctx = Plan.getContext();
+  auto ParamTypes = map_to_vector(*Plan.getEntry(), [](VPRecipeBase &R) {
+    return R.getVPSingleValue()->getScalarType();
+  });
+
+  Module *M = State.Builder.GetInsertBlock()->getModule();
+  // TODO: Unsupported under a CGSCC adaptor, as LazyCallGraph is not updated.
+  Function *OracleFn = Function::Create(
+      FunctionType::get(Type::getInt64Ty(Ctx), ParamTypes, /*isVarArg=*/false),
+      GlobalValue::InternalLinkage, "speculativeLoadOracle", M);
+  OracleFn->setMemoryEffects(MemoryEffects::argMemOnly(ModRefInfo::Ref));
+  for (Attribute::AttrKind Kind :
+       {Attribute::NoInline, Attribute::OptimizeNone, Attribute::NoUnwind,
+        Attribute::NoSync, Attribute::MustProgress, Attribute::WillReturn})
+    OracleFn->addFnAttr(Kind);
+  OracleFn->addFnAttr("oracle-function");
+
+  BasicBlock *EntryBB = BasicBlock::Create(Ctx, "oracle.entry", OracleFn);
+  IRBuilder<> OracleBuilder(EntryBB);
+  OracleBuilder.SetInsertPoint(OracleBuilder.CreateUnreachable());
+
+  // Execute the plan with VF=1.
+  LoopInfo OracleLI;
+  OracleLI.analyze(OracleFn);
+  VPTransformState OracleState(State.TTI, ElementCount::getFixed(1), &OracleLI,
+                               /*DT=*/nullptr, /*AC=*/nullptr, OracleBuilder,
+                               &Plan, /*CurrentParentLoop=*/nullptr);
+  OracleState.CFG.PrevBB = EntryBB;
+  OracleState.CFG.VPBB2IRBB[Plan.getEntry()] = EntryBB;
+
+  for (auto [R, Arg] : zip_equal(*Plan.getEntry(), OracleFn->args())) {
+    Arg.setName(cast<VPInstruction>(R).getName());
+    OracleState.set(R.getVPSingleValue(), &Arg, /*IsScalar=*/true);
+  }
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBlockBase *Block : drop_begin(RPOT))
+    Block->execute(&OracleState);
+  OracleState.fixupHeaderPhis();
+
+  State.set(this, OracleFn, /*IsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSpeculativeLoadOracleRecipe::printRecipe(raw_ostream &O,
+                                                const Twine &Indent,
+                                                VPSlotTracker &Tracker) const {
+  O << Indent << "SPECULATIVE-LOAD-ORACLE ";
+  printAsOperand(O, Tracker);
+  O << '\n';
+  OraclePlan->print(O, Indent + "  ");
+}
+#endif
 
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
