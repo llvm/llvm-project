@@ -485,6 +485,7 @@
 #include "math/tanbf16.h"
 #include "math/tanf.h"
 #include "math/tanf16.h"
+#include "math/tanh.h"
 #include "math/tanhf.h"
 #include "math/tanhf16.h"
 #include "math/tanpif.h"

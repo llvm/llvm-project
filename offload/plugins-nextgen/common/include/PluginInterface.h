@@ -1104,11 +1104,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the number of lanes used for the RPC interface.
   virtual uint32_t getRPCNumLanes() const { return getWarpSize(); }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  /// Get the maximum number of blocks that can be launched. The \p NumThreads
-  /// argument is the per-block thread count the kernel will be launched with.
-  virtual uint32_t getBlockLimit(uint32_t NumThreads) const {
-    return GridValues.GV_Max_Teams;
-  }
+  uint32_t getMaxNumBlocks() const { return GridValues.GV_Max_Teams; }
+  /// Get the maximum number of work items (blocks * threads) of a launch, or
+  /// zero if the device only limits the number of blocks.
+  uint64_t getMaxGridSize() const { return MaxGridSize; }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
@@ -1341,6 +1340,9 @@ protected:
 
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
+
+  /// Maximum number of work items of a launch, or zero if not limited.
+  uint64_t MaxGridSize = 0;
 
   /// Enumeration used for representing the current state between two devices
   /// two devices (both under the same plugin) for the peer access between them.

@@ -2485,7 +2485,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim))
       return Err;
 
-    GridValues.GV_Max_Teams = GridMaxDim.x / GridValues.GV_Max_WG_Size;
+    // The HSA grid is expressed in work items, so it limits blocks * threads
+    // rather than blocks alone. A block has at least one thread.
+    GridValues.GV_Max_Teams = GridMaxDim.x;
+    MaxGridSize = GridMaxDim.x;
     if (GridValues.GV_Max_Teams == 0)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "maximum number of teams cannot be zero");
@@ -2754,18 +2757,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
-
-  /// See GenericDeviceTy::getBlockLimit(uint32_t). The HSA launch configuration
-  /// is an int32_t grid representing blocks * threads. This means the block
-  /// limit depends on the user's requested thread count.
-  uint32_t getBlockLimit(uint32_t NumThreads) const override {
-    if (NumThreads == 0)
-      return GridValues.GV_Max_Teams;
-    uint64_t MaxGridItems =
-        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
-    uint64_t MaxBlocks = MaxGridItems / NumThreads;
-    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
-  }
 
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }

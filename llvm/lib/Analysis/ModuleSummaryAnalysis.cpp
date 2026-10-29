@@ -525,6 +525,12 @@ static void computeFunctionSummary(
               CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
           Edge.updateHotness(getHotness(Candidate.Count, PSI));
           Edge.setHasIndirectCall(true);
+          // Record that the profiled target was reached via a tail call, so
+          // that MemProf context disambiguation can identify frames missing
+          // from profiled contexts due to indirect tail calls (see
+          // findProfiledCalleeThroughTailCalls).
+          if (CB->isTailCall())
+            Edge.setHasTailCall(true);
         }
       }
 
