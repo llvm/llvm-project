@@ -34041,6 +34041,12 @@ static SDValue LowerPDEPPEXT(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected PDEP/PEXT type");
+  // Slow scalar PDEP is custom-lowered. Try the shared single-bit expansion,
+  // but keep the native instruction for other inputs and minsize.
+  if (!IsMinSize && Op.getOpcode() == ISD::PDEP)
+    if (SDValue Expanded = DAG.getTargetLoweringInfo().expandPDEP(
+            Op.getNode(), DAG, /*AllowFullExpansion=*/false))
+      return Expanded;
   return Op;
 }
 
