@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -321,7 +322,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
     mlir::Type scalarTy = mlir::isa<cir::VectorType>(ty)
                               ? mlir::cast<cir::VectorType>(ty).getElementType()
                               : ty;
-    cir::CIRDataLayout dl = cgm.getDataLayout();
+    const cir::CIRDataLayout &dl = cgm.getDataLayout();
     return dl.getTypeSizeInBits(scalarTy).getFixedValue();
   };
 
@@ -350,7 +351,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
   mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
   if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
     unsigned numSrcElts = vecTy->getNumElements();
-    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getSize();
+    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getFixedSize();
     if (numDstElts == numSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be
@@ -1905,7 +1906,9 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
       // If the member was explicitly marked as nontemporal, mark it as
       // nontemporal. If the base lvalue is marked as nontemporal, mark access
       // to children as nontemporal too.
-      cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: OpenMP");
+      assert(!cir::MissingFeatures::openMPNontemporalDecl());
+      if (baseLV.isNontemporal())
+        lv.setNontemporal(true);
     }
     return lv;
   }
@@ -2064,7 +2067,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Automatic:
     cgf.pushLifetimeExtendedDestroy(
         NormalAndEHCleanup, referenceTemporary, e->getType(),
-        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions);
+        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions,
+        m->getExtendingDecl());
     break;
 
   case SD_Dynamic:
@@ -2270,10 +2274,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     else
       emitStoreThroughLValue(rv, lv);
 
-    if (getLangOpts().OpenMP) {
-      cgm.errorNYI(e->getSourceRange(), "openmp");
-      return {};
-    }
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     return lv;
   }
@@ -2309,6 +2310,18 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
   llvm_unreachable("bad evaluation kind");
 }
 
+// Returns whether \p fn disables the builtin \p name with no_builtin. An empty
+// list disables all builtins.
+static bool hasNoBuiltinAttr(cir::FuncOp fn, StringRef name) {
+  auto noBuiltins = fn->getAttrOfType<mlir::ArrayAttr>(
+      cir::CIRDialect::getNoBuiltinsAttrName());
+  if (!noBuiltins)
+    return false;
+  return noBuiltins.empty() ||
+         llvm::is_contained(noBuiltins,
+                            mlir::StringAttr::get(fn.getContext(), name));
+}
+
 CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
@@ -2318,18 +2331,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // TODO: Read no-builtin function attribute and set this accordingly.
-    // Using false here matches OGCG's default behavior - builtins are called
-    // as builtins unless explicitly disabled. The previous value of true was
-    // overly conservative and caused functions to be marked as no_inline when
-    // they shouldn't be.
-    bool hasAttributeNoBuiltin = false;
-    assert(!cir::MissingFeatures::attributeNoBuiltin());
+    auto fn = dyn_cast<cir::FuncOp>(curFn);
+    bool hasAttributeNoBuiltin = fn && hasNoBuiltinAttr(fn, fd->getName());
 
     // When directly calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    if (auto fn = dyn_cast<cir::FuncOp>(curFn);
-        (!fn || fn.getName() != fdInlineName) &&
+    if ((!fn || fn.getName() != fdInlineName) &&
         CodeGenUtils::onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
@@ -2430,7 +2437,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::sanitizers());
 
   CallArgList args;
-  assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
+  EvaluationOrder order = CodeGenUtils::getCallArgEvaluationOrder(e);
 
   // C++23 static-member operators (`static operator()` /
   // `static operator[]`) produce a CXXOperatorCallExpr whose first argument
@@ -2448,7 +2455,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   }
 
   emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), arguments,
-               e->getDirectCallee());
+               e->getDirectCallee(), /*paramsToSkip=*/0, order);
 
   const CIRGenFunctionInfo &funcInfo =
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
@@ -3056,35 +3063,69 @@ Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
 }
 
 /// Try to emit a reference to the given value without producing it as
-/// an l-value.  For many cases, this is just an optimization, but it avoids
-/// us needing to emit global copies of variables if they're named without
-/// triggering a formal use in a context where we can't emit a direct
-/// reference to them, for instance if a block or lambda or a member of a
-/// local class uses a const int variable or constexpr variable from an
-/// enclosing function.
-///
-/// For named members of enums, this is the only way they are emitted.
+/// an l-value.  This is just an optimization, but it avoids us needing
+/// to emit global copies of variables if they're named without triggering
+/// a formal use in a context where we can't emit a direct reference to them,
+/// for instance if a block or lambda or a member of a local class uses a
+/// const int variable or constexpr variable from an enclosing function.
 CIRGenFunction::ConstantEmission
 CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   const ValueDecl *value = refExpr->getDecl();
 
-  // There is a lot more to do here, but for now only EnumConstantDecl is
-  // supported.
-  assert(!cir::MissingFeatures::tryEmitAsConstant());
-
   // The value needs to be an enum constant or a constant variable.
-  if (!isa<EnumConstantDecl>(value))
+  CodeGenUtils::ConstantEmissionKind cek;
+  if (isa<ParmVarDecl>(value))
+    cek = CodeGenUtils::CEK_None;
+  else if (const auto *var = dyn_cast<VarDecl>(value))
+    cek = CodeGenUtils::checkVarTypeForConstantEmission(var->getType());
+  else if (isa<EnumConstantDecl>(value))
+    cek = CodeGenUtils::CEK_AsValueOnly;
+  else
+    cek = CodeGenUtils::CEK_None;
+  if (cek == CodeGenUtils::CEK_None)
     return ConstantEmission();
 
   Expr::EvalResult result;
-  if (!refExpr->EvaluateAsRValue(result, getContext()))
+  bool resultIsReference;
+  QualType resultType;
+
+  // It's best to evaluate all the way as an r-value if that's permitted.
+  if (cek != CodeGenUtils::CEK_AsReferenceOnly &&
+      refExpr->EvaluateAsRValue(result, getContext())) {
+    resultIsReference = false;
+    resultType = refExpr->getType().getUnqualifiedType();
+  } else if (cek != CodeGenUtils::CEK_AsValueOnly &&
+             refExpr->EvaluateAsLValue(result, getContext())) {
+    resultIsReference = true;
+    resultType = value->getType();
+  } else {
+    return ConstantEmission();
+  }
+
+  // In any case, if the initializer has side-effects, abandon ship.
+  if (result.HasSideEffects)
     return ConstantEmission();
 
-  QualType resultType = refExpr->getType();
-
-  // As long as we're only handling EnumConstantDecl, there should be no
-  // side-effects.
-  assert(!result.HasSideEffects);
+  // In CUDA/HIP device compilation, a lambda may capture a reference variable
+  // referencing a global host variable by copy. In this case the lambda should
+  // make a copy of the value of the global host variable. The DRE of the
+  // captured reference variable cannot be emitted as load from the host
+  // global variable as compile time constant, since the host variable is not
+  // accessible on device. The DRE of the captured reference variable has to be
+  // loaded from captures.
+  if (cgm.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
+      refExpr->refersToEnclosingVariableOrCapture()) {
+    auto *md = dyn_cast_or_null<CXXMethodDecl>(curCodeDecl);
+    if (isLambdaMethod(md) && md->getOverloadedOperator() == OO_Call) {
+      const APValue::LValueBase &base = result.Val.getLValueBase();
+      if (const ValueDecl *d = base.dyn_cast<const ValueDecl *>()) {
+        if (const auto *vd = dyn_cast<const VarDecl>(d)) {
+          if (!vd->hasAttr<CUDADeviceAttr>())
+            return ConstantEmission();
+        }
+      }
+    }
+  }
 
   // Emit as a constant.
   // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
@@ -3092,9 +3133,15 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   mlir::Attribute c = ConstantEmitter(*this).emitAbstract(
       refExpr->getLocation(), result.Val, resultType);
   mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(c);
-  assert(cstToEmit && "expected a typed attribute");
+  if (!cstToEmit)
+    return ConstantEmission();
 
+  // Make sure we emit a debug reference to the global variable.
   assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // If we emitted a reference constant, we need to dereference that.
+  if (resultIsReference)
+    return ConstantEmission::forReference(cstToEmit);
 
   return ConstantEmission::forValue(cstToEmit);
 }
@@ -3109,10 +3156,10 @@ CIRGenFunction::tryEmitAsConstant(const MemberExpr *me) {
 mlir::Value CIRGenFunction::emitScalarConstant(
     const CIRGenFunction::ConstantEmission &constant, Expr *e) {
   assert(constant && "not a constant");
-  if (constant.isReference()) {
-    cgm.errorNYI(e->getSourceRange(), "emitScalarConstant: reference");
-    return {};
-  }
+  if (constant.isReference())
+    return emitLoadOfLValue(constant.getReferenceLValue(*this, e),
+                            e->getExprLoc())
+        .getValue();
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
 }
 

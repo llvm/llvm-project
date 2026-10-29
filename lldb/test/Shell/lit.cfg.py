@@ -52,7 +52,12 @@ llvm_config.with_system_environment(
 # Enable sanitizer runtime flags.
 if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    tsan_suppressions = os.path.join(
+        os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
+    )
+    config.environment["TSAN_OPTIONS"] = (
+        "halt_on_error=1:suppressions=" + tsan_suppressions
+    )
     config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:

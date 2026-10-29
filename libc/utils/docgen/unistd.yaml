@@ -541,6 +541,8 @@ functions:
     in-latest-posix: ""
   execvp:
     in-latest-posix: ""
+  execvpe:
+    c-definition: ''
   faccessat:
     in-latest-posix: ""
   fchdir:

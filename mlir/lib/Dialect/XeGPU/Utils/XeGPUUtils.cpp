@@ -747,8 +747,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -821,7 +828,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;

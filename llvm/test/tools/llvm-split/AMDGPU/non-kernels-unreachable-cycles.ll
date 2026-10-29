@@ -1,12 +1,21 @@
-; REQUIRES: asserts
-; RUN: not --crash llvm-split -o %t -j 3 -mtriple=amdgpu-amd-amdhsa < %s 2>&1 | FileCheck --check-prefix=CRASH %s
+; RUN: llvm-split -o %t -j 3 -mtriple=amdgpu-amd-amdhsa < %s
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=define %s
 
 ; No entry point reaches @self_rec or the cycle of @mutual_a and @mutual_b, and
-; each of these functions has an incoming direct call. FIXME: These cycles get
-; no entry point, so the graph verifier fails. Without assertions, no partition
-; defines these functions.
+; each of these functions has an incoming direct call. Check that each cycle is
+; still assigned to a partition. Only @self_rec calls @helper, and @helper is
+; defined first. Check that @helper does not become an entry point of its own,
+; so it is defined only once.
 
-; CRASH: not all nodes are reachable through the graph's entry points!
+; CHECK0: define amdgpu_kernel void @kernel
+
+; CHECK1: define void @mutual_a
+; CHECK1: define void @mutual_b
+
+; CHECK2: define internal void @helper
+; CHECK2: define void @self_rec
 
 define internal void @helper(ptr %p) {
   store i32 0, ptr %p

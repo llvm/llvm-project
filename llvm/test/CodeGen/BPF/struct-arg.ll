@@ -24,8 +24,8 @@ entry:
   %add10 = add nsw i64 %add8, %a4.coerce
   %add12 = add nsw i64 %add10, %a5.coerce
   ret i64 %add12
-; CHECK:        r0 = r2
-; CHECK:        r0 += r1
+; CHECK:        r0 = r1
+; CHECK:        r0 += r2
 ; CHECK:        r0 += r3
 ; CHECK:        r0 += r4
 ; CHECK:        r0 += r5
@@ -40,8 +40,8 @@ entry:
   %add = add nsw i64 %a2.coerce.fca.0.extract, %a1.coerce.fca.0.extract
   %add6 = add nsw i64 %add, %a3.coerce
   ret i64 %add6
-; CHECK:        r0 = r3
-; CHECK-NEXT:   r0 += r1
+; CHECK:        r0 = r1
+; CHECK-NEXT:   r0 += r3
 ; CHECK-NEXT:   r0 += r5
 ; CHECK-NEXT:   exit
 }

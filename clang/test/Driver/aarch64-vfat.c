@@ -17,3 +17,11 @@
 // RUN: %clang -target aarch64 -march=armv9.7a+btie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-BTIE %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+btie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-BTIE %s
 // VFAT-BTIE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+btie"
+
+// RUN: %clang -target aarch64 -march=armv9.8a+sme-f16f8f16 -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-SME-F16F8F16 %s
+// RUN: %clang -target aarch64 -march=armv9.8-a+sme-f16f8f16 -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-SME-F16F8F16 %s
+// VFAT-SME-F16F8F16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+sme-f16f8f16"
+
+// RUN: %clang -target aarch64 -march=armv9.8a+fpv2 -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-FPV2 %s
+// RUN: %clang -target aarch64 -march=armv9.8-a+fpv2 -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-FPV2 %s
+// VFAT-FPV2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+fpv2"

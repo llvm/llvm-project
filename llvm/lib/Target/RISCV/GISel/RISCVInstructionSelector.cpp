@@ -93,6 +93,7 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineInstr &MI) const;
   bool selectUnmergeValues(MachineInstr &MI) const;
+  bool selectMergeValues(MachineInstr &MI) const;
   void addVectorLoadStoreOperands(MachineInstr &I,
                                   SmallVectorImpl<Register> &SrcOps,
                                   unsigned &CurOp, bool IsMasked,
@@ -429,7 +430,8 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
   Register RootReg = Root.getReg();
 
   const unsigned XLen = STI.getXLen();
-  APInt Mask, C2;
+  APInt Mask;
+  int64_t C2;
   Register RegY;
   std::optional<bool> LeftShift;
   // (and (shl y, c2), mask)
@@ -442,22 +444,24 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     LeftShift = false;
 
   if (LeftShift.has_value()) {
+    assert(Mask.getBitWidth() == XLen && "Unexpected mask size!");
+    assert(C2 > 0 && C2 < XLen && "Unexpected shift amount!");
     if (*LeftShift)
-      Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
+      Mask &= maskTrailingZeros<uint64_t>(C2);
     else
-      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getZExtValue());
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2);
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
       unsigned Trailing = Mask.countr_zero();
       // Given (and (shl y, c2), mask) in which mask has no leading zeros and
       // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
-      if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
+      if (*LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
         Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
-              .addImm(Trailing - C2.getZExtValue());
+              .addImm(Trailing - C2);
           MIB.addReg(DstReg);
         }}};
       }
@@ -495,13 +499,13 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
     // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
     // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
-    bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                (Trailing + C2.getZExtValue()) == ShAmt;
+    bool Cond =
+        *LeftShift && Leading == 32 && Trailing > 0 && (Trailing + C2) == ShAmt;
     if (!Cond)
       // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
       // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
-      Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-             (Trailing - C2.getZExtValue()) == ShAmt;
+      Cond = !*LeftShift && Leading == 32 && C2 < Trailing &&
+             (Trailing - C2) == ShAmt;
 
     if (Cond) {
       Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -529,13 +533,15 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
   // Given (and (shl x, c2), mask) in which mask is a shifted mask with
   // 32 - ShAmt leading zeros and c2 trailing zeros. We can use SLLI by
   // c2 - ShAmt followed by SHXADD_UW with ShAmt for x amount.
-  APInt Mask, C2;
+  APInt Mask;
+  int64_t C2;
   Register RegX;
   if (mi_match(
           RootReg, *MRI,
           m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
                                 m_ICst(Mask))))) {
-    Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
+    assert(C2 > 0 && C2 < Mask.getBitWidth() && "Unexpected shift amount!");
+    Mask &= maskTrailingZeros<uint64_t>(C2);
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = Mask.countl_zero();
@@ -545,7 +551,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
-              .addImm(C2.getZExtValue() - ShAmt);
+              .addImm(C2 - ShAmt);
           MIB.addReg(DstReg);
         }}};
       }
@@ -838,9 +844,11 @@ static unsigned selectZalasrLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
 }
 
 /// Select the RISC-V regimm opcode for the G_LOAD or G_STORE operation
-/// \p GenericOpc, appropriate for the GPR register bank and of memory access
-/// size \p OpSize. \returns \p GenericOpc if the combination is unsupported.
-static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
+/// \p GenericOpc on \p STI, appropriate for the GPR register bank and of
+/// memory access size \p OpSize. \returns \p GenericOpc if the combination
+/// is unsupported.
+static unsigned selectRegImmLoadStoreOp(const RISCVSubtarget &STI,
+                                        unsigned GenericOpc, unsigned OpSize) {
   const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
   switch (OpSize) {
   case 8:
@@ -851,6 +859,10 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
   case 32:
     return IsStore ? RISCV::SW : RISCV::LW;
   case 64:
+    // LD/SD are RV64-only. On RV32 a 64-bit access goes through an even/odd
+    // GPR pair, which Zilsd provides via the LD_RV32/SD_RV32 pseudos.
+    if (!STI.is64Bit() && STI.hasStdExtZilsd())
+      return IsStore ? RISCV::SD_RV32 : RISCV::LD_RV32;
     return IsStore ? RISCV::SD : RISCV::LD;
   }
 
@@ -1510,6 +1522,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
     GLoadStore &LdSt = cast<GLoadStore>(MI);
@@ -1542,7 +1556,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       return true;
     }
 
-    const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
+    const unsigned NewOpc =
+        selectRegImmLoadStoreOp(STI, MI.getOpcode(), MemSize);
     if (NewOpc == MI.getOpcode())
       return false;
 
@@ -1583,15 +1598,44 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
-  if (!Subtarget->hasStdExtZfa())
-    return false;
-
-  // Split F64 Src into two s32 parts
+  // Split Src into two s32 parts.
   if (MI.getNumOperands() != 3)
     return false;
   Register Src = MI.getOperand(2).getReg();
   Register Lo = MI.getOperand(0).getReg();
   Register Hi = MI.getOperand(1).getReg();
+
+  // RV32+Zilsd: split a GPRPair (i64) into its two s32 GPR halves.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Src) == LLT::scalar(64) && isRegInGprb(Src) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    // GPRPairNoX0 rather than GPRPair: a sub-register index is only valid for
+    // a class when every register in it supports the index, and X0_Pair has no
+    // sub_gpr_odd. SelectionDAG gets the same effect through
+    // InstrEmitter::ConstrainForSubReg.
+    if (!RBI.constrainGenericRegister(Src, RISCV::GPRPairNoX0RegClass, *MRI))
+      return false;
+    // COPY with a sub-register index rather than EXTRACT_SUBREG, which is what
+    // SelectionDAG emits too: InstrEmitter lowers an EXTRACT_SUBREG SDNode to
+    // %dst = COPY %src:sub and never builds the pseudo itself. A literal
+    // EXTRACT_SUBREG would also survive to ExpandPostRAPseudos, which treats
+    // one as unreachable.
+    auto ExtractHalf = [&](Register Dst, unsigned SubIdx) {
+      RBI.constrainGenericRegister(Dst, RISCV::GPRRegClass, *MRI);
+      MachineInstr &C = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::COPY), Dst)
+                             .addReg(Src, {}, SubIdx);
+      constrainSelectedInstRegOperands(C, TII, TRI, RBI);
+    };
+    ExtractHalf(Lo, RISCV::sub_gpr_even);
+    ExtractHalf(Hi, RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
+
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
 
@@ -1607,6 +1651,37 @@ bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
+
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Lo = MI.getOperand(1).getReg();
+  Register Hi = MI.getOperand(2).getReg();
+
+  // RV32+Zilsd: build a GPRPair (i64) from two s32 GPR halves.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Dst) == LLT::scalar(64) && isRegInGprb(Dst) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    // GPRPairNoX0 rather than GPRPair, because sub_gpr_odd is not valid for
+    // X0_Pair. Constrain Dst up front: constrainSelectedInstRegOperands below
+    // would otherwise infer GPRPair from the s64 type.
+    if (!RBI.constrainGenericRegister(Dst, RISCV::GPRPairNoX0RegClass, *MRI))
+      return false;
+    MachineInstr &Seq = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::REG_SEQUENCE), Dst)
+                             .addReg(Lo)
+                             .addImm(RISCV::sub_gpr_even)
+                             .addReg(Hi)
+                             .addImm(RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    constrainSelectedInstRegOperands(Seq, TII, TRI, RBI);
+    return true;
+  }
+  return false;
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineInstr &MI,

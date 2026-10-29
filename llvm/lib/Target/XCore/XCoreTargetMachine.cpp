@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -104,6 +105,7 @@ void XCorePassConfig::addPreEmitPass() {
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
+  static opt::RegisterLibraryOptions<XCoreOptions> O;
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeXCoreAsmPrinterPass(PR);
   initializeXCoreDAGToDAGISelLegacyPass(PR);

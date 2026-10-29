@@ -74,7 +74,7 @@ void SmartPtrChecker::checkPreCall(const CallEvent &Call,
 
 void SmartPtrChecker::reportBug(CheckerContext &C, const MemRegion *DerefRegion,
                                 const CallEvent &Call) const {
-  ExplodedNode *ErrNode = C.generateErrorNode();
+  ExplodedNode *ErrNode = C.addSink();
   if (!ErrNode)
     return;
   llvm::SmallString<128> Str;

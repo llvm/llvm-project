@@ -712,8 +712,10 @@ static bool parseDeclareSimdClauses(
         }
 
         P.ConsumeToken();
+        SmallVector<OMPAdjustArgsItem> AdjustArgsItems;
         if (P.ParseOpenMPVarList(OMPD_declare_simd,
-                                 getOpenMPClauseKind(ClauseName), *Vars, Data))
+                                 getOpenMPClauseKind(ClauseName), *Vars, Data,
+                                 AdjustArgsItems))
           IsError = true;
         if (CKind == OMPC_aligned) {
           Alignments.append(Aligneds.size() - Alignments.size(),
@@ -1372,9 +1374,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       Actions.OpenMP().getOMPTraitInfoForSurroundingScope();
   ASTContext &ASTCtx = Actions.getASTContext();
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
-  SmallVector<Expr *, 6> AdjustNothing;
-  SmallVector<Expr *, 6> AdjustNeedDevicePtr;
-  SmallVector<Expr *, 6> AdjustNeedDeviceAddr;
+  SmallVector<OMPAdjustArgsDescriptor *, 3> AdjustArgs;
   SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
@@ -1404,22 +1404,29 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         ConsumeToken();
         SemaOpenMP::OpenMPVarListDataTy Data;
         SmallVector<Expr *> Vars;
+        SmallVector<OMPAdjustArgsItem, 4> Items;
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
-                                     Vars, Data);
+                                     Vars, Data, Items);
         if (!IsError) {
-          switch (Data.ExtraModifier) {
-          case OMPC_ADJUST_ARGS_nothing:
-            llvm::append_range(AdjustNothing, Vars);
-            break;
-          case OMPC_ADJUST_ARGS_need_device_ptr:
-            llvm::append_range(AdjustNeedDevicePtr, Vars);
-            break;
-          case OMPC_ADJUST_ARGS_need_device_addr:
-            llvm::append_range(AdjustNeedDeviceAddr, Vars);
-            break;
-          default:
-            llvm_unreachable("Unexpected 'adjust_args' clause modifier.");
+          for (Expr *E : Vars) {
+            OMPAdjustArgsItem Item;
+            Item.E = E;
+            Items.push_back(Item);
           }
+          OpenMPAdjustArgsOpKind AdjustOp =
+              static_cast<OpenMPAdjustArgsOpKind>(Data.ExtraModifier);
+          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier =
+              OMPC_NEED_DEVICE_PTR_unknown;
+          if (Data.NeedDevicePtrModifierLoc.isValid())
+            NeedDevicePtrModifier = static_cast<OpenMPNeedDevicePtrModifier>(
+                Data.NeedDevicePtrModifier);
+          OMPAdjustArgsDescriptor *Desc =
+              Actions.OpenMP().ActOnOpenMPAdjustArgsClause(
+                  AdjustOp, NeedDevicePtrModifier, Items, AdjustArgsLoc);
+          if (Desc)
+            AdjustArgs.push_back(Desc);
+          else
+            IsError = true;
         }
         break;
       }
@@ -1459,9 +1466,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
 
   if (DeclVarData && !TI.Sets.empty())
     Actions.OpenMP().ActOnOpenMPDeclareVariantDirective(
-        DeclVarData->first, DeclVarData->second, TI, AdjustNothing,
-        AdjustNeedDevicePtr, AdjustNeedDeviceAddr, AppendArgs, AdjustArgsLoc,
-        AppendArgsLoc, SourceRange(Loc, Tok.getLocation()));
+        DeclVarData->first, DeclVarData->second, TI, AdjustArgs, AppendArgs,
+        AdjustArgsLoc, AppendArgsLoc, SourceRange(Loc, Tok.getLocation()));
 
   // Skip the last annot_pragma_openmp_end.
   (void)ConsumeAnnotationToken();
@@ -2614,10 +2620,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
+    SmallVector<OMPTraitInfo *, 4> TraitInfos;
 
     // First iteration of parsing all clauses of metadirective.
-    // This iteration only parses and collects all context selector ignoring the
-    // associated directives.
+    // This iteration only parses and collects all context selectors ignoring
+    // the associated directives.
     TentativeParsingAction TPA(*this);
     ASTContext &ASTContext = Actions.getASTContext();
 
@@ -2693,8 +2700,10 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       TI.getAsVariantMatchInfo(ASTContext, VMI);
 
       VMIs.push_back(VMI);
+      TraitInfos.push_back(&TI);
     }
 
+    SourceLocation EndLoc = Tok.getLocation();
     TPA.Revert();
     // End of the first iteration. Parser is reset to the start of metadirective
 
@@ -2711,6 +2720,91 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // A single match is returned for OpenMP 5.0
     int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+
+    // Check if we have user conditions with non-constant expressions that
+    // require runtime selection.
+    bool HasNonConstUserCondition =
+        llvm::any_of(TraitInfos, [&](OMPTraitInfo *TI) {
+          return TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
+            return !IsScore && E && !E->getIntegerConstantExpr(ASTContext);
+          });
+        });
+
+    if (HasNonConstUserCondition &&
+        getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
+      // OpenMP 5.2, 7.4: without an 'otherwise' clause the effect is as if one
+      // was specified without an associated directive variant. Only
+      // 'otherwise' (or the deprecated 'default') has no context selectors.
+      unsigned NumClauses = TraitInfos.size();
+      if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
+            return TI->Sets.empty();
+          }))
+        TraitInfos.push_back(&ASTContext.getNewOMPTraitInfo());
+
+      // Reuse the normal metadirective variant parse per clause so every
+      // variant is a complete directive node with its own body and its own
+      // data-sharing context. Diagnostics in the associated statement are
+      // reported once per variant.
+      SmallVector<Stmt *, 4> Variants;
+      bool HasError = false;
+      for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
+        bool HasDirective = false;
+        if (I < NumClauses) {
+          OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
+          ConsumeToken();
+          T.consumeOpen();
+          if (CKind == OMPC_when) {
+            // The selectors were parsed into TraitInfos[I] by the first pass;
+            // skip them so their diagnostics are not repeated.
+            SkipUntil(tok::colon, StopBeforeMatch);
+            TryConsumeToken(tok::colon);
+          }
+          HasDirective = Tok.isNot(tok::r_paren) &&
+                         Tok.isNot(tok::annot_pragma_openmp_end);
+        }
+        // Re-parse the directive and body for every variant but the last.
+        std::optional<TentativeParsingAction> VariantTPA;
+        if (I + 1 < TraitInfos.size())
+          VariantTPA.emplace(*this, /*Unannotated=*/true);
+
+        StmtResult Variant;
+        if (HasDirective) {
+          Variant = ParseOpenMPDeclarativeOrExecutableDirective(
+              StmtCtx, /*ReadDirectiveWithinMetadirective=*/true);
+        } else {
+          // No directive variant: skip to the end of the pragma.
+          while (Tok.isNot(tok::annot_pragma_openmp_end))
+            ConsumeAnyToken();
+          ConsumeAnnotationToken();
+        }
+        // No directive or 'nothing': the variant is the associated statement.
+        if (!Variant.isInvalid() && !Variant.isUsable()) {
+          ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+          Variant = ParseStatement();
+        }
+        // A standalone variant does not take the associated statement while
+        // the others do; reject the mix until Sema models it.
+        if (auto *D = dyn_cast_or_null<OMPExecutableDirective>(Variant.get());
+            D && !D->hasAssociatedStmt()) {
+          Diag(Loc, diag::err_omp_metadirective_standalone_variant);
+          Variant = StmtError();
+        }
+
+        if (VariantTPA) {
+          VariantTPA->Revert();
+          SkipUntil(tok::r_paren, StopBeforeMatch);
+          T.consumeClose();
+        }
+        if (Variant.isInvalid())
+          HasError = true;
+        else
+          Variants.push_back(Variant.get());
+      }
+      if (HasError)
+        return StmtError();
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
+                                                       Variants);
+    }
 
     int Idx = 0;
     // In OpenMP 5.0 metadirective is either replaced by another directive or
@@ -4791,6 +4885,114 @@ bool Parser::ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
   return false;
 }
 
+bool Parser::ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound) {
+  // 'omp_num_args' is recognised by spelling: OpenMP 6.0 [5.2.1] gives it no
+  // declaration, so it is never looked up.
+  if (Tok.isNot(tok::identifier) ||
+      !Tok.getIdentifierInfo()->isStr("omp_num_args")) {
+    ExprResult E = ParseAssignmentExpression();
+    if (E.isInvalid())
+      return true;
+    E = Actions.ActOnFinishFullExpr(E.get(), E.get()->getExprLoc(),
+                                    /*DiscardedValue=*/false);
+    if (E.isInvalid())
+      return true;
+    Bound.Kind = OMPAdjustArgsItem::Bound::Expression;
+    Bound.E = E.get();
+    return false;
+  }
+
+  Bound.Kind = OMPAdjustArgsItem::Bound::NumArgs;
+  ConsumeToken();
+  if (Tok.isOneOf(tok::plus, tok::minus)) {
+    Bound.IsSubtraction = Tok.is(tok::minus);
+    ConsumeToken();
+    // OpenMP 6.0 [5.2.1]: the logical offset is a constant expression.
+    ExprResult Offset = ParseConstantExpression();
+    if (Offset.isInvalid())
+      return true;
+    Bound.E = Offset.get();
+  }
+  // 'omp_num_args' is a whole bound, not an operand of a larger expression, so
+  // nothing else may follow it.
+  if (!Tok.isOneOf(tok::colon, tok::comma, tok::r_paren,
+                   tok::annot_pragma_openmp_end)) {
+    Diag(Tok, diag::err_omp_num_args_invalid_form) << 1;
+    return true;
+  }
+  return false;
+}
+
+bool Parser::ParseOpenMPAdjustArgsList(
+    SmallVectorImpl<OMPAdjustArgsItem> &Items) {
+  bool IsError = false;
+  ColonProtectionRAIIObject ColonRAII(*this);
+  while (true) {
+    SourceLocation ItemLoc = Tok.getLocation();
+    // An omitted lower bound stands for 1, and is written as a leading ':'.
+    OMPAdjustArgsItem::Bound LowerBound;
+    bool ItemError = false;
+    if (Tok.isNot(tok::colon)) {
+      ItemError = ParseOpenMPAdjustArgsBound(LowerBound);
+      if (ItemError) {
+        IsError = true;
+        SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                  StopBeforeMatch);
+      }
+    }
+
+    if (Tok.is(tok::colon)) {
+      ConsumeToken();
+      // An omitted upper bound stands for 'omp_num_args'.
+      OMPAdjustArgsItem::Bound UpperBound;
+      if (!Tok.isOneOf(tok::comma, tok::r_paren,
+                       tok::annot_pragma_openmp_end)) {
+        if (ParseOpenMPAdjustArgsBound(UpperBound)) {
+          ItemError = true;
+          IsError = true;
+          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+        }
+      }
+      if (!ItemError) {
+        OMPAdjustArgsItem Item;
+        Item.Kind = OMPAdjustArgsItem::Range;
+        Item.Lower = LowerBound;
+        Item.Upper = UpperBound;
+        Items.push_back(Item);
+      }
+    } else if (!ItemError &&
+               LowerBound.Kind != OMPAdjustArgsItem::Bound::Omitted) {
+      // Without a colon the item is a parameter name or a position, and is
+      // stored as a regular expression.
+      if (LowerBound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
+        Diag(ItemLoc, diag::err_omp_num_args_invalid_form) << 0;
+        IsError = true;
+      } else {
+        OMPAdjustArgsItem Item;
+        Item.E = LowerBound.E;
+        Items.push_back(Item);
+      }
+    }
+
+    // Separator handling mirrors the shared var-list loop, so that a malformed
+    // item such as '1:2:3' diagnoses instead of silently mis-parsing.
+    if (Tok.isNot(tok::comma)) {
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end)) {
+        Diag(Tok, diag::err_omp_expected_punc)
+            << getOpenMPClauseName(OMPC_adjust_args) << /*IsDirective=*/0;
+        IsError = true;
+        SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                  StopBeforeMatch);
+      }
+      if (Tok.isNot(tok::comma))
+        break;
+    }
+    ConsumeToken();
+  }
+  return IsError;
+}
+
 /// Parse step size expression. Returns true if parsing is successfull,
 /// otherwise returns false.
 static bool parseStepSize(Parser &P, SemaOpenMP::OpenMPVarListDataTy &Data,
@@ -4896,10 +5098,10 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
   return Tail;
 }
 
-bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
-                                OpenMPClauseKind Kind,
-                                SmallVectorImpl<Expr *> &Vars,
-                                SemaOpenMP::OpenMPVarListDataTy &Data) {
+bool Parser::ParseOpenMPVarList(
+    OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
+    SmallVectorImpl<Expr *> &Vars, SemaOpenMP::OpenMPVarListDataTy &Data,
+    SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems) {
   UnqualifiedId UnqualifiedReductionId;
   bool InvalidReductionId = false;
   bool IsInvalidMapperModifier = false;
@@ -4913,6 +5115,11 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   bool HasIterator = false;
   bool InvalidIterator = false;
   bool NeedRParenForLinear = false;
+  // Set when the OpenMP 6.0 'adjust_args' parameter list has already been
+  // parsed by ParseOpenMPAdjustArgsList, so the shared list loop must be
+  // skipped.
+  bool ParsedAdjustArgsList = false;
+  bool InvalidAdjustArgsList = false;
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                    tok::annot_pragma_openmp_end);
   // Handle reduction-identifier for reduction clause.
@@ -5297,6 +5504,13 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       }
       ExpectAndConsume(tok::colon, diag::warn_pragma_expected_colon,
                        "adjust-op");
+      // OpenMP 6.0 [5.2.1, Parameter List Items] adds positions and parameter
+      // ranges, which the shared list loop below cannot express because a range
+      // colon terminates it.
+      if (getLangOpts().OpenMP >= 60) {
+        ParsedAdjustArgsList = true;
+        InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(AdjustArgsItems);
+      }
     }
   } else if (Kind == OMPC_use_device_ptr) {
     // Handle optional fallback modifier for use_device_ptr clause.
@@ -5471,8 +5685,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       (Kind == OMPC_adjust_args &&
        Data.ExtraModifier != OMPC_ADJUST_ARGS_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
-  while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
-                     Tok.isNot(tok::annot_pragma_openmp_end))) {
+  while (!ParsedAdjustArgsList &&
+         (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
+                      Tok.isNot(tok::annot_pragma_openmp_end)))) {
     ParseScope OMPListScope(this, Scope::OpenMPDirectiveScope);
     ColonProtectionRAIIObject ColonRAII(*this, MayHaveTail);
     if (!ParseOpenMPReservedLocator(Kind, Data, getLangOpts())) {
@@ -5590,9 +5805,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   if (HasIterator)
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_doacross && Kind != OMPC_map &&
-          Vars.empty()) ||
+          Vars.empty() && AdjustArgsItems.empty()) ||
          (MustHaveTail && !Data.DepModOrTailExpr && StepFound) ||
-         InvalidReductionId || IsInvalidMapperModifier || InvalidIterator;
+         InvalidReductionId || IsInvalidMapperModifier || InvalidIterator ||
+         InvalidAdjustArgsList;
 }
 
 OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
@@ -5601,9 +5817,10 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
   SourceLocation Loc = Tok.getLocation();
   SourceLocation LOpen = ConsumeToken();
   SmallVector<Expr *, 4> Vars;
+  SmallVector<OMPAdjustArgsItem> AdjustArgsItems;
   SemaOpenMP::OpenMPVarListDataTy Data;
 
-  if (ParseOpenMPVarList(DKind, Kind, Vars, Data))
+  if (ParseOpenMPVarList(DKind, Kind, Vars, Data, AdjustArgsItems))
     return nullptr;
 
   if (ParseOnly)

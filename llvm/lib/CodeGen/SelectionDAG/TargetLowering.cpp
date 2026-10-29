@@ -180,17 +180,6 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
-TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
-                                               Attribute::AttrKind Attr)
-    : ArgListEntry(nullptr, Node, Ty) {
-  if (Attr == Attribute::SExt)
-    IsSExt = true;
-  else if (Attr == Attribute::ZExt)
-    IsZExt = true;
-  else if (Attr != Attribute::None)
-    llvm_unreachable("Unexpected attribute left unhandled.");
-}
-
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, *Call, ArgIdx);
@@ -199,6 +188,20 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 void TargetLoweringBase::ArgListEntry::setAttributes(const AttributeList &Attrs,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, Attrs, ArgIdx);
+}
+
+void TargetLoweringBase::ArgListEntry::setExtAttribute(
+    Attribute::AttrKind Attr) {
+  if (Attr != Attribute::None) {
+    if (Attr == Attribute::SExt)
+      IsSExt = true;
+    else if (Attr == Attribute::ZExt)
+      IsZExt = true;
+    else if (Attr == Attribute::NoExt)
+      IsNoExt = true;
+    else
+      llvm_unreachable("Unexpected extension attribute!");
+  }
 }
 
 TargetLowering::ArgListTy
@@ -857,6 +860,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    SDValue Src = Op.getOperand(0);
+    // Preserve shared casts unless the cast is free and its source is not
+    // shared, or the truncate cancels an extension.
+    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
+                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
+    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
+                      ISD::isExtOpcode(Src.getOpcode()) &&
+                      Src.getOperand(0).getValueType() == VT;
+    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
+      break;
+    unsigned SrcBits = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
+    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
+        DemandedBits.getActiveBits() > SrcBits)
+      SrcDemandedBits.setSignBit();
+
+    // Do not preserve flags that the simplified source may invalidate.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -1355,6 +1384,54 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
 
+  // Before folding to the LHS, recheck bits excluded from its earlier demand
+  // using the full result demand. Mask identifies these excluded bits.
+  // KnownMask selects the Zero/One member of the recomputed LHS known bits
+  // that must cover Mask & DemandedBits.
+  auto TryFoldToLHS = [&](const APInt &Mask,
+                          const APInt KnownBits::*KnownMask) {
+    SDValue LHS = Op.getOperand(0);
+    APInt MaskedBits = Mask & DemandedBits;
+    if (MaskedBits.isZero())
+      return TLO.CombineTo(Op, LHS);
+
+    KnownBits LHSKnown;
+    if (SimplifyDemandedBits(LHS, DemandedBits, DemandedElts, LHSKnown, TLO,
+                             Depth + 1))
+      return true;
+
+    return MaskedBits.isSubsetOf(LHSKnown.*KnownMask) && TLO.CombineTo(Op, LHS);
+  };
+
+  // Try reducing the RHS demand using LHS known bits.
+  // KnownMask selects the LHS Zero/One bits that make RHS bits irrelevant.
+  auto TryReduceRHSDemand = [&](const KnownBits &LHSKnown,
+                                const APInt KnownBits::*KnownMask) {
+    SDValue RHS = Op.getOperand(1);
+    if (!RHS.hasOneUse() || isConstOrConstSplat(RHS, DemandedElts))
+      return false;
+
+    // Reuse LHS facts if the RHS did not reduce its earlier demand. Otherwise,
+    // query independent facts to avoid using bits outside that demand.
+    SDValue LHS = Op.getOperand(0);
+    // Keep only the selected mask, then compute DemandedBits & ~Mask in place.
+    // This avoids copying the unused KnownBits mask and extra APInt
+    // temporaries, which can allocate memory for masks wider than one word.
+    APInt RHSDemandedBits =
+        DemandedBits.intersects(Known.*KnownMask)
+            ? TLO.DAG.computeKnownBits(LHS, DemandedElts, Depth + 1).*KnownMask
+            : LHSKnown.*KnownMask;
+    RHSDemandedBits.flipAllBits();
+    RHSDemandedBits &= DemandedBits;
+    if (RHSDemandedBits == DemandedBits)
+      return false;
+
+    // A failed retry must not replace Known with reduced-demand facts.
+    KnownBits RetryKnown;
+    return SimplifyDemandedBits(RHS, RHSDemandedBits, DemandedElts, RetryKnown,
+                                TLO, Depth + 1);
+  };
+
   KnownBits Known2;
   switch (Op.getOpcode()) {
   case ISD::SCALAR_TO_VECTOR: {
@@ -1662,8 +1739,10 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
-    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One)) {
+      if (TryFoldToLHS(Known.Zero, &KnownBits::Zero))
+        return true;
+    }
     if (DemandedBits.isSubsetOf(Known.Zero | Known2.One))
       return TLO.CombineTo(Op, Op1);
     // If all of the demanded bits in the inputs are known zeros, return zero.
@@ -1691,6 +1770,9 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    if (TryReduceRHSDemand(Known2, &KnownBits::Zero))
+      return true;
+
     Known &= Known2;
     break;
   }
@@ -1711,8 +1793,12 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
-    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero)) {
+      if (TryFoldToLHS(Known.One, &KnownBits::One)) {
+        Op->dropFlags(SDNodeFlags::Disjoint);
+        return true;
+      }
+    }
     if (DemandedBits.isSubsetOf(Known.One | Known2.Zero))
       return TLO.CombineTo(Op, Op1);
     // If the RHS is a constant, see if we can simplify it.
@@ -1749,6 +1835,11 @@ bool TargetLowering::SimplifyDemandedBits(
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
       }
+    }
+
+    if (TryReduceRHSDemand(Known2, &KnownBits::One)) {
+      Op->dropFlags(SDNodeFlags::Disjoint);
+      return true;
     }
 
     Known |= Known2;
@@ -3953,6 +4044,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::OR:
   case ISD::XOR:
   case ISD::SUB:
@@ -4002,7 +4095,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS;
+    KnownZero = ZeroLHS & ~UndefRHS;
     KnownUndef = UndefLHS & UndefRHS; // TODO: use getKnownUndefForVectorBinop?
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -9316,6 +9409,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
+bool TargetLowering::expandMODF(SDNode *Node, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse = FracPart;
+  if (!Flags.hasNoInfs()) {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  Results.push_back(ResultFrac);
+  Results.push_back(IntPart);
+  return true;
+}
+
 SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -11439,6 +11561,52 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   return DAG.getZExtOrTrunc(HighestIdx, DL, N->getValueType(0));
 }
 
+SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(N);
+
+  SDValue Start = N->getOperand(0);
+  SDValue End = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = Start.getValueType();
+
+  auto [Mask, StepVector] = getLegalMaskAndStepVector(
+      DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
+
+  // No legal step vector: split the mask in half and recombine the results.
+  // Lo = get_active_lane_mask Start, End
+  // Hi = get_active_lane_mask (uaddsat Start, LoNumElts), End
+  if (!StepVector) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+    SDValue Lo = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, LoVT, Start, End);
+    SDValue LoNumElts =
+        DAG.getElementCount(DL, OpVT, LoVT.getVectorElementCount());
+    SDValue HiStart = DAG.getNode(ISD::UADDSAT, DL, OpVT, Start, LoNumElts);
+    SDValue Hi = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, HiVT, HiStart, End);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
+
+  // Rebase and saturate the termination value.
+  SDValue Max =
+      DAG.getConstant(maxUIntN(std::min(StepVector.getScalarValueSizeInBits(),
+                                        OpVT.getScalarSizeInBits())),
+                      DL, OpVT);
+  End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
+  End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
+  End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());
+
+  // cmp <0, 1, 2, 3...>, End
+  SDValue EndV = DAG.getSplat(StepVector.getValueType(), DL, End);
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                StepVector.getValueType());
+  SDValue Cmp = DAG.getSetCC(DL, CCVT, StepVector, EndV, ISD::SETULT);
+  SDValue Res = DAG.getBoolExtOrTrunc(Cmp, DL, Mask.getValueType(),
+                                      StepVector.getValueType());
+  if (Mask.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
+}
+
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(N);
@@ -11583,16 +11751,20 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
   }
 
-  // If the subtract doesn't overflow then just use abs(sub())
-  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+  // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
+  // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
+  bool UseSigned =
+      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+  if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  if (DAG.willNotOverflowSub(UseSigned, RHS, LHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
@@ -14190,9 +14362,11 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     MulRHS = DAG.getNode(ExtOpcRHS, DL, ExtMulOpVT, MulRHS);
   }
   SDValue Input = MulLHS;
+  // Maintain the FP flags (if any).
+  SDNodeFlags Flags = N->getFlags();
   if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA) {
     if (!llvm::isOneOrOneSplatFP(MulRHS))
-      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS, Flags);
   } else if (!llvm::isOneOrOneSplat(MulRHS)) {
     Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
   }
@@ -14210,8 +14384,8 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
 
   // Flatten the subvector tree
   while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        DAG.getNode(FlatNode, DL, AccVT, {Subvectors[0], Subvectors[1]}));
+    Subvectors.push_back(DAG.getNode(FlatNode, DL, AccVT,
+                                     {Subvectors[0], Subvectors[1]}, Flags));
     Subvectors.pop_front();
     Subvectors.pop_front();
   }
@@ -14274,7 +14448,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   if (LC == RTLIB::UNKNOWN_LIBCALL)
     return false;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl =
+      getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 

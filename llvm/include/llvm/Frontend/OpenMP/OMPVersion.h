@@ -20,8 +20,8 @@ namespace omp {
 struct Version {
   using value_type = unsigned;
   constexpr explicit Version(value_type Ver = 0) : V(Ver) {}
-  constexpr explicit operator value_type() const { return V; }
   constexpr explicit operator bool() const { return V != 0; }
+  constexpr value_type value() const { return V; }
 
   friend constexpr bool operator<(Version A, Version B);
   friend constexpr bool operator==(Version A, Version B);
@@ -50,8 +50,7 @@ inline constexpr bool operator>=(Version A, int B) { return A >= Version(B); }
 template <> struct DenseMapInfo<omp::Version> {
   static unsigned getHashValue(omp::Version V) {
     using UnderlyingTy = omp::Version::value_type;
-    return DenseMapInfo<UnderlyingTy>::getHashValue(
-        static_cast<UnderlyingTy>(V));
+    return DenseMapInfo<UnderlyingTy>::getHashValue(V.value());
   }
   static bool isEqual(omp::Version LHS, omp::Version RHS) { return LHS == RHS; }
 };

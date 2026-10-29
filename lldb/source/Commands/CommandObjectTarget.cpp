@@ -45,6 +45,8 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Args.h"
@@ -63,8 +65,11 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
+
+#include <numeric>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -487,6 +492,133 @@ protected:
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
+};
+
+#pragma mark CommandObjectTargetGroups
+
+static llvm::StringRef GetTargetGroupRoleName(TargetGroup::Role role) {
+  switch (role) {
+  case TargetGroup::Role::CPU:
+    return "CPU";
+  case TargetGroup::Role::Accelerator:
+    return "accelerator";
+  }
+  llvm_unreachable("unhandled target group role");
+}
+
+class CommandObjectTargetGroupsList : public CommandObjectParsed {
+public:
+  CommandObjectTargetGroupsList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target groups list",
+                            "List all target groups and their members.",
+                            nullptr),
+        m_target_option(LLDB_OPT_SET_1, false, "target", 't', 0,
+                        eArgTypeTargetID,
+                        "List only groups containing this target.", 0) {
+    m_option_group.Append(&m_target_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Finalize();
+    AddSimpleArgumentList(eArgTypeIndex, eArgRepeatStar);
+  }
+
+  ~CommandObjectTargetGroupsList() override = default;
+
+  Options *GetOptions() override { return &m_option_group; }
+
+protected:
+  void DoExecute(Args &args, CommandReturnObject &result) override {
+    Debugger &debugger = GetDebugger();
+    TargetGroupList &group_list = debugger.GetTargetGroupList();
+    std::vector<TargetGroupSP> groups = group_list.GetGroups();
+
+    std::vector<size_t> group_indexes;
+    if (args.empty()) {
+      group_indexes.resize(groups.size());
+      std::iota(group_indexes.begin(), group_indexes.end(), 0);
+    } else {
+      group_indexes.reserve(args.size());
+      for (size_t i = 0; i < args.size(); ++i) {
+        uint64_t group_index;
+        llvm::StringRef argument = args.GetArgumentAtIndex(i);
+        if (!llvm::to_integer(argument, group_index)) {
+          result.AppendErrorWithFormatv("invalid group index '{0}'", argument);
+          return;
+        }
+        if (group_index >= groups.size()) {
+          result.AppendErrorWithFormatv("group index {0} is out of range",
+                                        group_index);
+          return;
+        }
+        group_indexes.push_back(static_cast<size_t>(group_index));
+      }
+    }
+
+    TargetSP target_filter_sp;
+    if (m_target_option.GetOptionValue().OptionWasSet()) {
+      uint64_t target_index =
+          m_target_option.GetOptionValue().GetCurrentValue();
+      if (target_index >= LLDB_INVALID_INDEX32 ||
+          !(target_filter_sp = debugger.GetTargetList().GetTargetAtIndex(
+                static_cast<uint32_t>(target_index)))) {
+        result.AppendErrorWithFormatv("target index {0} is out of range",
+                                      target_index);
+        return;
+      }
+    }
+
+    Stream &strm = result.GetOutputStream();
+    if (groups.empty()) {
+      strm.PutCString("No target groups.\n");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    TargetList &target_list = debugger.GetTargetList();
+    bool listed_group = false;
+    for (size_t group_index : group_indexes) {
+      const TargetGroupSP &group_sp = groups[group_index];
+      if (target_filter_sp && !group_sp->GetRole(target_filter_sp))
+        continue;
+
+      listed_group = true;
+      strm.Format("group #{0}", group_index);
+      if (!group_sp->GetDescription().empty())
+        strm.Format(": {0}", group_sp->GetDescription());
+      strm.EOL();
+
+      for (const TargetSP &target_sp : group_sp->GetTargets()) {
+        std::optional<TargetGroup::Role> role = group_sp->GetRole(target_sp);
+        if (!role)
+          continue;
+        uint32_t target_index = target_list.GetIndexOfTarget(target_sp);
+        if (target_index == LLDB_INVALID_INDEX32)
+          strm.Format("  unlisted target: {0}\n",
+                      GetTargetGroupRoleName(*role));
+        else
+          strm.Format("  target #{0}: {1}\n", target_index,
+                      GetTargetGroupRoleName(*role));
+      }
+    }
+    if (!listed_group)
+      strm.PutCString("No matching target groups.\n");
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+
+private:
+  OptionGroupOptions m_option_group;
+  OptionGroupUInt64 m_target_option;
+};
+
+class CommandObjectTargetGroups : public CommandObjectMultiword {
+public:
+  CommandObjectTargetGroups(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(interpreter, "target groups",
+                               "Commands for viewing target groups.",
+                               "target groups <subcommand>") {
+    LoadSubCommand("list", CommandObjectSP(
+                               new CommandObjectTargetGroupsList(interpreter)));
+  }
+
+  ~CommandObjectTargetGroups() override = default;
 };
 
 #pragma mark CommandObjectTargetSelect
@@ -3388,9 +3520,9 @@ protected:
       }
     }
     if (dump_object_name) {
-      const char *object_name = module->GetObjectName().GetCString();
-      if (object_name)
-        strm.Printf("(%s)", object_name);
+      if (llvm::StringRef object_name = module->GetObjectName();
+          !object_name.empty())
+        strm.Format("({0})", object_name);
       std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
       if (memory_addr.has_value())
         strm.Printf("(0x%" PRIx64 ")", memory_addr.value());
@@ -6269,6 +6401,8 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
   LoadSubCommand(
       "frame-provider",
       CommandObjectSP(new CommandObjectTargetFrameProvider(interpreter)));
+  LoadSubCommand("groups",
+                 CommandObjectSP(new CommandObjectTargetGroups(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",

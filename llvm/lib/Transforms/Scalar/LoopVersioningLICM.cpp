@@ -545,8 +545,8 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(F);
 
   LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr, &LAR.AC);
-  if (!LoopVersioningLICM(ScalarOptions::Global, AA, SE, &ORE, LAIs, LAR.LI, &L)
-           .run(DT))
+  const ScalarOptions &Opts = getScalarOptions(*F);
+  if (!LoopVersioningLICM(Opts, AA, SE, &ORE, LAIs, LAR.LI, &L).run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }

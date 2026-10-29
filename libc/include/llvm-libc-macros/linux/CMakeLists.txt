@@ -11,9 +11,17 @@ add_header(
 )
 
 add_header(
+  sys_stat_macros
+  HDR
+    sys-stat-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
+  DEPENDS
+    .sys_stat_macros
 )
 
 add_header(
@@ -32,6 +40,14 @@ add_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h
+)
+
+add_header(
+  sys_eventfd_macros
+  HDR
+    sys-eventfd-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(
@@ -130,12 +146,6 @@ add_header(
   sys_resource_macros
   HDR
     sys-resource-macros.h
-)
-
-add_header(
-  sys_stat_macros
-  HDR
-    sys-stat-macros.h
 )
 
 add_header(

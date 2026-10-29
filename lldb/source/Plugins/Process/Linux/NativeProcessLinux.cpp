@@ -1362,6 +1362,16 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   llvm::scope_exit restore_regs(
       [&] { reg_ctx.WriteAllRegisterValues(registers_sp); });
 
+  // Running the syscall changes the siginfo of the thread. Restore it
+  // afterwards, as it describes the signal that the thread stopped with (and
+  // the one that gets delivered if the thread is resumed with that signal).
+  siginfo_t siginfo;
+  bool have_siginfo = GetSignalInfo(thread.GetID(), &siginfo).Success();
+  llvm::scope_exit restore_siginfo([&] {
+    if (have_siginfo)
+      PtraceWrapper(PTRACE_SETSIGINFO, thread.GetID(), nullptr, &siginfo);
+  });
+
   llvm::SmallVector<uint8_t, 8> memory(syscall_data.Insn.size());
   size_t bytes_read;
   if (llvm::Error Err =

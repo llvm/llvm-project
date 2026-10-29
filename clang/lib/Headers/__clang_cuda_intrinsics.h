@@ -843,6 +843,34 @@ __nv_associate_access_property(const void *__ptr, unsigned long long __prop) {
 }
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 800
 
+#if CUDA_VERSION >= 13040
+// Since CUDA 13.4 sm_61_intrinsics.hpp depends on `__nv_idp*_impl` being
+// available.
+extern "C" {
+__device__ inline int __nv_idp4a_s_s_impl(int __a, int __b, int __c) {
+  return __nvvm_idp4a_s_s(__a, __b, __c);
+}
+__device__ inline unsigned int
+__nv_idp4a_u_u_impl(unsigned int __a, unsigned int __b, unsigned int __c) {
+  return __nvvm_idp4a_u_u(__a, __b, __c);
+}
+__device__ inline int __nv_idp2a_lo_s_s_impl(int __a, int __b, int __c) {
+  return __nvvm_idp2a_lo_s_s(__a, __b, __c);
+}
+__device__ inline unsigned int
+__nv_idp2a_lo_u_u_impl(unsigned int __a, unsigned int __b, unsigned int __c) {
+  return __nvvm_idp2a_lo_u_u(__a, __b, __c);
+}
+__device__ inline int __nv_idp2a_hi_s_s_impl(int __a, int __b, int __c) {
+  return __nvvm_idp2a_hi_s_s(__a, __b, __c);
+}
+__device__ inline unsigned int
+__nv_idp2a_hi_u_u_impl(unsigned int __a, unsigned int __b, unsigned int __c) {
+  return __nvvm_idp2a_hi_u_u(__a, __b, __c);
+}
+} // extern "C"
+#endif // CUDA_VERSION >= 13040
+
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 900
 __device__ inline unsigned __isCtaShared(const void *ptr) {
   return __isShared(ptr);
