@@ -68,6 +68,10 @@ static bool rewriteKernel(Function &F) {
     }
     Params.push_back(ConstPtr);
     AttrBuilder AB(Ctx);
+    // the parameter's string attributes (its role for the host) stay with it
+    for (Attribute Att : OldAttrs.getParamAttrs(A.getArgNo()))
+      if (Att.isStringAttribute())
+        AB.addAttribute(Att);
     AB.addAttribute(Attribute::NoAlias);
     AB.addAttribute(Attribute::NonNull);
     AB.addAttribute(Attribute::NoUndef);
