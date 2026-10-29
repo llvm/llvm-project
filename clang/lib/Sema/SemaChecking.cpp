@@ -1496,6 +1496,67 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIread:
+  case Builtin::BIwrite:
+  case Builtin::BIpread:
+  case Builtin::BIpread64:
+  case Builtin::BIpwrite:
+  case Builtin::BIpwrite64: {
+    bool HasOffset =
+        BuiltinID != Builtin::BIread && BuiltinID != Builtin::BIwrite;
+    unsigned ExpectedArgs = HasOffset ? 4 : 3;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(0)->getType()->isIntegerType() ||
+        !TheCall->getArg(1)->getType()->isPointerType() ||
+        !TheCall->getArg(2)->getType()->isIntegerType())
+      return;
+    if (HasOffset && !TheCall->getArg(3)->getType()->isIntegerType())
+      return;
+    bool IsWrite = BuiltinID == Builtin::BIwrite ||
+                   BuiltinID == Builtin::BIpwrite ||
+                   BuiltinID == Builtin::BIpwrite64;
+    DiagID = IsWrite ? diag::warn_fortify_source_overread
+                     : diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
+  case Builtin::BIreadlink:
+  case Builtin::BIreadlinkat: {
+    unsigned BufIdx = BuiltinID == Builtin::BIreadlink ? 1 : 2;
+    unsigned CountIdx = BufIdx + 1;
+    if (TheCall->getNumArgs() != CountIdx + 1 ||
+        !TheCall->getArg(BufIdx)->getType()->isPointerType() ||
+        !TheCall->getArg(CountIdx)->getType()->isIntegerType())
+      return;
+    QualType PathTy = TheCall->getArg(BufIdx - 1)->getType()->getPointeeType();
+    QualType BufTy = TheCall->getArg(BufIdx)->getType()->getPointeeType();
+    if (PathTy.isNull() || !PathTy->isCharType() || !BufTy->isCharType())
+      return;
+    if (BuiltinID == Builtin::BIreadlinkat &&
+        !TheCall->getArg(0)->getType()->isIntegerType())
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(CountIdx);
+    BufferSize = Checker.ComputeSizeArgument(BufIdx);
+    break;
+  }
+
+  case Builtin::BIgetcwd: {
+    if (TheCall->getNumArgs() != 2 ||
+        !TheCall->getArg(0)->getType()->isPointerType() ||
+        !TheCall->getArg(1)->getType()->isIntegerType())
+      return;
+    QualType BufTy = TheCall->getArg(0)->getType()->getPointeeType();
+    if (!BufTy->isCharType())
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIrecv:
   case Builtin::BIrecvfrom: {
     unsigned ExpectedArgs = BuiltinID == Builtin::BIrecv ? 4 : 6;
