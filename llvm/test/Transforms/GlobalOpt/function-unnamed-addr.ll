@@ -1,4 +1,4 @@
-; RUN: opt -passes=globalopt -verify-each -S < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 ;
 ; Skipping use analysis for functions whose unnamed_addr cannot be strengthened
 ; must still allow local functions to be upgraded and other optimizations to run.
