@@ -2948,7 +2948,8 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate =
         CodeGenFunction::hasScalarEvaluationKind(QTy) ||
-        CodeGenFunction::hasAggregateEvaluationKind(QTy);
+        CodeGenFunction::hasAggregateEvaluationKind(QTy) ||
+        CodeGenFunction::hasComplexEvaluationKind(QTy);
 
     if (!Info.allowsMemory() && IsScalarOrAggregate) {
       Constraints += "=" + OutputConstraint;
