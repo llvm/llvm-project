@@ -780,6 +780,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                    {MVT::v2i8, MVT::v2i16}, Expand);
   setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i1, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
 
   // Register custom handling for illegal type loads/stores. We'll try to custom
