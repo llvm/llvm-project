@@ -5032,10 +5032,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         continue;
     }
 
-    VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
-        BackedgeVal,
-        match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
-
+    VPInstruction *RdxResult =
+        findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeVal);
     VPValue *NewFindLastSelect = BackedgeVal;
     VPValue *SelectCond = Cond;
     if (!SentinelVal || IVOfExpressionToSink) {

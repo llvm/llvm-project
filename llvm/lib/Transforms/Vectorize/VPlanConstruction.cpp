@@ -1799,12 +1799,9 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
 /// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
 ///        ComputeReductionResult(ReducedIV), Start.
 static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
-  return cast<VPInstruction>(
-      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
-        auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI &&
-               matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
-      }));
+  return vputils::findUserRecursively<VPInstruction>(
+      BackedgeVal,
+      match_fn(m_FindIVResult(m_Specific(BackedgeVal), m_VPValue())));
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {

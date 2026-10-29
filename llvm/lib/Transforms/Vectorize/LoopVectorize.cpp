@@ -7022,7 +7022,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   for (VPInstruction &VPI :
        make_isa_range<VPInstruction>(*MainPlan.getMiddleBlock())) {
     VPValue *OrigStart;
-    if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
+    if (!match(&VPI, m_FindIVResult(m_VPValue(), m_VPValue(OrigStart))))
       continue;
     if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
       continue;
@@ -7163,14 +7163,12 @@ static void preparePlanForEpilogueVectorLoop(
     VPValue *ResumeVPV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      // Find the reduction result by searching users of the phi or its backedge
+      // Find the reduction result by searching users of the phi's backedge
       // value.
-      auto IsReductionResult = [](VPRecipeBase *R) {
-        auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
-      };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      using namespace VPlanPatternMatch;
+      auto *RdxResult = vputils::findUserRecursively<VPInstruction>(
+          ReductionPhi->getBackedgeValue(),
+          match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       assert(RdxResult && "expected to find reduction result");
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
@@ -7208,9 +7206,8 @@ static void preparePlanForEpilogueVectorLoop(
           // computing the reduction result.
           if (match(BypassOp, m_Freeze(m_VPValue())))
             for (VPUser *U : RdxResult->users()) {
-              auto *VPI = dyn_cast<VPInstruction>(U);
-              if (VPI && matchFindIVResult(VPI, m_VPValue(), m_VPValue()))
-                VPI->setOperand(2, StartV);
+              if (match(U, m_FindIVResult(m_VPValue(), m_VPValue())))
+                U->setOperand(2, StartV);
             }
 
           // Adjust resume: select(icmp eq ResumeVPV, StartV), Sentinel,
