@@ -324,12 +324,15 @@ class SimplifyCFGOpt {
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
                  const DataLayout &DL, ArrayRef<WeakVH> LoopHeaders,
-                 const SimplifyCFGOptions &Opts)
-      : TTI(TTI), DTU(DTU), DL(DL), LoopHeaders(LoopHeaders), Options(Opts) {
+                 const SimplifyCFGOptions &Opts, BlockWaveCountUpdater *WPU)
+      : TTI(TTI), DTU(DTU), DL(DL), LoopHeaders(LoopHeaders), Options(Opts),
+        WPU(WPU) {
     assert((!DTU || !DTU->hasPostDomTree()) &&
            "SimplifyCFG is not yet capable of maintaining validity of a "
            "PostDomTree, so don't ask for it.");
   }
+
+  BlockWaveCountUpdater *WPU;
 
   bool simplifyOnce(BasicBlock *BB);
   bool run(BasicBlock *BB);
@@ -3662,7 +3665,7 @@ static bool reachesUncontrolledConvergentCallBeforeBlock(BasicBlock *From,
 /// from the predecessor to their ultimate destination.
 static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
     CondBrInst *BI, const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
-    AssumptionCache *AC, const DataLayout &DL) {
+    AssumptionCache *AC, const DataLayout &DL, BlockWaveCountUpdater *WPU) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3750,7 +3753,8 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
 
     // Split the predecessors we are threading into a new edge block. We'll
     // clone the instructions into this block, and then redirect it to RealDest.
-    BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU);
+    BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU,
+                                                nullptr, nullptr, false, WPU);
     if (!EdgeBB)
       continue;
 
@@ -3841,7 +3845,8 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
     // it back into the predecessor if possible. This not only avoids
     // unnecessary SimplifyCFG iterations, but also makes sure that we don't
     // bypass the check for trivial cycles above.
-    MergeBlockIntoPredecessor(EdgeBB, DTU);
+    MergeBlockIntoPredecessor(EdgeBB, DTU, nullptr, nullptr, nullptr, false,
+                              nullptr, WPU);
 
     // Signal repeat, simplifying any other constants.
     return std::nullopt;
@@ -3862,7 +3867,7 @@ bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(CondBrInst *BI) {
   do {
     // Note that None means "we changed things, but recurse further."
     Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, TTI, DTU,
-                                                         Options.AC, DL);
+                                                         Options.AC, DL, WPU);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -8886,7 +8891,8 @@ bool SimplifyCFGOpt::simplifyUncondBranch(UncondBrInst *BI,
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
   BasicBlock::iterator I = BB->getFirstNonPHIOrPseudoProbe();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
-      !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
+      !NeedCanonicalLoop &&
+      TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU, WPU))
     return true;
 
   // If the only instruction in the block is a seteq/setne comparison against a
@@ -9401,7 +9407,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
   // if there are no PHI nodes.
-  if (MergeBlockIntoPredecessor(BB, DTU))
+  if (MergeBlockIntoPredecessor(BB, DTU, nullptr, nullptr, nullptr, false,
+                                nullptr, WPU))
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts) {
@@ -9477,8 +9484,9 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
-                       ArrayRef<WeakVH> LoopHeaders) {
-  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), LoopHeaders,
-                        Options)
+                       ArrayRef<WeakVH> LoopHeaders,
+                       BlockWaveCountUpdater *WPU) {
+  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), LoopHeaders, Options,
+                        WPU)
       .run(BB);
 }

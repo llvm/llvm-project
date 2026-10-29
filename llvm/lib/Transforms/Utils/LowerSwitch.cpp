@@ -28,6 +28,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -147,13 +148,101 @@ void FixPhis(BasicBlock *SuccBB, BasicBlock *OrigBB, BasicBlock *NewBB,
   }
 }
 
+// A default weight describes all values outside the explicit cases. Preserve
+// a generated branch's weights only when that mass has one possible destination
+// (including bypassing the branch); splitting it would require value profiling.
+class SwitchProfile {
+  SmallVector<APInt> Values;
+  SmallVector<uint64_t> PrefixWeights;
+  uint32_t DefaultWeight = 0;
+  APInt Lower, Upper;
+  bool IsExpected;
+
+  std::pair<unsigned, unsigned> getRange(const APInt &Lo,
+                                         const APInt &Hi) const {
+    auto Less = [](const APInt &A, const APInt &B) { return A.slt(B); };
+    auto Begin = llvm::lower_bound(Values, Lo, Less);
+    auto End = llvm::upper_bound(Values, Hi, Less);
+    return {Begin - Values.begin(), End - Values.begin()};
+  }
+
+  bool hasDefaultValues(const APInt &Lo, const APInt &Hi) const {
+    APInt Size =
+        Hi.sext(Hi.getBitWidth() + 1) - Lo.sext(Lo.getBitWidth() + 1) + 1;
+    auto [Begin, End] = getRange(Lo, Hi);
+    return Size.ugt(End - Begin);
+  }
+
+  uint64_t getWeight(const APInt &Lo, const APInt &Hi) const {
+    auto [Begin, End] = getRange(Lo, Hi);
+    return PrefixWeights[End] - PrefixWeights[Begin];
+  }
+
+public:
+  explicit SwitchProfile(const SwitchInst &SI)
+      : Lower(APInt::getSignedMinValue(
+            SI.getCondition()->getType()->getIntegerBitWidth())),
+        Upper(APInt::getSignedMaxValue(Lower.getBitWidth())),
+        IsExpected(hasBranchWeightOrigin(SI)) {
+    SmallVector<uint32_t> Weights;
+    if (!hasValidBranchWeightMD(SI) || !extractBranchWeights(SI, Weights))
+      return;
+    DefaultWeight = Weights[0];
+    SmallVector<std::pair<APInt, uint32_t>> Cases;
+    for (auto [Index, Case] : enumerate(SI.cases()))
+      Cases.emplace_back(Case.getCaseValue()->getValue(), Weights[Index + 1]);
+    llvm::sort(Cases, [](const auto &A, const auto &B) {
+      return A.first.slt(B.first);
+    });
+    PrefixWeights.push_back(0);
+    for (const auto &[Value, Weight] : Cases) {
+      Values.push_back(Value);
+      PrefixWeights.push_back(PrefixWeights.back() + Weight);
+    }
+  }
+
+  void setBounds(const APInt &Lo, const APInt &Hi, bool DefaultUnreachable) {
+    Lower = Lo;
+    Upper = Hi;
+    if (DefaultUnreachable)
+      DefaultWeight = 0;
+  }
+
+  void setMetadata(CondBrInst &Br, const APInt &Lo, const APInt &Hi,
+                   const APInt &TrueLo, const APInt &TrueHi) const {
+    if (PrefixWeights.empty())
+      return;
+    uint64_t TrueWeight = getWeight(TrueLo, TrueHi);
+    uint64_t FalseWeight = getWeight(Lo, Hi) - TrueWeight;
+    if (DefaultWeight) {
+      bool TrueDefault = hasDefaultValues(TrueLo, TrueHi);
+      bool FalseDefault =
+          (Lo.slt(TrueLo) && hasDefaultValues(Lo, TrueLo - 1)) ||
+          (TrueHi.slt(Hi) && hasDefaultValues(TrueHi + 1, Hi));
+      bool OutsideDefault =
+          (Lower.slt(Lo) && hasDefaultValues(Lower, Lo - 1)) ||
+          (Hi.slt(Upper) && hasDefaultValues(Hi + 1, Upper));
+      if (unsigned(TrueDefault) + unsigned(FalseDefault) +
+              unsigned(OutsideDefault) >
+          1)
+        return;
+      if (TrueDefault)
+        TrueWeight += DefaultWeight;
+      else if (FalseDefault)
+        FalseWeight += DefaultWeight;
+    }
+    setFittedBranchWeights(Br, {TrueWeight, FalseWeight}, IsExpected,
+                           /*ElideAllZero=*/true);
+  }
+};
+
 /// Create a new leaf block for the binary lookup tree. It checks if the
 /// switch's value == the case's value. If not, then it jumps to the default
 /// branch. At this point in the tree, the value can't be another valid case
 /// value, so the jump to the "default" branch is warranted.
 BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
                          ConstantInt *UpperBound, BasicBlock *OrigBlock,
-                         BasicBlock *Default) {
+                         BasicBlock *Default, const SwitchProfile &Profile) {
   Function *F = OrigBlock->getParent();
   BasicBlock *NewLeaf = BasicBlock::Create(Val->getContext(), "LeafBlock");
   F->insert(++OrigBlock->getIterator(), NewLeaf);
@@ -191,7 +280,9 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  CondBrInst *Br = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  Profile.setMetadata(*Br, LowerBound->getValue(), UpperBound->getValue(),
+                      Leaf.Low->getValue(), Leaf.High->getValue());
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
@@ -227,7 +318,8 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
                           ConstantInt *UpperBound, Value *Val,
                           BasicBlock *Predecessor, BasicBlock *OrigBlock,
                           BasicBlock *Default,
-                          const std::vector<IntRange> &UnreachableRanges) {
+                          const std::vector<IntRange> &UnreachableRanges,
+                          const SwitchProfile &Profile) {
   assert(LowerBound && UpperBound && "Bounds must be initialized");
   unsigned Size = End - Begin;
 
@@ -241,8 +333,8 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
       FixPhis(Begin->BB, OrigBlock, Predecessor, NumMergedCases);
       return Begin->BB;
     }
-    return NewLeafBlock(*Begin, Val, LowerBound, UpperBound, OrigBlock,
-                        Default);
+    return NewLeafBlock(*Begin, Val, LowerBound, UpperBound, OrigBlock, Default,
+                        Profile);
   }
 
   unsigned Mid = Size / 2;
@@ -289,15 +381,17 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
 
   BasicBlock *LBranch =
       SwitchConvert(LHS.begin(), LHS.end(), LowerBound, NewUpperBound, Val,
-                    NewNode, OrigBlock, Default, UnreachableRanges);
+                    NewNode, OrigBlock, Default, UnreachableRanges, Profile);
   BasicBlock *RBranch =
       SwitchConvert(RHS.begin(), RHS.end(), NewLowerBound, UpperBound, Val,
-                    NewNode, OrigBlock, Default, UnreachableRanges);
+                    NewNode, OrigBlock, Default, UnreachableRanges, Profile);
 
   F->insert(++OrigBlock->getIterator(), NewNode);
   Comp->insertInto(NewNode, NewNode->end());
 
-  CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
+  CondBrInst *Br = CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
+  Profile.setMetadata(*Br, LowerBound->getValue(), UpperBound->getValue(),
+                      LowerBound->getValue(), Pivot.Low->getValue() - 1);
   return NewNode;
 }
 
@@ -333,7 +427,6 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
              "Cases should be strictly ascending");
       if ((nextValue == currentValue + 1) && (currentBB == nextBB)) {
         I->High = J->High;
-        // FIXME: Combine branch weights.
       } else if (++I != J) {
         *I = *J;
       }
@@ -352,6 +445,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   BasicBlock *OrigBlock = SI->getParent();
   Function *F = OrigBlock->getParent();
   Value *Val = SI->getCondition(); // The value we are switching on...
+  SwitchProfile Profile(*SI);
   BasicBlock *Default = SI->getDefaultDest();
 
   // Don't handle unreachable blocks. If there are successors with phis, this
@@ -508,9 +602,11 @@ void ProcessSwitchInst(SwitchInst *SI,
     Val = SI->getCondition();
   }
 
+  Profile.setBounds(LowerBound->getValue(), UpperBound->getValue(),
+                    DefaultIsUnreachableFromSwitch);
   BasicBlock *SwitchBlock =
       SwitchConvert(Cases.begin(), Cases.end(), LowerBound, UpperBound, Val,
-                    OrigBlock, OrigBlock, Default, UnreachableRanges);
+                    OrigBlock, OrigBlock, Default, UnreachableRanges, Profile);
 
   // We have added incoming values for newly-created predecessors in
   // NewLeafBlock(). The only meaningful work we offload to FixPhis() is to
@@ -534,6 +630,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
 bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
   bool Changed = false;
+  BlockWaveCountPreserver WaveProfile(F);
   SmallPtrSet<BasicBlock *, 8> DeleteList;
 
   // We use make_early_inc_range here so that we don't traverse new blocks.
@@ -545,7 +642,11 @@ bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(Cur.getTerminator())) {
       Changed = true;
+      MDNode *Uniformity =
+          SI->getMetadata(LLVMContext::MD_block_uniformity_profile);
       ProcessSwitchInst(SI, DeleteList, AC, LVI);
+      Cur.getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                       Uniformity);
     }
   }
 
@@ -554,6 +655,8 @@ bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
     DeleteDeadBlock(BB);
   }
 
+  if (Changed)
+    WaveProfile.restore();
   return Changed;
 }
 

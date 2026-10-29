@@ -34,6 +34,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -45,6 +46,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -238,7 +240,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
                                      LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                      MemoryDependenceResults *MemDep,
                                      bool PredecessorWithTwoSuccessors,
-                                     DominatorTree *DT) {
+                                     DominatorTree *DT,
+                                     BlockWaveCountUpdater *WPU) {
   if (BB->hasAddressTaken())
     return false;
 
@@ -287,6 +290,16 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
                     << PredBB->getName() << "\n");
+
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (!PredecessorWithTwoSuccessors) {
+    if (WPU)
+      WPU->mergeBlock(*BB, *PredBB);
+    else {
+      WaveProfile.emplace(*BB->getParent());
+      WaveProfile->forget(*BB);
+    }
+  }
 
   // Begin by getting rid of unneeded PHIs.
   SmallVector<AssertingVH<Value>, 4> IncomingValues;
@@ -365,6 +378,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     // The merged block retains the predecessor's executions. Its terminator
     // changes, but its block-uniformity classification still applies.
     STI->copyMetadata(*PTI, {LLVMContext::MD_block_uniformity_profile});
+    // The transplanted terminator must not replace the predecessor's event.
+    if (WPU ? WPU->hasProfile() : WaveProfile->hasProfile())
+      STI->setMetadata(LLVMContext::MD_wave_profile_block, nullptr);
 
     // Delete the unconditional branch from the predecessor.
     PredBB->back().eraseFromParent();
@@ -403,6 +419,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Finally, erase the old block and update dominator info.
   DeleteDeadBlock(BB, DTU);
 
+  if (WaveProfile)
+    WaveProfile->restore();
+
   return true;
 }
 
@@ -412,13 +431,18 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
   assert(!MergeBlocks.empty() && "MergeBlocks should not be empty");
 
   bool BlocksHaveBeenMerged = false;
+  DenseMap<Function *, std::unique_ptr<BlockWaveCountUpdater>> WaveUpdates;
   while (!MergeBlocks.empty()) {
     BasicBlock *BB = *MergeBlocks.begin();
     BasicBlock *Dest = BB->getSingleSuccessor();
     if (Dest && (!L || L->contains(Dest))) {
       BasicBlock *Fold = Dest->getUniquePredecessor();
       (void)Fold;
-      if (MergeBlockIntoPredecessor(Dest, DTU, LI)) {
+      auto &WPU = WaveUpdates[BB->getParent()];
+      if (!WPU)
+        WPU = std::make_unique<BlockWaveCountUpdater>(*BB->getParent());
+      if (MergeBlockIntoPredecessor(Dest, DTU, LI, nullptr, nullptr, false,
+                                    nullptr, WPU.get())) {
         assert(Fold == BB &&
                "Expecting BB to be unique predecessor of the Dest block");
         MergeBlocks.erase(Dest);
@@ -428,6 +452,8 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
     } else
       MergeBlocks.erase(BB);
   }
+  for (auto &Entry : WaveUpdates)
+    Entry.second->apply();
   return BlocksHaveBeenMerged;
 }
 
@@ -1311,11 +1337,10 @@ static void SplitLandingPadPredecessorsImpl(
     DomTreeUpdater *DTU, DominatorTree *DT, LoopInfo *LI,
     MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
 
-static BasicBlock *
-SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
-                           const char *Suffix, DomTreeUpdater *DTU,
-                           DominatorTree *DT, LoopInfo *LI,
-                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+static BasicBlock *SplitBlockPredecessorsImpl(
+    BasicBlock *BB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
+    DomTreeUpdater *DTU, DominatorTree *DT, LoopInfo *LI,
+    MemorySSAUpdater *MSSAU, bool PreserveLCSSA, BlockWaveCountUpdater *WPU) {
   // Do not attempt to split that which cannot be split.
   if (!BB->canSplitPredecessors())
     return nullptr;
@@ -1329,6 +1354,17 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     SplitLandingPadPredecessorsImpl(BB, Preds, Suffix, NewName.c_str(), NewBBs,
                                     DTU, DT, LI, MSSAU, PreserveLCSSA);
     return NewBBs[0];
+  }
+
+  // A new unconditional block on one predecessor's edge does not change
+  // existing wave events. The new block remains unmeasured.
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (Preds.size() == 1) {
+    // Capture the old graph before creating the split block.
+    if (WPU)
+      WPU->hasProfile();
+    else
+      WaveProfile.emplace(*BB->getParent());
   }
 
   // Create new basic block, insert right before the original block.
@@ -1354,6 +1390,9 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     OldLatch = L->getLoopLatch();
   } else
     BI->setDebugLoc(BB->getFirstNonPHIOrPseudoProbe()->getDebugLoc());
+
+  if (WPU && Preds.size() == 1)
+    WPU->splitEdge(*Preds.front(), *BB, *NewBB);
 
   // Move the edges from Preds to point to NewBB instead of BB.
   for (BasicBlock *Pred : Preds) {
@@ -1398,6 +1437,9 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     }
   }
 
+  if (WaveProfile)
+    WaveProfile->restore();
+
   return NewBB;
 }
 
@@ -1405,18 +1447,19 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
                                          ArrayRef<BasicBlock *> Preds,
                                          const char *Suffix, DominatorTree *DT,
                                          LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                         bool PreserveLCSSA) {
+                                         bool PreserveLCSSA,
+                                         BlockWaveCountUpdater *WPU) {
   return SplitBlockPredecessorsImpl(BB, Preds, Suffix, /*DTU=*/nullptr, DT, LI,
-                                    MSSAU, PreserveLCSSA);
+                                    MSSAU, PreserveLCSSA, WPU);
 }
-BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
-                                         ArrayRef<BasicBlock *> Preds,
-                                         const char *Suffix,
-                                         DomTreeUpdater *DTU, LoopInfo *LI,
-                                         MemorySSAUpdater *MSSAU,
-                                         bool PreserveLCSSA) {
+BasicBlock *
+llvm::SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
+                             const char *Suffix, DomTreeUpdater *DTU,
+                             LoopInfo *LI, MemorySSAUpdater *MSSAU,
+                             bool PreserveLCSSA, BlockWaveCountUpdater *WPU) {
   return SplitBlockPredecessorsImpl(BB, Preds, Suffix, DTU,
-                                    /*DT=*/nullptr, LI, MSSAU, PreserveLCSSA);
+                                    /*DT=*/nullptr, LI, MSSAU, PreserveLCSSA,
+                                    WPU);
 }
 
 static void SplitLandingPadPredecessorsImpl(

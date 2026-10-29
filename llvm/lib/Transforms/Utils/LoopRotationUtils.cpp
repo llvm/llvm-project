@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -456,6 +457,12 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   assert(L->contains(NewHeader) && !L->contains(Exit) &&
          "Unable to determine loop header and exit blocks");
 
+  Function &F = *OrigHeader->getParent();
+  BlockWaveCountPreserver WaveProfile(F);
+  bool HasWaveProfile = WaveProfile.hasProfile();
+  if (HasWaveProfile)
+    WaveProfile.invalidate(*OrigHeader);
+
   // This code assumes that the new header has exactly one predecessor.
   // Remove any single-entry PHI nodes in it.
   assert(NewHeader->getSinglePredecessor() &&
@@ -812,6 +819,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
+
+  if (HasWaveProfile) {
+    // The preheader clone inherits the old header's metadata. Restore the
+    // rotated events before the merge performs its own profile transfer.
+    OrigPreheader->getTerminator()->setMetadata(
+        LLVMContext::MD_wave_profile_block, nullptr);
+    WaveProfile.restore();
+  }
 
   // Now that the CFG and DomTree are in a consistent state again, try to merge
   // the OrigHeader block into OrigLatch.  This will succeed if they are

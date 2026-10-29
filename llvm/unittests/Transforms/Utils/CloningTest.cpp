@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -386,6 +388,283 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   if (!Mod)
     Err.print("CloneLoop", errs());
   return Mod;
+}
+
+// A profiled device helper can survive profile loading and be inlined into
+// several callsites later. Its aggregate wave visits do not describe any one
+// inlined copy, especially when waves visit both sides of its diamond.
+static const char *WaveInliningIR = R"(
+  define void @helper(i1 %c, ptr %p) {
+  entry:
+    br i1 %c, label %left, label %right
+  left:
+    store volatile i32 1, ptr %p
+    br label %exit
+  right:
+    store volatile i32 2, ptr %p
+    br label %exit
+  exit:
+    ret void
+  }
+  define void @caller(i1 %gate, i1 %c, ptr %p) {
+  entry:
+    br i1 %gate, label %calls, label %zero
+  calls:
+    call void @helper(i1 %c, ptr %p)
+    call void @helper(i1 %c, ptr %p)
+    br label %exit
+  zero:
+    br label %exit
+  exit:
+    ret void
+  }
+  define void @other(i1 %c, ptr %p) {
+  entry:
+    call void @helper(i1 %c, ptr %p)
+    ret void
+  }
+)";
+
+TEST(InlineFunction, CallerWaveCounts) {
+  for (bool Partial : {false, true}) {
+    LLVMContext Context;
+    auto M = parseIR(Context, WaveInliningIR);
+    ASSERT_TRUE(M);
+    Function &Caller = *M->getFunction("caller");
+    Function &Helper = *M->getFunction("helper");
+    Function &Other = *M->getFunction("other");
+    SmallVector<uint64_t> OriginalCounts{100, 60, 0, 100};
+    BitVector OriginalKnown(4, true);
+    if (Partial)
+      OriginalKnown.reset(2);
+    setBlockWaveCounts(Caller, OriginalCounts, OriginalKnown);
+    setBlockWaveCounts(Helper, {200, 180, 70, 200});
+    setBlockWaveCounts(Other, {5});
+    SmallVector<BasicBlock *> Originals;
+    for (BasicBlock &BB : Caller)
+      Originals.push_back(&BB);
+    SmallVector<CallBase *> Calls;
+    for (Instruction &I : instructions(Caller))
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        Calls.push_back(CB);
+
+    for (CallBase *CB : Calls) {
+      InlineFunctionInfo IFI;
+      ASSERT_TRUE(InlineFunction(*CB, IFI).isSuccess());
+      ASSERT_FALSE(verifyModule(*M, &errs()));
+      SmallVector<uint64_t> Counts;
+      BitVector Known;
+      uint64_t Entry;
+      ASSERT_TRUE(extractMappedBlockWaveCounts(Caller, Counts, Known, Entry));
+      EXPECT_EQ(Entry, 100u);
+      for (auto [Index, BB] : enumerate(Caller)) {
+        auto It = llvm::find(Originals, &BB);
+        if (It == Originals.end()) {
+          EXPECT_FALSE(Known[Index]);
+          continue;
+        }
+        unsigned Original = It - Originals.begin();
+        // The independent zero block keeps its event. The call block and its
+        // predecessors/successors are conservatively unmeasured after
+        // splitting.
+        EXPECT_EQ(Known[Index], Original == 2 && OriginalKnown[Original]);
+        if (Known[Index])
+          EXPECT_EQ(Counts[Index], OriginalCounts[Original]);
+      }
+    }
+
+    InlineFunctionInfo IFI;
+    auto &Call = cast<CallBase>(Other.front().front());
+    ASSERT_TRUE(InlineFunction(Call, IFI).isSuccess());
+    SmallVector<uint64_t> Counts;
+    BitVector Known;
+    uint64_t Entry;
+    ASSERT_TRUE(extractMappedBlockWaveCounts(Other, Counts, Known, Entry));
+    EXPECT_EQ(Entry, 5u);
+    EXPECT_EQ(Known.count(), 0u);
+    ASSERT_TRUE(extractBlockWaveCounts(Helper, Counts));
+    EXPECT_EQ(Counts, (SmallVector<uint64_t>{200, 180, 70, 200}));
+  }
+}
+
+TEST(InlineFunction, UnprofiledCallerDoesNotInheritWaveCounts) {
+  LLVMContext Context;
+  auto M = parseIR(Context, WaveInliningIR);
+  ASSERT_TRUE(M);
+  Function &Helper = *M->getFunction("helper");
+  Function &Caller = *M->getFunction("other");
+  setBlockWaveCounts(Helper, {200, 180, 70, 200});
+  InlineFunctionInfo IFI;
+  ASSERT_TRUE(
+      InlineFunction(cast<CallBase>(Caller.front().front()), IFI).isSuccess());
+  EXPECT_FALSE(Caller.getMetadata(LLVMContext::MD_wave_profile));
+  for (BasicBlock &BB : Caller)
+    EXPECT_FALSE(
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+}
+
+TEST(InlineFunction, SingleBlockWaveCounts) {
+  LLVMContext Context;
+  auto M = parseIR(Context, R"(
+    define void @helper(ptr %p) {
+      store volatile i32 1, ptr %p
+      ret void
+    }
+    define void @caller(ptr %p) {
+      call void @helper(ptr %p)
+      ret void
+    }
+  )");
+  ASSERT_TRUE(M);
+  Function &Caller = *M->getFunction("caller");
+  setBlockWaveCounts(Caller, {10});
+  setBlockWaveCounts(*M->getFunction("helper"), {200});
+  InlineFunctionInfo IFI;
+  ASSERT_TRUE(
+      InlineFunction(cast<CallBase>(Caller.front().front()), IFI).isSuccess());
+  SmallVector<uint64_t> Counts;
+  ASSERT_TRUE(extractBlockWaveCounts(Caller, Counts));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{10}));
+}
+
+TEST(InlineFunction, InvokeWaveCounts) {
+  LLVMContext Context;
+  auto M = parseIR(Context, R"(
+    declare i32 @personality(...)
+    declare void @may_throw()
+    define void @helper(i1 %c) {
+    entry:
+      br i1 %c, label %left, label %exit
+    left:
+      call void @may_throw()
+      br label %exit
+    exit:
+      ret void
+    }
+    define void @caller(i1 %c) personality ptr @personality {
+    entry:
+      invoke void @helper(i1 %c) to label %normal unwind label %unwind
+    normal:
+      ret void
+    unwind:
+      %lp = landingpad {ptr, i32} cleanup
+      ret void
+    }
+  )");
+  ASSERT_TRUE(M);
+  Function &Caller = *M->getFunction("caller");
+  setBlockWaveCounts(Caller, {100, 90, 20});
+  setBlockWaveCounts(*M->getFunction("helper"), {200, 140, 200});
+  InlineFunctionInfo IFI;
+  ASSERT_TRUE(
+      InlineFunction(cast<CallBase>(Caller.front().front()), IFI).isSuccess());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  SmallVector<uint64_t> Counts;
+  BitVector Known;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(Caller, Counts, Known, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Known.count(), 0u);
+}
+
+TEST(InlineFunction, RecursiveWaveCounts) {
+  LLVMContext Context;
+  auto M = parseIR(Context, R"(
+    define void @recurse(i1 %c, ptr %p) {
+    entry:
+      br i1 %c, label %call, label %exit
+    call:
+      call void @recurse(i1 false, ptr %p)
+      br label %exit
+    exit:
+      store volatile i32 1, ptr %p
+      ret void
+    }
+  )");
+  ASSERT_TRUE(M);
+  Function &Caller = *M->getFunction("recurse");
+  setBlockWaveCounts(Caller, {100, 40, 100});
+  InlineFunctionInfo IFI;
+  auto &Call = cast<CallBase>(std::next(Caller.begin())->front());
+  ASSERT_TRUE(InlineFunction(Call, IFI).isSuccess());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_FALSE(Caller.getMetadata(LLVMContext::MD_wave_profile));
+  for (BasicBlock &BB : Caller)
+    EXPECT_FALSE(
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+}
+
+TEST(InlineFunction, LoopCallerWaveCounts) {
+  LLVMContext Context;
+  auto M = parseIR(Context, R"(
+    define void @helper(i1 %c, ptr %p) {
+    entry:
+      br i1 %c, label %left, label %exit
+    left:
+      store volatile i32 1, ptr %p
+      br label %exit
+    exit:
+      ret void
+    }
+    define void @caller(i1 %c, ptr %p, i32 %n) {
+    entry:
+      br label %preheader
+    preheader:
+      br label %loop
+    loop:
+      %i = phi i32 [0, %preheader], [%next, %loop]
+      call void @helper(i1 %c, ptr %p)
+      %next = add i32 %i, 1
+      %again = icmp ult i32 %next, %n
+      br i1 %again, label %loop, label %exit
+    exit:
+      ret void
+    }
+  )");
+  ASSERT_TRUE(M);
+  Function &Caller = *M->getFunction("caller");
+  setBlockWaveCounts(Caller, {10, 10, 100, 10});
+  setBlockWaveCounts(*M->getFunction("helper"), {200, 170, 200});
+  SmallVector<BasicBlock *> Originals;
+  for (BasicBlock &BB : Caller)
+    Originals.push_back(&BB);
+  auto &Call = cast<CallBase>(*std::next(Originals[2]->begin()));
+  InlineFunctionInfo IFI;
+  ASSERT_TRUE(InlineFunction(Call, IFI).isSuccess());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  SmallVector<uint64_t> Counts;
+  BitVector Known;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(Caller, Counts, Known, Entry));
+  EXPECT_EQ(Entry, 10u);
+  EXPECT_EQ(Known.count(), 1u);
+  ASSERT_TRUE(Known[0]);
+  EXPECT_EQ(Counts[0], 10u);
+}
+
+TEST(InlineFunction, InvalidCallerWaveCountsStayInvalid) {
+  LLVMContext Context;
+  auto M = parseIR(Context, WaveInliningIR);
+  ASSERT_TRUE(M);
+  Function &Caller = *M->getFunction("caller");
+  Function &Helper = *M->getFunction("helper");
+  setBlockWaveCounts(Caller, {100, 60, 0, 100});
+  setBlockWaveCounts(Helper, {200, 180, 70, 200});
+  // Simulate a pre-existing foreign association in a block outside the call.
+  std::next(Caller.begin(), 2)
+      ->getTerminator()
+      ->setMetadata(LLVMContext::MD_wave_profile_block,
+                    Helper.front().getTerminator()->getMetadata(
+                        LLVMContext::MD_wave_profile_block));
+  SmallVector<uint64_t> Counts;
+  BitVector Known;
+  uint64_t Entry;
+  ASSERT_FALSE(extractMappedBlockWaveCounts(Caller, Counts, Known, Entry));
+  InlineFunctionInfo IFI;
+  auto &Call = cast<CallBase>(std::next(Caller.begin())->front());
+  ASSERT_TRUE(InlineFunction(Call, IFI).isSuccess());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_FALSE(extractMappedBlockWaveCounts(Caller, Counts, Known, Entry));
 }
 
 TEST(CloneLoop, CloneLoopNest) {

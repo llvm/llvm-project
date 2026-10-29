@@ -24,6 +24,8 @@
 
 namespace llvm {
 
+class BlockWaveCountUpdater;
+
 class DataLayout;
 class Value;
 class WeakTrackingVH;
@@ -152,7 +154,8 @@ LLVM_ABI void MergeBasicBlockIntoOnlyPred(BasicBlock *BB,
 /// successor block and return true. If we can't transform, return false.
 LLVM_ABI bool
 TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
-                                        DomTreeUpdater *DTU = nullptr);
+                                        DomTreeUpdater *DTU = nullptr,
+                                        BlockWaveCountUpdater *WPU = nullptr);
 
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
 /// to be clever about PHI nodes which differ only in the order of the incoming
@@ -179,7 +182,8 @@ LLVM_ABI extern cl::opt<bool> RequireAndPreserveDomTree;
 LLVM_ABI bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                           DomTreeUpdater *DTU = nullptr,
                           const SimplifyCFGOptions &Options = {},
-                          ArrayRef<WeakVH> LoopHeaders = {});
+                          ArrayRef<WeakVH> LoopHeaders = {},
+                          BlockWaveCountUpdater *WPU = nullptr);
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
