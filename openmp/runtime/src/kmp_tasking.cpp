@@ -17,6 +17,8 @@
 #include "kmp_wait_release.h"
 #include "kmp_taskdeps.h"
 
+#undef DEBUG_TASKGRAPH
+
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
@@ -731,7 +733,7 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
                            "dephash of implicit task %p\n",
                            gtid, taskdata));
             // cleanup dephash of finished implicit task
-            __kmp_dephash_free_entries(thread, taskdata->td_dephash);
+            __kmp_dephash_free_entries<true>(thread, taskdata->td_dephash);
           }
         }
       }
@@ -766,6 +768,12 @@ static bool __kmp_track_children_task(kmp_taskdata_t *taskdata) {
   return ret;
 }
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+static bool
+__kmp_taskgraph_exec_descr_finish(kmp_int32 gtid, kmp_info_t *thread,
+                                  kmp_taskgraph_exec_descr_t *descr);
+#endif
+
 // __kmp_task_finish: bookkeeping to do when a task finishes execution
 //
 // gtid: global thread ID for calling thread
@@ -782,6 +790,9 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_task_team_t *task_team =
       thread->th.th_task_team; // might be NULL for serial teams...
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  bool is_taskgraph;
+#endif
 #if KMP_DEBUG
   kmp_int32 children = 0;
 #endif
@@ -790,6 +801,10 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
                 gtid, taskdata, resumed_task));
 
   KMP_DEBUG_ASSERT(taskdata->td_flags.tasktype == TASK_EXPLICIT);
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  is_taskgraph = taskdata->owning_taskgraph;
+#endif
 
   if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to check the counter so that the task structure is not
@@ -901,6 +916,19 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     if (ompt)
       __ompt_task_finish(task, resumed_task, ompt_task_complete);
 #endif
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    if (is_taskgraph) {
+      __kmp_taskgraph_exec_descr_finish(gtid, thread, taskdata->exec_descr);
+      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
+      if (taskdata->td_taskgroup)
+        KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
+      thread->th.th_current_task = resumed_task;
+      resumed_task->td_flags.executing = 1; // resume previous task
+      return;
+    }
+#endif
+
     // TODO: What would be the balance between the conditions in the function
     // and an atomic operation?
     if (__kmp_track_children_task(taskdata)) {
@@ -1119,7 +1147,7 @@ void __kmp_finish_implicit_task(kmp_info_t *thread) {
         KA_TRACE(100, ("__kmp_finish_implicit_task: T#%d cleans "
                        "dephash of implicit task %p\n",
                        thread->th.th_info.ds.ds_gtid, task));
-        __kmp_dephash_free_entries(thread, task->td_dephash);
+        __kmp_dephash_free_entries<true>(thread, task->td_dephash);
       }
     }
   }
@@ -1132,7 +1160,7 @@ void __kmp_finish_implicit_task(kmp_info_t *thread) {
 void __kmp_free_implicit_task(kmp_info_t *thread) {
   kmp_taskdata_t *task = thread->th.th_current_task;
   if (task && task->td_dephash) {
-    __kmp_dephash_free(thread, task->td_dephash);
+    __kmp_dephash_free<true>(thread, task->td_dephash);
     task->td_dephash = NULL;
   }
 }
@@ -1147,7 +1175,7 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
     }
   }
   return size;
-} // __kmp_round_up_to_va
+} // __kmp_round_up_to_val
 
 // __kmp_task_alloc: Allocate the taskdata and task data structures for a task
 //
@@ -1336,6 +1364,10 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_flags.executing = 0;
   taskdata->td_flags.complete = 0;
   taskdata->td_flags.freed = 0;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  taskdata->owning_taskgraph = nullptr;
+  taskdata->exec_descr = nullptr;
+#endif
   KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
   // start at one because counts current task and children
   KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 1);
@@ -2090,6 +2122,629 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
   return TASK_CURRENT_NOT_QUEUED;
 }
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+
+// Return the members of the irreducible REGION in topological order, i.e. with
+// each member preceded by its intra-region predecessors.  The caller frees the
+// returned array.
+static kmp_taskgraph_region_t **
+__kmp_taskgraph_irreducible_order(kmp_info_t *thread,
+                                  kmp_taskgraph_region_t *region) {
+  kmp_int32 num_children = region->inner.num_children;
+  kmp_taskgraph_region_t **order =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, num_children * sizeof(kmp_taskgraph_region_t *));
+  kmp_int32 outidx = 0;
+
+  for (kmp_int32 c = 0; c < num_children; c++)
+    region->inner.children[c]->mark = TASKGRAPH_UNMARKED;
+
+  for (kmp_int32 c = 0; c < num_children; c++)
+    if (region->inner.children[c]->mark == TASKGRAPH_UNMARKED)
+      __kmp_taskgraph_topological_order(region->inner.children[c], order,
+                                        &outidx);
+
+  // Members only depend on other members, so the walk cannot leave the region.
+  assert(outidx == num_children);
+  return order;
+}
+
+// The number of exit descrs REGION resolves to, i.e. the length of the pred
+// list __kmp_build_exec_descrs_1 returns for it.  A dependency on REGION has to
+// name every one of them.
+static kmp_int32 __kmp_count_region_exits(kmp_taskgraph_region_t *region) {
+  switch (region->type) {
+  case TASKGRAPH_REGION_NODE:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT:
+    return 1;
+  case TASKGRAPH_REGION_PARALLEL: {
+    // A region with reductions is left through its join descr.
+    if (region->reduce_input)
+      return 1;
+    // All children run concurrently, so all of them are exits.
+    kmp_int32 exits = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      exits += __kmp_count_region_exits(region->inner.children[c]);
+    return exits;
+  }
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+    // The children are chained, so only the last one is an exit.
+    return __kmp_count_region_exits(
+        region->inner.children[region->inner.num_children - 1]);
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    // The members with no successors are the exits.
+    kmp_int32 exits = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      if (!region->inner.children[c]->successors)
+        exits += __kmp_count_region_exits(region->inner.children[c]);
+    return exits;
+  }
+  }
+}
+
+// Count the number of exec_descr and successor-list structures that we need
+// to flatten REGION.  Follows the structure of __kmp_build_exec_descrs_1.
+
+kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
+                                    kmp_int32 npreds, kmp_int32 &successors,
+                                    kmp_int32 &descrs) {
+  switch (region->type) {
+  case TASKGRAPH_REGION_NODE:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT: {
+    descrs++;
+    if (npreds > 0) {
+      successors += npreds;
+    }
+    return 1;
+  }
+  case TASKGRAPH_REGION_PARALLEL: {
+    if (npreds > 0)
+      successors += npreds;
+    descrs++;
+    npreds = 1;
+    kmp_int32 out_preds = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+      kmp_int32 child_preds = __kmp_count_exec_descrs_1(
+          region->inner.children[c], npreds, successors, descrs);
+      out_preds += child_preds;
+    }
+    if (region->reduce_input) {
+      // The join descr, which the members' exits do not name.
+      descrs++;
+      return 1;
+    }
+    return out_preds;
+  }
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE: {
+    // In this loop, PREDS can expire per-iteration and be reinitialised.  So
+    // we shouldn't alter its refcount.
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+      npreds = __kmp_count_exec_descrs_1(region->inner.children[c], npreds,
+                                         successors, descrs);
+    }
+    return npreds;
+  }
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    if (npreds > 0)
+      successors += npreds;
+    descrs++;
+    npreds = 1;
+    kmp_int32 out_preds = 0;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+      kmp_taskgraph_region_t *child_region = region->inner.children[c];
+      kmp_int32 inner_or_outer_preds = npreds;
+      if (child_region->predecessors) {
+        // Mirror the builder: an edge to a member contributes that member's
+        // whole exit set, not a single entry.
+        inner_or_outer_preds = 0;
+        for (kmp_taskgraph_region_dep_t *p = child_region->predecessors; p;
+             p = p->next)
+          inner_or_outer_preds += __kmp_count_region_exits(p->region);
+      }
+      kmp_int32 child_preds = __kmp_count_exec_descrs_1(
+          child_region, inner_or_outer_preds, successors, descrs);
+      if (!child_region->successors)
+        out_preds += child_preds;
+    }
+    return out_preds;
+  }
+  }
+}
+
+void __kmp_count_exec_descrs(kmp_taskgraph_region_t *region,
+                             kmp_int32 &successors, kmp_int32 &descrs) {
+  [[maybe_unused]] kmp_int32 npreds;
+  npreds = __kmp_count_exec_descrs_1(region, 0, successors, descrs);
+  // We want to reach the exit...
+  assert(npreds > 0);
+}
+
+kmp_taskgraph_exec_descr_list_t *
+__kmp_exec_descr_list_add(kmp_info_t *thread,
+                          kmp_taskgraph_exec_descr_elem_t **recycled_elems,
+                          kmp_taskgraph_exec_descr_t *exec_descr,
+                          kmp_taskgraph_exec_descr_list_t *list) {
+  kmp_taskgraph_exec_descr_elem_t *head;
+  if (*recycled_elems) {
+    head = *recycled_elems;
+    *recycled_elems = (*recycled_elems)->next;
+  } else
+    head = (kmp_taskgraph_exec_descr_elem_t *)__kmp_fast_allocate(
+        thread, sizeof(kmp_taskgraph_exec_descr_elem_t));
+  head->exec_descr = exec_descr;
+  if (!list) {
+    list = (kmp_taskgraph_exec_descr_list_t *)__kmp_fast_allocate(
+        thread, sizeof(kmp_taskgraph_exec_descr_list_t));
+    list->head = head;
+    list->refcount = 1;
+    list->length = 1;
+    head->next = head;
+  } else {
+    kmp_taskgraph_exec_descr_elem_t *list_head = list->head;
+    kmp_taskgraph_exec_descr_elem_t *list_head_next = list_head->next;
+    list_head->next = head;
+    head->next = list_head_next;
+    list->head = head;
+    list->length++;
+  }
+  return list;
+}
+
+kmp_taskgraph_exec_descr_list_t *__kmp_exec_descr_singleton_list(
+    kmp_info_t *thread, kmp_taskgraph_exec_descr_elem_t **recycled_elems,
+    kmp_taskgraph_exec_descr_t *exec_descr) {
+  return __kmp_exec_descr_list_add(thread, recycled_elems, exec_descr, nullptr);
+}
+
+static kmp_int32
+__kmp_exec_descr_list_len(kmp_taskgraph_exec_descr_list_t *list) {
+  return list ? list->length : 0;
+}
+
+void __kmp_exec_descr_free_recycled(kmp_info_t *thread,
+                                    kmp_taskgraph_exec_descr_elem_t *elems) {
+  while (elems) {
+    kmp_taskgraph_exec_descr_elem_t *next = elems->next;
+    __kmp_fast_free(thread, elems);
+    elems = next;
+  }
+}
+
+static void
+__kmp_exec_descr_elem_recycle(kmp_taskgraph_exec_descr_elem_t **recycled,
+                              kmp_taskgraph_exec_descr_elem_t *elem) {
+  elem->next = *recycled;
+  *recycled = elem;
+}
+
+void __kmp_exec_descr_list_recycle(kmp_info_t *thread,
+                                   kmp_taskgraph_exec_descr_elem_t **recycled,
+                                   kmp_taskgraph_exec_descr_list_t *list) {
+  if (!list)
+    return;
+  kmp_taskgraph_exec_descr_elem_t *head = list->head, *walk;
+  walk = head;
+  do {
+    kmp_taskgraph_exec_descr_elem_t *next = walk->next;
+    __kmp_exec_descr_elem_recycle(recycled, walk);
+    walk = next;
+  } while (walk != head);
+  __kmp_fast_free(thread, list);
+}
+
+kmp_taskgraph_exec_descr_list_t *
+__kmp_exec_descr_list_ref(kmp_taskgraph_exec_descr_list_t *list) {
+  if (list)
+    list->refcount++;
+  return list;
+}
+
+kmp_taskgraph_exec_descr_list_t *
+__kmp_exec_descr_list_deref(kmp_info_t *thread,
+                            kmp_taskgraph_exec_descr_elem_t **recycled,
+                            kmp_taskgraph_exec_descr_list_t *list) {
+  if (!list)
+    return nullptr;
+
+  list->refcount--;
+  if (list->refcount == 0) {
+    __kmp_exec_descr_list_recycle(thread, recycled, list);
+    return nullptr;
+  }
+  return list;
+}
+
+// Destructively append the elements of TO_ADD to DST_LIST.  The TO_ADD list
+// header is freed and shouldn't be used after calling this function.
+
+kmp_taskgraph_exec_descr_list_t *
+__kmp_exec_descr_splice_list(kmp_info_t *thread,
+                             kmp_taskgraph_exec_descr_list_t *dst_list,
+                             kmp_taskgraph_exec_descr_list_t *to_add) {
+  if (dst_list == nullptr && to_add == nullptr)
+    return nullptr;
+  else if (to_add == nullptr)
+    return dst_list;
+  else if (dst_list == nullptr) {
+    // We're splicing into a "new" list, so reset the refcount.
+    to_add->refcount = 1;
+    return to_add;
+  }
+
+  kmp_taskgraph_exec_descr_elem_t *dst_head = dst_list->head;
+  kmp_taskgraph_exec_descr_elem_t *dst_head_next = dst_head->next;
+  kmp_taskgraph_exec_descr_elem_t *add_head = to_add->head;
+  kmp_taskgraph_exec_descr_elem_t *add_head_next = add_head->next;
+
+  dst_list->length += to_add->length;
+  dst_head->next = add_head_next;
+  add_head->next = dst_head_next;
+
+  // Order doesn't really matter, but this makes the head pointer point to the
+  // start of the added list, so TO_ADD is neatly prepended to the dst list,
+  // rather than having (old head->appended list->remainder of old list).
+  dst_list->head = add_head;
+
+  // Free the added list header.
+  __kmp_fast_free(thread, to_add);
+
+  return dst_list;
+}
+
+// The PREDS list gets consumed ONCE by a call to this function, so if you need
+// to keep it alive, take another reference on it.
+
+kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
+    kmp_info_t *thread, kmp_taskgraph_exec_descr_t *exec_descr_arr,
+    kmp_int32 &idx, kmp_taskgraph_exec_descr_elem_t **recycled,
+    kmp_taskgraph_region_t *region, kmp_taskgraph_exec_descr_list_t *preds,
+    kmp_taskgraph_exec_descr_elem_t **successor_tail) {
+  auto descr_for_region =
+      [&](kmp_taskgraph_region_t *region,
+          kmp_int32 npreds) -> kmp_taskgraph_exec_descr_t * {
+    kmp_taskgraph_exec_descr_t *ed = nullptr;
+    if (region->exec_descr) {
+      assert(region->exec_descr->region == region);
+      ed = region->exec_descr;
+    } else {
+      assert(npreds >= 0);
+      ed = &exec_descr_arr[idx++];
+      ed->region = region;
+      ed->indegree = npreds;
+      ed->successors = nullptr;
+      ed->join = nullptr;
+      region->exec_descr = ed;
+    }
+    return ed;
+  };
+  auto fill = [&](kmp_taskgraph_exec_descr_t *exec_descr,
+                  kmp_taskgraph_exec_descr_list_t *preds_list) -> void {
+    if (!preds_list)
+      return;
+    kmp_taskgraph_exec_descr_elem_t *pred = preds_list->head, *walk;
+    walk = pred;
+    do {
+      kmp_taskgraph_exec_descr_t *pred_descr = walk->exec_descr;
+      // Build a simple linked list (null-terminated) of successors.  We're
+      // using a bump-allocated region because we know how many successors
+      // we need (we counted already).
+      kmp_taskgraph_exec_descr_elem_t *new_successor = *successor_tail;
+      (*successor_tail)++;
+      new_successor->exec_descr = exec_descr;
+      new_successor->next = pred_descr->successors;
+      pred_descr->successors = new_successor;
+      walk = walk->next;
+    } while (walk != pred);
+  };
+  switch (region->type) {
+  case TASKGRAPH_REGION_NODE:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT: {
+    kmp_taskgraph_exec_descr_t *exec_descr =
+        descr_for_region(region, __kmp_exec_descr_list_len(preds));
+    // Edit the taskdata for this specific instantiation.  At present the
+    // task/taskdata structures cannot be used simultaneously by different
+    // threads. We could duplicate the structures to allow simultaneous issue,
+    // but that's not done yet.  The exec_descr can already by thread-local,
+    // in principle, but for now it points to the taskgraph's single copy
+    // of each task/taskdata structure.
+    if (region->type == TASKGRAPH_REGION_NODE) {
+      kmp_task_t *task = exec_descr->region->task.node->task;
+      kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+      taskdata->exec_descr = exec_descr;
+    }
+    fill(exec_descr, preds);
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    return __kmp_exec_descr_singleton_list(thread, recycled, exec_descr);
+  }
+  case TASKGRAPH_REGION_PARALLEL: {
+    kmp_int32 npreds = __kmp_exec_descr_list_len(preds);
+    kmp_taskgraph_exec_descr_t *gather_descr = descr_for_region(region, npreds);
+    fill(gather_descr, preds);
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    preds = __kmp_exec_descr_singleton_list(thread, recycled, gather_descr);
+    kmp_taskgraph_exec_descr_list_t *out_preds = nullptr;
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+      kmp_taskgraph_exec_descr_list_t *child_preds;
+      // The preds are reused for each iteration, so keep them alive over this
+      // iteration of the loop.
+      __kmp_exec_descr_list_ref(preds);
+      child_preds = __kmp_build_exec_descrs_1(
+          thread, exec_descr_arr, idx, recycled, region->inner.children[c],
+          preds, successor_tail);
+      out_preds = __kmp_exec_descr_splice_list(thread, out_preds, child_preds);
+    }
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    if (region->reduce_input) {
+      // Whatever follows the region must see the combined reductions, so it
+      // waits on the join descr, which the region's descr releases once its
+      // taskgroup has ended, instead of on the members themselves.
+      __kmp_exec_descr_list_deref(thread, recycled, out_preds);
+      kmp_taskgraph_exec_descr_t *join = &exec_descr_arr[idx++];
+      join->region = region;
+      join->indegree = 0;
+      join->successors = nullptr;
+      join->join = nullptr;
+      gather_descr->join = join;
+      return __kmp_exec_descr_singleton_list(thread, recycled, join);
+    }
+    return out_preds;
+  }
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE: {
+    // In this loop, PREDS expires per-iteration and a fresh list is returned
+    // (with refcount==1).  So we don't need to make any further refcount
+    // adjustments.
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+      preds = __kmp_build_exec_descrs_1(thread, exec_descr_arr, idx, recycled,
+                                        region->inner.children[c], preds,
+                                        successor_tail);
+    }
+    return preds;
+  }
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    kmp_int32 npreds = __kmp_exec_descr_list_len(preds);
+    kmp_taskgraph_exec_descr_t *gather_descr = descr_for_region(region, npreds);
+    fill(gather_descr, preds);
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    preds = __kmp_exec_descr_singleton_list(thread, recycled, gather_descr);
+
+    // A member's dependencies name sibling members, and we resolve each one to
+    // the exit descrs recorded on it (see EXEC_DESCRS_OUT below).  Members are
+    // stored in reverse preorder, so walk them in topological order instead:
+    // that way a predecessor has always been built by the time we need it.
+    kmp_int32 num_children = region->inner.num_children;
+    kmp_taskgraph_region_t **order =
+        __kmp_taskgraph_irreducible_order(thread, region);
+
+    kmp_taskgraph_exec_descr_list_t *out_preds = nullptr;
+    for (kmp_int32 c = 0; c < num_children; c++) {
+      kmp_taskgraph_region_t *child_region = order[c];
+      kmp_taskgraph_exec_descr_list_t *inner_or_outer_preds = preds;
+      if (child_region->predecessors) {
+        inner_or_outer_preds = nullptr;
+        for (kmp_taskgraph_region_dep_t *p = child_region->predecessors; p;
+             p = p->next) {
+          assert(p->region);
+          // An edge to a compound member means "after everything in it", so
+          // depend on that member's whole exit set rather than on its entry
+          // descr.  For a leaf member the exit set is just its own descr.
+          assert(p->region->exec_descrs_out);
+          kmp_taskgraph_exec_descr_elem_t *head =
+              p->region->exec_descrs_out->head;
+          kmp_taskgraph_exec_descr_elem_t *walk = head;
+          do {
+            inner_or_outer_preds = __kmp_exec_descr_list_add(
+                thread, recycled, walk->exec_descr, inner_or_outer_preds);
+            walk = walk->next;
+          } while (walk != head);
+        }
+      } else {
+        // PREDS may be reused on successive iterations of the loop: make sure
+        // it stays alive.
+        __kmp_exec_descr_list_ref(preds);
+      }
+      // If INNER_OR_OUTER_PREDS is local, it will be consumed by the call.  If
+      // it is the incoming PREDS, we bumped the reference count above.  In
+      // either case the recursive call consumes it once.
+      kmp_taskgraph_exec_descr_list_t *child_preds = __kmp_build_exec_descrs_1(
+          thread, exec_descr_arr, idx, recycled, child_region,
+          inner_or_outer_preds, successor_tail);
+      if (!child_region->successors) {
+        // A region exit.  Having no successors, this child is named by no
+        // sibling, so nothing reads its exit set back and the destructive
+        // splice is safe.
+        out_preds =
+            __kmp_exec_descr_splice_list(thread, out_preds, child_preds);
+      } else {
+        // Later siblings resolve their edges to this child through
+        // EXEC_DESCRS_OUT, so keep a reference for the rest of the loop.
+        child_region->exec_descrs_out = child_preds;
+      }
+    }
+    // Release the exit sets: nothing outside this loop reads them, and leaving
+    // the pointers behind would leave dangling values in a structure that
+    // outlives the build.
+    for (kmp_int32 c = 0; c < num_children; c++) {
+      if (order[c]->exec_descrs_out) {
+        __kmp_exec_descr_list_deref(thread, recycled,
+                                    order[c]->exec_descrs_out);
+        order[c]->exec_descrs_out = nullptr;
+      }
+    }
+    __kmp_fast_free(thread, order);
+    // We do this unconditionally even though it looks like it could depend on
+    // the flow in the loop above, but the (explicit) ref by the _list_ref call
+    // and (implicit) deref by __kmp_build_exec_descrs balance out, so it's OK.
+    // The next line dereferences PREDS for *this* function activation, i.e.
+    // for our caller.
+    __kmp_exec_descr_list_deref(thread, recycled, preds);
+    return out_preds;
+  }
+  }
+}
+
+kmp_taskgraph_exec_descr_t *
+__kmp_build_exec_descrs(kmp_info_t *thread, kmp_taskgraph_region_t *region,
+                        kmp_int32 *num_descrs) {
+  kmp_int32 ndescrs = 0, nsuccessors = 0;
+  __kmp_count_exec_descrs(region, nsuccessors, ndescrs);
+  char *arena = (char *)__kmp_thread_malloc(
+      thread, ndescrs * sizeof(kmp_taskgraph_exec_descr_t) +
+                  nsuccessors * sizeof(kmp_taskgraph_exec_descr_elem_t));
+  kmp_taskgraph_exec_descr_t *exec_descr_arr =
+      (kmp_taskgraph_exec_descr_t *)arena;
+  kmp_taskgraph_exec_descr_elem_t *successors =
+      (kmp_taskgraph_exec_descr_elem_t *)&exec_descr_arr[ndescrs];
+  kmp_taskgraph_exec_descr_elem_t *successor_tail = successors;
+  kmp_taskgraph_exec_descr_elem_t *recycled_elems = nullptr;
+  kmp_int32 idx = 0;
+  kmp_taskgraph_exec_descr_list_t *out_preds =
+      __kmp_build_exec_descrs_1(thread, exec_descr_arr, idx, &recycled_elems,
+                                region, nullptr, &successor_tail);
+  assert(idx == ndescrs);
+  assert(successor_tail - successors == nsuccessors);
+  __kmp_exec_descr_list_deref(thread, &recycled_elems, out_preds);
+  __kmp_exec_descr_free_recycled(thread, recycled_elems);
+  *num_descrs = ndescrs;
+  return exec_descr_arr;
+}
+
+/// Reset, reparent and regroup the recorded task TASK and re-invoke it.
+
+static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_task_t *task,
+                              kmp_taskgroup_t *taskgroup,
+                              kmp_taskdata_t *parent_taskdata,
+                              bool serialize_immediate) {
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+  taskdata->td_parent = parent_taskdata;
+
+  // The team is the replaying one, not the recording one: a graph recorded in
+  // a serialized team and replayed in a real one would otherwise run its tasks
+  // as serialized ones there, skipping dependence tracking for the tasks they
+  // create and returning memory to the wrong thread's pool.
+  kmp_team_t *team = __kmp_threads[gtid]->th.th_team;
+  taskdata->td_team = team;
+  taskdata->td_flags.tasking_ser = (__kmp_tasking_mode == tskm_immediate_exec);
+  taskdata->td_flags.team_serial = team->t.t_serialized ? 1 : 0;
+
+  taskdata->td_flags.complete = 0;
+  taskdata->td_flags.started = 0;
+  taskdata->td_flags.freed = 0;
+  taskdata->td_flags.executing = 0;
+  taskdata->td_flags.task_serial =
+      (parent_taskdata->td_flags.final || taskdata->td_flags.team_serial ||
+       taskdata->td_flags.tasking_ser);
+
+  // An untied task left its last part's id behind; it starts again at 0.
+  task->part_id = 0;
+  KMP_ATOMIC_ST_RLX(&taskdata->td_untied_count, 0);
+  KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
+  // Start at one because counter represents current task and children.
+  KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 1);
+
+  taskdata->td_taskgroup = taskgroup;
+  KMP_ATOMIC_INC(&taskgroup->count);
+  KMP_ATOMIC_INC(&parent_taskdata->td_incomplete_child_tasks);
+  if (parent_taskdata->td_flags.tasktype == TASK_EXPLICIT)
+    KMP_ATOMIC_INC(&parent_taskdata->td_allocated_child_tasks);
+
+  __kmp_omp_task(gtid, task, false);
+}
+
+struct kmp_taskred_input;
+template <typename T>
+void *__kmp_task_reduction_init(int gtid, int num, T *data);
+
+// Decrement DESCR's predecessor count; if it reaches zero, fire it.  TASKGROUP
+// is the taskgroup any task spawned by DESCR should join.
+static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
+                                             kmp_taskgraph_exec_descr_t *descr,
+                                             kmp_taskgroup_t *taskgroup) {
+  kmp_int32 npredecessors = KMP_ATOMIC_DEC(&descr->npredecessors) - 1;
+  if (npredecessors > 0)
+    return;
+
+  switch (descr->region->type) {
+  case TASKGRAPH_REGION_NODE: {
+    // Spawn the task; its successors are triggered later, on completion, by
+    // __kmp_taskgraph_exec_descr_finish.
+    kmp_taskgraph_node_t *node = descr->region->task.node;
+    kmp_taskdata_t *current_taskdata = thread->th.th_current_task;
+    if (descr->region->mutexset)
+      __kmp_taskgraph_acquire_locks(gtid, descr->region->owner, descr->region);
+    __kmp_omp_tg_task(gtid, node->task, taskgroup, current_taskdata, false);
+    break;
+  }
+  case TASKGRAPH_REGION_PARALLEL:
+    if (descr->region->reduce_input) {
+      // If there are reductions associated with this parallel region, its
+      // members run in a taskgroup of their own, whose end combines the
+      // reductions into their original variables.
+      __kmpc_taskgroup(/*loc=*/nullptr, gtid);
+      kmp_taskgroup_t *members_taskgroup =
+          thread->th.th_current_task->td_taskgroup;
+      __kmp_task_reduction_init(
+          gtid, descr->region->reduce_input->reduce_num_data,
+          (struct kmp_taskred_input *)descr->region->reduce_input->reduce_data);
+      for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s;
+           s = s->next)
+        __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr,
+                                         members_taskgroup);
+      __kmpc_end_taskgroup(/*loc=*/nullptr, gtid);
+      for (kmp_taskgraph_exec_descr_elem_t *s = descr->join->successors; s;
+           s = s->next)
+        __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr,
+                                         taskgroup);
+      break;
+    }
+    KMP_FALLTHROUGH();
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next)
+      __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr, taskgroup);
+    break;
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT: {
+    // We don't expect to see any of these region types here.
+    abort();
+  }
+  }
+}
+
+// Called when DESCR's task completes: release its dataflow successors into the
+// same taskgroup the task ran in.  Returns true iff there were any successors.
+static bool
+__kmp_taskgraph_exec_descr_finish(kmp_int32 gtid, kmp_info_t *thread,
+                                  kmp_taskgraph_exec_descr_t *descr) {
+  KMP_DEBUG_ASSERT(descr->region->type == TASKGRAPH_REGION_NODE);
+  if (descr->region->mutexset)
+    __kmp_taskgraph_release_locks(gtid, descr->region->owner, descr->region);
+  kmp_task_t *task = descr->region->task.node->task;
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+  taskdata->td_flags.started = 0;
+  taskdata->td_flags.executing = 0;
+  taskdata->td_flags.complete = 0;
+  taskdata->td_flags.freed = 0;
+  bool any_successors = false;
+  for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next) {
+    any_successors = true;
+    __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr,
+                                     taskdata->td_taskgroup);
+  }
+  return any_successors;
+}
+#endif
+
 // Task Reduction implementation
 //
 // Note: initial implementation didn't take into account the possibility
@@ -2277,6 +2932,57 @@ void *__kmpc_taskred_init(int gtid, int num, void *data) {
   return __kmp_task_reduction_init(gtid, num, (kmp_taskred_input_t *)data);
 }
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+// The taskgraph record that a construct TASK encounters is recorded into, if
+// any: that of the innermost taskgroup being recorded, if TASK encountered its
+// taskgraph construct.  A task generated in the taskgraph region starts in the
+// region's taskgroup, but its region is not part of the taskgraph region
+// (OpenMP 6.0 [2], region) -- a replay runs it again, constructs and all -- so
+// nothing it encounters is recorded, a construct with a 'replayable' clause
+// included.  Nor can an outer record be TASK's if the innermost is not, since
+// TASK's own taskgroups are the innermost.
+static kmp_taskgraph_record_t *
+__kmp_taskgraph_task_recording(kmp_taskdata_t *task) {
+  for (kmp_taskgroup_t *taskgroup = task->td_taskgroup; taskgroup;
+       taskgroup = taskgroup->parent) {
+    kmp_taskgraph_record_t *rec =
+        KMP_ATOMIC_LD_ACQ(&taskgroup->taskgraph.recording);
+    if (rec)
+      return taskgroup->taskgraph.recording_task == task ? rec : nullptr;
+  }
+
+  return nullptr;
+}
+
+void *__kmpc_taskgraph_taskred_init(kmp_int32 gtid, kmp_int32 num, void *data) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec =
+      __kmp_taskgraph_task_recording(thread->th.th_current_task);
+
+  if (rec) {
+    kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
+    if (status == KMP_TDG_RECORDING) {
+      kmp_taskgraph_reduce_input_data_t *input_data =
+          (kmp_taskgraph_reduce_input_data_t *)__kmp_fast_allocate(
+              thread, sizeof(kmp_taskgraph_reduce_input_data_t));
+      // The compiler might build the reduction input data on the stack, so
+      // we must make a copy.
+      input_data->reduce_data =
+          __kmp_fast_allocate(thread, sizeof(kmp_taskred_input_t) * num);
+      KMP_MEMCPY(input_data->reduce_data, data,
+                 sizeof(kmp_taskred_input_t) * num);
+      ;
+      input_data->reduce_num_data = num;
+      taskgroup->taskgraph.reduce_input = input_data;
+    } else if (status == KMP_TDG_READY)
+      assert(false &&
+             "unexpected __kmpc_taskgraph_taskred_init with ready taskgraph");
+  }
+  return __kmp_task_reduction_init(gtid, num, (kmp_taskred_input_t *)data);
+}
+#endif
+
 // Copy task reduction data (except for shared pointers).
 template <typename T>
 void __kmp_task_reduction_init_copy(kmp_info_t *thr, int num, T *data,
@@ -2313,7 +3019,11 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
     return data; // nothing to do
 
   kmp_taskgroup_t *tg = (kmp_taskgroup_t *)tskgrp;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  if (tg == NULL || thread->th.th_current_task->owning_taskgraph)
+#else
   if (tg == NULL)
+#endif
     tg = thread->th.th_current_task->td_taskgroup;
   KMP_ASSERT(tg != NULL);
   kmp_taskred_data_t *arr;
@@ -2524,6 +3234,11 @@ void __kmpc_taskgroup(ident_t *loc, int gtid) {
   tg_new->reduce_data = NULL;
   tg_new->reduce_num_data = 0;
   tg_new->gomp_data = NULL;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  tg_new->taskgraph.recording = nullptr;
+  tg_new->taskgraph.recording_task = nullptr;
+  tg_new->taskgraph.reduce_input = nullptr;
+#endif
   taskdata->td_taskgroup = tg_new;
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -2679,6 +3394,23 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
       __kmp_task_reduction_fini(thread, taskgroup);
     }
   }
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  // The stash is normally adopted by the next node recorded in this taskgroup,
+  // which then owns it.  It can legitimately still be here: the construct that
+  // left it may have turned out not to be a replayable construct, in which
+  // case no node was recorded for it and nothing will come back for the stash.
+  // (A `replayable` clause whose argument is a compile-time constant is
+  // resolved by the compiler, which routes such a construct to the ordinary
+  // reduction init instead; this covers the non-constant case.)  No node can be
+  // recorded in a taskgroup that is ending, so free it here rather than leak.
+  if (taskgroup->taskgraph.reduce_input) {
+    __kmp_fast_free(thread, taskgroup->taskgraph.reduce_input->reduce_data);
+    __kmp_fast_free(thread, taskgroup->taskgraph.reduce_input);
+    taskgroup->taskgraph.reduce_input = nullptr;
+  }
+#endif
+
   // Restore parent taskgroup for the current task
   taskdata->td_taskgroup = taskgroup->parent;
   __kmp_thread_free(thread, taskgroup);
@@ -2694,6 +3426,48 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
   }
 #endif
 }
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+static void __kmp_replay_taskgraph(kmp_int32 gtid,
+                                   kmp_taskdata_t *current_taskdata,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_intptr_t graph_id,
+                                   kmp_taskgroup_t *taskgroup) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+
+  // An empty graph (no recorded task nodes) has nothing to replay.
+  // Bail out early.
+  if (taskgraph->num_tasks == 0)
+    return;
+
+  // Build the flat dataflow DAG once per taskgraph (cached on the record);
+  // re-arm the predecessor counters on every replay.
+  if (!taskgraph->exec_descrs) {
+    kmp_int32 num_descrs;
+    taskgraph->exec_descrs =
+        __kmp_build_exec_descrs(thread, taskgraph->root, &num_descrs);
+    taskgraph->num_exec_descrs = num_descrs;
+  }
+
+  kmp_taskgraph_exec_descr_t *exec_descrs = taskgraph->exec_descrs;
+  for (kmp_size_t i = 0; i < taskgraph->num_exec_descrs; i++) {
+    assert(exec_descrs[i].indegree >= 0);
+    exec_descrs[i].npredecessors = exec_descrs[i].indegree;
+  }
+
+  // Allocate all the mutexes that tasks (or target regions) need within the
+  // taskgraph.
+  if (taskgraph->num_mutexes > 0 && !taskgraph->node_mutexes) {
+    taskgraph->node_mutexes = (kmp_lock_t *)__kmp_thread_malloc(
+        thread, taskgraph->num_mutexes * sizeof(kmp_lock_t));
+    for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++)
+      __kmp_init_lock(&taskgraph->node_mutexes[i]);
+  }
+
+  __kmp_taskgraph_exec_descr_start(gtid, thread, taskgraph->exec_descrs,
+                                   taskgroup);
+}
+#endif
 
 static kmp_task_t *__kmp_get_priority_task(kmp_int32 gtid,
                                            kmp_task_team_t *task_team,
@@ -4287,7 +5061,12 @@ void __kmp_fulfill_event(kmp_event_t *event) {
 // taskloop_recur: used only when dealing with taskgraph,
 //      indicating whether we need to update task->td_task_id
 // returns:  a pointer to the allocated kmp_task_t structure (task).
-kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
+kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src
+#if OMP_TASKGRAPH_EXPERIMENTAL
+                                 ,
+                                 bool taskgraph
+#endif
+) {
   kmp_task_t *task;
   kmp_taskdata_t *taskdata;
   kmp_taskdata_t *taskdata_src = KMP_TASK_TO_TASKDATA(task_src);
@@ -4333,7 +5112,12 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
 
   // Only need to keep track of child task counts if team parallel and tasking
   // not serialized
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser ||
+        taskgraph)) {
+#else
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
+#endif
     KMP_ATOMIC_INC(&parent_task->td_incomplete_child_tasks);
     if (parent_task->td_taskgroup)
       KMP_ATOMIC_INC(&parent_task->td_taskgroup->count);
@@ -4466,6 +5250,48 @@ public:
   }
 };
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+kmp_taskgraph_node_t *
+__kmp_taskgraph_node_alloc(kmp_taskgraph_record_t *rec, kmp_task_t *task,
+                           kmp_size_t *index_p = nullptr) {
+  kmp_int32 gtid = rec->gtid;
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgraph_node_t *new_task = nullptr;
+
+  __kmp_acquire_lock(&rec->map_lock, gtid);
+
+  if (!rec->record_map) {
+    rec->nodes_allocated = 4;
+    rec->record_map = (kmp_taskgraph_node_t *)__kmp_thread_malloc(
+        thread, rec->nodes_allocated * sizeof(kmp_taskgraph_node_t));
+  }
+
+  if (rec->num_tasks >= rec->nodes_allocated) {
+    rec->record_map = (kmp_taskgraph_node_t *)__kmp_thread_realloc(
+        thread, rec->record_map,
+        2 * rec->nodes_allocated * sizeof(kmp_taskgraph_node_t));
+    rec->nodes_allocated *= 2;
+  }
+
+  new_task = &rec->record_map[rec->num_tasks];
+  if (index_p)
+    *index_p = rec->num_tasks;
+  ++rec->num_tasks;
+
+  __kmp_release_lock(&rec->map_lock, gtid);
+
+  new_task->task = task;
+  new_task->taskloop_task = false;
+  new_task->undeferred = false;
+  new_task->reduce_input = nullptr;
+  new_task->ndeps = 0;
+  new_task->dep_list = nullptr;
+  new_task->cfg_successor = -1;
+
+  return new_task;
+}
+#endif
+
 // __kmp_taskloop_linear: Start tasks of the taskloop linearly
 //
 // loc        Source location information
@@ -4482,15 +5308,21 @@ public:
 // tc         Iterations count
 // task_dup   Tasks duplication routine
 // codeptr_ra Return address for OMPT events
-void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
-                           kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
-                           kmp_uint64 ub_glob, kmp_uint64 num_tasks,
-                           kmp_uint64 grainsize, kmp_uint64 extras,
-                           kmp_int64 last_chunk, kmp_uint64 tc,
+static void
+__kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task, kmp_uint64 *lb,
+                      kmp_uint64 *ub, kmp_int64 st, kmp_int32 nogroup,
+                      kmp_uint64 ub_glob, kmp_uint64 num_tasks,
+                      kmp_uint64 grainsize, kmp_uint64 extras,
+                      kmp_int64 last_chunk, kmp_uint64 tc,
 #if OMPT_SUPPORT
-                           void *codeptr_ra,
+                      void *codeptr_ra,
 #endif
-                           void *task_dup) {
+                      void *task_dup
+#if OMP_TASKGRAPH_EXPERIMENTAL
+                      ,
+                      kmp_taskgraph_record_t *taskgraph_rec = nullptr
+#endif
+) {
   KMP_COUNT_BLOCK(OMP_TASKLOOP);
   KMP_TIME_PARTITIONED_BLOCK(OMP_taskloop_scheduling);
   p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
@@ -4503,6 +5335,9 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
   kmp_taskdata_t *current_task = thread->th.th_current_task;
   kmp_task_t *next_task;
   kmp_int32 lastpriv = 0;
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  kmp_int32 taskloop_prev_idx = -1, taskloop_first_idx = -1;
+#endif
 
   KMP_DEBUG_ASSERT(tc == num_tasks * grainsize +
                              (last_chunk < 0 ? last_chunk : extras));
@@ -4543,7 +5378,11 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
       }
     }
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    next_task = __kmp_task_dup_alloc(thread, task, /*taskgraph=*/taskgraph_rec);
+#else
     next_task = __kmp_task_dup_alloc(thread, task); // allocate new task
+#endif
 
     kmp_taskdata_t *next_taskdata = KMP_TASK_TO_TASKDATA(next_task);
     kmp_taskloop_bounds_t next_task_bounds =
@@ -4565,24 +5404,75 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
               gtid, i, next_task, lower, upper, st,
               next_task_bounds.get_lower_offset(),
               next_task_bounds.get_upper_offset()));
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    if (taskgraph_rec) {
+      kmp_size_t rec_index = -1;
+      // Record the task in the taskgraph.
+      kmp_taskgraph_node_t *node =
+          __kmp_taskgraph_node_alloc(taskgraph_rec, next_task, &rec_index);
+      kmp_taskgroup_t *taskgroup = current_task->td_taskgroup;
+      if (taskgroup->taskgraph.reduce_input) {
+        node->reduce_input = taskgroup->taskgraph.reduce_input;
+        taskgroup->taskgraph.reduce_input = nullptr;
+      }
+      node->taskloop_task = true;
+      next_taskdata->owning_taskgraph = taskgraph_rec;
+      // FIXME: These dependency fields might be back-filled by the as-yet
+      // unimplemented task_iteration subsidiary directive.  We'll need a way
+      // to locate the correct task given the value of the iteration variable,
+      // or similar.
+      node->ndeps = 0;
+      node->dep_list = nullptr;
+      if (nogroup)
+        taskgraph_rec->record_map[rec_index].cfg_successor = -1;
+      else if (taskloop_prev_idx != -1)
+        taskgraph_rec->record_map[taskloop_prev_idx].cfg_successor = rec_index;
+      if (taskloop_first_idx == -1)
+        taskloop_first_idx = rec_index;
+      taskloop_prev_idx = rec_index;
+    } else {
+#endif
 #if OMPT_SUPPORT
-    __kmp_omp_taskloop_task(NULL, gtid, next_task,
-                            codeptr_ra); // schedule new task
+      __kmp_omp_taskloop_task(NULL, gtid, next_task,
+                              codeptr_ra); // schedule new task
 #if OMPT_OPTIONAL
-    if (ompt_enabled.ompt_callback_dispatch) {
-      OMPT_GET_DISPATCH_CHUNK(next_taskdata->ompt_task_info.dispatch_chunk,
-                              lower, upper, st);
-    }
+      if (ompt_enabled.ompt_callback_dispatch) {
+        OMPT_GET_DISPATCH_CHUNK(next_taskdata->ompt_task_info.dispatch_chunk,
+                                lower, upper, st);
+      }
 #endif // OMPT_OPTIONAL
 #else
     __kmp_omp_task(gtid, next_task, true); // schedule new task
 #endif
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    }
+#endif
     lower = upper + st; // adjust lower bound for the next iteration
   }
-  // free the pattern task and exit
-  __kmp_task_start(gtid, task, current_task); // make internal bookkeeping
-  // do not execute the pattern task, just do internal bookkeeping
-  __kmp_task_finish<false>(gtid, task, current_task);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  if (taskgraph_rec) {
+    if (taskloop_prev_idx != -1 && !nogroup) {
+      // Create a node to act as an "end group" marker.
+      kmp_size_t endgroup_idx = -1;
+      kmp_taskgraph_node_t *endgrpnode =
+          __kmp_taskgraph_node_alloc(taskgraph_rec, nullptr, &endgroup_idx);
+      endgrpnode->taskloop_task = true;
+      // Point all the cfg_successor indices to this node now.
+      for (kmp_int32 looptask = taskloop_first_idx; looptask != -1;) {
+        kmp_int32 next_task = taskgraph_rec->record_map[looptask].cfg_successor;
+        taskgraph_rec->record_map[looptask].cfg_successor = endgroup_idx;
+        looptask = next_task;
+      }
+    }
+  } else {
+#endif
+    // free the pattern task and exit
+    __kmp_task_start(gtid, task, current_task); // make internal bookkeeping
+    // do not execute the pattern task, just do internal bookkeeping
+    __kmp_task_finish<false>(gtid, task, current_task);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  }
+#endif
 }
 
 // Structure to keep taskloop parameters for auxiliary task
@@ -4652,8 +5542,8 @@ int __kmp_taskloop_task(int gtid, void *ptask) {
 #endif
                          task_dup);
   else
-    __kmp_taskloop_linear(NULL, gtid, task, lb, ub, st, ub_glob, num_tasks,
-                          grainsize, extras, last_chunk, tc,
+    __kmp_taskloop_linear(NULL, gtid, task, lb, ub, st, /*nogroup=*/true,
+                          ub_glob, num_tasks, grainsize, extras, last_chunk, tc,
 #if OMPT_SUPPORT
                           codeptr_ra,
 #endif
@@ -4741,7 +5631,11 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   lb1 = ub0 + st;
 
   // create pattern task for 2nd half of the loop
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  next_task = __kmp_task_dup_alloc(thread, task, /*taskgraph=*/false);
+#else
   next_task = __kmp_task_dup_alloc(thread, task); // duplicate the task
+#endif
   // adjust lower bound (upper bound is not changed) for the 2nd half
   *(kmp_uint64 *)((char *)next_task + lower_offset) = lb1;
   if (ptask_dup != NULL) // construct firstprivates, etc.
@@ -4774,6 +5668,11 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   p->codeptr_ra = codeptr_ra;
 #endif
 
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  kmp_taskdata_t *new_task_data = KMP_TASK_TO_TASKDATA(new_task);
+  new_task_data->owning_taskgraph = nullptr;
+#endif
+
 #if OMPT_SUPPORT
   // schedule new task with correct return address for OMPT events
   __kmp_omp_taskloop_task(NULL, gtid, new_task, codeptr_ra);
@@ -4790,8 +5689,8 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 #endif
                          task_dup);
   else
-    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, ub_glob, n_tsk0,
-                          gr_size0, ext0, last_chunk0, tc0,
+    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, /*nogroup=*/true,
+                          ub_glob, n_tsk0, gr_size0, ext0, last_chunk0, tc0,
 #if OMPT_SUPPORT
                           codeptr_ra,
 #endif
@@ -4803,14 +5702,22 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
                            kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
                            int nogroup, int sched, kmp_uint64 grainsize,
-                           int modifier, void *task_dup) {
+                           int modifier, void *task_dup
+#if OMP_TASKGRAPH_EXPERIMENTAL
+                           ,
+                           kmp_taskgraph_record_t *taskgraph_rec = nullptr
+#endif
+) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   KMP_DEBUG_ASSERT(task != NULL);
   if (nogroup == 0) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
     OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
-    __kmpc_taskgroup(loc, gtid);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    if (!taskgraph_rec)
+#endif
+      __kmpc_taskgroup(loc, gtid);
   }
   // =========================================================================
   // calculate loop parameters
@@ -4842,17 +5749,27 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   }
   if (tc == 0) {
     KA_TRACE(20, ("__kmp_taskloop(exit): T#%d zero-trip loop\n", gtid));
-    // free the pattern task and exit
-    __kmp_task_start(gtid, task, current_task);
-    // do not execute anything for zero-trip loop
-    __kmp_task_finish<false>(gtid, task, current_task);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    if (!taskgraph_rec) {
+#endif
+      // free the pattern task and exit
+      __kmp_task_start(gtid, task, current_task);
+      // do not execute anything for zero-trip loop
+      __kmp_task_finish<false>(gtid, task, current_task);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    }
+#endif
     return;
   }
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
   ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  if (ompt_enabled.ompt_callback_work && !taskgraph_rec) {
+#else
   if (ompt_enabled.ompt_callback_work) {
+#endif
     ompt_callbacks.ompt_callback(ompt_callback_work)(
         ompt_work_taskloop, ompt_scope_begin, &(team_info->parallel_data),
         &(task_info->task_data), tc, OMPT_GET_RETURN_ADDRESS(0));
@@ -4909,14 +5826,31 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   KMP_DEBUG_ASSERT(num_tasks > 0);
   // =========================================================================
 
-  // check if clause value first
-  // Also require GOMP_taskloop to reduce to linear (taskdata->td_flags.native)
-  if (if_val == 0) { // if(0) specified, mark task as serial
+#if OMP_TASKGRAPH_EXPERIMENTAL
+  // Handle taskgraph case first.  We just generate tasks and record them in
+  // the graph, but we do not execute them here.
+  if (taskgraph_rec) {
+    if (if_val == 0) {
+      taskdata->td_flags.task_serial = 1;
+      taskdata->td_flags.tiedness = TASK_TIED;
+    }
+    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, nogroup, ub_glob,
+                          num_tasks, grainsize, extras, last_chunk, tc,
+#if OMPT_SUPPORT
+                          OMPT_GET_RETURN_ADDRESS(0),
+#endif
+                          task_dup, taskgraph_rec);
+    // check if clause value next
+    // Also require GOMP_taskloop to reduce to linear
+    // (taskdata->td_flags.native)
+  } else
+#endif
+      if (if_val == 0) { // if(0) specified, mark task as serial
     taskdata->td_flags.task_serial = 1;
     taskdata->td_flags.tiedness = TASK_TIED; // AC: serial task cannot be untied
     // always start serial tasks linearly
-    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, ub_glob, num_tasks,
-                          grainsize, extras, last_chunk, tc,
+    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, nogroup, ub_glob,
+                          num_tasks, grainsize, extras, last_chunk, tc,
 #if OMPT_SUPPORT
                           OMPT_GET_RETURN_ADDRESS(0),
 #endif
@@ -4939,8 +5873,8 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
                   "(%lld), grain %llu, extras %llu, last_chunk %lld\n",
                   gtid, tc, num_tasks, num_tasks_min, grainsize, extras,
                   last_chunk));
-    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, ub_glob, num_tasks,
-                          grainsize, extras, last_chunk, tc,
+    __kmp_taskloop_linear(loc, gtid, task, lb, ub, st, nogroup, ub_glob,
+                          num_tasks, grainsize, extras, last_chunk, tc,
 #if OMPT_SUPPORT
                           OMPT_GET_RETURN_ADDRESS(0),
 #endif
@@ -4959,7 +5893,10 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 #if OMPT_SUPPORT && OMPT_OPTIONAL
     OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
-    __kmpc_end_taskgroup(loc, gtid);
+#if OMP_TASKGRAPH_EXPERIMENTAL
+    if (!taskgraph_rec)
+#endif
+      __kmpc_end_taskgroup(loc, gtid);
   }
   KA_TRACE(20, ("__kmp_taskloop(exit): T#%d\n", gtid));
 }
@@ -5059,3 +5996,510 @@ bool __kmpc_omp_has_task_team(kmp_int32 gtid) {
 
   return taskdata->td_task_team != NULL;
 }
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+
+// Reset a taskgraph record so that it can be reused without allocating a fresh
+// one.  The KEEP_RECYCLED_DEPS flag can be set to reuse the previous record's
+// recycled dep list into the new record.
+static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
+                                  kmp_intptr_t graph_id,
+                                  bool keep_recycled_deps = false) {
+  rec->status = KMP_TDG_RECORDING;
+  rec->gtid = gtid;
+  rec->graph_id = graph_id;
+  rec->record_map = nullptr;
+  rec->alloc_root = nullptr;
+  // A reused record was only handed back because it had no users left, and a
+  // fresh one is raw memory, so this is an initialisation either way.
+  KMP_ATOMIC_ST_RLX(&rec->replay_users, 0);
+  rec->expired = false;
+  if (!keep_recycled_deps)
+    rec->recycled_deps = nullptr;
+  rec->num_tasks = 0;
+  rec->nodes_allocated = 0;
+  rec->num_mutexes = 0;
+  rec->node_mutexes = nullptr;
+  rec->exec_descrs = nullptr;
+  rec->num_exec_descrs = 0;
+  rec->next = nullptr;
+}
+
+static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
+                                                     kmp_intptr_t graph_id) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgraph_record_t *new_rec =
+      (kmp_taskgraph_record_t *)__kmp_fast_allocate(
+          thread, sizeof(kmp_taskgraph_record_t));
+  __kmp_init_lock(&new_rec->map_lock);
+  __kmp_taskgraph_reset(new_rec, gtid, graph_id,
+                        /*keep_recycled_deps=*/false);
+  return new_rec;
+}
+
+// Recursively release metadata hanging off a taskgraph region (owned by the
+// region).  The RECYCLED pointer is used to gather dependency-edge lists from
+// any irreducible regions found within.
+static void
+__kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
+                                     kmp_taskgraph_region_t *region,
+                                     kmp_taskgraph_region_dep_t **recycled) {
+  if (recycled) {
+    __kmp_region_deplist_recycle(recycled, region->predecessors);
+    __kmp_region_deplist_recycle(recycled, region->successors);
+  } else {
+    __kmp_region_deplist_free(thread, region->predecessors);
+    __kmp_region_deplist_free(thread, region->successors);
+  }
+  region->predecessors = nullptr;
+  region->successors = nullptr;
+  if (region->reduce_input) {
+    __kmp_fast_free(thread, region->reduce_input->reduce_data);
+    __kmp_fast_free(thread, region->reduce_input);
+  }
+  if (region->mutexset) {
+    __kmp_fast_free(thread, region->mutexset);
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_NODE:
+    break;
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    for (int k = 0; k < region->inner.num_children; k++) {
+      __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k],
+                                           recycled);
+    }
+    break;
+  }
+  default:
+    assert(false && "unreachable");
+  }
+}
+
+static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
+                                 bool keep_rec = false) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+
+  if (__kmp_taskgraph_check_lifetime()) {
+    int users = KMP_ATOMIC_LD_ACQ(&rec->replay_users);
+    if (users != 0)
+      fprintf(stderr,
+              "taskgraph lifetime check: tearing down record %p with %d "
+              "replay user(s) still attached\n",
+              rec, users);
+  }
+
+  if (rec->root)
+    __kmp_taskgraph_free_region_metadata(
+        thread, rec->root, keep_rec ? &rec->recycled_deps : nullptr);
+
+  for (size_t task = 0; task < rec->num_tasks; task++) {
+    // Skip entries that don't have an associated task (e.g. taskwait nodes
+    // recorded by __kmpc_taskgraph_taskwait).
+    if (rec->record_map[task].task == nullptr)
+      continue;
+    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(rec->record_map[task].task);
+    // Setting this here keeps an assertion in __kmp_free_task happy: the
+    // clone may never have been replayed, in which case 'complete' will be
+    // zero here, as initialized.
+    taskdata->td_flags.complete = 1;
+    // We never decrement td_allocated_child_tasks for taskgraph tasks.  This
+    // keeps another assertion happy in __kmp_free_task.
+    KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 0);
+    __kmp_free_task(gtid, taskdata, thread);
+  }
+  if (rec->record_map)
+    __kmp_thread_free(thread, rec->record_map);
+
+  // This loop frees region storage only: any linked data has already been freed
+  // by __kmp_taskgraph_free_region_metadata above.
+  kmp_taskgraph_region_t *region = rec->alloc_root;
+  while (region) {
+    kmp_taskgraph_region_t *next_region = region->alloc_chain;
+    __kmp_fast_free(thread, region);
+    region = next_region;
+  }
+
+  if (rec->exec_descrs)
+    __kmp_thread_free(thread, rec->exec_descrs);
+
+  if (rec->node_mutexes) {
+    for (int i = 0; i < rec->num_mutexes; i++)
+      __kmp_destroy_lock(&rec->node_mutexes[i]);
+    __kmp_thread_free(thread, rec->node_mutexes);
+  }
+
+  if (!keep_rec) {
+    __kmp_destroy_lock(&rec->map_lock);
+    __kmp_fast_free(thread, rec);
+  }
+}
+
+static kmp_taskgraph_header_t *__kmp_taskgraph_header_alloc(kmp_int32 gtid) {
+  kmp_taskgraph_header_t *new_hdr =
+      (kmp_taskgraph_header_t *)__kmp_allocate(sizeof(kmp_taskgraph_header_t));
+  new_hdr->first = nullptr;
+  new_hdr->expiring = nullptr;
+  __kmp_init_lock(&new_hdr->header_lock);
+  return new_hdr;
+}
+
+// Clone a (new) task that has had its private variables and shared variables
+// initialised already.
+static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
+                                              kmp_taskgraph_record_t *taskgraph,
+                                              kmp_task_t *orig,
+                                              size_t sizeof_kmp_task_t,
+                                              size_t sizeof_shareds) {
+  // FIXME: This should use a "taskdup" function like taskloops in cases where
+  // private variables are not trivially copyable.  For now, do it by plain
+  // bitwise copy.
+  // FIXME 2: It's intended that this copy be persistent, and can be
+  // re-executed on taskgraph replay.  Make sure that works (for shared
+  // variables) if stack addresses change (i.e. a task-generating function is
+  // called from different call stack depths).
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(orig);
+  size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
+  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
+  kmp_taskdata_t *copy_td = (kmp_taskdata_t *)__kmp_fast_allocate(
+      thread, shareds_offset + sizeof_shareds);
+  KMP_MEMCPY(copy_td, taskdata, shareds_offset + sizeof_shareds);
+  // Tasks cloned for a taskgraph always have this field set.
+  copy_td->owning_taskgraph = taskgraph;
+  kmp_task_t *copy_task = KMP_TASKDATA_TO_TASK(copy_td);
+  if (orig->shareds) {
+    // New task's shared data has now moved.  Update the pointer.
+    copy_task->shareds = (void *)((char *)copy_td + shareds_offset);
+  }
+  KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
+  return KMP_TASKDATA_TO_TASK(copy_td);
+}
+
+// Go through list of taskgraph records and free any that are no longer being
+// executed.  For now, this just frees everything in the list immediately: when
+// multiple concurrent playbacks are implemented, it should only free records
+// with zero usage counts.
+//
+// When available (and if WANT_REUSE is true), a kmp_taskgraph_record_t
+// structure is returned for reuse by a subsequent taskgraph recording.
+
+static kmp_taskgraph_record_t *__kmp_expire_taskgraph_records(
+    kmp_int32 gtid, kmp_taskgraph_record_t **expiring_p, bool want_reuse) {
+  kmp_taskgraph_record_t *record = nullptr;
+
+  while (*expiring_p) {
+    kmp_taskgraph_record_t *expiring = *expiring_p;
+    if (KMP_ATOMIC_LD_ACQ(&expiring->replay_users) != 0) {
+      if (__kmp_taskgraph_check_lifetime())
+        fprintf(stderr,
+                "taskgraph lifetime check: deferring record %p with %d "
+                "replay user(s)\n",
+                expiring, KMP_ATOMIC_LD_ACQ(&expiring->replay_users));
+      expiring_p = &expiring->next;
+      continue;
+    }
+    *expiring_p = expiring->next;
+    if (want_reuse && !record) {
+      record = expiring;
+      __kmp_taskgraph_free(gtid, record, /*keep_rec=*/true);
+    } else {
+      __kmp_taskgraph_free(gtid, expiring, /*keep_rec=*/false);
+    }
+  }
+
+  return record;
+}
+
+// Format LOC_REF as "file:line:col" for a user-facing message.  The caller
+// frees the result with __kmp_str_free.
+static char *__kmp_taskgraph_src_loc(ident_t *loc_ref) {
+  if (!loc_ref || !loc_ref->psource)
+    return __kmp_str_format("unknown");
+  kmp_str_loc_t str_loc = __kmp_str_loc_init(loc_ref->psource, false);
+  char *src_loc =
+      __kmp_str_format("%s:%d:%d", str_loc.file, str_loc.line, str_loc.col);
+  __kmp_str_loc_free(&str_loc);
+  return src_loc;
+}
+
+// __kmpc_taskgraph: record or replay taskgraph
+// loc_ref:     Location of TDG, not used yet
+// gtid:        Global Thread ID of the encountering thread
+// tdg_handle:  Handle of taskgraph -- the address of a slot in the host
+//              program that we write the taskgraph (list) pointer back to.
+// graph_id:    Graph ID for the taskgraph.
+// graph_reset: 1 to reset taskgraph for this taskgraph/graph_id, 0 to replay
+//              (or record, initially).
+// nogroup:     1 to omit implicit taskgroup, 0 to include it.
+// entry:       Pointer to the entry function
+// args:        Pointer to the function arguments
+void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
+                      std::atomic<void *> *tdg_handle, uintptr_t graph_id,
+                      kmp_int32 graph_reset, kmp_int32 nogroup,
+                      void (*entry)(void *), void *args) {
+  kmp_taskgraph_header_t *header =
+      (kmp_taskgraph_header_t *)KMP_ATOMIC_LD_ACQ(tdg_handle);
+  kmp_taskgraph_record_t *record = nullptr, **record_p = nullptr;
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup;
+
+  __kmpc_taskgroup(loc_ref, gtid);
+
+  taskgroup = thread->th.th_current_task->td_taskgroup;
+
+  if (!header) {
+    header = __kmp_taskgraph_header_alloc(gtid);
+    // Another thread may have allocated the header at the same time.  Grab
+    // their copy if so and forget ours.
+    kmp_taskgraph_header_t *other =
+        (kmp_taskgraph_header_t *)KMP_COMPARE_AND_STORE_RET64(tdg_handle,
+                                                              nullptr, header);
+    if (other != nullptr) {
+      __kmp_free(header);
+      header = other;
+    }
+  }
+
+  __kmp_acquire_lock(&header->header_lock, gtid);
+  for (record_p = &header->first; *record_p; record_p = &((*record_p)->next))
+    if ((*record_p)->graph_id == graph_id)
+      break;
+  record = *record_p;
+  kmp_taskgraph_record_t *reuse_record = nullptr;
+  if (record && graph_reset) {
+    kmp_taskgraph_status_t old_status = KMP_ATOMIC_LD_ACQ(&record->status);
+    // Sanity check: if the graph is not ready, it means another thread is
+    // already performing a record operation for this taskgraph/graph_id.
+    // That's likely a bug, so fail with an error.
+    if (old_status != KMP_TDG_READY) {
+      char *src_loc = __kmp_taskgraph_src_loc(loc_ref);
+      KMP_FATAL(OmpTaskgraphConcurrentRecord, src_loc, graph_id);
+      __kmp_str_free(&src_loc);
+    }
+    // Move the existing record to the header's expiring list.  It can't be used
+    // for new replays from here on.
+    record->expired = true;
+    *record_p = record->next;
+    record->next = header->expiring;
+    header->expiring = record;
+    reuse_record = __kmp_expire_taskgraph_records(gtid, &header->expiring,
+                                                  /*want_reuse=*/true);
+    record = nullptr;
+  }
+  if (!record) {
+    if (reuse_record) {
+      record = reuse_record;
+      __kmp_taskgraph_reset(record, gtid, graph_id,
+                            /*keep_recycled_deps=*/true);
+    } else
+      record = __kmp_taskgraph_alloc(gtid, graph_id);
+    // We record 'nogroup' here.  We always create a group for recording the
+    // taskgraph, but we could avoid doing so for replay.  That's not done
+    // yet though.
+    record->nogroup_taskgroup = nogroup;
+    record->next = header->first;
+    header->first = record;
+    // Store our taskgraph record into the taskgraph directive's implicit
+    // taskgroup.
+    taskgroup->taskgraph.recording_task = thread->th.th_current_task;
+    KMP_ATOMIC_ST_REL(&taskgroup->taskgraph.recording, record);
+  }
+  // Decide between recording and replaying while the header lock is still
+  // held, and increment the usage count if we're going to replay.
+  kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&record->status);
+  if (status == KMP_TDG_READY)
+    KMP_ATOMIC_INC(&record->replay_users);
+  __kmp_release_lock(&header->header_lock, gtid);
+
+  if (status == KMP_TDG_RECORDING)
+    entry(args);
+  else if (status == KMP_TDG_READY) {
+    kmp_taskdata *current_taskdata = thread->th.th_current_task;
+    if (!record) {
+      if (__kmp_taskgraph_trace())
+        fprintf(stderr, "Skipping replay of empty taskgraph from task %p\n",
+                KMP_TASKDATA_TO_TASK(current_taskdata));
+      return;
+    }
+    if (__kmp_taskgraph_trace())
+      fprintf(stderr, "Replay taskgraph %p from task %p\n", record,
+              KMP_TASKDATA_TO_TASK(current_taskdata));
+    __kmp_acquire_lock(&record->map_lock, gtid);
+    __kmp_replay_taskgraph(gtid, current_taskdata, record, graph_id, taskgroup);
+    __kmpc_end_taskgroup(loc_ref, gtid);
+    __kmp_release_lock(&record->map_lock, gtid);
+    // Decrement usage count and expire our record if it was 'graph_reset' by
+    // some thread during this replay.
+    if (KMP_ATOMIC_DEC(&record->replay_users) == 1) {
+      __kmp_acquire_lock(&header->header_lock, gtid);
+      __kmp_expire_taskgraph_records(gtid, &header->expiring,
+                                     /*want_reuse=*/false);
+      __kmp_release_lock(&header->header_lock, gtid);
+    }
+    return;
+  }
+
+  __kmpc_end_taskgroup(loc_ref, gtid);
+
+  // This could perhaps be spawned as a separate task in order to avoid
+  // blocking this thread.
+  if (record->gtid == gtid) {
+    kmp_taskdata *current_taskdata = thread->th.th_current_task;
+    __kmp_build_taskgraph(gtid, current_taskdata, record);
+  }
+}
+
+kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
+                                 kmp_task_t *new_task, kmp_int32 flags,
+                                 size_t sizeof_kmp_task_t,
+                                 size_t sizeof_shareds, kmp_int32 ndeps,
+                                 kmp_depend_info_t *dep_list,
+                                 kmp_task_relocate_t relocate, void *task_dup) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec =
+      __kmp_taskgraph_task_recording(thread->th.th_current_task);
+
+  if (rec) {
+    kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
+    if (status == KMP_TDG_RECORDING) {
+      // OpenMP 6.0 [14.3]: a detachable task must not be a replayable task in
+      // a taskgraph region.  Its completion event is created when the task is
+      // generated, and a replay does not generate the task again, so there
+      // would be no event for the program to fulfil and the node would never
+      // complete.  Clang rejects the lexically-nested case outright; this
+      // catches a replayable(cond) construct that reached a recording
+      // dynamically, which it cannot see.
+      if (KMP_TASK_TO_TASKDATA(new_task)->td_flags.detachable ==
+          TASK_DETACHABLE) {
+        char *src_loc = __kmp_taskgraph_src_loc(loc_ref);
+        KMP_FATAL(OmpTaskgraphDetachableTask, src_loc);
+        __kmp_str_free(&src_loc);
+      }
+      kmp_task_t *cloned_task = __kmp_taskgraph_clone_task(
+          thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds);
+      kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, cloned_task);
+      if (taskgroup->taskgraph.reduce_input) {
+        node->reduce_input = taskgroup->taskgraph.reduce_input;
+        taskgroup->taskgraph.reduce_input = nullptr;
+      }
+#if defined(DEBUG_TASKGRAPH)
+      fprintf(stderr, "__kmpc_taskgraph_task: record task here!\n");
+      fprintf(stderr, "private size: %d, shared size: %d\n",
+              (int)(sizeof_kmp_task_t - sizeof(kmp_task_t)),
+              (int)sizeof_shareds);
+      fprintf(stderr, "ndeps: %d\n", (int)ndeps);
+      fprintf(stderr, "gtid: %d rec->gtid: %d\n", gtid, rec->gtid);
+      fprintf(stderr, "taskgroup: %p\n",
+              thread->th.th_current_task->td_taskgroup);
+      kmp_taskdata_t *parent = thread->th.th_current_task->td_parent;
+      while (parent) {
+        fprintf(stderr, "  parent: %p (taskgroup %p)\n", parent,
+                parent->td_taskgroup);
+        parent = parent->td_parent;
+      }
+#endif
+      node->ndeps = ndeps;
+      node->dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
+          thread, ndeps * sizeof(kmp_depend_info_t));
+      KMP_MEMCPY(node->dep_list, dep_list, ndeps * sizeof(kmp_depend_info_t));
+    } else if (status == KMP_TDG_READY) {
+#ifdef DEBUG_TASKGRAPH
+      fprintf(stderr,
+              "non-taskgraph task entry point for task in finalized taskgraph");
+#endif
+      return 0;
+    }
+  } else {
+    kmp_taskdata_t *parent = thread->th.th_current_task->td_parent;
+    while (parent) {
+      parent = parent->td_parent;
+    }
+  }
+
+  kmp_int32 res;
+  if (ndeps == 0)
+    res = __kmpc_omp_task(loc_ref, gtid, new_task);
+  else
+    res = __kmpc_omp_task_with_deps(loc_ref, gtid, new_task, ndeps, dep_list, 0,
+                                    nullptr);
+
+  return res;
+}
+
+void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
+                               kmp_int32 ndeps, kmp_depend_info_t *dep_list,
+                               kmp_int32 has_no_wait) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgraph_record_t *rec =
+      __kmp_taskgraph_task_recording(thread->th.th_current_task);
+
+  if (rec) {
+    kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
+    if (status == KMP_TDG_RECORDING) {
+      kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, nullptr);
+#ifdef DEBUG_TASKGRAPH
+      fprintf(stderr, "__kmpc_taskgraph_taskwait: record taskwait here!\n");
+      fprintf(stderr, "ndeps: %d\n", (int)ndeps);
+#endif
+      // Without `nowait` this generates an undeferred (included) task, so it
+      // is a barrier for everything recorded after it rather than a pure
+      // dependence point.
+      node->undeferred = !has_no_wait;
+      node->ndeps = ndeps;
+      node->dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
+          thread, ndeps * sizeof(kmp_depend_info_t));
+      KMP_MEMCPY(node->dep_list, dep_list, ndeps * sizeof(kmp_depend_info_t));
+    } else if (status == KMP_TDG_READY) {
+#ifdef DEBUG_TASKGRAPH
+      fprintf(stderr, "non-taskgraph taskwait entry point for taskwait in "
+                      "finalized taskgraph\n");
+#endif
+      return;
+    }
+  }
+
+  __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
+                              has_no_wait);
+}
+
+kmp_uint32 __kmpc_taskgraph_taskloop(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 flags,
+    kmp_int32 if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
+    kmp_int32 nogroup, kmp_int32 sched, kmp_uint64 grainsize,
+    kmp_int32 modifier, void *task_dup, kmp_task_relocate_t relocate) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgraph_record_t *rec =
+      __kmp_taskgraph_task_recording(thread->th.th_current_task);
+
+  if (rec) {
+    kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
+    if (status == KMP_TDG_RECORDING)
+      __kmp_taskloop(loc_ref, gtid, new_task, if_val, lb, ub, st, nogroup,
+                     sched, grainsize, modifier, task_dup, rec);
+    else if (status == KMP_TDG_READY) {
+#ifdef DEBUG_TASKGRAPH
+      fprintf(stderr, "non-taskgraph taskloop entry point for taskloop in "
+                      "finalized taskgraph\n");
+#endif
+      return 0;
+    }
+  }
+
+  // For 'nogroup' here, we pass TRUE because this entry point does want to
+  // know if we originally had the 'nogroup' clause or not -- but the group is
+  // created using separate API calls wrapping this one (or __kmpc_taskloop).
+  // We don't want to create another taskgroup in __kmp_taskloop here in any
+  // case.
+  __kmp_taskloop(loc_ref, gtid, new_task, if_val, lb, ub, st, /*nogroup=*/true,
+                 sched, grainsize, modifier, task_dup);
+
+  return 0;
+}
+
+#endif
