@@ -542,11 +542,9 @@ define <8 x i16> @rhaddu_const_lhs(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: rhaddu_const_lhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.4s, #1
+; CHECK-GI-NEXT:    movi v1.4s, #2
 ; CHECK-GI-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    add v2.4s, v2.4s, v1.4s
-; CHECK-GI-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
 ; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
 ; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
 ; CHECK-GI-NEXT:    ret
@@ -787,11 +785,9 @@ define <8 x i16> @rhadds_const_lhs(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: rhadds_const_lhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.4s, #1
+; CHECK-GI-NEXT:    movi v1.4s, #2
 ; CHECK-GI-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    saddw2 v0.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    add v2.4s, v2.4s, v1.4s
-; CHECK-GI-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
 ; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
 ; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
 ; CHECK-GI-NEXT:    ret
