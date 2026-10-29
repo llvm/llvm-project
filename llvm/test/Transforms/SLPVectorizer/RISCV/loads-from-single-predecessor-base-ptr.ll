@@ -10,12 +10,12 @@ define i32 @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 7, i64 1>
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[TMP2]], <2 x i1> splat (i1 true), <2 x i32> poison)
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[L2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[G1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> zeroinitializer, <2 x i32> [[TMP5]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP7]], 0
