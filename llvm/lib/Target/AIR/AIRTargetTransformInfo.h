@@ -77,8 +77,9 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override {
     return TypeSize::getFixed(32);
   }
-  // (calls are expensive: kernels are inlined into one function)
-  unsigned getInliningThresholdMultiplier() const override { return 11; }
+  // Portable AIR leaves inlining big functions to its consumers (the AGX
+  // backend inlines everything, the Metal pipeline keeps large shared
+  // functions as calls): the default threshold here.
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override {
     return 128;
   }
