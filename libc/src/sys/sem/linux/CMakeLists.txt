@@ -1,18 +1,4 @@
 add_entrypoint_object(
-  semget
-  SRCS
-    semget.cpp
-  HDRS
-    ../semget.h
-  DEPENDS
-    libc.hdr.types.key_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   semctl
   SRCS
     semctl.cpp
@@ -24,6 +10,21 @@ add_entrypoint_object(
     libc.hdr.sys_sem_macros
     libc.hdr.types.struct_semid_ds
     libc.hdr.types.struct_seminfo
+    libc.src.__support.OSUtil.linux.syscall_wrappers.semctl
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  semget
+  SRCS
+    semget.cpp
+  HDRS
+    ../semget.h
+  DEPENDS
+    libc.hdr.types.key_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
