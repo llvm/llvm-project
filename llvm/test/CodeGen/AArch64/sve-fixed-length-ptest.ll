@@ -12,12 +12,13 @@ define i1 @ptest_v16i1_256bit_min_sve(ptr %a, ptr %b) vscale_range(2, 0) {
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    umaxv b0, v1.16b
+; CHECK-NEXT:    orv b0, p0, z1.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -34,9 +35,10 @@ define i1 @ptest_v16i1_512bit_min_sve(ptr %a, ptr %b) vscale_range(4, 0) {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -53,9 +55,10 @@ define i1 @ptest_v16i1_512bit_sve(ptr %a, ptr %b) vscale_range(4, 4) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -75,9 +78,10 @@ define i1 @ptest_or_v16i1_512bit_min_sve(ptr %a, ptr %b) vscale_range(4, 0) {
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
 ; CHECK-NEXT:    mov p0.b, p1/m, p1.b
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -105,9 +109,10 @@ define i1 @ptest_and_v16i1_512bit_sve(ptr %a, ptr %b) vscale_range(4, 4) {
 ; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -130,9 +135,10 @@ define i1 @ptest_and_v16i1_512bit_min_sve(ptr %a, ptr %b) vscale_range(4, 0) {
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret

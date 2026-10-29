@@ -32,7 +32,7 @@ define i1 @ptest_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    umaxv b0, p0, z0.b
+; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -163,7 +163,7 @@ define i1 @ptest_or_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    orr z0.d, z2.d, z0.d
-; CHECK-NEXT:    umaxv b0, p0, z0.b
+; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -372,7 +372,7 @@ define i1 @ptest_and_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    and z0.d, z2.d, z0.d
-; CHECK-NEXT:    uminv b0, p0, z0.b
+; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret

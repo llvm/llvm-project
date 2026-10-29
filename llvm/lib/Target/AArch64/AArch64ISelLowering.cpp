@@ -22860,6 +22860,33 @@ perfomPextFirstTrueVectorCombine(SDNode *N,
   return getSETCC(AArch64CC::CondCode::FIRST_ACTIVE, Flags, SDLoc(N), DCI.DAG);
 }
 
+/// extract(orv_pred(Pg, M), 0) -> ptest_any(Pg, M)
+static SDValue performAnyTrueCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  SDValue Pg, Src;
+  if (!sd_match(N, m_ExtractElt(
+                       m_Node(AArch64ISD::ORV_PRED, m_Value(Pg), m_Value(Src)),
+                       m_Zero())))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  SDValue Mask = Src, SubVec;
+  // Look through the undefs to get sign bits.
+  if (sd_match(Src, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
+    Mask = SubVec;
+  // Check if we actually have a predicate.
+  if (DAG.ComputeNumSignBits(Mask) != Mask.getScalarValueSizeInBits())
+    return SDValue();
+
+  // Convert the mask vector to a predicate.
+  SDValue Pred = DAG.getNode(
+      AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(), Pg, Src,
+      DAG.getConstant(0, DL, Src.getValueType()), DAG.getCondCode(ISD::SETNE));
+  return getPTest(DAG, VT, Pg, Pred, AArch64CC::ANY_ACTIVE);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
@@ -22874,6 +22901,10 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
+
+  if (SDValue Res = performAnyTrueCombine(N, DAG))
+    return Res;
+
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
 
   EVT VT = N->getValueType(0);
@@ -29798,6 +29829,13 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Vec.getValueType().getVectorElementType() == MVT::i1 &&
       Vec.getValueType().isFixedLengthVector() &&
       Vec.getValueType().isPow2VectorType()) {
+    const auto &TLI =
+        static_cast<const AArch64TargetLowering &>(DAG.getTargetLoweringInfo());
+    std::optional<Intrinsic::ID> PairwiseOpIID;
+    // With SVE, leave i1 reductions to type legalization.
+    if (TLI.shouldLowerReductionToSVE(SDValue(N, 0), PairwiseOpIID))
+      return SDValue();
+
     SDLoc DL(N);
     return getVectorBitwiseReduce(N->getOpcode(), Vec, N->getValueType(0), DL,
                                   DAG);
@@ -35158,6 +35196,8 @@ static unsigned getPredicatedReductionOpcode(unsigned Op) {
 
 bool AArch64TargetLowering::shouldLowerReductionToSVE(
     SDValue RdxOp, std::optional<Intrinsic::ID> &PairwiseOpIID) const {
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return false;
   EVT SrcVT = RdxOp.getOperand(0).getValueType();
   if (SrcVT.isScalableVector())
     return true;
@@ -35170,7 +35210,8 @@ bool AArch64TargetLowering::shouldLowerReductionToSVE(
                       (RdxOp.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
 
-  bool UseSVE = useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON);
+  bool UseSVE = useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON) ||
+                SrcVT.getVectorElementType() == MVT::i1;
 
   // Always lower v2i64 vectors to pairwise SVE2 operations when possible as
   // NEON does not natively support reductions on v2i64. Lower v2i32 to pairwise
