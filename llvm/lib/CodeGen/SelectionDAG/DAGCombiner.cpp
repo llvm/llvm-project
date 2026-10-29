@@ -822,7 +822,8 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     /// potentially may be merged with St are placed in StoreNodes. On success,
     /// returns a chain predecessor to all store candidates.
     SDNode *getStoreMergeCandidates(StoreSDNode *St,
-                                    SmallVectorImpl<MemOpLink> &StoreNodes);
+                                    SmallVectorImpl<MemOpLink> &StoreNodes,
+                                    bool LookThroughStores = false);
 
     /// Helper function for mergeConsecutiveStores. Checks if candidate stores
     /// have indirect dependency through their operands. RootNode is the
@@ -23653,7 +23654,8 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
 
 SDNode *
 DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
-                                     SmallVectorImpl<MemOpLink> &StoreNodes) {
+                                     SmallVectorImpl<MemOpLink> &StoreNodes,
+                                     bool LookThroughStores) {
   // This holds the base pointer, index, and the offset in bytes from the base
   // pointer. We must have a base and an offset. Do not handle stores to undef
   // base pointers.
@@ -23801,6 +23803,31 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
     // Bail out if we already analyzed this root node and found nothing.
     if (ChainsWithoutMergeableStores.contains(RootNode))
       return nullptr;
+    if (LookThroughStores) {
+      // The usual search only sees stores immediately below the common chain.
+      // Walk to the start of an alternating load/store chain, then follow its
+      // users to recover the complete fragmented copy sequence.
+      while (isa<LoadSDNode, StoreSDNode>(RootNode))
+        RootNode = RootNode->getOperand(0).getNode();
+      SmallPtrSet<SDNode *, 32> Visited;
+      SmallVector<SDNode *, 16> Worklist(1, RootNode);
+      while (!Worklist.empty() && NumNodesExplored++ < MaxSearchNodes) {
+        SDNode *Node = Worklist.pop_back_val();
+        if (!Visited.insert(Node).second)
+          continue;
+        for (SDUse &Use : Node->uses()) {
+          if (Use.getOperandNo() != 0)
+            continue;
+          SDNode *User = Use.getUser();
+          if (isa<StoreSDNode>(User))
+            TryToAddCandidate(Use);
+          if (isa<LoadSDNode, StoreSDNode>(User) ||
+              User->getOpcode() == ISD::TokenFactor)
+            Worklist.push_back(User);
+        }
+      }
+      return RootNode;
+    }
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
       SDNode *User = I->getUser();
@@ -24246,9 +24273,28 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     bool DoIntegerTruncate = false;
     int64_t StartAddress = LoadNodes[0].OffsetFromBase;
     SDValue LoadChain = FirstLoad->getChain();
+    // A 3-element sequence is already handled as a normal pair plus a scalar.
+    // Only relax serial load chains for larger sequences; the normal legality
+    // scan below will choose the widest profitable chunks.
+    bool MergeSerialLoads =
+        LoadNodes.size() == NumConsecutiveStores && NumConsecutiveStores >= 5 &&
+        llvm::any_of(drop_begin(LoadNodes), [&](const MemOpLink &Link) {
+          return Link.MemNode->getChain() != LoadChain;
+        });
+    if (MergeSerialLoads) {
+      // Lookthrough may expose serial loads. Merge them only if alias analysis
+      // finds the same safe predecessor for each load.
+      LoadChain = FindBetterChain(FirstLoad, LoadChain);
+      if (!llvm::all_of(drop_begin(LoadNodes), [&](const MemOpLink &Link) {
+            auto *Load = cast<LoadSDNode>(Link.MemNode);
+            return FindBetterChain(Load, Load->getChain()) == LoadChain;
+          })) {
+        StoreNodes.clear();
+        return MadeChange;
+      }
+    }
     for (unsigned i = 1; i < LoadNodes.size(); ++i) {
-      // All loads must share the same chain.
-      if (LoadNodes[i].MemNode->getChain() != LoadChain)
+      if (!MergeSerialLoads && LoadNodes[i].MemNode->getChain() != LoadChain)
         break;
 
       int64_t CurrAddress = LoadNodes[i].OffsetFromBase;
@@ -24428,12 +24474,12 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {
-      NewLoad = DAG.getLoad(
-          JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
-          LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
-                              : MachinePointerInfo(FirstLoadAS),
-          FirstLoadAlign, LdMMOFlags,
-          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
+      NewLoad =
+          DAG.getLoad(JointMemOpVT, LoadDL, LoadChain, FirstLoad->getBasePtr(),
+                      LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                                          : MachinePointerInfo(FirstLoadAS),
+                      FirstLoadAlign, LdMMOFlags,
+                      MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       SDValue StoreOp = NewLoad;
       if (NeedRotate) {
         unsigned LoadWidth = ElementSizeBytes * 8 * 2;
@@ -24453,13 +24499,12 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad =
-          DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
-                         FirstLoad->getChain(), FirstLoad->getBasePtr(),
-                         LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
-                                             : MachinePointerInfo(FirstLoadAS),
-                         JointMemOpVT, FirstLoadAlign, LdMMOFlags,
-                         MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
+      NewLoad = DAG.getExtLoad(
+          ISD::EXTLOAD, LoadDL, ExtendedTy, LoadChain, FirstLoad->getBasePtr(),
+          LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                              : MachinePointerInfo(FirstLoadAS),
+          JointMemOpVT, FirstLoadAlign, LdMMOFlags,
+          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
           StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
@@ -24549,11 +24594,29 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   // front of StoreNodes here.
   bool MadeChange = false;
   while (StoreNodes.size() > 1) {
+    SDNode *FirstCandidate = StoreNodes.front().MemNode;
     unsigned NumConsecutiveStores =
         getConsecutiveStores(StoreNodes, ElementSizeBytes);
     // There are no more stores in the list to examine.
     if (NumConsecutiveStores == 0)
       return MadeChange;
+    if (!MadeChange && NumConsecutiveStores == 2 && MemVT.isScalarInteger() &&
+        ElementSizeBytes >= 2 && StoreSrc == StoreSource::Load &&
+        StoreNodes.front().MemNode != FirstCandidate) {
+      // The trailing pair may be a local optimum. Recover the complete
+      // consecutive copy so the normal legality scan can choose wider chunks.
+      SmallVector<MemOpLink, 8> AllStoreNodes;
+      getStoreMergeCandidates(St, AllStoreNodes, /*LookThroughStores=*/true);
+      llvm::sort(AllStoreNodes, [](MemOpLink LHS, MemOpLink RHS) {
+        return LHS.OffsetFromBase < RHS.OffsetFromBase;
+      });
+      unsigned NumAllStores =
+          getConsecutiveStores(AllStoreNodes, ElementSizeBytes);
+      if (NumAllStores == AllStoreNodes.size() && NumAllStores >= 5) {
+        StoreNodes = std::move(AllStoreNodes);
+        NumConsecutiveStores = NumAllStores;
+      }
+    }
 
     // We have at least 2 consecutive stores. Try to merge them.
     assert(NumConsecutiveStores >= 2 && "Expected at least 2 stores");
