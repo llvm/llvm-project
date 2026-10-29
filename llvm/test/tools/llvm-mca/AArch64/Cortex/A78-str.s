@@ -86,17 +86,17 @@ stp      w8, w9, [x3, #4]!
 # CHECK-NEXT:  2      1     0.50           *            str	w9, [x2, #4]
 # CHECK-NEXT:  2      1     0.50           *            strb	w9, [x2, #4]
 # CHECK-NEXT:  2      1     0.50           *            strh	w9, [x2, #4]
-# CHECK-NEXT:  3      1     0.50           *            str	w19, [x21, x3]
-# CHECK-NEXT:  3      1     0.50           *            strb	w19, [x21, x3]
+# CHECK-NEXT:  2      1     0.50           *            str	w19, [x21, x3]
+# CHECK-NEXT:  2      1     0.50           *            strb	w19, [x21, x3]
 # CHECK-NEXT:  2      1     0.50           *            strh	w19, [x21, x3]
-# CHECK-NEXT:  3      1     0.50           *            str	w19, [x21, x3, lsl #2]
-# CHECK-NEXT:  3      1     0.50           *            str	x19, [x21, x3, lsl #3]
+# CHECK-NEXT:  2      1     0.50           *            str	w19, [x21, x3, lsl #2]
+# CHECK-NEXT:  2      1     0.50           *            str	x19, [x21, x3, lsl #3]
 # CHECK-NEXT:  3      2     0.50           *            strh	w19, [x21, x3, lsl #1]
-# CHECK-NEXT:  3      1     0.50           *            str	w19, [x21, x3, sxtx]
-# CHECK-NEXT:  3      1     0.50           *            strb	w19, [x21, x3, sxtx]
+# CHECK-NEXT:  2      1     0.50           *            str	w19, [x21, x3, sxtx]
+# CHECK-NEXT:  2      1     0.50           *            strb	w19, [x21, x3, sxtx]
 # CHECK-NEXT:  2      1     0.50           *            strh	w19, [x21, x3, sxtx]
-# CHECK-NEXT:  3      1     0.50           *            str	w19, [x21, x3, sxtx #2]
-# CHECK-NEXT:  3      1     0.50           *            str	x19, [x21, x3, sxtx #3]
+# CHECK-NEXT:  2      1     0.50           *            str	w19, [x21, x3, sxtx #2]
+# CHECK-NEXT:  2      1     0.50           *            str	x19, [x21, x3, sxtx #3]
 # CHECK-NEXT:  3      2     0.50           *            strh	w19, [x21, x3, sxtx #1]
 # CHECK-NEXT:  2      1     0.50           *            stp	w8, w9, [x3, #4]
 # CHECK-NEXT:  3      1     0.50           *            stp	w8, w9, [x3], #4
@@ -122,7 +122,7 @@ stp      w8, w9, [x3, #4]!
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -     15.00  15.00   -      -      -      -     15.00  15.00  4.50   4.50   4.50   4.50    -      -
+# CHECK-NEXT:  -      -     15.00  15.00   -      -      -      -     15.00  15.00  2.50   2.50   2.50   2.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -141,17 +141,17 @@ stp      w8, w9, [x3, #4]!
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	w9, [x2, #4]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strb	w9, [x2, #4]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strh	w9, [x2, #4]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	w19, [x21, x3]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     strb	w19, [x21, x3]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	w19, [x21, x3]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strb	w19, [x21, x3]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strh	w19, [x21, x3]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	w19, [x21, x3, lsl #2]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	x19, [x21, x3, lsl #3]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	w19, [x21, x3, lsl #2]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	x19, [x21, x3, lsl #3]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     strh	w19, [x21, x3, lsl #1]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	w19, [x21, x3, sxtx]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     strb	w19, [x21, x3, sxtx]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	w19, [x21, x3, sxtx]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strb	w19, [x21, x3, sxtx]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     strh	w19, [x21, x3, sxtx]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	w19, [x21, x3, sxtx #2]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     str	x19, [x21, x3, sxtx #3]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	w19, [x21, x3, sxtx #2]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     str	x19, [x21, x3, sxtx #3]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     strh	w19, [x21, x3, sxtx #1]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -     stp	w8, w9, [x3, #4]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -     stp	w8, w9, [x3], #4

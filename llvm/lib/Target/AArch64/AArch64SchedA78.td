@@ -1032,6 +1032,7 @@ def A78Write_ScaledSTRHH : SchedWriteVariant<[
   SchedVar<NoSchedPred,          [A78Write_1c_1L01_1D]>]>;
 
 def : InstRW<[A78Write_ScaledSTRHH], (instregex "^STRHHro[WX]$")>;
+def : InstRW<[A78Write_1c_1L01_1D], (instregex "^STR(X|W|BB)?ro[WX]$")>;
 
 // Atomic instructions
 // -----------------------------------------------------------------------------
