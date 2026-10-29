@@ -320,6 +320,11 @@ def A78Write_1c_1L01_1D_1I : SchedWriteRes<[A78UnitL01, A78UnitD, A78UnitI]> {
   let NumMicroOps = 3;
 }
 
+def A78Write_2c_1L01_1D_1I : SchedWriteRes<[A78UnitL01, A78UnitD, A78UnitI]> {
+  let Latency     = 2;
+  let NumMicroOps = 3;
+}
+
 def A78Write_2c_1L01_1V_1I : SchedWriteRes<[A78UnitL01, A78UnitV, A78UnitI]> {
   let Latency     = 2;
   let NumMicroOps = 3;
@@ -701,6 +706,18 @@ def A78ZeroMove : MCSchedPredicate<
 	      CheckSameRegOperand<1, 2>]>,
   ]>>;
 
+// Predicates for load and store instructions.
+// For example: str x0, [x1, x2, lsl #3]
+//
+// Scale multiplier is implicit from the instruction, so the 4th
+// operand is a flag.
+//
+def A78IsScaledLoadStore : MCSchedPredicate<CheckImmOperand<4, 1>>;
+
+// Extend operand is also a flag. The kind of extend is implicit from
+// the instruction.
+def A78IsExtendedLoadStore : MCSchedPredicate<CheckImmOperand<3, 1>>;
+
 //===----------------------------------------------------------------------===//
 // Define predicate-controlled types
 
@@ -1007,6 +1024,14 @@ def : SchedAlias<WriteST,    A78Write_1c_1L01_1D>;
 def : SchedAlias<WriteSTIdx, A78Write_1c_1L01_1D_1I>;
 def : SchedAlias<WriteSTP,   A78Write_1c_1L01_1D>;
 def : SchedAlias<WriteAdr,   A78Write_1c_1I>; // copied from A57.
+
+// STRH with a scaled offset has 2 cycles latency.
+// "I" pipeline is only used for pre-, post-index and scaled variants.
+def A78Write_ScaledSTRHH : SchedWriteVariant<[
+  SchedVar<A78IsScaledLoadStore, [A78Write_2c_1L01_1D_1I]>,
+  SchedVar<NoSchedPred,          [A78Write_1c_1L01_1D]>]>;
+
+def : InstRW<[A78Write_ScaledSTRHH], (instregex "^STRHHro[WX]$")>;
 
 // Atomic instructions
 // -----------------------------------------------------------------------------
