@@ -5708,7 +5708,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
   FileMgr.trackVFSUsage(false);
 }
 
-void ASTWriter::prepareLazyUpdates() {
+void ASTWriter::prepareLazyUpdates(ASTContext &Context) {
   // In C++20 named modules with reduced BMI, we only apply the update
   // if these updates are touched.
   if (!GeneratingReducedBMI)
@@ -5717,6 +5717,8 @@ void ASTWriter::prepareLazyUpdates() {
   DeclUpdateMap DeclUpdatesTmp;
   // Move updates to DeclUpdatesLazy but leave the updates that may be needed by
   // code generation eager.
+  // FIXME: The condition below is ugly. We need a better mechanism to decide
+  // which updates must be eager.
   for (auto &DeclUpdate : DeclUpdates) {
     const Decl *D = DeclUpdate.first;
 
@@ -5728,20 +5730,19 @@ void ASTWriter::prepareLazyUpdates() {
         // care of them, users might meet missing definition errors at linking
         // time. Here we leave all CXXAddedFunctionDefinition updates eager
         // unconditionally to avoid potential issues.
-        // TODO: Try to refine the strategy to handle CXXAddedFunctionDefinition
-        // precisely.
         DeclUpdatesTmp[D].push_back(
             ASTWriter::DeclUpdate(DeclUpdateKind::CXXAddedFunctionDefinition));
-      else if (Kind == DeclUpdateKind::CXXResolvedDtorDelete ||
-               Kind == DeclUpdateKind::CXXResolvedDtorGlobDelete ||
-               Kind == DeclUpdateKind::CXXResolvedDtorArrayDelete ||
-               Kind == DeclUpdateKind::CXXResolvedDtorGlobArrayDelete)
+      else if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+               (Kind == DeclUpdateKind::CXXResolvedDtorDelete ||
+                Kind == DeclUpdateKind::CXXResolvedDtorGlobDelete ||
+                Kind == DeclUpdateKind::CXXResolvedDtorArrayDelete ||
+                Kind == DeclUpdateKind::CXXResolvedDtorGlobArrayDelete))
         // The CXXResolvedDtor* updates record the 'operator delete' that Sema
-        // resolved for a virtual destructor. They are only produced for the
-        // Microsoft ABI. In that ABI the deleting destructor is emitted
-        // together with the vtable, so an importer can need the resolution
-        // without a declaration reference to the destructor, and it cannot
-        // recompute it. Keep these updates eager as well.
+        // resolved for a virtual destructor. In Microsoft ABI the deleting
+        // destructor is emitted together with the vtable, so an importer can
+        // need the resolution without a declaration reference to the
+        // destructor, and it cannot recompute it. Keep these updates eager as
+        // well.
         DeclUpdatesTmp[D].push_back(Update);
       else
         DeclUpdatesLazy[D].push_back(Update);
@@ -5759,7 +5760,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
 
   bool isModule = WritingModule != nullptr;
 
-  prepareLazyUpdates();
+  prepareLazyUpdates(Context);
 
   // Set up predefined declaration IDs.
   auto RegisterPredefDecl = [&] (Decl *D, PredefinedDeclIDs ID) {
