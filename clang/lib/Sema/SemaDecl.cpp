@@ -6470,16 +6470,16 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         // CheckRedeclarationExported.
         return false;
     } else {
-      unsigned DCKind = 0; // namespace by default
+      unsigned DCKind = diag::EnclosingDeclKind::Namespace;
       if (auto *TD = dyn_cast<TagDecl>(DC)) {
         if (TD->isStruct())
-          DCKind = 1;
+          DCKind = diag::EnclosingDeclKind::Struct;
         else if (TD->isClass())
-          DCKind = 2;
+          DCKind = diag::EnclosingDeclKind::Class;
         else if (TD->isUnion())
-          DCKind = 3;
+          DCKind = diag::EnclosingDeclKind::Union;
         else if (TD->isEnum())
-          DCKind = 4;
+          DCKind = diag::EnclosingDeclKind::Enum;
       }
       Diag(Loc, diag::err_invalid_declarator_scope)
           << Name << cast<NamedDecl>(Cur) << DCKind << cast<NamedDecl>(DC)

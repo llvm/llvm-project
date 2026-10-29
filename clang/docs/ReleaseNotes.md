@@ -760,6 +760,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- Fixed a diagnostic that incorrectly referred to structs, classes, unions, and enums as "namespace" in out-of-line declaration errors. (#GH134955)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
