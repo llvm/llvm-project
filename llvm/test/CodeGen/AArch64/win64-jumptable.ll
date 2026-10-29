@@ -1,6 +1,8 @@
-; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 | FileCheck %s
+; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 | FileCheck %s --check-prefixes=CHECK,WINDOWS
 ; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj --unwind - | FileCheck %s -check-prefix=UNWIND
-; RUN: llc -o - %s -mtriple=aarch64-unknown-uefi -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 | FileCheck %s
+; RUN: llc -o - %s -mtriple=aarch64-unknown-uefi -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 | FileCheck %s --check-prefixes=CHECK,UEFI
+; RUN: llc -o %t-uefi.obj %s -mtriple=aarch64-unknown-uefi -aarch64-min-jump-table-entries=4 -aarch64-enable-compress-jump-tables=0 -enable-shrink-wrap=true -filetype=obj
+; RUN: llvm-readobj --unwind %t-uefi.obj | FileCheck %s --check-prefix=UEFI-UNWIND
 
 define void @f(i32 %x) {
 entry:
@@ -37,10 +39,15 @@ declare void @g(i32, i32)
 ; CHECK:    .text
 ; CHECK:    f:
 ; CHECK:    .seh_proc f
-; CHECK:    .seh_endfunclet
-; CHECK-NEXT: .seh_endproc
-; CHECK:    .LBB0_7:
+; UEFI:     str x30, [sp, #-16]!
+; UEFI-NEXT: .seh_save_reg_x x30, 16
+; UEFI-NEXT: .seh_endprologue
+; UEFI-NEXT: cmp w0, #3
+; WINDOWS: .seh_endfunclet
+; WINDOWS-NEXT: .seh_endproc
+; WINDOWS: .LBB0_7:
 ; CHECK:    b g
+; UEFI-NEXT: .seh_endfunclet
 ; CHECK-NEXT:  .section .rdata,"dr"
 ; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: .LJTI0_0:
@@ -49,7 +56,15 @@ declare void @g(i32, i32)
 ; CHECK:    .word .LBB0_3-.Ltmp0
 ; CHECK:    .word .LBB0_4-.Ltmp0
 ; CHECK:    .text
+; UEFI-NEXT: .seh_endproc
 
 ; Check that we can emit an object file with correct unwind info.
 ; UNWIND: Function: f +0x8 (0x8)
 ; UNWIND: FunctionLength: {{[1-9][0-9]*}}
+
+; UEFI retains function-wide unwind emission even when shrink wrapping is forced,
+; since explicit unwind-range insertion currently runs only on Windows.
+; UEFI-UNWIND: Function: f (0x0)
+; UEFI-UNWIND: Prologue [
+; UEFI-UNWIND-NEXT: str lr, [sp, #-16]!
+; UEFI-UNWIND-NEXT: end

@@ -980,6 +980,10 @@ bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
     const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
 
+  // The range-insertion pass currently runs only on Windows, not UEFI.
+  if (!MF.getTarget().getTargetTriple().isOSWindows())
+    return false;
+
   // Split unwind ranges are currently supported only for native ARM64, not
   // ARM64EC's hybrid unwinding model.
   if (MF.getTarget().getTargetTriple().isWindowsArm64EC())
