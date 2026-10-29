@@ -5905,15 +5905,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::ldexp: {
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownSrc, Q, Depth + 1);
-      // Can refine inf/zero handling based on the exponent operand.
-      const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
+      FPClassTest InterestedSrcs = InterestedClasses;
+      // Input subnormals may flush to zero.
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcSubnormal;
 
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                          KnownSrc, Q, Depth + 1);
+
+      // Compute the exponent if the input may be non-zero finite.
       const Value *ExpArg = II->getArgOperand(1);
       ConstantRange ExpKnownRange =
-          ((KnownSrc.getKnownFPClasses() & ExpInfoMask) != fcNone)
+          (!KnownSrc.isKnownNever(fcSubnormal | fcNormal))
               ? computeConstantRange(ExpArg, /*ForSigned=*/true, Q, Depth + 1)
               : ConstantRange::getFull(
                     ExpArg->getType()->getScalarSizeInBits());
@@ -6165,6 +6169,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     const APFloat *CRHS;
     if (match(RHS, m_APFloat(CRHS))) {
+      KnownRHS = KnownFPClass(*CRHS);
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
                           Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
@@ -6221,6 +6226,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
 
     KnownFPClass KnownLHS, KnownRHS;
+
+    const APFloat *CRHS;
+    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                          Q, Depth + 1);
+      Known = KnownFPClass::fdiv(KnownLHS, *CRHS, Mode);
+      break;
+    }
+
     computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                         Q, Depth + 1);
 

@@ -870,7 +870,7 @@ define float @ret_known_zero_or_nan_fdiv_known_inf(float nofpclass(inf norm sub)
 define float @ret_fdiv_lhs_known_positive_or_nan(float %lhs, float %rhs) {
 ; CHECK-LABEL: define float @ret_fdiv_lhs_known_positive_or_nan
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS_FABS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -883,7 +883,7 @@ define float @ret_fdiv_lhs_known_positive_or_nan(float %lhs, float %rhs) {
 define float @ret_fdiv_rhs_known_positive_or_nan(float %lhs, float %rhs) {
 ; CHECK-LABEL: define float @ret_fdiv_rhs_known_positive_or_nan
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR8]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS]], [[RHS_FABS]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -896,8 +896,8 @@ define float @ret_fdiv_rhs_known_positive_or_nan(float %lhs, float %rhs) {
 define float @ret_fdiv_both_signs_positive_or_nan(float %lhs, float %rhs) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fdiv_both_signs_positive_or_nan
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR8]]
-; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR8]]
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS_FABS]], [[RHS_FABS]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -911,8 +911,8 @@ define float @ret_fdiv_both_signs_positive_or_nan(float %lhs, float %rhs) {
 define float @ret_fdiv_both_signs_negative_or_nan(float %lhs, float %rhs) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fdiv_both_signs_negative_or_nan
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR8]]
-; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR8]]
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    [[LHS_NEG_FABS:%.*]] = fneg float [[LHS_FABS]]
 ; CHECK-NEXT:    [[RHS_NEG_FABS:%.*]] = fneg float [[RHS_FABS]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS_NEG_FABS]], [[RHS_NEG_FABS]]
@@ -930,8 +930,8 @@ define float @ret_fdiv_both_signs_negative_or_nan(float %lhs, float %rhs) {
 define float @ret_fdiv_lhs_negative_rhs_positive(float %lhs, float %rhs) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fdiv_lhs_negative_rhs_positive
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR8]]
-; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR8]]
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    [[LHS_NEG_FABS:%.*]] = fneg float [[LHS_FABS]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS_NEG_FABS]], [[RHS_FABS]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -947,8 +947,8 @@ define float @ret_fdiv_lhs_negative_rhs_positive(float %lhs, float %rhs) {
 define float @ret_fdiv_rhs_negative_lhs_positive(float %lhs, float %rhs) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fdiv_rhs_negative_lhs_positive
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR8]]
-; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR8]]
+; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    [[RHS_NEG_FABS:%.*]] = fneg float [[RHS_FABS]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fdiv float [[LHS_FABS]], [[RHS_NEG_FABS]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -1392,12 +1392,323 @@ define float @ret_fdiv_neginf_posnormal__mode_dynamic_dynamic(float nofpclass(na
   ret float %fdiv
 }
 
+; A denominator of magnitude >= 1.0 cannot grow the result.
+
+define float @ret_fdiv_no_inf_const_1_5(float nofpclass(inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fdiv_no_inf_const_1_5
+; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 1.500000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 1.5
+  ret float %fdiv
+}
+
+; Negative test, 1.0 / 0.75 is greater than one.
+define float @ret_fdiv_no_inf_const_0_75(float nofpclass(inf) %arg0) #0 {
+; CHECK-LABEL: define float @ret_fdiv_no_inf_const_0_75
+; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 7.500000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.75
+  ret float %fdiv
+}
+
+define float @ret_fdiv_no_norm_inf_const_4(float nofpclass(norm inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf norm) float @ret_fdiv_no_norm_inf_const_4
+; CHECK-SAME: (float nofpclass(inf norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 4.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 4.0
+  ret float %fdiv
+}
+
+; Dividing by 0.75 can lift a subnormal into the normal range, but not to
+; an infinity.
+define float @ret_fdiv_no_norm_inf_const_0_75(float nofpclass(norm inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fdiv_no_norm_inf_const_0_75
+; CHECK-SAME: (float nofpclass(inf norm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 7.500000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.75
+  ret float %fdiv
+}
+
+define float @ret_fdiv_no_psub_const_0_75(float nofpclass(psub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(psub) float @ret_fdiv_no_psub_const_0_75
+; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 7.500000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.75
+  ret float %fdiv
+}
+
+; A denominator of magnitude <= 1.0 cannot shrink the result.
+
+define float @ret_fdiv_no_zero_sub_const_1(float nofpclass(zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero sub) float @ret_fdiv_no_zero_sub_const_1
+; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 1.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 1.0
+  ret float %fdiv
+}
+
+; A denominator below 2.0 cannot underflow to zero, but can produce a
+; subnormal.
+define float @ret_fdiv_no_zero_sub_const_1_5(float nofpclass(zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero) float @ret_fdiv_no_zero_sub_const_1_5
+; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 1.500000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 1.5
+  ret float %fdiv
+}
+
+define float @ret_fdiv_no_zero_sub_const_0_5(float nofpclass(zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero sub) float @ret_fdiv_no_zero_sub_const_0_5
+; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 5.000000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.5
+  ret float %fdiv
+}
+
+; A negative denominator keeps the same bound and only mirrors the sign.
+define float @ret_fdiv_no_zero_psub_const_neg1(float nofpclass(zero psub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero nsub) float @ret_fdiv_no_zero_psub_const_neg1
+; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], -1.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, -1.0
+  ret float %fdiv
+}
+
+; Scaling up by 2^MantissaBits lifts the smallest subnormal to a normal.
+
+define float @ret_fdiv_exponent_f32_neg23(float %arg0) #0 {
+; CHECK-LABEL: define nofpclass(sub) float @ret_fdiv_exponent_f32_neg23
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], f0x34000000
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x34000000
+  ret float %fdiv
+}
+
+; Negative test, 1.0 / nextup(2^-23) is below 2^23, so a subnormal can
+; survive.
+define float @ret_fdiv_exponent_f32_neg23_nextup(float %arg0) #0 {
+; CHECK-LABEL: define float @ret_fdiv_exponent_f32_neg23_nextup
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], f0x34000001
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x34000001
+  ret float %fdiv
+}
+
+; 1.0 / nextdown(2^-23) is above 2^23, which is still enough.
+define float @ret_fdiv_exponent_f32_neg23_nextdown(float %arg0) #0 {
+; CHECK-LABEL: define nofpclass(sub) float @ret_fdiv_exponent_f32_neg23_nextdown
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], f0x33FFFFFF
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x33FFFFFF
+  ret float %fdiv
+}
+
+; Negative test, 2^22 falls short of the 23 mantissa bits.
+define float @ret_fdiv_exponent_f32_neg22(float %arg0) #0 {
+; CHECK-LABEL: define float @ret_fdiv_exponent_f32_neg22
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], f0x34800000
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x34800000
+  ret float %fdiv
+}
+
+define half @ret_fdiv_exponent_f16_neg10(half %arg0) #0 {
+; CHECK-LABEL: define nofpclass(sub) half @ret_fdiv_exponent_f16_neg10
+; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv half [[ARG0]], 9.765620e-04
+; CHECK-NEXT:    ret half [[FDIV]]
+;
+  %fdiv = fdiv half %arg0, f0x1400
+  ret half %fdiv
+}
+
+; Negative test, 2^9 falls short of the 10 mantissa bits.
+define half @ret_fdiv_exponent_f16_neg9(half %arg0) #0 {
+; CHECK-LABEL: define half @ret_fdiv_exponent_f16_neg9
+; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv half [[ARG0]], 1.953130e-03
+; CHECK-NEXT:    ret half [[FDIV]]
+;
+  %fdiv = fdiv half %arg0, f0x1800
+  ret half %fdiv
+}
+
+; x86_fp80 has an explicit integer bit, so precision is 64 bits.
+define x86_fp80 @ret_fdiv_exponent_x86_fp80_neg63(x86_fp80 %arg0) #0 {
+; CHECK-LABEL: define nofpclass(sub) x86_fp80 @ret_fdiv_exponent_x86_fp80_neg63
+; CHECK-SAME: (x86_fp80 [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv x86_fp80 [[ARG0]], f0x3FC08000000000000000
+; CHECK-NEXT:    ret x86_fp80 [[FDIV]]
+;
+  %fdiv = fdiv x86_fp80 %arg0, f0x3FC08000000000000000
+  ret x86_fp80 %fdiv
+}
+
+; Negative test, 2^62 falls short of the 63 mantissa bits.
+define x86_fp80 @ret_fdiv_exponent_x86_fp80_neg62(x86_fp80 %arg0) #0 {
+; CHECK-LABEL: define x86_fp80 @ret_fdiv_exponent_x86_fp80_neg62
+; CHECK-SAME: (x86_fp80 [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv x86_fp80 [[ARG0]], f0x3FC18000000000000000
+; CHECK-NEXT:    ret x86_fp80 [[FDIV]]
+;
+  %fdiv = fdiv x86_fp80 %arg0, f0x3FC18000000000000000
+  ret x86_fp80 %fdiv
+}
+
+; Negative test, double-double reports no precision, so no scale is known to
+; leave the subnormal range.
+define ppc_fp128 @ret_fdiv_exponent_ppcf128_neg106(ppc_fp128 %arg0) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_fdiv_exponent_ppcf128_neg106
+; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ppc_fp128 [[ARG0]], f0x00000000000000003950000000000000
+; CHECK-NEXT:    ret ppc_fp128 [[FDIV]]
+;
+  %fdiv = fdiv ppc_fp128 %arg0, f0x00000000000000003950000000000000
+  ret ppc_fp128 %fdiv
+}
+
+define ppc_fp128 @ret_fdiv_exponent_ppcf128_neg106__no_zero(ppc_fp128 nofpclass(zero) %arg0) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_fdiv_exponent_ppcf128_neg106__no_zero
+; CHECK-SAME: (ppc_fp128 nofpclass(zero) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ppc_fp128 [[ARG0]], f0x00000000000000003950000000000000
+; CHECK-NEXT:    ret ppc_fp128 [[FDIV]]
+;
+  %fdiv = fdiv ppc_fp128 %arg0, f0x00000000000000003950000000000000
+  ret ppc_fp128 %fdiv
+}
+
+define ppc_fp128 @ret_fdiv_exponent_ppcf128_pos106__no_inf(ppc_fp128 nofpclass(inf) %arg0) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_fdiv_exponent_ppcf128_pos106__no_inf
+; CHECK-SAME: (ppc_fp128 nofpclass(inf) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv ppc_fp128 [[ARG0]], f0x00000000000000004690000000000000
+; CHECK-NEXT:    ret ppc_fp128 [[FDIV]]
+;
+  %fdiv = fdiv ppc_fp128 %arg0, f0x00000000000000004690000000000000
+  ret ppc_fp128 %fdiv
+}
+
+; The constant denominator is matched through a vector splat as well.
+define <2 x float> @ret_fdiv_v2f32_no_zero_sub_splat_0_5(<2 x float> nofpclass(zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero sub) <2 x float> @ret_fdiv_v2f32_no_zero_sub_splat_0_5
+; CHECK-SAME: (<2 x float> nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv <2 x float> [[ARG0]], splat (float 5.000000e-01)
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv <2 x float> %arg0, splat (float 0.5)
+  ret <2 x float> %fdiv
+}
+
+; Negative test, a non-splat denominator reports no single exponent.
+define <2 x float> @ret_fdiv_v2f32_no_zero_sub_nonsplat(<2 x float> nofpclass(zero sub) %arg0) #0 {
+; CHECK-LABEL: define <2 x float> @ret_fdiv_v2f32_no_zero_sub_nonsplat
+; CHECK-SAME: (<2 x float> nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv <2 x float> [[ARG0]], <float 5.000000e-01, float 1.500000e+00>
+; CHECK-NEXT:    ret <2 x float> [[FDIV]]
+;
+  %fdiv = fdiv <2 x float> %arg0, <float 0.5, float 1.5>
+  ret <2 x float> %fdiv
+}
+
+; A denominator with no exponent to report is left to the class rules alone.
+
+define float @ret_fdiv_const_zero(float %arg0) #0 {
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_fdiv_const_zero
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 0.000000e+00
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.0
+  ret float %fdiv
+}
+
+define float @ret_fdiv_const_inf(float %arg0) #0 {
+; CHECK-LABEL: define float @ret_fdiv_const_inf
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], +inf
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x7F800000
+  ret float %fdiv
+}
+
+define float @ret_fdiv_const_nan(float %arg0) #0 {
+; CHECK-LABEL: define float @ret_fdiv_const_nan
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], +qnan
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, f0x7FC00000
+  ret float %fdiv
+}
+
+; A positive zero input mode reads either subnormal as +0.0, so an input
+; flush puts back the +0.0 the scale ruled out, leaving only -0.0.
+define float @ret_fdiv_no_zero_const_0_5__mode_ieee_dapz(float nofpclass(zero) %arg0) #2 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret_fdiv_no_zero_const_0_5__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 5.000000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.5
+  ret float %fdiv
+}
+
+; A subnormal result may still be flushed onto a zero on output.
+
+define float @ret_fdiv_no_zero_const_0_5__mode_ftz_ieee(float nofpclass(zero) %arg0) #6 {
+; CHECK-LABEL: define float @ret_fdiv_no_zero_const_0_5__mode_ftz_ieee
+; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 5.000000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.5
+  ret float %fdiv
+}
+
+; A numerator that is never subnormal cannot reach a flushed zero either.
+define float @ret_fdiv_no_zero_sub_const_0_5__mode_ftz_ieee(float nofpclass(zero sub) %arg0) #6 {
+; CHECK-LABEL: define nofpclass(zero sub) float @ret_fdiv_no_zero_sub_const_0_5__mode_ftz_ieee
+; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], 5.000000e-01
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg0, 0.5
+  ret float %fdiv
+}
+
 attributes #0 = { denormal_fpenv(ieee|ieee) }
 attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { denormal_fpenv(ieee|positivezero) }
 attributes #3 = { denormal_fpenv(ieee|dynamic) }
 attributes #4 = { denormal_fpenv(positivezero|positivezero) }
 attributes #5 = { denormal_fpenv(dynamic|dynamic) }
+attributes #6 = { denormal_fpenv(preservesign|ieee) }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}

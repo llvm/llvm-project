@@ -818,8 +818,8 @@ body:             |
   ; CHECK-LABEL: name: @FLDExp_LargeNegExp
   ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
   ; CHECK-NEXT: %exp:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %val:_(f32) = G_FCONSTANT float 1.0
     %exp:_(s32) = G_CONSTANT i32 -32768
     %fldexp:_(f32) = G_FLDEXP %val, %exp
@@ -1018,6 +1018,45 @@ body:             |
     %lhs:_(f32) = G_FCONSTANT float 1.0
     %rhs:_(f32) = G_FCONSTANT float 0.0
     %fdiv:_(f32) = G_FDIV %lhs, %rhs
+    %copy:_(f32) = COPY %fdiv
+...
+---
+# Dividing by 2^-23 scales up by the 23 mantissa bits of float, which lifts
+# even the smallest subnormal to the smallest normal.
+name:            FDiv_ConstExponentNeg23
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FDiv_ConstExponentNeg23
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero norm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %rhs:_(f32) = G_FCONSTANT float f0x34000000
+    %fdiv:_(f32) = G_FDIV %val, %rhs
+    %copy:_(f32) = COPY %fdiv
+...
+---
+# Negative test, 2^22 falls short of the 23 mantissa bits.
+name:            FDiv_ConstExponentNeg22
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FDiv_ConstExponentNeg22
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %rhs:_(f32) = G_FCONSTANT float f0x34800000
+    %fdiv:_(f32) = G_FDIV %val, %rhs
     %copy:_(f32) = COPY %fdiv
 ...
 ---

@@ -15,7 +15,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 define float @ret_ldexp_f32(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32
 ; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR12:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -25,7 +25,7 @@ define float @ret_ldexp_f32(float %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_0(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_0
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -35,7 +35,7 @@ define float @ret_ldexp_f32_0(float %arg0) #0 {
 define float @ret_ldexp_f32_0_nopsub(float nofpclass(psub) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -45,7 +45,7 @@ define float @ret_ldexp_f32_0_nopsub(float nofpclass(psub) %arg0) #0 {
 define float @ret_ldexp_f32_0_nonsub(float nofpclass(nsub) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nsub) float @ret_ldexp_f32_0_nonsub
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -55,7 +55,7 @@ define float @ret_ldexp_f32_0_nonsub(float nofpclass(nsub) %arg0) #0 {
 define float @ret_ldexp_f32_0_nosub(float nofpclass(sub) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_0_nosub
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -65,7 +65,7 @@ define float @ret_ldexp_f32_0_nosub(float nofpclass(sub) %arg0) #0 {
 define float @ret_ldexp_f32_0_nosub_nosnan(float nofpclass(sub snan) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(snan sub) float @ret_ldexp_f32_0_nosub_nosnan
 ; CHECK-SAME: (float nofpclass(snan sub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.ldexp.f32.i32(float nofpclass(snan sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.ldexp.f32.i32(float nofpclass(snan sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -75,7 +75,7 @@ define float @ret_ldexp_f32_0_nosub_nosnan(float nofpclass(sub snan) %arg0) #0 {
 define float @ret_ldexp_f32_0_nopsub_nopzero(float nofpclass(psub pzero) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_0_nopsub_nopzero
 ; CHECK-SAME: (float nofpclass(pzero psub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -85,7 +85,7 @@ define float @ret_ldexp_f32_0_nopsub_nopzero(float nofpclass(psub pzero) %arg0) 
 define float @ret_ldexp_f32_0_nonsub_nonzero(float nofpclass(nsub nzero) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nzero nsub) float @ret_ldexp_f32_0_nonsub_nonzero
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -95,7 +95,7 @@ define float @ret_ldexp_f32_0_nonsub_nonzero(float nofpclass(nsub nzero) %arg0) 
 define float @ret_ldexp_f32_0_nosub_nozero(float nofpclass(sub zero) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(zero sub) float @ret_ldexp_f32_0_nosub_nozero
 ; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -105,7 +105,7 @@ define float @ret_ldexp_f32_0_nosub_nozero(float nofpclass(sub zero) %arg0) #0 {
 define float @ret_ldexp_f32_0_nopsub_daz(float nofpclass(psub) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_daz
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -115,7 +115,7 @@ define float @ret_ldexp_f32_0_nopsub_daz(float nofpclass(psub) %arg0) #1 {
 define float @ret_ldexp_f32_0_nonsub_daz(float nofpclass(nsub) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(nsub) float @ret_ldexp_f32_0_nonsub_daz
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -125,7 +125,7 @@ define float @ret_ldexp_f32_0_nonsub_daz(float nofpclass(nsub) %arg0) #1 {
 define float @ret_ldexp_f32_0_nosub_daz(float nofpclass(sub) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_0_nosub_daz
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -135,7 +135,7 @@ define float @ret_ldexp_f32_0_nosub_daz(float nofpclass(sub) %arg0) #1 {
 define float @ret_ldexp_f32_0_nosub_nosnan_daz(float nofpclass(sub snan) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(snan sub) float @ret_ldexp_f32_0_nosub_nosnan_daz
 ; CHECK-SAME: (float nofpclass(snan sub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.ldexp.f32.i32(float nofpclass(snan sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.ldexp.f32.i32(float nofpclass(snan sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -145,7 +145,7 @@ define float @ret_ldexp_f32_0_nosub_nosnan_daz(float nofpclass(sub snan) %arg0) 
 define float @ret_ldexp_f32_0_nopsub_nozero_daz(float nofpclass(psub pzero) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_0_nopsub_nozero_daz
 ; CHECK-SAME: (float nofpclass(pzero psub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -155,7 +155,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_daz(float nofpclass(psub pzero) %arg
 define float @ret_ldexp_f32_0_nonsub_nonzero_daz(float nofpclass(nsub nzero) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(nzero nsub) float @ret_ldexp_f32_0_nonsub_nonzero_daz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -165,7 +165,7 @@ define float @ret_ldexp_f32_0_nonsub_nonzero_daz(float nofpclass(nsub nzero) %ar
 define float @ret_ldexp_f32_0_nosub_nozero_daz(float nofpclass(sub zero) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(zero sub) float @ret_ldexp_f32_0_nosub_nozero_daz
 ; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -175,7 +175,7 @@ define float @ret_ldexp_f32_0_nosub_nozero_daz(float nofpclass(sub zero) %arg0) 
 define float @ret_ldexp_f32_0_nopsub_dapz(float nofpclass(psub) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_dapz
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -185,7 +185,7 @@ define float @ret_ldexp_f32_0_nopsub_dapz(float nofpclass(psub) %arg0) #2 {
 define float @ret_ldexp_f32_0_nonsub_dapz(float nofpclass(nsub) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(nsub) float @ret_ldexp_f32_0_nonsub_dapz
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -195,7 +195,7 @@ define float @ret_ldexp_f32_0_nonsub_dapz(float nofpclass(nsub) %arg0) #2 {
 define float @ret_ldexp_f32_0_nosub_dapz(float nofpclass(sub) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_0_nosub_dapz
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -205,7 +205,7 @@ define float @ret_ldexp_f32_0_nosub_dapz(float nofpclass(sub) %arg0) #2 {
 define float @ret_ldexp_f32_0_nopsub_nozero_dapz(float nofpclass(psub zero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(nzero psub) float @ret_ldexp_f32_0_nopsub_nozero_dapz
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -215,7 +215,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_dapz(float nofpclass(psub zero) %arg
 define float @ret_ldexp_f32_0_nonsub_nonzero_dapz(float nofpclass(nsub nzero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(nzero nsub) float @ret_ldexp_f32_0_nonsub_nonzero_dapz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -225,7 +225,7 @@ define float @ret_ldexp_f32_0_nonsub_nonzero_dapz(float nofpclass(nsub nzero) %a
 define float @ret_ldexp_f32_0_nosub_nozero_dapz(float nofpclass(sub zero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(zero sub) float @ret_ldexp_f32_0_nosub_nozero_dapz
 ; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -235,7 +235,7 @@ define float @ret_ldexp_f32_0_nosub_nozero_dapz(float nofpclass(sub zero) %arg0)
 define float @ret_ldexp_f32_0_nopsub_nozero_dapz_dapz(float nofpclass(psub zero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(nzero psub) float @ret_ldexp_f32_0_nopsub_nozero_dapz_dapz
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -245,7 +245,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_dapz_dapz(float nofpclass(psub zero)
 define float @ret_ldexp_f32_0_nopsub_nozero_daz_ieee(float nofpclass(psub zero) %arg0) #3 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_0_nopsub_nozero_daz_ieee
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -255,7 +255,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_daz_ieee(float nofpclass(psub zero) 
 define float @ret_ldexp_f32_0_nopsub_nozero_daz_dynamic(float nofpclass(psub zero) %arg0) #4 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_nozero_daz_dynamic
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -265,7 +265,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_daz_dynamic(float nofpclass(psub zer
 define float @ret_ldexp_f32_0_nopsub_nozero_ieee_daz(float nofpclass(psub zero) %arg0) #5 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_0_nopsub_nozero_ieee_daz
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -275,7 +275,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_ieee_daz(float nofpclass(psub zero) 
 define float @ret_ldexp_f32_0_nopsub_nozero_dynamic_daz(float nofpclass(psub zero) %arg0) #6 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_nozero_dynamic_daz
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -285,7 +285,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_dynamic_daz(float nofpclass(psub zer
 define float @ret_ldexp_f32_0_nopsub_nozero_dynamic_dapz(float nofpclass(psub zero) %arg0) #7 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_nozero_dynamic_dapz
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -295,7 +295,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_dynamic_dapz(float nofpclass(psub ze
 define float @ret_ldexp_f32_0_nopsub_nozero_dapz_dynamic(float nofpclass(psub zero) %arg0) #8 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_0_nopsub_nozero_dapz_dynamic
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -305,7 +305,7 @@ define float @ret_ldexp_f32_0_nopsub_nozero_dapz_dynamic(float nofpclass(psub ze
 define float @ret_ldexp_f32_0_nopnorm(float nofpclass(pnorm) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(pnorm) float @ret_ldexp_f32_0_nopnorm
 ; CHECK-SAME: (float nofpclass(pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pnorm) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pnorm) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -315,7 +315,7 @@ define float @ret_ldexp_f32_0_nopnorm(float nofpclass(pnorm) %arg0) #0 {
 define float @ret_ldexp_f32_0_nnorm(float nofpclass(nnorm) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nnorm) float @ret_ldexp_f32_0_nnorm
 ; CHECK-SAME: (float nofpclass(nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nnorm) float @llvm.ldexp.f32.i32(float nofpclass(nnorm) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nnorm) float @llvm.ldexp.f32.i32(float nofpclass(nnorm) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -325,7 +325,7 @@ define float @ret_ldexp_f32_0_nnorm(float nofpclass(nnorm) %arg0) #0 {
 define float @ret_ldexp_f32_0_nopnorm_nonsub(float nofpclass(pnorm nsub) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nsub pnorm) float @ret_ldexp_f32_0_nopnorm_nonsub
 ; CHECK-SAME: (float nofpclass(nsub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(nsub pnorm) [[ARG0]], i32 noundef 0) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(nsub pnorm) [[ARG0]], i32 noundef 0) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 0)
@@ -335,7 +335,7 @@ define float @ret_ldexp_f32_0_nopnorm_nonsub(float nofpclass(pnorm nsub) %arg0) 
 define <2 x float> @ret_ldexp_v2f32_0(<2 x float> %arg0) #0 {
 ; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_0
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> <i32 undef, i32 0>) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> <i32 undef, i32 0>) #[[ATTR14]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %call = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %arg0, <2 x i32> <i32 undef, i32 0>)
@@ -345,7 +345,7 @@ define <2 x float> @ret_ldexp_v2f32_0(<2 x float> %arg0) #0 {
 define float @ret_ldexp_f32_i64(float %arg0, i64 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_i64
 ; CHECK-SAME: (float [[ARG0:%.*]], i64 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i64(float [[ARG0]], i64 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i64(float [[ARG0]], i64 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i64(float %arg0, i64 %arg1)
@@ -355,7 +355,7 @@ define float @ret_ldexp_f32_i64(float %arg0, i64 %arg1) #0 {
 define <2 x float> @ret_ldexp_v2f32(<2 x float> %arg0, <2 x i32> %arg1) #0 {
 ; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %call = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %arg0, <2 x i32> %arg1)
@@ -365,7 +365,7 @@ define <2 x float> @ret_ldexp_v2f32(<2 x float> %arg0, <2 x i32> %arg1) #0 {
 define float @ret_ldexp_f32_nonan(float nofpclass(nan) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_ldexp_f32_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i32(float nofpclass(nan) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i32(float nofpclass(nan) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -375,7 +375,7 @@ define float @ret_ldexp_f32_nonan(float nofpclass(nan) %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_nosnan(float nofpclass(snan) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_ldexp_f32_nosnan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.ldexp.f32.i32(float nofpclass(snan) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.ldexp.f32.i32(float nofpclass(snan) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -385,7 +385,7 @@ define float @ret_ldexp_f32_nosnan(float nofpclass(snan) %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_noqnan(float nofpclass(qnan) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(qnan) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(qnan) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -395,7 +395,7 @@ define float @ret_ldexp_f32_noqnan(float nofpclass(qnan) %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_noneg(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_ldexp_f32_noneg
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -405,7 +405,7 @@ define float @ret_ldexp_f32_noneg(float nofpclass(ninf nsub nnorm) %arg0, i32 %a
 define float @ret_ldexp_f32_noneg_nonzero(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_ldexp_f32_noneg_nonzero
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -415,7 +415,7 @@ define float @ret_ldexp_f32_noneg_nonzero(float nofpclass(ninf nsub nnorm nzero)
 define float @ret_ldexp_f32_noneg_nozero(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_ldexp_f32_noneg_nozero
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -425,7 +425,7 @@ define float @ret_ldexp_f32_noneg_nozero(float nofpclass(ninf nsub nnorm) %arg0,
 define float @ret_ldexp_f32_nonzero(float nofpclass(nzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_nonzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -435,7 +435,7 @@ define float @ret_ldexp_f32_nonzero(float nofpclass(nzero) %arg0, i32 %arg1) #0 
 define float @ret_ldexp_f32_nopzero(float nofpclass(pzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_nopzero
 ; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -445,7 +445,7 @@ define float @ret_ldexp_f32_nopzero(float nofpclass(pzero) %arg0, i32 %arg1) #0 
 define float @ret_ldexp_f32_noneg_ftz_daz(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_ldexp_f32_noneg_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -455,7 +455,7 @@ define float @ret_ldexp_f32_noneg_ftz_daz(float nofpclass(ninf nsub nnorm) %arg0
 define float @ret_ldexp_f32_noneg_nonzero_ftz_daz(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_ldexp_f32_noneg_nonzero_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -465,7 +465,7 @@ define float @ret_ldexp_f32_noneg_nonzero_ftz_daz(float nofpclass(ninf nsub nnor
 define float @ret_ldexp_f32_noneg_nonzero_ftpz_dapz(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #2 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_ldexp_f32_noneg_nonzero_ftpz_dapz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -475,7 +475,7 @@ define float @ret_ldexp_f32_noneg_nonzero_ftpz_dapz(float nofpclass(ninf nsub nn
 define float @ret_ldexp_f32_noninf_nonnorm(float nofpclass(ninf nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_noninf_nonnorm
 ; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -485,7 +485,7 @@ define float @ret_ldexp_f32_noninf_nonnorm(float nofpclass(ninf nnorm) %arg0, i3
 define float @ret_ldexp_f32_noninf_nonnorm_ftz_daz(float nofpclass(ninf nnorm) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_noninf_nonnorm_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -495,7 +495,7 @@ define float @ret_ldexp_f32_noninf_nonnorm_ftz_daz(float nofpclass(ninf nnorm) %
 define float @ret_ldexp_f32_noneg_ftz_ieee(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #3 {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_ldexp_f32_noneg_ftz_ieee
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -505,7 +505,7 @@ define float @ret_ldexp_f32_noneg_ftz_ieee(float nofpclass(ninf nsub nnorm) %arg
 define float @ret_ldexp_f32_noneg_nonzero_ftz_ieee(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #3 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_ldexp_f32_noneg_nonzero_ftz_ieee
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -515,7 +515,7 @@ define float @ret_ldexp_f32_noneg_nonzero_ftz_ieee(float nofpclass(ninf nsub nno
 define float @ret_ldexp_f32_nopos(float nofpclass(pinf psub pnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_ldexp_f32_nopos
 ; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -525,7 +525,7 @@ define float @ret_ldexp_f32_nopos(float nofpclass(pinf psub pnorm) %arg0, i32 %a
 define float @ret_ldexp_f32_nopos_nopzero(float nofpclass(pinf psub pnorm pzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_ldexp_f32_nopos_nopzero
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf pzero psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf pzero psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf pzero psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf pzero psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -535,7 +535,7 @@ define float @ret_ldexp_f32_nopos_nopzero(float nofpclass(pinf psub pnorm pzero)
 define float @ret_ldexp_f32_nopos_nozero(float nofpclass(pinf psub pnorm zero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_ldexp_f32_nopos_nozero
 ; CHECK-SAME: (float nofpclass(pinf zero psub pnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf pzero psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf zero psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf pzero psub pnorm) float @llvm.ldexp.f32.i32(float nofpclass(pinf zero psub pnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -545,7 +545,7 @@ define float @ret_ldexp_f32_nopos_nozero(float nofpclass(pinf psub pnorm zero) %
 define float @ret_ldexp_f32_nozero(float nofpclass(zero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -555,7 +555,7 @@ define float @ret_ldexp_f32_nozero(float nofpclass(zero) %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_noinf(float nofpclass(inf) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -565,7 +565,7 @@ define float @ret_ldexp_f32_noinf(float nofpclass(inf) %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_noinf_nonan(float nofpclass(inf nan) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_ldexp_f32_noinf_nonan
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i32(float nofpclass(nan inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i32(float nofpclass(nan inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -576,7 +576,7 @@ define float @ret_ldexp_f32_known_pos_exp(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_pos_exp
 ; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -588,7 +588,7 @@ define float @ret_ldexp_f32_known_neg_exp(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp
 ; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -600,7 +600,7 @@ define float @ret_ldexp_f32_known_pos_exp_nosub(float nofpclass(sub) %arg0, i32 
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_known_pos_exp_nosub
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -612,7 +612,7 @@ define float @ret_ldexp_f32_known_neg_exp_nosub(float nofpclass(sub) %arg0, i32 
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nosub
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(sub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -624,7 +624,7 @@ define float @ret_ldexp_f32_known_pos_exp_nopsub(float nofpclass(psub) %arg0, i3
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_known_pos_exp_nopsub
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -636,7 +636,7 @@ define float @ret_ldexp_f32_known_neg_exp_nopsub(float nofpclass(psub) %arg0, i3
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nopsub
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(psub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -648,7 +648,7 @@ define float @ret_ldexp_f32_known_pos_exp_nonsub(float nofpclass(nsub) %arg0, i3
 ; CHECK-LABEL: define nofpclass(nsub) float @ret_ldexp_f32_known_pos_exp_nonsub
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -660,7 +660,7 @@ define float @ret_ldexp_f32_known_neg_exp_nonsub(float nofpclass(nsub) %arg0, i3
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nonsub
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nsub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -672,7 +672,7 @@ define float @ret_ldexp_f32_known_pos_exp_noinf(float nofpclass(inf) %arg0, i32 
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_pos_exp_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -684,7 +684,7 @@ define float @ret_ldexp_f32_known_neg_exp_noinf(float nofpclass(inf) %arg0, i32 
 ; CHECK-LABEL: define nofpclass(inf) float @ret_ldexp_f32_known_neg_exp_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -696,7 +696,7 @@ define <2 x float> @ret_ldexp_v2f32_known_pos_exp_noinf(<2 x float> nofpclass(in
 ; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_known_pos_exp_noinf
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and <2 x i32> [[ARG1]], <i32 127, i32 64>
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %and.arg1 = and <2 x i32> %arg1, <i32 127, i32 64>
@@ -708,7 +708,7 @@ define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_splat(<2 x float> nofpcl
 ; CHECK-LABEL: define nofpclass(inf) <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_splat
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], splat (i32 -32)
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %or.arg1 = or <2 x i32> %arg1, splat (i32 -32)
@@ -721,7 +721,7 @@ define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_nonsplat(<2 x float> nof
 ; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf_nonsplat
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %or.arg1 = or <2 x i32> %arg1, <i32 -16, i32 -32>
@@ -733,7 +733,7 @@ define float @ret_ldexp_f32_known_pos_exp_nopinf(float nofpclass(pinf) %arg0, i3
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_pos_exp_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pinf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pinf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -745,7 +745,7 @@ define float @ret_ldexp_f32_known_neg_exp_nopinf(float nofpclass(pinf) %arg0, i3
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_ldexp_f32_known_neg_exp_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.ldexp.f32.i32(float nofpclass(pinf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.ldexp.f32.i32(float nofpclass(pinf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -757,7 +757,7 @@ define float @ret_ldexp_f32_known_pos_exp_noninf(float nofpclass(ninf) %arg0, i3
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_pos_exp_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(ninf) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -769,7 +769,7 @@ define float @ret_ldexp_f32_known_neg_exp_noninf(float nofpclass(ninf) %arg0, i3
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_ldexp_f32_known_neg_exp_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) float @llvm.ldexp.f32.i32(float nofpclass(ninf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) float @llvm.ldexp.f32.i32(float nofpclass(ninf) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -781,7 +781,7 @@ define float @ret_ldexp_f32_known_pos_exp_nopsub_nopzero_daz(float nofpclass(psu
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_known_pos_exp_nopsub_nopzero_daz
 ; CHECK-SAME: (float nofpclass(pzero psub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -793,7 +793,7 @@ define float @ret_ldexp_f32_known_neg_exp_nopsub_nopzero_daz(float nofpclass(psu
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nopsub_nopzero_daz
 ; CHECK-SAME: (float nofpclass(pzero psub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -805,7 +805,7 @@ define float @ret_ldexp_f32_known_pos_exp_nonsub_nonzero_daz(float nofpclass(nsu
 ; CHECK-LABEL: define nofpclass(nzero nsub) float @ret_ldexp_f32_known_pos_exp_nonsub_nonzero_daz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -817,7 +817,7 @@ define float @ret_ldexp_f32_known_neg_exp_nonsub_nonzero_daz(float nofpclass(nsu
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nonsub_nonzero_daz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nzero nsub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -829,7 +829,7 @@ define float @ret_ldexp_f32_known_pos_exp_nosub_nozero_daz(float nofpclass(sub z
 ; CHECK-LABEL: define nofpclass(zero sub) float @ret_ldexp_f32_known_pos_exp_nosub_nozero_daz
 ; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[AND_ARG1:%.*]] = and i32 [[ARG1]], 127
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 [[AND_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %and.arg1 = and i32 %arg1, 127
@@ -841,7 +841,7 @@ define float @ret_ldexp_f32_known_neg_exp_nosub_nozero_daz(float nofpclass(sub z
 ; CHECK-LABEL: define float @ret_ldexp_f32_known_neg_exp_nosub_nozero_daz
 ; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or i32 [[ARG1]], -16
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero sub) [[ARG0]], i32 [[OR_ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %or.arg1 = or i32 %arg1, -16
@@ -852,7 +852,7 @@ define float @ret_ldexp_f32_known_neg_exp_nosub_nozero_daz(float nofpclass(sub z
 define float @ret_ldexp_f32_22(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_22
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 22) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 22) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 22)
@@ -862,7 +862,7 @@ define float @ret_ldexp_f32_22(float %arg0) #0 {
 define float @ret_ldexp_f32_23(float %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_23
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
@@ -872,7 +872,7 @@ define float @ret_ldexp_f32_23(float %arg0) #0 {
 define float @ret_ldexp_f32_24(float %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_24
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 24) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 24) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 24)
@@ -882,8 +882,8 @@ define float @ret_ldexp_f32_24(float %arg0) #0 {
 define float @ret_ldexp_f32_min24(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_min24
 ; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[ARG1]], i32 noundef 24) #[[ATTR12]]
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[MIN]]) #[[ATTR12]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[ARG1]], i32 noundef 24) #[[ATTR14]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[MIN]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %min = call i32 @llvm.smin.i32(i32 %arg1, i32 24)
@@ -894,7 +894,7 @@ define float @ret_ldexp_f32_min24(float %arg0, i32 %arg1) #0 {
 define float @ret_ldexp_f32_23_nnan(float nofpclass(nan) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nan sub) float @ret_ldexp_f32_23_nnan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan sub) float @llvm.ldexp.f32.i32(float nofpclass(nan) [[ARG0]], i32 noundef 23) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan sub) float @llvm.ldexp.f32.i32(float nofpclass(nan) [[ARG0]], i32 noundef 23) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
@@ -904,7 +904,7 @@ define float @ret_ldexp_f32_23_nnan(float nofpclass(nan) %arg0) #0 {
 define double @ret_ldexp_f64_24(double %arg0) #0 {
 ; CHECK-LABEL: define double @ret_ldexp_f64_24
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 24) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 24) #[[ATTR14]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 24)
@@ -914,7 +914,7 @@ define double @ret_ldexp_f64_24(double %arg0) #0 {
 define double @ret_ldexp_f64_51(double %arg0) #0 {
 ; CHECK-LABEL: define double @ret_ldexp_f64_51
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 51) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 51) #[[ATTR14]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 51)
@@ -924,7 +924,7 @@ define double @ret_ldexp_f64_51(double %arg0) #0 {
 define double @ret_ldexp_f64_52(double %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) double @ret_ldexp_f64_52
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 52) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 52) #[[ATTR14]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 52)
@@ -934,7 +934,7 @@ define double @ret_ldexp_f64_52(double %arg0) #0 {
 define double @ret_ldexp_f64_53(double %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) double @ret_ldexp_f64_53
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 53) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 53) #[[ATTR14]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 53)
@@ -944,7 +944,7 @@ define double @ret_ldexp_f64_53(double %arg0) #0 {
 define half @ret_ldexp_f16_8(half %arg0) #0 {
 ; CHECK-LABEL: define half @ret_ldexp_f16_8
 ; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 8) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 8) #[[ATTR14]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 8)
@@ -954,7 +954,7 @@ define half @ret_ldexp_f16_8(half %arg0) #0 {
 define half @ret_ldexp_f16_9(half %arg0) #0 {
 ; CHECK-LABEL: define half @ret_ldexp_f16_9
 ; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 9) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 9) #[[ATTR14]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 9)
@@ -964,7 +964,7 @@ define half @ret_ldexp_f16_9(half %arg0) #0 {
 define half @ret_ldexp_f16_10(half %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) half @ret_ldexp_f16_10
 ; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 10) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 10) #[[ATTR14]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 10)
@@ -974,7 +974,7 @@ define half @ret_ldexp_f16_10(half %arg0) #0 {
 define bfloat @ret_ldexp_bf16_6(bfloat %arg0) #0 {
 ; CHECK-LABEL: define bfloat @ret_ldexp_bf16_6
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 6) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 6) #[[ATTR14]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 6)
@@ -984,7 +984,7 @@ define bfloat @ret_ldexp_bf16_6(bfloat %arg0) #0 {
 define bfloat @ret_ldexp_bf16_7(bfloat %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) bfloat @ret_ldexp_bf16_7
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 7) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 7) #[[ATTR14]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 7)
@@ -994,7 +994,7 @@ define bfloat @ret_ldexp_bf16_7(bfloat %arg0) #0 {
 define bfloat @ret_ldexp_bf16_8(bfloat %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) bfloat @ret_ldexp_bf16_8
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 8) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 8) #[[ATTR14]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 8)
@@ -1004,7 +1004,7 @@ define bfloat @ret_ldexp_bf16_8(bfloat %arg0) #0 {
 define float @ret_ldexp_f32_neg22(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_neg22
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -22) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -22) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -22)
@@ -1014,7 +1014,7 @@ define float @ret_ldexp_f32_neg22(float %arg0) #0 {
 define float @ret_ldexp_f32_neg23(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_neg23
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -23) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -23) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -23)
@@ -1024,7 +1024,7 @@ define float @ret_ldexp_f32_neg23(float %arg0) #0 {
 define float @ret_ldexp_f32_neg24(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_neg24
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -24) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -24) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -24)
@@ -1034,7 +1034,7 @@ define float @ret_ldexp_f32_neg24(float %arg0) #0 {
 define float @ret_ldexp_f32_neg126(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_neg126
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -126) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -126) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -126)
@@ -1044,7 +1044,7 @@ define float @ret_ldexp_f32_neg126(float %arg0) #0 {
 define float @ret_ldexp_f32_neg127(float %arg0) #0 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_neg127
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -127) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef -127) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -127)
@@ -1054,7 +1054,7 @@ define float @ret_ldexp_f32_neg127(float %arg0) #0 {
 define float @ret_ldexp_f32_noinf_exp_known_neg_or_0(float nofpclass(inf) %arg0, i32 range(i32 -256, 1) %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_ldexp_f32_noinf_exp_known_neg_or_0
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 range(i32 -256, 1) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1065,7 +1065,7 @@ define float @ret_ldexp_f32_noinf_exp_known_neg_or_0(float nofpclass(inf) %arg0,
 define float @ret_ldexp_f32_nozero_exp_known_nonneg_ftz_ieee(float nofpclass(zero) %arg0, i32 range(i32 0, 256) %arg1) #3 {
 ; CHECK-LABEL: define float @ret_ldexp_f32_nozero_exp_known_nonneg_ftz_ieee
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1076,7 +1076,7 @@ define float @ret_ldexp_f32_nozero_exp_known_nonneg_ftz_ieee(float nofpclass(zer
 define float @ret_ldexp_f32_nopsub_nopzero_exp_known_nonneg(float nofpclass(psub pzero) %arg0, i32 range(i32 0, 256) %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_nopsub_nopzero_exp_known_nonneg
 ; CHECK-SAME: (float nofpclass(pzero psub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(pzero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1086,9 +1086,9 @@ define float @ret_ldexp_f32_nopsub_nopzero_exp_known_nonneg(float nofpclass(psub
 ; A source already free of zero, subnormal and inf still learns from the
 ; exponent. A non-negative exponent cannot underflow.
 define float @ret_ldexp_f32_nozerosubinf_exp_known_nonneg(float nofpclass(zero sub inf) %arg0, i32 range(i32 0, 256) %arg1) #0 {
-; CHECK-LABEL: define float @ret_ldexp_f32_nozerosubinf_exp_known_nonneg
+; CHECK-LABEL: define nofpclass(zero sub) float @ret_ldexp_f32_nozerosubinf_exp_known_nonneg
 ; CHECK-SAME: (float nofpclass(inf zero sub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(inf zero sub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero sub) float @llvm.ldexp.f32.i32(float nofpclass(inf zero sub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1100,7 +1100,7 @@ define float @ret_ldexp_f32_nozerosubinf_exp_known_nonneg(float nofpclass(zero s
 define float @ret_ldexp_f32_noinfnan_exp_i64(float nofpclass(inf nan) %arg0, i64 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_ldexp_f32_noinfnan_exp_i64
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], i64 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i64(float nofpclass(nan inf) [[ARG0]], i64 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i64(float nofpclass(nan inf) [[ARG0]], i64 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i64(float %arg0, i64 %arg1)
@@ -1110,9 +1110,9 @@ define float @ret_ldexp_f32_noinfnan_exp_i64(float nofpclass(inf nan) %arg0, i64
 ; A non-positive exponent cannot grow the result. A normal or an infinity
 ; must come from a source of the same class.
 define float @ret_ldexp_f32_nonorminf_exp_nonpos(float nofpclass(norm inf) %arg0, i32 range(i32 -256, 1) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(inf) float @ret_ldexp_f32_nonorminf_exp_nonpos
+; CHECK-LABEL: define nofpclass(inf norm) float @ret_ldexp_f32_nonorminf_exp_nonpos
 ; CHECK-SAME: (float nofpclass(inf norm) [[ARG0:%.*]], i32 range(i32 -256, 1) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.ldexp.f32.i32(float nofpclass(inf norm) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf norm) float @llvm.ldexp.f32.i32(float nofpclass(inf norm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1122,7 +1122,7 @@ define float @ret_ldexp_f32_nonorminf_exp_nonpos(float nofpclass(norm inf) %arg0
 define ppc_fp128 @ret_ldexp_ppcf128_exp_0_to_255(ppc_fp128 %arg0, i32 range(i32 0, 256) %arg1) #0 {
 ; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128_exp_0_to_255
 ; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 %arg1)
@@ -1132,7 +1132,7 @@ define ppc_fp128 @ret_ldexp_ppcf128_exp_0_to_255(ppc_fp128 %arg0, i32 range(i32 
 define ppc_fp128 @ret_ldexp_ppcf128_exp_1_to_255(ppc_fp128 %arg0, i32 range(i32 1, 256) %arg1) #0 {
 ; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128_exp_1_to_255
 ; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]], i32 range(i32 1, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 %arg1)
@@ -1142,10 +1142,30 @@ define ppc_fp128 @ret_ldexp_ppcf128_exp_1_to_255(ppc_fp128 %arg0, i32 range(i32 
 define ppc_fp128 @ret_ldexp_ppcf128_exp_128_to_255(ppc_fp128 %arg0, i32 range(i32 128, 256) %arg1) #0 {
 ; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128_exp_128_to_255
 ; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]], i32 range(i32 128, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 %arg1)
+  ret ppc_fp128 %call
+}
+
+define ppc_fp128 @ret_ldexp_ppcf128__large_pos_exp(ppc_fp128 %arg0) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128__large_pos_exp
+; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 noundef 65536) #[[ATTR14]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 65536)
+  ret ppc_fp128 %call
+}
+
+define ppc_fp128 @ret_ldexp_ppcf128__large_neg_exp(ppc_fp128 %arg0) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128__large_neg_exp
+; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 noundef -65536) #[[ATTR14]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 -65536)
   ret ppc_fp128 %call
 }
 
@@ -1153,7 +1173,7 @@ define ppc_fp128 @ret_ldexp_ppcf128_exp_128_to_255(ppc_fp128 %arg0, i32 range(i3
 define x86_fp80 @ret_ldexp_x86_fp80_62(x86_fp80 %arg0) #0 {
 ; CHECK-LABEL: define x86_fp80 @ret_ldexp_x86_fp80_62
 ; CHECK-SAME: (x86_fp80 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 62) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 62) #[[ATTR14]]
 ; CHECK-NEXT:    ret x86_fp80 [[CALL]]
 ;
   %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 62)
@@ -1163,7 +1183,7 @@ define x86_fp80 @ret_ldexp_x86_fp80_62(x86_fp80 %arg0) #0 {
 define x86_fp80 @ret_ldexp_x86_fp80_63(x86_fp80 %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) x86_fp80 @ret_ldexp_x86_fp80_63
 ; CHECK-SAME: (x86_fp80 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 63) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 63) #[[ATTR14]]
 ; CHECK-NEXT:    ret x86_fp80 [[CALL]]
 ;
   %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 63)
@@ -1173,7 +1193,7 @@ define x86_fp80 @ret_ldexp_x86_fp80_63(x86_fp80 %arg0) #0 {
 define x86_fp80 @ret_ldexp_x86_fp80_64(x86_fp80 %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) x86_fp80 @ret_ldexp_x86_fp80_64
 ; CHECK-SAME: (x86_fp80 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 64) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 [[ARG0]], i32 noundef 64) #[[ATTR14]]
 ; CHECK-NEXT:    ret x86_fp80 [[CALL]]
 ;
   %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 64)
@@ -1183,7 +1203,7 @@ define x86_fp80 @ret_ldexp_x86_fp80_64(x86_fp80 %arg0) #0 {
 define fp128 @ret_ldexp_fp128_111(fp128 %arg0) #0 {
 ; CHECK-LABEL: define fp128 @ret_ldexp_fp128_111
 ; CHECK-SAME: (fp128 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 111) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 111) #[[ATTR14]]
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ;
   %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 111)
@@ -1193,7 +1213,7 @@ define fp128 @ret_ldexp_fp128_111(fp128 %arg0) #0 {
 define fp128 @ret_ldexp_fp128_112(fp128 %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) fp128 @ret_ldexp_fp128_112
 ; CHECK-SAME: (fp128 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 112) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 112) #[[ATTR14]]
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ;
   %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 112)
@@ -1203,7 +1223,7 @@ define fp128 @ret_ldexp_fp128_112(fp128 %arg0) #0 {
 define fp128 @ret_ldexp_fp128_113(fp128 %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(sub) fp128 @ret_ldexp_fp128_113
 ; CHECK-SAME: (fp128 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 113) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) fp128 @llvm.ldexp.f128.i32(fp128 [[ARG0]], i32 noundef 113) #[[ATTR14]]
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ;
   %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 113)
@@ -1215,7 +1235,7 @@ define fp128 @ret_ldexp_fp128_113(fp128 %arg0) #0 {
 define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_ieee_out(float nofpclass(zero psub) %arg0, i32 range(i32 0, 256) %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(zero psub) float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_ieee_out
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1225,7 +1245,7 @@ define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_ieee_out(float nofpclass(ze
 define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_preservesign_out(float nofpclass(zero psub) %arg0, i32 range(i32 0, 256) %arg1) #3 {
 ; CHECK-LABEL: define nofpclass(pzero psub) float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_preservesign_out
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1235,7 +1255,7 @@ define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_preservesign_out(float nofp
 define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_positivezero_out(float nofpclass(zero psub) %arg0, i32 range(i32 0, 256) %arg1) #9 {
 ; CHECK-LABEL: define nofpclass(nzero psub) float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_positivezero_out
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
@@ -1245,11 +1265,1333 @@ define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_positivezero_out(float nofp
 define float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_dynamic_out(float nofpclass(zero psub) %arg0, i32 range(i32 0, 256) %arg1) #10 {
 ; CHECK-LABEL: define nofpclass(psub) float @ret_ldexp_f32_nozero_nopsub_exp_nonneg_dynamic_out
 ; CHECK-SAME: (float nofpclass(zero psub) [[ARG0:%.*]], i32 range(i32 0, 256) [[ARG1:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub) float @llvm.ldexp.f32.i32(float nofpclass(zero psub) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
   ret float %call
+}
+
+define float @ret_ldexp_f32__psub_nnorm__zero_nsub(float nofpclass(nan inf zero nsub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @ret_ldexp_f32__psub_nnorm__zero_nsub
+; CHECK-SAME: (float nofpclass(nan inf zero nsub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf psub norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero nsub pnorm) [[ARG0]], i32 noundef -255) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -255)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__nsub_pnorm__zero_psub_pnorm(float nofpclass(nan inf zero psub nnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nsub nnorm) float @ret_ldexp_f32__nsub_pnorm__zero_psub_pnorm
+; CHECK-SAME: (float nofpclass(nan inf zero psub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nsub nnorm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero psub nnorm) [[ARG0]], i32 noundef -254) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -254)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__psub_nnorm__ninf_norm(float nofpclass(nan inf zero nsub pnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf zero sub) float @ret_ldexp_f32__psub_nnorm__ninf_norm
+; CHECK-SAME: (float nofpclass(nan inf zero nsub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero nsub pnorm) [[ARG0]], i32 noundef 23) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__nsub_pnorm__pinf_norm_nsub(float nofpclass(nan inf zero psub nnorm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan ninf zero psub) float @ret_ldexp_f32__nsub_pnorm__pinf_norm_nsub
+; CHECK-SAME: (float nofpclass(nan inf zero psub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero psub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero psub nnorm) [[ARG0]], i32 noundef 22) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 22)
+  ret float %call
+}
+
+; Handle a contradictory range gracefully.
+define float @ret_ldexp_f32_exp_contradictory_assumes(float %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define float @ret_ldexp_f32_exp_contradictory_assumes
+; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %sgt = icmp sgt i32 %arg1, 10
+  call void @llvm.assume(i1 %sgt)
+  %slt = icmp slt i32 %arg1, 5
+  call void @llvm.assume(i1 %slt)
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_ldexp_f32_exp_contradictory_assumes__pnorm(float nofpclass(nan inf zero sub nnorm) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define float @ret_ldexp_f32_exp_contradictory_assumes__pnorm
+; CHECK-SAME: (float nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR12]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %sgt = icmp sgt i32 %arg1, 10
+  call void @llvm.assume(i1 %sgt)
+  %slt = icmp slt i32 %arg1, 5
+  call void @llvm.assume(i1 %slt)
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+; PPCDoubleDouble uses a different code path.
+define ppc_fp128 @ret_ldexp_ppcf128_exp_contradictory_assumes(ppc_fp128 %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128_exp_contradictory_assumes
+; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR12]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %sgt = icmp sgt i32 %arg1, 10
+  call void @llvm.assume(i1 %sgt)
+  %slt = icmp slt i32 %arg1, 5
+  call void @llvm.assume(i1 %slt)
+  %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 %arg1)
+  ret ppc_fp128 %call
+}
+
+define ppc_fp128 @ret_ldexp_ppcf128_exp_contradictory_assumes__pnorm(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_ldexp_ppcf128_exp_contradictory_assumes__pnorm
+; CHECK-SAME: (ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR12]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR15]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR14]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %sgt = icmp sgt i32 %arg1, 10
+  call void @llvm.assume(i1 %sgt)
+  %slt = icmp slt i32 %arg1, 5
+  call void @llvm.assume(i1 %slt)
+  %call = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %arg0, i32 %arg1)
+  ret ppc_fp128 %call
+}
+
+;-------------------------------------------------------------------------------
+; Test edge cases for each type (round-to-nearest with ties-to-even).
+;-------------------------------------------------------------------------------
+
+; half
+
+define half @ret_ldexp_f16__sub__never_sub__decrease(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) half @ret_ldexp_f16__sub__never_sub__decrease
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -11) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -11)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__maybe_sub__decrease(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @ret_ldexp_f16__sub__maybe_sub__decrease
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -10) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -10)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__never_sub__increase(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) half @ret_ldexp_f16__sub__never_sub__increase
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 10) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 10)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__maybe_sub__increase(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) half @ret_ldexp_f16__sub__maybe_sub__increase
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 9) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 9)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__never_norm(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) half @ret_ldexp_f16__sub__never_norm
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 40) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 40)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__maybe_norm(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_ldexp_f16__sub__maybe_norm
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 39) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 39)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__never_inf(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) half @ret_ldexp_f16__sub__never_inf
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 30) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 30)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub__maybe_inf(half nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_ldexp_f16__sub__maybe_inf
+; CHECK-SAME: (half nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 31) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 31)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__never_zero(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) half @ret_ldexp_f16__norm__never_zero
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -10) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -10)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__maybe_zero(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) half @ret_ldexp_f16__norm__maybe_zero
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -11) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -11)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__never_sub(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) half @ret_ldexp_f16__norm__never_sub
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -41) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -41)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__maybe_sub(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @ret_ldexp_f16__norm__maybe_sub
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -40) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -40)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__never_norm__increase(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) half @ret_ldexp_f16__norm__never_norm__increase
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 30) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 30)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__maybe_norm__increase(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_ldexp_f16__norm__maybe_norm__increase
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 29) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 29)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__never_norm__decrease(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @ret_ldexp_f16__norm__never_norm__decrease
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -31) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -31)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__norm__maybe_norm__decrease(half nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) half @ret_ldexp_f16__norm__maybe_norm__decrease
+; CHECK-SAME: (half nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -30) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -30)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub_norm__zero_sub(half nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @ret_ldexp_f16__sub_norm__zero_sub
+; CHECK-SAME: (half nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero) [[ARG0]], i32 noundef -31) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -31)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub_norm__zero_sub_norm(half nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) half @ret_ldexp_f16__sub_norm__zero_sub_norm
+; CHECK-SAME: (half nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero) [[ARG0]], i32 noundef -30) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 -30)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub_norm__inf_norm(half nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_ldexp_f16__sub_norm__inf_norm
+; CHECK-SAME: (half nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero) [[ARG0]], i32 noundef 10) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 10)
+  ret half %call
+}
+
+define half @ret_ldexp_f16__sub_norm__inf_norm_sub(half nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) half @ret_ldexp_f16__sub_norm__inf_norm_sub
+; CHECK-SAME: (half nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) half @llvm.ldexp.f16.i32(half nofpclass(nan inf zero) [[ARG0]], i32 noundef 9) #[[ATTR14]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 9)
+  ret half %call
+}
+
+; bfloat
+
+define bfloat @ret_ldexp_bf16__sub__never_sub__decrease(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) bfloat @ret_ldexp_bf16__sub__never_sub__decrease
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -8) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -8)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__maybe_sub__decrease(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) bfloat @ret_ldexp_bf16__sub__maybe_sub__decrease
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -7) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -7)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__never_sub__increase(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) bfloat @ret_ldexp_bf16__sub__never_sub__increase
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 7) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 7)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__maybe_sub__increase(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) bfloat @ret_ldexp_bf16__sub__maybe_sub__increase
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 6) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 6)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__never_norm(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) bfloat @ret_ldexp_bf16__sub__never_norm
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 261) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 261)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__maybe_norm(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_ldexp_bf16__sub__maybe_norm
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 260) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 260)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__never_inf(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) bfloat @ret_ldexp_bf16__sub__never_inf
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 254) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 254)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub__maybe_inf(bfloat nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_ldexp_bf16__sub__maybe_inf
+; CHECK-SAME: (bfloat nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 255) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 255)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__never_zero(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) bfloat @ret_ldexp_bf16__norm__never_zero
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -7) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -7)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__maybe_zero(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_ldexp_bf16__norm__maybe_zero
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -8) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -8)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__never_sub(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) bfloat @ret_ldexp_bf16__norm__never_sub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -262) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -262)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__maybe_sub(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) bfloat @ret_ldexp_bf16__norm__maybe_sub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -261) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -261)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__never_norm__increase(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) bfloat @ret_ldexp_bf16__norm__never_norm__increase
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 254) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 254)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__maybe_norm__increase(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_ldexp_bf16__norm__maybe_norm__increase
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 253) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 253)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__never_norm__decrease(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) bfloat @ret_ldexp_bf16__norm__never_norm__decrease
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -255) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -255)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__norm__maybe_norm__decrease(bfloat nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_ldexp_bf16__norm__maybe_norm__decrease
+; CHECK-SAME: (bfloat nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -254) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -254)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub_norm__zero_sub(bfloat nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) bfloat @ret_ldexp_bf16__sub_norm__zero_sub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero) [[ARG0]], i32 noundef -255) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -255)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub_norm__zero_sub_norm(bfloat nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_ldexp_bf16__sub_norm__zero_sub_norm
+; CHECK-SAME: (bfloat nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero) [[ARG0]], i32 noundef -254) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 -254)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub_norm__inf_norm(bfloat nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_ldexp_bf16__sub_norm__inf_norm
+; CHECK-SAME: (bfloat nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero) [[ARG0]], i32 noundef 7) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 7)
+  ret bfloat %call
+}
+
+define bfloat @ret_ldexp_bf16__sub_norm__inf_norm_sub(bfloat nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) bfloat @ret_ldexp_bf16__sub_norm__inf_norm_sub
+; CHECK-SAME: (bfloat nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) bfloat @llvm.ldexp.bf16.i32(bfloat nofpclass(nan inf zero) [[ARG0]], i32 noundef 6) #[[ATTR14]]
+; CHECK-NEXT:    ret bfloat [[CALL]]
+;
+  %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 6)
+  ret bfloat %call
+}
+
+; float
+
+define float @ret_ldexp_f32__sub__never_sub__decrease(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_ldexp_f32__sub__never_sub__decrease
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -24) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -24)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__maybe_sub__decrease(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) float @ret_ldexp_f32__sub__maybe_sub__decrease
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -23) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -23)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__never_sub__increase(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @ret_ldexp_f32__sub__never_sub__increase
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 23) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__maybe_sub__increase(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) float @ret_ldexp_f32__sub__maybe_sub__increase
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 22) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 22)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__never_norm(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_ldexp_f32__sub__never_norm
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 277) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 277)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__maybe_norm(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_ldexp_f32__sub__maybe_norm
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 276) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 276)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__never_inf(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @ret_ldexp_f32__sub__never_inf
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 254) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 254)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub__maybe_inf(float nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_ldexp_f32__sub__maybe_inf
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 255) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 255)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__never_zero(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) float @ret_ldexp_f32__norm__never_zero
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -23) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -23)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__maybe_zero(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_ldexp_f32__norm__maybe_zero
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -24) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -24)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__never_sub(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_ldexp_f32__norm__never_sub
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -278) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -278)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__maybe_sub(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) float @ret_ldexp_f32__norm__maybe_sub
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -277) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -277)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__never_norm__increase(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_ldexp_f32__norm__never_norm__increase
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 254) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 254)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__maybe_norm__increase(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_ldexp_f32__norm__maybe_norm__increase
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 253) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 253)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__never_norm__decrease(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) float @ret_ldexp_f32__norm__never_norm__decrease
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -255) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -255)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__norm__maybe_norm__decrease(float nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_ldexp_f32__norm__maybe_norm__decrease
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -254) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -254)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub_norm__zero_sub(float nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) float @ret_ldexp_f32__sub_norm__zero_sub
+; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero) [[ARG0]], i32 noundef -255) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -255)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub_norm__zero_sub_norm(float nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_ldexp_f32__sub_norm__zero_sub_norm
+; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero) [[ARG0]], i32 noundef -254) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 -254)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub_norm__inf_norm(float nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_ldexp_f32__sub_norm__inf_norm
+; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero) [[ARG0]], i32 noundef 23) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
+  ret float %call
+}
+
+define float @ret_ldexp_f32__sub_norm__inf_norm_sub(float nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) float @ret_ldexp_f32__sub_norm__inf_norm_sub
+; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) float @llvm.ldexp.f32.i32(float nofpclass(nan inf zero) [[ARG0]], i32 noundef 22) #[[ATTR14]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 22)
+  ret float %call
+}
+
+; double
+
+define double @ret_ldexp_f64__sub__never_sub__decrease(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) double @ret_ldexp_f64__sub__never_sub__decrease
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -53) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -53)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__maybe_sub__decrease(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) double @ret_ldexp_f64__sub__maybe_sub__decrease
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -52) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -52)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__never_sub__increase(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) double @ret_ldexp_f64__sub__never_sub__increase
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 52) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 52)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__maybe_sub__increase(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) double @ret_ldexp_f64__sub__maybe_sub__increase
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 51) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 51)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__never_norm(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) double @ret_ldexp_f64__sub__never_norm
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 2098) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2098)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__maybe_norm(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_ldexp_f64__sub__maybe_norm
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 2097) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2097)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__never_inf(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) double @ret_ldexp_f64__sub__never_inf
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 2046) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2046)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub__maybe_inf(double nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_ldexp_f64__sub__maybe_inf
+; CHECK-SAME: (double nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 2047) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2047)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__never_zero(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) double @ret_ldexp_f64__norm__never_zero
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -52) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -52)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__maybe_zero(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) double @ret_ldexp_f64__norm__maybe_zero
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -53) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -53)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__never_sub(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) double @ret_ldexp_f64__norm__never_sub
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -2099) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2099)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__maybe_sub(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) double @ret_ldexp_f64__norm__maybe_sub
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -2098) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2098)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__never_norm__increase(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) double @ret_ldexp_f64__norm__never_norm__increase
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 2046) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2046)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__maybe_norm__increase(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_ldexp_f64__norm__maybe_norm__increase
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 2045) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 2045)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__never_norm__decrease(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) double @ret_ldexp_f64__norm__never_norm__decrease
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -2047) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2047)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__norm__maybe_norm__decrease(double nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) double @ret_ldexp_f64__norm__maybe_norm__decrease
+; CHECK-SAME: (double nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -2046) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2046)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub_norm__zero_sub(double nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) double @ret_ldexp_f64__sub_norm__zero_sub
+; CHECK-SAME: (double nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero) [[ARG0]], i32 noundef -2047) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2047)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub_norm__zero_sub_norm(double nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) double @ret_ldexp_f64__sub_norm__zero_sub_norm
+; CHECK-SAME: (double nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero) [[ARG0]], i32 noundef -2046) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 -2046)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub_norm__inf_norm(double nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_ldexp_f64__sub_norm__inf_norm
+; CHECK-SAME: (double nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero) [[ARG0]], i32 noundef 52) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 52)
+  ret double %call
+}
+
+define double @ret_ldexp_f64__sub_norm__inf_norm_sub(double nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) double @ret_ldexp_f64__sub_norm__inf_norm_sub
+; CHECK-SAME: (double nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) double @llvm.ldexp.f64.i32(double nofpclass(nan inf zero) [[ARG0]], i32 noundef 51) #[[ATTR14]]
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 51)
+  ret double %call
+}
+
+; x86_fp80
+
+define x86_fp80 @ret_ldexp_f80__sub__never_sub__decrease(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) x86_fp80 @ret_ldexp_f80__sub__never_sub__decrease
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -64) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -64)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__maybe_sub__decrease(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) x86_fp80 @ret_ldexp_f80__sub__maybe_sub__decrease
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -63) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -63)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__never_sub__increase(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) x86_fp80 @ret_ldexp_f80__sub__never_sub__increase
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 63) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 63)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__maybe_sub__increase(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) x86_fp80 @ret_ldexp_f80__sub__maybe_sub__increase
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 62) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 62)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__never_norm(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) x86_fp80 @ret_ldexp_f80__sub__never_norm
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32829) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32829)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__maybe_norm(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_ldexp_f80__sub__maybe_norm
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32828) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32828)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__never_inf(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) x86_fp80 @ret_ldexp_f80__sub__never_inf
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32766) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32766)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub__maybe_inf(x86_fp80 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_ldexp_f80__sub__maybe_inf
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32767) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32767)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__never_zero(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) x86_fp80 @ret_ldexp_f80__norm__never_zero
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -63) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -63)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__maybe_zero(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_ldexp_f80__norm__maybe_zero
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -64) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -64)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__never_sub(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) x86_fp80 @ret_ldexp_f80__norm__never_sub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32830) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32830)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__maybe_sub(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) x86_fp80 @ret_ldexp_f80__norm__maybe_sub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32829) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32829)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__never_norm__increase(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) x86_fp80 @ret_ldexp_f80__norm__never_norm__increase
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 32766) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32766)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__maybe_norm__increase(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_ldexp_f80__norm__maybe_norm__increase
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 32765) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 32765)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__never_norm__decrease(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) x86_fp80 @ret_ldexp_f80__norm__never_norm__decrease
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32767) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32767)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__norm__maybe_norm__decrease(x86_fp80 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_ldexp_f80__norm__maybe_norm__decrease
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32766) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32766)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub_norm__zero_sub(x86_fp80 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) x86_fp80 @ret_ldexp_f80__sub_norm__zero_sub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero) [[ARG0]], i32 noundef -32767) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32767)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub_norm__zero_sub_norm(x86_fp80 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_ldexp_f80__sub_norm__zero_sub_norm
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero) [[ARG0]], i32 noundef -32766) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 -32766)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub_norm__inf_norm(x86_fp80 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_ldexp_f80__sub_norm__inf_norm
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero) [[ARG0]], i32 noundef 63) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 63)
+  ret x86_fp80 %call
+}
+
+define x86_fp80 @ret_ldexp_f80__sub_norm__inf_norm_sub(x86_fp80 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) x86_fp80 @ret_ldexp_f80__sub_norm__inf_norm_sub
+; CHECK-SAME: (x86_fp80 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 nofpclass(nan inf zero) [[ARG0]], i32 noundef 62) #[[ATTR14]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %arg0, i32 62)
+  ret x86_fp80 %call
+}
+
+; fp128
+
+define fp128 @ret_ldexp_f128__sub__never_sub__decrease(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) fp128 @ret_ldexp_f128__sub__never_sub__decrease
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -113) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -113)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__maybe_sub__decrease(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) fp128 @ret_ldexp_f128__sub__maybe_sub__decrease
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef -112) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -112)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__never_sub__increase(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) fp128 @ret_ldexp_f128__sub__never_sub__increase
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 112) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 112)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__maybe_sub__increase(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) fp128 @ret_ldexp_f128__sub__maybe_sub__increase
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 111) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 111)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__never_norm(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) fp128 @ret_ldexp_f128__sub__never_norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32878) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32878)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__maybe_norm(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_ldexp_f128__sub__maybe_norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32877) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32877)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__never_inf(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) fp128 @ret_ldexp_f128__sub__never_inf
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32766) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32766)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub__maybe_inf(fp128 nofpclass(nan inf zero norm) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_ldexp_f128__sub__maybe_inf
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero norm) [[ARG0]], i32 noundef 32767) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32767)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__never_zero(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero) fp128 @ret_ldexp_f128__norm__never_zero
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -112) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -112)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__maybe_zero(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) fp128 @ret_ldexp_f128__norm__maybe_zero
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -113) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -113)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__never_sub(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) fp128 @ret_ldexp_f128__norm__never_sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf sub norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32879) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32879)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__maybe_sub(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) fp128 @ret_ldexp_f128__norm__maybe_sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32878) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32878)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__never_norm__increase(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) fp128 @ret_ldexp_f128__norm__never_norm__increase
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 32766) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32766)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__maybe_norm__increase(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_ldexp_f128__norm__maybe_norm__increase
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef 32765) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 32765)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__never_norm__decrease(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) fp128 @ret_ldexp_f128__norm__never_norm__decrease
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32767) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32767)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__norm__maybe_norm__decrease(fp128 nofpclass(nan inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) fp128 @ret_ldexp_f128__norm__maybe_norm__decrease
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero sub) [[ARG0]], i32 noundef -32766) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32766)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub_norm__zero_sub(fp128 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf norm) fp128 @ret_ldexp_f128__sub_norm__zero_sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf norm) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero) [[ARG0]], i32 noundef -32767) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32767)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub_norm__zero_sub_norm(fp128 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) fp128 @ret_ldexp_f128__sub_norm__zero_sub_norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero) [[ARG0]], i32 noundef -32766) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 -32766)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub_norm__inf_norm(fp128 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_ldexp_f128__sub_norm__inf_norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero sub) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero) [[ARG0]], i32 noundef 112) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 112)
+  ret fp128 %call
+}
+
+define fp128 @ret_ldexp_f128__sub_norm__inf_norm_sub(fp128 nofpclass(nan inf zero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan zero) fp128 @ret_ldexp_f128__sub_norm__inf_norm_sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan zero) fp128 @llvm.ldexp.f128.i32(fp128 nofpclass(nan inf zero) [[ARG0]], i32 noundef 111) #[[ATTR14]]
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 111)
+  ret fp128 %call
 }
 
 attributes #0 = { denormal_fpenv(ieee|ieee) }
