@@ -71,6 +71,11 @@ static bool isIntegerComponent(ElementType Type) {
 
 static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
   switch (E.SemanticKind) {
+  case dxbc::PSV::SemanticKind::Target:
+    if (E.CompType != ElementType::F16 && E.CompType != ElementType::F32)
+      return signatureError(
+          "SV_Target requires 16- or 32-bit floating-point components");
+    break;
   case dxbc::PSV::SemanticKind::Position:
     if (E.Rows != 1 || E.Cols != 4 ||
         (E.CompType != ElementType::F16 && E.CompType != ElementType::F32))

@@ -23,7 +23,8 @@ float4 not_an_entry([[vk::location(0)]] float4 a : A, float4 b : B) : C {
 // CHECK: @SV_Position0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#MD_0:]]
 // CHECK: @A0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_0:]]
 // CHECK: @A0.1 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#MD_0:]]
-// CHECK: @SV_Target0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_2:]]
+// SV_Target0 uses the location of its semantic index.
+// CHECK: @SV_Target0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_0]]
 
 
 // CHECK: define void @vs_main()
@@ -36,5 +37,3 @@ float4 not_an_entry([[vk::location(0)]] float4 a : A, float4 b : B) : C {
 
 // CHECK: ![[#MD_0]] = !{![[#MD_1:]]}
 // CHECK: ![[#MD_1]] = !{i32 30, i32 0}
-// CHECK: ![[#MD_2]] = !{![[#MD_3:]]}
-// CHECK: ![[#MD_3]] = !{i32 30, i32 1}

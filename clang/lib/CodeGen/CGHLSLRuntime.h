@@ -381,12 +381,14 @@ private:
                                   const clang::DeclaratorDecl *Decl,
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index,
-                                  llvm::hlsl::InterpolationMode InterpMode);
+                                  llvm::hlsl::InterpolationMode InterpMode,
+                                  bool LocationFromIndex = false);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
                                  std::optional<unsigned> Index,
-                                 SemanticSignatures &Signature);
+                                 SemanticSignatures &Signature,
+                                 bool OneElementPerRow = false);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,

@@ -1239,19 +1239,24 @@ static void createSPIRVOutputStore(
 void CGHLSLRuntime::emitSPIRVUserSemanticStore(
     llvm::IRBuilder<> &B, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index, llvm::hlsl::InterpolationMode InterpMode) {
+    std::optional<unsigned> Index, llvm::hlsl::InterpolationMode InterpMode,
+    bool LocationFromIndex) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
-  unsigned Location = SPIRVLastAssignedOutputSemanticLocation;
+  unsigned Location;
+  if (LocationFromIndex) {
+    Location = Index.value_or(0);
+  } else {
+    Location = SPIRVLastAssignedOutputSemanticLocation;
+    llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
+    // In the case of an array, locations are assigned from the first semantic
+    // to the last.
+    SPIRVLastAssignedOutputSemanticLocation += AT ? AT->getNumElements() : 1;
+  }
   if (auto *L = Decl->getAttr<HLSLVkLocationAttr>())
     Location = L->getLocation();
 
-  // DXC completely ignores the semantic/index pair. Location are assigned from
-  // the first semantic to the last.
-  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
-  unsigned ElementCount = AT ? AT->getNumElements() : 1;
-  SPIRVLastAssignedOutputSemanticLocation += ElementCount;
   createSPIRVOutputStore(B, CGM.getModule(), Source, VariableName.str(),
                          llvm::hlsl::SPIRVInterfaceDecoration::Location,
                          Location, InterpMode);
@@ -1441,13 +1446,21 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               const clang::DeclaratorDecl *Decl,
                                               HLSLAppliedSemanticAttr *Semantic,
                                               std::optional<unsigned> Index,
-                                              SemanticSignatures &Signature) {
+                                              SemanticSignatures &Signature,
+                                              bool OneElementPerRow) {
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+  assert(!(OneElementPerRow && Shape.IsMatrix) &&
+         "matrices cannot be split into one element per row");
 
-  uint32_t SigId = Signature.size();
-  Signature.push_back(
-      createSemanticSignatureElement(CGM, SigId, Semantic, Index, Shape));
+  // DXIL pixel shader outputs are not indexable, and each render target must
+  // be in the signature row of its semantic index. An SV_Target array is
+  // therefore split into one single-row element per render target.
+  SemanticShape RowShape{{}, Shape.Cols, Shape.RowType};
+  uint32_t FirstSigId = Signature.size();
+  if (!OneElementPerRow)
+    Signature.push_back(createSemanticSignatureElement(CGM, FirstSigId,
+                                                       Semantic, Index, Shape));
 
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
@@ -1482,8 +1495,17 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
       Val = B.CreateZExt(Val, RowTy, "storedv");
     }
 
+    uint32_t SigId = FirstSigId;
+    uint32_t SigRow = Row;
+    if (OneElementPerRow) {
+      SigId = Signature.size();
+      SigRow = 0;
+      Signature.push_back(createSemanticSignatureElement(
+          CGM, SigId, Semantic, Index.value_or(0) + Row, RowShape));
+    }
+
     std::array<Value *, 4> Args{/*SigElementId=*/B.getInt32(SigId),
-                                /*RowIndex=*/B.getInt32(Row),
+                                /*RowIndex=*/B.getInt32(SigRow),
                                 /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
     B.CreateCall(IntrFn, Args, OB);
   }
@@ -1820,9 +1842,17 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     assert(Stage == llvm::Triple::Pixel &&
            "SV_Target is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
-                          InterpMode);
-    return;
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
+                                /*OneElementPerRow=*/true);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index, InterpMode,
+                                 /*LocationFromIndex=*/true);
+      return;
+    }
+    break;
   case llvm::dxbc::PSV::SemanticKind::ShadingRate:
     assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
                                llvm::Triple::Domain, llvm::Triple::Geometry,
@@ -1857,6 +1887,16 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       "Store hasn't been implemented yet for this system semantic. FIXME");
 }
 
+// A system-value name can have an arbitrary interpretation, for example
+// SV_Position on a vertex input. Its signature elements are then arbitrary,
+// although they keep the system-value name.
+static void markArbitrarySignatureElements(
+    SmallVectorImpl<llvm::hlsl::SemanticSignatureElement> &Signature,
+    size_t FirstElement) {
+  for (auto &Element : llvm::drop_begin(Signature, FirstElement))
+    Element.SemanticKind = llvm::dxbc::PSV::SemanticKind::Arbitrary;
+}
+
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
@@ -1875,9 +1915,13 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
   if (CGM.getTarget().getTriple().isSPIRV())
     InterpMode = getSPIRVInterpolationMode(
         InterpMode, Type, ShaderAttr->getType(), llvm::hlsl::IOType::In);
-  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
-    return emitUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature,
-                                InterpMode);
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
+    size_t FirstElement = Signature.size();
+    llvm::Value *Value = emitUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                              Signature, InterpMode);
+    markArbitrarySignatureElements(Signature, FirstElement);
+    return Value;
+  }
   return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind,
                                 ShaderAttr->getType(), Index, Signature,
                                 InterpMode);
@@ -1903,9 +1947,13 @@ void CGHLSLRuntime::handleScalarSemanticStore(
                                            ShaderAttr->getType(),
                                            llvm::hlsl::IOType::Out);
 
-  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
-    return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
-                                 InterpMode);
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
+    size_t FirstElement = Signature.size();
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
+                          InterpMode);
+    markArbitrarySignatureElements(Signature, FirstElement);
+    return;
+  }
   emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind,
                           ShaderAttr->getType(), Index, Signature, InterpMode);
 }
@@ -2025,12 +2073,11 @@ CGHLSLRuntime::handleSemanticStore(
   size_t PreviousSize = Signature.size();
   auto InterpMode = llvm::hlsl::getInterpolationMode(Modifiers);
   handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature, InterpMode);
-  if (Signature.size() != PreviousSize) {
-    auto &Element = Signature.back();
+  // A leaf can add several elements, such as an SV_Target array.
+  for (auto &Element : llvm::drop_begin(Signature, PreviousSize))
     Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
         InterpMode, Element.CompType, Element.SemanticKind,
         FD->getAttr<HLSLShaderAttr>()->getType(), llvm::hlsl::IOType::Out);
-  }
   return AttrBegin;
 }
 
