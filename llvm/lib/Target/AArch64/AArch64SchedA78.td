@@ -1022,6 +1022,7 @@ def A78Write_ScaledLDRH : SchedWriteVariant<[
   SchedVar<NoSchedPred,          [A78Write_4c_1L]>]>;
 
 def : InstRW<[A78Write_ScaledLDRH], (instregex "^LDR(HH|SHW|SHX)ro[WX]$")>;
+def : InstRW<[A78Write_4c_1L], (instregex "^LDR(X|W|BB|SBX|SBW|SW)?ro[WX]$")>;
 
 // Store instructions
 // -----------------------------------------------------------------------------
