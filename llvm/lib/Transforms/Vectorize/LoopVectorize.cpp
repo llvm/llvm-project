@@ -5914,14 +5914,13 @@ VPRecipeBuilder::getCompressedPtrInfo(VPInstruction *VPI) {
 VPWidenMemIntrinsicRecipe *
 VPRecipeBuilder::handleCompressedLoadOrStore(VPInstruction *VPI) {
   assert(getCompressedPtrInfo(VPI) && "Expected a compressed load/store");
-  Instruction *I = VPI->getUnderlyingInstr();
 
   VPBuilder::InsertPointGuard Guard(Builder);
   Builder.setInsertPoint(VPI);
 
   VPValue *Mask = VPI->getMask();
-  Type *AccessTy = getLoadStoreType(I);
-  Align Alignment = getLoadStoreAlignment(I);
+  Type *AccessTy = vputils::getLoadStoreValueType(VPI);
+  Align Alignment = getLoadStoreAlignment(VPI->getUnderlyingInstr());
 
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
@@ -5929,15 +5928,16 @@ VPRecipeBuilder::handleCompressedLoadOrStore(VPInstruction *VPI) {
                                                /*Reverse=*/false,
                                                VPI->getDebugLoc());
 
+  // Note: For expandload we fill masked-off lanes with passthru poison.
   if (VPI->getOpcode() == Instruction::Load)
     return new VPWidenMemIntrinsicRecipe(
         Intrinsic::masked_expandload, {Ptr, Mask, Plan.getPoison(AccessTy)},
-        AccessTy, Alignment, *VPI, I->getDebugLoc());
+        AccessTy, Alignment, *VPI, VPI->getDebugLoc());
 
   VPValue *StoredValue = VPI->getOperand(0);
   return new VPWidenMemIntrinsicRecipe(Intrinsic::masked_compressstore,
                                        {StoredValue, Ptr, Mask}, AccessTy,
-                                       Alignment, *VPI, I->getDebugLoc());
+                                       Alignment, *VPI, VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
@@ -6402,9 +6402,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, Legal, PlanCM, Builder);
 
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleCompressingPatterns, *Plan,
-                      HeaderVPBB, RecipeBuilder))
+                      RecipeBuilder, *PSE.getSE()))
     return nullptr;
 
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
@@ -6427,6 +6426,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
 
   // Convert remaining VPInstructions to widen or replicate recipes.
   // TODO: This legacy code should eventually be migrated to VPlan.
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(HeaderVPBB))) {
     // All types but VPInstructions are already widened and don't need extra
