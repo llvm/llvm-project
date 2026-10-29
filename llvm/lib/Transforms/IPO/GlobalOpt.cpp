@@ -1323,27 +1323,9 @@ deleteIfDead(GlobalValue &GV,
   if (!GV.isDiscardableIfUnused() && !GV.isDeclaration())
     return false;
 
-  if (auto *C = GV.getComdat()) {
-    auto IsComdatLeaderWithUses = false;
-    if (GV.isComdatLeader()) {
-      if (C->getUsers().size() > 1) {
-        IsComdatLeaderWithUses = true;
-      } else if (auto *GA = dyn_cast<GlobalAlias>(&GV)) {
-        if (auto *GO = dyn_cast<GlobalObject>(GA->getAliasee())) {
-          GO->removeDeadConstantUsers();
-          // The alias leader has uses if the aliasee cannot be discarded, or if
-          // the aliasee has uses other than this alias.
-          IsComdatLeaderWithUses = !GO->hasOneUse();
-        } else {
-          IsComdatLeaderWithUses = true;
-        }
-      }
-    }
-
-    if (IsComdatLeaderWithUses ||
-        (!GV.hasInternalLinkage() && NotDiscardableComdats.count(C)))
+  if (const Comdat *C = GV.getComdat())
+    if (!GV.hasLocalLinkage() && NotDiscardableComdats.count(C))
       return false;
-  }
 
   bool Dead;
   if (auto *F = dyn_cast<Function>(&GV))
@@ -2422,12 +2404,12 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   // is trivial and remove them.
   bool Changed = false;
 
-  for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
-    // We're only interested in calls. Theoretically, we could handle invoke
-    // instructions as well, but neither llvm-gcc nor clang generate invokes
-    // to __cxa_atexit.
-    CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI)
+  for (Use &U : llvm::make_early_inc_range(CXAAtExitFn->uses())) {
+    // We're only interested in calls to the atexit function. Theoretically, we
+    // could handle invoke instructions as well, but neither llvm-gcc nor clang
+    // generate invokes to __cxa_atexit.
+    CallInst *CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI || !CI->isCallee(&U))
       continue;
 
     Function *DtorFn =

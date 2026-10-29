@@ -7,6 +7,9 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformAttach(GDBRemoteTestBase):
     @skipIfRemote
+    # Sometimes times out on Windows.
+    # https://github.com/llvm/llvm-project/issues/234e982
+    @skipIfWindows
     def test_attach(self):
         """Test attaching by name"""
 

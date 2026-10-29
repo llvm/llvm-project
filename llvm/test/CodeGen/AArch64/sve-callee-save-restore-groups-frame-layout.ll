@@ -11,7 +11,7 @@
 define aarch64_sve_vector_pcs void @single_pair_zpr_spills() {
   ; LINUX-LABEL: name: single_pair_zpr_spills
   ; LINUX: bb.0 (%ir-block.0):
-  ; LINUX-NEXT:   liveins: $fp, $p8, $z17, $z19, $z18, $z21, $z20, $z23, $z22
+  ; LINUX-NEXT:   liveins: $fp, $p8, $z17, $z19, $z18, $z23, $z22, $z21, $z20
   ; LINUX-NEXT: {{  $}}
   ; LINUX-NEXT:   early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.8)
   ; LINUX-NEXT:   $sp = frame-setup ADDVL_XXI $sp, -8, implicit $vg
@@ -19,16 +19,14 @@ define aarch64_sve_vector_pcs void @single_pair_zpr_spills() {
   ; LINUX-NEXT:   frame-setup STR_ZXI killed $z17, $sp, 1 :: (store (s128) into %stack.6)
   ; LINUX-NEXT:   $pn8 = frame-setup PTRUE_C_B implicit $vg
   ; LINUX-NEXT:   frame-setup ST1B_2Z_IMM $z18_z19, $pn8, $sp, 1 :: (store (s128) into %stack.5), (store (s128) into %stack.4)
-  ; LINUX-NEXT:   frame-setup ST1B_2Z_IMM $z20_z21, $pn8, $sp, 2 :: (store (s128) into %stack.3), (store (s128) into %stack.2)
-  ; LINUX-NEXT:   frame-setup ST1B_2Z_IMM $z22_z23, $pn8, $sp, 3 :: (store (s128) into %stack.1), (store (s128) into %stack.0)
+  ; LINUX-NEXT:   frame-setup ST1B_4Z_IMM $z20_z21_z22_z23, $pn8, $sp, 1 :: (store (s128) into %stack.3), (store (s128) into %stack.2), (store (s128) into %stack.1), (store (s128) into %stack.0)
   ; LINUX-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22
   ; LINUX-NEXT:   frame-setup CFI_INSTRUCTION offset $w29, -16
   ; LINUX-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $z17, clobber, implicit-def dead early-clobber $z18, clobber, implicit-def dead early-clobber $z19, clobber, implicit-def dead early-clobber $z20, clobber, implicit-def dead early-clobber $z21, clobber, implicit-def dead early-clobber $z22, clobber, implicit-def dead early-clobber $z23
   ; LINUX-NEXT:   $z17 = frame-destroy LDR_ZXI $sp, 1 :: (load (s128) from %stack.6)
   ; LINUX-NEXT:   $pn8 = frame-destroy PTRUE_C_B implicit $vg
   ; LINUX-NEXT:   $z18_z19 = frame-destroy LD1B_2Z_IMM $pn8, $sp, 1 :: (load (s128) from %stack.5), (load (s128) from %stack.4)
-  ; LINUX-NEXT:   $z20_z21 = frame-destroy LD1B_2Z_IMM $pn8, $sp, 2 :: (load (s128) from %stack.3), (load (s128) from %stack.2)
-  ; LINUX-NEXT:   $z22_z23 = frame-destroy LD1B_2Z_IMM $pn8, $sp, 3 :: (load (s128) from %stack.1), (load (s128) from %stack.0)
+  ; LINUX-NEXT:   $z20_z21_z22_z23 = frame-destroy LD1B_4Z_IMM $pn8, $sp, 1 :: (load (s128) from %stack.3), (load (s128) from %stack.2), (load (s128) from %stack.1), (load (s128) from %stack.0)
   ; LINUX-NEXT:   $p8 = frame-destroy LDR_PXI $sp, 7 :: (load (s16) from %stack.7)
   ; LINUX-NEXT:   $sp = frame-destroy ADDVL_XXI $sp, 8, implicit $vg
   ; LINUX-NEXT:   early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.8)

@@ -857,6 +857,7 @@ cc_library(
     name = "DebugInfoDWARF",
     srcs = glob([
         "lib/DebugInfo/DWARF/*.cpp",
+        "lib/DebugInfo/DWARF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/DWARF/*.h"]),
     copts = llvm_copts,
@@ -1784,7 +1785,7 @@ gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/PowerPC/PPC.td",
+    td_file = "lib/Target/PowerPC/PPCTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":PPCTargetTdFiles",
@@ -3144,6 +3145,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Lanai/LanaiGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":LanaiOptionsTableGen",
+        ],
     },
     {
         "name": "LoongArch",
@@ -3335,6 +3339,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-subtarget"],
                 "lib/Target/MSP430/MSP430GenSubtargetInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":MSP430OptionsTableGen",
         ],
     },
     {
@@ -3958,6 +3965,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/XCore/XCoreGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":XCoreOptionsTableGen",
+        ],
     },
     {
         "name": "Xtensa",
@@ -4146,6 +4156,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LanaiOptionsTableGen",
+    strip_include_prefix = "lib/Target/Lanai",
+    tbl_outs = {"lib/Target/Lanai/LanaiOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Lanai/LanaiOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "MipsMCOptionsTableGen",
     strip_include_prefix = "lib/Target/Mips",
     tbl_outs = {"lib/Target/Mips/MipsMCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4160,6 +4179,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Mips/MipsOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Mips/MipsOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MSP430OptionsTableGen",
+    strip_include_prefix = "lib/Target/MSP430",
+    tbl_outs = {"lib/Target/MSP430/MSP430Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/MSP430/MSP430Options.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -4205,6 +4233,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/X86/X86Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "XCoreOptionsTableGen",
+    strip_include_prefix = "lib/Target/XCore",
+    tbl_outs = {"lib/Target/XCore/XCoreOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/XCore/XCoreOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

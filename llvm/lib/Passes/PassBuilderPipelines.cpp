@@ -170,8 +170,7 @@ extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions(
-    const cl::LibraryOptionsContext *LibraryOptions)
-    : LibraryOptions(LibraryOptions) {
+    const cl::LibraryOptionsContext *LibraryOptions) {
   const PassesOptions &Opts =
       cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions);
   LoopInterleaving = true;
@@ -1133,8 +1132,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsPreLink = !isThinLTOPostLink(Phase);
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen =
-      IsPreLink &&
-      PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(LibraryOptions);
+      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+                       Context.getLibraryOptions());
   const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
@@ -1143,19 +1142,19 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
-  assert(!(IsPGOInstrGen &&
-           PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(LibraryOptions)) &&
+  assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+                                Context.getLibraryOptions())) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
   const bool IsCtxProfUse = !UseCtxProfile.empty() && isThinLTOPreLink(Phase);
 
   assert((Opts.instrument_cold_function_only_path.empty() ||
-          isPGOInstrumentColdFunctionOnly(LibraryOptions)) &&
+          isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions())) &&
          "--instrument-cold-function-only-path is provided but "
          "--pgo-instrument-cold-function-only is not enabled");
   const bool IsColdFuncOnlyInstrGen =
-      isPGOInstrumentColdFunctionOnly(LibraryOptions) && IsPGOPreLink &&
-      !Opts.instrument_cold_function_only_path.empty();
+      isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions()) &&
+      IsPGOPreLink && !Opts.instrument_cold_function_only_path.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse || IsColdFuncOnlyInstrGen)

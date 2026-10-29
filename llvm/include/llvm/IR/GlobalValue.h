@@ -251,14 +251,6 @@ public:
                            static_cast<const GlobalValue *>(this)->getComdat());
   }
 
-  /// Returns true if the \c GlobalValue is the leader of its \c Comdat group.
-  /// A \c GlobalValue is considered a \c Comdat leader if it has a \c Comdat
-  /// and its name matches the name of the \c Comdat group in the symbol table.
-  /// For a \c GlobalAlias, this resolves through the alias to inspect the
-  /// aliasee's \c Comdat, treating the alias as the leader if its own name
-  /// matches the \c Comdat group name.
-  LLVM_ABI bool isComdatLeader() const;
-
   VisibilityTypes getVisibility() const { return VisibilityTypes(Visibility); }
   bool hasDefaultVisibility() const { return Visibility == DefaultVisibility; }
   bool hasHiddenVisibility() const { return Visibility == HiddenVisibility; }

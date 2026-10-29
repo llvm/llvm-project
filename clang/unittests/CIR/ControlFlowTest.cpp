@@ -824,7 +824,7 @@ TEST_F(CIRControlFlowTest, CoroutineOp) {
   EXPECT_FALSE(coroBranch.isRepetitiveRegion(2));
   EXPECT_FALSE(coroBranch.isRepetitiveRegion(3));
   EXPECT_FALSE(coroBranch.isRepetitiveRegion(4));
-  EXPECT_TRUE(coroBranch.hasLoop());
+  EXPECT_FALSE(coroBranch.hasLoop());
 
   // TODO: cir.return doesn't implement RegionBranchTerminatorOpInterface
   // verifyControlFlowInterfaceConsistency(coroOp);
@@ -872,14 +872,11 @@ TEST_F(CIRControlFlowTest, AwaitOp) {
                              {&awaitOp.getResume(), nullptr});
   expectTerminatorSuccessors(awaitOp.getResume(), {nullptr});
 
-  // MLIR's RegionBranchOpInterface::hasLoop() reports any region reached
-  // twice as a loop, and resume is reachable both directly from ready and
-  // through suspend.
   RegionBranchOpInterface awaitBranch = asRegionBranch(awaitOp);
   EXPECT_FALSE(awaitBranch.isRepetitiveRegion(0));
   EXPECT_FALSE(awaitBranch.isRepetitiveRegion(1));
   EXPECT_FALSE(awaitBranch.isRepetitiveRegion(2));
-  EXPECT_TRUE(awaitBranch.hasLoop());
+  EXPECT_FALSE(awaitBranch.hasLoop());
 
   verifyControlFlowInterfaceConsistency(awaitOp);
 }

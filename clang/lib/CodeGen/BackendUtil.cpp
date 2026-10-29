@@ -395,17 +395,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.MCOptions.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
 
-  if (CodeGenOpts.hasSjLjExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-  if (CodeGenOpts.hasSEHExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
-  if (CodeGenOpts.hasDWARFExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
-  if (CodeGenOpts.hasWasmExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
-  if (CodeGenOpts.hasEmscriptenExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Emscripten;
-
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
@@ -523,6 +512,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
   Options.MisExpect = CodeGenOpts.MisExpect;
+  Options.VerifyArgABICompliance = true;
 
   return true;
 }
@@ -536,6 +526,7 @@ getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   // if LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
   Options.EmitNotes = !CodeGenOpts.CoverageNotesFile.empty();
+  Options.UseAbsolutePathsInNotes = CodeGenOpts.UseAbsolutePathsInNotesFile;
   Options.EmitData = !CodeGenOpts.CoverageDataFile.empty();
   llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
@@ -943,7 +934,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       (CodeGenOpts.DebugPassManager || DebugPassStructure),
       CodeGenOpts.VerifyEach, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC, CI.getVirtualFileSystemPtr());
+  PassBuilder PB(TheModule->getContext(), TM.get(), PTO, PGOOpt, &PIC,
+                 CI.getVirtualFileSystemPtr());
 
   // Handle the assignment tracking feature options.
   switch (CodeGenOpts.getAssignmentTrackingMode()) {
@@ -1290,7 +1282,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, !CodeGenOpts.VerifyModule,
+        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+        !CodeGenOpts.VerifyModule,
         /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);

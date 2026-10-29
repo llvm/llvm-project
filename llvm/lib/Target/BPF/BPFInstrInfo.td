@@ -71,6 +71,7 @@ def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;
 def BPFHasMovsx : Predicate<"Subtarget->hasMovsx()">;
 def BPFHasBswap : Predicate<"Subtarget->hasBswap()">;
 def BPFHasSdivSmod : Predicate<"Subtarget->hasSdivSmod()">;
+def BPFHasHmul : Predicate<"Subtarget->hasHmul()">;
 def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
@@ -360,7 +361,9 @@ class ALU_RR<BPFOpClass Class, BPFArithOp Opc, int off,
   let BPFClass = Class;
 }
 
-multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
+multiclass ALU64<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode,
+                 bit Commutable = 0> {
+  let isCommutable = Commutable in
   def _rr : ALU_RR<BPF_ALU64, Opc, off,
                    (outs GPR:$dst),
                    (ins GPR:$src2, GPR:$src),
@@ -371,6 +374,12 @@ multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
                    (ins GPR:$src2, i64imm:$imm),
                    "$dst "#OpcodeStr#" $imm",
                    [(set GPR:$dst, (OpNode GPR:$src2, i64immSExt32:$imm))]>;
+}
+
+multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode,
+               bit Commutable = 0>
+    : ALU64<Opc, off, OpcodeStr, OpNode, Commutable> {
+  let isCommutable = Commutable in
   def _rr_32 : ALU_RR<BPF_ALU, Opc, off,
                    (outs GPR32:$dst),
                    (ins GPR32:$src2, GPR32:$src),
@@ -385,22 +394,30 @@ multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
 
 let Constraints = "$dst = $src2" in {
 let isAsCheapAsAMove = 1 in {
-  defm ADD : ALU<BPF_ADD, 0, "+=", add>;
+  defm ADD : ALU<BPF_ADD, 0, "+=", add, 1>;
   defm SUB : ALU<BPF_SUB, 0, "-=", sub>;
-  defm OR  : ALU<BPF_OR, 0, "|=", or>;
-  defm AND : ALU<BPF_AND, 0, "&=", and>;
+  defm OR  : ALU<BPF_OR, 0, "|=", or, 1>;
+  defm AND : ALU<BPF_AND, 0, "&=", and, 1>;
   defm SLL : ALU<BPF_LSH, 0, "<<=", shl>;
   defm SRL : ALU<BPF_RSH, 0, ">>=", srl>;
-  defm XOR : ALU<BPF_XOR, 0, "^=", xor>;
+  defm XOR : ALU<BPF_XOR, 0, "^=", xor, 1>;
   defm SRA : ALU<BPF_ARSH, 0, "s>>=", sra>;
 }
-  defm MUL : ALU<BPF_MUL, 0, "*=", mul>;
+  defm MUL : ALU<BPF_MUL, 0, "*=", mul, 1>;
   defm DIV : ALU<BPF_DIV, 0, "/=", udiv>;
   defm MOD : ALU<BPF_MOD, 0, "%=", urem>;
 
   let Predicates = [BPFHasSdivSmod] in {
     defm SDIV : ALU<BPF_DIV, 1, "s/=", sdiv>;
     defm SMOD : ALU<BPF_MOD, 1, "s%=", srem>;
+  }
+
+  // High-half multiply variants encoded via insn->off on BPF_MUL:
+  //   off == 1  UHMUL:  dst = ((u128)dst * (u128)src) >> 64
+  //   off == 2  SHMUL:  dst = ((i128)dst * (i128)src) >> 64
+  let Predicates = [BPFHasHmul] in {
+    defm UHMUL : ALU64<BPF_MUL, 1, "uh*=", mulhu>;
+    defm SHMUL : ALU64<BPF_MUL, 2, "sh*=", mulhs>;
   }
 }
 
@@ -741,10 +758,11 @@ class relaxed_load<PatFrags base>
   let IsAtomicOrderingAcquireOrStronger = 0;
 }
 
+// seq_cst too: a seq_cst store is xchg.
 class acquiring_load<PatFrags base>
     : PatFrag<(ops node:$ptr), (base node:$ptr)> {
   let IsAtomic = 1;
-  let IsAtomicOrderingAcquire = 1;
+  let IsAtomicOrderingAcquireOrStronger = 1;
 }
 
 let Predicates = [BPFHasLoadAcqStoreRel] in {

@@ -90,6 +90,12 @@ inline __host__ __device__ void hd3(B *b) {
 __device__ void call_hd3(B *b) { hd3(b); }
 // dev-note@-1 {{called by 'call_hd3'}}
 
+// Error, emitted for device although it is not used there.
+inline __host__ __device__ __attribute__((used)) void hd_used(B *b) {
+  (void)typeid(*b);
+  // dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+}
+
 // Templates are checked when they are instantiated.
 template <class T> __device__ T *tmpl_unused(B *b) {
   return dynamic_cast<T *>(b);
@@ -233,12 +239,17 @@ __device__ void use_default_arg() {
   // expected-note@-1 {{default argument used here}}
 }
 
-inline __host__ __device__ void hd_default_arg(const std::type_info *t = &typeid(int)) {}
+inline __host__ __device__ void hd_default_arg(const std::type_info *t = &typeid(int)) {} // #hd_default_arg
 // expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
 void use_hd_default_arg_host() { hd_default_arg(); }
 __device__ void use_hd_default_arg_device() {
   hd_default_arg();
   // expected-note@-1 {{default argument used here}}
+}
+// dev-error@#hd_default_arg {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+inline __host__ __device__ __attribute__((used)) void use_hd_default_arg_used() {
+  hd_default_arg();
+  // dev-note@-1 {{default argument used here}}
 }
 
 // Diagnosed once, at the use, although the default argument is parsed in a
@@ -313,6 +324,17 @@ struct NestedDefaultArg { // #nested_struct
 __device__ void nested_default_arg() {
   NestedDefaultArg n;
   // dev-note@-1 {{called by 'nested_default_arg'}}
+  (void)n;
+}
+
+// The constructor of a class calls the constructors of its members.
+struct Wrapper { // #wrapper_struct
+  NestedDefaultArg x;
+};
+// dev-note@#wrapper_struct {{called by 'Wrapper'}}
+__device__ void wrapper() {
+  Wrapper n;
+  // dev-note@-1 {{which is called by 'wrapper'}}
   (void)n;
 }
 

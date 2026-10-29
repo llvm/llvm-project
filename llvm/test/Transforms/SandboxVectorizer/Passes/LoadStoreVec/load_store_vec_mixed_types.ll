@@ -8,8 +8,8 @@ target datalayout = "e-ni:5"
 define void @mixed_int_float(ptr %ptr0) {
 ; CHECK-LABEL: define void @mixed_int_float(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i32>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    store <2 x i32> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i32>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 4
@@ -26,8 +26,8 @@ define void @mixed_int_float(ptr %ptr0) {
 define void @mixed_int_vector_float(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_int_vector_float(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x i16>, ptr [[PTR]], align 1, !sandboxvec [[META1:![0-9]+]]
-; CHECK-NEXT:    store <4 x i16> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x i16>, ptr [[PTR]], align 4, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> [[VECIINITL]], ptr [[PTR]], align 4, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_4 = getelementptr inbounds i8, ptr %ptr, i64 4
@@ -44,8 +44,8 @@ define void @mixed_int_vector_float(ptr %ptr) {
 define void @mixed_int_pointer(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_int_pointer(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i64>, ptr [[PTR]], align 1, !sandboxvec [[META2:![0-9]+]]
-; CHECK-NEXT:    store <2 x i64> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i64>, ptr [[PTR]], align 4, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> [[VECIINITL]], ptr [[PTR]], align 4, !sandboxvec [[META2]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_8 = getelementptr inbounds i8, ptr %ptr, i64 8
@@ -62,8 +62,8 @@ define void @mixed_int_pointer(ptr %ptr) {
 define void @mixed_dboule_pointer(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_dboule_pointer(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i64>, ptr [[PTR]], align 1, !sandboxvec [[META3:![0-9]+]]
-; CHECK-NEXT:    store <2 x i64> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i64>, ptr [[PTR]], align 8, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> [[VECIINITL]], ptr [[PTR]], align 8, !sandboxvec [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_8 = getelementptr inbounds i8, ptr %ptr, i64 8
@@ -393,7 +393,7 @@ define void @mixed_dboule_pointer_with_four_external_users(ptr %ptr, ptr %ptrExt
 define void @constants_i32_f32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i32_f32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i32> <i32 456, i32 1065353216>, ptr [[PTR0]], align 1, !sandboxvec [[META18:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 456, i32 1065353216>, ptr [[PTR0]], align 4, !sandboxvec [[META18:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i32, ptr %ptr0, i32 1
@@ -405,7 +405,7 @@ define void @constants_i32_f32(ptr %ptr0) {
 define void @constants_f32_i32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_f32_i32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 456>, ptr [[PTR0]], align 1, !sandboxvec [[META19:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 456>, ptr [[PTR0]], align 4, !sandboxvec [[META19:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -419,7 +419,7 @@ define void @constants_f32_i32(ptr %ptr0) {
 define void @constants_i64_ptr(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i64_ptr(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 5, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 1, !sandboxvec [[META20:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 5, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 4, !sandboxvec [[META20:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -431,7 +431,7 @@ define void @constants_i64_ptr(ptr %ptr0) {
 define void @constants_f64_ptr(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_f64_ptr(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 1, !sandboxvec [[META21:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 8, !sandboxvec [[META21:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -443,7 +443,7 @@ define void @constants_f64_ptr(ptr %ptr0) {
 define void @constants_ptr_f64(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_ptr_f64(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 0, i64 4607182418800017408>, ptr [[PTR0]], align 1, !sandboxvec [[META22:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 0, i64 4607182418800017408>, ptr [[PTR0]], align 8, !sandboxvec [[META22:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -455,7 +455,7 @@ define void @constants_ptr_f64(ptr %ptr0) {
 define void @constants_f64_ptrtoint(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_f64_ptrtoint(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 1, !sandboxvec [[META23:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR0]], align 8, !sandboxvec [[META23:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -469,7 +469,7 @@ define void @constants_f64_ptrtoint(ptr %ptr0) {
 define void @constants_f64_gep(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_f64_gep(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr getelementptr (i32, ptr @arr, i64 2) to i64)>, ptr [[PTR0]], align 1, !sandboxvec [[META24:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr getelementptr (i32, ptr @arr, i64 2) to i64)>, ptr [[PTR0]], align 8, !sandboxvec [[META24:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -481,7 +481,7 @@ define void @constants_f64_gep(ptr %ptr0) {
 define void @constants_f32_poison(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_f32_poison(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 poison>, ptr [[PTR0]], align 1, !sandboxvec [[META25:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 poison>, ptr [[PTR0]], align 4, !sandboxvec [[META25:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -497,7 +497,7 @@ define void @constants_f32_poison(ptr %ptr0) {
 define void @constants_2xi8_i16(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi8_i16(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 1, i8 1>, ptr [[PTR0]], align 1, !sandboxvec [[META26:![0-9]+]]
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 1, i8 1>, ptr [[PTR0]], align 2, !sandboxvec [[META26:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 2
@@ -509,7 +509,7 @@ define void @constants_2xi8_i16(ptr %ptr0) {
 define void @constants_2xi32_f64(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32_f64(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 0, i32 1072693248>, ptr [[PTR0]], align 1, !sandboxvec [[META27:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 0, i32 1072693248>, ptr [[PTR0]], align 8, !sandboxvec [[META27:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -521,7 +521,7 @@ define void @constants_2xi32_f64(ptr %ptr0) {
 define void @constants_2xi32_ptr(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32_ptr(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 0, i32 0>, ptr [[PTR0]], align 1, !sandboxvec [[META28:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 0, i32 0>, ptr [[PTR0]], align 8, !sandboxvec [[META28:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -547,7 +547,7 @@ define void @constants_2xptr_i128(ptr %ptr0) {
 define void @constants_2xf16_i32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xf16_i32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i16> <i16 15360, i16 16384, i16 7, i16 0>, ptr [[PTR0]], align 1, !sandboxvec [[META30:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> <i16 15360, i16 16384, i16 7, i16 0>, ptr [[PTR0]], align 4, !sandboxvec [[META30:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -559,7 +559,7 @@ define void @constants_2xf16_i32(ptr %ptr0) {
 define void @constants_2xbf16_f32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xbf16_f32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i16> <i16 16256, i16 16384, i16 0, i16 16448>, ptr [[PTR0]], align 1, !sandboxvec [[META31:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> <i16 16256, i16 16384, i16 0, i16 16448>, ptr [[PTR0]], align 4, !sandboxvec [[META31:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -571,7 +571,7 @@ define void @constants_2xbf16_f32(ptr %ptr0) {
 define void @constants_i64_2xf32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i64_2xf32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 0, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 1, !sandboxvec [[META32:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 0, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 4, !sandboxvec [[META32:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -586,7 +586,7 @@ define void @constants_i64_2xf32(ptr %ptr0) {
 define void @constants_i32_i24(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i32_i24(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 3, i8 0, i8 0, i8 4, i8 0, i8 0, i8 5, i8 0, i8 0>, ptr [[PTR0]], align 1, !sandboxvec [[META33:![0-9]+]]
+; CHECK-NEXT:    store <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 2, i8 0, i8 0, i8 3, i8 0, i8 0, i8 4, i8 0, i8 0, i8 5, i8 0, i8 0>, ptr [[PTR0]], align 4, !sandboxvec [[META33:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -608,7 +608,7 @@ define void @constants_i32_i24(ptr %ptr0) {
 define void @constants_2xi32_2xf32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32_2xf32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 1, !sandboxvec [[META34:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 8, !sandboxvec [[META34:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -620,7 +620,7 @@ define void @constants_2xi32_2xf32(ptr %ptr0) {
 define void @constants_2xf32-zeroinit_2xi32-zeroinit(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xf32-zeroinit_2xi32-zeroinit(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 0, i32 0, i32 5, i32 6>, ptr [[PTR0]], align 1, !sandboxvec [[META35:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 0, i32 0, i32 5, i32 6>, ptr [[PTR0]], align 8, !sandboxvec [[META35:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -632,7 +632,7 @@ define void @constants_2xf32-zeroinit_2xi32-zeroinit(ptr %ptr0) {
 define void @constants_2xi32-zeroinit_2xf32-zeroinit(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32-zeroinit_2xf32-zeroinit(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR0]], align 1, !sandboxvec [[META36:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR0]], align 8, !sandboxvec [[META36:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -644,7 +644,7 @@ define void @constants_2xi32-zeroinit_2xf32-zeroinit(ptr %ptr0) {
 define void @constants_2xi32-splat_2xf32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32-splat_2xf32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 7, i32 7, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 1, !sandboxvec [[META37:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 7, i32 7, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 8, !sandboxvec [[META37:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -656,7 +656,7 @@ define void @constants_2xi32-splat_2xf32(ptr %ptr0) {
 define void @constants_2xf32-splat_2xi32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xf32-splat_2xi32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 1073741824, i32 1073741824, i32 9, i32 10>, ptr [[PTR0]], align 1, !sandboxvec [[META38:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1073741824, i32 1073741824, i32 9, i32 10>, ptr [[PTR0]], align 8, !sandboxvec [[META38:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -668,7 +668,7 @@ define void @constants_2xf32-splat_2xi32(ptr %ptr0) {
 define void @constants_2xptr_2xi64(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xptr_2xi64(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i64> <i64 ptrtoint (ptr @g to i64), i64 0, i64 3, i64 4>, ptr [[PTR0]], align 1, !sandboxvec [[META39:![0-9]+]]
+; CHECK-NEXT:    store <4 x i64> <i64 ptrtoint (ptr @g to i64), i64 0, i64 3, i64 4>, ptr [[PTR0]], align 16, !sandboxvec [[META39:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 16
@@ -680,7 +680,7 @@ define void @constants_2xptr_2xi64(ptr %ptr0) {
 define void @constants_2xi32-poison_2xf32(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_2xi32-poison_2xf32(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <4 x i32> <i32 poison, i32 poison, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 1, !sandboxvec [[META40:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 poison, i32 poison, i32 1077936128, i32 1082130432>, ptr [[PTR0]], align 8, !sandboxvec [[META40:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 8
@@ -725,8 +725,8 @@ define void @constants_i32_i32_ptr(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i32_i32_ptr(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR0]], i64 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[PTR0]], align 1, !sandboxvec [[META45:![0-9]+]]
-; CHECK-NEXT:    store ptr @g, ptr [[PTR2]], align 8, !sandboxvec [[META46:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[PTR0]], align 4, !sandboxvec [[META41:![0-9]+]]
+; CHECK-NEXT:    store ptr @g, ptr [[PTR2]], align 8, !sandboxvec [[META42:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -741,8 +741,8 @@ define void @constants_i32_i32_ptr-gep(ptr %ptr0) {
 ; CHECK-LABEL: define void @constants_i32_i32_ptr-gep(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR0]], i64 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[PTR0]], align 1, !sandboxvec [[META47:![0-9]+]]
-; CHECK-NEXT:    store ptr getelementptr (i32, ptr @arr, i64 2), ptr [[PTR2]], align 8, !sandboxvec [[META48:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[PTR0]], align 4, !sandboxvec [[META43:![0-9]+]]
+; CHECK-NEXT:    store ptr getelementptr (i32, ptr @arr, i64 2), ptr [[PTR2]], align 8, !sandboxvec [[META44:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i64 4
@@ -756,7 +756,7 @@ define void @constants_i32_i32_ptr-gep(ptr %ptr0) {
 define void @constants_i64_ptr-nonintegral(ptr addrspace(5) %ptr0) {
 ; CHECK-LABEL: define void @constants_i64_ptr-nonintegral(
 ; CHECK-SAME: ptr addrspace(5) [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 5, i64 0>, ptr addrspace(5) [[PTR0]], align 1, !sandboxvec [[META49:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 5, i64 0>, ptr addrspace(5) [[PTR0]], align 4, !sandboxvec [[META45:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr addrspace(5) %ptr0, i64 8
@@ -807,9 +807,9 @@ define void @constants_i64_ptr-nonintegral(ptr addrspace(5) %ptr0) {
 ; CHECK: [[META38]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META39]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META40]] = distinct !{!"sandboxregion"}
+; CHECK: [[META41]] = distinct !{!"sandboxregion"}
+; CHECK: [[META42]] = distinct !{!"sandboxregion"}
+; CHECK: [[META43]] = distinct !{!"sandboxregion"}
+; CHECK: [[META44]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META45]] = distinct !{!"sandboxregion"}
-; CHECK: [[META46]] = distinct !{!"sandboxregion"}
-; CHECK: [[META47]] = distinct !{!"sandboxregion"}
-; CHECK: [[META48]] = distinct !{!"sandboxregion"}
-; CHECK: [[META49]] = distinct !{!"sandboxregion"}
 ;.

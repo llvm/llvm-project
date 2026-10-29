@@ -3710,10 +3710,22 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   if (ID->getImplementation())
     Flags |= llvm::DINode::FlagObjcClassComplete;
 
+  llvm::DINodeArray Annotations;
+  const auto *RuntimeName = ID->getAttr<ObjCRuntimeNameAttr>();
+  if (RuntimeName && RuntimeName->getMetadataName() != ID->getName()) {
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Metadata *Ops[2] = {
+        llvm::MDString::get(Ctx, "objc_runtime_name"),
+        llvm::MDString::get(Ctx, RuntimeName->getMetadataName())};
+    Annotations = DBuilder.getOrCreateArray({llvm::MDNode::get(Ctx, Ops)});
+  }
+
   llvm::DIScope *Mod = getParentModuleOrNull(ID);
   llvm::DICompositeType *RealDecl = DBuilder.createStructType(
       Mod ? Mod : Unit, ID->getName(), DefUnit, Line, Size, Align, Flags,
-      nullptr, llvm::DINodeArray(), RuntimeLang);
+      nullptr, llvm::DINodeArray(), RuntimeLang, /*VTableHolder=*/nullptr,
+      /*UniqueIdentifier=*/"", /*Specification=*/nullptr,
+      /*NumExtraInhabitants=*/0, Annotations);
 
   QualType QTy(Ty, 0);
   TypeCache[QTy.getAsOpaquePtr()].reset(RealDecl);

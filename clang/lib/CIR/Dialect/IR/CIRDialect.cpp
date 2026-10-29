@@ -134,10 +134,14 @@ static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
 
 static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
                                         cir::OpenCLVersionAttr cxxVersion) {
-  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
-         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+  return (openCLVersion.getMajorVersion() == 2 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 1 &&
+          cxxVersion.getMinorVersion() == 0) ||
+         (openCLVersion.getMajorVersion() == 3 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 2021 &&
+          cxxVersion.getMinorVersion() == 0);
 }
 
 static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
@@ -252,33 +256,6 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
       return failure();
   }
   return success();
-}
-
-bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
-  assert(ty && "isPureCIRType requires a non-null type");
-  {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    auto it = pureCIRTypeCache.find(ty);
-    if (it != pureCIRTypeCache.end())
-      return it->second;
-  }
-  // Records gain members when completed, so a "pure" answer is only stable
-  // when the walk saw no incomplete record. "Impure" answers stay stable.
-  bool sawIncompleteRecord = false;
-  bool result = !ty.walk([&](mlir::Type t) {
-                     if (!t)
-                       return mlir::WalkResult::advance();
-                     if (auto rec = mlir::dyn_cast<cir::RecordType>(t))
-                       sawIncompleteRecord |= rec.isIncomplete();
-                     return mlir::isa<cir::CIRDialect>(t.getDialect())
-                                ? mlir::WalkResult::advance()
-                                : mlir::WalkResult::interrupt();
-                   }).wasInterrupted();
-  if (!result || !sawIncompleteRecord) {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    pureCIRTypeCache[ty] = result;
-  }
-  return result;
 }
 
 LogicalResult
@@ -1291,13 +1268,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
-    case cir::CastKind::integral: {
-      llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
-      auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
-        return mlir::cast<mlir::Attribute>(foldResults[0]);
-      return {};
-    }
+    case cir::CastKind::integral:
     case cir::CastKind::bitcast:
     case cir::CastKind::address_space:
     case cir::CastKind::float_complex:
@@ -2704,7 +2675,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
   } else {
     // Parse constant with initializer, examples:
     //  cir.global @y = 3.400000e+00 : f32
-    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<!s8i x 3>>
     if (parseConstantValue(parser, initialValueAttr).failed())
       return failure();
 
@@ -2919,7 +2890,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::Builder &builder = parser.getBuilder();
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
-  mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr coroutineKindNameAttr = getCoroutineKindAttrName(state.name);
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
@@ -2933,9 +2904,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
-  if (::mlir::succeeded(
-          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
-    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+
+  // Parse optional coroutine kind attribute
+  {
+    static constexpr llvm::StringRef keywords[] = {"coroutine",
+                                                   "flattened_coroutine"};
+    llvm::StringRef keyword;
+    if (parser.parseOptionalKeyword(&keyword, keywords).succeeded())
+      state.addAttribute(
+          coroutineKindNameAttr,
+          cir::CoroutineKindAttr::get(builder.getContext(),
+                                      *cir::symbolizeCoroutineKind(keyword)));
+  }
 
   // Parse optional inline kind attribute
   cir::InlineKindAttr inlineKindAttr;
@@ -3279,8 +3259,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getBuiltin())
     p << " builtin";
 
-  if (getCoroutine())
-    p << " coroutine";
+  if (std::optional<cir::CoroutineKind> coroKind = getCoroutineKind())
+    p << ' ' << cir::stringifyCoroutineKind(*coroKind);
 
   printInlineKindAttr(p, getInlineKindAttr());
 
@@ -3379,7 +3359,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 mlir::LogicalResult cir::FuncOp::verify() {
 
-  if (!isDeclaration() && getCoroutine()) {
+  if (!isDeclaration() && getCoroutineKind() == cir::CoroutineKind::Coroutine) {
     int coroutineOpCount = 0;
     this->walk([&](Operation *op) {
       if (isa<CoroutineOp>(op)) {
@@ -4238,10 +4218,13 @@ LogicalResult cir::VecCreateOp::verify() {
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
   const cir::VectorType vecTy = getType();
-  if (getElements().size() != vecTy.getSize()) {
+  if (vecTy.isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
+  if (getElements().size() != vecTy.getFixedSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
-                         << " element count of " << vecTy.getSize();
+                         << " element count of " << vecTy.getFixedSize();
   }
 
   const mlir::Type elementType = vecTy.getElementType();
@@ -4478,9 +4461,13 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
+  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
+      getResult().getType().isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize()) {
+  if (getIndices().size() != getResult().getType().getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
   }
@@ -4493,8 +4480,8 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
-  const uint64_t maxValidIndex =
-      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
+                                 getVec2().getType().getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;

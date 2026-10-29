@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "../../VectorizeOptions.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
@@ -27,18 +28,13 @@ namespace sandboxir {
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
-  // Check if in the same BB.
-  if (LegalityAnalysis::differentBlock(Bndl))
-    return std::nullopt;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
+             VecUtils::dump(Bndl));
+  const auto &LegalityRes = Legality->canVectorizeLSV(Bndl);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
 
-  // Check if instructions repeat.
-  if (!LegalityAnalysis::areUnique(Bndl))
+  if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
     return std::nullopt;
-
-  // Check scheduling.
-  if (!Sched->trySchedule(Bndl))
-    return std::nullopt;
-
   return VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
 }
 
@@ -56,8 +52,7 @@ bool LoadStoreVec::acceptOrRevert() {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "CostGain=" << CostGain
                     << " (After=" << CostAfter << " Before=" << CostBefore
                     << ")\n");
-  const VectorizeOptions &Opts =
-      Ctx->getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(*Ctx);
   if (CostGain > Opts.sbvec_cost_threshold) {
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Not profitable, reverting.\n");
     Ctx->revert();
@@ -77,10 +72,12 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
 
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
-  // TODO: Compute alignment.
-  Align LdAlign(1);
+  Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  auto *VecL =
+      LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  Utils::propagateMetadata(VecL, Loads);
+  return VecL;
 }
 
 Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
@@ -273,10 +270,10 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
   // Generate vector store.
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
-  // TODO: Compute alignment.
-  Align StAlign(1);
+  Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
-  StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
@@ -336,8 +333,10 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   DL = &F.getParent()->getDataLayout();
   Ctx = &F.getContext();
   A = &RegionAnalyses;
-  Sched =
-      std::make_unique<Scheduler>(A->getAA(), *Ctx, SchedDirection::BottomUp);
+  InstrMaps IMaps;
+  Legality = std::make_unique<LegalityAnalysis>(
+      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
+      A->getTTI(), F.getContext(), IMaps, SchedDirection::BottomUp);
 
   auto Opc = Bndl[0]->getOpcode();
   assert(
@@ -355,7 +354,6 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   default:
     llvm_unreachable("Expected Load or Store");
   }
-  Sched.reset();
   return Changed;
 }
 

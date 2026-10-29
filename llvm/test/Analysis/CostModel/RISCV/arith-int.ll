@@ -238,9 +238,9 @@ define i32 @sub() {
 
 define i32 @mul() {
 ; CHECK-LABEL: 'mul'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = mul i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = mul i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = mul i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I16 = mul <1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I16 = mul <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I16 = mul <4 x i16> undef, undef

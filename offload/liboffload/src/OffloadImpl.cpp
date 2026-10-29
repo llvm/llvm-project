@@ -577,6 +577,18 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
     return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
 
+  case OL_DEVICE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
   default:
     break;
   }
@@ -787,6 +799,12 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -982,10 +1000,6 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
     if (auto Err = Device->Device->synchronize(Queue->AsyncInfo,
                                                /*Release=*/true))
       return Err;
-
-    // The queue was synchronized correctly, plugin should cache internal
-    // references to hardware queues. We can free `AsyncInfo`.
-    delete Queue->AsyncInfo;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
     Context->addOutstandingQueue(Device, Queue->AsyncInfo);
@@ -1046,6 +1060,13 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     if (auto Err = Pending.takeError())
       return Err;
     return Info.write<bool>(!*Pending);
+  }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -1616,6 +1637,11 @@ GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
+
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
+  return Device->Device->getRecordReplay();
+}
+
 } // namespace tmp
 
 } // namespace offload

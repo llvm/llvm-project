@@ -860,6 +860,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    SDValue Src = Op.getOperand(0);
+    // Preserve shared casts unless the cast is free and its source is not
+    // shared, or the truncate cancels an extension.
+    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
+                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
+    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
+                      ISD::isExtOpcode(Src.getOpcode()) &&
+                      Src.getOperand(0).getValueType() == VT;
+    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
+      break;
+    unsigned SrcBits = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
+    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
+        DemandedBits.getActiveBits() > SrcBits)
+      SrcDemandedBits.setSignBit();
+
+    // Do not preserve flags that the simplified source may invalidate.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -9383,6 +9409,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
+bool TargetLowering::expandMODF(SDNode *Node, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse = FracPart;
+  if (!Flags.hasNoInfs()) {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  Results.push_back(ResultFrac);
+  Results.push_back(IntPart);
+  return true;
+}
+
 SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -11518,22 +11573,38 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   auto [Mask, StepVector] = getLegalMaskAndStepVector(
       DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
 
-  // TODO: Handle the step vector needing to be split + widened.
-  assert(StepVector && "Step vector needs splitting");
-  assert(Mask.getValueType() == VT && "Step vector was widened");
+  // No legal step vector: split the mask in half and recombine the results.
+  // Lo = get_active_lane_mask Start, End
+  // Hi = get_active_lane_mask (uaddsat Start, LoNumElts), End
+  if (!StepVector) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+    SDValue Lo = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, LoVT, Start, End);
+    SDValue LoNumElts =
+        DAG.getElementCount(DL, OpVT, LoVT.getVectorElementCount());
+    SDValue HiStart = DAG.getNode(ISD::UADDSAT, DL, OpVT, Start, LoNumElts);
+    SDValue Hi = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, HiVT, HiStart, End);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
 
   // Rebase and saturate the termination value.
-  SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
-                                DL, OpVT);
+  SDValue Max =
+      DAG.getConstant(maxUIntN(std::min(StepVector.getScalarValueSizeInBits(),
+                                        OpVT.getScalarSizeInBits())),
+                      DL, OpVT);
   End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
   End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
+  End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());
 
   // cmp <0, 1, 2, 3...>, End
   SDValue EndV = DAG.getSplat(StepVector.getValueType(), DL, End);
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                 StepVector.getValueType());
   SDValue Cmp = DAG.getSetCC(DL, CCVT, StepVector, EndV, ISD::SETULT);
-  return DAG.getBoolExtOrTrunc(Cmp, DL, VT, StepVector.getValueType());
+  SDValue Res = DAG.getBoolExtOrTrunc(Cmp, DL, Mask.getValueType(),
+                                      StepVector.getValueType());
+  if (Mask.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
 }
 
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
@@ -11680,16 +11751,20 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
   }
 
-  // If the subtract doesn't overflow then just use abs(sub())
-  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+  // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
+  // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
+  bool UseSigned =
+      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+  if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  if (DAG.willNotOverflowSub(UseSigned, RHS, LHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;

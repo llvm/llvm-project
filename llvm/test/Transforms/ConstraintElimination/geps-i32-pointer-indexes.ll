@@ -10,7 +10,8 @@ define i1 @gep_idx_implicit_truncate(ptr %dst, i64 %off) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sge i64 [[OFF:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[GEP_OFF:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[OFF]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[DST]], [[GEP_OFF]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %pos = icmp sge i64 %off, 0
   call void @llvm.assume(i1 %pos)
@@ -31,6 +32,22 @@ define i1 @gep_idx_explicit_truncate(ptr %dst, i64 %off) {
   %pos = icmp sge i64 %off, 0
   call void @llvm.assume(i1 %pos)
   %t = trunc i64 %off to i32
+  %gep.off = getelementptr inbounds i8, ptr %dst, i32 %t
+  %cmp = icmp ule ptr %dst, %gep.off
+  ret i1 %cmp
+}
+
+define i1 @gep_idx_explicit_truncate_nsw(ptr %dst, i64 %off) {
+; CHECK-LABEL: @gep_idx_explicit_truncate_nsw(
+; CHECK-NEXT:    [[POS:%.*]] = icmp sge i64 [[OFF:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[OFF]] to i32
+; CHECK-NEXT:    [[GEP_OFF:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i32 [[T]]
+; CHECK-NEXT:    ret i1 true
+;
+  %pos = icmp sge i64 %off, 0
+  call void @llvm.assume(i1 %pos)
+  %t = trunc nsw i64 %off to i32
   %gep.off = getelementptr inbounds i8, ptr %dst, i32 %t
   %cmp = icmp ule ptr %dst, %gep.off
   ret i1 %cmp

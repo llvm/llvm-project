@@ -13,6 +13,7 @@
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
@@ -354,6 +355,16 @@ public:
       paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
     }
 
+    // The TOSA specification requires a negative padding to be diagnosed.
+    // We emit a runtime assertion, as this could be dead or unreachable code.
+    if (llvm::any_of(paddingVals, [](int64_t val) { return val < 0; })) {
+      Value fail =
+          arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(false));
+      cf::AssertOp::create(
+          rewriter, loc, fail,
+          rewriter.getStringAttr("tosa.pad: padding must be non-negative"));
+    }
+
     ShapedType inputTy = cast<ShapedType>(input.getType());
     int64_t rank = inputTy.getRank();
 
@@ -397,59 +408,14 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   LogicalResult
   matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = dyn_cast<RankedTensorType>(op.getType());
+    auto resultType =
+        getTypeConverter()->convertType<RankedTensorType>(op.getType());
+    if (!resultType)
+      return failure();
 
-    Location loc = op.getLoc();
-    int axis = op.getAxis();
-    Value axisValue =
-        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(axis));
-    int64_t rank = resultType.getRank();
-
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    SmallVector<OpFoldResult> sizes =
-        tensor::getMixedSizes(rewriter, op.getLoc(), adaptor.getOperands()[0]);
-
-    // Pre-compute the offsets along the axis dimension.
-    // The axisOffsets will be of size rank + 1, where the last value
-    // will hold the total size of the tensor along the 'axis' dimension.
-    SmallVector<OpFoldResult> axisOffsets;
-    axisOffsets.push_back(rewriter.getIndexAttr(0));
-    axisOffsets.push_back(sizes[axis]);
-
-    for (auto arg : adaptor.getOperands().drop_front()) {
-      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
-      auto currentOffset =
-          getValueOrCreateConstantIndexOp(rewriter, loc, axisOffsets.back());
-      auto total =
-          rewriter.createOrFold<arith::AddIOp>(loc, currentOffset, size);
-      axisOffsets.push_back(getAsOpFoldResult(total));
-    }
-    sizes[axis] = axisOffsets.back();
-
-    // Compute the dynamic sizes of the tensor.empty operation.
-    // This is based off of the specified result type of the tosa.concat
-    // operation, since we don't want to change the result type of the operation
-    // during the conversion.
-    SmallVector<Value> dynDims;
-    for (int64_t i = 0; i < rank; ++i) {
-      if (resultType.isDynamicDim(i)) {
-        dynDims.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, sizes[i]));
-      }
-    }
-
-    Value result =
-        tensor::EmptyOp::create(rewriter, loc, resultType.getShape(),
-                                resultType.getElementType(), dynDims);
-
-    for (auto [arg, offset] : llvm::zip(adaptor.getOperands(), axisOffsets)) {
-      auto sizes = tensor::getMixedSizes(rewriter, op.getLoc(), arg);
-      offsets[axis] = offset;
-      result = rewriter.createOrFold<tensor::InsertSliceOp>(
-          loc, arg, result, offsets, sizes, strides);
-    }
-    rewriter.replaceOp(op, result);
+    rewriter.replaceOpWithNewOp<tensor::ConcatOp>(
+        op, resultType, rewriter.getI64IntegerAttr(op.getAxis()),
+        adaptor.getInput1());
     return success();
   }
 };

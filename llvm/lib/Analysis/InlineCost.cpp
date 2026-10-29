@@ -811,7 +811,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       if (Trimmed.empty())
         continue;
       // Filter out the outlined assembly instructions from the cost by keeping
-      // track of the section level and only accounting for instrutions at
+      // track of the section level and only accounting for instructions at
       // section level of zero. Note there will be duplication in outlined
       // sections too, but is not accounted in the inlining cost model.
       if (Trimmed.starts_with(".pushsection")) {

@@ -256,6 +256,30 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
   return DeclToList[D] = buildListForType(D->getType(), D);
 }
 
+/// Returns true if the field named by \p ME denotes a subobject of `*this`,
+/// reached as `this->f` or through anonymous-struct/union subobjects.
+static bool isSubobjectOfThis(const MemberExpr *ME) {
+  const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(Base))
+    return true;
+
+  // An arrow access dereferences a pointer, so the field belongs to another
+  // object, not a subobject of `*this`.
+  if (ME->isArrow())
+    return false;
+
+  // Traverse only *anonymous* subobjects: their members are uniquely named
+  // within the class, so the FieldDecl-keyed origin can't conflate two
+  // subobjects. A named subobject (`this->a.f`) could repeat the same inner
+  // type, so it is rejected.
+  if (const auto *BaseAsME = dyn_cast<MemberExpr>(Base)) {
+    const auto *BaseField = dyn_cast<FieldDecl>(BaseAsME->getMemberDecl());
+    if (BaseField && BaseField->isAnonymousStructOrUnion())
+      return isSubobjectOfThis(BaseAsME);
+  }
+  return false;
+}
+
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
@@ -290,7 +314,7 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     ReferencedDecl = DRE->getDecl();
   else if (auto *ME = dyn_cast<MemberExpr>(E))
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        Field && isSubobjectOfThis(ME))
       ReferencedDecl = Field;
   if (ReferencedDecl) {
     OriginList *Head = nullptr;

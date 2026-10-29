@@ -691,6 +691,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     if (EmitCovNotes) {
       CmdArgs.push_back(
           Args.MakeArgString("-coverage-notes-file=" + CoverageFilename));
+
+      bool UseAbsolutePathsInNotes =
+          Args.hasFlag(options::OPT_fprofile_abs_path,
+                       options::OPT_fno_profile_abs_path, false);
+      if (UseAbsolutePathsInNotes)
+        CmdArgs.push_back(Args.MakeArgString("-coverage-notes-abs-paths"));
     }
 
     if (EmitCovData) {
@@ -2798,11 +2804,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                 .Case("-Av8plus", {"+v8plus", "+v9"})
                 .Case("-Av8plusa", {"+v8plus", "+v9", "+vis"})
                 .Case("-Av8plusb", {"+v8plus", "+v9", "+vis", "+vis2"})
-                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3",
+                                    "+ua2005", "+ua2007"})
                 .Case("-Av9", {"+v9"})
                 .Case("-Av9a", {"+v9", "+vis"})
                 .Case("-Av9b", {"+v9", "+vis", "+vis2"})
-                .Case("-Av9d", {"+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av9d",
+                      {"+v9", "+vis", "+vis2", "+vis3", "+ua2005", "+ua2007"})
                 .Default({});
         if (!SparcTargetFeatures.empty())
           continue;
@@ -4052,6 +4060,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-pdb-in-private");
   }
+  CmdArgs.push_back("-load-bool-from-mem=nonzero");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
@@ -4162,8 +4171,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
-  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
-                     options::OPT_fno_modulemap_allow_subdirectory_search);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                    options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -7326,14 +7335,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mnop_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mrecord_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)

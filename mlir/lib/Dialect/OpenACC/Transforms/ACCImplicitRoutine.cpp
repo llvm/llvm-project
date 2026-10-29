@@ -87,18 +87,6 @@ private:
     module.walk([&](acc::RoutineOp routineOp) { routineCounter++; });
   }
 
-  // Check if routine has a default bind clause or a device-type specific bind
-  // clause. Returns true if `acc routine` has a default bind clause or
-  // a device-type specific bind clause.
-  bool isACCRoutineBindDefaultOrDeviceType(acc::RoutineOp op,
-                                           acc::DeviceType deviceType) {
-    // Fast check to avoid device-type specific lookups.
-    if (!op.getBindIdName() && !op.getBindStrName())
-      return false;
-    return op.getBindNameValue().has_value() ||
-           op.getBindNameValue(deviceType).has_value();
-  }
-
   // Generate a unique name for the routine and create the routine operation
   acc::RoutineOp createRoutineOp(OpBuilder &builder, Location loc,
                                  FunctionOpInterface &callee) {
@@ -190,7 +178,7 @@ private:
     // function to which the `acc routine` is used with. Skip this case to
     // avoid implicitly recursively marking calls that would not end up on
     // device.
-    if (isACCRoutineBindDefaultOrDeviceType(routineOp, targetDeviceType))
+    if (routineOp.getEffectiveBindName(targetDeviceType))
       return success();
 
     SymbolTable symTab(routineOp->getParentOfType<ModuleOp>());

@@ -1287,7 +1287,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   std::string copyFuncName =
       fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = builder.getNamedFunction(copyFuncName))
     return decl;
 
   // create function
@@ -1298,6 +1298,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
@@ -1787,7 +1788,7 @@ bool ClauseProcessor::processLinear(
                   clause.t)) {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1795,7 +1796,7 @@ bool ClauseProcessor::processLinear(
         mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
         mlir::Value operand =
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       }
 
       // Determine the linear modifier:

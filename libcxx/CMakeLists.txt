@@ -230,6 +230,7 @@ set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI 
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
+string(LENGTH "${LIBCXX_ABI_NAMESPACE}" LIBCPP_ABI_NAMESPACE_LEN)
 set(LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
   "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
    version must correspond to the major version of an LLVM release.")
@@ -745,6 +746,7 @@ endfunction()
 # Configuration file flags =====================================================
 config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
+config_define(${LIBCPP_ABI_NAMESPACE_LEN} _LIBCPP_ABI_NAMESPACE_LEN)
 config_define(${LIBCXX_ABI_FORCE_ITANIUM} _LIBCPP_ABI_FORCE_ITANIUM)
 config_define(${LIBCXX_ABI_FORCE_MICROSOFT} _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define(${LIBCXX_ENABLE_THREADS} _LIBCPP_HAS_THREADS)

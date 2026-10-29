@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SourceMgrDiagnosticVerifier.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -80,6 +81,25 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
   return true;
 }
 
+static Regex buildExpectedRegex(ArrayRef<StringRef> prefixes) {
+  assert(!prefixes.empty() && "Diagnostic verifier needs at least one prefix");
+  std::string pattern = "(^|[^[:alnum:]_-])(";
+  llvm::interleave(
+      prefixes,
+      [&](StringRef prefix) {
+        assert(!prefix.empty() && "Diagnostic verifier prefix cannot be empty");
+        pattern += Regex::escape(prefix);
+      },
+      [&] { pattern += '|'; });
+  pattern += ")-(error|note|remark|warning)(-re)?"
+             "( *@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$";
+  return Regex(pattern);
+}
+
+SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
+    ArrayRef<StringRef> prefixes)
+    : expected(buildExpectedRegex(prefixes)) {}
+
 MutableArrayRef<SourceMgrDiagnosticVerifier::ExpectedDiag>
 SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
                                                   SourceMgr &mgr,
@@ -99,7 +119,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
   SmallVector<StringRef, 100> lines;
   buf->getBuffer().split(lines, '\n');
   for (unsigned lineNo = 0, e = lines.size(); lineNo < e; ++lineNo) {
-    SmallVector<StringRef, 4> matches;
+    SmallVector<StringRef, 8> matches;
     if (!expected.match(lines[lineNo].rtrim(), &matches)) {
       // Check for designators that apply to this line.
       if (!designatorsForNextLine.empty()) {
@@ -111,32 +131,30 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
       continue;
     }
 
-    // Point to the start of expected-*.
-    SMLoc expectedStart = SMLoc::getFromPointer(matches[0].data());
+    // Point to the start of <prefix>-<kind>.
+    SMLoc expectedStart = SMLoc::getFromPointer(matches[2].data());
 
     SourceMgr::DiagKind kind;
-    if (matches[1] == "error")
+    if (matches[3] == "error")
       kind = SourceMgr::DK_Error;
-    else if (matches[1] == "warning")
+    else if (matches[3] == "warning")
       kind = SourceMgr::DK_Warning;
-    else if (matches[1] == "remark")
+    else if (matches[3] == "remark")
       kind = SourceMgr::DK_Remark;
     else {
-      assert(matches[1] == "note");
+      assert(matches[3] == "note");
       kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[5]);
+    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[7]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
-    if (!matches[2].empty() && !record.computeRegex(os, mgr)) {
+    if (!matches[4].empty() && !record.computeRegex(os, mgr)) {
       ok = false;
       continue;
     }
 
-    StringRef offsetMatch = matches[3];
+    StringRef offsetMatch = matches[6];
     if (!offsetMatch.empty()) {
-      offsetMatch = offsetMatch.drop_front(1);
-
       // Get the integer value without the @ and +/- prefix.
       if (offsetMatch[0] == '+' || offsetMatch[0] == '-') {
         int offset;

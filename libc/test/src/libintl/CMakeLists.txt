@@ -1,5 +1,5 @@
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  add_custom_target(libc-libintl-tests)
+  add_libc_testsuite(libc-libintl-tests)
 
   add_libc_test(
     libintl_test
