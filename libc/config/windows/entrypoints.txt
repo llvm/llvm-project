@@ -378,7 +378,6 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.copysignbf16
   libc.src.math.exp2bf16
   libc.src.math.expbf16
-  libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
   libc.src.math.fmaxbf16
@@ -432,6 +431,12 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )
+
+if(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    libc.src.math.fabsbf16
+  )
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

@@ -265,6 +265,7 @@ add_fp_unittest(
     FAbsTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.properties.types
     libc.src.math.fabsbf16
 )
 

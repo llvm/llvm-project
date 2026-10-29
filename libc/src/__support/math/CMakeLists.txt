@@ -3333,9 +3333,11 @@ add_header_library(
   HDRS
     fabsbf16.h
   DEPENDS
+    libc.include.llvm-libc-macros.bfloat16_macros
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
