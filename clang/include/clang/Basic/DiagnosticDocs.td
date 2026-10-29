@@ -97,3 +97,16 @@ this behavior, such as `-ffast-math`, `-fhonor-infinities`, and
 `-fhonor-nans` (etc), as well as `#pragma` directives if this diagnostic is
 generated unexpectedly.
 }];
+
+defvar FortifySourceDocs = [{
+Warns when calls to supported C library or POSIX
+functions have buffer sizes and access lengths (or string literal format
+strings) that can be constant-evaluated and exceed the
+known buffer size (or specified bound), or have invalid constant
+arguments. These checks are modeled after
+[`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
+compile-time diagnostics. See {doc}`SourceFortification` for the list of
+supported functions and differences, as well as related
+diagnostics {ref}`-Wformat-overflow`, {ref}`-Wformat-truncation`,
+{ref}`-Wbuiltin-memcpy-chk-size`, and {ref}`-Wstringop-overread`.
+}];
