@@ -5,7 +5,7 @@
 // RUN:   -c %s 2>&1 | FileCheck %s
 // CHECK: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=igca_20ca,kind=sycl"
 
-/// Reject IGCA targets not listed in IntelGPUTargetParser.def:
+/// Reject IGCA targets that no device can run:
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=igca_42a \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-INVALID %s

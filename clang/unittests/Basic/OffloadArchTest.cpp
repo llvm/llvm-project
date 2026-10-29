@@ -106,7 +106,7 @@ TEST(OffloadArchTest, AMDGPUSubArchRoundTrip) {
 
 // Test equality and ordering of Intel IGCA targets.
 TEST(OffloadArchTest, IntelIGCAComparison) {
-  // Listed in ascending order: by target level, then by feature set.
+  // Listed in ascending order: by numeric IGCA target, then by feature set.
   const char *Ordered[] = {"igca_10", "igca_15r", "igca_20c", "igca_20ca",
                            "igca_35"};
   for (size_t I = 0; I < std::size(Ordered); ++I) {

@@ -146,18 +146,18 @@ TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
             IGCATarget(35, IGCAFeatureSet::RenderExact));
   EXPECT_EQ(IntelGPU::parseIGCATarget("igca_60r"),
             IGCATarget(60, IGCAFeatureSet::Render));
-  // Not all target levels support all feature sets:
+  // Not all numeric IGCA targets support all feature sets:
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10c"));
   // xe-cri is igca_60 (Core), so there is no igca_60c:
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_60c"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_20r"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_20ra"));
-  // Only some target levels have an exact feature set:
+  // Only some numeric IGCA targets have an exact feature set:
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_10ra"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_30ra"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_60ca"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_60ra"));
-  // Only target levels in the table are valid targets:
+  // Only numeric IGCA targets that some device has are valid:
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_42"));
   EXPECT_FALSE(IntelGPU::parseIGCATarget("igca_0"));
   // Cannot have exact without naming feature set:
