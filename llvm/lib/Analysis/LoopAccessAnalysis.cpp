@@ -803,7 +803,132 @@ struct StencilDecomposition {
   int64_t Constant = 0;
   /// Map from loop-invariant stride SCEV to its integer coefficient.
   SmallMapVector<const SCEV *, int64_t, 4> Coefficients;
+  /// Upper limits for strides that come from inside a sext, see splitSExt.
+  SmallMapVector<const SCEV *, int64_t, 2> SExtLimits;
 };
+
+static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
+                                 ScalarEvolution &SE, StencilDecomposition &D);
+
+/// Split a sext into a constant plus strides, like the rest of the offset.
+/// Example, with int s:
+///   for (int i = 0; i < n; i++, src++)
+///     dst[i] = src[2 * s] + src[s] + src[-s + 2] + src[-s - 2];
+/// Each index is an int that is sign-extended for the address. SCEV gives:
+///   2 * s    sext(2 * %s)
+///   s        sext(%s)
+///   -s + 2   sext(2 + (-1 * %s))
+///   -s - 2   sext(-2 + (-1 * %s))
+/// If we do not look inside the sext, each one is a separate stride with its
+/// own check. The checks contradict each other: s >= 1 and -s - 2 >= 1
+/// never both hold, so the vector loop never runs.
+/// So we split the inside of the sext the same way as any offset, and
+/// extend each stride on its own:
+///   sext(C + A * x + B * y)  becomes  C + A * sext(x) + B * sext(y)
+/// C, A and B are plain numbers here, so they need no sext. For example,
+/// sext(-2 + (-1 * %s)) becomes -2 + (-1 * sext(%s)). Then all four offsets
+/// use the one stride sext(%s). A sext with two strides works the same way:
+/// sext(-1 + (-1 * (%s + %t))) becomes -1 - sext(%s) - sext(%t).
+///
+/// This is correct only if the sum inside the sext does not overflow in the
+/// narrow type. The merge already checks that every stride is 1 or more. So
+/// we find one upper limit M and require every stride inside to be at most M.
+/// Example: 1 + 2 * s - t in i32, with s and t between 1 and M.
+///   The sum is largest with s = M, t = 1:  1 + 2 * M - 1 <= 2147483647.
+///   The sum is smallest with s = 1, t = M: 1 + 2 - M >= -2147483648.
+///   So M <= 1073741823 from the first and M <= 2147483651 from the second.
+///   M is the smaller one, 1073741823.
+/// For the four offsets of the first example:
+///   2 * s    needs s <= 1073741823
+///   -s - 2   needs s <= 2147483646
+///   -s + 2   never overflows. Its limit is 2147483650, above the i32
+///            maximum, so SCEV proves it and no check is added.
+///
+/// Returns the StencilDecomposition of Inside, the expression inside the
+/// sext. SExtLimits holds the upper limit for each stride in it.
+/// Example result for sext(1 + 2 * %s - %t), with i32 %s and %t:
+///   Constant      1
+///   Coefficients  %s -> 2, %t -> -1
+///   SExtLimits    %s -> 1073741823, %t -> 1073741823
+/// The strides are still i32. The caller turns them into sext(%s) and
+/// sext(%t).
+///
+/// Returns nullopt when there is nothing to split, or the split fails:
+///   sext(%s)                   a plain sext is a stride key as it is.
+///   sext(100 + 50 * %s) in i8  already 150 for s = 1, so no s >= 1 avoids
+///                              overflow.
+/// The caller then keeps the whole sext as one stride key.
+static std::optional<StencilDecomposition> splitSExt(const SCEV *Term,
+                                                     ScalarEvolution &SE) {
+  const SCEV *Inside;
+  if (!match(Term, m_scev_SExt(m_SCEV(Inside))))
+    return std::nullopt;
+  // The caller only merges offsets of at most 64 bits, and a sign extend
+  // adds at least one bit. So Inside has at most 63 bits, and its edges fit in
+  // int64_t.
+  unsigned NarrowBits = SE.getTypeSizeInBits(Inside->getType());
+  assert(NarrowBits < 64 && "offsets wider than 64 bits are not merged");
+  // Depth starts again at 0. The sum inside a sext, like 1 + 2 * %s, can be
+  // as deep as a whole offset. This cannot go on forever: each nested sext
+  // works on a narrower type.
+  StencilDecomposition Narrow;
+  if (!addScaledStencilTerm(Inside, /*Mult=*/1, /*Depth=*/0, SE, Narrow))
+    return std::nullopt;
+  // sext(%s) gives just %s back. There is nothing to split or limit.
+  if (Narrow.Constant == 0 && Narrow.Coefficients.size() == 1 &&
+      Narrow.Coefficients.front() == std::make_pair(Inside, int64_t(1)))
+    return std::nullopt;
+
+  // PosSum is the sum of the positive coefficients, NegSum of the negative
+  // ones. With all strides between 1 and M:
+  //   largest sum   Constant + PosSum * M + NegSum
+  //   smallest sum  Constant + PosSum + NegSum * M
+  // For 1 + 2 * s - t: PosSum = 2, NegSum = -1.
+  int64_t PosSum = 0, NegSum = 0;
+  for (const auto &[Stride, Coeff] : Narrow.Coefficients) {
+    int64_t &Side = Coeff > 0 ? PosSum : NegSum;
+    if (AddOverflow(Side, Coeff, Side))
+      return std::nullopt;
+  }
+  int64_t SignedMax = maxIntN(NarrowBits);
+  int64_t SignedMin = minIntN(NarrowBits);
+  // With M = 1 both sums are the same. If even that overflows, no M fits.
+  int64_t SumAtOne;
+  if (AddOverflow(Narrow.Constant, PosSum, SumAtOne) ||
+      AddOverflow(SumAtOne, NegSum, SumAtOne) || SumAtOne > SignedMax ||
+      SumAtOne < SignedMin)
+    return std::nullopt;
+  // Now each sum gives a limit on M. Both limits are at least 1.
+  int64_t Limit = std::numeric_limits<int64_t>::max();
+  int64_t Room;
+  if (PosSum > 0) {
+    // Constant + PosSum * M + NegSum <= SignedMax, so
+    // M <= (SignedMax - Constant - NegSum) / PosSum.
+    if (SubOverflow(SignedMax, Narrow.Constant, Room) ||
+        SubOverflow(Room, NegSum, Room))
+      return std::nullopt;
+    Limit = Room / PosSum;
+  }
+  if (NegSum < 0) {
+    // Constant + PosSum + NegSum * M >= SignedMin, so
+    // M <= (Constant + PosSum - SignedMin) / -NegSum.
+    if (AddOverflow(Narrow.Constant, PosSum, Room) ||
+        SubOverflow(Room, SignedMin, Room))
+      return std::nullopt;
+    // Room / NegSum is <= 0, so negating it cannot overflow, unlike
+    // -NegSum.
+    Limit = std::min(Limit, -(Room / NegSum));
+  }
+
+  // A stride from a sext nested in Inside already has a limit. Keep the
+  // smaller.
+  for (const auto &[Stride, Coeff] : Narrow.Coefficients) {
+    auto [It, Inserted] = Narrow.SExtLimits.try_emplace(Stride, Limit);
+    if (!Inserted)
+      It->second = std::min(It->second, Limit);
+  }
+  return Narrow;
+}
 
 /// Recursion cap for addScaledStencilTerm. Depth counts how deep a term
 /// sits inside the offset expression. For example, the offset
@@ -845,6 +970,9 @@ constexpr unsigned MaxStencilDecomposeDepth = 3;
 ///   constant K       D.Constant += Mult * K
 ///   (K * X)          visit X with Mult * K
 ///   (a + b + ...)    visit a, b, ... each with this same Mult
+///   sext(X)          split X with splitSExt, then add the constant and
+///                    each sext(stride) with Mult. If it does not split,
+///                    sext(X) is a stride key.
 ///   anything else    a stride key: D.Coefficients[Term] += Mult
 /// The two recursive cases only fire while Depth is below
 /// MaxStencilDecomposeDepth. At the cap, (K * X) and (a + b + ...) are
@@ -852,7 +980,7 @@ constexpr unsigned MaxStencilDecomposeDepth = 3;
 /// Returns false when a constant does not fit in int64_t or an update
 /// overflows. The caller then drops the whole decomposition.
 static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
-                                 StencilDecomposition &D) {
+                                 ScalarEvolution &SE, StencilDecomposition &D) {
   const SCEVConstant *C;
   // A constant folds into the running constant at any depth.
   if (match(Term, m_SCEVConstant(C))) {
@@ -862,17 +990,38 @@ static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
            !AddOverflow(D.Constant, Scaled, D.Constant);
   }
 
+  if (std::optional<StencilDecomposition> S = splitSExt(Term, SE)) {
+    int64_t Scaled;
+    if (MulOverflow(Mult, S->Constant, Scaled) ||
+        AddOverflow(D.Constant, Scaled, D.Constant))
+      return false;
+    for (const auto &[Stride, Coeff] : S->Coefficients) {
+      const SCEV *Wide = SE.getSignExtendExpr(Stride, Term->getType());
+      int64_t &Sum = D.Coefficients[Wide];
+      if (MulOverflow(Mult, Coeff, Scaled) || AddOverflow(Sum, Scaled, Sum))
+        return false;
+      // The stride may already have a limit from another sext in the same
+      // offset. Example: sext(4 + 4 * %s) + sext(2 * %s). Then keep the
+      // smaller limit.
+      int64_t SExtLimit = S->SExtLimits.lookup(Stride);
+      auto [It, Inserted] = D.SExtLimits.try_emplace(Wide, SExtLimit);
+      if (!Inserted)
+        It->second = std::min(It->second, SExtLimit);
+    }
+    return true;
+  }
+
   if (Depth < MaxStencilDecomposeDepth) {
     const SCEV *Inner;
     if (match(Term, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Inner)))) {
       std::optional<int64_t> V = C->getAPInt().trySExtValue();
       int64_t NewMult;
       return V && !MulOverflow(Mult, *V, NewMult) &&
-             addScaledStencilTerm(Inner, NewMult, Depth + 1, D);
+             addScaledStencilTerm(Inner, NewMult, Depth + 1, SE, D);
     }
     if (auto *Add = dyn_cast<SCEVAddExpr>(Term))
       return all_of(Add->operands(), [&](const SCEV *Op) {
-        return addScaledStencilTerm(Op, Mult, Depth + 1, D);
+        return addScaledStencilTerm(Op, Mult, Depth + 1, SE, D);
       });
   }
 
@@ -904,7 +1053,7 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   assert(SE.isLoopInvariant(Expr, &L) && "expected a loop-invariant offset");
 
   StencilDecomposition D;
-  if (!addScaledStencilTerm(Expr, /*Mult=*/1, /*Depth=*/0, D))
+  if (!addScaledStencilTerm(Expr, /*Mult=*/1, /*Depth=*/0, SE, D))
     return std::nullopt;
   return D;
 }
@@ -1005,27 +1154,31 @@ public:
 
 /// Add to \p Limits the checks each stride s of \p D needs:
 ///   1 <= s     isNeverAbove assumes every stride is 1 or more.
-///   s <= Max   Max is from getStencilStrideUpperLimit.
+///   s <= Limit   Limit is the smaller of getStencilStrideUpperLimit and
+///                D.SExtLimits[s].
 /// A check is skipped when SCEV already proves it.
-/// Returns false if getStencilStrideUpperLimit finds no Max, or if SCEV proves
-/// that a check always fails. Example: s = smin(x, -1) can never pass 1 <= s,
-/// so a merge would send every run to the scalar loop.
+/// Returns false if getStencilStrideUpperLimit finds no limit, or if SCEV
+/// proves that a check always fails. Example: s = smin(x, -1) can never pass
+/// 1 <= s, so a merge would send every run to the scalar loop.
 static bool collectStrideLimits(const StencilDecomposition &D,
                                 unsigned BitWidth, ScalarEvolution &SE,
                                 StrideLimits &Limits) {
-  std::optional<APInt> UpperLimit = getStencilStrideUpperLimit(D, BitWidth);
-  if (!UpperLimit)
+  std::optional<APInt> OffsetLimit = getStencilStrideUpperLimit(D, BitWidth);
+  if (!OffsetLimit)
     return false;
 
-  const SCEV *Max = SE.getConstant(*UpperLimit);
   for (const auto &[Stride, Coeff] : D.Coefficients) {
+    APInt Limit = *OffsetLimit;
+    if (const auto *It = D.SExtLimits.find(Stride); It != D.SExtLimits.end())
+      Limit = APIntOps::smin(Limit, APInt(BitWidth, It->second));
+    const SCEV *LimitExpr = SE.getConstant(Limit);
     if (SE.isKnownNonPositive(Stride) ||
-        SE.isKnownPredicate(ICmpInst::ICMP_SGT, Stride, Max))
+        SE.isKnownPredicate(ICmpInst::ICMP_SGT, Stride, LimitExpr))
       return false;
     if (!SE.isKnownPositive(Stride))
       Limits.requireLowerLimit(Stride);
-    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride, Max))
-      Limits.requireUpperLimit(Stride, *UpperLimit);
+    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride, LimitExpr))
+      Limits.requireUpperLimit(Stride, Limit);
   }
   return true;
 }
