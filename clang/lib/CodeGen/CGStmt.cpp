@@ -3376,7 +3376,8 @@ void AsmConstraintsInfo::EmitAsmStores(
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
 
       if (getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
+        llvm::StoreInst *S =
+            Builder.CreateStore(Tmp, A, Dest.isVolatileQualified());
         CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
@@ -3389,11 +3390,21 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
+      // An output tied to a larger input has the input's type, so store only
+      // the destination's bits.
+      llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
+      if (Tmp->getType()->isPointerTy())
+        Tmp = Builder.CreatePtrToInt(Tmp, IntTy);
+      else
+        Tmp = Builder.CreateTrunc(Tmp, IntTy);
+
       // The integer isn't the destination's type, so a TBAA tag for it would
       // claim that the store doesn't alias accesses to the destination's
-      // members.
-      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
-                                TBAAAccessInfo::getMayAliasInfo());
+      // members. Keep the destination's qualifiers, such as volatile.
+      Dest = CGF.MakeAddrLValue(
+          Dest.getAddress().withElementType(IntTy),
+          getContext().getQualifiedType(Ty, Dest.getQuals()),
+          Dest.getBaseInfo(), TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
