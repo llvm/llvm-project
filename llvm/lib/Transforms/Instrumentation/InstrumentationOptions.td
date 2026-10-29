@@ -788,9 +788,5 @@ defm : BoolField<"tsan-omit-by-pointer-capturing", "true",
   "Omit accesses due to pointer capturing">;
 
 // TypeSanitizer.cpp
-defm : BoolField<"tysan-outline-instrumentation", "true",
-  "Uses function calls for all TySan instrumentation, reducing ELF size">;
-defm : BoolField<"tysan-verify-outlined-instrumentation", "false",
-  "Check types twice with both inlined instrumentation and function calls. This verifies that they behave the same">;
 defm : BoolField<"tysan-writes-always-set-type", "false",
   "Writes always set the type">;
