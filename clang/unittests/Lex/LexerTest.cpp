@@ -585,12 +585,17 @@ TEST_F(LexerTest, AvoidPastEndOfStringDereference03) {
 // An unclosed paren after an undefined identifier must not lex past the eod.
 TEST_F(LexerTest, SingleFileUnclosedParenUndefinedId01) {
   PPOpts.SingleFileParseMode = true;
-  EXPECT_TRUE(Lex("#if (defined(FOO)\n").empty());
+  EXPECT_TRUE(Lex("#if (FOO\n").empty());
 }
 
 TEST_F(LexerTest, SingleFileUnclosedParenUndefinedId02) {
   PPOpts.SingleFileParseMode = true;
-  EXPECT_TRUE(Lex("#if (FOO\n").empty());
+  CheckLex(R"cc(
+    #if (FOO
+    int x;
+    #endif
+  )cc",
+           {tok::kw_int, tok::identifier, tok::semi});
 }
 
 TEST_F(LexerTest, StringizingRasString) {
