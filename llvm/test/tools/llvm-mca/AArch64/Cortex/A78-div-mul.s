@@ -63,10 +63,10 @@ umull   x0, w1, w2
 # CHECK-NEXT:  1      2     1.00                        msub	w0, w1, w2, w3
 # CHECK-NEXT:  1      2     1.00                        madd	x0, x1, x2, x3
 # CHECK-NEXT:  1      2     1.00                        msub	x0, x1, x2, x3
-# CHECK-NEXT:  1      2     1.00                        smaddl	x0, w1, w2, x3
-# CHECK-NEXT:  1      2     1.00                        smsubl	x0, w1, w2, x3
-# CHECK-NEXT:  1      2     1.00                        umaddl	x0, w1, w2, x3
-# CHECK-NEXT:  1      2     1.00                        umsubl	x0, w1, w2, x3
+# CHECK-NEXT:  1      2     0.50                        smaddl	x0, w1, w2, x3
+# CHECK-NEXT:  1      2     0.50                        smsubl	x0, w1, w2, x3
+# CHECK-NEXT:  1      2     0.50                        umaddl	x0, w1, w2, x3
+# CHECK-NEXT:  1      2     0.50                        umsubl	x0, w1, w2, x3
 # CHECK-NEXT:  1      3     0.50                        smulh	x0, x1, x2
 # CHECK-NEXT:  1      3     0.50                        umulh	x0, x1, x2
 # CHECK-NEXT:  1      2     0.50                        smnegl	x0, w1, w2
@@ -94,7 +94,7 @@ umull   x0, w1, w2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     77.00  5.00    -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     75.00  7.00    -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -110,10 +110,10 @@ umull   x0, w1, w2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	w0, w1, w2, w3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     madd	x0, x1, x2, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     msub	x0, x1, x2, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smaddl	x0, w1, w2, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     smsubl	x0, w1, w2, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umaddl	x0, w1, w2, x3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     umsubl	x0, w1, w2, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smaddl	x0, w1, w2, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smsubl	x0, w1, w2, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umaddl	x0, w1, w2, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umsubl	x0, w1, w2, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smulh	x0, x1, x2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     umulh	x0, x1, x2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     smnegl	x0, w1, w2

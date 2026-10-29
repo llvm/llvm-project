@@ -969,7 +969,7 @@ def : InstRW<[A78Wr_IMUL, ReadIM, ReadIM, A78Rd_IMA],
              (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
 // Multiply accumulate long
-def : InstRW<[A78Wr_IMUL, ReadIM, ReadIM, A78Rd_IMA],
+def : InstRW<[A78Wr_IM, ReadIM, ReadIM, A78Rd_IMA],
              (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 
 // Multiply high
