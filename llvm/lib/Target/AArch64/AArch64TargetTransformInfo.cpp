@@ -8096,7 +8096,8 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (!SI->isSimple() || !II)
       break;
 
-    if (LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
+    if (LI &&
+        LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
       break;
 
     unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
