@@ -30,6 +30,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -12365,13 +12366,17 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     return false;
   }
 
-  // Target attribute on AArch64 is not used for multiversioning
-  if (NewTA && TI.getTriple().isAArch64())
+  // Target attribute is not used for multiversioning on AArch64, RISC-V or AIX.
+  if (NewTA && (TI.getTriple().isAArch64() || TI.getTriple().isRISCV() ||
+                TI.getTriple().isOSAIX())) {
+    if (Redeclaration) {
+      S.Diag(NewFD->getLocation(),
+             diag::err_target_attr_not_used_for_multiversion);
+      NewFD->setInvalidDecl();
+      return true;
+    }
     return false;
-
-  // Target attribute on RISCV is not used for multiversioning
-  if (NewTA && TI.getTriple().isRISCV())
-    return false;
+  }
 
   if (!OldDecl || !OldDecl->getAsFunction() ||
       !OldDecl->getDeclContext()->getRedeclContext()->Equals(
