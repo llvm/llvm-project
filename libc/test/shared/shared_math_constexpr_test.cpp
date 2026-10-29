@@ -418,6 +418,10 @@ static_assert(Float80(0.0) ==
               LIBC_NAMESPACE::shared::fmaxf80(Float80(0.0), Float80(0.0)));
 static_assert(Float80(0.0) ==
               LIBC_NAMESPACE::shared::fminf80(Float80(0.0), Float80(0.0)));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximumf80(Float80(0.0), Float80(0.0)));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::fminimumf80(Float80(0.0), Float80(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==
