@@ -1650,7 +1650,7 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     IRBuilder<> B(&I);
     Type *Ty = I.getType();
     bool Float = Ty->isFloatTy();
-    Value *X = nullptr, *R = nullptr;
+    Value *R = nullptr;
     if (Float && Afn(&I) && I.getOpcode() == Instruction::FDiv &&
         IsOne(I.getOperand(0))) {
       // 1 / sqrt(x) and 1 / x (R is only set for these: it replaces I)
@@ -1663,13 +1663,13 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     } else if (auto *II = dyn_cast<IntrinsicInst>(&I);
                Float && II && Afn(II) &&
                (II->getIntrinsicID() == Intrinsic::sin ||
-                II->getIntrinsicID() == Intrinsic::cos) &&
-               match(II->getArgOperand(0),
-                     m_FMul(m_Value(X), m_SpecificFP(float(numbers::pi / 2))))) {
+                II->getIntrinsicID() == Intrinsic::cos)) {
+      // (both in radians: llvm.agx.sin is the code of llvm.sin, which LLVM
+      // does not fold on the host)
       R = B.CreateIntrinsic(II->getIntrinsicID() == Intrinsic::sin
                                 ? Intrinsic::agx_sin
                                 : Intrinsic::agx_cos,
-                            {Ty}, {X});
+                            {Ty}, {II->getArgOperand(0)});
     } else if (auto *Sel = dyn_cast<SelectInst>(&I);
                Sel && Ty->isFPOrFPVectorTy() &&
                match(Sel->getTrueValue(), m_NaN())) {
