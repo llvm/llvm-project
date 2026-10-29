@@ -4094,21 +4094,15 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
                               VectorTy, Config.CostKind);
   }
-  StoreInst *SI = cast<StoreInst>(I);
 
-  bool IsLoopInvariantStoreValue = Legal->isInvariant(SI->getValueOperand());
   // TODO: We have existing tests that request the cost of extracting element
   // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
   // the actual generated code, which involves extracting the last element of
   // a scalable vector where the lane to extract is unknown at compile time.
-  InstructionCost Cost =
-      TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, Config.CostKind) +
-      TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
-                          Config.CostKind);
-  if (!IsLoopInvariantStoreValue)
-    Cost += TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
-                                                 VectorTy, Config.CostKind, 0);
-  return Cost;
+  return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                       Config.CostKind) +
+         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
+                             Config.CostKind);
 }
 
 InstructionCost
@@ -4277,40 +4271,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
                         << I << '\n');
       if (isUniformMemOp(I, VF)) {
-        auto IsLegalToScalarize = [&]() {
-          if (!VF.isScalable())
-            // Scalarization of fixed length vectors "just works".
-            return true;
-
-          // We have dedicated lowering for unpredicated uniform loads and
-          // stores.  Note that even with tail folding we know that at least
-          // one lane is active (i.e. generalized predication is not possible
-          // here), and the logic below depends on this fact.
-          if (!foldTailByMasking())
-            return true;
-
-          // For scalable vectors, a uniform memop load is always
-          // uniform-by-parts  and we know how to scalarize that.
-          if (isa<LoadInst>(I))
-            return true;
-
-          // A uniform store isn't neccessarily uniform-by-part
-          // and we can't assume scalarization.
-          auto &SI = cast<StoreInst>(I);
-          return TheLoop->isLoopInvariant(SI.getValueOperand());
-        };
-
         const InstructionCost GatherScatterCost =
             isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
                                            : InstructionCost::getInvalid();
 
-        // Load: Scalar load + broadcast
-        // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
-        // FIXME: This cost is a significant under-estimate for tail folded
-        // memory ops.
+        // FIXME: We disable this when folding tail by masking, as the costs are
+        // not accurate then.
         const InstructionCost ScalarizationCost =
-            IsLegalToScalarize() ? getUniformMemOpCost(&I, VF)
-                                 : InstructionCost::getInvalid();
+            foldTailByMasking() ? InstructionCost::getInvalid()
+                                : getUniformMemOpCost(&I, VF);
 
         // Choose better solution for the current VF,  Note that Invalid
         // costs compare as maximumal large.  If both are invalid, we get
