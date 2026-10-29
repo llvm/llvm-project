@@ -4904,13 +4904,10 @@ define i1 @clang_builtin_isnormal_inf_check_neg_inf(half %x) {
   ret i1 %and
 }
 
-; Negative test
 define i1 @clang_builtin_isnormal_inf_check_not_inf(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_not_inf(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp uge half [[FABS_X]], 6.550400e+04
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oge half [[FABS_X]], 6.550400e+04
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -5118,9 +5115,7 @@ define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
 
 define i1 @and_ord_ult_nonnan_const(double %x) {
 ; CHECK-LABEL: @and_ord_ult_nonnan_const(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[LT:%.*]] = fcmp ult double [[X]], f0x43E0000000000000
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[ORD]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[X:%.*]], f0x43E0000000000000
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ord = fcmp ord double %x, 0.0
@@ -5131,9 +5126,7 @@ define i1 @and_ord_ult_nonnan_const(double %x) {
 
 define <2 x i1> @and_ord_uge_nonnan_const_vec_poison(<2 x double> %x) {
 ; CHECK-LABEL: @and_ord_uge_nonnan_const_vec_poison(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord <2 x double> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[GE:%.*]] = fcmp uge <2 x double> [[X]], <double 2.000000e+00, double poison>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[ORD]], [[GE]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp oge <2 x double> [[X:%.*]], <double 2.000000e+00, double poison>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ord = fcmp ord <2 x double> %x, zeroinitializer
@@ -5144,9 +5137,7 @@ define <2 x i1> @and_ord_uge_nonnan_const_vec_poison(<2 x double> %x) {
 
 define <2 x i1> @and_ord_ult_nonnan_const_vec_nonsplat(<2 x double> %x) {
 ; CHECK-LABEL: @and_ord_ult_nonnan_const_vec_nonsplat(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord <2 x double> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[LT:%.*]] = fcmp ult <2 x double> [[X]], <double 2.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[ORD]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt <2 x double> [[X:%.*]], <double 2.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ord = fcmp ord <2 x double> %x, zeroinitializer

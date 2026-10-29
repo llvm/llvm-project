@@ -4656,9 +4656,7 @@ define i1 @or_fcmp_reassoc4(i1 %x, double %a, double %b) {
 
 define i1 @or_uno_olt_nonnan_const(double %x) {
 ; CHECK-LABEL: @or_uno_olt_nonnan_const(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[LT:%.*]] = fcmp olt double [[X]], f0x43E0000000000000
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[X:%.*]], f0x43E0000000000000
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno = fcmp uno double %x, 0.0
@@ -4669,9 +4667,7 @@ define i1 @or_uno_olt_nonnan_const(double %x) {
 
 define i1 @or_uno_oge_nonnan_const_commute(double %x) {
 ; CHECK-LABEL: @or_uno_oge_nonnan_const_commute(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[GE:%.*]] = fcmp oge double [[X]], f0x43E0000000000000
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[GE]], [[UNO]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[X:%.*]], f0x43E0000000000000
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno = fcmp uno double %x, 0.0
@@ -4682,9 +4678,7 @@ define i1 @or_uno_oge_nonnan_const_commute(double %x) {
 
 define i1 @or_uno_olt_nonnan_const_fmf(double %x) {
 ; CHECK-LABEL: @or_uno_olt_nonnan_const_fmf(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp nsz uno double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[LT:%.*]] = fcmp nnan nsz olt double [[X]], 2.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp nsz ult double [[X:%.*]], 2.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno = fcmp nsz uno double %x, 0.0
@@ -4695,9 +4689,7 @@ define i1 @or_uno_olt_nonnan_const_fmf(double %x) {
 
 define <2 x i1> @or_uno_olt_nonnan_const_vec_poison(<2 x double> %x) {
 ; CHECK-LABEL: @or_uno_olt_nonnan_const_vec_poison(
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno <2 x double> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[LT:%.*]] = fcmp olt <2 x double> [[X]], <double 2.000000e+00, double poison>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[UNO]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult <2 x double> [[X:%.*]], <double 2.000000e+00, double poison>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %uno = fcmp uno <2 x double> %x, zeroinitializer
@@ -4709,9 +4701,7 @@ define <2 x i1> @or_uno_olt_nonnan_const_vec_poison(<2 x double> %x) {
 define i1 @or_uno_olt_fabs_nonnan_const(double %x) {
 ; CHECK-LABEL: @or_uno_olt_fabs_nonnan_const(
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno double [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LT:%.*]] = fcmp olt double [[FABS]], 2.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO]], [[LT]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[FABS]], 2.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fabs = call double @llvm.fabs.f64(double %x)

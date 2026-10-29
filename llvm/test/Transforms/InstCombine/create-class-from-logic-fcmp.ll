@@ -963,7 +963,8 @@ define i1 @not_isnormalinf_or_ord(half %x) #0 {
 ; -> subnormal | zero
 define i1 @not_isnormalinf_and_ord(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_and_ord(
-; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], /* (zero sub) */ i32 240)
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = fcmp olt half [[FABS]], 6.103520e-05
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1068,7 +1069,7 @@ define i1 @olt_smallest_normal_or_ord(half %x) #0 {
 ; -> ~pinf
 define i1 @olt_smallest_normal_or_uno(half %x) #0 {
 ; CHECK-LABEL: @olt_smallest_normal_or_uno(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], /* (nan ninf zero sub nnorm) */ i32 255)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ult half [[X:%.*]], 6.103520e-05
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %uno = fcmp uno half %x, 0.0
