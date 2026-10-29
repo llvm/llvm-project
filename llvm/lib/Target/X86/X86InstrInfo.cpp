@@ -5629,7 +5629,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     From = MBB->rbegin();
   }
 
-
   // We only handle UseDefEFLAGS when it uses EFLAGS from a duplicate compare.
   if (UseDefEFLAGS && !Sub)
     return false;
