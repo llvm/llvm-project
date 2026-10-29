@@ -1,7 +1,7 @@
 ; RUN: opt -passes=correlated-propagation -S < %s | FileCheck %s
 ; CHECK: %{{[a-zA-Z0-9_]*}} = udiv i8 %x.nonneg, %y
 ; CHECK-NEXT: %{{[a-zA-Z0-9_]*}}.neg = sub i8 0, %rem1
-; CHECK-NEXT: #dbg_value(!DIArgList(i8 %x, i8 %y), ![[DBGLOC:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_div, DW_OP_stack_value), ![[DBGLOC:[0-9]+]])
+; CHECK-NEXT: #dbg_value(i8 poison, ![[DBGLOC:[0-9]+]], !DIExpression(), ![[DBGLOC:[0-9]+]])
 
 ; Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind willreturn
 declare void @llvm.assume(i1 noundef) #0

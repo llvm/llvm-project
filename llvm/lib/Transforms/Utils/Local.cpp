@@ -2178,9 +2178,9 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
     return dwarf::DW_OP_minus;
   case Instruction::Mul:
     return dwarf::DW_OP_mul;
-  case Instruction::SDiv:
+  case Instruction::UDiv:
     return dwarf::DW_OP_div;
-  case Instruction::SRem:
+  case Instruction::URem:
     return dwarf::DW_OP_mod;
   case Instruction::Or:
     return dwarf::DW_OP_or;

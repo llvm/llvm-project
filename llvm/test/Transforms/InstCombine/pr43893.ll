@@ -9,9 +9,9 @@ entry:
   %0 = load i8, ptr @a, align 1, !dbg !17
   %dec = add i8 %0, -1, !dbg !17
   store i8 %dec, ptr @a, align 1, !dbg !17
-;CHECK: #dbg_value(i32 poison
-;CHECK: #dbg_value(i32 -8
-;CHECK: #dbg_value(i32 poison
+;CHECK: #dbg_value(i8 %dec, !18, !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_constu, 4, DW_OP_div, DW_OP_stack_value), !19)
+;CHECK: #dbg_value(i32 -8, !20, !DIExpression(), !19)
+;CHECK: #dbg_value(i8 %dec, !20, !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_constu, 4, DW_OP_div, DW_OP_stack_value), !19)
   %conv = sext i8 %dec to i32, !dbg !17
   %udiv = udiv i32 %conv, 4, !dbg !17
   call void @llvm.dbg.value(metadata i32 %udiv, metadata !18, metadata !DIExpression()), !dbg !19
