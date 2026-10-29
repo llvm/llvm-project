@@ -153,9 +153,10 @@ public:
 
   /// \return the nd_range of the current execution.
   nd_range<Dimensions> get_nd_range() const noexcept {
-    return nd_range<Dimensions>(
-        get_global_range(), get_local_range(),
-        __spirv::initBuiltInGlobalOffset<Dimensions, id<Dimensions>>());
+    nd_range<Dimensions> NdRange(get_global_range(), get_local_range());
+    NdRange.MOffset =
+        __spirv::initBuiltInGlobalOffset<Dimensions, id<Dimensions>>();
+    return NdRange;
   }
 
   // TODO: add wait_for and async_work_group_copy once builtins are implemented.

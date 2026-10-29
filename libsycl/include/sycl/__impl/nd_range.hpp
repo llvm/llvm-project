@@ -82,6 +82,10 @@ protected:
   id<Dimensions> MOffset;
 
   friend struct detail::UnifiedRangeView;
+
+  // nd_item::get_nd_range sets the offset directly, so it doesn't use the
+  // deprecated constructor.
+  template <int> friend class nd_item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL
