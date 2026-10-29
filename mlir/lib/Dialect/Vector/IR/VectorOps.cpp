@@ -7187,15 +7187,12 @@ public:
       int64_t bcastStride = 1, dstStride = 1;
       int64_t bcastScalableDims = 0, dstScalableDims = 0;
       for (int64_t i = 0, e = srcVectorType.getRank(); i < e; ++i) {
-        int64_t srcDim = srcVectorType.getRank() - 1 - i;
+        int64_t srcDim = e - 1 - i;
         int64_t bcastDim = broadcastVectorType.getRank() - 1 - i;
         int64_t dstDim = dstVectorType.getRank() - 1 - i;
 
         // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
-        // not unit) only ever have index 0, so their stride does not contribute
-        // to the linear element offset. For non-unit dimensions, verify that
-        // both the static stride factor and the `vscale` exponent accumulated
-        // from the more minor (trailing) dimensions match.
+        // not unit) always have index 0, so their stride is irrelevant.
         bool isUnitDim = srcVectorType.getDimSize(srcDim) == 1 &&
                          !srcVectorType.getScalableDims()[srcDim];
         if (!isUnitDim && (bcastStride != dstStride ||
