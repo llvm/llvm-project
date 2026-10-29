@@ -281,12 +281,13 @@ void hexagon::Linker::RenderExtraToolArgs(const JobAction &JA,
                                           ArgStringList &CmdArgs) const {
 }
 
-static void
-constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
-                         const toolchains::HexagonToolChain &HTC,
-                         const InputInfo &Output, const InputInfoList &Inputs,
-                         const ArgList &Args, ArgStringList &CmdArgs,
-                         const char *LinkingOutput) {
+static void constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
+                                     const toolchains::HexagonToolChain &HTC,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const ArgList &Args,
+                                     ArgStringList &CmdArgs,
+                                     const char *LinkingOutput, bool UseLLD) {
 
   const Driver &D = HTC.getDriver();
 
@@ -300,8 +301,6 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
-  bool UseLLD = false;
-  (void)HTC.GetLinkerPath(&UseLLD);
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
@@ -547,11 +546,13 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   auto &HTC = static_cast<const toolchains::HexagonToolChain&>(getToolChain());
 
+  bool UseLLD = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+
   ArgStringList CmdArgs;
   constructHexagonLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
-                           LinkingOutput);
+                           LinkingOutput, UseLLD);
 
-  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
