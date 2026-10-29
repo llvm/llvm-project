@@ -3559,9 +3559,9 @@ define void @store_v8i4(<8 x i4> %data, ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: store_v8i4:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_and_b32_e32 v0, 15, v0
 ; SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
-; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 4, v1
-; SDAG-NEXT:    v_and_or_b32 v0, v0, 15, v1
+; SDAG-NEXT:    v_lshl_or_b32 v0, v1, 4, v0
 ; SDAG-NEXT:    v_and_b32_e32 v1, 15, v3
 ; SDAG-NEXT:    v_and_b32_e32 v2, 15, v2
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 12, v1
