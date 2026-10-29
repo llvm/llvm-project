@@ -5148,8 +5148,12 @@ void CodeGenFunction::EmitCallArgs(
   bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
       Order, CGM.getTarget().getCXXABI());
 
+  // Keep the ABI order of the remaining arguments when hoisting the first.
+  bool HoistFirstArg = !LeftToRight && ArgTypes.size() > 1 &&
+                       Order == EvaluationOrder::ForceFirstBeforeRest;
+
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
-                                         RValue EmittedArg) {
+                                         RValue EmittedArg, bool Reversed) {
     if (!AC.hasFunctionDecl() || I >= AC.getNumParams())
       return;
     auto *PS = AC.getParamDecl(I)->getAttr<PassObjectSizeAttr>();
@@ -5165,7 +5169,7 @@ void CodeGenFunction::EmitCallArgs(
     Args.add(RValue::get(V), SizeTy);
     // If we're emitting args in reverse, be sure to do so with
     // pass_object_size, as well.
-    if (!LeftToRight)
+    if (Reversed)
       std::swap(Args.back(), *(&Args.back() - 1));
   };
 
@@ -5177,9 +5181,17 @@ void CodeGenFunction::EmitCallArgs(
   }
 
   // Evaluate each argument in the appropriate order.
-  size_t CallArgsStart = Args.size();
+  // Keep the hoisted argument and its hidden parameters outside the reversal.
+  size_t ReversedStart = Args.size();
   for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
-    unsigned Idx = LeftToRight ? I : E - I - 1;
+    unsigned Idx;
+    if (LeftToRight)
+      Idx = I;
+    else if (HoistFirstArg)
+      Idx = I == 0 ? 0 : E - I;
+    else
+      Idx = E - I - 1;
+    bool Reversed = !LeftToRight && !(HoistFirstArg && I == 0);
     CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
     unsigned InitialArgSize = Args.size();
     // If *Arg is an ObjCIndirectCopyRestoreExpr, check that either the types of
@@ -5205,14 +5217,16 @@ void CodeGenFunction::EmitCallArgs(
       // @llvm.objectsize should never have side-effects and shouldn't need
       // destruction/cleanups, so we can safely "emit" it after its arg,
       // regardless of right-to-leftness
-      MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg);
+      MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg, Reversed);
     }
+    if (HoistFirstArg && I == 0)
+      ReversedStart = Args.size();
   }
 
   if (!LeftToRight) {
     // Un-reverse the arguments we just evaluated so they match up with the LLVM
     // IR function.
-    std::reverse(Args.begin() + CallArgsStart, Args.end());
+    std::reverse(Args.begin() + ReversedStart, Args.end());
 
     // Reverse the writebacks to match the MSVC ABI.
     Args.reverseWritebacks();

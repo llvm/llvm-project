@@ -46,7 +46,10 @@ EvaluationOrder getCallArgEvaluationOrder(const CallExpr *E) {
   case OO_PipePipe:
   case OO_Comma:
   case OO_ArrowStar:
+  case OO_Subscript:
     return EvaluationOrder::ForceLeftToRight;
+  case OO_Call:
+    return EvaluationOrder::ForceFirstBeforeRest;
   default:
     return EvaluationOrder::Default;
   }

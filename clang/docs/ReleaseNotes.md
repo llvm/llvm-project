@@ -906,6 +906,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 #### Bug Fixes to C++ Support
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
+- Clang now evaluates the object before the arguments of overloaded
+  `operator[]` and `operator()` with explicit object parameters on Microsoft
+  ABI targets. It evaluates multidimensional subscript indices left to right.
+  Parameter destruction still follows Microsoft ABI order and can differ from
+  reverse construction order.
+
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.

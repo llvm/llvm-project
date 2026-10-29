@@ -67,13 +67,17 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, GlobalDecl GD,
   } else if (CE) {
     // Special case: skip first argument of CXXOperatorCall (it is "this").
     unsigned ArgsToSkip = 0;
+    CodeGenFunction::EvaluationOrder Order =
+        CodeGenFunction::EvaluationOrder::Default;
     if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(CE)) {
       if (const auto *M = dyn_cast<CXXMethodDecl>(Op->getCalleeDecl()))
         ArgsToSkip =
             static_cast<unsigned>(!M->isExplicitObjectMemberFunction());
+      if (Op->getOperator() == OO_Subscript)
+        Order = CodeGenFunction::EvaluationOrder::ForceLeftToRight;
     }
     CGF.EmitCallArgs(Args, FPT, drop_begin(CE->arguments(), ArgsToSkip),
-                     CE->getDirectCallee());
+                     CE->getDirectCallee(), /*ParamsToSkip=*/0, Order);
   } else {
     assert(
         FPT->getNumParams() == 0 &&
