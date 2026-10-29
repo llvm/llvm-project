@@ -41,6 +41,13 @@ protected:
     for (unsigned I = 0; I != Expected.size(); ++I)
       checkConstant(Result.getOperand(I), Expected[I]);
   }
+
+  SDValue makeI32Addend(unsigned Reg, uint64_t Mask, SDLoc &DL) {
+    SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(Reg), MVT::i32);
+    return DAG->getNode(ISD::AND, DL, MVT::i32, Op,
+                        DAG->getConstant(Mask, DL, MVT::i32));
+  }
 };
 
 TEST_F(SelectionDAGNodeConstructionTest, ADD) {
@@ -58,6 +65,47 @@ TEST_F(SelectionDAGNodeConstructionTest, ADD) {
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, MVT::i32, Op, Undef), Undef);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, MVT::i32, Undef, Op), Undef);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, MVT::i32, Undef, Undef), Undef);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsUnbalancedADD) {
+  SDLoc DL;
+  SDValue Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(1, 7, DL),
+                             makeI32Addend(2, 7, DL));
+  Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Sum, makeI32Addend(3, 7, DL));
+  Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Sum, makeI32Addend(4, 7, DL));
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 27u);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsBalancedADD) {
+  SDLoc DL;
+  SDValue Left = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(1, 7, DL),
+                              makeI32Addend(2, 7, DL));
+  SDValue Right = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(3, 7, DL),
+                               makeI32Addend(4, 7, DL));
+  SDValue Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Left, Right);
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 27u);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest,
+       ComputeNumSignBitsADDWithDifferentBounds) {
+  SDLoc DL;
+  SDValue Left = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(1, 1, DL),
+                              makeI32Addend(2, 3, DL));
+  SDValue Right = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(3, 7, DL),
+                               makeI32Addend(4, 15, DL));
+  SDValue Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Left, Right);
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 28u);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsTwoOperandADD) {
+  SDLoc DL;
+  SDValue Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, makeI32Addend(1, 7, DL),
+                             makeI32Addend(2, 7, DL));
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 28u);
 }
 
 TEST_F(SelectionDAGNodeConstructionTest, AND) {
