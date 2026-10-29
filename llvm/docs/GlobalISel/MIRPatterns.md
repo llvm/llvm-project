@@ -284,6 +284,37 @@ def TestNot : GICombineRule<
   (apply (G_BAR $dst, $src, (MIFlags $zext, (not FmNoInfs))))>;
 ```
 
+### Commutable Instructions
+
+If a `match` instruction pattern uses a generic opcode marked `isCommutable`,
+the rule is also emitted with the first two use operands of that instruction
+swapped. The pattern below matches both `G_AND (G_XOR a, b), y` and
+`G_AND y, (G_XOR a, b)`:
+
+```{code-block} text
+:caption: Example
+
+def Test : GICombineRule<
+  (defs root:$dst),
+  (match (G_XOR $x, $a, $b),
+         (G_AND $dst, $x, $y)),
+  (apply (G_OR $dst, $a, $y))>;
+```
+
+Operand names always refer to the same values, also in the swapped version.
+C++ code that receives a matched instruction must therefore not assume that
+an operand is at a specific index of a commutable instruction. Use operand
+names, or check both operands.
+
+A swapped version is not emitted when it cannot match anything that the
+version as written does not match. This is the case when both operands are
+the same name, or when neither operand is an immediate, is defined by another
+`match` instruction, is used more than once in the `match` patterns, or is
+used by `match` C++ code.
+
+Each commutable instruction doubles the number of permutations of the rule,
+and the `MaxPermutations` limit of the rule applies.
+
 ### Limitations
 
 This a non-exhaustive list of known issues with MIR patterns at this time.

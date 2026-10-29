@@ -49,6 +49,89 @@ define float @fmul_select_f32_test1(float %x, i32 %bool.arg1, i32 %bool.arg2) {
   ret float %ldexp
 }
 
+; The select is the first G_FMUL operand.
+define float @fmul_select_f32_test1_commuted(float %x, i32 %bool.arg1, i32 %bool.arg2) {
+; GFX7-SDAG-LABEL: fmul_select_f32_test1_commuted:
+; GFX7-SDAG:       ; %bb.0:
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v3, 0xc1800000
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v4, 0xc1000000
+; GFX7-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
+; GFX7-SDAG-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-GISEL-LABEL: fmul_select_f32_test1_commuted:
+; GFX7-GISEL:       ; %bb.0:
+; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
+; GFX7-GISEL-NEXT:    v_add_i32_e32 v1, vcc, 4, v1
+; GFX7-GISEL-NEXT:    v_ldexp_f32_e64 v0, -v0, v1
+; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: fmul_select_f32_test1_commuted:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, 0xc1800000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, 0xc1000000
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
+; GFX9-SDAG-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: fmul_select_f32_test1_commuted:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v1, 4, v1
+; GFX9-GISEL-NEXT:    v_ldexp_f32 v0, -v0, v1
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: fmul_select_f32_test1_commuted:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v3, 0xc1000000
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0xc1800000, v3, vcc_lo
+; GFX10-SDAG-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: fmul_select_f32_test1_commuted:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v1, 4, v1
+; GFX10-GISEL-NEXT:    v_ldexp_f32 v0, -v0, v1
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: fmul_select_f32_test1_commuted:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v3, 0xc1000000
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0xc1800000, v3, vcc_lo
+; GFX11-SDAG-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: fmul_select_f32_test1_commuted:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v1, 4, v1
+; GFX11-GISEL-NEXT:    v_ldexp_f32 v0, -v0, v1
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %bool = icmp eq i32 %bool.arg1, %bool.arg2
+  %y = select i1 %bool, float -8.000000e+00, float -1.600000e+01
+  %ldexp = fmul float %y, %x
+  ret float %ldexp
+}
+
 define float @fmul_select_f32_test2(float %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX7-LABEL: fmul_select_f32_test2:
 ; GFX7:       ; %bb.0:

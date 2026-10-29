@@ -634,7 +634,26 @@ struct MatchDataDef {
 class CombineRuleBuilder {
 public:
   using PatternMap = MapVector<StringRef, std::unique_ptr<Pattern>>;
-  using PatternAlternatives = DenseMap<const Pattern *, unsigned>;
+
+  /// Identifies a commutable instruction pattern: {enclosing PatFragPattern or
+  /// nullptr, instruction pattern}. The enclosing PatFragPattern is needed
+  /// because the patterns of a PatFrag alternative are shared by every use of
+  /// that PatFrag.
+  using CommuteKey = std::pair<const Pattern *, const Pattern *>;
+
+  /// One permutation of a rule.
+  struct PatternAlternatives {
+    /// Index of the alternative selected for each PatFragPattern.
+    DenseMap<const Pattern *, unsigned> PatFragAlts;
+    /// Commutable instructions whose first two use operands are swapped.
+    DenseSet<CommuteKey> Commuted;
+
+    unsigned lookup(const Pattern *P) const { return PatFragAlts.lookup(P); }
+    bool isCommuted(const Pattern *Ctx, const Pattern *P) const {
+      return Commuted.contains({Ctx, P});
+    }
+    bool empty() const { return PatFragAlts.empty() && Commuted.empty(); }
+  };
 
   CombineRuleBuilder(const CodeGenTarget &CGT,
                      SubtargetFeatureInfoMap &SubtargetFeatures,
@@ -699,7 +718,17 @@ private:
   /// permutations are allowed before an error is emitted and this function
   /// returns false. This is a simple safeguard to prevent combination of
   /// PatFrags from generating enormous amounts of rules.
+  ///
+  /// Each commutable instruction pattern (see \ref shouldCommute) also
+  /// doubles the number of permutations.
   bool buildPermutationsToEmit();
+
+  /// \returns true if a version of \p P with its first two use operands
+  /// swapped must be emitted. \p PFP is the PatFragPattern that contains \p P,
+  /// or nullptr if \p P is a top-level match pattern.
+  bool shouldCommute(const CodeGenInstructionPattern &P,
+                     const PatFragPattern *PFP,
+                     const PatternAlternatives &Alts) const;
 
   /// Checks additional semantics of the Patterns.
   bool checkSemantics();
@@ -753,7 +782,7 @@ private:
 
   // Recursively visits CodeGenInstructionPattern from P to build up the
   // RuleMatcher/InstructionMatcher. May create new InstructionMatchers as
-  // needed.
+  // needed. \p PFP is the PatFragPattern that contains P, or nullptr.
   using OperandMapperFnRef =
       function_ref<InstructionOperand(const InstructionOperand &)>;
   using OperandDefLookupFn =
@@ -762,7 +791,8 @@ private:
       CodeExpansions &CE, const PatternAlternatives &Alts, RuleMatcher &M,
       InstructionMatcher &IM, const CodeGenInstructionPattern &P,
       DenseSet<const Pattern *> &SeenPats, OperandDefLookupFn LookupOperandDef,
-      OperandMapperFnRef OperandMapper = [](const auto &O) { return O; });
+      OperandMapperFnRef OperandMapper = [](const auto &O) { return O; },
+      const PatFragPattern *PFP = nullptr);
 
   PatternParser Parser;
   const CodeGenTarget &CGT;
@@ -851,10 +881,13 @@ bool CombineRuleBuilder::emitRuleMatchers() {
   auto StackTrace = PrettyStackTraceEmit(RuleDef);
 
   assert(MatchRoot);
-  CodeExpansions CE;
 
   assert(!PermutationsToEmit.empty());
   for (const auto &Alts : PermutationsToEmit) {
+    // Each permutation needs its own expansions: an operand name can refer to
+    // a different operand index in each permutation, and CodeExpansions keeps
+    // the first expansion declared for a name.
+    CodeExpansions CE;
     switch (MatchRoot->getKind()) {
     case Pattern::K_AnyOpcode: {
       if (!emitMatchPattern(CE, Alts, *cast<AnyOpcodePattern>(MatchRoot)))
@@ -1008,10 +1041,16 @@ CombineRuleBuilder::getLLTCodeGenOrTempType(const PatternType &PT,
 void CombineRuleBuilder::print(raw_ostream &OS,
                                const PatternAlternatives &Alts) const {
   SmallVector<std::string, 1> Strings(
-      map_range(Alts, [](const auto &PatAndPerm) {
+      map_range(Alts.PatFragAlts, [](const auto &PatAndPerm) {
         return PatAndPerm.first->getName().str() + "[" +
                to_string(PatAndPerm.second) + "]";
       }));
+  for (const auto &[Ctx, P] : Alts.Commuted) {
+    std::string Name = P->getName().str();
+    if (Ctx)
+      Name = Ctx->getName().str() + "." + Name;
+    Strings.push_back(Name + "[commuted]");
+  }
   // Sort so output is deterministic for tests. Otherwise it's sorted by pointer
   // values.
   sort(Strings);
@@ -1158,6 +1197,16 @@ bool CombineRuleBuilder::typecheckPatterns() {
 bool CombineRuleBuilder::buildPermutationsToEmit() {
   PermutationsToEmit.clear();
 
+  const int64_t MaxPerms = RuleDef.getValueAsInt("MaxPermutations");
+  const auto CheckMaxPerms = [&](uint64_t NumPerms) {
+    if (MaxPerms <= 0 || NumPerms <= uint64_t(MaxPerms))
+      return true;
+    PrintError(
+        "cannot emit rule '" + RuleDef.getName() + "'; " + Twine(NumPerms) +
+        " permutations would be emitted, but the max is " + Twine(MaxPerms));
+    return false;
+  };
+
   // Start with one empty set of alternatives.
   PermutationsToEmit.emplace_back();
   for (const auto &Pat : values(MatchPats)) {
@@ -1172,29 +1221,69 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     else
       continue;
 
+    if (!CheckMaxPerms(uint64_t(PermutationsToEmit.size()) * NumAlts))
+      return false;
+
     // For each pattern that needs permutations, multiply the current set of
     // alternatives.
     auto CurPerms = PermutationsToEmit;
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.PatFragAlts.contains(Pat.get()) &&
+             "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
-        NewPerm[Pat.get()] = K;
+        NewPerm.PatFragAlts[Pat.get()] = K;
         PermutationsToEmit.emplace_back(std::move(NewPerm));
       }
     }
   }
 
-  if (int64_t MaxPerms = RuleDef.getValueAsInt("MaxPermutations");
-      MaxPerms > 0) {
-    if ((int64_t)PermutationsToEmit.size() > MaxPerms) {
-      PrintError("cannot emit rule '" + RuleDef.getName() + "'; " +
-                 Twine(PermutationsToEmit.size()) +
-                 " permutations would be emitted, but the max is " +
-                 Twine(MaxPerms));
+  // Then, for each commutable instruction, emit every permutation once with
+  // the operands as written and once with the operands swapped. The
+  // instructions to consider depend on the PatFrag alternatives selected by
+  // each permutation.
+  auto CurPerms = std::move(PermutationsToEmit);
+  PermutationsToEmit.clear();
+
+  for (const auto &Perm : CurPerms) {
+    SmallVector<CommuteKey, 4> Keys;
+    for (const auto &Pat : values(MatchPats)) {
+      if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat.get())) {
+        if (shouldCommute(*CGP, /*PFP=*/nullptr, Perm))
+          Keys.emplace_back(nullptr, CGP);
+        continue;
+      }
+
+      const auto *PFP = dyn_cast<PatFragPattern>(Pat.get());
+      if (!PFP)
+        continue;
+      const auto &FragAlt = PFP->getPatFrag().getAlternative(Perm.lookup(PFP));
+      for (const auto &FragPat : FragAlt.Pats) {
+        const auto *CGP = dyn_cast<CodeGenInstructionPattern>(FragPat.get());
+        if (CGP && shouldCommute(*CGP, PFP, Perm))
+          Keys.emplace_back(PFP, CGP);
+      }
+    }
+
+    if (Keys.size() >= 32) {
+      PrintError("cannot emit rule '" + RuleDef.getName() + "'; it has " +
+                 Twine(Keys.size()) + " commutable instructions");
       return false;
+    }
+
+    const uint32_t NumCommutes = uint32_t(1) << Keys.size();
+    if (!CheckMaxPerms(PermutationsToEmit.size() + uint64_t(NumCommutes)))
+      return false;
+
+    for (uint32_t Mask = 0; Mask < NumCommutes; ++Mask) {
+      PatternAlternatives NewPerm = Perm;
+      for (const auto &[Idx, Key] : enumerate(Keys)) {
+        if (Mask & (uint32_t(1) << Idx))
+          NewPerm.Commuted.insert(Key);
+      }
+      PermutationsToEmit.emplace_back(std::move(NewPerm));
     }
   }
 
@@ -1206,6 +1295,95 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
   }
 
   return true;
+}
+
+bool CombineRuleBuilder::shouldCommute(const CodeGenInstructionPattern &P,
+                                       const PatFragPattern *PFP,
+                                       const PatternAlternatives &Alts) const {
+  // Only generic opcodes: for them, isCommutable means that the first two use
+  // operands can be swapped. A target instruction can commute other operands,
+  // or need other changes to commute (see TargetInstrInfo::commuteInstruction).
+  const CodeGenInstruction &Inst = P.getInst();
+  if (!Inst.isCommutable || !Inst.isPreISelOpcode || P.isIntrinsic())
+    return false;
+
+  const unsigned FirstUse = P.getNumInstDefs();
+  if (P.operands_size() < FirstUse + 2)
+    return false;
+
+  const InstructionOperand &LHS = P.getOperand(FirstUse);
+  const InstructionOperand &RHS = P.getOperand(FirstUse + 1);
+  if (LHS.getType().isVariadicPack() || RHS.getType().isVariadicPack())
+    return false;
+
+  // Swapping two references to the same operand changes nothing.
+  if (LHS.isNamedOperand() && RHS.isNamedOperand()) {
+    if (LHS.getOperandName() == RHS.getOperandName())
+      return false;
+    if (PFP) {
+      const auto &PF = PFP->getPatFrag();
+      unsigned LHSIdx = PF.getParamIdx(LHS.getOperandName());
+      unsigned RHSIdx = PF.getParamIdx(RHS.getOperandName());
+      if (LHSIdx != unsigned(-1) && RHSIdx != unsigned(-1)) {
+        const auto &LHSArg = PFP->getOperand(LHSIdx);
+        const auto &RHSArg = PFP->getOperand(RHSIdx);
+        if (LHSArg.isNamedOperand() && RHSArg.isNamedOperand() &&
+            LHSArg.getOperandName() == RHSArg.getOperandName())
+          return false;
+      }
+    }
+  }
+
+  // An operand is constrained if the pattern can match some value in its
+  // position, but not every value. If neither operand is constrained, the
+  // version with the operands as written always matches first, and the
+  // swapped version is never used.
+  const auto HasConstraint = [](const InstructionOperand &O,
+                                const OperandTable &OpTable, const auto &Pats) {
+    if (O.hasImmValue())
+      return true;
+    if (!O.isNamedOperand())
+      return false;
+
+    StringRef Name = O.getOperandName();
+    if (OpTable.getDef(Name))
+      return true;
+
+    const std::string Expansion = ("${" + Name + "}").str();
+    unsigned NumUses = 0;
+    for (const auto &Pat : Pats) {
+      if (const auto *CXXPat = dyn_cast<CXXPattern>(Pat.get())) {
+        if (CXXPat->getRawCode().contains(Expansion))
+          return true;
+        continue;
+      }
+      if (const auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
+        for (const auto &Op : IP->operands()) {
+          if (Op.isNamedOperand() && Op.getOperandName() == Name)
+            ++NumUses;
+        }
+      }
+    }
+    return NumUses > 1;
+  };
+
+  const auto IsConstrained = [&](const InstructionOperand &O) {
+    if (!PFP)
+      return HasConstraint(O, MatchOpTable, values(MatchPats));
+
+    const auto &PF = PFP->getPatFrag();
+    const auto &FragAlt = PF.getAlternative(Alts.lookup(PFP));
+    if (HasConstraint(O, FragAlt.OpTable, FragAlt.Pats))
+      return true;
+
+    // A parameter can also be constrained by its argument in the caller.
+    unsigned ParamIdx = PF.getParamIdx(O.getOperandName());
+    return ParamIdx != unsigned(-1) &&
+           HasConstraint(PFP->getOperand(ParamIdx), MatchOpTable,
+                         values(MatchPats));
+  };
+
+  return IsConstrained(LHS) || IsConstrained(RHS);
 }
 
 bool CombineRuleBuilder::checkSemantics() {
@@ -1863,7 +2041,7 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
 
     if (!emitCodeGenInstructionMatchPattern(
             PatFragCEs, Alts, RM, *IM, *cast<CodeGenInstructionPattern>(Def),
-            PatFragSeenPats, LookupOperandDef, OperandMapper))
+            PatFragSeenPats, LookupOperandDef, OperandMapper, &PFP))
       return false;
   }
 
@@ -2272,7 +2450,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     CodeExpansions &CE, const PatternAlternatives &Alts, RuleMatcher &M,
     InstructionMatcher &IM, const CodeGenInstructionPattern &P,
     DenseSet<const Pattern *> &SeenPats, OperandDefLookupFn LookupOperandDef,
-    OperandMapperFnRef OperandMapper) {
+    OperandMapperFnRef OperandMapper, const PatFragPattern *PFP) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
 
   if (!SeenPats.insert(&P).second)
@@ -2300,6 +2478,11 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
                                                           /*CheckNot=*/true);
   }
 
+  // If this permutation commutes P, its first two use operands are matched
+  // against the MachineInstr operands in reverse order.
+  const bool IsCommuted = Alts.isCommuted(PFP, &P);
+  const unsigned FirstUse = P.getNumInstDefs();
+
   for (auto [Idx, OriginalO] : enumerate(P.operands())) {
     // Remap the operand. This is used when emitting InstructionPatterns inside
     // PatFrags, so it can remap them to the arguments passed to the pattern.
@@ -2324,8 +2507,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     // From now on:
     //    Idx = index in the pattern operand list.
     //    RealIdx = expected index in the MachineInstr.
-    const unsigned RealIdx =
+    unsigned RealIdx =
         (P.isIntrinsic() && !OriginalO.isDef()) ? (Idx + 1) : Idx;
+    if (IsCommuted && (Idx == FirstUse || Idx == FirstUse + 1))
+      RealIdx = (2 * FirstUse + 1) - Idx;
 
     if (Ty.isVariadicPack() && M.hasOperand(OpName)) {
       // TODO: We could add some CheckIsSameOperand opcode variant that checks
@@ -2424,7 +2609,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     if (const auto *CGIDef = dyn_cast<CodeGenInstructionPattern>(DefPat)) {
       if (!emitCodeGenInstructionMatchPattern(CE, Alts, M, IM, *CGIDef,
                                               SeenPats, LookupOperandDef,
-                                              OperandMapper))
+                                              OperandMapper, PFP))
         return false;
       continue;
     }
