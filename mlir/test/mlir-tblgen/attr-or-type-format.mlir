@@ -133,3 +133,36 @@ func.func private @test_attr_with_type_failed_to_parse_type() -> () attributes {
   // expected-error@+1 {{failed to parse TestAttrWithTypeParam parameter 'int_type'}}
   attr = #test.attr_with_type<vector<4xi32>, vector<4xi32>>
 }
+
+// -----
+
+func.func private @test_char_param_multi_char_string() -> () attributes {
+  // expected-error@+2 {{expected a single character}}
+  // expected-error@+1 {{failed to parse TestAttrWithCharParam parameter 'value' which is to be a `char`}}
+  attr = #test.attr_with_char_param<"ab">
+}
+
+// -----
+
+func.func private @test_char_param_multi_char_keyword() -> () attributes {
+  // expected-error@+2 {{expected a single character}}
+  // expected-error@+1 {{failed to parse TestAttrWithCharParam parameter 'value' which is to be a `char`}}
+  attr = #test.attr_with_char_param<abc>
+}
+
+// -----
+
+// A digit is neither a keyword nor a string, so it must be quoted.
+func.func private @test_char_param_integer() -> () attributes {
+  // expected-error@+2 {{expected valid keyword or string}}
+  // expected-error@+1 {{failed to parse TestAttrWithCharParam parameter 'value' which is to be a `char`}}
+  attr = #test.attr_with_char_param<5>
+}
+
+// -----
+
+func.func private @test_char_param_missing() -> () attributes {
+  // expected-error@+2 {{expected valid keyword or string}}
+  // expected-error@+1 {{failed to parse TestAttrWithCharParam parameter 'value' which is to be a `char`}}
+  attr = #test.attr_with_char_param<>
+}
