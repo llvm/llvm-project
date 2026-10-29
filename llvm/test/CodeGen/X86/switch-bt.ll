@@ -86,7 +86,9 @@ define void @test2(i32 %x) nounwind ssp {
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movl $91, %eax
 ; CHECK-NEXT:    btl %edi, %eax
-; CHECK-NEXT:    jb bar@PLT # TAILCALL
+; CHECK-NEXT:    jae .LBB1_2
+; CHECK-NEXT:  # %bb.3: # %if.then
+; CHECK-NEXT:    jmp bar@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    retq
 
@@ -116,7 +118,9 @@ define void @test3(i32 %x) nounwind {
 ; CHECK-NEXT:    ja .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cmpl $4, %edi
-; CHECK-NEXT:    jne bar@PLT # TAILCALL
+; CHECK-NEXT:    je .LBB2_2
+; CHECK-NEXT:  # %bb.3: # %if.then
+; CHECK-NEXT:    jmp bar@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB2_2: # %if.end
 ; CHECK-NEXT:    retq
   switch i32 %x, label %if.end [
