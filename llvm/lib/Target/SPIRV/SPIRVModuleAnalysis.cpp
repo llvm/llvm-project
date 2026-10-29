@@ -1842,6 +1842,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypeReserveId:
     Reqs.addCapability(SPIRV::Capability::Pipes);
     break;
+  case SPIRV::OpTypePipeStorage:
+    Reqs.addCapability(SPIRV::Capability::PipeStorage);
+    break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
   case SPIRV::OpBuildNDRange:
