@@ -3279,6 +3279,18 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       }))
     return;
 
+  // DW_OP_LLVM_implicit_pointer is only lowered for single-location variables
+  // (see DwarfCompileUnit::emitImplicitPointerLocation). In a location list,
+  // bail before anything is written, otherwise the register part of the
+  // location gets emitted without the implicit pointer and describes the
+  // wrong thing. The range then has an empty location, i.e. optimized out.
+  if (DIExpr && any_of(DIExpr->expr_ops(),
+                       [](const DIExpression::ExprOperand &Op) {
+                         return Op.getOp() ==
+                                dwarf::DW_OP_LLVM_implicit_pointer;
+                       }))
+    return;
+
   DwarfExpr.addFragmentOffset(DIExpr);
 
   // If the DIExpr is an Entry Value, we want to follow the same code path
