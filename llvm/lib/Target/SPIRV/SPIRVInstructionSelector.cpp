@@ -478,8 +478,7 @@ private:
 
   bool selectLdexp(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
-  bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
-                    MachineInstr &I) const;
+  bool selectSincos(Register ResVReg, MachineInstr &I) const;
   bool selectExp10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
@@ -1158,7 +1157,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FMODF:
     return selectModf(ResVReg, ResType, I);
   case TargetOpcode::G_FSINCOS:
-    return selectSincos(ResVReg, ResType, I);
+    return selectSincos(ResVReg, I);
 
   case TargetOpcode::G_FLOG:
     return selectExtInst(ResVReg, ResType, I, CL::log, GL::Log);
@@ -1688,10 +1687,11 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
-                                            SPIRVTypeInst ResType,
                                             MachineInstr &I) const {
   Register CosResVReg = I.getOperand(1).getReg();
   unsigned SrcIdx = I.getNumExplicitDefs();
+  // An unused sine result has no float type, so take it from the argument.
+  SPIRVTypeInst ResType = GR.getSPIRVTypeForVReg(I.getOperand(SrcIdx).getReg());
   Register ResTypeReg = GR.getSPIRVTypeID(ResType);
 
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
