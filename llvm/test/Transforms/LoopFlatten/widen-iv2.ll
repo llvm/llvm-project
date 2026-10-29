@@ -3,7 +3,7 @@
 ; This checks updating of phi nodes when the transformation is deemed
 ; unprofitable after IV widening.
 
-; RUN: opt < %s -S -passes='loop(loop-flatten),verify' \
+; RUN: opt < %s -S -passes="loop(loop-flatten),verify" \
 ; RUN:     -verify-loop-info -verify-dom-info -verify-scev | \
 ; RUN:     FileCheck %s --check-prefix=CHECK
 
@@ -23,36 +23,24 @@ define dso_local i32 @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[FOR_END6:%.*]]
 ; CHECK:       for.cond1.preheader.us.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
-; CHECK-NEXT:    [[INDVAR2:%.*]] = phi i64 [ [[INDVAR_NEXT3:%.*]], [[FOR_COND1_FOR_INC4_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
-; CHECK-NEXT:    [[I_016_US:%.*]] = phi i32 [ [[INC5_US:%.*]], [[FOR_COND1_FOR_INC4_CRIT_EDGE_US]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; CHECK-NEXT:    [[I_016_US:%.*]] = phi i32 [ [[INC5_US:%.*]], [[FOR_COND1_FOR_INC4_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr @c, align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw i64 [[INDVAR2]], [[TMP2]]
 ; CHECK-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[I_016_US]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[MUL_US]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3_US:%.*]]
 ; CHECK:       for.body3.us:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY3_US]] ], [ 0, [[FOR_COND1_PREHEADER_US]] ]
 ; CHECK-NEXT:    [[J_014_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY3_US]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVAR]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[J_014_US]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_014_US]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP7]]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    store i32 32, ptr [[ARRAYIDX_US]], align 4
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_014_US]], 1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP1]]
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY3_US]], label [[FOR_COND1_FOR_INC4_CRIT_EDGE_US]]
 ; CHECK:       for.cond1.for.inc4_crit_edge.us:
-; CHECK-NEXT:    [[INDVAR_NEXT3]] = add nuw nsw i64 [[INDVAR2]], 1
 ; CHECK-NEXT:    [[INC5_US]] = add nuw nsw i32 [[I_016_US]], 1
-; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT3]], [[TMP3]]
+; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i32 [[INC5_US]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END6_LOOPEXIT:%.*]]
 ; CHECK:       for.end6.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END6]]
