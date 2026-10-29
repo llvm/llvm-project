@@ -37,6 +37,8 @@ public:
                         std::pair<Register, Register> &MatchInfo) const;
   void applySPIRVLdexp(MachineInstr &MI,
                        const std::pair<Register, Register> &MatchInfo) const;
+  bool matchDegrees(Register LHS, Register RHS, Register &MatchInfo) const;
+  void applyDegrees(MachineInstr &MI, Register &MatchInfo) const;
   void applyMatrixTranspose(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
 

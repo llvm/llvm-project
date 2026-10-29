@@ -77,6 +77,12 @@ def ol_device_info_t : Enum {
                   "requested">,
        TaggedEtor<"LAUNCH_DEFAULT_NUM_WORK_GROUPS", "uint32_t",
                   "Number of work groups to use when none is requested">,
+       TaggedEtor<"LAUNCH_MAX_NUM_WORK_GROUPS", "uint32_t",
+                  "Maximum number of work groups a launch can have">,
+       TaggedEtor<"LAUNCH_MAX_GRID_SIZE", "uint64_t",
+                  "Maximum total number of work items (work groups times work "
+                  "group size) a launch can have, or zero if the device only "
+                  "limits the number of work groups">,
        TaggedEtor<"NATIVE_HANDLE", "void *",
                   "The backend-native handle of the device, reinterpreted as "
                   "a void pointer. The actual type of the handle is backend "

@@ -39,6 +39,13 @@ def fmul_exp2_to_ldexp_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVLdexp(*${root}, ${matchinfo}); }])
 >;
 
+def degrees_matchdata : GIDefMatchData<"Register">;
+def degrees_lowering
+    : GICombineRule<(defs root:$root, degrees_matchdata:$matchinfo),
+                    (match (G_FMUL $dst, $lhs, $rhs):$root,
+                        [{ return Helper.matchDegrees(${lhs}.getReg(), ${rhs}.getReg(), ${matchinfo}); }]),
+                    (apply [{ Helper.applyDegrees(*${root}, ${matchinfo}); }])>;
+
 def matrix_transpose_lowering
     : GICombineRule<
           (defs root:$root),
@@ -56,7 +63,7 @@ def SPIRVPreLegalizerCombiner
                  [vector_length_sub_to_distance_lowering,
                   vector_fdiv_length_to_normalize_lowering,
                   vector_select_to_faceforward_lowering,
-                  fmul_exp2_to_ldexp_lowering, matrix_transpose_lowering,
-                  matrix_multiply_lowering]> {
+                  fmul_exp2_to_ldexp_lowering, degrees_lowering,
+                  matrix_transpose_lowering, matrix_multiply_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
