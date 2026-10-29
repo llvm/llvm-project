@@ -3,11 +3,18 @@
 # threshold of five, the three NOOPs leave the ADD in range only if debug
 # instructions are ignored. Pin the threshold so changing its default cannot
 # mask this regression.
+# Also check that a trailing DBG_VALUE does not hide the end of the block from
+# the EFLAGS liveness query.
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -x86-fixup-leas-search-distance-threshold=5 -run-pass=x86-fixup-leas -verify-machineinstrs -o - %s | FileCheck %s
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -x86-fixup-leas-search-distance-threshold=5 -passes="require<profile-summary>,function(machine-function(x86-fixup-leas))" -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |
   define i64 @debug_instrs_do_not_count(i64 %a, i64 %b) {
+  entry:
+    ret i64 0
+  }
+
+  define i64 @trailing_debug(i64 %a, i64 %b) {
   entry:
     ret i64 0
   }
@@ -41,5 +48,57 @@ body:             |
     NOOP
     NOOP
     renamable $rax = ADD64rr killed renamable $rax, killed renamable $rcx, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            trailing_debug
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rax' }
+  - { reg: '$rdx' }
+body:             |
+  ; CHECK-LABEL: name: trailing_debug
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $rax, $rdx, $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $rax = ADD64rr $rax, $rdx, implicit-def $eflags
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   NOOP
+  ; CHECK-NEXT:   DBG_VALUE 0, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $rax
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   RET64 $rax
+  bb.0:
+    successors: %bb.1
+    liveins: $rax, $rdx, $eflags
+
+    ; EFLAGS is live in, so the fallback backward scan cannot prove it dead.
+    ; The LEA and nine NOOPs fill the ten-instruction neighborhood.
+    ; The trailing DBG_VALUE must not hide the end of the block.
+
+    renamable $rax = LEA64r killed renamable $rax, 1, killed renamable $rdx, 0, $noreg
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    DBG_VALUE 0, $noreg
+
+  bb.1:
+    liveins: $rax
     RET64 $rax
 ...
