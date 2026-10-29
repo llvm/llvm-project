@@ -43,6 +43,8 @@
 
 namespace llvm {
 
+class BlockWaveCountUpdater;
+
 class AssumptionCache;
 class DominatorTree;
 class Loop;
@@ -64,7 +66,8 @@ public:
 /// analyses if they're non-null, and LCSSA if \c PreserveLCSSA is true.
 LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                            ScalarEvolution *SE, AssumptionCache *AC,
-                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
+                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                           BlockWaveCountUpdater *WPU = nullptr);
 
 } // end namespace llvm
 

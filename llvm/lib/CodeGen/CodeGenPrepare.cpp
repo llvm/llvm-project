@@ -279,7 +279,7 @@ private:
   bool eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI);
   BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
   bool canMergeBlocks(const BasicBlock *BB, const BasicBlock *DestBB) const;
-  bool eliminateMostlyEmptyBlock(BasicBlock *BB);
+  bool eliminateMostlyEmptyBlock(BasicBlock *BB, BlockWaveCountUpdater &WPU);
   bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                      bool isPreheader);
   bool makeBitReverse(Instruction &I);
@@ -730,6 +730,7 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 bool CodeGenPrepare::eliminateFallThrough(Function &F) {
   bool Changed = false;
   SmallPtrSet<BasicBlock *, 8> Preds;
+  BlockWaveCountUpdater WPU(F);
   // Scan all of the blocks in the function, except for the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     auto *BB = &Block;
@@ -748,7 +749,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
       LLVM_DEBUG(dbgs() << "To merge:\n" << *BB << "\n\n\n");
 
       // Merge BB into SinglePred and delete it.
-      MergeBlockIntoPredecessor(BB, DTU, LI);
+      MergeBlockIntoPredecessor(BB, DTU, LI, nullptr, nullptr, false, nullptr,
+                                &WPU);
       Preds.insert(SinglePred);
 
       if (IsHugeFunc) {
@@ -758,6 +760,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
       }
     }
   }
+
+  WPU.apply();
 
   // (Repeatedly) merging blocks into their predecessors can create redundant
   // debug intrinsics.
@@ -811,6 +815,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
+  BlockWaveCountUpdater WPU(F);
   SmallPtrSet<PHINode *, 32> KnownNonDeadPHIs;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
@@ -828,9 +833,10 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
         !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
       continue;
 
-    ResetLI |= eliminateMostlyEmptyBlock(BB);
+    ResetLI |= eliminateMostlyEmptyBlock(BB, WPU);
     MadeChange = true;
   }
+  WPU.apply();
   return MadeChange;
 }
 
@@ -1007,7 +1013,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
 /// Indicate that the LoopInfo was modified only if it wasn't updated.
-bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
+bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
+                                               BlockWaveCountUpdater &WPU) {
   UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
   BasicBlock *DestBB = BI->getSuccessor();
 
@@ -1021,7 +1028,8 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
       assert(SinglePred == BB &&
              "Single predecessor not the same as predecessor");
       // Merge DestBB into SinglePred/BB and delete it.
-      MergeBlockIntoPredecessor(DestBB, DTU, LI);
+      MergeBlockIntoPredecessor(DestBB, DTU, LI, nullptr, nullptr, false,
+                                nullptr, &WPU);
       // Note: BB(=SinglePred) will not be deleted on this path.
       // DestBB(=its single successor) is the one that was deleted.
       LLVM_DEBUG(dbgs() << "AFTER:\n" << *SinglePred << "\n\n\n");
@@ -1034,6 +1042,11 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
       return false;
     }
   }
+
+  // Removing a block on a single predecessor's edge preserves the surrounding
+  // wave events. Multiple predecessors may change wave reconvergence.
+  if (BB->getSinglePredecessor())
+    WPU.removeBlock(*BB);
 
   // Otherwise, we have multiple predecessors of BB.  Update the PHIs in DestBB
   // to handle the new incoming edges it is about to have.

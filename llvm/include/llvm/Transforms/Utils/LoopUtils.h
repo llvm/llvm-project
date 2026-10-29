@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class BlockWaveCountUpdater;
+
 template <typename T> class DomTreeNodeBase;
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
 class AssumptionCache;
@@ -54,10 +56,10 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
 template <typename T, unsigned N> class SmallSetVector;
 template <typename T, unsigned N> class SmallPriorityWorklist;
 
-LLVM_ABI BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
-                                            LoopInfo *LI,
-                                            MemorySSAUpdater *MSSAU,
-                                            bool PreserveLCSSA);
+LLVM_ABI BasicBlock *
+InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                       MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                       BlockWaveCountUpdater *WPU = nullptr);
 
 /// Ensure that all exit blocks of the loop are dedicated exits.
 ///
@@ -66,7 +68,8 @@ LLVM_ABI BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
 /// tree and loop info if provided, and will preserve LCSSA if requested.
 LLVM_ABI bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                       MemorySSAUpdater *MSSAU,
-                                      bool PreserveLCSSA);
+                                      bool PreserveLCSSA,
+                                      BlockWaveCountUpdater *WPU = nullptr);
 
 /// Ensures LCSSA form for every instruction from the Worklist in the scope of
 /// innermost containing loop.

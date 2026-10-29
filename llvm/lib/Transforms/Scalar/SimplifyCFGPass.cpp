@@ -34,6 +34,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -203,6 +204,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
                                       UniqueLoopHeaders.end());
 
+  BlockWaveCountUpdater WPU(F);
   unsigned IterCnt = 0;
   (void)IterCnt;
   while (LocalChange) {
@@ -221,13 +223,14 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
+      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders, &WPU)) {
         LocalChange = true;
         ++NumSimpl;
       }
     }
     Changed |= LocalChange;
   }
+  WPU.apply();
   return Changed;
 }
 
