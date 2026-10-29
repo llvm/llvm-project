@@ -178,7 +178,7 @@ void FormatManager::GetPossibleMatches(
     FormattersMatchCandidate::Flags current_flags, bool root_level,
     uint32_t ptr_stripped_depth) {
   compiler_type = compiler_type.GetTypeForFormatters();
-  ConstString type_name(compiler_type.GetTypeName());
+  llvm::StringRef type_name(compiler_type.GetTypeName().GetStringRef());
   // A ValueObject that couldn't be made correctly won't necessarily have a
   // target.  We aren't going to find a formatter in this case anyway, so we
   // should just exit.
@@ -190,19 +190,20 @@ void FormatManager::GetPossibleMatches(
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Format("{0}:{1}", type_name, valobj.GetBitfieldBitSize());
-    ConstString bitfieldname(sstring.GetString());
-    entries.push_back({bitfieldname, script_interpreter,
+    llvm::StringRef bitfieldname(sstring.GetString());
+    entries.push_back({bitfieldname.str(), script_interpreter,
                        TypeImpl(compiler_type), current_flags,
                        ptr_stripped_depth});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
-    entries.push_back({type_name, script_interpreter, TypeImpl(compiler_type),
-                       current_flags, ptr_stripped_depth});
+    entries.push_back({type_name.str(), script_interpreter,
+                       TypeImpl(compiler_type), current_flags,
+                       ptr_stripped_depth});
 
-    ConstString display_type_name(compiler_type.GetTypeName());
+    llvm::StringRef display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
-      entries.push_back({display_type_name, script_interpreter,
+      entries.push_back({display_type_name.str(), script_interpreter,
                          TypeImpl(compiler_type), current_flags,
                          ptr_stripped_depth});
   }
@@ -412,9 +413,9 @@ void FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback) {
   }
 }
 
-lldb::TypeCategoryImplSP FormatManager::GetCategory(ConstString category_name,
-                                                    bool can_create) {
-  if (!category_name)
+lldb::TypeCategoryImplSP
+FormatManager::GetCategory(llvm::StringRef category_name, bool can_create) {
+  if (category_name.empty())
     return GetCategory(m_default_category_name);
   lldb::TypeCategoryImplSP category;
   if (m_categories_map.Get(category_name, category))
@@ -423,9 +424,8 @@ lldb::TypeCategoryImplSP FormatManager::GetCategory(ConstString category_name,
   if (!can_create)
     return lldb::TypeCategoryImplSP();
 
-  m_categories_map.Add(category_name,
-                       std::make_shared<TypeCategoryImpl>(
-                           this, category_name.GetStringRef().str()));
+  m_categories_map.Add(category_name, std::make_shared<TypeCategoryImpl>(
+                                          this, category_name.str()));
   return GetCategory(category_name);
 }
 
@@ -563,15 +563,16 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   return true;
 }
 
-ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
-                                           lldb::DynamicValueType use_dynamic) {
+llvm::StringRef
+FormatManager::GetTypeForCache(ValueObject &valobj,
+                               lldb::DynamicValueType use_dynamic) {
   ValueObjectSP valobj_sp = valobj.GetQualifiedRepresentationIfAvailable(
       use_dynamic, valobj.IsSynthetic());
   if (valobj_sp && valobj_sp->GetCompilerType().IsValid()) {
     if (!valobj_sp->GetCompilerType().IsMeaninglessWithoutDynamicResolution())
       return valobj_sp->GetQualifiedTypeName();
   }
-  return ConstString();
+  return llvm::StringRef();
 }
 
 std::vector<lldb::LanguageType>
@@ -624,7 +625,7 @@ template <> const char *FormatterKind<lldb::TypeSummaryImplSP> = "summary";
 template <> const char *FormatterKind<lldb::SyntheticChildrenSP> = "synthetic";
 } // namespace
 
-#define FORMAT_LOG(Message) "[%s] " Message, FormatterKind<ImplSP>
+#define FORMAT_LOG(Message) "[{0}] " Message, FormatterKind<ImplSP>
 
 template <typename ImplSP>
 ImplSP FormatManager::Get(ValueObject &valobj,
@@ -635,19 +636,19 @@ ImplSP FormatManager::Get(ValueObject &valobj,
 
   Log *log = GetLog(LLDBLog::DataFormatters);
 
-  LLDB_LOGF(log, FORMAT_LOG("Search failed. Giving language a chance."));
+  LLDB_LOG(log, FORMAT_LOG("Search failed. Giving language a chance."));
   for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
     if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
       ImplSP retval_sp;
       if (lang_category->Get(match_data, retval_sp))
         if (retval_sp) {
-          LLDB_LOGF(log, FORMAT_LOG("Language search success. Returning."));
+          LLDB_LOG(log, FORMAT_LOG("Language search success. Returning."));
           return retval_sp;
         }
     }
   }
 
-  LLDB_LOGF(log, FORMAT_LOG("Search failed. Giving hardcoded a chance."));
+  LLDB_LOG(log, FORMAT_LOG("Search failed. Giving hardcoded a chance."));
   return GetHardcoded<ImplSP>(match_data);
 }
 
@@ -655,25 +656,26 @@ template <typename ImplSP>
 ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   ImplSP retval_sp;
   Log *log = GetLog(LLDBLog::DataFormatters);
-  if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(log, "\n\n" FORMAT_LOG("Looking into cache for type %s"),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
-      LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
+  llvm::StringRef match_data_name(match_data.GetTypeForCache());
+  if (!match_data_name.empty()) {
+    LLDB_LOG(log, "\n\n" FORMAT_LOG("Looking into cache for type {1}"),
+              match_data_name.nonEmptyOr("<invalid>"));
+    if (m_format_cache.Get(match_data_name, retval_sp)) {
+      LLDB_LOG(log, FORMAT_LOG("Cache search success. Returning."));
       LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
                        m_format_cache.GetCacheHits(),
                        m_format_cache.GetCacheMisses());
       return retval_sp;
     }
-    LLDB_LOGF(log, FORMAT_LOG("Cache search failed. Going normal route"));
+    LLDB_LOG(log, FORMAT_LOG("Cache search failed. Going normal route"));
   }
 
   m_categories_map.Get(match_data, retval_sp);
-  if (match_data.GetTypeForCache() && (!retval_sp || !retval_sp->NonCacheable())) {
-    LLDB_LOGF(log, FORMAT_LOG("Caching %p for type %s"),
+  if (!match_data_name.empty() && (!retval_sp || !retval_sp->NonCacheable())) {
+    LLDB_LOG(log, FORMAT_LOG("Caching {1} for type {2}"),
               static_cast<void *>(retval_sp.get()),
-              match_data.GetTypeForCache().AsCString("<invalid>"));
-    m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
+              match_data_name.nonEmptyOr("<invalid>"));
+    m_format_cache.Set(match_data_name, retval_sp);
   }
   LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
                    m_format_cache.GetCacheHits(),
@@ -704,9 +706,9 @@ FormatManager::GetSyntheticChildren(ValueObject &valobj,
 FormatManager::FormatManager()
     : m_last_revision(0), m_format_cache(), m_language_categories_mutex(),
       m_language_categories_map(), m_named_summaries_map(this),
-      m_categories_map(this), m_default_category_name(ConstString("default")),
-      m_system_category_name(ConstString("system")),
-      m_vectortypes_category_name(ConstString("VectorTypes")) {
+      m_categories_map(this), m_default_category_name("default"),
+      m_system_category_name("system"),
+      m_vectortypes_category_name("VectorTypes") {
   LoadSystemFormatters();
   LoadVectorFormatters();
 
