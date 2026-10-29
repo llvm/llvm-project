@@ -530,9 +530,6 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
 
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-  if (Subtarget.hasStdExtZfinx())
-    return false;
-
   for (auto &Arg : F.args()) {
     if (!isSupportedArgumentType(Arg.getType(), Subtarget,
                                  /*IsLowerArgs=*/true))
