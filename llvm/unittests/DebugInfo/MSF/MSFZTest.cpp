@@ -344,6 +344,90 @@ TEST(MSFZTest, ConfigurableChunkSize) {
             "MSFZ output: chunk size must be between 4096 and 1073741824 bytes"));
 }
 
+TEST(MSFZTest, ParallelCompressionHandlesChunksAboveQueueBudget) {
+  if (hardware_concurrency(2).compute_thread_count() < 2)
+    GTEST_SKIP();
+  ThreadPoolStrategy SavedStrategy = parallel::strategy;
+  scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });
+
+  constexpr uint32_t ChunkSize = 32 * 1024 * 1024;
+  constexpr uint32_t StreamSize = 2 * ChunkSize + 17;
+  SuperBlock SB = {};
+  SB.BlockSize = StreamSize;
+  SB.NumBlocks = 2;
+  support::ulittle32_t Sizes[2];
+  Sizes[0] = 0;
+  Sizes[1] = StreamSize;
+  support::ulittle32_t Block;
+  Block = 1;
+  MSFLayout Layout;
+  Layout.SB = &SB;
+  Layout.StreamSizes = Sizes;
+  Layout.StreamMap = {{}, {&Block, 1}};
+  SmallVector<uint8_t, 0> Data(StreamSize);
+  for (uint32_t I = 0; I != StreamSize; ++I)
+    Data[I] = static_cast<uint8_t>(I * 37);
+
+  unittest::TempDir TestDirectory("msfz-large-chunks", /*Unique=*/true);
+  auto Write = [&](StringRef Path, unsigned Threads,
+                   uint32_t WriterChunkSize) -> Error {
+    parallel::strategy = hardware_concurrency(Threads);
+    auto Writer = MSFZWriter::create(
+        Path, Layout, compression::zstd::BestSpeedCompression, WriterChunkSize);
+    if (!Writer)
+      return Writer.takeError();
+    if (Error E = (*Writer)->writeBytes(StreamSize, Data))
+      return E;
+    return (*Writer)->finalize();
+  };
+  SmallString<128> SerialPath = TestDirectory.path("serial.pdz");
+  ASSERT_THAT_ERROR(Write(SerialPath, 1, ChunkSize), Succeeded());
+  SmallString<128> ParallelPath = TestDirectory.path("parallel.pdz");
+  ASSERT_THAT_ERROR(Write(ParallelPath, 2, ChunkSize), Succeeded());
+  auto Serial = MemoryBuffer::getFile(SerialPath, /*IsText=*/false);
+  ASSERT_TRUE(Serial);
+  auto Parallel = MemoryBuffer::getFile(ParallelPath, /*IsText=*/false);
+  ASSERT_TRUE(Parallel);
+  EXPECT_EQ((*Serial)->getBuffer(), (*Parallel)->getBuffer());
+
+  ArrayRef<uint8_t> File(
+      reinterpret_cast<const uint8_t *>((*Parallel)->getBufferStart()),
+      (*Parallel)->getBufferSize());
+  MSFZHeader Header;
+  std::memcpy(&Header, File.data(), sizeof(Header));
+  ASSERT_EQ(Header.NumChunks, 3u);
+  for (uint32_t I = 0; I != Header.NumChunks; ++I) {
+    MSFZChunkEntry Chunk;
+    std::memcpy(&Chunk,
+                File.data() + Header.ChunkTableOffset + I * sizeof(Chunk),
+                sizeof(Chunk));
+    EXPECT_EQ(Chunk.UncompressedSize, I == 2 ? 17u : ChunkSize);
+  }
+  BumpPtrAllocator Allocator;
+  BinaryByteStream Input(File, llvm::endianness::little);
+  auto Reader = MSFZFile::create(Input, Allocator);
+  ASSERT_THAT_EXPECTED(Reader, Succeeded());
+  auto Stream = (*Reader)->createStream(1);
+  ASSERT_THAT_EXPECTED(Stream, Succeeded());
+  ArrayRef<uint8_t> ReadData;
+  ASSERT_THAT_ERROR((*Stream)->readBytes(0, StreamSize, ReadData), Succeeded());
+  EXPECT_EQ(ReadData, ArrayRef(Data));
+
+  SmallString<128> PartialPath = TestDirectory.path("partial.pdz");
+  ASSERT_THAT_ERROR(Write(PartialPath, 2, 1u << 30), Succeeded());
+  auto Partial = MemoryBuffer::getFile(PartialPath, /*IsText=*/false);
+  ASSERT_TRUE(Partial);
+  BinaryByteStream PartialInput((*Partial)->getBuffer(),
+                                llvm::endianness::little);
+  auto PartialReader = MSFZFile::create(PartialInput, Allocator);
+  ASSERT_THAT_EXPECTED(PartialReader, Succeeded());
+  auto PartialStream = (*PartialReader)->createStream(1);
+  ASSERT_THAT_EXPECTED(PartialStream, Succeeded());
+  ASSERT_THAT_ERROR((*PartialStream)->readBytes(0, StreamSize, ReadData),
+                    Succeeded());
+  EXPECT_EQ(ReadData, ArrayRef(Data));
+}
+
 TEST(MSFZTest, ParallelCompressionIsDeterministic) {
   ThreadPoolStrategy SavedStrategy = parallel::strategy;
   scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });

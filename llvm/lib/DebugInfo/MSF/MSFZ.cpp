@@ -935,16 +935,17 @@ private:
   }
 
   Error submitChunk(uint32_t Index, SmallVector<uint8_t, 0> Data) {
-    if (!CompressionPool) {
+    size_t ReservedBytes = compressionReservation(Data.size());
+    if (!CompressionPool || ReservedBytes > MaxQueuedCompressionBytes) {
+      // Compress oversized chunks alone without exceeding the queue budget.
+      if (Error E = drainPendingChunks())
+        return E;
       CompressedChunk Result = {Index, {}};
       llvm::TimeTraceScope TimeScope("Compress MSFZ chunk");
       compressChunk(Data, Result.Data, CompressionLevel);
       return emitChunk(std::move(Result));
     }
 
-    size_t ReservedBytes = compressionReservation(Data.size());
-    if (ReservedBytes > MaxQueuedCompressionBytes)
-      return streamError("MSFZ output: chunk exceeds compression queue limit");
     while (PendingChunks.size() >= MaxPendingChunks ||
            ReservedBytes > MaxQueuedCompressionBytes - QueuedCompressionBytes)
       if (Error E = emitNextPendingChunk())
