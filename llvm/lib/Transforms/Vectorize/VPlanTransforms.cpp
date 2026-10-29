@@ -6474,8 +6474,8 @@ bool VPlanTransforms::handleCompressingPatterns(
     VPValue *Mask = nullptr;
     auto *BlendR = cast<VPBlendRecipe>(CondIndPhi.getBackedgeValue());
     for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
-      if (auto *IncomingVal = BlendR->getIncomingValue(I);
-          IncomingVal != &CondIndPhi) {
+      if (VPValue *IncomingValue = BlendR->getIncomingValue(I);
+          IncomingValue != &CondIndPhi) {
         Mask = BlendR->getMask(I);
         break;
       }
@@ -6486,7 +6486,7 @@ bool VPlanTransforms::handleCompressingPatterns(
     for (VPInstruction *VPI : CondIndToMemOps[CondIndPhi.getPHINode()]) {
       // Bail out if the mask for the memory op does not match the condition
       // used to update the conditional induction.
-      if (!VPI->getMask() || VPI->getMask() != Mask)
+      if (VPI->getMask() != Mask)
         return false;
 
       Builder.setInsertPoint(VPI);
@@ -6500,26 +6500,24 @@ bool VPlanTransforms::handleCompressingPatterns(
 
     // Update the conditional induction to increment by the number of active
     // lanes in the mask.
-    auto *BackedgeVal = CondIndPhi.getBackedgeValue();
-    auto *InsertBlock = BackedgeVal->getDefiningRecipe()->getParent();
+    VPValue *BackedgeValue = CondIndPhi.getBackedgeValue();
+    VPBasicBlock *InsertBlock = BackedgeValue->getDefiningRecipe()->getParent();
     Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
 
     Type *UpdateType = CondIndPhi.getScalarType();
     assert(!UpdateType->isPointerTy() && "ptr types are not supported yet");
 
-    auto *HandledLanes = Builder.createNaryOp(
+    auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
+    VPValue *HandledLanes = Builder.createNaryOp(
         VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
         DebugLoc::getUnknown(), "handled.lanes", UpdateType);
-
-    auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
     VPValue *Offset =
         Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
     VPValue *Update =
         Builder.createAdd(&CondIndPhi, Offset, {}, "conditional.step");
-
-    BackedgeVal->replaceAllUsesWith(Update);
+    BackedgeValue->replaceAllUsesWith(Update);
   }
 
   return true;
