@@ -767,7 +767,7 @@ body: |
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   bb.0:
-    %2:sgpr(i32) = G_CONSTANT i32 1
+    %2:sgpr(s32) = G_CONSTANT i32 1
     %0:sgpr(s1) = G_TRUNC %2
     %1:sgpr(s32) = G_ZEXT %0
     G_BRCOND %1, %bb.1
