@@ -1442,7 +1442,8 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
             if (ostype == llvm::Triple::FreeBSD ||
                 ostype == llvm::Triple::Linux ||
                 ostype == llvm::Triple::NetBSD ||
-                ostype == llvm::Triple::OpenBSD) {
+                ostype == llvm::Triple::OpenBSD ||
+                ostype == llvm::Triple::AIX) {
               format = "%" PRIu64;
             }
           } else {

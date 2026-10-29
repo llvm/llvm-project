@@ -20,6 +20,14 @@
 #include <sys/proc.h>
 #include <sys/procfs.h>
 
+#include "lldb/Host/FileSystem.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+
+using namespace llvm;
+using namespace llvm::object;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -84,6 +92,44 @@ static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
   return true;
 }
 
+static std::string ResolveExecutablePath(llvm::StringRef exe_path,
+                                         ::pid_t pid) {
+  Log *log = GetLog(LLDBLog::Host);
+  std::string resolved_path = exe_path.str();
+  char cwd[PATH_MAX];
+  char real_path[PATH_MAX];
+
+  // If resolved_path is already absolute, use it directly
+  if (!resolved_path.empty() && resolved_path[0] == '/') {
+    LLDB_LOG(log, "Path is already absolute: {0}", resolved_path);
+    return resolved_path;
+  }
+
+  // Try to resolve using the process's cwd
+  std::string cwd_link = "/proc/" + std::to_string(pid) + "/cwd";
+  ssize_t cwd_len = readlink(cwd_link.c_str(), cwd, sizeof(cwd) - 1);
+
+  if (cwd_len > 0) {
+    cwd[cwd_len] = '\0';
+    std::string full_path = std::string(cwd) + exe_path.str();
+
+    if (realpath(full_path.c_str(), real_path) != nullptr) {
+      resolved_path = real_path;
+      LLDB_LOG(log, "Resolved executable path via cwd: {0}", resolved_path);
+      return resolved_path;
+    }
+  }
+
+  // If still not resolved, try realpath on the relative path
+  if (realpath(exe_path.str().c_str(), real_path) != nullptr) {
+    resolved_path = real_path;
+    LLDB_LOG(log, "Resolved executable path via realpath: {0}", resolved_path);
+    return resolved_path;
+  }
+
+  return resolved_path;
+}
+
 static ArchSpec GetXCOFFProcessCPUType(llvm::StringRef exe_path) {
   Log *log = GetLog(LLDBLog::Host);
 
@@ -127,14 +173,29 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
     return false;
 
   std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
+
+  // pr_psargs holds argv[0] + arguments as a single string; take the first
+  // space-delimited token as the executable name.  Fall back to pr_fname (the
+  // short process name, always set by the kernel) when pr_psargs is empty
+  // this can happen for processes created via execv(..., nullptr)
   llvm::StringRef PathRef(
       psinfoData.pr_psargs,
       strnlen(psinfoData.pr_psargs, sizeof(psinfoData.pr_psargs)));
-  if (PathRef.empty())
+
+  llvm::StringRef executable = PathRef.split(' ').first;
+  if (executable.empty()) {
+    executable = llvm::StringRef(
+        psinfoData.pr_fname,
+        strnlen(psinfoData.pr_fname, sizeof(psinfoData.pr_fname)));
+  }
+  if (executable.empty())
     return false;
 
-  process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
-  ArchSpec arch_spec = GetXCOFFProcessCPUType(PathRef);
+  // Resolve the executable path to an absolute path
+  std::string resolved_path = ResolveExecutablePath(executable, pid);
+  process_info.GetExecutableFile().SetFile(resolved_path,
+                                           FileSpec::Style::native);
+  ArchSpec arch_spec = GetXCOFFProcessCPUType(resolved_path);
   if (!arch_spec)
     return false;
   process_info.SetArchitecture(arch_spec);

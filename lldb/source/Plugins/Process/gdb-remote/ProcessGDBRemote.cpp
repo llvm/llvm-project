@@ -114,6 +114,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
+
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
 #elif defined(_WIN32)
@@ -3484,6 +3488,13 @@ Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
   return error;
 }
 
+#if defined(_AIX)
+Status ProcessGDBRemote::DoGetLDXINFO(struct ld_xinfo *info_ptr) {
+  Status error(m_gdb_comm.GetLDXINFO(info_ptr));
+  return error;
+}
+#endif
+
 std::optional<uint32_t> ProcessGDBRemote::GetWatchpointSlotCount() {
   return m_gdb_comm.GetWatchpointSlotCount();
 }
@@ -6139,6 +6150,40 @@ void ProcessGDBRemote::AddRemoteRegisters(
     abi_sp->AugmentRegisterInfo(registers);
 
   m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
+}
+
+std::string
+ProcessGDBRemote::HandleAsyncSymbolLookup(llvm::StringRef symbol_name) {
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOGF(log,
+            "ProcessGDBRemote::%s: server requested address of symbol '%s'",
+            __FUNCTION__, std::string(symbol_name).c_str());
+
+  // Attempt to resolve the symbol in the current target image list.
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindSymbolsWithNameAndType(ConstString(symbol_name),
+                                                    eSymbolTypeAny, sc_list);
+  for (const SymbolContext &sc : sc_list) {
+    if (sc.symbol) {
+      load_addr = sc.symbol->GetLoadAddress(&GetTarget());
+      if (load_addr != LLDB_INVALID_ADDRESS)
+        break;
+    }
+  }
+
+  LLDB_LOGF(log, "ProcessGDBRemote::%s: resolved '%s' -> 0x%" PRIx64,
+            __FUNCTION__, std::string(symbol_name).c_str(), load_addr);
+
+  // Build the reply payload: qSymbolLookupReply:<hex_addr>:<hex_encoded_name>
+  StreamString payload;
+  payload.PutCString("qSymbolLookupReply:");
+  if (load_addr != LLDB_INVALID_ADDRESS)
+    payload.Printf("%" PRIx64, load_addr);
+  payload.PutChar(':');
+  payload.PutBytesAsRawHex8(symbol_name.data(), symbol_name.size());
+
+  return std::string(payload.GetString());
 }
 
 // query the target of gdb-remote for extended target information returns

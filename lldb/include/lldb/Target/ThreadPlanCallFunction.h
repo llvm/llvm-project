@@ -28,6 +28,12 @@ public:
                          const EvaluateExpressionOptions &options);
 
   ThreadPlanCallFunction(Thread &thread, const Address &function,
+                         const Address &toc,
+                         const CompilerType &return_type,
+                         llvm::ArrayRef<lldb::addr_t> args,
+                         const EvaluateExpressionOptions &options);
+
+  ThreadPlanCallFunction(Thread &thread, const Address &function,
                          const EvaluateExpressionOptions &options);
 
   ~ThreadPlanCallFunction() override;

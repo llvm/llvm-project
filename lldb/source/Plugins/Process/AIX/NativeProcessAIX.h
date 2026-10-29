@@ -6,22 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
+#ifndef liblldb_NativeProcessAIX_H_
+#define liblldb_NativeProcessAIX_H_
 
-#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
+#include <csignal>
+#include <procinfo.h>
+#include <string>
+#include <sys/pthdebug.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include "lldb/Host/Debug.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/posix/Support.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include <csignal>
-#include <unordered_set>
+#include "llvm/ADT/SmallPtrSet.h" 
+#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 
-namespace lldb_private::process_aix {
+#include "NativeThreadAIX.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
+#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
+
+namespace lldb_private {
+class Status;
+class Scalar;
+
+namespace process_aix {
 /// \class NativeProcessAIX
 /// Manages communication with the inferior (debugee) process.
 ///
@@ -29,7 +43,8 @@ namespace lldb_private::process_aix {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessAIX : public NativeProcessProtocol {
+class NativeProcessAIX : public NativeProcessProtocol,
+                           private NativeProcessSoftwareSingleStep {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
@@ -37,12 +52,16 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info,
-           NativeDelegate &native_delegate) override;
+            NativeDelegate &native_delegate) override;
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
 
-    void AddProcess(NativeProcessAIX &process) { m_processes.insert(&process); }
+    Extension GetSupportedExtensions() const override;
+
+    void AddProcess(NativeProcessAIX &process) {
+      m_processes.insert(&process);
+    }
 
     void RemoveProcess(NativeProcessAIX &process) {
       m_processes.erase(&process);
@@ -51,10 +70,18 @@ public:
     // Collect an event for the given tid, waiting for it if necessary.
     void CollectThread(::pid_t tid);
 
+    // Schedule a waitpid poll after PTT_CONTINUE to catch new threads that
+    // trap before SIGCHLD fires.  Called by NativeProcessAIX::Resume().
+    void ScheduleWaitpidPoll();
+
   private:
+    MainLoop &m_mainloop;
     MainLoop::SignalHandleUP m_sigchld_handle;
 
     llvm::SmallPtrSet<NativeProcessAIX *, 2> m_processes;
+
+    // Threads (events) which haven't been claimed by any process.
+    llvm::DenseSet<::pid_t> m_unowned_threads;
 
     void SigchldHandler();
   };
@@ -77,11 +104,25 @@ public:
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
 
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &range_info) override;
+
   Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
   Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                        size_t &bytes_written) override;
+
+  llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
+                                              uint32_t permissions) override;
+
+  llvm::Error DeallocateMemory(lldb::addr_t addr) override;
+
+  Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
+                        std::vector<uint8_t> &tags) override;
+
+  Status WriteMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
+                         const std::vector<uint8_t> &tags) override;
 
   size_t UpdateThreads() override;
 
@@ -92,43 +133,247 @@ public:
 
   Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false) override;
 
+  void DoStopIDBumped(uint32_t newBumpId) override;
+
   Status GetLoadedModuleFileSpec(const char *module_path,
                                  FileSpec &file_spec) override;
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  GetAuxvData() const override {
-    return getProcFile(GetID(), "auxv");
-  }
 
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
-  static llvm::Expected<int> PtraceWrapper(int req, lldb::pid_t pid,
-                                           void *addr = nullptr,
-                                           void *data = nullptr,
-                                           size_t data_size = 0);
+  NativeThreadAIX *GetThreadByID(lldb::tid_t id);
+  NativeThreadAIX *GetCurrentThread();
+
+  /// Returns the kernel TID that triggered the most recent stop event.
+  lldb::tid_t GetTriggeringTID() const { return m_triggering_tid; }
+
+  // Accessors used by PthdbWrapper.cpp callbacks.
+  // Must be public because the callbacks receive a plain NativeProcessAIX *.
+
+  /// Expose delegate for synchronous symbol lookup from pthdb callbacks.
+  NativeDelegate &GetDelegate() { return m_delegate; }
+
+  /// Look up a cached pthdb symbol address.  Returns LLDB_INVALID_ADDRESS
+  /// if the name has not been resolved yet.
+  lldb::addr_t LookupPthdbgSymbol(llvm::StringRef name) const {
+    auto it = m_pthdbg_symbols.find(name.str());
+    return (it != m_pthdbg_symbols.end()) ? it->second : LLDB_INVALID_ADDRESS;
+  }
+
+  /// Cache a resolved pthdb symbol address.
+  void StorePthdbgSymbol(llvm::StringRef name, lldb::addr_t addr) {
+    m_pthdbg_symbols[name.str()] = addr;
+  }
+
+  // libpthdebug session state accessors (used by PthdbWrapper).
+
+  bool IsPthdbInitialized() const { return m_pthdb_initialized; }
+  bool IsPthdbNotPthreaded() const { return m_pthdb_not_pthreaded; }
+  pthdb_session_t GetPthdbSession() const { return m_pthdb_session; }
+
+  void SetPthdbSession(pthdb_session_t session) {
+    m_pthdb_session = session;
+    m_pthdb_initialized = true;
+  }
+
+  /// Reset the session handle and mark it as uninitialised (teardown).
+  void ClearPthdbSession() {
+    m_pthdb_session = 0;
+    m_pthdb_initialized = false;
+  }
+
+  void SetPthdbNotPthreaded() { m_pthdb_not_pthreaded = true; }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  GetAuxvData() const override {
+    // Not available on this target.
+    return llvm::errc::not_supported;
+  }
+
+  /// Tracing
+  /// These methods implement the jLLDBTrace packets
+  /// \{
+  llvm::Error TraceStart(llvm::StringRef json_request,
+                         llvm::StringRef type) override;
+
+  llvm::Error TraceStop(const TraceStopRequest &request) override;
+
+  llvm::Expected<llvm::json::Value>
+  TraceGetState(llvm::StringRef type) override;
+
+  llvm::Expected<std::vector<uint8_t>>
+  TraceGetBinaryData(const TraceGetBinaryDataRequest &request) override;
+
+  llvm::Expected<TraceSupportedResponse> TraceSupported() override;
+  /// }
+
+  // Interface used by NativeRegisterContext-derived classes.
+  static Status PtraceWrapper(int req,
+                              lldb::pid_t id, /* pid or tid based on caller */
+                              void *addr = nullptr,
+                              void *data = nullptr,
+                              size_t data_size = 0,
+                              long *result = nullptr);
 
   bool SupportHardwareSingleStepping() const;
 
+  /// Writes a siginfo_t structure corresponding to the given thread ID to the
+  /// memory region pointed to by \p siginfo.
+  int8_t GetSignalInfo(WaitStatus wstatus) const;
+
+  NativeThreadAIX* FindStoppedThread();
+
+  /// Retrieve the saved user stack pointer (ti_ustk) and mode for a kernel thread
+  /// using getthrds64(). Used to reconstruct registers when a thread is suspended in kernel mode.
+  bool GetKernelThreadUserStack(lldb::tid_t tid, lldb::addr_t &user_sp,
+                                bool &in_kernel_mode);
+
+protected:
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
+
+  llvm::Expected<uint64_t> Syscall(llvm::ArrayRef<uint64_t> args);
+
 private:
   Manager &m_manager;
+  /*MainLoop::SignalHandleUP m_sigchld_handle;*/
   ArchSpec m_arch;
+  /*MainLoop& m_main_loop;*/
+  static lldb::pid_t process_pid; // For Access to PtraceWrapper
+
+  // libpthdebug session state
+
+  /// Map from symbol name resolved address, populated by cb_symbol_addrs().
+  std::unordered_map<std::string, lldb::addr_t> m_pthdbg_symbols;
+
+  /// libpthdebug session handle; 0 = not initialised.
+  pthdb_session_t m_pthdb_session = 0;
+
+  /// True once pthdb_session_init() has succeeded.
+  bool m_pthdb_initialized = false;
+
+  /// True if the inferior is not pthreaded (PTHDB_NOT_PTHREADED received).
+  bool m_pthdb_not_pthreaded = false;
+
+  /// Set of pthdb_pthread_t handles that have reached PST_TERM (exited).
+  std::unordered_set<pthdb_pthread_t> m_pthdb_exited_pthreads;
+
+  lldb::tid_t m_triggering_tid = LLDB_INVALID_THREAD_ID;
+
+  LazyBool m_supports_mem_region = eLazyBoolCalculate;
+  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
+
+  lldb::tid_t m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
+
+  /// Inferior memory (allocated by us) and its size.
+  llvm::DenseMap<lldb::addr_t, lldb::addr_t> m_allocated_memory;
 
   // Private Instance Methods
   NativeProcessAIX(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
-                   const ArchSpec &arch, Manager &manager,
-                   llvm::ArrayRef<::pid_t> tids);
-
-  bool TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status);
+                     const ArchSpec &arch, Manager &manager,
+                     llvm::ArrayRef<::pid_t> tids);
 
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
-  llvm::Error Detach(lldb::tid_t tid);
+  static Status SetDefaultPtraceOpts(const lldb::pid_t);
+
+  bool TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status);
+
+  void MonitorCallback(NativeThreadAIX &thread, WaitStatus status);
+
+  void MonitorSIGTRAP(const WaitStatus status, NativeThreadAIX &thread);
+
+  void MonitorTrace(NativeThreadAIX &thread);
+
+  void LogSymbolLookupResults(llvm::ArrayRef<llvm::StringLiteral> symbols);
+
+  void MonitorBreakpoint(NativeThreadAIX &thread);
+
+  void MonitorWatchpoint(NativeThreadAIX &thread, uint32_t wp_index);
+
+  void MonitorSignal(const WaitStatus status, NativeThreadAIX &thread);
+
+  bool HasThreadNoLock(lldb::tid_t thread_id);
+
+  void StopTrackingThread(NativeThreadAIX &thread);
+
+  /// Reconcile m_threads against a getthrds64 snapshot.
+  void ReconcileThreads(const std::vector<struct thrdentry64> &snapshot,
+                        lldb::tid_t stop_tid);
+
+  /// Create a new thread.
+  ///
+  /// If process tracing is enabled and the thread can't be traced, then the
+  /// thread is left stopped with a \a eStopReasonProcessorTrace status, and
+  /// then the process is stopped.
+  ///
+  /// \param[in] resume
+  ///     If a tracing error didn't happen, then resume the thread after
+  ///     creation if \b true, or leave it stopped with SIGSTOP if \b false.
+  NativeThreadAIX &AddThread(lldb::tid_t thread_id, bool resume);
+
+  /// Start tracing a new thread if process tracing is enabled.
+  ///
+  /// Trace mechanisms should modify this method to provide automatic tracing
+  /// for new threads.
+  Status NotifyTracersOfNewThread(lldb::tid_t tid);
+
+  /// Stop tracing threads upon a destroy event.
+  ///
+  /// Trace mechanisms should modify this method to provide automatic trace
+  /// stopping for threads being destroyed.
+  Status NotifyTracersOfThreadDestroyed(lldb::tid_t tid);
+
+  void NotifyTracersProcessWillResume() override;
+
+  void NotifyTracersProcessDidStop() override;
+  /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
+  /// corresponding to the given thread ID to the memory pointed to by @p
+  /// message.
+  Status GetEventMessage(lldb::tid_t tid, unsigned long *message);
+
+  void NotifyThreadDeath(lldb::tid_t tid);
+
+  Status Detach(lldb::tid_t tid);
+
+  // This method is requests a stop on all threads which are still running. It
+  // sets up a
+  // deferred delegate notification, which will fire once threads report as
+  // stopped. The
+  // triggerring_tid will be set as the current thread (main stop reason).
+  void StopRunningThreads(lldb::tid_t triggering_tid);
+
+  // Notify the delegate if all threads have stopped.
+  void SignalIfAllThreadsStopped();
+
+  // Resume the given thread, optionally passing it the given signal. The type
+  // of resume
+  // operation (continue, single-step) depends on the state parameter.
+  Status ResumeThread(NativeThreadAIX &thread, lldb::StateType state,
+                      int signo);
+
+  // Issue a single PTT_CONTINUE ptrace call.
+  //   triggering_tid - the thread with TTRCSIG that caused the exception
+  //   signo          - 0 to discard, or a valid signal number to deliver
+  //   other_tids     - all OTHER threads to start simultaneously (null-
+  //                    terminated ptthreads64 is built internally).
+  //                    The triggering_tid itself is NOT included here.
+  Status IssuePTTContinue(lldb::tid_t triggering_tid, int signo,
+                          llvm::ArrayRef<lldb::tid_t> other_tids);
+
+  void ThreadWasCreated(NativeThreadAIX &thread);
 
   void SigchldHandler();
+
+  Status PopulateMemoryRegionCache();
+
+  // Handle a clone()-like event.
+  bool MonitorClone(NativeThreadAIX &parent, lldb::pid_t child_pid,
+                    int event);
 };
 
-} // namespace lldb_private::process_aix
+} // namespace process_aix
+} // namespace lldb_private
 
-#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
+#endif // #ifndef liblldb_NativeProcessAIX_H_

@@ -54,7 +54,8 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
-// Tests flaky on Windows
+#if !defined(_AIX)
+// This test is flaky on Windows on Arm.
 #ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
@@ -194,4 +195,5 @@ TEST_F(PipeTest, ReadWithTimeout) {
                        llvm::HasValue(hello_world.size()));
   EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
 }
+#endif
 #endif /*ifndef _WIN32*/

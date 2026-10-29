@@ -18,6 +18,7 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/Locked.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServerCommon.h"
@@ -94,6 +95,9 @@ public:
   void NewProcessOutput(NativeProcessProtocol *process,
                         llvm::StringRef data) override;
 
+  /// Send a server initiated need symbol lookup request to the lldb client.
+  lldb::addr_t SymbolLookup(llvm::StringRef symbol_name) override;
+
   /// Drain m_pending_output_buffer and emit a `$O` packet if the debuggee
   /// is currently in a running state. No-op otherwise.
   void FlushPendingProcessOutput();
@@ -151,12 +155,20 @@ protected:
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
 
+  lldb::addr_t m_symbol_lookup_result = LLDB_INVALID_ADDRESS;
+  bool m_symbol_lookup_pending = false;
+
   // Typically we would use a SmallVector for this data but in this context we
   // don't know how much data we're recieving so we would have to heap allocate
   // a lot, or have a very large stack frame. So it's a member instead.
   uint8_t m_reg_bytes[RegisterValue::kMaxRegisterByteSize];
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
+
+  PacketResult SendSymbolLookupRequest(llvm::StringRef symbol_name);
+
+  PacketResult Handle_qSymbolLookupReply(StringExtractorGDBRemote &packet);
+
 
   PacketResult SendWResponse(NativeProcessProtocol *process);
 
@@ -239,6 +251,8 @@ protected:
   PacketResult Handle_Z(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_z(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qLDXINFO(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_s(StringExtractorGDBRemote &packet);
 
