@@ -1640,16 +1640,17 @@ bool VectorCombine::foldSelectExt(Instruction &I) {
   if (!VecTy)
     return false;
 
-  // The fold only holds for vectors with 2 elements due to the reduce.and/or combining all lanes
+  // The fold only holds for vectors with 2 elements due to the reduce.and/or
+  // combining all lanes
   unsigned NumElts = VecTy->getNumElements();
-  if (NumElts != 2) 
+  if (NumElts != 2)
     return false;
 
   bool IsAnd;
   ConstantInt *C2;
-  // Check both arms of the select for each case since the fold only holds in the cases below:
-  // select c0, c1, false  ==  c0 && c1
-  if (match(FalseArm, m_Zero()) && 
+  // Check both arms of the select for each case since the fold only holds in
+  // the cases below: select c0, c1, false  ==  c0 && c1
+  if (match(FalseArm, m_Zero()) &&
       match(TrueArm, m_ExtractElt(m_Specific(V), m_ConstantInt(C2))))
     IsAnd = true;
   // select c0, true, c1   ==  c0 || c1
@@ -1659,12 +1660,13 @@ bool VectorCombine::foldSelectExt(Instruction &I) {
   else
     return false;
 
-  // If C1 or C2 are greater then the number of elements then the extract is invalid
-  // If C1 == C2 then the fold will miscompile:
+  // If C1 or C2 are greater then the number of elements then the extract is
+  // invalid If C1 == C2 then the fold will miscompile:
   /*
   %b0 = extractelement <2 x i1> %v, i64 0
   %b1 = extractelement <2 x i1> %v, i64 0
-  %b  = select i1 %b0, i1 %b1, i1 0   ; == V[0], but reduce.and(freeze V) will AND in V[1]
+  %b  = select i1 %b0, i1 %b1, i1 0   ; == V[0], but reduce.and(freeze V) will
+  AND in V[1]
   */
   if (C1->uge(NumElts) || C2->uge(NumElts) ||
       C1->getZExtValue() == C2->getZExtValue())
