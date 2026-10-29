@@ -505,7 +505,7 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> ()>
 
-// CHECK-LABEL: contract_broadcast_one_sided_unit_dim_reduction
+// CHECK-LABEL: negative_contract_broadcast_one_sided_unit_dim_reduction
 //  CHECK-SAME: (%[[ARG0:.+]]: vector<2xbf16>, %[[ARG1:.+]]: bf16)
 //  CHECK: %[[CST:.+]] = arith.constant 0.0{{.*}}: bf16
 //  CHECK: %[[LHS:.+]] = vector.shape_cast %[[ARG0]] : vector<2xbf16> to vector<1x1x2xbf16>
@@ -514,7 +514,7 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
 //  CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]]]
 //  CHECK-SAME: iterator_types = ["reduction", "reduction", "reduction"]
 //  CHECK-SAME: %[[LHS]], %[[RHS]], %[[CST]] : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
-func.func @contract_broadcast_one_sided_unit_dim_reduction(%arg0 : vector<2xbf16>, %arg1 : bf16) -> bf16 {
+func.func @negative_contract_broadcast_one_sided_unit_dim_reduction(%arg0 : vector<2xbf16>, %arg1 : bf16) -> bf16 {
   %zero = arith.constant 0.0 : bf16
   %lhs = vector.shape_cast %arg0 : vector<2xbf16> to vector<1x1x2xbf16>
   %rhs = vector.broadcast %arg1 : bf16 to vector<1x1x2xbf16>
