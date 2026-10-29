@@ -5,8 +5,8 @@ define i1 @and_repeated_after_other_group(i1 %c0, i32 %mm, i1 %x) {
 ; CHECK-LABEL: define i1 @and_repeated_after_other_group(
 ; CHECK-SAME: i1 [[C0:%.*]], i32 [[MM:%.*]], i1 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = icmp eq i32 [[MM]], 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C0]], i1 [[X]], i1 false
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 [[M]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C0]], i1 [[M]], i1 false
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 [[X]], i1 false
 ; CHECK-NEXT:    ret i1 [[S4]]
 ;
   %m = icmp eq i32 %mm, 0
@@ -21,8 +21,8 @@ define i1 @or_repeated_after_other_group(i1 %c0, i32 %mm, i1 %x) {
 ; CHECK-LABEL: define i1 @or_repeated_after_other_group(
 ; CHECK-SAME: i1 [[C0:%.*]], i32 [[MM:%.*]], i1 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = icmp eq i32 [[MM]], 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C0]], i1 true, i1 [[X]]
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 true, i1 [[M]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C0]], i1 true, i1 [[M]]
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 true, i1 [[X]]
 ; CHECK-NEXT:    ret i1 [[S4]]
 ;
   %m = icmp eq i32 %mm, 0
@@ -37,8 +37,8 @@ define i1 @and_repeated_first(i1 %c0, i32 %mm, i1 %x) {
 ; CHECK-LABEL: define i1 @and_repeated_first(
 ; CHECK-SAME: i1 [[C0:%.*]], i32 [[MM:%.*]], i1 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = icmp eq i32 [[MM]], 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[X]], i1 [[C0]], i1 false
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 [[M]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[X]], i1 [[M]], i1 false
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[OP_RDX]], i1 [[C0]], i1 false
 ; CHECK-NEXT:    ret i1 [[S4]]
 ;
   %m = icmp eq i32 %mm, 0
@@ -53,13 +53,11 @@ define i1 @and_repeated_with_vector(<4 x i32> %x, <4 x i32> %y, i1 %a, i1 %b, i1
 ; CHECK-LABEL: define i1 @and_repeated_with_vector(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[B]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP4]], i1 [[A]], i1 false
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[OP_RDX]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP5]], i1 [[C]], i1 false
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[OP_RDX1]], i1 [[TMP3]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[A]], i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[B]], i1 [[C]], i1 false
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[OP_RDX]], i1 [[OP_RDX1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX2]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -92,8 +90,8 @@ define i1 @and_op0_leaf_in_chain(<4 x i32> %x, <4 x i32> %y, i1 %a, float %ff) {
 ; CHECK-NEXT:    [[F:%.*]] = fcmp olt float [[FF]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[F]], i1 false
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[A]], i1 [[OP_RDX]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[A]], i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 [[F]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -125,7 +123,7 @@ define i1 @and_op0_leaf_in_subtree(<4 x i32> %x, <4 x i32> %y, i1 %a, i32 %mm) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[M]], i1 false
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[A]], i1 [[OP_RDX]], i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 [[A]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -157,12 +155,9 @@ define i1 @and_poison_after_vector(<4 x i32> %x, <4 x i32> %y, i32 %mm, i1 %a, i
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[M]], i1 false
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = freeze i1 [[B]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i1 [[A]], i1 false
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[OP_RDX]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 [[TMP5]], i1 [[OP_RDX3]], i1 false
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze i1 [[OP_RDX4]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = select i1 [[TMP6]], i1 poison, i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 poison, i1 [[B]], i1 false
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[OP_RDX]], i1 [[OP_RDX1]], i1 false
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX2]], i1 [[A]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX5]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
