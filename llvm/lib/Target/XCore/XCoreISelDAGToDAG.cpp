@@ -88,10 +88,14 @@ INITIALIZE_PASS(XCoreDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 /// createXCoreISelDag - This pass converts a legalized DAG into a
 /// XCore-specific DAG, ready for instruction scheduling.
 ///
-FunctionPass *llvm::createXCoreISelDag(XCoreTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createXCoreISelDagLegacyPass(XCoreTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel) {
   return new XCoreDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+XCoreISelDAGToDAGPass::XCoreISelDAGToDAGPass(XCoreTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<XCoreDAGToDAGISel>(TM, OptLevel)) {}
 
 bool XCoreDAGToDAGISel::SelectADDRspii(SDValue Addr, SDValue &Base,
                                        SDValue &Offset) {
