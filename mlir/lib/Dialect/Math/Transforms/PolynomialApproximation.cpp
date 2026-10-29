@@ -495,49 +495,48 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   std::optional<VectorShape> shape = vectorShape(op.getResult());
 
-  // Compute atan in the valid range.
-  auto div = arith::DivFOp::create(builder, y, x);
-  auto atan = math::AtanOp::create(builder, div);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, shape);
+  };
+  Value zero = bcast(f32Cst(builder, 0.0));
+  Value one = bcast(f32Cst(builder, 1.0));
+  Value inf = bcast(f32FromBits(builder, 0x7f800000u));
+  Value pi = bcast(f32Cst(builder, llvm::numbers::pi));
+  Value halfPi = bcast(f32Cst(builder, llvm::numbers::pi / 2));
 
-  // Determine what the atan would be for a 180 degree rotation.
-  auto zero = broadcast(builder, f32Cst(builder, 0.0f), shape);
-  auto pi = broadcast(builder, f32Cst(builder, 3.14159265359f), shape);
-  auto addPi = arith::AddFOp::create(builder, atan, pi);
-  auto subPi = arith::SubFOp::create(builder, atan, pi);
-  auto atanGt =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, atan, zero);
-  auto flippedAtan = arith::SelectOp::create(builder, atanGt, subPi, addPi);
+  // Compute atan(t) for t = min(|x|, |y|) / max(|x|, |y|) in [0, 1] and
+  // recover the quadrant from the signs of x and y. minimumf and maximumf
+  // propagate NaN operands.
+  Value absX = math::AbsFOp::create(builder, x);
+  Value absY = math::AbsFOp::create(builder, y);
+  Value minAbs = arith::MinimumFOp::create(builder, absX, absY);
+  Value maxAbs = arith::MaximumFOp::create(builder, absX, absY);
+  Value t = arith::DivFOp::create(builder, minAbs, maxAbs);
 
-  // Determine whether to directly use atan or use the 180 degree flip
-  auto xGt = arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, x, zero);
-  Value result = arith::SelectOp::create(builder, xGt, atan, flippedAtan);
+  // Handle x = y = 0 and |x| = |y| = inf, where the division yields NaN.
+  Value bothZero =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, maxAbs, zero);
+  t = arith::SelectOp::create(builder, bothZero, zero, t);
+  Value bothInf =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, minAbs, inf);
+  t = arith::SelectOp::create(builder, bothInf, one, t);
 
-  // Handle x = 0, y > 0
-  Value xZero =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, x, zero);
-  Value yGt =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, y, zero);
-  Value isHalfPi = arith::AndIOp::create(builder, xZero, yGt);
-  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  result = arith::SelectOp::create(builder, isHalfPi, halfPi, result);
+  Value result = math::AtanOp::create(builder, t);
 
-  // Handle x = 0, y < 0
-  Value yLt =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, y, zero);
-  Value isNegativeHalfPiPi = arith::AndIOp::create(builder, xZero, yLt);
-  auto negativeHalfPiPi =
-      broadcast(builder, f32Cst(builder, -1.57079632679f), shape);
-  result = arith::SelectOp::create(builder, isNegativeHalfPiPi,
-                                   negativeHalfPiPi, result);
+  // Handle |y| > |x|: atan(|y| / |x|) = pi/2 - atan(|x| / |y|).
+  Value yGtX =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, absY, absX);
+  Value complement = arith::SubFOp::create(builder, halfPi, result);
+  result = arith::SelectOp::create(builder, yGtX, complement, result);
 
-  // Handle x = 0, y = 0;
-  Value yZero =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, y, zero);
-  Value isNan = arith::AndIOp::create(builder, xZero, yZero);
-  Value cstNan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
-  result = arith::SelectOp::create(builder, isNan, cstNan, result);
+  // Handle negative x, including x = -0.
+  Value signX = math::CopySignOp::create(builder, one, x);
+  Value xNeg =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, signX, zero);
+  Value reflected = arith::SubFOp::create(builder, pi, result);
+  result = arith::SelectOp::create(builder, xNeg, reflected, result);
 
-  rewriter.replaceOp(op, result);
+  rewriter.replaceOpWithNewOp<math::CopySignOp>(op, result, y);
   return success();
 }
 
