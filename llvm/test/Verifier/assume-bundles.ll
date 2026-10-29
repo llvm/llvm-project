@@ -98,6 +98,8 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i33 0)]
 ; CHECK: all arguments should have the same bit width
   call void @llvm.assume(i1 true) ["range"(i32 %P1, i33 0, i32 0)]
+; CHECK: an empty range has to be represented as `0, 0`
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 1, i32 1)]
 
 ; SeparateStorage checks
 ;
