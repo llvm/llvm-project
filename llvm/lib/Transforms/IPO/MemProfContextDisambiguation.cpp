@@ -5992,9 +5992,20 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 // in the summary, to use in detection of duplicate clones.
 uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
   SHA1 Hasher;
+  // Add a record for the callsite or alloc at the given index in the summary,
+  // with the given version. The index must be included, since two clones that
+  // assign the same versions to different callsites or allocs are not
+  // duplicates.
+  auto AddRecord = [&](char Kind, uint32_t Index, uint32_t Version) {
+    uint8_t Data[1 + 2 * sizeof(uint32_t)];
+    Data[0] = Kind;
+    support::endian::write32le(&Data[1], Index);
+    support::endian::write32le(&Data[1 + sizeof(uint32_t)], Version);
+    Hasher.update(Data);
+  };
   // Update hash with any callsites that call non-default (non-zero) callee
   // versions.
-  for (auto &SN : FS->callsites()) {
+  for (auto [Index, SN] : enumerate(FS->callsites())) {
     // In theory all callsites and allocs in this function should have the same
     // number of clone entries, but handle any discrepancies gracefully below
     // for NDEBUG builds.
@@ -6003,12 +6014,10 @@ uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
         "Callsite summary has fewer entries than other summaries in function");
     if (SN.Clones.size() <= I || !SN.Clones[I])
       continue;
-    uint8_t Data[sizeof(SN.Clones[I])];
-    support::endian::write32le(Data, SN.Clones[I]);
-    Hasher.update(Data);
+    AddRecord('c', Index, SN.Clones[I]);
   }
   // Update hash with any allocs that have non-default (non-None) hints.
-  for (auto &AN : FS->allocs()) {
+  for (auto [Index, AN] : enumerate(FS->allocs())) {
     // In theory all callsites and allocs in this function should have the same
     // number of clone entries, but handle any discrepancies gracefully below
     // for NDEBUG builds.
@@ -6017,7 +6026,7 @@ uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
     if (AN.Versions.size() <= I ||
         (AllocationType)AN.Versions[I] == AllocationType::None)
       continue;
-    Hasher.update(ArrayRef<uint8_t>(&AN.Versions[I], 1));
+    AddRecord('a', Index, AN.Versions[I]);
   }
   return support::endian::read64le(Hasher.result().data());
 }
