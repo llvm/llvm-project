@@ -110,6 +110,26 @@ add_libc_test(
 )
 
 add_libc_test(
+  copy_file_range_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    copy_file_range_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.string_view
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.copy_file_range
+    libc.src.unistd.read
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   dup2_test
   SUITE
     libc-unistd-tests
