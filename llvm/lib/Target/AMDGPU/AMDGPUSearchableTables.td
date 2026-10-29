@@ -438,3 +438,30 @@ def LDSDMAIntrinsicTable : GenericTable {
   let PrimaryKey = ["Intr"];
   let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }
+
+//===----------------------------------------------------------------------===//
+// Matrix intrinsics table (WMMA, MFMA, SWMMAC, SMFMAC).
+//===----------------------------------------------------------------------===//
+
+class MatrixIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def MatrixIntrinsics : GenericTable {
+  let FilterClass = "MatrixIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupMatrixIntrinsic";
+}
+
+foreach intr = !listconcat(AMDGPUWMMAIntrinsicsGFX11,
+                           AMDGPUWMMAIntrinsicsGFX12,
+                           AMDGPUWMMAIntrinsicsGFX1250,
+                           AMDGPUMFMAIntrinsics908,
+                           AMDGPUMFMAIntrinsics90A,
+                           AMDGPUMFMAIntrinsics940,
+                           AMDGPUMFMAIntrinsics950,
+                           AMDGPUSWMMACIntrinsicsGFX1250) in {
+  def : MatrixIntrinsic<intr>;
+}
