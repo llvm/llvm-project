@@ -1372,6 +1372,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### SystemZ Support
 
+#### LFI Support
+
 ### DWARF Support in Clang
 
 ### Floating Point Support in Clang
