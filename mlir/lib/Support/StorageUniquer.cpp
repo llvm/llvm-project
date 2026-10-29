@@ -528,9 +528,9 @@ struct StorageUniquerImpl {
 StorageUniquer::StorageUniquer() : impl(new StorageUniquerImpl()) {}
 StorageUniquer::~StorageUniquer() = default;
 
-/// Set the flag specifying if multi-threading is disabled within the uniquer.
-void StorageUniquer::disableMultithreading(bool disable) {
-  impl->threadingIsEnabled = !disable;
+/// Set whether thread-safe locking is enabled within the uniquer.
+void StorageUniquer::setThreadSafeLocking(bool enable) {
+  impl->threadingIsEnabled = enable;
 }
 
 void StorageUniquer::beginTransientScope() { impl->beginTransientScope(); }
