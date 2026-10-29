@@ -20240,8 +20240,25 @@ bool Sema::tryCaptureVariable(
   // Exception: Function parameters are not tied to the function's DeclContext
   // until we enter the function definition. Capturing them anyway would result
   // in an out-of-bounds error while traversing DC and its parents.
-  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod())
+  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod()) {
+    // The parameters of a function are not tied to it while its default
+    // arguments are being parsed. A lambda there cannot capture a parameter,
+    // so naming one in the lambda's body is ill-formed.
+    if (BuildAndDiagnose && !Var->isInvalidDecl() && getCurLambda()) {
+      for (const auto &Rec : llvm::reverse(ExprEvalContexts)) {
+        auto *DefaultArgParam =
+            dyn_cast_or_null<ParmVarDecl>(Rec.ManglingContextDecl);
+        if (!DefaultArgParam)
+          continue;
+        if (DefaultArgParam->getFunctionScopeDepth() ==
+            cast<ParmVarDecl>(Var)->getFunctionScopeDepth())
+          Diag(ExprLoc, diag::err_param_default_argument_references_param)
+              << Var->getDeclName();
+        break;
+      }
+    }
     return true;
+  }
 
   const auto *VD = dyn_cast<VarDecl>(Var);
   if (VD) {
