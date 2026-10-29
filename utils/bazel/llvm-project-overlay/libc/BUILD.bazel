@@ -11181,26 +11181,32 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_exp10_double_eval",
+    hdrs = ["src/__support/math/exp10_double_eval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_fp_bitwise",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_exp_double_utils",
+        ":__support_math_exp_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp10",
     hdrs = ["src/__support/math/exp10.h"],
     deps = [
         ":__support_common",
-        ":__support_cpp_bit",
-        ":__support_cpp_optional",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_fputil_triple_double",
-        ":__support_integer_literals",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_exp_constants",
-        ":__support_math_exp_utils",
+        ":__support_math_exp10_double_eval",
     ],
 )
 
