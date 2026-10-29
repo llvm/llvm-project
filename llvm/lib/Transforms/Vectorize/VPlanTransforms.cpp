@@ -2399,9 +2399,13 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
         return false;
-    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
-      if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
+    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L)) {
+      auto *RExp = cast<VPExpandSCEVRecipe>(R);
+      if (LExp->getSCEV() != RExp->getSCEV())
         return false;
+      assert(LExp->expandInIR() == RExp->expandInIR() &&
+             "cannot CSE recipes expanded in IR and as VPInstructions");
+    }
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
     if (isa<VPWidenPHIRecipe>(L) && L->getParent() != R->getParent())

@@ -1726,3 +1726,256 @@ outer.loop.exit:
 exit:
   ret void
 }
+
+; Bounds with a udiv by a non-zero, non-poison divisor are hoisted.
+define void @udiv_known_nonzero(ptr %dst, ptr %src, i64 %n, i64 noundef %x) {
+; CHECK-LABEL: define void @udiv_known_nonzero(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]], i64 noundef [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[S:%.*]] = or i64 [[X]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[S]], i64 [[N]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[S]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 101380
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[DST_OFF:%.*]] = mul i64 [[OUTER_IV]], 1024
+; CHECK-NEXT:    [[DST_O:%.*]] = getelementptr i8, ptr [[DST]], i64 [[DST_OFF]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umax.i64(i64 [[S]], i64 [[N]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], -1
+; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP7]], [[S]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw i64 [[TMP8]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP9]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp sle i64 [[S]], 0
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[N_VEC]], [[S]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP12]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP12]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[TMP12]], i64 3
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP14]], align 4, !alias.scope [[META86:![0-9]+]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP16]], align 4, !alias.scope [[META86]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP18]], align 4, !alias.scope [[META86]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP20]], align 4, !alias.scope [[META86]]
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i32> poison, i32 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP22]], i64 1
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> [[TMP26]], i32 [[TMP23]], i64 2
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i32> [[TMP27]], i32 [[TMP24]], i64 3
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[DST_O]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP28]], ptr [[TMP29]], align 4, !alias.scope [[META89:![0-9]+]], !noalias [[META86]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP91:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP9]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K_2:%.*]] = shl nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[K_2]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST_O]], i64 [[K]]
+; CHECK-NEXT:    store i32 [[L]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[K_NEXT]] = add nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[S]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP92:![0-9]+]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[OUTER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s = or i64 %x, 1
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %dst.off = mul i64 %outer.iv, 1024
+  %dst.o = getelementptr i8, ptr %dst, i64 %dst.off
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %k = phi i64 [ 0, %outer ], [ %k.next, %inner ]
+  %k.2 = shl nuw nsw i64 %k, 1
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %k.2
+  %l = load i32, ptr %gep.src
+  %gep.dst = getelementptr inbounds i32, ptr %dst.o, i64 %k
+  store i32 %l, ptr %gep.dst
+  %k.next = add nuw nsw i64 %k, 1
+  %iv.next = add nuw i64 %iv, %s
+  %c = icmp ult i64 %iv.next, %n
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec = icmp eq i64 %outer.iv.next, 100
+  br i1 %ec, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; Bounds with a udiv by a non-zero, maybe-poison divisor are not hoisted.
+define void @udiv_known_nonzero_maybe_poison(ptr %dst, ptr %src, i64 %n, i64 %x, i1 %g) {
+; CHECK-LABEL: define void @udiv_known_nonzero_maybe_poison(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]], i64 [[X:%.*]], i1 [[G:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[S:%.*]] = or i64 [[X]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[S]], i64 [[N]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[DST_OFF:%.*]] = mul i64 [[OUTER_IV]], 1024
+; CHECK-NEXT:    [[DST_O:%.*]] = getelementptr i8, ptr [[DST]], i64 [[DST_OFF]]
+; CHECK-NEXT:    br i1 [[G]], label %[[INNER_PH:.*]], label %[[OUTER_LATCH]]
+; CHECK:       [[INNER_PH]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[S]], i64 [[N]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], [[S]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp sle i64 [[S]], 0
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP0]], [[S]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 101380
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP5]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[TMP11]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[TMP8]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP4]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], [[S]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[TMP14]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP14]], i64 3
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP16]], align 4, !alias.scope [[META93:![0-9]+]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP18]], align 4, !alias.scope [[META93]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP20]], align 4, !alias.scope [[META93]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP22]], align 4, !alias.scope [[META93]]
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i32> [[TMP27]], i32 [[TMP24]], i64 1
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i32> [[TMP28]], i32 [[TMP25]], i64 2
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> [[TMP29]], i32 [[TMP26]], i64 3
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[DST_O]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP30]], ptr [[TMP31]], align 4, !alias.scope [[META96:![0-9]+]], !noalias [[META93]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP98:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[INNER_PH]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[INNER_PH]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[K_2:%.*]] = shl nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[K_2]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST_O]], i64 [[K]]
+; CHECK-NEXT:    store i32 [[L]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[K_NEXT]] = add nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[S]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[INNER]], label %[[OUTER_LATCH_LOOPEXIT]], !llvm.loop [[LOOP99:![0-9]+]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[OUTER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s = or i64 %x, 1
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %dst.off = mul i64 %outer.iv, 1024
+  %dst.o = getelementptr i8, ptr %dst, i64 %dst.off
+  br i1 %g, label %inner.ph, label %outer.latch
+
+inner.ph:
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %inner.ph ], [ %iv.next, %inner ]
+  %k = phi i64 [ 0, %inner.ph ], [ %k.next, %inner ]
+  %k.2 = shl nuw nsw i64 %k, 1
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %k.2
+  %l = load i32, ptr %gep.src
+  %gep.dst = getelementptr inbounds i32, ptr %dst.o, i64 %k
+  store i32 %l, ptr %gep.dst
+  %k.next = add nuw nsw i64 %k, 1
+  %iv.next = add nuw i64 %iv, %s
+  %c = icmp ult i64 %iv.next, %n
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec = icmp eq i64 %outer.iv.next, 100
+  br i1 %ec, label %exit, label %outer
+
+exit:
+  ret void
+}

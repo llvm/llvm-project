@@ -1060,10 +1060,12 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPExpandSCEVRecipe &ExpSCEV :
        make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(*Entry))) {
-    if (ExpSCEV.user_empty() || ExpSCEV.expandInIR())
+    if (ExpSCEV.user_empty())
       continue;
     Builder.setInsertPoint(&ExpSCEV);
-    VPValue *Expanded = Expander.expand(ExpSCEV.getSCEV());
+    VPValue *Expanded = Expander.expand(ExpSCEV);
+    if (Expanded == &ExpSCEV)
+      continue;
     ExpSCEV.replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.

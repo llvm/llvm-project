@@ -306,6 +306,12 @@ public:
 
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);
+
+  /// Expand the expression of \p R, or return \p R if it must be expanded in
+  /// IR.
+  VPValue *expand(VPExpandSCEVRecipe &R) {
+    return R.expandInIR() ? &R : expand(R.getSCEV());
+  }
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

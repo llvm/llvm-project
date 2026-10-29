@@ -988,12 +988,8 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 
-  auto IsUnsafeToHoist = [](const SCEV *Op) {
-    auto *D = dyn_cast<SCEVUDivExpr>(Op);
-    return D && !isa<SCEVConstant>(D->getRHS());
-  };
   if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
-      !SCEVExprContains(S, IsUnsafeToHoist))
+      SE.isGuaranteedNotToCauseUB(S))
     return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
                                                   /*ExpandInIR=*/true);
 
