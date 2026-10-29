@@ -288,7 +288,7 @@ LegalityAnalysis::canVectorizeLSV(BndlRef<Instruction *> Bndl) {
 
   // Check scheduling.
   if (!Sched.trySchedule(Bndl))
-    createLegalityResult<Pack>(ResultReason::CantSchedule);
+    return createLegalityResult<Pack>(ResultReason::CantSchedule);
 
   return createLegalityResult<Widen>();
 }
