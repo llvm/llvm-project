@@ -1923,7 +1923,8 @@ static DebugLoc inlineDebugLoc(
           : InlinedAt;
   DILocation *Result = DILocation::getDistinct(
       Ctx, OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(), IA,
-      OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank());
+      OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank(),
+      OrigDL.getRawIRLayers());
   InlineLocs[OrigDL.get()] = Result;
   return DebugLoc(Result);
 }
@@ -1960,9 +1961,13 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Create a unique call site, not to be confused with any other call from the
   // same location.
+  // Keep the call site's irlayers: this node ends the inlinedAt chain of
+  // every location inlined here.
   InlinedAtNode = DILocation::getDistinct(
       Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
-      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt());
+      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt(),
+      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+      InlinedAtNode->getRawIRLayers());
 
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each
