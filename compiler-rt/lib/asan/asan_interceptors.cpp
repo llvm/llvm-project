@@ -600,7 +600,10 @@ INTERCEPTOR(char*, strcat, char* to, const char* from) {
     if (from_length > 0) {
       CHECK_RANGES_OVERLAP("strcat", to, from_length + to_length + 1, from,
                            from_length + 1);
+      REAL(memcpy)(to + to_length, from, from_length);
     }
+    to[to_length + from_length] = '\0';
+    return to;
   }
   return REAL(strcat)(to, from);
 }
@@ -619,7 +622,10 @@ INTERCEPTOR(char*, strncat, char* to, const char* from, usize size) {
     if (from_length > 0) {
       CHECK_RANGES_OVERLAP("strncat", to, to_length + copy_length + 1, from,
                            copy_length);
+      REAL(memcpy)(to + to_length, from, from_length);
     }
+    to[to_length + from_length] = '\0';
+    return to;
   }
   return REAL(strncat)(to, from, size);
 }
