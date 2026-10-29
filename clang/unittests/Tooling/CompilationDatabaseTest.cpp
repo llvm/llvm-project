@@ -12,6 +12,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -27,8 +28,8 @@ using testing::UnorderedElementsAreArray;
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
   EXPECT_EQ(nullptr,
-            JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
-                                                    JSONCommandLineSyntax::Gnu))
+            JSONCompilationDatabase::loadFromBuffer(
+                "", JSONDatabase, ErrorMessage, JSONCommandLineSyntax::Gnu))
       << "Expected an error because of: " << Explanation.str();
 }
 
@@ -56,7 +57,7 @@ static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
                                             std::string &ErrorMessage,
                                             JSONCommandLineSyntax Syntax) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
@@ -71,7 +72,7 @@ static std::vector<CompileCommand>
 getAllCompileCommands(JSONCommandLineSyntax Syntax, StringRef JSONDatabase,
                       std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
@@ -193,7 +194,7 @@ static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
                                                     std::string JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
@@ -223,6 +224,62 @@ TEST(JSONCompilationDatabase, ArgumentsPreferredOverCommand) {
    EXPECT_EQ(Directory, FoundCommand.Directory) << ErrorMessage;
    EXPECT_EQ(1u, FoundCommand.CommandLine.size()) << ErrorMessage;
    EXPECT_EQ(Arguments, FoundCommand.CommandLine[0]) << ErrorMessage;
+}
+
+static std::string native(StringRef Path) {
+  SmallString<32> Result;
+  llvm::sys::path::native(Path, Result);
+  return std::string(Result);
+}
+
+TEST(JSONCompilationDatabase, RelativeDirectory) {
+  StringRef JSONDatabase = R"([
+    {"directory": ".", "command": "cc a.cc", "file": "a.cc"},
+    {"directory": "../out", "command": "cc b.cc", "file": "b.cc"},
+    {"directory": "//net/abs/.", "command": "cc c.cc", "file": "c.cc"},
+    {"directory": "", "command": "cc d.cc", "file": "d.cc"}
+  ])";
+  std::string ErrorMessage;
+  std::unique_ptr<JSONCompilationDatabase> Database =
+      JSONCompilationDatabase::loadFromBuffer(
+          "//net/db", JSONDatabase, ErrorMessage, JSONCommandLineSyntax::Gnu);
+  ASSERT_TRUE(Database) << ErrorMessage;
+  std::vector<CompileCommand> Commands = Database->getAllCompileCommands();
+  ASSERT_EQ(4u, Commands.size());
+  EXPECT_EQ(native("//net/db"), Commands[0].Directory);
+  EXPECT_EQ(native("//net/db/../out"), Commands[1].Directory);
+  EXPECT_EQ("//net/abs/.", Commands[2].Directory);
+  EXPECT_EQ("", Commands[3].Directory);
+  EXPECT_EQ(1u, Database->getCompileCommands("//net/out/b.cc").size());
+
+  Database = JSONCompilationDatabase::loadFromBuffer(
+      "", JSONDatabase, ErrorMessage, JSONCommandLineSyntax::Gnu);
+  ASSERT_TRUE(Database) << ErrorMessage;
+  EXPECT_EQ(".", Database->getAllCompileCommands()[0].Directory);
+}
+
+TEST(JSONCompilationDatabase, RelativeDirectoryFromFile) {
+  llvm::unittest::TempDir Dir("relative-directory", /*Unique=*/true);
+  llvm::unittest::TempDir Build(Dir.path("build"));
+  llvm::unittest::TempFile File(
+      Build.path("compile_commands.json"), "",
+      R"([{"directory": ".", "command": "cc a.cc", "file": "a.cc"}])");
+  auto Check = [](StringRef DatabasePath, const llvm::unittest::TempDir &Base) {
+    std::string ErrorMessage;
+    std::unique_ptr<JSONCompilationDatabase> Database =
+        JSONCompilationDatabase::loadFromFile(DatabasePath, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu);
+    ASSERT_TRUE(Database) << ErrorMessage;
+    std::vector<CompileCommand> Commands =
+        Database->getCompileCommands(Base.path("a.cc"));
+    ASSERT_EQ(1u, Commands.size());
+    EXPECT_EQ(Base.path(), Commands[0].Directory);
+  };
+  Check(File.path(), Build);
+  // Symlinks are not resolved: a link to the database is relative to the
+  // link's directory.
+  llvm::unittest::TempLink Link(File.path(), Dir.path("compile_commands.json"));
+  Check(Link.path(), Dir);
 }
 
 struct FakeComparator : public PathComparator {

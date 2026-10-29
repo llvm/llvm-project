@@ -197,22 +197,26 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
     ErrorMessage = "Error while opening JSON database: " + Result.message();
     return nullptr;
   }
+  SmallString<128> BaseDirectory(FilePath);
+  llvm::sys::fs::make_absolute(BaseDirectory);
+  llvm::sys::path::remove_filename(BaseDirectory);
   std::unique_ptr<JSONCompilationDatabase> Database(
       new JSONCompilationDatabase(std::move(*DatabaseBuffer), Syntax));
-  if (!Database->parse(ErrorMessage))
+  if (!Database->parse(BaseDirectory, ErrorMessage))
     return nullptr;
   return Database;
 }
 
 std::unique_ptr<JSONCompilationDatabase>
-JSONCompilationDatabase::loadFromBuffer(StringRef DatabaseString,
+JSONCompilationDatabase::loadFromBuffer(StringRef BaseDirectory,
+                                        StringRef DatabaseString,
                                         std::string &ErrorMessage,
                                         JSONCommandLineSyntax Syntax) {
   std::unique_ptr<llvm::MemoryBuffer> DatabaseBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(DatabaseString));
   std::unique_ptr<JSONCompilationDatabase> Database(
       new JSONCompilationDatabase(std::move(DatabaseBuffer), Syntax));
-  if (!Database->parse(ErrorMessage))
+  if (!Database->parse(BaseDirectory, ErrorMessage))
     return nullptr;
   return Database;
 }
@@ -308,19 +312,18 @@ void JSONCompilationDatabase::getCommands(
     ArrayRef<CompileCommandRef> CommandsRef,
     std::vector<CompileCommand> &Commands) const {
   for (const auto &CommandRef : CommandsRef) {
-    SmallString<8> DirectoryStorage;
     SmallString<32> FilenameStorage;
     SmallString<32> OutputStorage;
     auto Output = std::get<3>(CommandRef);
-    Commands.emplace_back(
-        std::get<0>(CommandRef)->getValue(DirectoryStorage),
-        std::get<1>(CommandRef)->getValue(FilenameStorage),
-        nodeToCommandLine(Syntax, std::get<2>(CommandRef)),
-        Output ? Output->getValue(OutputStorage) : "");
+    Commands.emplace_back(std::get<0>(CommandRef),
+                          std::get<1>(CommandRef)->getValue(FilenameStorage),
+                          nodeToCommandLine(Syntax, std::get<2>(CommandRef)),
+                          Output ? Output->getValue(OutputStorage) : "");
   }
 }
 
-bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
+bool JSONCompilationDatabase::parse(StringRef BaseDirectory,
+                                    std::string &ErrorMessage) {
   llvm::yaml::document_iterator I = YAMLStream.begin();
   if (I == YAMLStream.end()) {
     ErrorMessage = "Error while parsing YAML.";
@@ -409,19 +412,26 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
       ErrorMessage = "Missing key: \"directory\".";
       return false;
     }
+    SmallString<8> DirectoryStorage;
+    SmallString<128> DirectoryPath(Directory->getValue(DirectoryStorage));
+    if (!BaseDirectory.empty() && !DirectoryPath.empty() &&
+        !llvm::sys::path::is_absolute(DirectoryPath)) {
+      llvm::sys::path::make_absolute(BaseDirectory, DirectoryPath);
+      llvm::sys::path::remove_dots(DirectoryPath);
+    }
+    StringRef DirectoryName = Directories.insert(DirectoryPath).first->getKey();
     SmallString<8> FileStorage;
     StringRef FileName = File->getValue(FileStorage);
     SmallString<128> NativeFilePath;
     if (llvm::sys::path::is_relative(FileName)) {
-      SmallString<8> DirectoryStorage;
-      SmallString<128> AbsolutePath(Directory->getValue(DirectoryStorage));
+      SmallString<128> AbsolutePath(DirectoryName);
       llvm::sys::path::append(AbsolutePath, FileName);
       llvm::sys::path::native(AbsolutePath, NativeFilePath);
     } else {
       llvm::sys::path::native(FileName, NativeFilePath);
     }
     llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
-    auto Cmd = CompileCommandRef(Directory, File, *Command, Output);
+    auto Cmd = CompileCommandRef(DirectoryName, File, *Command, Output);
     IndexByFile[NativeFilePath].push_back(Cmd);
     AllCommands.push_back(Cmd);
     MatchTrie.insert(NativeFilePath);

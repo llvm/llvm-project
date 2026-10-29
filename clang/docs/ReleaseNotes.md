@@ -320,6 +320,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
+- A relative `directory` in a JSON compilation database is now resolved against the directory containing the compilation database file.
+
 - On musl targets, the driver now links ``libssp_nonshared.a`` when stack
   protection is enabled and the library is present in the toolchain library
   paths, matching what musl distributions configure GCC to do.
