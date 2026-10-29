@@ -114,8 +114,6 @@ define hidden void @pointer_phi_v4i32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i32 11952
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i32 3984
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -130,25 +128,11 @@ define hidden void @pointer_phi_v4i32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 48
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], %[[FOR_BODY]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 996, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[FOR_BODY]] ], [ [[TMP1]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[A_ADDR_09]], i32 3
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[Y]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[B_ADDR_07]], i32 1
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -189,7 +173,7 @@ define hidden void @pointer_phi_v8i16_add1(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr [[NEXT_GEP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[END]]:
@@ -238,7 +222,7 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[NEXT_GEP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -254,7 +238,7 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i16, ptr [[B_ADDR_09]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_010]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -338,7 +322,7 @@ define hidden void @pointer_phi_v16i8_add1(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[NEXT_GEP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -354,7 +338,7 @@ define hidden void @pointer_phi_v16i8_add1(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_08]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -401,7 +385,7 @@ define hidden void @pointer_phi_v16i8_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[NEXT_GEP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -417,7 +401,7 @@ define hidden void @pointer_phi_v16i8_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[B_ADDR_08]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -501,7 +485,7 @@ define hidden void @pointer_phi_v4f32_add1(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[END]]:
@@ -548,7 +532,7 @@ define hidden void @pointer_phi_v4f32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -564,7 +548,7 @@ define hidden void @pointer_phi_v4f32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[B_ADDR_07]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -592,8 +576,6 @@ define hidden void @pointer_phi_v4f32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i32 11952
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i32 3984
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -608,25 +590,11 @@ define hidden void @pointer_phi_v4f32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 48
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], %[[FOR_BODY]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 996, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[B_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[FOR_BODY]] ], [ [[TMP1]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[A_ADDR_09]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_09]], i32 3
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP4]], [[Y]]
-; CHECK-NEXT:    store float [[ADD]], ptr [[B_ADDR_07]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[B_ADDR_07]], i32 1
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
-; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -666,7 +634,7 @@ define hidden void @pointer_phi_v4half_add1(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[END]]:
@@ -713,7 +681,7 @@ define hidden void @pointer_phi_v4half_add2(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    store <8 x half> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -729,7 +697,7 @@ define hidden void @pointer_phi_v4half_add2(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds half, ptr [[B_ADDR_07]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -774,7 +742,7 @@ define hidden void @pointer_phi_v4half_add3(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    store <8 x half> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -790,7 +758,7 @@ define hidden void @pointer_phi_v4half_add3(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds half, ptr [[B_ADDR_07]], i32 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -821,8 +789,6 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i32 239808
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i32 39968
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -842,26 +808,12 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 192
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 9992
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[A_ADDR_08:%.*]] = phi ptr [ [[TMP0]], %[[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 9992, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[B_ADDR_06:%.*]] = phi ptr [ [[TMP1]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_ADDR_08]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[A_ADDR_08]], i32 6
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], [[Y]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_06]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[B_ADDR_06]], i32 1
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -892,8 +844,6 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i32 239616
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i32 39936
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -923,26 +873,12 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 384
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 9984
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[A_ADDR_08:%.*]] = phi ptr [ [[TMP0]], %[[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 9984, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[B_ADDR_06:%.*]] = phi ptr [ [[TMP1]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A_ADDR_08]], align 4
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[A_ADDR_08]], i32 6
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], [[Y]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_ADDR_06]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[B_ADDR_06]], i32 1
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -994,7 +930,7 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 12
 ; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI2]], i32 12
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:

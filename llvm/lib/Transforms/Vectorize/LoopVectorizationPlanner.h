@@ -1045,7 +1045,8 @@ public:
   /// Create a check to \p Plan to see if the vector loop should be executed
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                                ElementCount MinProfitableTripCount) const;
+                                ElementCount MinProfitableTripCount,
+                                bool RequiresScalarEpilogue) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
