@@ -583,9 +583,11 @@ cc_test(
     srcs = glob(["ObjectContainer/*.cpp"]),
     deps = [
         ":lldbUtilityHelpers",
+        "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:Interpreter",
         "//lldb:Utility",
         "//lldb/source/Plugins:PluginObjectContainerClangOffloadBundle",
         "//lldb/source/Plugins:PluginObjectContainerMachOArchive",
