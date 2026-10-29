@@ -48,7 +48,7 @@ class Reinterpret {
 
   /// \returns the casts that reinterpret \p SrcTy as \p DestTy, empty if the
   /// types match, or nullopt if a non-integral pointer is involved.
-  static std::optional<SmallVector<CastStep, 3>>
+  LLVM_ABI static std::optional<SmallVector<CastStep, 3>>
   getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL);
 
 public:
@@ -61,15 +61,15 @@ public:
   /// inserting casts before \p WhereIt. Casts of constants fold, so nothing is
   /// inserted for those. \returns nullptr if a non-integral pointer is
   /// involved.
-  static Value *reinterpretValue(Value *V, Type *DestTy,
-                                 BasicBlock::iterator WhereIt, Context &Ctx,
-                                 const DataLayout &DL);
+  LLVM_ABI static Value *reinterpretValue(Value *V, Type *DestTy,
+                                          BasicBlock::iterator WhereIt,
+                                          Context &Ctx, const DataLayout &DL);
 
   /// Reinterprets \p C as \p DestTy, e.g., float 1.0 to i32 0x3f800000, or a
   /// null pointer to i64 0. \returns nullptr if a non-integral pointer is
   /// involved.
-  static Constant *reinterpretConstant(Constant *C, Type *DestTy,
-                                       const DataLayout &DL);
+  LLVM_ABI static Constant *reinterpretConstant(Constant *C, Type *DestTy,
+                                                const DataLayout &DL);
 };
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
