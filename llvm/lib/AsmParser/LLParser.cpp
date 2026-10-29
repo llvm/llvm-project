@@ -5833,7 +5833,9 @@ bool LLParser::parseMDFieldsImplBody(ParserTy ParseField) {
 
 template <class ParserTy>
 bool LLParser::parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert((Lex.getKind() == lltok::MetadataVar ||
+          Lex.getKind() == lltok::FLMDType) &&
+         "Expected metadata type name");
   Lex.Lex();
 
   if (parseToken(lltok::lparen, "expected '(' here"))
@@ -5889,19 +5891,6 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
       return true;                                                             \
     VISIT_MD_FIELDS(NOP_FIELD, REQUIRE_FIELD)                                  \
   } while (false)
-// Defined similarly to PARSE_MD_FIELDS, but skips parsing the metadata type
-// name and parentheses.
-#define PARSE_MD_FIELDS_CONTENTS()                                             \
-  VISIT_MD_FIELDS(DECLARE_FIELD, DECLARE_FIELD)                                \
-  do {                                                                         \
-    if (parseMDFieldsImplBody([&]() -> bool {                                  \
-          VISIT_MD_FIELDS(PARSE_MD_FIELD, PARSE_MD_FIELD)                      \
-          return tokError(Twine("invalid field '") + Lex.getStrVal() + "'");   \
-        }))                                                                    \
-      return true;                                                             \
-    LocTy ClosingLoc = Lex.getLoc();                                           \
-    VISIT_MD_FIELDS(NOP_FIELD, REQUIRE_FIELD)                                  \
-  } while (false)
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
@@ -5909,16 +5898,10 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
                               MDFunctionLocalContext *Context) {
   if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "scope")
     return tokError("expected !!scope");
-  Lex.Lex();
-  // Parse !!scope arguments.
-  if (parseToken(lltok::lparen, "expected '(' at start of !!scope"))
-    return true;
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDNodeField, (/* AllowNull */ false));
-  PARSE_MD_FIELDS_CONTENTS();
+  PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
-  if (parseToken(lltok::rparen, "expected ')' at end of !!scope"))
-    return true;
   DILocalScope *ValidScope = dyn_cast_or_null<DILocalScope>(scope.Val);
   // If this is a forward reference, track it elsewhere, as FLScope does not use
   // a tracking metadata ref.
@@ -5934,18 +5917,12 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
                               MDFunctionLocalContext *Context) {
   if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "srcLoc")
     return tokError("expected !!srcLoc");
-  Lex.Lex();
-  // Parse !!srcLoc arguments.
-  if (parseToken(lltok::lparen, "expected '(' at start of !!srcLoc"))
-    return true;
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(line, LineField, );                                                 \
   OPTIONAL(column, ColumnField, );                                             \
   REQUIRED(scope, MDUnsignedField, (0, UINT16_MAX - 1));
-  PARSE_MD_FIELDS_CONTENTS();
+  PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
-  if (parseToken(lltok::rparen, "expected ')' at end of !!srcLoc"))
-    return true;
   Result = FLSrcLoc(line.Val, column.Val, scope.Val);
   return false;
 }
@@ -5954,19 +5931,13 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
                               MDFunctionLocalContext *Context) {
   if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "inlinedCall")
     return tokError("expected !!inlinedCall");
-  Lex.Lex();
-  // Parse !!inlinedCall arguments.
-  if (parseToken(lltok::lparen, "expected '(' at start of !!inlinedCall"))
-    return true;
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(srcLoc, MDUnsignedField, (0, UINT32_MAX - 1));                      \
   OPTIONAL(inlinedAt, MDUnsignedField, (0, UINT16_MAX - 1));                   \
   OPTIONAL(uniquable, MDBoolField, (false));                                   \
   REQUIRED(inlineeContext, MDNodeField, (/* AllowNull */ false));
-  PARSE_MD_FIELDS_CONTENTS();
+  PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
-  if (parseToken(lltok::rparen, "expected ')' at end of !!inlinedCall"))
-    return true;
   // There isn't a valid unsigned default value for FLIndex fields, so manually
   // check the 'Seen' field to check whether we want to use them.
   FLIndex<FLSrcLoc> ActualSrcLoc;
@@ -6037,7 +6008,8 @@ bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
   SmallVector<FLInlinedCall> InlinedCallsStorage;
   auto ParseStorageField = [&](StringRef Name, bool &Seen, auto &Storage) {
     if (Seen)
-      return tokError("field '" + Name + "' cannot be specified more than once");
+      return tokError("field '" + Name +
+                      "' cannot be specified more than once");
     Seen = true;
 
     LocTy Loc = Lex.getLoc();
@@ -6045,18 +6017,21 @@ bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
     return parseFLMDStorage(Loc, Storage, FLMD);
   };
   LocTy ClosingLoc;
-  if (parseMDFieldsImpl([&]() {
-        StringRef Label = Lex.getStrVal();
-        if (Label == "nonDebug")
-          return parseMDField("nonDebug", NonDebug);
-        if (Label == "scopes")
-          return ParseStorageField("scopes", SeenScopes, ScopesStorage);
-        if (Label == "srcLocs")
-          return ParseStorageField("srcLocs", SeenSrcLocs, SrcLocsStorage);
-        if (Label == "inlinedCalls")
-          return ParseStorageField("inlinedCalls", SeenInlinedCalls, InlinedCallsStorage);
-        return tokError(Twine("invalid field '") + Label + "'");
-      }, ClosingLoc))
+  if (parseMDFieldsImpl(
+          [&]() {
+            StringRef Label = Lex.getStrVal();
+            if (Label == "nonDebug")
+              return parseMDField("nonDebug", NonDebug);
+            if (Label == "scopes")
+              return ParseStorageField("scopes", SeenScopes, ScopesStorage);
+            if (Label == "srcLocs")
+              return ParseStorageField("srcLocs", SeenSrcLocs, SrcLocsStorage);
+            if (Label == "inlinedCalls")
+              return ParseStorageField("inlinedCalls", SeenInlinedCalls,
+                                       InlinedCallsStorage);
+            return tokError(Twine("invalid field '") + Label + "'");
+          },
+          ClosingLoc))
     return true;
 
   // Write to FLMD fields directly to construct it efficiently.
