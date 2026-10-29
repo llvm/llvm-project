@@ -57,3 +57,23 @@ exit:
   store float %acc2, ptr addrspace(1) %out
   ret void
 }
+
+; The constant part of an address folded into a constant expression with the
+; variable's address (as optimizations of portable AIR leave it): the two
+; loads are still one base plus 0 and 4, and one xy load.
+; CHECK-LABEL: const_expr_offset:
+; CHECK: threadgroup_load i32, xy,
+; OFF-LABEL: const_expr_offset:
+; OFF-COUNT-2: threadgroup_load i32, x,
+define void @const_expr_offset(ptr addrspace(1) %out, i32 %t) {
+  %base = shl i32 %t, 4
+  %a0 = add i32 %base, ptrtoint (ptr addrspace(3) @s to i32)
+  %p0 = inttoptr i32 %a0 to ptr addrspace(3)
+  %x = load i32, ptr addrspace(3) %p0, align 4
+  %a1 = add i32 %base, add (i32 ptrtoint (ptr addrspace(3) @s to i32), i32 4)
+  %p1 = inttoptr i32 %a1 to ptr addrspace(3)
+  %y = load i32, ptr addrspace(3) %p1, align 4
+  %sum = add i32 %x, %y
+  store i32 %sum, ptr addrspace(1) %out
+  ret void
+}

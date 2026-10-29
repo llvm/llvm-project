@@ -93,8 +93,16 @@ public:
       return {nullptr, C->getValue()};
     Value *A, *B;
     const APInt *K;
+    // (a constant expression add: a global's address plus a constant, which
+    // the patterns below no longer match in constants)
+    auto *CE = dyn_cast<ConstantExpr>(V);
+    bool ConstantAdd = CE && CE->getOpcode() == Instruction::Add;
+    if (ConstantAdd) {
+      A = CE->getOperand(0);
+      B = CE->getOperand(1);
+    }
     if (Depth < 8) {
-      if (match(V, m_Add(m_Value(A), m_Value(B))) ||
+      if (ConstantAdd || match(V, m_Add(m_Value(A), m_Value(B))) ||
           match(V, m_DisjointOr(m_Value(A), m_Value(B)))) {
         Split SA = split(A, Depth + 1), SB = split(B, Depth + 1);
         if (SA.Offset.isZero() && SB.Offset.isZero())
