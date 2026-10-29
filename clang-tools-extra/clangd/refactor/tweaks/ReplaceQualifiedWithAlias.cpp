@@ -172,10 +172,9 @@ const UsingDecl *findMatchingUsingDecl(
   // classes, and enums).
   if (llvm::isa<NamespaceDecl, LinkageSpecDecl, ExportDecl>(D)) {
     for (const Decl *Child : llvm::cast<DeclContext>(D)->decls()) {
-      if (const auto *UD =
-              findMatchingUsingDecl(Child, SM, SelectionLoc, VisibleContexts,
-                                    SpelledName, SelectedTargets,
-                                    MatchedTargets))
+      if (const auto *UD = findMatchingUsingDecl(
+              Child, SM, SelectionLoc, VisibleContexts, SpelledName,
+              SelectedTargets, MatchedTargets))
         return UD;
     }
   }

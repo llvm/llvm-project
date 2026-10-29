@@ -218,8 +218,8 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
   const auto &Prepared = prepareQualifiedSelection(
       Inputs, QualifiedRewriteClient::AddUsingReplaceAll);
   if (!Prepared.HasQualifiedRef ||
-      isNamespaceForbidden(
-          Inputs, Prepared.QualifierToRemove.getNestedNameSpecifier()))
+      isNamespaceForbidden(Inputs,
+                           Prepared.QualifierToRemove.getNestedNameSpecifier()))
     return false;
 
   QualifierToRemove = Prepared.QualifierToRemove;
