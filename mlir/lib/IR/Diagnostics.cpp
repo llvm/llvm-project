@@ -101,14 +101,18 @@ twineToStrRef(const Twine &val,
   return StringRef(&strings.back()[0], strRef.size());
 }
 
+DiagnosticArgument Diagnostic::getStringArgument(const Twine &val) {
+  return DiagnosticArgument(twineToStrRef(val, strings));
+}
+
 /// Stream in a Twine argument.
 Diagnostic &Diagnostic::operator<<(char val) { return *this << Twine(val); }
 Diagnostic &Diagnostic::operator<<(const Twine &val) {
-  arguments.push_back(DiagnosticArgument(twineToStrRef(val, strings)));
+  arguments.push_back(getStringArgument(val));
   return *this;
 }
 Diagnostic &Diagnostic::operator<<(Twine &&val) {
-  arguments.push_back(DiagnosticArgument(twineToStrRef(val, strings)));
+  arguments.push_back(getStringArgument(val));
   return *this;
 }
 

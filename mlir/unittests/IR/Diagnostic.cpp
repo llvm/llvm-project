@@ -68,6 +68,23 @@ TEST(DiagnosticLifetime, TestLazyCopyStringLiteral) {
   ASSERT_STREQ("^rror 1, mutate this", resultMessage.c_str());
 }
 
+TEST(DiagnosticLifetime, TestMetadataOwnsStringArgument) {
+  mlir::MLIRContext context;
+  Diagnostic diagnostic(mlir::UnknownLoc::get(&context),
+                        DiagnosticSeverity::Note);
+  {
+    std::string value = "metadata value";
+    diagnostic.getMetadata().push_back(diagnostic.getStringArgument(value));
+    value[0] = '^';
+  }
+
+  ArrayRef<DiagnosticArgument> metadata = diagnostic.getMetadata();
+  ASSERT_EQ(metadata.size(), 1u);
+  ASSERT_EQ(metadata[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::String);
+  EXPECT_EQ(metadata[0].getAsString(), "metadata value");
+}
+
 // Register counting handlers first so they receive diagnostics only after
 // the verifier's registration is erased.
 
