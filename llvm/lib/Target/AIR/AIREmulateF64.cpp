@@ -784,7 +784,51 @@ private:
 
 /// Whether M has a double or a constrained intrinsic (otherwise the pass
 /// leaves it as it is).
+/// The module asks for IEEE f32 (a front end's strict mode: the module flag
+/// air.ieee-fp32) and F keeps f32 denormals: its f32 arithmetic must give
+/// denormal results and read denormal operands, which a GPU that flushes them
+/// (Metal's) does not.
+static bool ieeeF32(const Function &F) {
+  auto *Flag = mdconst::extract_or_null<ConstantInt>(
+      F.getParent()->getModuleFlag("air.ieee-fp32"));
+  return Flag && !Flag->isZero() &&
+         F.getDenormalMode(APFloat::IEEEsingle()).Output == DenormalMode::IEEE;
+}
+
+/// An f32 operation that ieee32 emulates: add, sub, mul, div, fma, sqrt.
+static StringRef ieeeF32Op(const Instruction &I) {
+  if (!I.getType()->isFloatTy())
+    return "";
+  if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+    switch (BO->getOpcode()) {
+    case Instruction::FAdd:
+      return "add";
+    case Instruction::FSub:
+      return "sub";
+    case Instruction::FMul:
+      return "mul";
+    case Instruction::FDiv:
+      return "div";
+    default:
+      return "";
+    }
+  }
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    if (II->getIntrinsicID() == Intrinsic::fma ||
+        II->getIntrinsicID() == Intrinsic::fmuladd)
+      return "fma";
+    if (II->getIntrinsicID() == Intrinsic::sqrt && !II->hasApproxFunc())
+      return "sqrt";
+  }
+  return "";
+}
+
 bool EmulateF64::hasWork() {
+  for (Function &F : M)
+    if (!F.isDeclaration() && ieeeF32(F))
+      for (Instruction &I : instructions(F))
+        if (!ieeeF32Op(I).empty())
+          return true;
   for (GlobalVariable &GV : M.globals())
     if (hasDouble(GV.getValueType()))
       return true;
@@ -902,6 +946,16 @@ void EmulateF64::replaceOperations(Function &F) {
               .str();
       replaceWithEmulation(*RMW, Key,
                            {RMW->getPointerOperand(), RMW->getValOperand()});
+      continue;
+    }
+    if (StringRef Name = ieeeF32Op(I); !Name.empty() && ieeeF32(F)) {
+      // "ieee32:<op>": the f32 operation with denormal operands and results
+      SmallVector<Value *, 3> Ops;
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        Ops.append(II->arg_begin(), II->arg_end());
+      else
+        Ops.append(I.op_begin(), I.op_end());
+      replaceWithEmulation(I, ("ieee32:" + Name).str(), Ops);
       continue;
     }
     if (isDoubleOp(I)) {
@@ -1104,6 +1158,67 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
   StringRef Op = Parts[0], Mask = Parts.size() > 1 ? Parts[1] : "";
+  if (StringRef Name = Op; Name.consume_front("ieee32:")) {
+    // The hardware's result where no operand is a denormal and the result is
+    // normal (an exponent field that is not zero: also infinities and NaNs),
+    // where flushing changes nothing; else soft-f64 on the exact operands,
+    // rounded to odd (toward zero, the last bit set where rounding away from
+    // zero differs) and then to nearest f32, which rounds once (53 >= 24 + 2
+    // bits).
+    auto Bits = [&](Value *V) { return B.CreateBitCast(V, I32); };
+    auto Denormal = [&](Value *V) {
+      Value *X = Bits(V);
+      return B.CreateAnd(
+          B.CreateICmpEQ(B.CreateAnd(X, 0x7f800000), B.getInt32(0)),
+          B.CreateICmpNE(B.CreateAnd(X, 0x7fffff), B.getInt32(0)));
+    };
+    Value *Fast;
+    if (Name == "add")
+      Fast = B.CreateFAdd(A[0], A[1]);
+    else if (Name == "sub")
+      Fast = B.CreateFSub(A[0], A[1]);
+    else if (Name == "mul")
+      Fast = B.CreateFMul(A[0], A[1]);
+    else if (Name == "div")
+      Fast = B.CreateFDiv(A[0], A[1]);
+    else if (Name == "fma")
+      Fast = B.CreateIntrinsic(Intrinsic::fma, {F32}, {A[0], A[1], A[2]});
+    else if (Name == "sqrt")
+      Fast = B.CreateUnaryIntrinsic(Intrinsic::sqrt, A[0]);
+    else
+      return NoEmulation();
+    Value *Ok = B.CreateICmpNE(B.CreateAnd(Bits(Fast), 0x7f800000),
+                               B.getInt32(0));
+    for (Value *X : A)
+      Ok = B.CreateAnd(Ok, B.CreateNot(Denormal(X)));
+    BasicBlock *Slow = BasicBlock::Create(Ctx, "ieee32.slow", &F);
+    BasicBlock *Done = BasicBlock::Create(Ctx, "ieee32.done", &F);
+    BasicBlock *FastEnd = B.GetInsertBlock();
+    B.CreateCondBr(Ok, Done, Slow);
+    B.SetInsertPoint(Slow);
+    SmallVector<Value *, 4> D;
+    for (Value *X : A)
+      D.push_back(Lib("__air_f64_from_f32", I64, {Bits(X)}));
+    std::string Lname = ("__air_f64_" + Name + "_r").str();
+    auto Call = [&](Value *Rounding) {
+      SmallVector<Value *, 4> Args(D);
+      Args.push_back(Rounding);
+      return Lib(Lname, I64, Args);
+    };
+    Value *TZ = Call(B.getInt32(0));
+    Value *Away = Call(B.CreateSelect(B.CreateICmpSLT(TZ, B.getInt64(0)),
+                                      B.getInt32(3), B.getInt32(2)));
+    Value *Odd = B.CreateOr(TZ, B.CreateZExt(B.CreateICmpNE(TZ, Away), I64));
+    Value *SlowR = B.CreateBitCast(
+        Lib("__air_f64_to_f32_r", I32, {Odd, B.getInt32(1)}), F32);
+    BasicBlock *SlowEnd = B.GetInsertBlock();
+    B.CreateBr(Done);
+    B.SetInsertPoint(Done);
+    PHINode *P = B.CreatePHI(F32, 2);
+    P->addIncoming(Fast, FastEnd);
+    P->addIncoming(SlowR, SlowEnd);
+    return Fin(P);
+  }
   if (StringRef RMW = Op; RMW.consume_front("atomic:")) {
     // A double precision read-modify-write as a compare-exchange loop of its
     // bits, with the operation in soft-f64 (LLVM's 64-bit cmpxchg, which
