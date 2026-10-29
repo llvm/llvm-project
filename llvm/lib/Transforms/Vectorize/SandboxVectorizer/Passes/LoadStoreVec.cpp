@@ -89,7 +89,8 @@ Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
                                                       Type *DestTy) {
   Type *SrcTy = C->getType();
   // A non-integral pointer has no fixed ptrtoint/inttoptr representation.
-  if (isNonIntegralPtr(SrcTy, *DL) || isNonIntegralPtr(DestTy, *DL))
+  if (VecUtils::isNonIntegralPtr(SrcTy, *DL) ||
+      VecUtils::isNonIntegralPtr(DestTy, *DL))
     return nullptr;
   if (SrcTy == DestTy)
     return C;
