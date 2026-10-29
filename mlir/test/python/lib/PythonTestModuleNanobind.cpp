@@ -139,6 +139,11 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
   // clang-format on
 
   m.def(
+      "register_rendezvous_pass",
+      []() { mlirPythonTestRegisterRendezvousPass(); },
+      "Registers the test-python-rendezvous pass used by concurrency tests.");
+
+  m.def(
       "test_diagnostics_with_errors_and_notes",
       [](DefaultingPyMlirContext ctx) {
         mlir::python::CollectDiagnosticsToStringScope handler(ctx.get()->get());
