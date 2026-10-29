@@ -38,6 +38,15 @@ jobs:
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             testing: BUILD
+          - name: linux-x86_64-Release
+            os: llvm-premerge-linux-32-runners
+            build_type: Release
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            linker: lld-23
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
+            build_fuzzing_tests: ON
           - name: linux-x86_64-Release-Asserts
             os: llvm-premerge-linux-32-runners
             build_type: Release
@@ -47,7 +56,6 @@ jobs:
             linker: lld-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            build_fuzzing_tests: ON
           - name: linux-x86_64-MinSizeRel
             os: llvm-premerge-linux-32-runners
             build_type: MinSizeRel
