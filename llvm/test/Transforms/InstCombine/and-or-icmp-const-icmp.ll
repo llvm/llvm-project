@@ -287,3 +287,33 @@ define i1 @ne_commuted_equal_minus_1(i8 %x, i8 %py) {
 }
 
 declare void @use(i1)
+
+; ==============================================================================
+; srem sign-contradiction folds (foldAndOrOfICmps):
+;   srem(X, C) has the same sign as X (or is zero) for C > 0.
+;   So "srem > 0" requires X > 0, "srem < 0" requires X < 0.
+;   AND-ing with an icmp that forces X to the opposite sign is always false.
+; ==============================================================================
+define i1 @and_srem_sgt_zero_x_slt_neg(i64 %x) {
+; CHECK-LABEL: define i1 @and_srem_sgt_zero_x_slt_neg(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %rem = srem i64 %x, 1000000
+  %c1 = icmp sgt i64 %rem, 0
+  %c2 = icmp slt i64 %x, 1
+  %r = and i1 %c1, %c2
+  ret i1 %r
+}
+
+define i1 @and_srem_slt_zero_x_sgt_pos(i64 %x) {
+; CHECK-LABEL: define i1 @and_srem_slt_zero_x_sgt_pos(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %rem = srem i64 %x, 1000000
+  %c1 = icmp slt i64 %rem, 0
+  %c2 = icmp sgt i64 %x, -1
+  %r = and i1 %c1, %c2
+  ret i1 %r
+}
