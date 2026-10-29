@@ -5,3 +5,4 @@ add_distinct_clang_unittest(libclangCrashTests
   LINK_LIBS
   libclang
   )
+copy_libclang_dll_to_unittest(libclangCrashTests)
