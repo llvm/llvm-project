@@ -937,8 +937,8 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
 ; GFX11-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %fma = call float @llvm.fma.f32(float %x, float %y, float %z)
-  %fptrunc = fptrunc float %fma to half
+  %fma = call contract float @llvm.fma.f32(float %x, float %y, float %z)
+  %fptrunc = fptrunc contract float %fma to half
   %cast = bitcast half %fptrunc to i16
   %zext = zext i16 %cast to i32
   ret i32 %zext

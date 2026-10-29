@@ -37,7 +37,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_ADD_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
-  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMA_MIX_F16_t16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = contract nofpexcept V_FMA_MIX_F16_t16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], [[V_FMA_MIX_F16_t16_]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
@@ -72,7 +72,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT:   [[V_ADD_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, [[S_MOV_B32_2]], 0, 0, implicit $mode, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
-  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIXLO_F16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMA_MIXLO_F16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
   ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[V_FMA_MIXLO_F16_]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
@@ -85,8 +85,8 @@ entry:
   %load.c = load half, ptr addrspace(1) %in.gep3
   %add.c = fadd half %load.c, 0.5
   %load.float.c = fpext half %add.c to float
-  %result = tail call float @llvm.fmuladd.f32(float %load.a, float %load.b, float %load.float.c)
-  %half = fptrunc float %result to half
+  %result = tail call contract float @llvm.fmuladd.f32(float %load.a, float %load.b, float %load.float.c)
+  %half = fptrunc contract float %result to half
   store half %half, ptr addrspace(1) %out
   ret void
 }

@@ -2734,8 +2734,10 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
                                            !isTypeLegal(MVT::f16));
 
     if (PromoteToF32) {
-      // Log and multiply in f32 is always good enough for f16.
+      // Log and multiply in f32 is always good enough for f16. The result is
+      // an approximation anyway, so allow contraction.
       X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
+      Flags.setAllowContract(true);
     }
 
     SDValue Lowered = LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags);

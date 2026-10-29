@@ -3813,10 +3813,14 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     bool PromoteToF32 =
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
+      // Log and multiply in f32 is always good enough for f16. The result is
+      // an approximation anyway, so allow contraction.
+      unsigned ContractFlags = Flags | MachineInstr::FmContract;
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X, Flags);
-      legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal, Flags);
+      legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10,
+                         ContractFlags);
+      B.buildFPTrunc(Dst, LogVal, ContractFlags);
     } else {
       legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
     }
@@ -5775,8 +5779,10 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   auto TmpInt = B.buildBitcast(I32, Tmp);
   auto MaskedInt = B.buildAnd(I32, TmpInt, B.buildConstant(I32, 0xff800000));
   auto Masked = B.buildBitcast(F32, MaskedInt);
-  Quot = B.buildFAdd(F32, Masked, Quot, Flags);
-  auto RDst = B.buildFPTrunc(F16, Quot, Flags);
+  // Contraction here does not affect the correctness of the final result.
+  unsigned ContractFlags = Flags | MachineInstr::FmContract;
+  Quot = B.buildFAdd(F32, Masked, Quot, ContractFlags);
+  auto RDst = B.buildFPTrunc(F16, Quot, ContractFlags);
   B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res)
       .addUse(RDst.getReg(0))
       .addUse(RHS)

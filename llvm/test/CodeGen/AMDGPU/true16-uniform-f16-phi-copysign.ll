@@ -29,7 +29,9 @@ define amdgpu_kernel void @uniform_f16_phi_copysign(half %x, ptr addrspace(1) %o
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_s_sqrt_f32 s1, s1
 ; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_fma_mixlo_f16 v0, s1, s0, v0 op_sel_hi:[0,1,0]
+; CHECK-NEXT:    v_fma_mix_f32 v0, s1, s0, v0 op_sel_hi:[0,1,0]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: ; %small
 ; CHECK-NEXT:    s_mul_f16 s1, s0, s0
