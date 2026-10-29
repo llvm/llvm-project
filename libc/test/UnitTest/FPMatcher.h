@@ -18,6 +18,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
@@ -175,6 +176,23 @@ CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 
+// Returns its argument as a value the compiler cannot see through. A call on a
+// constant that is inlined, as it is under LTO, is otherwise folded at compile
+// time, which skips the exception flags, the rounding mode and the flush or
+// denormals-are-zero mode that tests of floating point functions are there to
+// check.
+template <typename T> LIBC_INLINE T opaque(T value) {
+#ifdef LIBC_COMPILER_IS_MSVC
+  // MSVC has no inline assembly on every target; a volatile object cannot be
+  // folded either.
+  volatile T copy = value;
+  return copy;
+#else
+  __asm__ volatile("" : "+m"(value));
+  return value;
+#endif
+}
+
 template <typename T> struct FPTest : public ErrnoCheckingTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
@@ -184,14 +202,14 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
   static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
-  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  const T sNaN = opaque(FPBits::signaling_nan().get_val());
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
   static constexpr T max_normal = FPBits::max_normal(Sign::POS).get_val();
   static constexpr T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();
-  static constexpr T min_denormal = FPBits::min_subnormal().get_val();
-  static constexpr T max_denormal = FPBits::max_subnormal().get_val();
+  const T min_denormal = opaque(FPBits::min_subnormal().get_val());
+  const T max_denormal = opaque(FPBits::max_subnormal().get_val());
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   static constexpr int N_ROUNDING_MODES = 1;
@@ -254,16 +272,19 @@ private:
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
   const T aNaN = FPBits::quiet_nan(Sign::POS).get_val();                       \
   const T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();                   \
-  const T sNaN = FPBits::signaling_nan(Sign::POS).get_val();                   \
+  const T sNaN = LIBC_NAMESPACE::testing::opaque(                              \
+      FPBits::signaling_nan(Sign::POS).get_val());                             \
   const T neg_sNaN = FPBits::signaling_nan(Sign::NEG).get_val();               \
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \
   const T max_normal = FPBits::max_normal(Sign::POS).get_val();                \
   const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
-  const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
+  const T min_denormal = LIBC_NAMESPACE::testing::opaque(                      \
+      FPBits::min_subnormal(Sign::POS).get_val());                             \
   const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
-  const T max_denormal = FPBits::max_subnormal().get_val();                    \
+  const T max_denormal =                                                       \
+      LIBC_NAMESPACE::testing::opaque(FPBits::max_subnormal().get_val());      \
   static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
   static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
       MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
