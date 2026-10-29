@@ -188,7 +188,7 @@ protected:
 
   bool ProfileIsValid = true;
   ErrorOr<uint64_t> getInstWeight(const MachineInstr &MI) override {
-    if (FunctionSamples::ProfileIsProbeBased)
+    if (Reader->profileIsProbeBased())
       return getProbeWeight(MI);
     if (ImprovedFSDiscriminator && MI.isMetaInstruction())
       return std::error_code();
@@ -300,7 +300,8 @@ bool MIRProfileLoader::doInitialization(Module &M) {
 
   // Load pseudo probe descriptors for probe-based function samples.
   if (Reader->profileIsProbeBased()) {
-    ProbeManager = std::make_unique<PseudoProbeManager>(M);
+    ProbeManager =
+        std::make_unique<PseudoProbeManager>(M, Reader->getAttributes());
     if (!ProbeManager->moduleIsProbed(M)) {
       return false;
     }
@@ -325,7 +326,7 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
   if (!Samples || Samples->empty())
     return false;
 
-  if (FunctionSamples::ProfileIsProbeBased) {
+  if (Reader->profileIsProbeBased()) {
     if (!ProbeManager->profileIsValid(MF.getFunction(), *Samples))
       return false;
   } else {

@@ -45,7 +45,7 @@ static uint64_t getFuncGUID(Module *M, DILocation *DL) {
   // CoroSplit Pass will change the debug info with suffixes i.e. `.resume`,
   // `.destroy`, `.cleanup`. Strip these suffixes to make the GUID consistent
   // with the pseudo probe
-  Name = FunctionSamples::getCanonicalCoroFnName(Name);
+  Name = SampleProfileAttributes::getCanonicalCoroFnName(Name);
   return Function::getGUIDAssumingExternalLinkage(Name);
 }
 

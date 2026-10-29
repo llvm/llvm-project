@@ -267,7 +267,7 @@ GlobalValue::GUID getGUID(const StringRef FunctionName) {
   // functions in the profile use phase prior to their addition. Note that this
   // applies to both instrumented and sampled function names.
   StringRef CanonicalName =
-      sampleprof::FunctionSamples::getCanonicalFnName(FunctionName);
+      sampleprof::SampleProfileAttributes().getCanonicalFnName(FunctionName);
 
   // We use the function guid which we expect to be a uint64_t. At
   // this time, it is the lower 64 bits of the md5 of the canonical

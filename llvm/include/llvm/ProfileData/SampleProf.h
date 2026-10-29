@@ -1058,18 +1058,6 @@ public:
     return &Iter->second;
   }
 
-  /// Returns a pointer to FunctionSamples at the given callsite location
-  /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
-  /// the restriction to return the FunctionSamples at callsite location
-  /// \p Loc with the maximum total sample count. If \p Remapper or \p
-  /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
-  /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
-      const LineLocation &Loc, StringRef CalleeName,
-      SampleProfileReaderItaniumRemapper *Remapper,
-      const HashKeyMap<DenseMap, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
-
   bool empty() const { return TotalSamples == 0; }
 
   /// Return the total number of samples collected inside the function.
@@ -1082,34 +1070,6 @@ public:
   /// raw profile without referring to potentially inaccurate debug info, this
   /// gives more accurate profile data and is preferred for standalone symbols.
   uint64_t getHeadSamples() const { return TotalHeadSamples; }
-
-  /// Return an estimate of the sample count of the function entry basic block.
-  /// The function can be either a standalone symbol or an inlined function.
-  /// For Context-Sensitive profiles, this will prefer returning the head
-  /// samples (i.e. getHeadSamples()), if non-zero. Otherwise it estimates from
-  /// the function body's samples or callsite samples.
-  uint64_t getHeadSamplesEstimate() const {
-    if (FunctionSamples::ProfileIsCS && getHeadSamples()) {
-      // For CS profile, if we already have more accurate head samples
-      // counted by branch sample from caller, use them as entry samples.
-      return getHeadSamples();
-    }
-    uint64_t Count = 0;
-    // Use either BodySamples or CallsiteSamples which ever has the smaller
-    // lineno.
-    if (!BodySamples.empty() &&
-        (CallsiteSamples.empty() ||
-         BodySamples.begin()->first < CallsiteSamples.begin()->first))
-      Count = BodySamples.begin()->second.getSamples();
-    else if (!CallsiteSamples.empty()) {
-      // An indirect callsite may be promoted to several inlined direct calls.
-      // We need to get the sum of them.
-      for (const auto &FuncSamples : CallsiteSamples.begin()->second)
-        Count += FuncSamples.second.getHeadSamplesEstimate();
-    }
-    // Return at least 1 if total sample is not 0.
-    return Count ? Count : TotalSamples > 0;
-  }
 
   /// Return all the samples collected in the body of the function.
   /// The returned reference may be invalidated by subsequent modifications to
@@ -1301,76 +1261,6 @@ public:
     IRToProfileLocationMap = LTLM;
   }
 
-  /// Return the canonical name for a function, taking into account
-  /// suffix elision policy attributes.
-  static StringRef getCanonicalFnName(const Function &F) {
-    const char *AttrName = "sample-profile-suffix-elision-policy";
-    auto Attr = F.getFnAttribute(AttrName).getValueAsString();
-    return getCanonicalFnName(F.getName(), Attr);
-  }
-
-  /// Name suffixes which canonicalization should handle to avoid
-  /// profile mismatch.
-  static constexpr const char *LLVMSuffix = ".llvm.";
-  static constexpr const char *PartSuffix = ".part.";
-  static constexpr const char *UniqSuffix = ".__uniq.";
-  // Appended by LowerTypeTests to the body of a CFI jump table member, whose
-  // original name then refers to the jump table entry.
-  static constexpr const char *CfiSuffix = ".cfi";
-
-  static StringRef getCanonicalFnName(StringRef FnName,
-                                      StringRef Attr = "selected") {
-    // Note the sequence of the suffixes in the knownSuffixes array matters.
-    // If suffix "A" is appended after the suffix "B", "A" should be in front
-    // of "B" in knownSuffixes. The CFI suffix is appended in the ThinLTO
-    // backend, after all the others.
-    const SmallVector<StringRef> KnownSuffixes{CfiSuffix, LLVMSuffix,
-                                               PartSuffix, UniqSuffix};
-    return getCanonicalFnName(FnName, KnownSuffixes, Attr);
-  }
-
-  static StringRef getCanonicalCoroFnName(StringRef FnName,
-                                          StringRef Attr = "selected") {
-    // A local coroutine function from another CU can be promoted to a global
-    // function during ThinLTO import. This will create a linkage name like
-    // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
-    // the coroutine suffixes to avoid pseudo probe mismatch.
-    const SmallVector<StringRef, 4> CoroSuffixes{".cleanup", ".destroy",
-                                                 ".resume", LLVMSuffix};
-    return getCanonicalFnName(FnName, CoroSuffixes, Attr);
-  }
-
-  static StringRef getCanonicalFnName(StringRef FnName,
-                                      ArrayRef<StringRef> Suffixes,
-                                      StringRef Attr = "selected") {
-    if (Attr == "" || Attr == "all")
-      return FnName.split('.').first;
-    if (Attr == "selected") {
-      StringRef Cand(FnName);
-      for (const auto Suffix : Suffixes) {
-        // If the profile contains ".__uniq." suffix, don't strip the
-        // suffix for names in the IR.
-        if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
-          continue;
-        if (!Suffix.ends_with(".")) {
-          Cand.consume_back(Suffix);
-          continue;
-        }
-        auto It = Cand.rfind(Suffix);
-        if (It == StringRef::npos)
-          continue;
-        auto Dit = Cand.rfind('.');
-        if (Dit == It + Suffix.size() - 1)
-          Cand = Cand.substr(0, It);
-      }
-      return Cand;
-    }
-    if (Attr == "none")
-      return FnName;
-    assert(false && "internal error: unknown suffix elision policy");
-    return FnName;
-  }
-
   /// Translate \p Func into its original name.
   /// When profile doesn't use MD5, \p Func needs no translation.
   /// When profile uses MD5, \p Func in current FunctionSamples
@@ -1379,7 +1269,7 @@ public:
   /// by looking up in the function map GUIDToFuncNameMap.
   /// If the original name doesn't exist in the map, return empty StringRef.
   StringRef getFuncName(FunctionId Func) const {
-    if (!UseMD5)
+    if (Func.isStringRef() || Func.empty())
       return Func.stringRef();
 
     assert(GUIDToFuncNameMap &&
@@ -1387,64 +1277,9 @@ public:
     return GUIDToFuncNameMap->lookup(Func.getHashCode());
   }
 
-  /// Returns the line offset to the start line of the subprogram.
-  /// We assume that a single function will not exceed 65535 LOC.
-  LLVM_ABI static unsigned getOffset(const DILocation *DIL);
-
-  /// Returns a unique call site identifier for a given debug location of a call
-  /// instruction. This is wrapper of two scenarios, the probe-based profile and
-  /// regular profile, to hide implementation details from the sample loader and
-  /// the context tracker.
-  LLVM_ABI static LineLocation getCallSiteIdentifier(const DILocation *DIL,
-                                                     bool ProfileIsFS = false);
-
-  /// Returns a unique hash code for a combination of a callsite location and
-  /// the callee function name.
-  /// Guarantee MD5 and non-MD5 representation of the same function results in
-  /// the same hash.
-  static uint64_t getCallSiteHash(FunctionId Callee,
-                                  const LineLocation &Callsite) {
-    return SampleContextFrame(Callee, Callsite).getHashCode();
-  }
-
-  /// Get the FunctionSamples of the inline instance where DIL originates
-  /// from.
-  ///
-  /// The FunctionSamples of the instruction (Machine or IR) associated to
-  /// \p DIL is the inlined instance in which that instruction is coming from.
-  /// We traverse the inline stack of that instruction, and match it with the
-  /// tree nodes in the profile.
-  ///
-  /// \returns the FunctionSamples pointer to the inlined instance.
-  /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
-  /// to find matching FunctionSamples with not exactly the same but equivalent
-  /// name.
-  LLVM_ABI const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-      const HashKeyMap<DenseMap, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
-
   SampleContext &getContext() const LLVM_LIFETIME_BOUND { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
-
-  // These boolean variables are atomic so that parallel in-process ThinLTO
-  // backends writing the same value do not race.
-  LLVM_ABI static std::atomic<bool> ProfileIsProbeBased;
-
-  LLVM_ABI static std::atomic<bool> ProfileIsCS;
-
-  LLVM_ABI static std::atomic<bool> ProfileIsPreInlined;
-
-  /// Whether the profile uses MD5 to represent string.
-  LLVM_ABI static std::atomic<bool> UseMD5;
-
-  /// Whether the profile contains any ".__uniq." suffix in a name.
-  LLVM_ABI static std::atomic<bool> HasUniqSuffix;
-
-  /// If this profile uses flow sensitive discriminators.
-  LLVM_ABI static std::atomic<bool> ProfileIsFS;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
@@ -1553,13 +1388,177 @@ private:
   const LocToLocMap *IRToProfileLocationMap = nullptr;
 };
 
-/// Get the proper representation of a string according to whether the
-/// current Format uses MD5 to represent the string.
-static inline FunctionId getRepInFormat(StringRef Name) {
-  if (Name.empty() || !FunctionSamples::UseMD5)
-    return FunctionId(Name);
-  return FunctionId(Function::getGUIDAssumingExternalLinkage(Name));
-}
+/// Metadata flags and query helpers associated with a sample profile.
+class SampleProfileAttributes {
+public:
+  bool ProfileIsProbeBased = false;
+  bool ProfileIsCS = false;
+  bool ProfileIsPreInlined = false;
+  /// Whether the profile uses MD5 to represent string.
+  bool UseMD5 = false;
+  /// Whether the profile contains any ".__uniq." suffix in a name.
+  bool HasUniqSuffix = true;
+  /// If this profile uses flow sensitive discriminators.
+  bool ProfileIsFS = false;
+
+  /// Name suffixes which canonicalization should handle to avoid
+  /// profile mismatch.
+  static constexpr const char *LLVMSuffix = ".llvm.";
+  static constexpr const char *PartSuffix = ".part.";
+  static constexpr const char *UniqSuffix = ".__uniq.";
+  // Appended by LowerTypeTests to the body of a CFI jump table member, whose
+  // original name then refers to the jump table entry.
+  static constexpr const char *CfiSuffix = ".cfi";
+
+  /// Return the canonical name for a function, taking into account
+  /// suffix elision policy attributes.
+  StringRef getCanonicalFnName(const Function &F) const {
+    const char *AttrName = "sample-profile-suffix-elision-policy";
+    auto Attr = F.getFnAttribute(AttrName).getValueAsString();
+    return getCanonicalFnName(F.getName(), Attr);
+  }
+
+  StringRef getCanonicalFnName(StringRef FnName,
+                               StringRef Attr = "selected") const {
+    // Note the sequence of the suffixes in the knownSuffixes array matters.
+    // If suffix "A" is appended after the suffix "B", "A" should be in front
+    // of "B" in knownSuffixes. The CFI suffix is appended in the ThinLTO
+    // backend, after all the others.
+    const SmallVector<StringRef> KnownSuffixes{CfiSuffix, LLVMSuffix,
+                                               PartSuffix, UniqSuffix};
+    return getCanonicalFnName(FnName, KnownSuffixes, Attr);
+  }
+
+  static StringRef getCanonicalCoroFnName(StringRef FnName,
+                                          StringRef Attr = "selected") {
+    // A local coroutine function from another CU can be promoted to a global
+    // function during ThinLTO import. This will create a linkage name like
+    // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
+    // the coroutine suffixes to avoid pseudo probe mismatch.
+    const SmallVector<StringRef, 4> CoroSuffixes{".cleanup", ".destroy",
+                                                 ".resume", LLVMSuffix};
+    return SampleProfileAttributes().getCanonicalFnName(FnName, CoroSuffixes,
+                                                        Attr);
+  }
+
+  StringRef getCanonicalFnName(StringRef FnName, ArrayRef<StringRef> Suffixes,
+                               StringRef Attr = "selected") const {
+    if (Attr == "" || Attr == "all")
+      return FnName.split('.').first;
+    if (Attr == "selected") {
+      StringRef Cand(FnName);
+      for (const auto Suffix : Suffixes) {
+        // If the profile contains ".__uniq." suffix, don't strip the
+        // suffix for names in the IR.
+        if (Suffix == UniqSuffix && HasUniqSuffix)
+          continue;
+        if (!Suffix.ends_with(".")) {
+          Cand.consume_back(Suffix);
+          continue;
+        }
+        auto It = Cand.rfind(Suffix);
+        if (It == StringRef::npos)
+          continue;
+        auto Dit = Cand.rfind('.');
+        if (Dit == It + Suffix.size() - 1)
+          Cand = Cand.substr(0, It);
+      }
+      return Cand;
+    }
+    if (Attr == "none")
+      return FnName;
+    assert(false && "internal error: unknown suffix elision policy");
+    return FnName;
+  }
+
+  /// Returns the line offset to the start line of the subprogram.
+  /// We assume that a single function will not exceed 65535 LOC.
+  LLVM_ABI static unsigned getOffset(const DILocation *DIL);
+
+  /// Returns a unique call site identifier for a given debug location of a call
+  /// instruction. This is wrapper of two scenarios, the probe-based profile and
+  /// regular profile, to hide implementation details from the sample loader and
+  /// the context tracker.
+  LLVM_ABI LineLocation getCallSiteIdentifier(const DILocation *DIL) const;
+
+  /// Returns a unique hash code for a combination of a callsite location and
+  /// the callee function name.
+  /// Guarantee MD5 and non-MD5 representation of the same function results in
+  /// the same hash.
+  static uint64_t getCallSiteHash(FunctionId Callee,
+                                  const LineLocation &Callsite) {
+    return SampleContextFrame(Callee, Callsite).getHashCode();
+  }
+
+  /// Return an estimate of the sample count of the function entry basic block.
+  /// The function can be either a standalone symbol or an inlined function.
+  /// For Context-Sensitive profiles, this will prefer returning the head
+  /// samples (i.e. getHeadSamples()), if non-zero. Otherwise it estimates from
+  /// the function body's samples or callsite samples.
+  uint64_t getHeadSamplesEstimate(const FunctionSamples &FS) const {
+    if (ProfileIsCS && FS.getHeadSamples()) {
+      // For CS profile, if we already have more accurate head samples
+      // counted by branch sample from caller, use them as entry samples.
+      return FS.getHeadSamples();
+    }
+    uint64_t Count = 0;
+    const auto &BodySamples = FS.getBodySamples();
+    const auto &CallsiteSamples = FS.getCallsiteSamples();
+    // Use either BodySamples or CallsiteSamples which ever has the smaller
+    // lineno.
+    if (!BodySamples.empty() &&
+        (CallsiteSamples.empty() ||
+         BodySamples.begin()->first < CallsiteSamples.begin()->first))
+      Count = BodySamples.begin()->second.getSamples();
+    else if (!CallsiteSamples.empty()) {
+      // An indirect callsite may be promoted to several inlined direct calls.
+      // We need to get the sum of them.
+      for (const auto &FuncSamples : CallsiteSamples.begin()->second)
+        Count += getHeadSamplesEstimate(FuncSamples.second);
+    }
+    // Return at least 1 if total sample is not 0.
+    return Count ? Count : FS.getTotalSamples() > 0;
+  }
+
+  /// Returns a pointer to FunctionSamples at the given callsite location
+  /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
+  /// the restriction to return the FunctionSamples at callsite location
+  /// \p Loc with the maximum total sample count. If \p Remapper or \p
+  /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
+  /// with equivalent name as \p CalleeName.
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamplesAt(const FunctionSamples &FS, const LineLocation &Loc,
+                        StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper,
+                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                            *FuncNameToProfNameMap = nullptr) const;
+
+  /// Get the FunctionSamples of the inline instance where DIL originates
+  /// from.
+  ///
+  /// The FunctionSamples of the instruction (Machine or IR) associated to
+  /// \p DIL is the inlined instance in which that instruction is coming from.
+  /// We traverse the inline stack of that instruction, and match it with the
+  /// tree nodes in the profile.
+  ///
+  /// \returns the FunctionSamples pointer to the inlined instance.
+  /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
+  /// to find matching FunctionSamples with not exactly the same but equivalent
+  /// name.
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamples(const FunctionSamples &FS, const DILocation *DIL,
+                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                          *FuncNameToProfNameMap = nullptr) const;
+
+  /// Get the proper representation of a string according to whether the
+  /// current Format uses MD5 to represent the string.
+  FunctionId getRepInFormat(StringRef Name) const {
+    if (Name.empty() || !UseMD5)
+      return FunctionId(Name);
+    return FunctionId(Function::getGUIDAssumingExternalLinkage(Name));
+  }
+};
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
@@ -1570,7 +1569,12 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 /// the mapped value immediately because the key no longer holds it.
 class SampleProfileMap
     : public HashKeyMap<std::unordered_map, SampleContext, FunctionSamples> {
+  SampleProfileAttributes ProfAttrs;
+
 public:
+  SampleProfileAttributes &getAttributes() { return ProfAttrs; }
+  const SampleProfileAttributes &getAttributes() const { return ProfAttrs; }
+
   // Convenience method because this is being used in many places. Set the
   // FunctionSamples' context if its newly inserted.
   mapped_type &create(const SampleContext &Ctx) {
@@ -1668,6 +1672,9 @@ public:
   static void flattenProfile(const SampleProfileMap &InputProfiles,
                              SampleProfileMap &OutputProfiles,
                              bool ProfileIsCS = false) {
+    OutputProfiles.getAttributes() = InputProfiles.getAttributes();
+    OutputProfiles.getAttributes().ProfileIsCS = false;
+    OutputProfiles.getAttributes().ProfileIsPreInlined = false;
     if (ProfileIsCS) {
       for (const auto &I : InputProfiles) {
         // Retain the profile name and clear the full context for each function
@@ -1677,13 +1684,15 @@ public:
       }
     } else {
       for (const auto &I : InputProfiles)
-        flattenNestedProfile(OutputProfiles, I.second);
+        flattenNestedProfile(OutputProfiles, I.second,
+                             InputProfiles.getAttributes());
     }
   }
 
 private:
   static void flattenNestedProfile(SampleProfileMap &OutputProfiles,
-                                   const FunctionSamples &FS) {
+                                   const FunctionSamples &FS,
+                                   const SampleProfileAttributes &ProfAttrs) {
     // To retain the context, checksum, attributes of the original profile, make
     // a copy of it if no profile is found.
     SampleContext &Context = FS.getContext();
@@ -1714,26 +1723,27 @@ private:
     for (const auto &I : FS.getCallsiteSamples()) {
       for (const auto &Callee : I.second) {
         const auto &CalleeProfile = Callee.second;
+        uint64_t CalleeHeadSamples =
+            ProfAttrs.getHeadSamplesEstimate(CalleeProfile);
         // Add body sample.
         Profile.addBodySamples(I.first.LineOffset, I.first.Discriminator,
-                               CalleeProfile.getHeadSamplesEstimate());
+                               CalleeHeadSamples);
         // Add callsite sample.
-        Profile.addCalledTargetSamples(I.first.LineOffset,
-                                       I.first.Discriminator,
-                                       CalleeProfile.getFunction(),
-                                       CalleeProfile.getHeadSamplesEstimate());
+        Profile.addCalledTargetSamples(
+            I.first.LineOffset, I.first.Discriminator,
+            CalleeProfile.getFunction(), CalleeHeadSamples);
         // Update total samples.
         TotalSamples = TotalSamples >= CalleeProfile.getTotalSamples()
                            ? TotalSamples - CalleeProfile.getTotalSamples()
                            : 0;
-        TotalSamples += CalleeProfile.getHeadSamplesEstimate();
+        TotalSamples += CalleeHeadSamples;
         // Recursively convert callee profile.
-        flattenNestedProfile(OutputProfiles, CalleeProfile);
+        flattenNestedProfile(OutputProfiles, CalleeProfile, ProfAttrs);
       }
     }
     Profile.addTotalSamples(TotalSamples);
 
-    Profile.setHeadSamples(Profile.getHeadSamplesEstimate());
+    Profile.setHeadSamples(ProfAttrs.getHeadSamplesEstimate(Profile));
   }
 
   // Nest all children profiles into the profile of Node.
@@ -1870,7 +1880,7 @@ inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
   // numbers or characters but not both.
   llvm::APInt IntHash(128, Str.str(), 16);
   return toString(IntHash, /* Radix = */ 10, /* Signed = */ false)
-      .insert(0, FunctionSamples::UniqSuffix);
+      .insert(0, SampleProfileAttributes::UniqSuffix);
 }
 
 } // end namespace llvm
