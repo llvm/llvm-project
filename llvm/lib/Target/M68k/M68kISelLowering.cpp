@@ -2592,27 +2592,21 @@ SDValue M68kTargetLowering::LowerUADDO_USUBO_CARRY(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDNode *N = Op.getNode();
   MVT VT = N->getSimpleValueType(0);
-
-  // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
   SDLoc DL(N);
 
   // Set the X flag from the carry-in. ADD sets X and C; ADDX/SUBX read X.
   SDValue Carry = Op.getOperand(2);
   EVT CarryVT = Carry.getValueType();
-  Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i8), Carry,
-                      DAG.getAllOnesConstant(DL, CarryVT));
+  SDValue Flags = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i8),
+                              Carry, DAG.getAllOnesConstant(DL, CarryVT))
+                      .getValue(1);
 
   bool IsAdd = Op.getOpcode() == ISD::UADDO_CARRY;
   SDValue Sum = DAG.getNode(IsAdd ? M68kISD::ADDX : M68kISD::SUBX, DL,
                             DAG.getVTList(VT, MVT::i8), Op.getOperand(0),
-                            Op.getOperand(1), Carry.getValue(1));
+                            Op.getOperand(1), Flags);
 
   SDValue SetCC = getSETCC(M68k::COND_CS, Sum.getValue(1), DL, DAG);
-  if (N->getValueType(1) == MVT::i1)
-    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
