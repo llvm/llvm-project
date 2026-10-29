@@ -2388,6 +2388,19 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (REG_SEQUENCE VReg_128,
+      (i32 (EXTRACT_SUBREG VReg_128:$src, sub0)), sub0,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_128:$src, sub1)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub1,
+      (i32 (EXTRACT_SUBREG VReg_128:$src, sub2)), sub2,
+      (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_128:$src, sub3)),
+                     (i32 (S_MOV_B32 (i32 0x80000000)))), sub3)
+> {
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps;
+}
+
+def : GCNPat <
+  (fcanonicalize (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src))),
   (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
                 !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
 > {
