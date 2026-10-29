@@ -835,7 +835,7 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
   if (auto value{GetScalarConstantValue<Ty>(kind, operand)}) {
     return MakeConstantExpr<Ty>(kind, !value->IsTrue());
   }
-  return Expr<Ty>{x};
+  return Expr<Ty>{std::move(x)};
 }
 
 Expr<Type<TypeCategory::Logical>> FoldOperation(
