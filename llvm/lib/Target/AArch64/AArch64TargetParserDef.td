@@ -25,6 +25,7 @@ def CortexA510Model : SchedMachineModel;
 def CortexA53Model : SchedMachineModel;
 def CortexA55Model : SchedMachineModel;
 def CortexA57Model : SchedMachineModel;
+def CortexA78Model : SchedMachineModel;
 def CycloneModel : SchedMachineModel;
 def ExynosM3Model : SchedMachineModel;
 def ExynosM4Model : SchedMachineModel;

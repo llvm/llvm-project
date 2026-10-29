@@ -1359,11 +1359,11 @@ def : ProcessorModel<"cortex-a76ae", NeoverseN1Model, ProcessorFeatures.A76,
                      [TuneA76]>;
 def : ProcessorModel<"cortex-a77", NeoverseN2Model, ProcessorFeatures.A77,
                      [TuneA77]>;
-def : ProcessorModel<"cortex-a78", NeoverseN2Model, ProcessorFeatures.A78,
+def : ProcessorModel<"cortex-a78", CortexA78Model, ProcessorFeatures.A78,
                      [TuneA78]>;
-def : ProcessorModel<"cortex-a78ae", NeoverseN2Model, ProcessorFeatures.A78AE,
+def : ProcessorModel<"cortex-a78ae", CortexA78Model, ProcessorFeatures.A78AE,
                      [TuneA78AE]>;
-def : ProcessorModel<"cortex-a78c", NeoverseN2Model, ProcessorFeatures.A78C,
+def : ProcessorModel<"cortex-a78c", CortexA78Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
                      [TuneA710]>;

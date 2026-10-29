@@ -207,22 +207,22 @@ ldpsw	x0, x1, [x2], #4
 # CHECK-NEXT:  3      5     5.00    *                   ldpsw	x0, x1, [x2], #4
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0.0] - N2UnitB
-# CHECK-NEXT: [0.1] - N2UnitB
-# CHECK-NEXT: [1.0] - N2UnitD
-# CHECK-NEXT: [1.1] - N2UnitD
-# CHECK-NEXT: [2.0] - N2UnitFlg
-# CHECK-NEXT: [2.1] - N2UnitFlg
-# CHECK-NEXT: [2.2] - N2UnitFlg
-# CHECK-NEXT: [3]   - N2UnitL2
-# CHECK-NEXT: [4.0] - N2UnitL01
-# CHECK-NEXT: [4.1] - N2UnitL01
-# CHECK-NEXT: [5]   - N2UnitM0
-# CHECK-NEXT: [6]   - N2UnitM1
-# CHECK-NEXT: [7.0] - N2UnitS
-# CHECK-NEXT: [7.1] - N2UnitS
-# CHECK-NEXT: [8]   - N2UnitV0
-# CHECK-NEXT: [9]   - N2UnitV1
+# CHECK-NEXT: [0.0] - A78UnitB
+# CHECK-NEXT: [0.1] - A78UnitB
+# CHECK-NEXT: [1.0] - A78UnitD
+# CHECK-NEXT: [1.1] - A78UnitD
+# CHECK-NEXT: [2.0] - A78UnitFlg
+# CHECK-NEXT: [2.1] - A78UnitFlg
+# CHECK-NEXT: [2.2] - A78UnitFlg
+# CHECK-NEXT: [3]   - A78UnitL2
+# CHECK-NEXT: [4.0] - A78UnitL01
+# CHECK-NEXT: [4.1] - A78UnitL01
+# CHECK-NEXT: [5]   - A78UnitM0
+# CHECK-NEXT: [6]   - A78UnitM1
+# CHECK-NEXT: [7.0] - A78UnitS
+# CHECK-NEXT: [7.1] - A78UnitS
+# CHECK-NEXT: [8]   - A78UnitV0
+# CHECK-NEXT: [9]   - A78UnitV1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
