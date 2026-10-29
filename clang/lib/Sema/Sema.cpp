@@ -2049,6 +2049,14 @@ public:
     }
   }
 
+  // Skip constant expressions evaluated at compile time.
+  void VisitConstantExpr(ConstantExpr *E) {
+    if (E->getResultStorageKind() != ConstantResultStorageKind::None ||
+        E->isImmediateInvocation())
+      return;
+    Inherited::VisitConstantExpr(E);
+  }
+
   void VisitDeclStmt(DeclStmt *DS) {
     // Visit dtors called by variables that need destruction
     for (auto *D : DS->decls())
@@ -2062,6 +2070,19 @@ public:
             if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
               asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
+
+    // Skip initializers evaluated at compile time.
+    auto IsConstantInitialized = [&](const Decl *D) {
+      const auto *VD = dyn_cast<VarDecl>(D);
+      return VD && VD->isUsableInConstantExpressions(S.Context);
+    };
+    if (llvm::any_of(DS->decls(), IsConstantInitialized)) {
+      for (auto *D : DS->decls())
+        if (auto *VD = dyn_cast<VarDecl>(D); VD && !IsConstantInitialized(VD))
+          if (Expr *Init = VD->getInit())
+            this->Visit(Init);
+      return;
+    }
 
     Inherited::VisitDeclStmt(DS);
   }
