@@ -4,8 +4,8 @@
 ; Reverse loop loading 4 i32 elements whose access range exactly fills the
 ; dereferenceable region (deref(16), reads bytes [0, 16)).
 ;
-; LAA should recognise that this AR fits within the deref
-; region and produce tight bounds (Low: %A, High: %A + 16).
+; LAA recognises that this AR fits within the deref
+; region and produces tight bounds (Low: %A, High: %A + 16).
 ;
 ; Pseudocode:
 ;   // A, B: at least 4 i32s dereferenceable each
@@ -63,12 +63,72 @@ exit.done:
   ret void
 }
 
+; Reverse loop whose last access lands one element below the base: A[-1]
+; is outside the deref region, so LAA must not use the deref-based Low bound.
+;
+; Pseudocode:
+;   // A, B: at least 4 i32s dereferenceable each
+;   for (i64 i = 3; i >= -1; --i) {
+;     i32 l = A[i];       // A[3], A[2], A[1], A[0], A[-1]
+;     B[i] = 0;
+;     if (l == 0) break;
+;   }
+
+define void @reverse_one_below_base(ptr dereferenceable(16) %A, ptr dereferenceable(16) %B) {
+; CHECK-LABEL: 'reverse_one_below_base'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr i32, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: (16 + %B)<nuw>)
+; CHECK-NEXT:            Member: {(12 + %B)<nuw>,+,-4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: null High: (16 + %A)<nuw>)
+; CHECK-NEXT:            Member: {(12 + %A)<nuw>,+,-4}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 3, %entry ], [ %iv.dec, %latch ]
+  %gep.A = getelementptr i32, ptr %A, i64 %iv
+  %gep.B = getelementptr i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %uncntable = icmp eq i32 %l, 0
+  br i1 %uncntable, label %exit.early, label %latch
+
+latch:
+  %iv.dec = add nsw i64 %iv, -1
+  %ec = icmp eq i64 %iv, -1
+  br i1 %ec, label %exit.done, label %loop
+
+exit.early:
+  ret void
+
+exit.done:
+  ret void
+}
+
 ; Reverse i32 loop whose top read spills one byte past the deref end.
 ; The top i32 read at byte 13 covers [13, 17), but deref(16) only
 ; guarantees [0, 16) — bytes at/after 16 may or may not be dereferenceable.
 ;
-; TODO: The end of the top access (17) is past the deref region and may wrap;
-; LAA should fall back to the wide high bound.
+; TODO: High is computed as Start + EltSize (17) unconditionally, so it is past
+; the deref region and may wrap. getStartAndEndForAccess should saturate it when
+; it cannot prove that Start + EltSize does not wrap.
 ;
 ; Pseudocode:
 ;   // A, B: char *, 16 bytes dereferenceable each

@@ -259,8 +259,9 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       return false;
   }
 
-  // Compute MaxOffset per direction: exclusive upper offset of the
-  // accessed range.
+  // Compute MaxOffset per direction: for a non-negative step, the exclusive
+  // upper offset of the accessed range; for a negative step, the offset of the
+  // start of the highest access.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
     // Total length in bytes of the accessed range (from the first accessed
@@ -427,6 +428,9 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
               ? LastAddr
               : SE->getSCEV(ConstantExpr::getIntToPtr(
                     Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
+      // FIXME: Start + EltSize is neither checked to stay within the
+      // dereferenceable region nor guarded against wrapping; it should
+      // saturate like the non-negative case below when that can't be proven.
       ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
     } else if (SE->isKnownNonNegative(Step)) {
       ScStart = Start;
