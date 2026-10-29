@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_XCORE_XCORE_H
 
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
@@ -31,7 +32,14 @@ class XCoreTargetMachine;
 
 void initializeXCoreLowerThreadLocalLegacyPass(PassRegistry &p);
 
-FunctionPass *createXCoreFrameToArgsOffsetEliminationPass();
+class XCoreFrameToArgsOffsetEliminationPass
+    : public RequiredPassInfoMixin<XCoreFrameToArgsOffsetEliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createXCoreFrameToArgsOffsetEliminationLegacyPass();
 
 class XCoreISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
