@@ -9394,13 +9394,22 @@ def defsym : Separate<["--"], "defsym">,
 //===----------------------------------------------------------------------===//
 
 def cl_Group : OptionGroup<"<clang-cl options>">,
-  HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
+  HelpText<"CL.EXE COMPATIBILITY OPTIONS">,
+  DocName<"clang-cl options">, DocBrief<[{
+cl.exe compatibility options, accepted by the `clang-cl` driver. Each of these
+options can be spelled with either a `/` or a `-` prefix. Options listed
+without a description are recognized for compatibility with cl.exe but are not
+currently supported; `clang-cl` ignores them, with a warning for most of them.
+`clang-cl` also accepts a subset of the GCC-compatible options documented
+elsewhere on this page. Run `clang-cl /?` for the full list of options it
+supports, and see the {ref}`clang-cl` section of the User's Manual for
+details.}]>;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
-  Group<cl_Group>;
+  Group<cl_Group>, DocFlatten;
 
 def cl_ignored_Group : OptionGroup<"<clang-cl ignored options>">,
-  Group<cl_Group>;
+  Group<cl_Group>, DocFlatten;
 
 class CLFlag<string name, list<OptionVisibility> vis = [CLOption]> :
   Option<["/", "-"], name, KIND_FLAG>,
@@ -9808,7 +9817,7 @@ def _SLASH_winsysroot : CLJoinedOrSeparate<"winsysroot">,
   HelpText<"Same as \"/diasdkdir <dir>/DIA SDK\" /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> \"/winsdkdir <dir>/Windows Kits/10\"">,
   MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
-  Visibility<[CLOption]>, Alias<fno_ms_volatile>,
+  Group<_SLASH_volatile_Group>, Visibility<[CLOption]>, Alias<fno_ms_volatile>,
   HelpText<"Volatile loads and stores have standard semantics">;
 def _SLASH_vmb : CLFlag<"vmb">,
   HelpText<"Use a best-case representation method for member pointers">;
@@ -9823,7 +9832,7 @@ def _SLASH_vmv : CLFlag<"vmv">,
   HelpText<"Set the default most-general representation to "
            "virtual inheritance">;
 def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
-  Visibility<[CLOption]>, Alias<fms_volatile>,
+  Group<_SLASH_volatile_Group>, Visibility<[CLOption]>, Alias<fms_volatile>,
   HelpText<"Volatile loads and stores have acquire and release semantics">;
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;

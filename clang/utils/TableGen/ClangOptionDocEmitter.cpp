@@ -61,6 +61,20 @@ static bool isOptionVisible(const Record *Option, const Record *DocInfo) {
   return false;
 }
 
+// Whether the option is visible to the primary program being documented, that
+// is, the first entry of VisibilityMask. Options that are only visible to a
+// secondary program (such as clang-cl options on the clang page) are documented
+// on their own, in their own group, rather than being folded into the entry of
+// the option they alias; the alias is a different spelling in a different
+// driver, so presenting it as a spelling of the primary program's option would
+// be misleading.
+static bool isVisibleToPrimaryProgram(const Record *Option,
+                                      const Record *DocInfo) {
+  std::vector<StringRef> Masks =
+      DocInfo->getValueAsListOfStrings("VisibilityMask");
+  return !Masks.empty() && hasFlag(Option, Masks.front(), "Visibility");
+}
+
 // Reorganize the records into a suitable form for emitting documentation.
 Documentation extractDocumentation(const RecordKeeper &Records,
                                    const Record *DocInfo) {
@@ -101,14 +115,17 @@ Documentation extractDocumentation(const RecordKeeper &Records,
   }
 
   for (const Record *R : Records.getAllDerivedDefinitions("Option")) {
+    bool PrimaryProgram = isVisibleToPrimaryProgram(R, DocInfo);
     if (auto *A = dyn_cast<DefInit>(R->getValueInit("Alias"))) {
-      Aliases[A->getDef()].push_back(R);
-      continue;
+      if (PrimaryProgram) {
+        Aliases[A->getDef()].push_back(R);
+        continue;
+      }
     }
 
     // Pretend no-X and Xno-Y options are aliases of X and XY.
     std::string Name = std::string(R->getValueAsString("Name"));
-    if (Name.size() >= 4) {
+    if (PrimaryProgram && Name.size() >= 4) {
       if (Name.substr(0, 3) == "no-") {
         if (const Record *Opt = OptionsByName[Name.substr(3)]) {
           Aliases[Opt].push_back(R);
@@ -288,17 +305,25 @@ void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
     }
   }
 
-  emitOptionWithArgs(Prefix, Option,
-                     std::vector<StringRef>(Args.begin(), Args.end()), OS);
+  // Build the option and its expansion without prefixes first, so that an
+  // alias of a joined option whose argument is the alias suffix (e.g. /O1 as
+  // an alias of /O with argument 1) does not get a redundant expansion.
+  std::string Name;
+  raw_string_ostream NameOS(Name);
+  emitOptionWithArgs("", Option,
+                     std::vector<StringRef>(Args.begin(), Args.end()), NameOS);
+  OS << Prefix << Name;
 
   auto AliasArgs = Option->getValueAsListOfStrings("AliasArgs");
   if (!AliasArgs.empty()) {
     const Record *Alias = Option->getValueAsDef("Alias");
-    OS << " (equivalent to ";
-    emitOptionWithArgs(
-        Alias->getValueAsListOfStrings("Prefixes").front(), Alias,
-        AliasArgs, OS);
-    OS << ")";
+    std::string Equivalent;
+    raw_string_ostream EquivalentOS(Equivalent);
+    emitOptionWithArgs("", Alias, AliasArgs, EquivalentOS);
+    if (Equivalent != Name)
+      OS << " (equivalent to "
+         << Alias->getValueAsListOfStrings("Prefixes").front() << Equivalent
+         << ")";
   }
 }
 
