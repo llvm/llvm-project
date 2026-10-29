@@ -41,6 +41,7 @@ enum {
   S_LO = FirstTargetFixupKind,
   S_PCREL_LO,
   S_PCREL_HI,
+  S_BASE_IDX_LO,
   S_TPREL_LO,
   S_CALL_PLT,
   S_GOT_HI,
