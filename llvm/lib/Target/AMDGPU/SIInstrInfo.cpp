@@ -7891,6 +7891,17 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
   return std::tuple(RsrcPtr, NewSRsrc);
 }
 
+// Follow copies to the instruction that defines Reg.
+static MachineInstr *skipCopiesToDef(MachineRegisterInfo &MRI, Register Reg) {
+  if (!Reg.isVirtual())
+    return nullptr;
+  MachineInstr *Def = MRI.getVRegDef(Reg);
+  while (Def && Def->isCopy() && Def->getOperand(1).isReg() &&
+         Def->getOperand(1).getReg().isVirtual())
+    Def = MRI.getVRegDef(Def->getOperand(1).getReg());
+  return Def;
+}
+
 MachineBasicBlock *
 SIInstrInfo::legalizeOperands(MachineInstr &MI,
                               MachineDominatorTree *MDT) const {
@@ -7948,63 +7959,41 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       Register OldReg = Op.getReg();
       legalizeGenericOperand(*InsertBB, Insert, VRC, Op, MRI, MI.getDebugLoc());
 
-      // A VGPR phi of uniform 64-bit SGPRs (two buffer bases, after a
-      // flat->global addrspacecast is sunk into the predecessors). A COPY is
-      // coalescable, so the allocator can join the VGPR with one SGPR and
-      // delete the other; both sides of the branch then store through one
-      // base. Materialize each defined incoming with a VALU move in the
-      // predecessor where exec is that edge, and phi the VGPRs.
+      // A COPY from a uniform 64-bit SGPR phi is coalescable, so a VGPR phi of
+      // two buffer bases can keep one base on both edges. Move each defined
+      // incoming in the predecessor whose exec mask owns it.
       if (Op.getReg() == OldReg || RI.getRegSizeInBits(*VRC) != 64)
         continue;
       MachineInstr *Copy = MRI.getVRegDef(Op.getReg());
-      if (!Copy || !Copy->isCopy() || !Copy->getOperand(1).isReg() ||
-          !Copy->getOperand(1).getReg().isVirtual())
+      if (!Copy || !Copy->isCopy() || !Copy->getOperand(1).isReg())
         continue;
       Register CopySrc = Copy->getOperand(1).getReg();
-      if (!RI.isSGPRClass(MRI.getRegClass(CopySrc)))
+      if (!CopySrc.isVirtual() || !RI.isSGPRClass(MRI.getRegClass(CopySrc)))
         continue;
-      MachineInstr *SrcDef = MRI.getVRegDef(CopySrc);
-      bool ImpDef = SrcDef && SrcDef->isImplicitDef();
-      while (!ImpDef && SrcDef && SrcDef->isCopy() &&
-             SrcDef->getOperand(1).isReg() &&
-             SrcDef->getOperand(1).getReg().isVirtual()) {
-        SrcDef = MRI.getVRegDef(SrcDef->getOperand(1).getReg());
-        ImpDef = SrcDef && SrcDef->isImplicitDef();
-      }
-      if (SrcDef && SrcDef->isPHI() && SrcDef->getParent() == InsertBB) {
-        const DebugLoc &DL = MI.getDebugLoc();
-        Register VPhi = MRI.createVirtualRegister(VRC);
-        auto PhiI = BuildMI(*InsertBB, InsertBB->getFirstNonPHI(), DL,
-                            get(AMDGPU::PHI), VPhi);
-        for (unsigned PI = 1, PE = SrcDef->getNumOperands(); PI != PE;
-             PI += 2) {
-          MachineOperand &Inc = SrcDef->getOperand(PI);
-          Register IncReg = Inc.getReg();
-          MachineBasicBlock *Pred = SrcDef->getOperand(PI + 1).getMBB();
-          MachineInstr *IncDef =
-              IncReg.isVirtual() ? MRI.getVRegDef(IncReg) : nullptr;
-          bool IncImp = Inc.isUndef() || (IncDef && IncDef->isImplicitDef());
-          while (!IncImp && IncDef && IncDef->isCopy() &&
-                 IncDef->getOperand(1).isReg() &&
-                 IncDef->getOperand(1).getReg().isVirtual()) {
-            IncDef = MRI.getVRegDef(IncDef->getOperand(1).getReg());
-            IncImp = IncDef && IncDef->isImplicitDef();
-          }
-          Register NewInc = MRI.createVirtualRegister(VRC);
-          auto At = Pred->getFirstTerminator();
-          if (IncImp)
-            BuildMI(*Pred, At, DL, get(TargetOpcode::IMPLICIT_DEF), NewInc);
-          else
-            BuildMI(*Pred, At, DL, get(AMDGPU::V_MOV_B64_PSEUDO), NewInc)
-                .addReg(IncReg);
-          PhiI.addReg(NewInc).addMBB(Pred);
+      MachineInstr *SrcDef = skipCopiesToDef(MRI, CopySrc);
+      if (!SrcDef || !SrcDef->isPHI() || SrcDef->getParent() != InsertBB)
+        continue;
+
+      const DebugLoc &DL = MI.getDebugLoc();
+      Register VPhi = MRI.createVirtualRegister(VRC);
+      auto PhiI = BuildMI(*InsertBB, InsertBB->getFirstNonPHI(), DL,
+                          get(AMDGPU::PHI), VPhi);
+      for (unsigned PI = 1, PE = SrcDef->getNumOperands(); PI != PE; PI += 2) {
+        MachineOperand &Inc = SrcDef->getOperand(PI);
+        MachineBasicBlock *Pred = SrcDef->getOperand(PI + 1).getMBB();
+        MachineInstr *IncDef = skipCopiesToDef(MRI, Inc.getReg());
+        if (Inc.isUndef() || (IncDef && IncDef->isImplicitDef())) {
+          PhiI.addReg(Inc.getReg(), RegState::Undef).addMBB(Pred);
+          continue;
         }
-        Op.setReg(VPhi);
-        Copy->eraseFromParent();
-        continue;
+        Register Moved = MRI.createVirtualRegister(VRC);
+        BuildMI(*Pred, Pred->getFirstTerminator(), DL,
+                get(AMDGPU::V_MOV_B64_PSEUDO), Moved)
+            .addReg(Inc.getReg());
+        PhiI.addReg(Moved).addMBB(Pred);
       }
-      if (!ImpDef)
-        Copy->setDesc(get(AMDGPU::V_MOV_B64_PSEUDO));
+      Op.setReg(VPhi);
+      Copy->eraseFromParent();
     }
   }
 
