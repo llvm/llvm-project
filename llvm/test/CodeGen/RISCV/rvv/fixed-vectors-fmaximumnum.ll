@@ -313,3 +313,17 @@ entry:
   %c = call <16 x bfloat> @llvm.maximumnum.v16bf16(<16 x bfloat> %a, <16 x bfloat> %b)
   ret <16 x bfloat> %c
 }
+
+define <4 x float> @max_positive_zero_fixed_f32(<4 x float> %x) {
+; CHECK-LABEL: max_positive_zero_fixed_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmfgt.vf v0, v8, fa5
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <4 x float> %x, zeroinitializer
+  %r = select <4 x i1> %cmp, <4 x float> %x, <4 x float> zeroinitializer
+  ret <4 x float> %r
+}

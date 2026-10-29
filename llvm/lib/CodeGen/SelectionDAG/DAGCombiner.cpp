@@ -13433,6 +13433,35 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+// Fold (X > Y) ? X : Y and (Y < X) ? X : Y to llvm.maximumnum(X, Y)
+// when Y is known to be neither NaN nor negative zero.
+static SDValue combineSelectCCToFMaximumNum(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue LHS, SDValue RHS,
+                                            SDValue True, SDValue False,
+                                            ISD::CondCode CC,
+                                            SDNodeFlags Flags) {
+  EVT VT = True.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!VT.isFloatingPoint() || !TLI.isOperationLegal(ISD::FMAXIMUMNUM, VT))
+    return SDValue();
+
+  if (CC == ISD::SETOLT)
+    std::swap(LHS, RHS);
+  else if (CC != ISD::SETOGT)
+    return SDValue();
+
+  if (LHS != True || RHS != False)
+    return SDValue();
+
+  // NaN would select Y instead of X, and a -0.0 Y would be selected over
+  // a +0.0 X. Neither result agrees with maximumnum.
+  KnownFPClass Known = DAG.computeKnownFPClass(False, fcNan | fcNegZero);
+  if (!Known.isKnownNever(fcNan | fcNegZero))
+    return SDValue();
+
+  return DAG.getNode(ISD::FMAXIMUMNUM, DL, VT, True, False, Flags);
+}
+
 // Combine x olt y ? x : y to pseudo_fmin and x ogt y ? x : y to pseudo_fmax.
 // Op0/Op1 are the setcc operands, LHS/RHS are the select operands, Flags are
 // from the select.
@@ -13819,6 +13848,13 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
     return R;
+
+  if (N0.getOpcode() == ISD::SETCC) {
+    if (SDValue R = combineSelectCCToFMaximumNum(
+            DAG, DL, N0.getOperand(0), N0.getOperand(1), N1, N2,
+            cast<CondCodeSDNode>(N0.getOperand(2))->get(), Flags))
+      return R;
+  }
 
   return SDValue();
 }
@@ -15091,6 +15127,13 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
     return R;
+
+  if (N0.getOpcode() == ISD::SETCC) {
+    if (SDValue R = combineSelectCCToFMaximumNum(
+            DAG, DL, N0.getOperand(0), N0.getOperand(1), N1, N2,
+            cast<CondCodeSDNode>(N0.getOperand(2))->get(), N->getFlags()))
+      return R;
+  }
 
   return SDValue();
 }

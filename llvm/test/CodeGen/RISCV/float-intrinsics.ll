@@ -3067,3 +3067,278 @@ define { float, float } @test_modf_f32(float %a) nounwind {
   %result = call { float, float } @llvm.modf.f32(float %a)
   ret { float, float } %result
 }
+
+define float @max_positive_zero_f32(float %x) {
+; RV32IF-LABEL: max_positive_zero_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x fa5, zero
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: max_positive_zero_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: max_positive_zero_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x fa5, zero
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: max_positive_zero_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV64IZFINX-NEXT:    ret
+;
+; RV64IFD-LABEL: max_positive_zero_f32:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    fmv.w.x fa5, zero
+; RV64IFD-NEXT:    fmax.s fa0, fa0, fa5
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: max_positive_zero_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    call __gtsf2
+; RV32I-NEXT:    sgtz a0, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    and a0, a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: max_positive_zero_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    call __gtsf2
+; RV64I-NEXT:    sgtz a0, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    and a0, a0, s0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+  %cmp = fcmp ogt float %x, 0.0
+  %r = select i1 %cmp, float %x, float 0.0
+  ret float %r
+}
+
+
+define float @scalar_negative_zero(float %x) {
+; RV32IF-LABEL: scalar_negative_zero:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    lui a0, 524288
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    flt.s a0, fa5, fa0
+; RV32IF-NEXT:    bnez a0, .LBB55_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fmv.s fa0, fa5
+; RV32IF-NEXT:  .LBB55_2:
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: scalar_negative_zero:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32IZFINX-NEXT:    lui a1, 524288
+; RV32IZFINX-NEXT:    flt.s a1, a1, a0
+; RV32IZFINX-NEXT:    bnez a1, .LBB55_2
+; RV32IZFINX-NEXT:  # %bb.1:
+; RV32IZFINX-NEXT:    lui a0, 524288
+; RV32IZFINX-NEXT:  .LBB55_2:
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: scalar_negative_zero:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    lui a0, 524288
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    flt.s a0, fa5, fa0
+; RV64IF-NEXT:    bnez a0, .LBB55_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fmv.s fa0, fa5
+; RV64IF-NEXT:  .LBB55_2:
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: scalar_negative_zero:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64IZFINX-NEXT:    lui a1, 524288
+; RV64IZFINX-NEXT:    flt.s a1, a1, a0
+; RV64IZFINX-NEXT:    bnez a1, .LBB55_2
+; RV64IZFINX-NEXT:  # %bb.1:
+; RV64IZFINX-NEXT:    lui a0, 524288
+; RV64IZFINX-NEXT:  .LBB55_2:
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64IZFINX-NEXT:    ret
+;
+; RV64IFD-LABEL: scalar_negative_zero:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    lui a0, 524288
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    flt.s a0, fa5, fa0
+; RV64IFD-NEXT:    bnez a0, .LBB55_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fmv.s fa0, fa5
+; RV64IFD-NEXT:  .LBB55_2:
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: scalar_negative_zero:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    call __gtsf2
+; RV32I-NEXT:    bgtz a0, .LBB55_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    lui s0, 524288
+; RV32I-NEXT:  .LBB55_2:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: scalar_negative_zero:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    call __gtsf2
+; RV64I-NEXT:    bgtz a0, .LBB55_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    lui s0, 524288
+; RV64I-NEXT:  .LBB55_2:
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+  %cmp = fcmp ogt float %x, -0.000000e+00
+  %r = select i1 %cmp, float %x, float -0.000000e+00
+  ret float %r
+}
+
+
+define float @scalar_known_not_nan_or_negzero(float %x, float nofpclass(nan nzero) %y) {
+; RV32IF-LABEL: scalar_known_not_nan_or_negzero:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa1
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: scalar_known_not_nan_or_negzero:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: scalar_known_not_nan_or_negzero:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa1
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: scalar_known_not_nan_or_negzero:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV64IZFINX-NEXT:    ret
+;
+; RV64IFD-LABEL: scalar_known_not_nan_or_negzero:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    fmax.s fa0, fa0, fa1
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: scalar_known_not_nan_or_negzero:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    .cfi_offset s1, -12
+; RV32I-NEXT:    mv s1, a1
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    call __gtsf2
+; RV32I-NEXT:    bgtz a0, .LBB56_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv s0, s1
+; RV32I-NEXT:  .LBB56_2:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: scalar_known_not_nan_or_negzero:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    .cfi_offset s1, -24
+; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    call __gtsf2
+; RV64I-NEXT:    bgtz a0, .LBB56_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv s0, s1
+; RV64I-NEXT:  .LBB56_2:
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+  %cmp = fcmp ogt float %x, %y
+  %r = select i1 %cmp, float %x, float %y
+  ret float %r
+}

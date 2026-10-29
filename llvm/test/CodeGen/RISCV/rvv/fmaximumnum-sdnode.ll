@@ -871,3 +871,15 @@ define <vscale x 8 x float> @vfmax_vf_mask_nxv8f32(<vscale x 8 x float> %va, flo
   %vc = call fast <vscale x 8 x float> @llvm.maximumnum.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vs)
   ret <vscale x 8 x float> %vc
 }
+
+define <vscale x 4 x float> @max_positive_zero_scalable(<vscale x 4 x float> %x) {
+; CHECK-LABEL: max_positive_zero_scalable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfmax.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <vscale x 4 x float> %x, zeroinitializer
+  %r = select <vscale x 4 x i1> %cmp, <vscale x 4 x float> %x, <vscale x 4 x float> zeroinitializer
+  ret <vscale x 4 x float> %r
+}
