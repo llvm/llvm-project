@@ -947,6 +947,11 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind, FMF);
 }
 
+unsigned TargetTransformInfo::getPartialReductionScaleFactor(
+    Type *InputType, Type *AccumType, ElementCount VF) const {
+  return TTIImpl->getPartialReductionScaleFactor(InputType, AccumType, VF);
+}
+
 unsigned
 TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
                                             bool HasUnorderedReductions) const {

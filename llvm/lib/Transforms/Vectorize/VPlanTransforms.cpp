@@ -5592,7 +5592,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
 /// per-iteration input VF and narrower PHI VF. If successful, returns the chain
 /// of partial reduction descriptors (that are links in the reduction chain).
 static std::optional<SmallVector<PartialReductionDescriptor>>
-getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
+getScaledReductionChain(VPReductionPHIRecipe *RedPhiR,
+                        const TargetTransformInfo &TTI, ElementCount VF) {
   // Get the backedge value from the reduction PHI and find the
   // ComputeReductionResult that uses it (directly or through a select for
   // predicated reductions).
@@ -5605,7 +5606,6 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   SmallVector<PartialReductionDescriptor> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = RedPhiR->getScalarType();
-  TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
   // Work backwards from the ExitValue examining each reduction operation.
   VPValue *CurrentValue = ExitValue;
@@ -5649,15 +5649,14 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
       return std::nullopt;
 
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
-    TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
-    if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
+    unsigned ScaleFactor =
+        TTI.getPartialReductionScaleFactor(ExtSrcType, PhiType, VF);
+    if (ScaleFactor == 0)
       return std::nullopt;
 
     PartialReductionDescriptor Link(
         {UpdateR, *ExtendedOp, RK,
-         PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
-         Blend});
+         PrevValue == UpdateR->getOperand(0) ? 0U : 1U, ScaleFactor, Blend});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
@@ -5715,12 +5714,24 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   for (VPReductionPHIRecipe &RedPhiR :
        make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
-    if (auto Chain = getScaledReductionChain(&RedPhiR))
+    if (auto Chain =
+            getScaledReductionChain(&RedPhiR, CostCtx.TTI, Range.Start)) {
+      // A VPlan recipe has a single scale factor. If the target chooses a
+      // different factor for a later VF, leave that VF for a separate VPlan.
+      LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) {
+            return all_of(*Chain, [&](const PartialReductionDescriptor &Link) {
+              return CostCtx.TTI.getPartialReductionScaleFactor(
+                         Link.ExtendedOp.ExtendA.SrcType,
+                         RedPhiR.getScalarType(), VF) == Link.ScaleFactor;
+            });
+          },
+          Range);
       PhiToChain.try_emplace(&RedPhiR, std::move(*Chain));
-    else if (CostCtx.Opts.use_partial_reductions_by_default &&
-             (RedPhiR.getRecurrenceKind() == RecurKind::Add ||
-              (RedPhiR.getRecurrenceKind() == RecurKind::FAdd &&
-               !RedPhiR.isOrdered() && !RedPhiR.isInLoop())))
+    } else if (CostCtx.Opts.use_partial_reductions_by_default &&
+               (RedPhiR.getRecurrenceKind() == RecurKind::Add ||
+                (RedPhiR.getRecurrenceKind() == RecurKind::FAdd &&
+                 !RedPhiR.isOrdered() && !RedPhiR.isInLoop())))
       UnorderedReductions.push_back(&RedPhiR);
   }
 
