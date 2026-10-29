@@ -104,6 +104,14 @@ functions:
     return_type: int
     arguments:
       - type: sigset_t *
+  - name: sigismember
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const sigset_t *
+      - type: int
+
   - name: signal
     standards:
       - stdc

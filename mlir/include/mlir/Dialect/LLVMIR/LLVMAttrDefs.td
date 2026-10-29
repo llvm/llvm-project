@@ -105,15 +105,10 @@ def LLVM_FunctionEntryCountAttr
   let summary = "LLVM function entry count profile metadata";
   let description = [{
     Models function-level `!prof` entry-count metadata. The `entry_count` field
-    stores the unsigned 64-bit counter bit pattern. The `count_type` field
-    defaults to real and selects whether the metadata is emitted as
-    `"function_entry_count"` or `"synthetic_function_entry_count"`. The optional
-    `imports` field stores the trailing import GUID operands used by ThinLTO
-    sample PGO.
+    stores the unsigned 64-bit counter bit pattern. The optional `imports` field
+    stores the trailing import GUID operands used by ThinLTO sample PGO.
   }];
   let parameters = (ins "uint64_t":$entry_count,
-                        DefaultValuedParameter<"ProfileCountType",
-                                               "ProfileCountType::Real">:$count_type,
                         OptionalArrayRefParameter<"uint64_t">:$imports);
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -298,9 +293,17 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     metadatas: https://llvm.org/docs/LangRef.html#llvm-loop
     It stores annotations in attribute parameters and groups related options in
     nested attributes to provide structured access.
+
+    The optional 'id' parameter is used to make the metadata 'distinct' from
+    other `loop_annotation` attributes that share the same values. It doesn't
+    generate metadata, however it participates in equality to provide users of
+    this attribute an ability to enforce distinct-ness across separate loops.
+    If provided, the 'id' should represent annotations that are collectively a
+    single distinct set of metadata.
   }];
 
   let parameters = (ins
+    OptionalParameter<"DistinctAttr">:$id,
     OptionalParameter<"BoolAttr">:$disableNonforced,
     OptionalParameter<"LoopVectorizeAttr">:$vectorize,
     OptionalParameter<"LoopInterleaveAttr">:$interleave,
@@ -313,6 +316,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
+    OptionalParameter<"uint32_t">:$align,
     OptionalParameter<"FusedLoc">:$startLoc,
     OptionalParameter<"FusedLoc">:$endLoc,
     OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses

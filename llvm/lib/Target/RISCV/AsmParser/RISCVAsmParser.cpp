@@ -3247,11 +3247,6 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
-  const auto &AllFeatures = getSTI().getAllProcessorFeatures();
-  for (auto &Feature : AllFeatures)
-    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
-      clearFeatureBits(Feature.Value, Feature.key());
-
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /*EnableExperimentalExtension=*/true,
       /*ExperimentalExtensionVersionCheck=*/true);
@@ -3267,23 +3262,29 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   }
   auto &ISAInfo = *ParseResult;
 
-  for (auto &Feature : AllFeatures)
-    if (ISAInfo->hasExtension(Feature.key()))
-      setFeatureBits(Feature.Value, Feature.key());
-
   if (FromOptionDirective) {
     if (ISAInfo->getXLen() == 32 && isRV64())
       return Error(Loc, "bad arch string switching from rv64 to rv32");
     else if (ISAInfo->getXLen() == 64 && !isRV64())
       return Error(Loc, "bad arch string switching from rv32 to rv64");
   }
-
-  if (ISAInfo->getXLen() == 32)
-    clearFeatureBits(RISCV::Feature64Bit, "64bit");
-  else if (ISAInfo->getXLen() == 64)
-    setFeatureBits(RISCV::Feature64Bit, "64bit");
-  else
+  if (ISAInfo->getXLen() != 32 && ISAInfo->getXLen() != 64)
     return Error(Loc, "bad arch string " + Arch);
+
+  // RISCVISAInfo::parseArchString already expands all implied extensions
+  // (including conditional C/Zce implications like Zcd and Zcf), so we can
+  // toggle the feature bits directly without calling setFeatureBits() (which
+  // would run updateCZceFeatureImplications() on an incomplete feature set).
+  MCSubtargetInfo &STI = copySTI();
+  for (auto &Feature : STI.getAllProcessorFeatures()) {
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      continue;
+    if (ISAInfo->hasExtension(Feature.key()) != STI.hasFeature(Feature.Value))
+      STI.ToggleFeature(Feature.Value);
+  }
+  if ((ISAInfo->getXLen() == 64) != STI.hasFeature(RISCV::Feature64Bit))
+    STI.ToggleFeature(RISCV::Feature64Bit);
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   Result = ISAInfo->toString();
   return false;

@@ -321,7 +321,20 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-LABEL: vec2:
 ; X64:       # %bb.0:
-; X64-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X64-NEXT:    pmuludq %xmm1, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; X64-NEXT:    pmuludq %xmm2, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,2,2,3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    pcmpgtd %xmm1, %xmm0
+; X64-NEXT:    por %xmm3, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: vec2:

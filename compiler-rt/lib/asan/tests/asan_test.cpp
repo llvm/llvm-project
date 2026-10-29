@@ -372,13 +372,25 @@ void *ManyThreadsWorker(void *a) {
 #if !defined(__powerpc64__)
 // FIXME: Also occasional hang on powerpc.  Maybe same problem as on AArch64?
 TEST(AddressSanitizer, ManyThreadsTest) {
-  const size_t kNumThreads =
+  const size_t kMaxNumThreads =
       (SANITIZER_WORDSIZE == 32 || ASAN_AVOID_EXPENSIVE_TESTS) ? 30 : 1000;
-  pthread_t t[kNumThreads];
-  for (size_t i = 0; i < kNumThreads; i++) {
+  pthread_t t[kMaxNumThreads];
+  size_t NumThreads = kMaxNumThreads;
+
+  for (size_t i = 0; i < NumThreads; i++) {
+#  ifdef _WIN32
     PTHREAD_CREATE(&t[i], 0, ManyThreadsWorker, (void*)i);
+#  else
+    int Result = pthread_create(&t[i], 0, ManyThreadsWorker, (void*)i);
+    // Create as many threads as we are allowed to.
+    if (Result == EAGAIN) {
+      NumThreads = i;
+      break;
+    }
+    ASSERT_EQ(0, Result);
+#  endif
   }
-  for (size_t i = 0; i < kNumThreads; i++) {
+  for (size_t i = 0; i < NumThreads; i++) {
     PTHREAD_JOIN(t[i], 0);
   }
 }

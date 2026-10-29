@@ -5,7 +5,7 @@
 ; CHECK: L#EPM_sourcename_0 DS 0H
 ; CHECK-NEXT: DC XL7'00C300C500C500'
 ; CHECK-NEXT: DC XL1'F1'
-; CHECK-NEXT: DC AD(L#PPA1_sourcename_0-L#EPM_sourcename_0)
+; CHECK-NEXT: DC A(L#PPA1_sourcename_0-L#EPM_sourcename_0)
 ; CHECK-NEXT: DC XL4'00000008'
 ; CHECK-NEXT: ENTRY sourcename
 ; CHECK:sourcename DS 0H
@@ -23,7 +23,7 @@ attributes #0 = { "zos-ppa1-name"="name" }
 ; CHECK-NEXT: DC XL1'02'
 ; CHECK-NEXT: DC XL1'CE'
 ; CHECK-NEXT: DC XL2'0000'
-; CHECK-NEXT: DC AD(L#PPA2-L#PPA1_sourcename_0)
+; CHECK-NEXT: DC A(L#PPA2-L#PPA1_sourcename_0)
 ; CHECK-NEXT: DC XL1'80'
 ; CHECK-NEXT: DC XL1'80'
 ; CHECK-NEXT: DC XL1'00'
@@ -31,7 +31,8 @@ attributes #0 = { "zos-ppa1-name"="name" }
 ; CHECK-NEXT: DC XL2'0000'
 ; CHECK-NEXT: DC XL1'00'
 ; CHECK-NEXT: DC XL1'00'
-; CHECK-NEXT: DC AD(L#sourcename_end_0-L#EPM_sourcename_0)
+; CHECK-NEXT: DC A(L#sourcename_end_0-L#EPM_sourcename_0)
 ; CHECK-NEXT: DC XL2'0004'
 ; CHECK-NEXT: DC XL4'95819485'
-; CHECK-NEXT: DC AD(L#EPM_sourcename_0-L#PPA1_sourcename_0)
+; CHECK-NEXT: DC 2XL1'00'
+; CHECK-NEXT: DC A(L#EPM_sourcename_0-L#PPA1_sourcename_0)

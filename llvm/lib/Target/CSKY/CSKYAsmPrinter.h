@@ -11,11 +11,13 @@
 
 #include "CSKYMCInstLower.h"
 #include "CSKYSubtarget.h"
+#include "MCTargetDesc/CSKYMCOptions.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCDirectives.h"
 
 namespace llvm {
 class LLVM_LIBRARY_VISIBILITY CSKYAsmPrinter : public AsmPrinter {
+  const CSKYMCOptions &CLOpts;
   CSKYMCInstLower MCInstLowering;
 
   const MCSubtargetInfo *Subtarget;

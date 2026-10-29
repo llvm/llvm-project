@@ -9,6 +9,7 @@
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace clang::CodeGenUtils {
 
@@ -146,6 +147,45 @@ bool shouldBeInCOMDAT(const ASTContext &Ctx, const Decl &D) {
     return true;
   }
   llvm_unreachable("No such linkage");
+}
+
+llvm::SmallVector<Module *, 8>
+importedModulesToInitialize(Module *Primary,
+                            llvm::ArrayRef<Module *> Imported) {
+  llvm::SmallSetVector<Module *, 8> Candidates;
+  if (Primary && Primary->isInterfaceOrPartition()) {
+    // The modules the unit exports.
+    for (auto I : Primary->Exports)
+      Candidates.insert(I.first);
+    // The modules it only imports.
+    Candidates.insert_range(Primary->Imports);
+    // The modules it imports in the global module fragment or the private
+    // module fragment.
+    for (Module *SubM : Primary->submodules()) {
+      assert(
+          (SubM->isGlobalModule() || SubM->isPrivateModule()) &&
+          "The sub modules of C++20 module unit should only be global module "
+          "fragments or private module fragments.");
+      assert(SubM->Exports.empty() &&
+             "The global module fragments and the private module fragments are "
+             "not allowed to export import modules.");
+      Candidates.insert_range(SubM->Imports);
+    }
+  } else {
+    Candidates.insert_range(Imported);
+  }
+
+  llvm::SmallVector<Module *, 8> Result;
+  for (Module *M : Candidates) {
+    // No Itanium initializer in header like modules.
+    if (M->isHeaderLikeModule())
+      continue;
+    // The initialization may be skipped when it is sure to do nothing.
+    if (!M->isNamedModuleInterfaceHasInit())
+      continue;
+    Result.push_back(M);
+  }
+  return Result;
 }
 
 } // namespace clang::CodeGenUtils

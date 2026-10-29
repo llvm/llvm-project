@@ -58,15 +58,15 @@ define dso_local i32 @bar(ptr noundef %0) local_unnamed_addr #1 !dbg !32 {
 ; CHECK-DUMP:      <foo>:
 ; CHECK-DUMP-NEXT: 0:       r2 = 40000
 ; CHECK-DUMP-NEXT:          0000000000000000:  CO-RE <byte_off> [3] struct t::ub (0:1)
-; CHECK-DUMP-NEXT: 1:       r1 += r2
-; CHECK-DUMP-NEXT: 2:       w2 = 1
-; CHECK-DUMP-NEXT: 3:       *(u32 *)(r1 + 0) = w2
+; CHECK-DUMP-NEXT: 1:       r2 += r1
+; CHECK-DUMP-NEXT: 2:       w1 = 1
+; CHECK-DUMP-NEXT: 3:       *(u32 *)(r2 + 0) = w1
 ; CHECK-DUMP-NEXT: 4:       exit
 ; CHECK-DUMP:      <bar>:
 ; CHECK-DUMP-NEXT: 5:       r2 = 40000
 ; CHECK-DUMP-NEXT:          0000000000000028:  CO-RE <byte_off> [3] struct t::ub (0:1)
-; CHECK-DUMP-NEXT: 6:       r1 += r2
-; CHECK-DUMP-NEXT: 7:       w0 = *(u32 *)(r1 + 0)
+; CHECK-DUMP-NEXT: 6:       r2 += r1
+; CHECK-DUMP-NEXT: 7:       w0 = *(u32 *)(r2 + 0)
 ; CHECK-DUMP-NEXT: 8:       exit
 
 ; Function Attrs: nofree nosync nounwind memory(none)

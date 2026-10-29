@@ -87,6 +87,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -3567,8 +3568,38 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
     bool isPerThreadPrivateTarget) {
   gpu::AllReduceOperationAttr attr = gpu::AllReduceOperationAttr::get(
       computeRegion->getContext(), getAllReduceOperation(kind));
-  auto allReduceOp = gpu::AllReduceOp::create(rewriter, loc, input, attr, true);
-  mlir::acc::setParDimsAttr(allReduceOp, parDimsAttr);
+  auto emitAllReduce = [&](Value operand) -> Value {
+    auto allReduceOp =
+        gpu::AllReduceOp::create(rewriter, loc, operand, attr, true);
+    mlir::acc::setParDimsAttr(allReduceOp, parDimsAttr);
+    return allReduceOp;
+  };
+
+  Value reducedValue;
+  if (auto complexType = dyn_cast<ComplexType>(input.getType())) {
+    // gpu.all_reduce takes only integers and floats, so a complex value has to
+    // go through as components. Addition is the one operator reaching here
+    // where that is equivalent: multiplication mixes the components, and
+    // min/max have no ordering on complex at all.
+    if (kind != arith::AtomicRMWKind::addf) {
+      std::string msg;
+      llvm::raw_string_ostream os(msg);
+      os << "reduction: " << arith::stringifyAtomicRMWKind(kind) << " of "
+         << complexType << " across threads";
+      (void)accSupport.emitNYI(loc, os.str());
+      hasFailed = true;
+      return;
+    }
+    Type elementType = complexType.getElementType();
+    Value realResult =
+        emitAllReduce(complex::ReOp::create(rewriter, loc, elementType, input));
+    Value imagResult =
+        emitAllReduce(complex::ImOp::create(rewriter, loc, elementType, input));
+    reducedValue = complex::CreateOp::create(rewriter, loc, complexType,
+                                             realResult, imagResult);
+  } else {
+    reducedValue = emitAllReduce(input);
+  }
   // Predicate the store on the thread-level dimensions being reduced so that
   // only one thread per reduced group writes the result. Only dimensions in
   // parDimsAttr are included; sweeping over all dimensions between the highest
@@ -3612,13 +3643,13 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
     Block &thenBlock = thenRegion.back();
     rewriter.setInsertionPoint(thenBlock.getTerminator());
   }
-  memref::StoreOp::create(rewriter, loc, allReduceOp, memref, indices);
+  memref::StoreOp::create(rewriter, loc, reducedValue, memref, indices);
   if (predicate && !isPerThreadPrivate)
     rewriter.setInsertionPointAfter(ifOp);
   // A later block combine reuses this instead of reloading the slot. This only
   // applies to scalar accumulators; array elements are indexed individually.
   if (indices.empty())
-    reductionAccumValue[memref] = allReduceOp;
+    reductionAccumValue[memref] = reducedValue;
 }
 
 void ACCCGToGPULowering::postprocessAccumulateOp(
@@ -3665,6 +3696,10 @@ void ACCCGToGPULowering::postprocessAccumulateOp(
   } else if (hasThreadDim) {
     createGPUAllReduceOp(loc, op.getValue(), op.getMemref(), *kind,
                          op.getParDims());
+    // Nothing replaced the accumulate, so leave it in place rather than
+    // erasing it below.
+    if (hasFailed)
+      return;
   } else {
     // Block-only: no gpu.all_reduce needed (all threads have the same
     // value after broadcast).  Just store the value to the memref.
@@ -3959,29 +3994,25 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
       rewriter.eraseOp(boundsOp);
   };
 
+  auto isUnitExtent = [&](mlir::acc::GPUParallelDimAttr parDim) {
+    std::optional<uint64_t> width =
+        computeRegion.getKnownConstantLaunchArg(parDim);
+    return width && *width == 1;
+  };
+
+  // A dimension launched one wide partitions nothing, so skip it.
   bool hasThreadDim = false;
-  bool hasBlockDim = false;
   for (auto pd : op.getParDims().getArray()) {
+    if (isUnitExtent(pd))
+      continue;
     hasThreadDim |= pd.isAnyThread();
-    hasBlockDim |= pd.isAnyBlock();
   }
 
-  // Block-only (gang) reduction: each element is produced by one gang, so the
-  // per-gang copy already holds the result and the combine does the rest.
-  if (hasBlockDim && !hasThreadDim) {
+  // Without a thread dimension no two threads share an accumulator copy, so
+  // each copy already holds a complete total and nothing has to be merged
+  // here. Merging across gangs, if any, is left to the combine.
+  if (!hasThreadDim) {
     eraseDeadBounds();
-    return;
-  }
-
-  // A thread-only accumulate merges with a within-block all_reduce, which is
-  // complete only in one block: block context, or a launch with no block dim.
-  // Multi-block thread-only still grid-strides across blocks, so stays NYI.
-  bool regionLaunchesBlocks = llvm::any_of(
-      computeRegion.getLaunchParDims(),
-      [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyBlock(); });
-  if (!reductionHasBlockContext(op) && regionLaunchesBlocks) {
-    (void)accSupport.emitNYI(
-        loc, "reduction: thread-only array reduction accumulate");
     return;
   }
 
@@ -4144,20 +4175,27 @@ void ACCCGToGPULowering::processReductionCombineOp(acc::ReductionCombineOp op) {
 
   SmallVector<mlir::acc::GPUParallelDimAttr> parDims =
       getReductionCombineParDims(op);
-  for (auto parDim : parDims) {
-    if (parDim.isAnyBlock() && !destIsPerThreadPrivate) {
-      // Block reduction directly stores to the accumulator using atomic.
-      // The predication (tid.x == 0 when subgroup-aligned) is already handled
-      // by the parent predicate_region processing.
-      // Reloading a grid-shared slot races with other blocks; record
-      // it and replace with the block-reduced register value in the fixup.
-      auto srcLoad =
-          memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
-      pendingCombineReloads.push_back({srcMemref, srcLoad});
-      constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad,
-                                  kind);
-      return;
-    }
+  // An atomic is needed exactly when more than one block can reach the
+  // destination. A block dimension in the reduction's parallel dims implies
+  // that; so does a thread-only reduction in a multi-block launch, where every
+  // block combines its own partial into the same shared slot.
+  bool destIsGridShared =
+      !destIsPerThreadPrivate &&
+      (llvm::any_of(parDims,
+                    [](mlir::acc::GPUParallelDimAttr parDim) {
+                      return parDim.isAnyBlock();
+                    }) ||
+       computeRegion.launchesMultipleBlocks());
+  if (destIsGridShared) {
+    // The predication (tid.x == 0 when subgroup-aligned) is already handled
+    // by the parent predicate_region processing.
+    // Reloading a grid-shared slot races with other blocks; record it and
+    // replace with the block-reduced register value in the fixup.
+    auto srcLoad =
+        memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
+    pendingCombineReloads.push_back({srcMemref, srcLoad});
+    constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad, kind);
+    return;
   }
 
   // Atomic construction is not needed; lower this operation to typical
@@ -4380,6 +4418,11 @@ class ACCCGToGPU : public acc::impl::ACCCGToGPUBase<ACCCGToGPU> {
 public:
   using acc::impl::ACCCGToGPUBase<ACCCGToGPU>::ACCCGToGPUBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCCGToGPUBase<ACCCGToGPU>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *context = funcOp->getContext();
@@ -4427,5 +4470,4 @@ public:
     }
   }
 };
-
 } // namespace

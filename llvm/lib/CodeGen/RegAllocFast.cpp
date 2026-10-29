@@ -283,6 +283,10 @@ private:
   SmallVector<MCRegister, 4> LiveDefRegs;
 
   SmallVector<unsigned, 8> DefOperandIndexes;
+
+  /// Set if an error assignment was used for a def in the current instruction.
+  bool HasErrorDef = false;
+
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
 
@@ -1361,6 +1365,14 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   return setPhysReg(MI, MO, *LRI);
 }
 
+/// Clear dead flags on defs of any register which also has a live def on \p MI.
+static void clearDeadsOfLiveDefs(MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.all_defs()) {
+    if (!MO.isDead())
+      MI.clearRegisterDeads(MO.getReg());
+  }
+}
+
 /// Query a physical register to use as a filler in contexts where the
 /// allocation has failed. This will raise an error, but not abort the
 /// compilation.
@@ -1420,6 +1432,8 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
     // assigned to a reserved register.
     if (MO.isUse())
       MO.setIsUndef(true);
+    else
+      HasErrorDef = true;
   }
 
   if (!MO.getSubReg()) {
@@ -1992,6 +2006,12 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
     }
 
     allocateInstruction(MI);
+
+    // An error assignment may give a live and a dead def the same register.
+    if (HasErrorDef) {
+      clearDeadsOfLiveDefs(MI);
+      HasErrorDef = false;
+    }
 
     // Once BUNDLE header is assigned registers, same assignments need to be
     // done for bundled MIs.

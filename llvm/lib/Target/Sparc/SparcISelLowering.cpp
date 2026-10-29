@@ -1210,16 +1210,42 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 // this table could be generated automatically from RegInfo.
 Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                                 const MachineFunction &MF) const {
-  Register Reg = StringSwitch<Register>(RegName)
-    .Case("i0", SP::I0).Case("i1", SP::I1).Case("i2", SP::I2).Case("i3", SP::I3)
-    .Case("i4", SP::I4).Case("i5", SP::I5).Case("i6", SP::I6).Case("i7", SP::I7)
-    .Case("o0", SP::O0).Case("o1", SP::O1).Case("o2", SP::O2).Case("o3", SP::O3)
-    .Case("o4", SP::O4).Case("o5", SP::O5).Case("o6", SP::O6).Case("o7", SP::O7)
-    .Case("l0", SP::L0).Case("l1", SP::L1).Case("l2", SP::L2).Case("l3", SP::L3)
-    .Case("l4", SP::L4).Case("l5", SP::L5).Case("l6", SP::L6).Case("l7", SP::L7)
-    .Case("g0", SP::G0).Case("g1", SP::G1).Case("g2", SP::G2).Case("g3", SP::G3)
-    .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
-    .Default(0);
+  StringRef Name(RegName);
+  Name.consume_front("%");
+  Register Reg = StringSwitch<Register>(Name)
+                     .Case("i0", SP::I0)
+                     .Case("i1", SP::I1)
+                     .Case("i2", SP::I2)
+                     .Case("i3", SP::I3)
+                     .Case("i4", SP::I4)
+                     .Case("i5", SP::I5)
+                     .Cases({"i6", "fp"}, SP::I6)
+                     .Case("i7", SP::I7)
+                     .Case("o0", SP::O0)
+                     .Case("o1", SP::O1)
+                     .Case("o2", SP::O2)
+                     .Case("o3", SP::O3)
+                     .Case("o4", SP::O4)
+                     .Case("o5", SP::O5)
+                     .Cases({"o6", "sp"}, SP::O6)
+                     .Case("o7", SP::O7)
+                     .Case("l0", SP::L0)
+                     .Case("l1", SP::L1)
+                     .Case("l2", SP::L2)
+                     .Case("l3", SP::L3)
+                     .Case("l4", SP::L4)
+                     .Case("l5", SP::L5)
+                     .Case("l6", SP::L6)
+                     .Case("l7", SP::L7)
+                     .Case("g0", SP::G0)
+                     .Case("g1", SP::G1)
+                     .Case("g2", SP::G2)
+                     .Case("g3", SP::G3)
+                     .Case("g4", SP::G4)
+                     .Case("g5", SP::G5)
+                     .Case("g6", SP::G6)
+                     .Case("g7", SP::G7)
+                     .Default(0);
 
   // If we're directly referencing register names
   // (e.g in GCC C extension `register int r asm("g1");`),
@@ -2150,29 +2176,58 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = getPointerTy(DAG.getDataLayout());
 
-  // Handle PIC mode first. SPARC needs a got load for every variable!
+  // Handle PIC mode first.
   if (isPositionIndependent()) {
     const Module *M = DAG.getMachineFunction().getFunction().getParent();
     PICLevel::Level picLevel = M->getPICLevel();
-    SDValue Idx;
-
-    if (picLevel == PICLevel::SmallPIC) {
-      // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
-      Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
-    } else {
-      // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, ELF::R_SPARC_GOT22, ELF::R_SPARC_GOT10, DAG);
-    }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
-    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
     // GLOBAL_BASE_REG codegen'ed with call. Inform MFI that this
     // function has calls.
     MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     MFI.setHasCalls(true);
-    return DAG.getLoad(VT, DL, DAG.getEntryNode(), AbsAddr,
-                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+
+    if (picLevel == PICLevel::SmallPIC) {
+      // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
+      // There is no 13-bit form of the GOTDATA_OP relocations, so always load
+      // the address from the GOT.
+      SDValue Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
+                                withTargetFlags(Op, ELF::R_SPARC_GOT13, DAG));
+      SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
+      return DAG.getLoad(VT, DL, DAG.getEntryNode(), AbsAddr,
+                         MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+    }
+
+    // This is the pic32 code model, the GOT is known to be smaller than 4GB.
+    // Use the GOTDATA_OP sequence:
+    //
+    //   sethi %gdop_hix22(sym), %r1
+    //   xor   %r1, %gdop_lox10(sym), %r1
+    //   ld[x] [%gotbase + %r1], %r2, %gdop(sym)
+    //
+    // The three relocations tell the linker this is a GOT load of sym's
+    // address. If sym binds locally, the linker rewrites the sethi/xor to
+    // produce sym's offset from the GOT and turns the load into an add, so
+    // nothing is read from the GOT at run time. This matches GCC and matters
+    // for code that runs before dynamic relocations are applied, such as the
+    // dynamic linker's own startup code.
+    SDValue Hi =
+        DAG.getNode(SPISD::Hi, DL, VT,
+                    withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP_HIX22, DAG));
+    SDValue Lo =
+        DAG.getNode(SPISD::Lo, DL, VT,
+                    withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP_LOX10, DAG));
+    SDValue Idx = DAG.getNode(ISD::XOR, DL, VT, Hi, Lo);
+    SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Idx);
+    // Attach a GOT memory operand, as for the plain GOT load above, so that
+    // the load is still known to be invariant and can be hoisted, CSE'd and
+    // rematerialized.
+    SDValue Ops[] = {DAG.getEntryNode(), AbsAddr,
+                     withTargetFlags(Op, ELF::R_SPARC_GOTDATA_OP, DAG)};
+    return DAG.getMemIntrinsicNode(
+        SPISD::LOAD_GDOP, DL, DAG.getVTList(VT, MVT::Other), Ops, VT,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+        /*Alignment=*/std::nullopt, MachineMemOperand::MOLoad);
   }
 
   // This is one of the absolute code models.
@@ -2477,15 +2532,19 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
@@ -3597,6 +3656,18 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (RegName.empty())
     return std::make_pair(0U, nullptr);
 
+  unsigned CCReg = StringSwitch<unsigned>(RegName)
+                       .Cases({"cc", "icc"}, SP::ICC)
+                       .Case("fcc0", SP::FCC0)
+                       .Case("fcc1", SP::FCC1)
+                       .Case("fcc2", SP::FCC2)
+                       .Case("fcc3", SP::FCC3)
+                       .Default(0);
+  if (CCReg == SP::ICC)
+    return std::make_pair(CCReg, &SP::ICCRegsRegClass);
+  if (CCReg)
+    return std::make_pair(CCReg, &SP::FCCRegsRegClass);
+
   unsigned long long RegNo;
   // Handle numbered register aliases.
   if (RegName[0] == 'r' &&
@@ -3730,16 +3801,19 @@ bool SparcTargetLowering::isFNegFree(EVT VT) const {
   return false;
 }
 
-bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
-    return true;
+    return FPImmAction::Legal;
   if (Subtarget->isVIS3())
     return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-           Imm.getExactLog2Abs() == -1;
-  return false;
+                   Imm.getExactLog2Abs() == -1
+               ? FPImmAction::Legal
+               : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

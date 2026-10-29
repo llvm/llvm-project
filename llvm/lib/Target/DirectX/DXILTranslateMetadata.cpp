@@ -481,8 +481,7 @@ static void translateInstructionMetadata(Module &M) {
     for (BasicBlock &BB : F) {
       // This needs to be done first so that "hlsl.controlflow.hints" isn't
       // removed in the allow-list below
-      if (auto *I = BB.getTerminator())
-        translateBranchMetadata(M, I);
+      translateBranchMetadata(M, BB.getTerminator());
 
       for (auto &I : make_early_inc_range(BB)) {
         if (isa<UncondBrInst, CondBrInst>(I))

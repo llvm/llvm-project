@@ -184,8 +184,10 @@ extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
-bool llvm::isPGOInstrumentColdFunctionOnly() {
-  return InstrumentationOptions::Global.pgo_instrument_cold_function_only;
+bool llvm::isPGOInstrumentColdFunctionOnly(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
+      .pgo_instrument_cold_function_only;
 }
 
 namespace {
@@ -694,7 +696,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   auto canInstrument = [](BasicBlock *BB) -> BasicBlock * {
     // There are basic blocks (such as catchswitch) cannot be instrumented.
     // If the returned first insertion point is the end of BB, skip this BB.
-    if (BB->getFirstNonPHIOrDbgOrAlloca() == BB->end())
+    if (BB->getFirstNonPHIOrAlloca() == BB->end())
       return nullptr;
     return BB;
   };
@@ -791,7 +793,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (Opts.pgo_function_entry_coverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -850,7 +852,7 @@ void FunctionInstrumenter::instrument() {
   if (Opts.pgo_temporal_instrumentation) {
     NumCounters += Opts.pgo_block_coverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -861,7 +863,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -1642,7 +1644,7 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
-    if (!BB || !BB->getTerminator())
+    if (!BB)
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
     auto *MD = MDNode::get(
@@ -1890,11 +1892,11 @@ static bool instrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &MAM) {
   createProfileFileNameVar(M, CSInstrName);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(
-      M, createIRLevelProfileFlagVar(InstrumentationOptions::Global, M,
-                                     PGOInstrumentationType::CSFDO));
+      M, createIRLevelProfileFlagVar(Opts, M, PGOInstrumentationType::CSFDO));
   if (ProfileSampling)
     createProfileSamplingVar(M);
   PreservedAnalyses PA;
@@ -1919,9 +1921,9 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
     return &FAM.getResult<LoopAnalysis>(F);
   };
 
-  if (!instrumentAllFunctions(InstrumentationOptions::Global, M, LookupTLI,
-                              LookupBPI, LookupBFI, LookupLI,
-                              InstrumentationType))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  if (!instrumentAllFunctions(Opts, M, LookupTLI, LookupBPI, LookupBFI,
+                              LookupLI, InstrumentationType))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2255,11 +2257,6 @@ PGOInstrumentationUse::PGOInstrumentationUse(
     : ProfileFileName(std::move(Filename)),
       ProfileRemappingFileName(std::move(RemappingFilename)), IsCS(IsCS),
       FS(std::move(VFS)) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  if (!Opts.pgo_test_profile_file.empty())
-    ProfileFileName = Opts.pgo_test_profile_file;
-  if (!Opts.pgo_test_profile_remapping_file.empty())
-    ProfileRemappingFileName = Opts.pgo_test_profile_remapping_file;
   if (!FS)
     FS = vfs::getRealFileSystem();
 }
@@ -2282,9 +2279,15 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-  if (!annotateAllFunctions(InstrumentationOptions::Global, M, ProfileFileName,
-                            ProfileRemappingFileName, *FS, LookupTLI, LookupBPI,
-                            LookupBFI, LookupLI, PSI, IsCS))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  StringRef ProfileFile = ProfileFileName;
+  if (!Opts.pgo_test_profile_file.empty())
+    ProfileFile = Opts.pgo_test_profile_file;
+  StringRef RemappingFile = ProfileRemappingFileName;
+  if (!Opts.pgo_test_profile_remapping_file.empty())
+    RemappingFile = Opts.pgo_test_profile_remapping_file;
+  if (!annotateAllFunctions(Opts, M, ProfileFile, RemappingFile, *FS, LookupTLI,
+                            LookupBPI, LookupBFI, LookupLI, PSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2312,7 +2315,9 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
-  if (InstrumentationOptions::Global.pgo_emit_branch_prob) {
+  const InstrumentationOptions &Opts =
+      getInstrumentationOptions(*TI->getFunction());
+  if (Opts.pgo_emit_branch_prob) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
       return;
@@ -2391,7 +2396,9 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     else
       OS << "Unknown\\l";
 
-    if (!InstrumentationOptions::Global.pgo_instr_select)
+    const InstrumentationOptions &Opts =
+        getInstrumentationOptions(*Node->getParent());
+    if (!Opts.pgo_instr_select)
       return Result;
 
     for (const Instruction &I : *Node) {

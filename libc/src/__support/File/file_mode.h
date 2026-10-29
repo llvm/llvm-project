@@ -86,6 +86,10 @@ public:
 
   constexpr bool is_valid() const { return file_mode_ != 0; }
 
+  constexpr bool operator==(const FileMode &other) const {
+    return file_mode_ == other.file_mode_;
+  }
+
   constexpr bool is_append() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::APPEND)) != 0;
   }

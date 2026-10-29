@@ -1787,10 +1787,12 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
       LongDoubleFormat::IEEEdouble,
       Triple("thumbv7-unknown-linux-gnueabi").getDefaultLongDoubleFormat());
 
-  // SPARC V8 uses IEEE double for bare-metal and RTEMS targets. Linux,
+  // SPARC V8 uses IEEE double for bare-metal, NetBSD, and RTEMS targets. Linux,
   // Solaris, and other targets use IEEE quad. SPARC V9 always uses IEEE quad.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("sparc-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-netbsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("sparc-unknown-rtems").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
@@ -1801,6 +1803,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("sparc-unknown-solaris").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("sparcv9-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcv9-unknown-netbsd").getDefaultLongDoubleFormat());
 
   // Targets that use IEEE quad, independent of the environment.
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
@@ -3355,6 +3359,8 @@ TEST(TripleTest, DefaultExceptionHandling) {
             Triple("spirv32--").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::None,
             Triple("spirv64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("avr--").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());

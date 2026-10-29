@@ -179,7 +179,6 @@ private:
   SDValue ExpandFNEG(SDNode *Node) const;
   SDValue expandLdexp(SDNode *Node) const;
   SDValue expandFrexp(SDNode *Node) const;
-  SDValue expandModf(SDNode *Node) const;
 
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
@@ -540,6 +539,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar store");
+      ReplaceNode(SDValue(Node, 0), TLI.scalarizeVectorStore(ST, DAG));
+      break;
     }
     return;
   }
@@ -719,6 +722,10 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       RChain = Res.getValue(1);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar load");
+      std::tie(RVal, RChain) = TLI.scalarizeVectorLoad(LD, DAG);
+      break;
     }
     if (RChain.getNode() != Node) {
       assert(RVal.getNode() != Node && "Load must be completely replaced");
@@ -2765,34 +2772,6 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   return DAG.getMergeValues({Result0, Result1}, dl);
 }
 
-SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
-  SDLoc dl(Node);
-  SDValue Val = Node->getOperand(0);
-  EVT VT = Val.getValueType();
-  SDNodeFlags Flags = Node->getFlags();
-
-  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
-  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
-
-  SDValue FracToUse;
-  if (Flags.hasNoInfs()) {
-    FracToUse = FracPart;
-  } else {
-    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
-    SDValue Inf =
-        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
-    EVT SetCCVT =
-        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
-    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
-    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
-  }
-
-  SDValue ResultFrac =
-      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
-  return DAG.getMergeValues({ResultFrac, IntPart}, dl);
-}
-
 /// This function is responsible for legalizing a
 /// INT_TO_FP operation of the specified operand when the target requests that
 /// we expand it.  At this point, we know that the result and operand types are
@@ -3931,10 +3910,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
-    if (SDValue Expanded = expandModf(Node)) {
-      Results.push_back(Expanded);
-      Results.push_back(Expanded.getValue(1));
-    }
+    TLI.expandMODF(Node, DAG, Results);
     break;
   }
   case ISD::FSINCOS: {

@@ -358,10 +358,10 @@ void spirv::AddressOfOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, var.getType(), SymbolRefAttr::get(var));
 }
 
-LogicalResult spirv::AddressOfOp::verify() {
-  auto varOp = dyn_cast_or_null<spirv::GlobalVariableOp>(
-      SymbolTable::lookupNearestSymbolFrom((*this)->getParentOp(),
-                                           getVariableAttr()));
+LogicalResult
+spirv::AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto varOp = symbolTable.lookupNearestSymbolFrom<spirv::GlobalVariableOp>(
+      *this, getVariableAttr());
   if (!varOp) {
     return emitOpError("expected spirv.GlobalVariable symbol");
   }
@@ -1105,17 +1105,19 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
            << schema.numOperands << " value operand(s), got "
            << getValues().size();
 
-  for (Attribute value : getValues()) {
-    auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
-    if (!valueSymbol)
-      return emitOpError("expected value operands to be symbol reference");
-    Operation *valueOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), valueSymbol);
-    if (!valueOp)
+  if (!llvm::all_of(getValues(), llvm::IsaPred<FlatSymbolRefAttr>))
+    return emitOpError("expected value operands to be symbol reference");
+
+  return success();
+}
+
+LogicalResult
+spirv::ExecutionModeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  for (auto valueSymbol : getValues().getAsRange<FlatSymbolRefAttr>()) {
+    if (!symbolTable.lookupNearestSymbolFrom(*this, valueSymbol))
       return emitOpError("cannot find symbol referenced by value operand: ")
              << valueSymbol.getValue();
   }
-
   return success();
 }
 
@@ -1511,9 +1513,14 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  return verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType);
+}
+
+LogicalResult
+spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (FlatSymbolRefAttr init = getInitializerAttr()) {
-    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), init.getAttr());
+    Operation *initOp = symbolTable.lookupNearestSymbolFrom(*this, init);
     // TODO: Currently only variable initialization with specialization
     // constants is supported. There could be normal constants in the module
     // scope as well.
@@ -1531,11 +1538,6 @@ LogicalResult spirv::GlobalVariableOp::verify() {
                          "spirv.SpecConstantCompositeOp op");
     }
   }
-
-  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
-  if (failed(
-          verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
-    return failure();
 
   return success();
 }
@@ -1580,7 +1582,9 @@ ParseResult spirv::INTELSubgroupBlockWriteOp::parse(OpAsmParser &parser,
 }
 
 void spirv::INTELSubgroupBlockWriteOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << ", " << getValue() << " : "
+  StringRef sc = stringifyStorageClass(
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+  printer << " \"" << sc << "\" " << getPtr() << ", " << getValue() << " : "
           << getValue().getType();
 }
 
@@ -1847,9 +1851,10 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
 // spirv.mlir.referenceof
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::ReferenceOfOp::verify() {
-  auto *specConstSym = SymbolTable::lookupNearestSymbolFrom(
-      (*this)->getParentOp(), getSpecConstAttr());
+LogicalResult
+spirv::ReferenceOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *specConstSym =
+      symbolTable.lookupNearestSymbolFrom(*this, getSpecConstAttr());
   Type constType;
 
   auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(specConstSym);
@@ -2036,11 +2041,19 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
            << cType.getNumElements() << ", but provided "
            << constituents.size();
 
+  return success();
+}
+
+LogicalResult spirv::SpecConstantCompositeOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto cType = cast<spirv::CompositeType>(getType());
+  ArrayRef<Attribute> constituents = getConstituents().getValue();
+
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
 
-    Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), constituent.getAttr());
+    Operation *constituentOp =
+        symbolTable.lookupNearestSymbolFrom(*this, constituent);
 
     if (!constituentOp)
       return emitError("unknown constituent symbol ") << constituent.getAttr();
@@ -2110,13 +2123,18 @@ void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
-  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
-  if (!compositeType)
+  if (!isa<spirv::CompositeType>(getType()))
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
-      (*this)->getParentOp(), this->getConstituent());
+  return success();
+}
+
+LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto compositeType = cast<spirv::CompositeType>(getType());
+  Operation *constituentOp =
+      symbolTable.lookupNearestSymbolFrom(*this, getConstituent());
   if (!constituentOp)
     return emitError(
         "splat spec constant reference defining constituent not found");
@@ -2298,10 +2316,10 @@ LogicalResult spirv::CLRootnOp::verify() {
 LogicalResult spirv::CLSincosOp::verify() {
   auto storageClass =
       cast<spirv::PointerType>(getCosval().getType()).getStorageClass();
-  if (storageClass != spirv::StorageClass::CrossWorkgroup &&
-      storageClass != spirv::StorageClass::Workgroup &&
-      storageClass != spirv::StorageClass::Function &&
-      storageClass != spirv::StorageClass::Generic)
+  if (!llvm::is_contained(
+          {spirv::StorageClass::CrossWorkgroup, spirv::StorageClass::Workgroup,
+           spirv::StorageClass::Function, spirv::StorageClass::Generic},
+          storageClass))
     return emitOpError("cosval must point to CrossWorkgroup, Workgroup, "
                        "Function, or Generic storage");
   return success();

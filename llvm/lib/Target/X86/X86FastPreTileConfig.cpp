@@ -266,7 +266,6 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
       FI);
   MachineOperand &MO = NewMI->getOperand(5);
   MO.setReg(StrideReg);
-  MO.setIsKill(true);
   RowMO->setIsKill(false);
   ColMO->setIsKill(false);
   // Erase copy instruction after it is folded.
@@ -439,7 +438,6 @@ void X86FastPreTileConfigImpl::convertPHI(MachineBasicBlock *MBB,
       StackAddrReg);
   MachineOperand &MO = NewMI->getOperand(5);
   MO.setReg(StrideReg);
-  MO.setIsKill(true);
   PHI.eraseFromParent();
   VisitedPHIs.erase(&PHI);
 }

@@ -86,7 +86,8 @@ static void initializeUsedResources(InstrDesc &ID,
     }
 
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
-    const int BufferSize = SM.getResourceBufferSize(PRE->ProcResourceIdx);
+    // Reservation station scaling preserves whether a size is -1, 0, or 1.
+    const int BufferSize = PR.BufferSize;
     if (BufferSize < 0) {
       AllInOrderResources = false;
     } else {
@@ -190,7 +191,7 @@ static void initializeUsedResources(InstrDesc &ID,
   // Identify extra buffers that are consumed through super resources.
   for (const auto &SR : SuperResources) {
     for (unsigned I = 1, E = NumProcResources; I < E; ++I) {
-      if (SM.getResourceBufferSize(I) == -1)
+      if (SM.getProcResource(I)->BufferSize == -1)
         continue;
 
       uint64_t Mask = ProcResourceMasks[I];

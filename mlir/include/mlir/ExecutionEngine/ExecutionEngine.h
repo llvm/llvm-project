@@ -55,6 +55,9 @@ private:
 };
 
 struct ExecutionEngineOptions {
+  /// Library options for the LLVMContext and the default TargetMachine.
+  const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr;
+
   /// If `llvmModuleBuilder` is provided, it will be used to create an LLVM
   /// module from the given MLIR IR. Otherwise, a default
   /// `translateModuleToLLVMIR` function will be used to translate to LLVM IR.

@@ -275,7 +275,7 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (ScalarOptions::Global.earlycse_debug_hash)
+  if (getScalarOptions(*Val.Inst->getFunction()).earlycse_debug_hash)
     return 0;
 #endif
   return getHashValueImpl(Val);
@@ -499,6 +499,7 @@ namespace {
 /// expected that a later pass of GVN will catch the interesting/hard cases.
 class EarlyCSE {
 public:
+  const ScalarOptions &Opts;
   const TargetLibraryInfo &TLI;
   const TargetTransformInfo &TTI;
   DominatorTree &DT;
@@ -589,11 +590,11 @@ public:
   unsigned CurrentGeneration = 0;
 
   /// Set up the EarlyCSE runner for a particular function.
-  EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
-           const TargetTransformInfo &TTI, DominatorTree &DT,
-           AssumptionCache &AC, MemorySSA *MSSA)
-      : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
-        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
+  EarlyCSE(const ScalarOptions &Opts, const DataLayout &DL,
+           const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
+           DominatorTree &DT, AssumptionCache &AC, MemorySSA *MSSA)
+      : Opts(Opts), TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC),
+        MSSA(MSSA), MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
 
   bool run();
 
@@ -1019,7 +1020,7 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   // EarlierInst and LaterInst and neither can any other write that potentially
   // clobbers LaterInst.
   MemoryAccess *LaterDef;
-  if (ClobberCounter < ScalarOptions::Global.earlycse_mssa_optimization_cap) {
+  if (ClobberCounter < Opts.earlycse_mssa_optimization_cap) {
     LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
     ClobberCounter++;
   } else
@@ -1741,7 +1742,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(getScalarOptions(F), F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1795,7 +1796,8 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(getScalarOptions(F), F.getDataLayout(), TLI, TTI, DT, AC,
+                 MSSA);
 
     return CSE.run();
   }

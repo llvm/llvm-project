@@ -115,27 +115,35 @@ static void process(cir::FuncOp func,
 void GotoSolverPass::runOnOperation() {
   llvm::TimeTraceScope scope("Goto Solver");
 
-  // Block addresses can also appear in attributes outside of any function body,
-  // such as global variable initializers.  Collect, per target function and in
-  // initializer order, the labels referenced this way so their LabelOps survive
-  // and join the indirect branch's successors.  A SetVector keeps the first
-  // occurrence in order: a label named more than once across initializers needs
-  // to be a successor only once.
+  // Block addresses also appear in attributes: global initializers and
+  // cir.const values. Collect, per target function and in walk order, the
+  // labels referenced this way so their LabelOps survive and join the
+  // indirect branch's successors. A SetVector keeps the first occurrence
+  // in order: a label named more than once is a successor only once.
+  //
+  // process() collects cir.block_address ops in IR order; this scan covers
+  // only attribute-carried addresses (globals, constants) that no
+  // function-body walk sees. BlockAddressOp stays out so op labels keep
+  // their IR-order phase instead of sorting with the attributes.
   llvm::StringMap<llvm::SmallSetVector<StringRef, 4>> globalBlockAddrLabels;
-  getOperation()->walk([&](mlir::Operation *op) {
+  mlir::ModuleOp module = mlir::cast<mlir::ModuleOp>(getOperation());
+  module.walk([&](mlir::Operation *op) {
+    if (!mlir::isa<cir::GlobalOp, cir::ConstantOp>(op))
+      return;
     auto collectBlockAddresses = [&](mlir::Attribute attr) {
-      attr.walk([&](cir::BlockAddrInfoAttr info) {
-        globalBlockAddrLabels[info.getFunc().getValue()].insert(
-            info.getLabel());
-      });
-      // A block-address difference attribute references two labels in the same
-      // function; keep both alive.
-      attr.walk([&](cir::BlockAddrDiffAttr diff) {
-        llvm::SmallSetVector<StringRef, 4> &labels =
-            globalBlockAddrLabels[diff.getFunc().getValue()];
-        labels.insert(diff.getLhsLabel().getValue());
-        labels.insert(diff.getRhsLabel().getValue());
-      });
+      attr.walk(
+          [&](cir::BlockAddrInfoAttr info) {
+            globalBlockAddrLabels[info.getFunc().getValue()].insert(
+                info.getLabel());
+          },
+          [&](cir::BlockAddrDiffAttr diff) {
+            // A block-address difference attribute references two labels in
+            // the same function; keep both alive.
+            llvm::SmallSetVector<StringRef, 4> &labels =
+                globalBlockAddrLabels[diff.getFunc().getValue()];
+            labels.insert(diff.getLhsLabel().getValue());
+            labels.insert(diff.getRhsLabel().getValue());
+          });
     };
     op->getName().walkInherentAttrs(
         op, [&](llvm::StringRef, mlir::Attribute &attr) {
@@ -144,12 +152,12 @@ void GotoSolverPass::runOnOperation() {
   });
 
   static const llvm::SmallVector<StringRef> empty;
-  getOperation()->walk([&](cir::FuncOp func) {
+  for (cir::FuncOp func : module.getOps<cir::FuncOp>()) {
     auto it = globalBlockAddrLabels.find(func.getSymName());
     process(func, it == globalBlockAddrLabels.end()
                       ? llvm::ArrayRef<StringRef>(empty)
                       : it->second.getArrayRef());
-  });
+  }
 }
 
 } // namespace

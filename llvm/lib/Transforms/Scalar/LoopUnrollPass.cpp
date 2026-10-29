@@ -74,8 +74,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll"
 
-bool llvm::getForgetSCEVInLoopUnroll() {
-  return ScalarOptions::Global.forget_scev_loop_unroll;
+bool llvm::getForgetSCEVInLoopUnroll(
+    const cl::LibraryOptionsContext *LibraryOptions) {
+  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
+      .forget_scev_loop_unroll;
 }
 
 /// A magic value for use with the Threshold parameter to indicate
@@ -92,7 +94,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     std::optional<unsigned> UserThreshold, std::optional<bool> UserAllowPartial,
     std::optional<bool> UserRuntime, std::optional<bool> UserUpperBound,
     std::optional<unsigned> UserFullUnrollMaxCount) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(*L);
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -193,7 +195,6 @@ struct UnrolledInstState {
 
 /// Hashing and equality testing for a set of the instruction states.
 struct UnrolledInstStateKeyInfo {
-  using PtrInfo = DenseMapInfo<Instruction *>;
   using PairInfo = DenseMapInfo<std::pair<Instruction *, int>>;
 
   static inline unsigned getHashValue(const UnrolledInstState &S) {
@@ -412,7 +413,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
       Value *V = PHI->getIncomingValueForBlock(
           Iteration == 0 ? L->getLoopPreheader() : L->getLoopLatch());
-      if (Iteration != 0 && SimplifiedValues.count(V))
+      if (Iteration != 0 && SimplifiedValues.contains(V))
         V = SimplifiedValues.lookup(V);
       SimplifiedInputValues.push_back({PHI, V});
     }
@@ -436,7 +437,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       for (Instruction &I : *BB) {
         // These won't get into the final code - don't even try calculating the
         // cost for them.
-        if (EphValues.count(&I))
+        if (EphValues.contains(&I))
           continue;
 
         // Track this instruction's expected baseline cost when executing the
@@ -487,7 +488,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       Instruction *TI = BB->getTerminator();
 
       auto getSimplifiedConstant = [&](Value *V) -> Constant * {
-        if (SimplifiedValues.count(V))
+        if (SimplifiedValues.contains(V))
           V = SimplifiedValues.lookup(V);
         return dyn_cast<Constant>(V);
       };
@@ -684,7 +685,7 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
 }
 
 UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
-    : UserUnrollCount(ScalarOptions::Global.unroll_count.has_value()),
+    : UserUnrollCount(getScalarOptions(*L).unroll_count.has_value()),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
       PragmaCount(unrollCountPragmaValue(L)),
       PragmaEnableUnroll(hasUnrollEnablePragma(L)),
@@ -920,7 +921,7 @@ unsigned llvm::computeUnrollCount(
     const unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(*L);
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -1544,6 +1545,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   // pass. Function analyses need to be preserved across loop transformations
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  const ScalarOptions &Opts = getScalarOptions(L);
 
   // Keep track of the previous loop structure so we can identify new loops
   // created by unrolling.
@@ -1613,7 +1615,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
     Updater.markLoopAsDeleted(L, LoopName);
   } else {
     // We can only walk child loops if the current loop remained valid.
-    if (ScalarOptions::Global.unroll_revisit_child_loops) {
+    if (Opts.unroll_revisit_child_loops) {
       // Walk *all* of the child loops.
       SmallVector<Loop *, 4> ChildLoops(L.begin(), L.end());
       Updater.addChildLoops(ChildLoops);
