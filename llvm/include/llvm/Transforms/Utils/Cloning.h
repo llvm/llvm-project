@@ -281,6 +281,14 @@ public:
   /// 'InlineFunction' fills this in by scanning the inlined instructions.
   SmallVector<CallBase *, 8> InlinedCallSites;
 
+  /// The instruction range for the inlined code:
+  /// [InlinedRegionBegin, InlinedRegionEnd).
+  /// The range is defined in InlineFunction and is currently used by
+  /// simplifyInlinedRegion. InlinedRegionEnd can be set to null to skip the
+  /// simplification.
+  Instruction *InlinedRegionBegin = nullptr;
+  Instruction *InlinedRegionEnd = nullptr;
+
   Value *ConvergenceControlToken = nullptr;
   Instruction *CallSiteEHPad = nullptr;
 
@@ -291,6 +299,8 @@ public:
   void reset() {
     StaticAllocas.clear();
     InlinedCallSites.clear();
+    InlinedRegionBegin = nullptr;
+    InlinedRegionEnd = nullptr;
     ConvergenceControlToken = nullptr;
     CallSiteEHPad = nullptr;
   }

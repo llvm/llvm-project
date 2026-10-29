@@ -290,6 +290,8 @@ defm : BoolField<"print-instruction-comments", "false",
   "Prints comments for instruction based on inline cost analysis">;
 defm : ValueField<"recursive-inline-max-stacksize", "size_t", "1024",
   "Do not inline recursive functions with a stack size that exceeds the specified limit">;
+defm : ValueField<"inline-reaching-store-scan-limit", "unsigned", "64",
+  "Maximum number of instructions scanned backwards from a call site to collect the stores that reach it">;
 
 // InlineOrder.cpp
 defm : EnumField<"inline-priority-mode", "InlinePriorityMode", "InlinePriorityMode::Size", "size,cost,cost-benefit,ml", ["InlinePriorityMode::Size", "InlinePriorityMode::Cost", "InlinePriorityMode::CostBenefit", "InlinePriorityMode::ML"],
