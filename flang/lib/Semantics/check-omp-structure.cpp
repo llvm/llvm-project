@@ -16,6 +16,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
@@ -6077,48 +6078,71 @@ void OmpStructureChecker::CheckArraySection(
       (clause != llvm::omp::Clause::OMPC_affinity &&
           clause != llvm::omp::Clause::OMPC_depend)};
   if (!arrayElement.Subscripts().empty()) {
-    for (const auto &subscript : arrayElement.Subscripts()) {
+    std::optional<evaluate::NamedEntity> base;
+    for (const auto &[dimension, subscript] :
+        llvm::enumerate(arrayElement.Subscripts())) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
-        if (isSubstring && std::get<2>(triplet->t)) {
-          context_.Say(GetContext().clauseSource,
-              "Cannot specify a step for a substring"_err_en_US);
-        }
         const auto &lower{std::get<0>(triplet->t)};
         const auto &upper{std::get<1>(triplet->t)};
-        if (lower && upper) {
-          std::optional<int64_t> strideVal{std::nullopt};
-          if (const auto &strideExpr = std::get<2>(triplet->t)) {
-            // OpenMP 6.0 Section 5.2.5: Array Sections
-            // Restrictions: if a stride expression is specified it must be
-            // positive. A stride of 0 doesn't make sense.
-            strideVal = GetIntValue(strideExpr);
-            if (strideVal && *strideVal < 1 && checkPositiveStride) {
-              context_.Say(GetContext().clauseSource,
-                  "'%s' in %s clause must have a positive stride"_err_en_US,
-                  name.ToString(), parser::omp::GetUpperName(clause, version));
+        std::optional<int64_t> strideVal{std::nullopt};
+        if (const auto &strideExpr = std::get<2>(triplet->t)) {
+          if (isSubstring) {
+            context_.Say(GetContext().clauseSource,
+                "Cannot specify a step for a substring"_err_en_US);
+            break;
+          }
+          // OpenMP 6.0 Section 5.2.5: Array Sections
+          // Restrictions: if a stride expression is specified it must be
+          // positive. A stride of 0 doesn't make sense.
+          strideVal = GetIntValue(strideExpr);
+          if (lower && upper && strideVal && *strideVal < 1 &&
+              checkPositiveStride) {
+            context_.Say(GetContext().clauseSource,
+                "'%s' in %s clause must have a positive stride"_err_en_US,
+                name.ToString(), parser::omp::GetUpperName(clause, version));
+          }
+        }
+        std::optional<int64_t> lval{lower ? GetIntValue(lower) : std::nullopt};
+        std::optional<int64_t> uval{upper ? GetIntValue(upper) : std::nullopt};
+        if (!lower || !upper) {
+          // Omitted section bounds use the declared bounds, which differ from
+          // LBOUND/UBOUND inquiry results for a zero-extent dimension.
+          if (!base) {
+            if (const auto *baseName{
+                    std::get_if<parser::Name>(&arrayElement.Base().u)}) {
+              base = evaluate::NamedEntity{*baseName->symbol};
+            } else if (MaybeExpr expr{
+                           AnalyzeExpr(context_, arrayElement.Base())}) {
+              base = evaluate::ExtractNamedEntity(*expr);
             }
           }
-          const auto lval{GetIntValue(lower)};
-          const auto uval{GetIntValue(upper)};
-          if (lval && uval) {
-            int64_t sectionLen = *uval - *lval;
-            if (strideVal) {
-              if (*strideVal == 0) {
-                continue;
+          if (base &&
+              dimension < static_cast<decltype(dimension)>(base->Rank())) {
+            if (!lower) {
+              lval = evaluate::ToInt64(evaluate::GetRawLowerBound(
+                  context_.foldingContext(), *base, dimension));
+            }
+            if (!upper) {
+              if (auto bound{evaluate::GetRawUpperBound(
+                      context_.foldingContext(), *base, dimension)}) {
+                uval = evaluate::ToInt64(*bound);
               }
-              sectionLen = sectionLen / *strideVal;
-            }
-
-            if (sectionLen < 1) {
-              context_.Say(GetContext().clauseSource,
-                  "'%s' in %s clause"
-                  " is a zero size array section"_err_en_US,
-                  name.ToString(), parser::omp::GetUpperName(clause, version));
-              break;
             }
           }
-        } else if (clause == llvm::omp::Clause::OMPC_depend) {
+        }
+        if (lval && uval) {
+          if ((strideVal && *strideVal < 0) ? *uval >= *lval : *uval < *lval) {
+            context_.Say(GetContext().clauseSource,
+                "'%s' in %s clause"
+                " is a zero size array section"_err_en_US,
+                name.ToString(), parser::omp::GetUpperName(clause, version));
+            break;
+          }
+        }
+        // Preserve the DEPEND check for an empty base when an omitted bound
+        // cannot be resolved, including a different zero-extent dimension.
+        if ((!lower || !upper) && clause == llvm::omp::Clause::OMPC_depend) {
           if (auto extents{
                   evaluate::AsConstantExtents(context_.foldingContext(),
                       evaluate::GetShape(
