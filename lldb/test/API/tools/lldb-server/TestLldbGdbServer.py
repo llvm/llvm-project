@@ -1002,7 +1002,7 @@ class LldbGdbServerTestCase(
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
 
-    @skipUnlessPlatform(oslist=["freebsd", "linux"])
+    @skipUnlessPlatform(oslist=["freebsd", "linux", "netbsd"])
     @add_test_categories(["llgs"])
     def test_qXfer_siginfo_read(self):
         self.build()
