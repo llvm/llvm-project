@@ -6139,7 +6139,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
       return nullptr;
 
     // TODO: Check target preference for style.
-    UncountableExitStyle EEStyle = UncountableExitStyle::ReadOnly;
+    UncountableExitStyle EEStyle =
+        UncountableExitStyle::MaskedHandleExitInVectorLoop;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
                         EEStyle)) {

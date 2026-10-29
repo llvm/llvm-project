@@ -1260,7 +1260,9 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
         continue;
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
-        assert(!R.mayReadFromMemory() && "unexpected recipe reading memory");
+        assert((!R.mayReadFromMemory() ||
+                (VPI && VPI->getOpcode() == Instruction::Store)) &&
+               "unexpected recipe reading memory");
         continue;
       }
 
