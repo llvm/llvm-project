@@ -5,7 +5,8 @@
 ; to the format in it. bfloat is computed in float (or soft-f64), its
 ; conversions on the bits. strictfp goes.
 ; RUN: opt -mtriple=air -passes=air-emulate-f64 -S < %s \
-; RUN:   | FileCheck %s --implicit-check-not=constrained --implicit-check-not=strictfp
+; RUN:   | FileCheck %s --implicit-check-not='@llvm.experimental.constrained' --implicit-check-not=strictfp
+; RUN: opt -mtriple=air -passes=air-emulate-f64 -S < %s | FileCheck %s --check-prefix=HINT
 
 target triple = "air"
 
@@ -34,24 +35,19 @@ define void @nearest(ptr addrspace(1) %p, float %x, float %y, <2 x half> %v) "ai
   ret void
 }
 
-; Directed: float multiplication toward zero, by the error-free product
-; where it is exact and soft-f64 elsewhere; half addition upward, by the
-; float error-free sum (exact for any halves) rounded upward to half with no
-; soft-f64; integer to float downward.
+; Directed: hints (llvm/IR/AIR.h) that name the constrained operation, for
+; a consumer that has it (AGX); their bodies are the exact emulations (float
+; multiplication toward zero by the error-free product where it is exact and
+; soft-f64 elsewhere, half addition upward by the float error-free sum, integer
+; to float downward), which the Metal pipeline inlines.
 ; CHECK-LABEL: define void @directed(
-; CHECK: fmul float %x, %y
-; CHECK: call float @llvm.fma.f32(
-; CHECK: directed.slow.i:
-; CHECK: call i64 @__air_f64_mul_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 0)
-; CHECK: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 0)
-; CHECK: fpext half %h to float
-; CHECK: fadd float
-; CHECK-NOT: __air_f64
-; CHECK: fptrunc float %{{[0-9]+}} to half
-; CHECK: store half
-; CHECK: call i64 @__air_f64_from_i64_r(i64 %i, i32 3)
-; CHECK: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 3)
+; CHECK: call float @__air_hint.{{[0-9]+}}(float %x, float %y)
+; CHECK: call half @__air_hint.{{[0-9]+}}(half %h, half %h)
+; CHECK: call float @__air_hint.{{[0-9]+}}(i64 %i)
 ; CHECK: ret void
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.fmul.f32|---|round.towardzero|fpexcept.ignore"
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.fadd.f16|---|round.upward|fpexcept.ignore"
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.sitofp.f32.i64|--|round.downward|fpexcept.ignore"
 define void @directed(ptr addrspace(1) %p, float %x, float %y, half %h, i64 %i) "air-kernel" strictfp {
   %m = call float @llvm.experimental.constrained.fmul.f32(float %x, float %y, metadata !"round.towardzero", metadata !"fpexcept.ignore") strictfp
   store float %m, ptr addrspace(1) %p
@@ -100,12 +96,17 @@ define void @bf16_ftz(ptr addrspace(1) %p, bfloat %x) "air-kernel" strictfp deno
   ret void
 }
 
-; Double precision in a directed rounding: the _r functions.
+; Double precision in a directed rounding: hints too, whose bodies call the
+; _r functions.
 ; CHECK-LABEL: define void @f64(
-; CHECK: call i64 @__air_f64_div_r(i64 %x, i64 %y, i32 2)
-; CHECK: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 0)
-; CHECK: call i64 @__air_f64_from_u64_r(i64 %i, i32 3)
+; CHECK: call i64 @__air_hint.{{[0-9]+}}(i64 %x, i64 %y)
+; CHECK: call float @__air_hint.{{[0-9]+}}(i64 %d)
+; CHECK: call i64 @__air_hint.{{[0-9]+}}(i64 %i)
 ; CHECK: ret void
+; HINT-DAG: call i64 @__air_f64_div_r(i64 %0, i64 %1, i32 2)
+; HINT-DAG: call i32 @__air_f64_to_f32_r(i64 %{{[0-9]+}}, i32 0)
+; HINT-DAG: call i64 @__air_f64_from_u64_r(i64 %0, i32 3)
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.fdiv.f64|ddd|round.upward|fpexcept.ignore"
 define void @f64(ptr addrspace(1) %p, double %x, double %y, i64 %i) "air-kernel" strictfp {
   %d = call double @llvm.experimental.constrained.fdiv.f64(double %x, double %y, metadata !"round.upward", metadata !"fpexcept.ignore") strictfp
   store double %d, ptr addrspace(1) %p

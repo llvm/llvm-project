@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/AIR.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -49,6 +50,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -68,6 +70,26 @@ namespace {
 /// The attribute of an emulation (a function standing for one operation
 /// until its body is written and inlined): the operation's key.
 constexpr StringLiteral EmulationAttr = "air-emulate-f64";
+
+// Constrained operations with a directed rounding stay hints (llvm/IR/AIR.h):
+// a consumer with a floating point mode (the AGX backend) compiles them as
+// the operation, which is much cheaper than their exact emulation; the others
+// (the Metal pipeline) inline the emulation, the hint's body.
+static cl::opt<bool> HintDirected(
+    "air-hint-directed-rounding", cl::init(true), cl::Hidden,
+    cl::desc("Keep constrained operations with a directed rounding as AIR "
+             "hints whose body is their emulation"));
+
+/// An emulation that stays a hint: a constrained operation rounding toward
+/// zero, upward or downward, whose key agx-lower-air restores (no "+"
+/// operands it would miscount).
+static bool keepsAsHint(StringRef Key) {
+  if (!HintDirected || !Key.starts_with("call:llvm.experimental.constrained.") ||
+      Key.contains("|+"))
+    return false;
+  return Key.contains("|round.towardzero") || Key.contains("|round.upward") ||
+         Key.contains("|round.downward");
+}
 
 bool isDouble(const Type *T) { return T->getScalarType()->isDoubleTy(); }
 
@@ -720,6 +742,7 @@ class EmulateF64 {
   LLVMContext &Ctx;
   bool Failed = false;
   bool NeedSoftF64 = false;
+  unsigned HintCount = 0;
   /// Emulations by key and type, before the types change.
   std::map<std::pair<std::string, FunctionType *>, Function *> Emulations;
 
@@ -1465,6 +1488,18 @@ void EmulateF64::inlineEmulations() {
   for (Function &F : make_early_inc_range(M)) {
     if (!F.hasFnAttribute(EmulationAttr) || F.isDeclaration())
       continue;
+    StringRef Key = F.getFnAttribute(EmulationAttr).getValueAsString();
+    if (keepsAsHint(Key)) {
+      // the hint: its body simplified below, as the inlined emulations are
+      std::string Name = (air::HintPrefix + Twine(HintCount++)).str();
+      F.setName(Name);
+      F.addFnAttr(air::HintAttr, Key);
+      F.removeFnAttr(EmulationAttr);
+      F.addFnAttr(Attribute::NoInline);
+      F.setLinkage(GlobalValue::InternalLinkage);
+      Callers.insert(&F);
+      continue;
+    }
     F.setName(""); // (its name would be left in the inlined blocks')
     for (User *U : make_early_inc_range(F.users())) {
       auto *CI = dyn_cast<CallInst>(U);
