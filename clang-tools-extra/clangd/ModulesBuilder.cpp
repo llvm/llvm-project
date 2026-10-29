@@ -1161,9 +1161,9 @@ private:
   /// `ModuleName` is newer than the published module file of `ModuleName`
   /// itself. C++20 named modules don't record the signatures of the modules
   /// they import, so the AST reader can't detect this kind of staleness.
-  bool hasNewerDependency(StringRef ModuleName, PathRef PublishedModuleFilePath,
+  bool hasNewerDependency(PathRef PublishedModuleFilePath,
                           PathRef RequiredSource, PathRef ModuleUnitFileName,
-                          CachingProjectModules &MDB);
+                          CachingProjectModules &MDB, const ThreadsafeFS& TFS);
 
   ModuleFileCache Cache;
   ObservedModuleFiles ObservedFiles;
@@ -1244,18 +1244,22 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
 }
 
 bool ModulesBuilder::ModulesBuilderImpl::hasNewerDependency(
-    StringRef ModuleName, PathRef PublishedModuleFilePath,
+    PathRef PublishedModuleFilePath,
     PathRef RequiredSource, PathRef ModuleUnitFileName,
-    CachingProjectModules &MDB) {
+    CachingProjectModules &MDB, const ThreadsafeFS& TFS) {
   std::vector<std::string> Deps = MDB.getRequiredModules(ModuleUnitFileName);
   if (Deps.empty())
     return false;
 
-  llvm::sys::fs::file_status Status;
+  auto ErrOrStatus = TFS.view(std::nullopt)->status(PublishedModuleFilePath);
+  
   // Without a published module file there is nothing to compare against, so
   // treat any cached copy as stale.
-  if (llvm::sys::fs::status(PublishedModuleFilePath, Status))
+  if (!ErrOrStatus)
     return true;
+
+  llvm::vfs::Status& Status = ErrOrStatus.get();
+  
   const auto ModuleTime = Status.getLastModificationTime();
 
   return llvm::any_of(Deps, [&](const std::string &Dep) {
@@ -1267,11 +1271,14 @@ bool ModulesBuilder::ModulesBuilderImpl::hasNewerDependency(
       return false;
     const std::string DepPublishedPath = getPublishedModuleFilePath(
         Dep, getModuleFilesDirectory(DepSource, *DepCmd, getCDB()));
-    llvm::sys::fs::file_status DepStatus;
+    auto ErrOrDepStatus = TFS.view(std::nullopt)->status(DepPublishedPath);
+    
     // Dependencies that clangd didn't publish, like module files from the
     // build system, are validated by the AST reader instead.
-    if (llvm::sys::fs::status(DepPublishedPath, DepStatus))
+    if (!ErrOrDepStatus)
       return false;
+
+    llvm::vfs::Status& DepStatus = ErrOrDepStatus.get();
     return DepStatus.getLastModificationTime() > ModuleTime;
   });
 }
@@ -1328,8 +1335,8 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
       return SourceLock.takeError();
     
     const bool DependencyRebuilt =
-        hasNewerDependency(ReqModuleName, PublishedModuleFilePath,
-                           RequiredSource, ReqFileName, MDB);
+        hasNewerDependency(PublishedModuleFilePath,
+                           RequiredSource, ReqFileName, MDB, TFS);
 
     std::shared_ptr<const ModuleFile> Cached =
         Cache.getModule(ReqModuleName, ReqFileName, CommandHash);
