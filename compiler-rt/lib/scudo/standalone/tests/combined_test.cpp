@@ -264,6 +264,89 @@ struct TestNoCacheConfig {
   template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
 
+struct TestDeallocZeroFillConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool DeallocZeroFill = true;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+struct TestDeallocNoZeroFillConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool DeallocZeroFill = false;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128U;
+      static const scudo::u32 QuarantineSize = 0U;
+      static const scudo::u32 DefaultMaxEntriesCount = 64U;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    };
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
 } // namespace scudo
 
 #if SCUDO_FUCHSIA
@@ -409,6 +492,56 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
       Allocator->deallocateSized(P, Origin, Size);
     }
   }
+}
+
+TEST(ScudoCombinedTest, DeallocZeroFill) {
+  auto Allocator =
+      std::make_unique<TestAllocator<scudo::TestDeallocZeroFillConfig>>();
+  Allocator->setFillContents(scudo::ZeroFill);
+
+  const scudo::uptr Size = 1024U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0xaa, Size);
+  Allocator->deallocateSized(P, Origin, Size);
+
+  void *P2 = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P2, nullptr);
+  for (scudo::uptr I = 0; I < Size; I++)
+    ASSERT_EQ((reinterpret_cast<char *>(P2))[I], '\0');
+
+  Allocator->deallocateSized(P2, Origin, Size);
+}
+
+TEST(ScudoCombinedTest, DeallocNoZeroFill) {
+  auto Allocator =
+      std::make_unique<TestAllocator<scudo::TestDeallocNoZeroFillConfig>>();
+  // MTE zeroes the allocations even when turned off.
+  if (Allocator->useMemoryTaggingTestOnly())
+    TEST_SKIP("Doesn't work on MTE");
+
+  Allocator->setFillContents(scudo::NoFill);
+
+  const scudo::uptr Size = 1024U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0xaa, Size);
+  Allocator->deallocateSized(P, Origin, Size);
+
+  void *P2 = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P2, nullptr);
+  if (Allocator->useMemoryTaggingTestOnly()) {
+    EXPECT_EQ(scudo::untagPointer(P), scudo::untagPointer(P2));
+  } else {
+    EXPECT_EQ(P, P2);
+  }
+
+  for (scudo::uptr I = 0; I < Size; I++) {
+    EXPECT_EQ(0xaa, (reinterpret_cast<unsigned char *>(P2))[I])
+        << "Failed on index " << I;
+  }
+
+  Allocator->deallocateSized(P2, Origin, Size);
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
