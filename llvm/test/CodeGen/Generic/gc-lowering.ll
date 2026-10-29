@@ -11,9 +11,9 @@ define i32 @main() gc "shadow-stack" {
 ; CHECK-LABEL: define i32 @main() gc "shadow-stack" {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    [[B:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr null, ptr [[B]], align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[B]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    call void @llvm_gc_initialize(i32 1048576)
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr [[A]], ptr null)
 ; CHECK-NEXT:    [[APTR:%.*]] = call ptr @llvm_gc_allocate(i32 10)
@@ -67,9 +67,9 @@ define void @non_ptr_alloca_root() gc "shadow-stack" {
 ; CHECK-LABEL: define void @non_ptr_alloca_root() gc "shadow-stack" {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %A = alloca double, align 8
-; CHECK-NEXT:    store double 0.000000e+00, ptr %A, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 %A, i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    %B = alloca { double, double }, align 8
-; CHECK-NEXT:    store { double, double } zeroinitializer, ptr %B, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 %B, i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr %A, ptr @metadata)
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr %B, ptr @metadata)
 ; CHECK-NEXT:    ret void
@@ -83,6 +83,34 @@ entry:
 
   ;; ptr B;
   call void @llvm.gcroot(ptr %B, ptr @metadata)
+
+  ret void
+}
+
+; The root is an opaque blob, so a root that is neither a pointer nor of
+; pointer size is zero-initialized in full.
+define void @fat_and_array_roots() gc "shadow-stack" {
+; CHECK-LABEL: define void @fat_and_array_roots() gc "shadow-stack" {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %A = alloca { ptr, i1 }, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 %A, i8 0, i64 16, i1 false)
+; CHECK-NEXT:    %B = alloca [4 x ptr], align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 %B, i8 0, i64 32, i1 false)
+; CHECK-NEXT:    %C = alloca ptr, i32 7, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 %C, i8 0, i64 56, i1 false)
+; CHECK-NEXT:    call void @llvm.gcroot(ptr %A, ptr null)
+; CHECK-NEXT:    call void @llvm.gcroot(ptr %B, ptr null)
+; CHECK-NEXT:    call void @llvm.gcroot(ptr %C, ptr null)
+; CHECK-NEXT:    ret void
+; CHECK-NEXT:  }
+entry:
+  %A = alloca { ptr, i1 }
+  %B = alloca [4 x ptr]
+  %C = alloca ptr, i32 7
+
+  call void @llvm.gcroot(ptr %A, ptr null)
+  call void @llvm.gcroot(ptr %B, ptr null)
+  call void @llvm.gcroot(ptr %C, ptr null)
 
   ret void
 }
