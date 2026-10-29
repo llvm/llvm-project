@@ -1224,7 +1224,8 @@ void FactsGenerator::handleUse(const Expr *E) {
 void FactsGenerator::issueFieldPlaceholderLoans(
     const CXXRecordDecl *ClassDef, llvm::SmallVectorImpl<Fact *> &Facts) {
   assert(ClassDef && "class methods have a defined parent");
-  assert(ClassDef->isThisDeclarationADefinition());
+  // Eagerly instantiated methods may see their class still being defined.
+  assert(ClassDef->isCompleteDefinition() || ClassDef->isBeingDefined());
   auto IssueForRecord = [&](const CXXRecordDecl *RD) {
     for (const FieldDecl *Field : RD->fields()) {
       // Skip private fields of bases as they cannot be named in ClassDef.
