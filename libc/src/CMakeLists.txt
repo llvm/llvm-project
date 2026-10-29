@@ -65,3 +65,6 @@ add_subdirectory(signal)
 add_subdirectory(spawn)
 add_subdirectory(threads)
 add_subdirectory(ucontext)
+
+# Names the platform ABI settled on, which lean on the functions behind them.
+add_subdirectory(compat)
