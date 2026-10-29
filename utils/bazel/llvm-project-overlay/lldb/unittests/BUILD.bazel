@@ -1,0 +1,173 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+# Test names and dependencies mirror the add_lldb_unittest() calls in
+# lldb/unittests/**/CMakeLists.txt so the two builds are easy to keep in sync.
+
+# Inputs read through lldb_private::GetInputFilePath(), keyed by test. That
+# helper looks in an Inputs/ directory next to the test binary, which CMake's
+# add_unittest_inputs() populates by copying. Do the same here: copy every
+# input into this package's Inputs/ directory, where it sits next to the test
+# binaries in the runfiles tree.
+_TEST_INPUTS = {
+    "HostCommonTests": glob(["Host/common/Inputs/*"]),
+    "UtilityTests": glob(["Utility/Inputs/*"]),
+}
+
+[
+    copy_file(
+        name = "copy_input_" + src.rsplit("/", 1)[1],
+        testonly = True,
+        src = src,
+        out = "Inputs/" + src.rsplit("/", 1)[1],
+    )
+    for inputs in _TEST_INPUTS.values()
+    for src in inputs
+]
+
+# TestingSupport helper libraries.
+
+cc_library(
+    name = "lldbUtilityHelpers",
+    testonly = True,
+    srcs = [
+        "TestingSupport/MockTildeExpressionResolver.cpp",
+        "TestingSupport/TestUtilities.cpp",
+    ],
+    hdrs = [
+        "TestingSupport/MockTildeExpressionResolver.h",
+        "TestingSupport/SubsystemRAII.h",
+        "TestingSupport/TestUtilities.h",
+    ],
+    includes = ["."],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Utility",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_library(
+    name = "lldbHostHelpers",
+    testonly = True,
+    srcs = ["TestingSupport/Host/SocketTestUtilities.cpp"],
+    hdrs = glob(["TestingSupport/Host/*.h"]),
+    includes = ["."],
+    deps = [
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+# Unit tests.
+
+cc_test(
+    name = "EditlineTests",
+    srcs = ["Editline/EditlineTest.cpp"],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "HostTests",
+    srcs = glob(
+        ["Host/*.cpp"],
+        # Only built when LLDB_ENABLE_PYTHON, which this build does not set.
+        exclude = ["Host/PythonRuntimeLoaderTest.cpp"],
+    ) + select({
+        "@platforms//os:windows": glob(["Host/windows/*.cpp"]),
+        "//conditions:default": glob(["Host/posix/*.cpp"]),
+    }),
+    deps = [
+        ":lldbHostHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "HostCommonTests",
+    srcs = glob(["Host/common/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["HostCommonTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SignalsTests",
+    srcs = ["Signals/UnixSignalsTest.cpp"],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "UtilityTests",
+    srcs = glob([
+        "Utility/*.cpp",
+        "Utility/*.h",
+    ]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["UtilityTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

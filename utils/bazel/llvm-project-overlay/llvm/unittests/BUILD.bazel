@@ -763,6 +763,26 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "TargetParserTests",
+    size = "small",
+    srcs = glob(
+        [
+            "TargetParser/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
 # Note that the name of this test is important as it is used in the test itself.
 cc_test(
     name = "SupportTests",
