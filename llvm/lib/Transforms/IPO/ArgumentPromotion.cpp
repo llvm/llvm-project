@@ -110,6 +110,39 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
   return Ptr;
 }
 
+/// Size in bits of the object a pointer/reference variable points to, or
+/// std::nullopt if unknown (void *, forward declarations, ...).
+static std::optional<uint64_t>
+getPointeeSizeInBits(const DILocalVariable *Var) {
+  auto Strip = [](const DIType *Ty) {
+    while (auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
+      switch (DT->getTag()) {
+      case dwarf::DW_TAG_typedef:
+      case dwarf::DW_TAG_const_type:
+      case dwarf::DW_TAG_volatile_type:
+      case dwarf::DW_TAG_restrict_type:
+      case dwarf::DW_TAG_atomic_type:
+        Ty = DT->getBaseType();
+        continue;
+      default:
+        return Ty;
+      }
+    }
+    return Ty;
+  };
+
+  auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Strip(Var->getType()));
+  if (!PtrTy || (PtrTy->getTag() != dwarf::DW_TAG_pointer_type &&
+                 PtrTy->getTag() != dwarf::DW_TAG_reference_type &&
+                 PtrTy->getTag() != dwarf::DW_TAG_rvalue_reference_type))
+    return std::nullopt;
+
+  const DIType *Pointee = Strip(PtrTy->getBaseType());
+  if (!Pointee || Pointee->getSizeInBits() == 0)
+    return std::nullopt;
+  return Pointee->getSizeInBits();
+}
+
 /// DoPromotion - This method actually performs the promotion of the specified
 /// arguments, and returns the new function.  At this point, we know that it's
 /// safe to do so.
@@ -338,23 +371,28 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
     const auto &ArgParts = It->second;
 
-    // For single-part promoted pointer arguments, preserve debug info by
-    // prepending DW_OP_LLVM_implicit_pointer to the existing expression,
-    // referencing the promoted scalar value.
-    // Multi-part promotions and dead arguments fall back to poisoning
-    // (multi-part would need DW_OP_LLVM_fragment combined with implicit
-    // pointer, which is future work).
-    if (ArgParts.size() == 1 && !Arg.use_empty()) {
+    // Describe the promoted pointer with DW_OP_LLVM_implicit_pointer only when
+    // the single promoted part is the whole pointee (offset 0, same size) and
+    // the expression does no computation on the address (fragments are fine).
+    // Field promotions, multi-part promotions and everything else fall back to
+    // poison below.
+    if (ArgParts.size() == 1 && ArgParts[0].first == 0 && !Arg.use_empty()) {
       Argument *PromotedNewArg = &*I2;
+      uint64_t PartBits =
+          DL.getTypeStoreSizeInBits(ArgParts[0].second.Ty).getFixedValue();
       SmallVector<DbgVariableRecord *> DVRs;
       findDbgUsers(&Arg, DVRs);
-      if (!DVRs.empty()) {
-        SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_LLVM_implicit_pointer};
-        for (auto *DVR : DVRs) {
-          DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
-          DVR->setExpression(
-              DIExpression::prependOpcodes(DVR->getExpression(), Ops));
-        }
+      for (auto *DVR : DVRs) {
+        if (!DVR->isDbgValue() || DVR->hasArgList() ||
+            DVR->getExpression()->isComplex() ||
+            getPointeeSizeInBits(DVR->getVariable()) != PartBits)
+          continue;
+        // prependOpcodes appends the existing ops into Ops, build it fresh
+        // for each record.
+        SmallVector<uint64_t, 4> Ops = {dwarf::DW_OP_LLVM_implicit_pointer};
+        DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
+        DVR->setExpression(
+            DIExpression::prependOpcodes(DVR->getExpression(), Ops));
       }
     }
 
