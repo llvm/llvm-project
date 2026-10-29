@@ -577,8 +577,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   auto elementOf{[](const SubscriptIntExpr &base, int dim) {
     if (const auto *constant{
             evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(base)}) {
-      return SubscriptIntExpr{evaluate::Constant<evaluate::SubscriptInteger>{
-          constant->values().at(dim)}};
+      return evaluate::MakeSubscriptIntExpr(constant->values().at(dim));
     }
     return SubscriptIntExpr{
         evaluate::RankOneBoundElement{common::Clone(base), dim}};

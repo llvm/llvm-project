@@ -1233,9 +1233,10 @@ static void PutRankOneBoundSide(
     auto value{evaluate::ToInt64(boundOf(spec).GetExplicit())};
     // A rank-1 side without a RankOneBoundElement is a folded constant array.
     CHECK(value);
-    values.emplace_back(*value);
+    values.emplace_back(evaluate::SubscriptIntegerKind, *value);
   }
-  evaluate::Constant<evaluate::SubscriptInteger>{std::move(values),
+  evaluate::Constant<evaluate::SubscriptInteger>{evaluate::SubscriptIntegerKind,
+      std::move(values),
       evaluate::ConstantSubscripts{
           static_cast<evaluate::ConstantSubscript>(shape.size())}}
       .AsFortran(os);

@@ -878,7 +878,7 @@ llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
     // the originating intrinsic so the mod file round-trips as real Fortran.
     o << (isUpperBound_ ? "ubound(" : "lbound(");
     originatingArray_->AsFortran(o);
-    return o << ",dim=" << (dimension_ + 1) << ",kind=" << Result::kind << ')';
+    return o << ",dim=" << (dimension_ + 1) << ",kind=" << kind() << ')';
   }
   // A declaration-time RankOneBoundElement extracts a single element from a
   // rank-1 array expression used as an array bound.  It has no true Fortran

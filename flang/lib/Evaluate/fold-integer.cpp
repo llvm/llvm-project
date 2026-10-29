@@ -200,10 +200,10 @@ static bool ShapeHasUntaggedRankOneBoundElement(
   return false;
 }
 
-
 Expr<Type<TypeCategory::Integer>> LBOUND(FoldingContext &context,
     FunctionRef<Type<TypeCategory::Integer>> &&funcRef) {
   using T = Type<TypeCategory::Integer>;
+  const int kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
     std::optional<int> dim;
@@ -310,7 +310,8 @@ Expr<Type<TypeCategory::Integer>> UBOUND(FoldingContext &context,
             }
           } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
             if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
-              return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
+              return Fold(
+                  context, ConvertToType<T>(kind, std::move(*shapeExpr)));
             }
           }
         }
@@ -1526,17 +1527,18 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
         } else if (dim) {
           if (auto &extent{shape->at(*dim)}; extent &&
               !FoldedExtentHasUntaggedRankOneBoundElement(context, extent)) {
-            return Fold(context, ConvertToType<T>(std::move(*extent)));
+            return Fold(context, ConvertToType<T>(kind, std::move(*extent)));
           }
         }
       } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
         if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
           // DIM= is absent; compute PRODUCT(SHAPE())
-          ExtentExpr product{1};
+          ExtentExpr product{MakeExtentConstant(1)};
           for (auto &&extent : std::move(*extents)) {
             product = std::move(product) * std::move(extent);
           }
-          return Expr<T>{ConvertToType<T>(Fold(context, std::move(product)))};
+          return Expr<T>{
+              ConvertToType<T>(kind, Fold(context, std::move(product)))};
         }
       }
     }
@@ -1546,7 +1548,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       if (auto info{
               characteristics::TypeAndShape::Characterize(args[0], context)}) {
         if (auto bytes{info->MeasureSizeInBytes(context)}) {
-          return Expr<T>{Fold(context, ConvertToType<T>(std::move(*bytes)))};
+          return Expr<T>{
+              Fold(context, ConvertToType<T>(kind, std::move(*bytes)))};
         }
       }
     }
@@ -1685,10 +1688,9 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   return AsExpr(std::move(inquiry));
 }
 
-template <int KIND>
-static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
-ExtractRankOneElement(FoldingContext &context,
-    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim);
+static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
+    FoldingContext &context, const Expr<Type<TypeCategory::Integer>> &base,
+    int dim);
 
 // Subscripts `entity`, whose last part-ref is the rank>0 array, at element
 // [dim] (0-based) using its lower bound.
@@ -1699,7 +1701,7 @@ static std::optional<DataRef> SubscriptArrayPartRef(
     return std::nullopt;
   }
   std::vector<Subscript> ss;
-  ss.emplace_back(Fold(context, std::move(*lb) + Expr<SubscriptInteger>{dim}));
+  ss.emplace_back(Fold(context, std::move(*lb) + MakeSubscriptIntExpr(dim)));
   return DataRef{ArrayRef{std::move(entity), std::move(ss)}};
 }
 
@@ -1764,7 +1766,7 @@ static std::optional<DataRef> SubscriptRankOneElement(
                   }
                   ss.emplace_back(Fold(context,
                       std::move(*lower) +
-                          Expr<SubscriptInteger>{dim} * trip->stride()));
+                          MakeSubscriptIntExpr(dim) * trip->stride()));
                 } else {
                   const auto &vec{
                       std::get<IndirectSubscriptIntegerExpr>(sub.u).value()};
@@ -1810,27 +1812,31 @@ static std::optional<DataRef> SubscriptRankOneElement(
 // so the result is genuine Fortran that round-trips through module files.
 // Returns std::nullopt when a leaf cannot be reduced (e.g. a user function
 // reference), so the caller keeps the RankOneBoundElement unchanged.
-template <int KIND>
-static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
-ExtractRankOneElement(FoldingContext &context,
-    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim) {
-  using T = Type<TypeCategory::Integer, KIND>;
+static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
+    FoldingContext &context, const Expr<Type<TypeCategory::Integer>> &base,
+    int dim) {
+  using T = Type<TypeCategory::Integer>;
+  const int kind{base.kind()};
   if (base.Rank() == 0) {
     return base; // a scalar operand contributes itself to every element
   }
   return common::visit(
       [&](const auto &y) -> std::optional<Expr<T>> {
         using Ty = std::decay_t<decltype(y)>;
-        if constexpr (std::is_same_v<Ty, Constant<T>>) {
+        const int tyKind{y.kind()};
+
+        if (kind != tyKind) {
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Constant<T>>) {
           ConstantSubscripts at{y.lbounds()};
           at[0] = y.lbounds()[0] + dim;
-          return Expr<T>{Constant<T>{y.At(at)}};
+          return MakeConstantExpr<T>(tyKind, y.At(at));
         } else if constexpr (std::is_same_v<Ty, Designator<T>>) {
           if (auto dr{ExtractDataRef(y)}) {
             if (auto elem{SubscriptRankOneElement(context, *dr, dim)}) {
               if (auto expr{AsGenericExpr(std::move(*elem))}) {
                 if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*expr)}) {
-                  return ConvertToType<T>(std::move(*ie));
+                  return ConvertToType<T>(tyKind, std::move(*ie));
                 }
               }
             }
@@ -1894,6 +1900,7 @@ ExtractRankOneElement(FoldingContext &context,
           }
           return std::nullopt;
         } else if constexpr (std::is_same_v<Ty, Parentheses<T>>) {
+
           if (auto op{ExtractRankOneElement(context, y.left(), dim)}) {
             return Expr<T>{Parentheses<T>{std::move(*op)}};
           }
@@ -1909,7 +1916,7 @@ ExtractRankOneElement(FoldingContext &context,
           auto l{ExtractRankOneElement(context, y.left(), dim)};
           auto r{ExtractRankOneElement(context, y.right(), dim)};
           if (l && r) {
-            return Expr<T>{Ty{std::move(*l), std::move(*r)}};
+            return Expr<T>{Ty{tyKind, std::move(*l), std::move(*r)}};
           }
           return std::nullopt;
         } else if constexpr (std::is_same_v<Ty, Extremum<T>>) {
@@ -1926,7 +1933,7 @@ ExtractRankOneElement(FoldingContext &context,
               [&](const auto &inner) -> std::optional<Expr<T>> {
                 if (auto op{ExtractRankOneElement(context, inner, dim)}) {
                   return Expr<T>{Convert<T, TypeCategory::Integer>{
-                      Expr<SomeInteger>{std::move(*op)}}};
+                      kind, Expr<SomeInteger>{std::move(*op)}}};
                 }
                 return std::nullopt;
               },

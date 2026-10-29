@@ -537,14 +537,15 @@ static MaybeExtentExpr GetNonNegativeExtent(const NamedEntity &base,
     if (lval.value_or(0) == 1) {
       // max(0,ub) == max(0,UBOUND(a,dim)) for every ub when lb == 1, so a
       // surviving rank-1 bound element can carry ubound() provenance exactly.
-      return ExtentExpr{Extremum<SubscriptInteger>{Ordering::Greater,
-          ExtentExpr{0}, CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
+      return ExtentExpr{
+          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
+              CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
     } else {
       // Neither UBOUND() nor LBOUND() equals the declared bound of an empty
       // dimension, so the raw copies cannot carry provenance here.
       return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
-              CloneBound(*ubound) - CloneBound(*lbound) + ExtentExpr{1}}};
+          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
+              CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
     }
   } else {
     return std::nullopt;

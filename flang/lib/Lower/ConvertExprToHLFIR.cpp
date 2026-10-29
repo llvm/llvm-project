@@ -2159,8 +2159,8 @@ private:
     mlir::Location loc = getLoc();
     auto &builder = getBuilder();
     using ResTy = Fortran::evaluate::RankOneBoundElement::Result;
-    mlir::Type resultType =
-        getConverter().genType(ResTy::category, ResTy::kind);
+    constexpr int resKind{Fortran::evaluate::RankOneBoundElement::ResultKind};
+    mlir::Type resultType = getConverter().genType(ResTy::category, resKind);
     // Evaluate the rank-1 base expression.
     Fortran::lower::SomeExpr someExpr{Fortran::evaluate::AsGenericExpr(
         Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
