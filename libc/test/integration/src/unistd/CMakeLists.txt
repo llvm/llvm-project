@@ -40,6 +40,22 @@ add_integration_test(
 )
 
 add_integration_test(
+  wait_status_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    wait_status_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.include.sys_wait
+    libc.src.signal.kill
+    libc.src.signal.raise
+    libc.src.stdlib.exit
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.fork
+)
+
+add_integration_test(
   lockf_test
   SUITE
     libc-unistd-integration-tests
