@@ -130,7 +130,7 @@ void usage(void){
 // recorded before the definition was seen does not survive.
 // CIR:      cir.func{{.*}} @f_use_before_def()
 // CIR-SAME: "cir.target-cpu" = "lakemont"
-// CIR-SAME: "cir.target-features" = "+cx8,+mmx", module_default_attrs, nothrow, optnone}
+// CIR-SAME: "cir.target-features" = "+cx8,+mmx", nothrow, optnone}
 __attribute__((target("arch=lakemont,mmx")))
 void f_use_before_def(void) {}
 
@@ -193,10 +193,10 @@ __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
 
 // A declaration gets the attributes too.  target(arch=) suppresses tune-cpu,
-// so no "cir.tune-cpu" entry follows the features.
+// so the dictionary closes after the features.
 // CIR:      cir.func private @f_decl_only()
 // CIR-SAME: "cir.target-cpu" = "lakemont"
-// CIR-SAME: "cir.target-features" = "+cx8,+mmx", module_default_attrs}
+// CIR-SAME: "cir.target-features" = "+cx8,+mmx"}
 
 // LLVM: [[f_decl_only]] = {{.*}}"target-cpu"="lakemont" "target-features"="+cx8,+mmx" }
 __attribute__((target("arch=lakemont,mmx")))

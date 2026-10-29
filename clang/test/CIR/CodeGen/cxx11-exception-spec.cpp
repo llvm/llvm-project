@@ -107,50 +107,50 @@ void h() {
 // LLVM: define {{.*}} @_Z1iv
 void i() {
   // LLVM: declare {{.*}} @_Z1gIiEvv() [[NUW2:#[0-9]+]]
-  // CIR: cir.func private @_Z1gIiEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_Z1gIiEvv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   g<int>();
   // LLVM: declare {{.*}} @_Z1gIA2_iEvv()
-  // CIR: cir.func private @_Z1gIA2_iEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_Z1gIA2_iEvv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   g<int[2]>();
 
   // LLVM: declare {{.*}} @_ZN1SIiE1gEv() [[NUW2]]
-  // CIR: cir.func private @_ZN1SIiE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_ZN1SIiE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   S<int>::g();
   // LLVM: declare {{.*}} @_ZN1SIA2_iE1gEv()
-  // CIR: cir.func private @_ZN1SIA2_iE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_ZN1SIA2_iE1gEv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   S<int[2]>::g();
 
   // LLVM: declare {{.*}} @_Z1gIfEvv() [[NUW2]]
-  // CIR: cir.func private @_Z1gIfEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_Z1gIfEvv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   void (*g1)() = &g<float>;
   // LLVM: declare {{.*}} @_Z1gIdEvv()
-  // CIR: cir.func private @_Z1gIdEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_Z1gIdEvv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   void (*g2)() = &g<double>;
 
   // LLVM: declare {{.*}} @_ZN1SIfE1gEv() [[NUW2]]
-  // CIR: cir.func private @_ZN1SIfE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_ZN1SIfE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   void (*g3)() = &S<float>::g;
   // LLVM: declare {{.*}} @_ZN1SIdE1gEv()
-  // CIR: cir.func private @_ZN1SIdE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_ZN1SIdE1gEv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   void (*g4)() = &S<double>::g;
 
   // LLVM: declare {{.*}} @_Z1gIA4_cEvv() [[NUW2]]
-  // CIR: cir.func private @_Z1gIA4_cEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_Z1gIA4_cEvv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   (void)&g<char[4]>;
   // LLVM: declare {{.*}} @_Z1gIcEvv()
-  // CIR: cir.func private @_Z1gIcEvv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_Z1gIcEvv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   (void)&g<char>;
 
   // LLVM: declare {{.*}} @_ZN1SIA4_cE1gEv() [[NUW2]]
-  // CIR: cir.func private @_ZN1SIA4_cE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_ZN1SIA4_cE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   (void)&S<char[4]>::g;
   // LLVM: declare {{.*}} @_ZN1SIcE1gEv()
-  // CIR: cir.func private @_ZN1SIcE1gEv() attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_ZN1SIcE1gEv() attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   (void)&S<char>::g;
 }
@@ -162,11 +162,11 @@ template<typename T> struct Nested {
 // LLVM: define {{.*}} @_Z1jv
 void j() {
   // LLVM: declare {{.*}} @_ZN6NestedIiE1fILb1EcEEvv(
-  // CIR: cir.func private @_ZN6NestedIiE1fILb1EcEEvv({{.*}}) attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
+  // CIR: cir.func private @_ZN6NestedIiE1fILb1EcEEvv({{.*}}) attributes {"cir.target-features" = "{{[^"]*}}"}
   // LLVM-NOT: [[NUW]]
   Nested<int>().f<true, char>();
   // LLVM: declare {{.*}} @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) [[NUW2]]
-  // CIR: cir.func private @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow}
+  // CIR: cir.func private @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) attributes {"cir.target-features" = "{{[^"]*}}", nothrow}
   Nested<long>().f<false, long>();
 }
 

@@ -1,37 +1,33 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
 
-// A `cir.func` marked `module_default_attrs` gets the `no_trapping_math` and
-// `ssp_buffer_size` values of the module's #cir.lowering_lang_options as
-// `llvm.func` `passthrough` entries, translated to the "no-trapping-math" and
-// "stack-protector-buffer-size" LLVM IR string attributes. Unmarked functions
-// get neither.
+// A `cir.func` gets the `no_trapping_math` and `ssp_buffer_size` values of the
+// module's #cir.lowering_lang_options as `llvm.func` `passthrough` entries,
+// translated to the "no-trapping-math" and "stack-protector-buffer-size" LLVM
+// IR string attributes. A function marked `runtime_func` gets neither.
 
 module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
     openmp = false, openmp_is_target_device = false, clang_abi_compat = 0,
     long_double_size = 0, no_trapping_math = true, ssp_buffer_size = 16>} {
-  cir.func @def_fn() attributes {module_default_attrs} {
+  cir.func @def_fn() {
     cir.return
   }
 
-  cir.func private @decl_fn() attributes {module_default_attrs}
+  cir.func private @decl_fn()
 
-  cir.func @plain_fn() {
-    cir.return
-  }
+  cir.func private @runtime_fn() attributes {runtime_func}
 }
 
 // MLIR-LABEL: llvm.func @def_fn()
 // MLIR-SAME:    passthrough = {{\[}}["no-trapping-math", "true"], ["stack-protector-buffer-size", "16"]]
 // MLIR-LABEL: llvm.func @decl_fn()
 // MLIR-SAME:    passthrough = {{\[}}["no-trapping-math", "true"], ["stack-protector-buffer-size", "16"]]
-// MLIR-LABEL: llvm.func @plain_fn()
+// MLIR-LABEL: llvm.func @runtime_fn()
 // MLIR-NOT:     passthrough
 
 // LLVM:       define void @def_fn() #[[ATTRS:[0-9]+]]
 // LLVM:       declare void @decl_fn() #[[ATTRS]]
-// LLVM-LABEL: define void @plain_fn()
-// LLVM-NOT:     #
+// LLVM:       declare void @runtime_fn(){{$}}
 // LLVM:       attributes #[[ATTRS]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="16" }

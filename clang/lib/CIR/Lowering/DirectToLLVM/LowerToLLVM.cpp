@@ -3081,7 +3081,7 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
          attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
-         attr.getName() == CIRDialect::getModuleDefaultAttrsAttrName();
+         attr.getName() == CIRDialect::getRuntimeFuncAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3256,7 +3256,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
-  if (op->hasAttr(CIRDialect::getModuleDefaultAttrsAttrName())) {
+  // Every function but a runtime function gets the TU-wide default function
+  // attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
     if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
                             ->getAttrOfType<cir::LoweringLangOptionsAttr>(
                                 CIRDialect::getLoweringLangOptionsAttrName())) {

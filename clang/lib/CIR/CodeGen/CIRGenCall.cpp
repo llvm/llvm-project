@@ -260,11 +260,10 @@ static void addTrivialDefaultFunctionAttributes(
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
     // various inf/nan/nsz/etc work here.
-
-    // no-trapping-math and stack-protector-buffer-size are TU-wide, so their
-    // values live in #cir.lowering_lang_options; only mark the function here.
-    attrs.set(cir::CIRDialect::getModuleDefaultAttrsAttrName(),
-              mlir::UnitAttr::get(mlirCtx));
+    //
+    // no-trapping-math and stack-protector-buffer-size are TU-wide, so they
+    // live in #cir.lowering_lang_options and LowerToLLVM adds them to every
+    // function not marked as a runtime function.
 
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,

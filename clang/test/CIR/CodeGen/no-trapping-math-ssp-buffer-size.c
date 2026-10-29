@@ -14,21 +14,17 @@
 
 // Both the definition and the declaration get "no-trapping-math" (unless FP
 // exceptions are not ignored) and "stack-protector-buffer-size". Their values
-// are TU-wide and live in #cir.lowering_lang_options; each function that gets
-// them carries the module_default_attrs marker. Runtime library functions
-// (e.g. __cxa_guard_acquire) are not marked, matching classic codegen.
+// are TU-wide and live in #cir.lowering_lang_options, and LowerToLLVM adds them
+// to every function that is not marked runtime_func.
 
 int decl(int);
 
 int def(int x) { return decl(x); }
 
 // CIR: cir.lowering_lang_options = #cir.lowering_lang_options<{{.*}}no_trapping_math = true, ssp_buffer_size = 8>
-// CIR: cir.func{{.*}} @def({{.*}}) -> {{.*}} attributes {{{.*}}module_default_attrs{{.*}}}
-// CIR: cir.func private @decl({{.*}}) -> {{.*}} attributes {{{.*}}module_default_attrs{{.*}}}
+// CIR-NOT: runtime_func
 
 // CIR-STRICT: cir.lowering_lang_options = #cir.lowering_lang_options<{{.*}}no_trapping_math = false, ssp_buffer_size = 16>
-// CIR-STRICT: cir.func{{.*}} @def({{.*}}) -> {{.*}} attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs, nothrow, optnone, strictfp}
-// CIR-STRICT: cir.func private @decl({{.*}}) -> {{.*}} attributes {"cir.target-features" = "{{[^"]*}}", module_default_attrs}
 
 // LLVM: define{{.*}} i32 @def(i32 {{.*}}) #[[DEF_ATTR:[0-9]+]]
 // LLVM: declare{{.*}} i32 @decl(i32 {{.*}}) #[[DECL_ATTR:[0-9]+]]

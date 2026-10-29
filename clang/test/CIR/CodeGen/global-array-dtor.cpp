@@ -56,7 +56,7 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) {
+// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) #{{[0-9]+}} {
 // LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 16
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
@@ -76,7 +76,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   ret void
 // LLVM: }
 //
-// LLVM: define internal void @__cxx_global_var_init() {
+// LLVM: define internal void @__cxx_global_var_init() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @arrDtor, ptr @__dso_handle)
 
 // Note: OGCG defines these functions in reverse order of CIR->LLVM.
@@ -106,7 +106,7 @@ ArrayDtor arrDtor[16];
 // CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 
-// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() #{{[0-9]+}}
 // LLVM:   call void @__cxx_global_var_init()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() {{.*}} section ".text.startup" {
