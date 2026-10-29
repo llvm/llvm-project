@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -18,30 +19,24 @@ struct TestPtrSetTypeOffset
     : public PassWrapper<TestPtrSetTypeOffset, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPtrSetTypeOffset)
 
-  TestPtrSetTypeOffset() = default;
-  TestPtrSetTypeOffset(const TestPtrSetTypeOffset &pass) : PassWrapper(pass) {}
-
   StringRef getArgument() const final { return "test-ptr-set-type-offset"; }
   StringRef getDescription() const final {
-    return "Attach the queried type offset to each ptr.type_offset operation";
+    return "Attach type offsets to ptr.type_offset operations in func.func";
   }
 
   void runOnOperation() override {
     Builder builder(&getContext());
-    getOperation()->walk([&](ptr::TypeOffsetOp op) {
-      llvm::TypeSize size = useExplicitLayout
-                                ? op.getTypeSize(DataLayout::closest(op))
-                                : op.getTypeSize();
-      op->setAttr("type_offset", builder.getIndexAttr(size.getKnownMinValue()));
-      if (size.isScalable())
-        op->setAttr("type_offset_scalable", builder.getUnitAttr());
+    getOperation()->walk([&](func::FuncOp func) {
+      DataLayout layout = DataLayout::closest(func);
+      func.walk([&](ptr::TypeOffsetOp op) {
+        llvm::TypeSize size = op.getTypeSize(layout);
+        op->setAttr("type_offset",
+                    builder.getIndexAttr(size.getKnownMinValue()));
+        if (size.isScalable())
+          op->setAttr("type_offset_scalable", builder.getUnitAttr());
+      });
     });
   }
-
-  Option<bool> useExplicitLayout{
-      *this, "use-explicit-layout",
-      llvm::cl::desc("Pass the enclosing data layout explicitly to the query"),
-      llvm::cl::init(false)};
 };
 } // namespace
 

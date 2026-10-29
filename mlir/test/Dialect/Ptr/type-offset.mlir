@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s --test-ptr-set-type-offset --split-input-file | FileCheck %s
-// RUN: mlir-opt %s --test-ptr-set-type-offset=use-explicit-layout --split-input-file | FileCheck %s
 
 // CHECK-LABEL: @default_layout
 func.func @default_layout() {

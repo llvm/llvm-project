@@ -465,10 +465,9 @@ LogicalResult ToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
-  if (layout)
-    return layout->getTypeAllocSize(getElementType());
-  DataLayout dl = DataLayout::closest(*this);
-  return dl.getTypeAllocSize(getElementType());
+  if (!layout)
+    layout.emplace(DataLayout::closest(*this));
+  return layout->getTypeAllocSize(getElementType());
 }
 
 //===----------------------------------------------------------------------===//

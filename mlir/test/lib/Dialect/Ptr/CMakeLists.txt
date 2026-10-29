@@ -5,6 +5,7 @@ add_mlir_library(MLIRPtrTestPasses
 )
 mlir_target_link_libraries(MLIRPtrTestPasses PUBLIC
   MLIRDataLayoutInterfaces
+  MLIRFuncDialect
   MLIRIR
   MLIRPass
   MLIRPtrDialect
