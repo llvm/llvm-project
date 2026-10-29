@@ -50,6 +50,13 @@ static cl::opt<unsigned> MaxThunkChainLength(
     "max-thunk-chain-length",
     cl::desc("maximum number of B-only thunks to use for call relaxation"),
     cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> DeprecatedRelaxPLT(
+    "relax-plt", cl::desc("deprecated, has no effect"), cl::init(true),
+    cl::callback([](const bool &) {
+      errs() << "BOLT-WARNING: '-relax-plt' is deprecated and has no effect\n";
+    }),
+    cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

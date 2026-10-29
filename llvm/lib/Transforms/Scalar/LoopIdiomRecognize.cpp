@@ -176,14 +176,14 @@ class LoopIdiomRecognize {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
-  explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              TargetLibraryInfo *TLI,
+  explicit LoopIdiomRecognize(const ScalarOptions &Opts, AliasAnalysis *AA,
+                              DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
-        TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(Opts), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL),
+        ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -297,7 +297,8 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
+  const ScalarOptions &Opts = getScalarOptions(L);
+  LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
@@ -2089,9 +2090,21 @@ public:
       return false;
     if (StepSize != OpWidth / 8)
       return false;
-    if (OpWidth >= 16)
+    if (OpWidth >= 16) {
       if (OpWidth != WcharSize * 8)
         return false;
+
+      // Don't call `wcslen` if the base pointer isn't known to be aligned.
+      const DataLayout &DL = LoopLoad->getDataLayout();
+      Align OperandAlign = DL.getABITypeAlign(OperandType);
+      if (LoopLoad->getAlign() < OperandAlign) {
+        // For null pointers the load base number of trailing zeros may be
+        // larger than what `Align` allows. So take log2 of operand alignment
+        // instead and compare trailing zeros instead of alignments.
+        if (SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
+          return false;
+      }
+    }
 
     // Scan every instruction in the loop to ensure there are no side effects.
     for (Instruction &I : *LoopBody)
@@ -3038,17 +3051,17 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
   // Step 1: Insert the ctpop instruction at the end of the precondition block
   IRBuilder<> Builder(PreCondBr);
-  Value *PopCnt, *PopCntZext, *NewCount, *TripCnt;
+  Value *PopCnt, *NewCount, *TripCnt;
   {
     PopCnt = createPopcntIntrinsic(Builder, Var, DL);
-    NewCount = PopCntZext =
+    NewCount =
         Builder.CreateZExtOrTrunc(PopCnt, cast<IntegerType>(CntPhi->getType()));
 
     if (NewCount != PopCnt)
       (cast<Instruction>(NewCount))->setDebugLoc(DL);
 
     // TripCnt is exactly the number of iterations the loop has
-    TripCnt = NewCount;
+    TripCnt = PopCnt;
 
     // If the population counter's initial value is not zero, insert Add Inst.
     Value *CntInitVal = CntPhi->getIncomingValueForBlock(PreHead);
@@ -3060,14 +3073,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   }
 
   // Step 2: Replace the precondition from "if (x == 0) goto loop-exit" to
-  //   "if (NewCount == 0) loop-exit". Without this change, the intrinsic
+  //   "if (TripCnt == 0) loop-exit". Without this change, the intrinsic
   //   function would be partial dead code, and downstream passes will drag
   //   it back from the precondition block to the preheader.
   {
     ICmpInst *PreCond = cast<ICmpInst>(PreCondBr->getCondition());
 
-    Value *Opnd0 = PopCntZext;
-    Value *Opnd1 = ConstantInt::get(PopCntZext->getType(), 0);
+    Value *Opnd0 = TripCnt;
+    Value *Opnd1 = ConstantInt::get(TripCnt->getType(), 0);
     if (PreCond->getOperand(0) != Var)
       std::swap(Opnd0, Opnd1);
 
@@ -3109,14 +3122,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
     Builder.SetInsertPoint(LbCond);
     Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1), "tcdec",
+                          /*HasNUW=*/true, /*HasNSW=*/false));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
 
     CmpInst::Predicate Pred =
-        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_SLE;
+        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_EQ;
     LbCond->setPredicate(Pred);
     LbCond->setOperand(0, TcDec);
     LbCond->setOperand(1, ConstantInt::get(Ty, 0));
@@ -3249,8 +3262,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   assert(CurLoop->isLoopInvariant(BaseX) &&
          "Expected BaseX to be available in the preheader!");
 
-  if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
-    // FIXME: support right-shift?
+  if (!NextX || (!match(NextX, m_Shl(m_Specific(CurrX), m_One())) &&
+                 !match(NextX, m_LShr(m_Specific(CurrX), m_One())))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad recurrence.\n");
     return false;
   }
@@ -3275,6 +3288,50 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 
   // Okay, idiom checks out.
   return true;
+}
+
+static bool isRightShiftBitTestKnownToTerminate(Value *X, Value *BitPos,
+                                                BasicBlock *Preheader,
+                                                const DataLayout &DL,
+                                                DominatorTree *DT) {
+  using namespace PatternMatch;
+
+  auto *Pos = dyn_cast<ConstantInt>(BitPos);
+  unsigned Bitwidth = X->getType()->getScalarSizeInBits();
+  if (!Pos || Bitwidth == 1 || Pos->getValue().uge(Bitwidth))
+    return false;
+
+  SimplifyQuery SQ(DL, DT, /*AC=*/nullptr, Preheader->getTerminator());
+  if (!isKnownNonZero(X, SQ))
+    return false;
+  if (Pos->isZero())
+    return true;
+
+  // The guard must rule out set bits below BitPos; those bits can never
+  // reach the tested position when X shifts right.
+  BasicBlock *GuardBB = Preheader->getSinglePredecessor();
+  if (!GuardBB)
+    return false;
+  auto *Guard = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!Guard)
+    return false;
+
+  CmpPredicate Pred;
+  Value *LHS;
+  if (!match(Guard->getCondition(), m_ICmp(Pred, m_Value(LHS), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  const APInt *Mask;
+  if (!match(LHS, m_And(m_Specific(X), m_APInt(Mask))))
+    return false;
+
+  BasicBlock *ZeroSuccessor =
+      Guard->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 0 : 1);
+  if (ZeroSuccessor != Preheader)
+    return false;
+
+  return Mask->countr_one() >= Pos->getZExtValue();
 }
 
 /// Look for the following loop:
@@ -3327,6 +3384,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 ///     %x.next.res = phi i32 [ %x.next, %loop ] <...>
 ///     <...>
 /// \endcode
+/// A logical right-shift recurrence uses cttz of X shifted by BitPos instead,
+/// provided the preheader proves that the loop will reach a set bit.
 bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   bool MadeChange = false;
 
@@ -3353,9 +3412,16 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   IRBuilder<> Builder(LoopPreheaderBB->getTerminator());
   Builder.SetCurrentDebugLocation(cast<Instruction>(XCurr)->getDebugLoc());
 
-  Intrinsic::ID IntrID = Intrinsic::ctlz;
+  bool IsRightShift = XNext->getOpcode() == Instruction::LShr;
+  Intrinsic::ID IntrID = IsRightShift ? Intrinsic::cttz : Intrinsic::ctlz;
   Type *Ty = X->getType();
   unsigned Bitwidth = Ty->getScalarSizeInBits();
+
+  // A right shift must be guaranteed to reach a set bit at BitPos.
+  if (IsRightShift && !isRightShiftBitTestKnownToTerminate(
+                          X, BitPos, LoopPreheaderBB, *DL, DT)) {
+    return false;
+  }
 
   TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_SizeAndLatency;
@@ -3371,7 +3437,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
                " Intrinsic is too costly, not beneficial\n");
     return MadeChange;
   }
-  if (TTI->getArithmeticInstrCost(Instruction::Shl, Ty, CostKind) >
+  if (TTI->getArithmeticInstrCost(XNext->getOpcode(), Ty, CostKind) >
       TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Shift is too costly, not beneficial\n");
     return MadeChange;
@@ -3387,7 +3453,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
       InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =
@@ -3400,26 +3466,35 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // Step 1: Compute the loop trip count.
 
-  Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
-                                        BitPos->getName() + ".lowbitmask");
-  Value *Mask =
-      Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
-  Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
-      /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
-  Value *XMaskedNumActiveBits = Builder.CreateSub(
-      ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
-      XMasked->getName() + ".numactivebits", /*HasNUW=*/true,
-      /*HasNSW=*/Bitwidth != 2);
-  Value *XMaskedLeadingOnePos =
-      Builder.CreateAdd(XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
-                        XMasked->getName() + ".leadingonepos", /*HasNUW=*/false,
-                        /*HasNSW=*/Bitwidth > 2);
+  Value *LoopBackedgeTakenCount;
+  if (IsRightShift) {
+    Value *ShiftedX = Builder.CreateLShr(X, BitPos);
+    LoopBackedgeTakenCount = Builder.CreateIntrinsic(
+        IntrID, Ty, {ShiftedX, /*is_zero_poison=*/Builder.getTrue()});
+  } else {
+    Value *LowBitMask =
+        Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
+                          BitPos->getName() + ".lowbitmask");
+    Value *Mask =
+        Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
+    Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
+    Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+        IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
+        /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
+    Value *XMaskedNumActiveBits = Builder.CreateSub(
+        ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
+        XMasked->getName() + ".numactivebits",
+        /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
+    Value *XMaskedLeadingOnePos = Builder.CreateAdd(
+        XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
+        XMasked->getName() + ".leadingonepos", /*HasNUW=*/false,
+        /*HasNSW=*/Bitwidth > 2);
 
-  Value *LoopBackedgeTakenCount = Builder.CreateSub(
-      BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount",
-      /*HasNUW=*/true, /*HasNSW=*/true);
+    LoopBackedgeTakenCount = Builder.CreateSub(
+        BitPos, XMaskedLeadingOnePos,
+        CurLoop->getName() + ".backedgetakencount", /*HasNUW=*/true,
+        /*HasNSW=*/true);
+  }
   // We know loop's backedge-taken count, but what's loop's trip count?
   // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
   Value *LoopTripCount =
@@ -3431,23 +3506,27 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // NewX is always safe to compute, because `LoopBackedgeTakenCount`
   // will always be smaller than `bitwidth(X)`, i.e. we never get poison.
-  Value *NewX = Builder.CreateShl(X, LoopBackedgeTakenCount);
+  Value *NewX = IsRightShift ? Builder.CreateLShr(X, LoopBackedgeTakenCount)
+                             : Builder.CreateShl(X, LoopBackedgeTakenCount);
   NewX->takeName(XCurr);
   if (auto *I = dyn_cast<Instruction>(NewX))
     I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
   Value *NewXNext;
-  // Rewriting XNext is more complicated, however, because `X << LoopTripCount`
-  // will be poison iff `LoopTripCount == bitwidth(X)` (which will happen
-  // iff `BitPos` is `bitwidth(x) - 1` and `X` is `1`). So unless we know
-  // that isn't the case, we'll need to emit an alternative, safe IR.
-  if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
-      PatternMatch::match(
-          BitPos, PatternMatch::m_SpecificInt_ICMP(
-                      ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
-                                               Ty->getScalarSizeInBits() - 1))))
+  // Shifting X by LoopTripCount is poison if the count equals Bitwidth.
+  // For right shifts, shift NewX by one instead. For left shifts, this can
+  // happen when BitPos is the highest bit and X is one, so use a single
+  // additional shift unless the larger shift is known to be safe.
+  if (IsRightShift) {
+    NewXNext = Builder.CreateLShr(NewX, ConstantInt::get(Ty, 1));
+  } else if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
+             PatternMatch::match(BitPos,
+                                 PatternMatch::m_SpecificInt_ICMP(
+                                     ICmpInst::ICMP_NE,
+                                     APInt(Ty->getScalarSizeInBits(),
+                                           Ty->getScalarSizeInBits() - 1)))) {
     NewXNext = Builder.CreateShl(X, LoopTripCount);
-  else {
+  } else {
     // Otherwise, just additionally shift by one. It's the smallest solution,
     // alternatively, we could check that NewX is INT_MIN (or BitPos is )
     // and select 0 instead.

@@ -534,6 +534,11 @@ bool isVOPC64DPP(unsigned Opc);
 LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
+/// Returns true if this VOP3P opcode has no op_sel_hi field, in which case
+/// those bits are encoded as zero instead of defaulting to one.
+LLVM_READONLY
+bool hasNoOpSelHi(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
@@ -1669,8 +1674,8 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
-LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi,
+                            bool *IsBF16 = nullptr);
 
 LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
@@ -1782,6 +1787,9 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns true if the intrinsic executes an LDSDMA operation
+bool isLDSDMAIntrinsic(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

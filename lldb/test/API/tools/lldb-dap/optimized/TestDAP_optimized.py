@@ -9,7 +9,6 @@ from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_optimized(DAPTestCaseBase):
-    @skipIfWindows
     def test_stack_frame_name(self):
         """Test optimized frame has special name suffix."""
         program = self.getBuildArtifact("a.out")
@@ -31,7 +30,6 @@ class TestDAP_optimized(DAPTestCaseBase):
         self.assertTrue(parent_frame.name.endswith(" [opt]"))
 
     @skipIfAsan  # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
-    @skipIfWindows
     @skipIfWasm  # an optimized out variable keeps a reused local, so reading it succeeds
     def test_optimized_variable(self):
         """Test optimized variable value contains error."""

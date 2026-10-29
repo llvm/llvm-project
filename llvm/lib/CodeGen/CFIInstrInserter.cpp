@@ -42,6 +42,10 @@ public:
     if (!MF.needsFrameMoves())
       return false;
 
+    // Functions with Windows unwind info have no DWARF CFI to fix up.
+    if (MF.usesWindowsUnwindInfo())
+      return false;
+
     MBBVector.resize(MF.getNumBlockIDs());
     calculateCFAInfo(MF);
 

@@ -44,7 +44,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -96,12 +95,6 @@ int llvm::compileModuleWithNewPM(
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType) {
 
-  if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::error(errs(), Arg0)
-        << "--passes cannot be used with "
-        << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
-    return 1;
-  }
 
   raw_pwrite_stream *OS = &Out->os();
 
@@ -113,16 +106,24 @@ int llvm::compileModuleWithNewPM(
   }
 
   // Fetch options from TargetPassConfig
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
+  CGPassBuilderOption Opt = getCGPassBuilderOption(*Target);
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
+  if (VK == VerifierKind::EachPass)
+    Opt.VerifyMachineCode = MachineVerifierMode::Each;
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
   MachineModuleInfo MMI(Target.get());
 
-  Target->getObjFileLowering()->Initialize(MMI.getContext(), *Target);
-
   PassInstrumentationCallbacks PIC;
+  if (!PassPipeline.empty()) {
+    auto Info = ExitOnErr(TargetPassConfig::getStartStopInfo(*Target, PIC));
+    if (Info.isLimited()) {
+      WithColor::error(errs(), Arg0)
+          << "--passes cannot be used with " << Info.getLimitReason() << ".\n";
+      return 1;
+    }
+  }
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
   registerCodeGenCallback(PIC, *Target);
@@ -142,7 +143,7 @@ int llvm::compileModuleWithNewPM(
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  PassBuilder PB(Context, Target.get(), std::nullopt, std::nullopt, &PIC);
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
   PB.registerModuleAnalyses(MAM);
@@ -169,7 +170,7 @@ int llvm::compileModuleWithNewPM(
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
-    if (VK == VerifierKind::InputOutput)
+    if (Opt.VerifyMachineCode == MachineVerifierMode::End)
       MFPM.addPass(MachineVerifierPass());
     MFPM.addPass(PrintMIRPass(*OS));
     FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));

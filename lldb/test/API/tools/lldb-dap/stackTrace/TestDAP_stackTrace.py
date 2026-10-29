@@ -229,7 +229,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
             0, len(stack_frames), "verify zero frames with startFrame out of bounds"
         )
 
-    @skipIfWindows
     def test_function_name_with_args(self):
         """Test that a stack frame's name includes its argument values."""
         program = self.getBuildArtifact("a.out")
@@ -248,7 +247,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         frame = thread_ctx.top_frame().frame
         self.assertEqual(frame.name, "recurse(x=1)")
 
-    @skipIfWindows
     def test_stack_frame_format(self):
         """
         Test the StackFrameFormat options.
@@ -279,7 +277,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         frame = thread_ctx.top_frame(format=format)
         self.assertEqual(frame.name, "a.out recurse")
 
-    @skipIfWindows
     def test_stack_frame_module_id(self) -> None:
         """Test that each stack frame's moduleId matches the loaded module's id."""
         program = self.getBuildArtifact("a.out")

@@ -19,7 +19,7 @@ define amdgpu_kernel void @call_debug_loc() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7, debug-location !7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5, debug-location !7
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, debug-location !7
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, debug-location !7
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64 = COPY [[COPY8]], debug-location !7
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[COPY7]], debug-location !7
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[COPY6]], debug-location !7
@@ -45,10 +45,10 @@ define amdgpu_kernel void @call_debug_loc() {
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]], debug-location !7
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]], debug-location !7
   ; CHECK-NEXT:   $vgpr31 = COPY [[V_OR3_B32_e64_]], debug-location !7
-  ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee, target-flags(amdgpu-gotprel32-hi) @callee, implicit-def $scc, debug-location !7
+  ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee, target-flags(amdgpu-gotprel32-hi) @callee, implicit-def dead $scc, debug-location !7
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0, debug-location !7 :: (dereferenceable invariant load (p0) from got, addrspace 4)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @callee, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, debug-location !7
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, debug-location !7
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, debug-location !7
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   call void @callee(), !dbg !6

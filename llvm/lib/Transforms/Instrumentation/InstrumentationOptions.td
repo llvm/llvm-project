@@ -50,6 +50,8 @@ defm : BoolField<"asan-initialization-order", "true",
   "Handle C++ initializer order">;
 defm : ListField<"asan-instrument-address-spaces", "unsigned",
   "Only instrument variables in the specified address spaces">;
+defm : BoolField<"asan-instrument-assume-dereferenceable", "false",
+  "Instrument llvm.assume(dereferenceable)">;
 defm : BoolField<"asan-instrument-atomics", "true",
   "Instrument atomic instructions (rmw, cmpxchg)">;
 defm : BoolField<"asan-instrument-byval", "true",
@@ -367,7 +369,7 @@ defm : BoolField<"icp-samplepgo", "false",
   "Run indirect-call promotion in SamplePGO mode">;
 // Indirect call promotion pass will fall back to function-based comparison if
 // vtable-count / function-count is smaller than this threshold.
-defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995",
+defm : ValueField<"icp-vtable-percentage-threshold", "float", "0.995f",
   "The percentage threshold of vtable-count / function-count for cost-benefit analysis">;
 
 // InstrProfiling.cpp
@@ -397,9 +399,9 @@ defm : ValueField<"max-counter-promotions-per-loop", "unsigned", "20",
   "Max number counter promotions per loop to avoid increasing register pressure too much">;
 defm : ValueField<"offload-pgo-sampling", "unsigned", "3",
   "Log2 of the sampling period for offload PGO instrumentation. Only 1 in every 2^N blocks is instrumented. 0 = all blocks, 1 = 50%, 2 = 25%, 3 = 12.5%. Higher values reduce overhead at the cost of sparser profiles">;
-defm : EnumField<"profile-correlate", "InstrProfCorrelator::ProfCorrelatorKind", "InstrProfCorrelator::NONE",
+defm : OptionalEnumField<"profile-correlate", "ProfCorrelatorKind",
   "debug-info,binary",
-  ["InstrProfCorrelator::DEBUG_INFO", "InstrProfCorrelator::BINARY"],
+  ["ProfCorrelatorKind::DebugInfo", "ProfCorrelatorKind::Binary"],
   "Use debug info or binary file to correlate profiles">;
 defm : OptionalBoolField<"runtime-counter-relocation",
   "Enable relocating counters at runtime">;

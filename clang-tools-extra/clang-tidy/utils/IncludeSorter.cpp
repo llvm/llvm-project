@@ -199,19 +199,18 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
     return std::nullopt;
 
   if (NonEmptyKind < IncludeKind) {
-    // Create a block after.
+    // Insert directly after the nearest preceding group.
+    // This keeps clang-format able to fix up the ordering within group.
     const std::string &LastInclude = IncludeBucket[NonEmptyKind].back();
     const SourceRange LastIncludeLocation =
         IncludeLocations[LastInclude].back();
-    IncludeStmt.insert(0, LineEnding);
     return FixItHint::CreateInsertion(LastIncludeLocation.getEnd(),
                                       IncludeStmt);
   }
-  // Create a block before.
+  // Insert directly before the nearest group for the same reason as above.
   const std::string &FirstInclude = IncludeBucket[NonEmptyKind][0];
   const SourceRange FirstIncludeLocation =
       IncludeLocations[FirstInclude].back();
-  IncludeStmt.append(LineEnding);
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
 }

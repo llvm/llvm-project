@@ -350,10 +350,11 @@ static ShadowMapping getShadowMapping(const InstrumentationOptions &Opts,
   return Mapping;
 }
 
-void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
+void llvm::getAddressSanitizerParams(const LLVMContext &Ctx,
+                                     const Triple &TargetTriple, int LongSize,
                                      bool IsKasan, uint64_t *ShadowBase,
                                      int *MappingScale, bool *OrShadowOffset) {
-  auto Mapping = getShadowMapping(InstrumentationOptions::Global, TargetTriple,
+  auto Mapping = getShadowMapping(getInstrumentationOptions(Ctx), TargetTriple,
                                   LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
@@ -667,6 +668,7 @@ private:
   // These arrays is indexed by AccessIsWrite and Experiment.
   FunctionCallee AsanErrorCallbackSized[2][2];
   FunctionCallee AsanMemoryAccessCallbackSized[2][2];
+  FunctionCallee AsanAssumeDereferenceableCallback;
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
@@ -1056,7 +1058,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_address"))
     return PreservedAnalyses::all();
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
                                          Options.CompileKernel, Options.Recover,
                                          UseGlobalGC, UseOdrIndicator,
@@ -2366,7 +2368,7 @@ void ModuleAddressSanitizer::InstrumentGlobalsWithMetadataArray(
       M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
       ConstantArray::get(ArrayOfGlobalStructTy, MetadataInitializers), "");
   if (Mapping.Scale > 3)
-    AllGlobals->setAlignment(Align(1ULL << Mapping.Scale));
+    AllGlobals->setAlignment(Align::fromLog2(Mapping.Scale));
 
   if (ConstructorKind == AsanCtorKind::Global)
     IRB.CreateCall(AsanRegisterGlobals,
@@ -2675,6 +2677,12 @@ bool ModuleAddressSanitizer::instrumentModule() {
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
   IRBuilder<> IRB(M);
+
+  const std::string EndingStr = Recover ? "_noabort" : "";
+  AsanAssumeDereferenceableCallback = M.getOrInsertFunction(
+      "__asan_report_assume_dereferenceable" + EndingStr,
+      FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -2900,6 +2908,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
+  SmallVector<AssumeInst *, 8> DerefAssumptions;
 
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
@@ -2914,6 +2923,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
+      AssumeInst *AI;
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
           if (Opts.asan_opt && Opts.asan_opt_same_temp) {
@@ -2943,6 +2953,12 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;
+      } else if (Opts.asan_instrument_assume_dereferenceable &&
+                 (AI = dyn_cast<AssumeInst>(&Inst))) {
+        if (AI->getOperandBundle("dereferenceable")) {
+          DerefAssumptions.push_back(AI);
+          NumInsnsPerBB++;
+        }
       } else {
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
@@ -2990,6 +3006,28 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   for (auto *Inst : PointerComparisonsOrSubtracts) {
     FunctionModified |= instrumentPointerComparisonOrSubtraction(Inst, RTCI);
+  }
+
+  for (auto *AI : DerefAssumptions) {
+    if (auto Bundle = AI->getOperandBundle("dereferenceable")) {
+      Value *Ptr = Bundle->Inputs[0];
+      Value *Size = Bundle->Inputs[1];
+
+      // Skip if size is exactly 0 without generating IR.
+      if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+        if (CI->getValue().zextOrTrunc(IntptrTy->getIntegerBitWidth()).isZero())
+          continue;
+      }
+
+      IRBuilder<> IRB(AI);
+      Value *AddrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
+      Value *SizeExt = IRB.CreateZExtOrTrunc(Size, IntptrTy);
+
+      RTCI.createRuntimeCall(IRB, AsanAssumeDereferenceableCallback,
+                             {AddrLong, SizeExt});
+
+      FunctionModified = true;
+    }
   }
 
   if (ChangedStack || !NoReturnCalls.empty())

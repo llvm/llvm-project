@@ -22,19 +22,6 @@
 
 namespace clang {
 namespace format {
-
-static bool mustBreakAfterAttributes(const FormatToken &Tok,
-                                     const FormatStyle &Style) {
-  switch (Style.BreakAfterAttributes) {
-  case FormatStyle::ABS_Always:
-    return true;
-  case FormatStyle::ABS_Never:
-    return false;
-  default: // ABS_Leave and ABS_LeaveAll
-    return Tok.NewlinesBefore > 0;
-  }
-}
-
 namespace {
 
 /// Returns \c true if the line starts with a token that can start a statement
@@ -1334,7 +1321,7 @@ private:
       if (Prev && Prev->is(TT_AttributeRSquare) &&
           CurrentToken->isOneOf(tok::kw_if, tok::kw_switch, tok::kw_case,
                                 tok::kw_default, tok::kw_for, tok::kw_while) &&
-          mustBreakAfterAttributes(*CurrentToken, Style)) {
+          CurrentToken->mustBreakAfterAttributes(Style)) {
         CurrentToken->MustBreakBefore = true;
       }
     }
@@ -3437,7 +3424,7 @@ private:
           Current->isOneOf(Keywords.kw_in, Keywords.kw_as)) {
         return prec::Relational;
       }
-      if (Current->isOneOf(TT_BinaryOperator, tok::comma))
+      if (Current->isOneOf(TT_BinaryOperator, TT_EnumEqual, tok::comma))
         return Current->getPrecedence();
       if (Current->isOneOf(tok::period, tok::arrow) &&
           Current->isNot(TT_TrailingReturnArrow)) {
@@ -4206,7 +4193,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     if (SeenName && AfterLastAttribute &&
-        mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
+        AfterLastAttribute->mustBreakAfterAttributes(Style)) {
       AfterLastAttribute->MustBreakBefore = true;
       if (LineIsFunctionDeclaration)
         Line.ReturnTypeWrapped = true;
@@ -4372,15 +4359,13 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       const auto *RParen = Prev->MatchingParen;
       for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
            ParamTok = ParamTok->Next) {
-        if (ParamTok->opensScope()) {
-          ParamTok = ParamTok->MatchingParen;
-          continue;
-        }
 
         if (startsNextParameter(*ParamTok, Style)) {
           ParamTok->MustBreakBefore = true;
           ParamTok->CanBreakBefore = true;
         }
+        if (ParamTok->opensScope())
+          ParamTok = ParamTok->MatchingParen;
       }
     }
 

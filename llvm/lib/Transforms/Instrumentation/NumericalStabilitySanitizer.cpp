@@ -569,7 +569,8 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-  NumericalStabilitySanitizer Nsan(InstrumentationOptions::Global, M);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  NumericalStabilitySanitizer Nsan(Opts, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)
     Nsan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
@@ -604,6 +605,15 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(
 
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Context, Attribute::NoUnwind);
+
+  Triple TT(M.getTargetTriple());
+  Attribute::AttrKind I32RetExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Return(TT, /*Signed=*/true);
+  Attribute::AttrKind I32ArgExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(TT, /*Signed=*/true);
+  Attribute::AttrKind BoolExtAttr =
+      TargetLibraryInfo::getExtAttrForBoolParam(TT);
+
   // Initialize the runtime values (functions and global variables).
   for (int I = 0; I < kNumValueTypes; ++I) {
     const FTValueType VT = static_cast<FTValueType>(I);
@@ -621,14 +631,26 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(
     // Check.
     const auto &ShadowConfig = Config.byValueType(VT);
     Type *ShadowTy = ShadowConfig.getType(Context);
-    NsanCheckValue[VT] =
-        M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
-                                  "_" + ShadowConfig.getNsanTypeId(),
-                              Attr, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
-    NsanFCmpFail[VT] = M.getOrInsertFunction(
-        std::string("__nsan_fcmp_fail_") + VTName + "_" +
-            ShadowConfig.getNsanTypeId(),
-        Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddRetAttribute(Context, I32RetExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 2, I32ArgExtAttr);
+      NsanCheckValue[VT] =
+          M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
+                                    "_" + ShadowConfig.getNsanTypeId(),
+                                AL, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
+    }
+
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddParamAttribute(Context, 4, I32ArgExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 5, BoolExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 6, BoolExtAttr);
+      NsanFCmpFail[VT] = M.getOrInsertFunction(
+          std::string("__nsan_fcmp_fail_") + VTName + "_" +
+              ShadowConfig.getNsanTypeId(),
+          AL, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
+    }
   }
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
@@ -1945,6 +1967,9 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
   if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
       F.isDeclaration())
+    return false;
+
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within

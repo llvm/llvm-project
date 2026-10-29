@@ -9,15 +9,13 @@ target triple = "nvptx64-nvidia-cuda"
 define void @test_b128_input_from_const() {
 ; CHECK-LABEL: test_b128_input_from_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b64 %rd2, 0;
-; CHECK-NEXT:    mov.b64 %rd3, 42;
-; CHECK-NEXT:    mov.b128 %rq1, {%rd3, %rd2};
-; CHECK-NEXT:    mov.b64 %rd4, value;
-; CHECK-NEXT:    cvta.global.u64 %rd1, %rd4;
+; CHECK-NEXT:    mov.b64 %rd2, value;
+; CHECK-NEXT:    cvta.global.u64 %rd1, %rd2;
+; CHECK-NEXT:    mov.b128 %rq1, {42, 0};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    { st.b128 [%rd1], %rq1; }
 ; CHECK-NEXT:    // end inline asm
@@ -55,7 +53,7 @@ define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -64,10 +62,9 @@ define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
 ; CHECK-NEXT:    ld.global.b8 %rs1, [%rd3];
 ; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, 0;
 ; CHECK-NEXT:    selp.b64 %rd4, 24, 42, %p1;
-; CHECK-NEXT:    mov.b64 %rd5, 0;
-; CHECK-NEXT:    mov.b128 %rq1, {%rd4, %rd5};
-; CHECK-NEXT:    mov.b64 %rd6, value;
-; CHECK-NEXT:    cvta.global.u64 %rd1, %rd6;
+; CHECK-NEXT:    mov.b64 %rd5, value;
+; CHECK-NEXT:    cvta.global.u64 %rd1, %rd5;
+; CHECK-NEXT:    mov.b128 %rq1, {%rd4, 0};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    { st.b128 [%rd1], %rq1; }
 ; CHECK-NEXT:    // end inline asm

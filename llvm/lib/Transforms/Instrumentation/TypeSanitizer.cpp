@@ -555,6 +555,8 @@ bool TypeSanitizer::sanitizeFunction(Function &F,
                                      const TargetLibraryInfo &TLI) {
   if (F.isDeclaration())
     return false;
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
@@ -930,7 +932,8 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
 
     if (!Src) {
       IRB.CreateMemSet(ShadowData, IRB.getInt8(0),
-                       IRB.CreateShl(Size, PtrShift), Align(1ull << PtrShift));
+                       IRB.CreateShl(Size, PtrShift),
+                       Align::fromLog2(PtrShift));
       return true;
     }
 
@@ -942,11 +945,13 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
     Value *SrcShadowData = IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getPtrTy());
 
     if (NeedsMemMove) {
-      IRB.CreateMemMove(ShadowData, Align(1ull << PtrShift), SrcShadowData,
-                        Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+      IRB.CreateMemMove(ShadowData, Align::fromLog2(PtrShift), SrcShadowData,
+                        Align::fromLog2(PtrShift),
+                        IRB.CreateShl(Size, PtrShift));
     } else {
-      IRB.CreateMemCpy(ShadowData, Align(1ull << PtrShift), SrcShadowData,
-                       Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+      IRB.CreateMemCpy(ShadowData, Align::fromLog2(PtrShift), SrcShadowData,
+                       Align::fromLog2(PtrShift),
+                       IRB.CreateShl(Size, PtrShift));
     }
   }
 
@@ -961,7 +966,7 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
                                           kTysanInitName, /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   TypeSanitizer TySan(Opts, M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);

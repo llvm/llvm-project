@@ -359,6 +359,8 @@ class LldbGdbServerTestCase(
         self.Hg_fails_on_pid(0)
 
     @add_test_categories(["llgs"])
+    # Flaky in GitHub CI - https://github.com/llvm/llvm-project/issues/138085.
+    @skipIfWindows
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -477,9 +479,9 @@ class LldbGdbServerTestCase(
             post_handle_thread_id = int(post_handle_thread_id, 16)
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
-    @expectedFailureDarwin
+    @skipIfDarwin
     @requireSignals
-    @expectedFailureNetBSD
+    @skipIfNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()

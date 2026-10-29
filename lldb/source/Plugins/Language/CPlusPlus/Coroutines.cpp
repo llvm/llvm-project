@@ -197,7 +197,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   for (const auto &[idx, child_sp] : llvm::enumerate(m_children)) {
     if (child_sp->GetName() == name)
       return idx;

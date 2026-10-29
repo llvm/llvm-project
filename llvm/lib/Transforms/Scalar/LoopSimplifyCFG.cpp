@@ -664,11 +664,12 @@ public:
 
 /// Turn branches and switches with known constant conditions into unconditional
 /// branches.
-static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
+static bool constantFoldTerminators(const ScalarOptions &Opts, Loop &L,
+                                    DominatorTree &DT, LoopInfo &LI,
                                     ScalarEvolution &SE,
                                     MemorySSAUpdater *MSSAU,
                                     bool &IsLoopDeleted) {
-  if (!ScalarOptions::Global.enable_loop_simplifycfg_term_folding)
+  if (!Opts.enable_loop_simplifycfg_term_folding)
     return false;
 
   // To keep things simple, only process loops with single latch. We
@@ -720,10 +721,11 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU,
                             bool &IsLoopDeleted) {
+  const ScalarOptions &Opts = getScalarOptions(L);
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.
-  Changed |= constantFoldTerminators(L, DT, LI, SE, MSSAU, IsLoopDeleted);
+  Changed |= constantFoldTerminators(Opts, L, DT, LI, SE, MSSAU, IsLoopDeleted);
 
   if (IsLoopDeleted)
     return true;

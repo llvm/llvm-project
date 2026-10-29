@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -420,12 +421,52 @@ APInt CmpSamePredicateHelper::getFamilyConstant(bool IsComplement,
   }
 }
 
-bool CmpSamePredicateHelper::add(const ICmpInst *CI) {
-  MaskType LaneMask = getBit(CI->getPredicate());
-  if (auto *C = dyn_cast<ConstantInt>(CI->getOperand(1)))
-    LaneMask = getFormsMask(CI->getPredicate(), C->getValue());
-  SeenBefore |= getBit(CI->getPredicate());
-  Mask &= LaneMask;
+/// Returns the predicate and the compared constant of the comparison lane
+/// \p I, treating trunc X to i1 as and X, 1 ne 0.
+static std::optional<std::pair<CmpInst::Predicate, APInt>>
+getLaneConstantCmp(const Instruction *I) {
+  if (auto *TI = dyn_cast<TruncInst>(I);
+      TI && TI->getType()->isIntOrIntVectorTy(1))
+    return std::make_pair(
+        CmpInst::ICMP_NE,
+        APInt::getZero(TI->getSrcTy()->getScalarSizeInBits()));
+  const APInt *C;
+  if (auto *CI = dyn_cast<ICmpInst>(I);
+      CI && match(CI->getOperand(1), m_APInt(C)))
+    return std::make_pair(CI->getPredicate(), *C);
+  return std::nullopt;
+}
+
+CmpSamePredicateHelper::MaskType
+CmpSamePredicateHelper::getLaneMask(const Instruction *I) {
+  if (std::optional<std::pair<CmpInst::Predicate, APInt>> Cmp =
+          getLaneConstantCmp(I)) {
+    MaskType M = getFormsMask(Cmp->first, Cmp->second);
+    // trunc X to i1 is also and X, 1 eq 1.
+    return isa<TruncInst>(I) ? M | getBit(CmpInst::ICMP_EQ) : M;
+  }
+  if (auto *CI = dyn_cast<ICmpInst>(I))
+    return getBit(CI->getPredicate());
+  return 0;
+}
+
+bool CmpSamePredicateHelper::isBitTest(const Instruction *I) {
+  if (auto *CI = dyn_cast<ICmpInst>(I);
+      CI && !match(CI->getOperand(0), m_OneUse(m_And(m_Value(), m_Value()))))
+    return false;
+  std::optional<std::pair<CmpInst::Predicate, APInt>> Cmp =
+      getLaneConstantCmp(I);
+  if (!Cmp)
+    return false;
+  std::optional<std::pair<bool, APInt>> Family =
+      getCmpBoundaryFamily(Cmp->first, Cmp->second);
+  return Family && Family->second.isZero();
+}
+
+bool CmpSamePredicateHelper::add(const Instruction *I) {
+  if (auto *CI = dyn_cast<ICmpInst>(I))
+    SeenBefore |= getBit(CI->getPredicate());
+  Mask &= getLaneMask(I);
   return Mask != 0;
 }
 
@@ -445,40 +486,38 @@ CmpSamePredicateHelper::getSharedPredicate(ArrayRef<Value *> VL,
                                            const ICmpInst *Preferred) {
   CmpSamePredicateHelper Helper;
   if (!all_of(VL, [&](Value *V) {
-        auto *CI = dyn_cast<ICmpInst>(V);
-        return isa<PoisonValue>(V) || (CI && Helper.add(CI));
+        auto *I = dyn_cast<Instruction>(V);
+        return isa<PoisonValue>(V) || (I && Helper.add(I));
       }))
     return CmpInst::BAD_ICMP_PREDICATE;
   return Helper.getPredicate(Preferred);
 }
 
-bool CmpSamePredicateHelper::canConvertTo(const CmpInst *CI,
+bool CmpSamePredicateHelper::canConvertTo(const Instruction *I,
                                           CmpInst::Predicate Pred) {
-  auto *ICI = dyn_cast<ICmpInst>(CI);
-  if (!ICI || !CmpInst::isIntPredicate(Pred))
-    return false;
-  if (ICI->getPredicate() == Pred)
-    return true;
-  auto *C = dyn_cast<ConstantInt>(ICI->getOperand(1));
-  return C &&
-         (getFormsMask(ICI->getPredicate(), C->getValue()) & getBit(Pred)) != 0;
+  return CmpInst::isIntPredicate(Pred) && (getLaneMask(I) & getBit(Pred)) != 0;
 }
 
-ConstantInt *
-CmpSamePredicateHelper::getAdjustedConstant(const CmpInst *CI,
-                                            CmpInst::Predicate Pred) {
-  if (!canConvertTo(CI, Pred))
+Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
+                                                      CmpInst::Predicate Pred) {
+  if (!canConvertTo(I, Pred))
     return nullptr;
-  auto *ICI = cast<ICmpInst>(CI);
-  if (ICI->getPredicate() == Pred)
+  if (auto *CI = dyn_cast<ICmpInst>(I); CI && CI->getPredicate() == Pred)
     return nullptr;
-  auto *C = cast<ConstantInt>(ICI->getOperand(1));
+  if (isa<TruncInst>(I) && Pred == CmpInst::ICMP_EQ)
+    return ConstantInt::get(I->getOperand(0)->getType(), 1);
+  auto [LanePred, C] = *getLaneConstantCmp(I);
   std::optional<std::pair<bool, APInt>> Family =
-      getCmpBoundaryFamily(ICI->getPredicate(), C->getValue());
+      getCmpBoundaryFamily(LanePred, C);
   assert(Family && "Expected a boundary family for a convertible compare.");
   const auto &[IsComplement, K] = *Family;
-  return ConstantInt::get(CI->getContext(),
+  return ConstantInt::get(I->getOperand(0)->getType(),
                           getFamilyConstant(IsComplement, K, Pred));
+}
+
+bool isFMAOrFMulAdd(const Instruction *I) {
+  return match(I, m_CombineOr(m_Intrinsic<Intrinsic::fma>(),
+                              m_Intrinsic<Intrinsic::fmuladd>()));
 }
 
 bool InstructionsState::isSameOperation(const Instruction *I,
@@ -501,6 +540,9 @@ Instruction *InstructionsState::getMatchingMainOpOrAltOp(Instruction *I) const {
     return MainOp;
   if (MainOp->getOpcode() == Instruction::Select &&
       I->getOpcode() == Instruction::ZExt && !isAltShuffle())
+    return MainOp;
+  if (MainOp->getOpcode() == Instruction::ICmp &&
+      I->getOpcode() == Instruction::Trunc && !isAltShuffle())
     return MainOp;
   // Prefer AltOp instead of interchangeable instruction of MainOp.
   assert(AltOp && "AltOp cannot be nullptr.");
@@ -757,6 +799,11 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
+  // Match trunc X to i1 lanes against the compares.
+  if (isa<TruncInst>(MainOp) && MainOp->getType()->isIntOrIntVectorTy(1))
+    if (auto *CmpIt = find_if(VL, IsaPred<ICmpInst>); CmpIt != VL.end())
+      MainOp = cast<Instruction>(*CmpIt);
+
   bool IsCastOp = isa<CastInst>(MainOp);
   bool IsBinOp = isa<BinaryOperator>(MainOp);
   bool IsCmpOp = isa<CmpInst>(MainOp);
@@ -874,6 +921,18 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             AltPred == CurrentPred || AltPred == SwappedCurrentPred)
           continue;
       }
+    } else if (auto *TI = dyn_cast<TruncInst>(I); TI && IsCmpOp) {
+      // trunc X to i1 is the bit test and X, 1 != 0 or and X, 1 == 1, so the
+      // whole list must be the bit tests of the same type sharing the
+      // predicate.
+      if (InterchangeablePred != CmpInst::BAD_ICMP_PREDICATE &&
+          TI->getSrcTy() == MainOp->getOperand(0)->getType() &&
+          all_of(VL, [](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return isa<PoisonValue>(V) ||
+                   (I && CmpSamePredicateHelper::isBitTest(I));
+          }))
+        continue;
     } else if (InstOpcode == Opcode) {
       assert(InstOpcode == AltOpcode &&
              "Alternate instructions are only supported by BinaryOperator and "
@@ -984,8 +1043,8 @@ convertTo(Instruction *I, const InstructionsState &S) {
   // adjusted constant.
   if (auto *MainCI = dyn_cast<ICmpInst>(SelectedOp);
       MainCI && !S.isAltShuffle())
-    if (ConstantInt *C = CmpSamePredicateHelper::getAdjustedConstant(
-            cast<ICmpInst>(I), MainCI->getPredicate()))
+    if (Constant *C = CmpSamePredicateHelper::getAdjustedConstant(
+            I, MainCI->getPredicate()))
       return std::make_pair(SelectedOp,
                             SmallVector<Value *>{I->getOperand(0), C});
   return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));

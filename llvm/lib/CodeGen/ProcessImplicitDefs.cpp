@@ -87,6 +87,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   for (unsigned i = MI->getNumOperands() - 1; i; --i)
     MI->removeOperand(i);
 
+  MachineBasicBlock *MBB = MI->getParent();
+
   if (Reg.isVirtual()) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
@@ -109,7 +111,6 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       return;
     }
     // A kept PHI, now an IMPLICIT_DEF, leaves the PHI block.
-    MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::iterator Next = std::next(MI->getIterator());
     if (Next != MBB->end() && Next->isPHI())
       MBB->splice(MBB->SkipPHIsAndLabels(Next), MBB, MI);
@@ -120,7 +121,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // Try to add undef flag to all uses.  If all uses are updated remove
   // implicit-def.
   MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();
-  MachineBasicBlock::instr_iterator SearchE = MI->getParent()->instr_end();
+  MachineBasicBlock::instr_iterator SearchE = MBB->instr_end();
   bool ImplicitDefIsDead = false;
   bool SearchedWholeBlock = true;
   constexpr unsigned SearchLimit = 35;
@@ -165,11 +166,17 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
 
   // If we have added an undef flag to all uses (i.e. we have found a redefining
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
-  if (ImplicitDefIsDead ||
-      (SearchedWholeBlock && MI->getParent()->succ_empty())) {
-    MI->eraseFromParent();
+  if (ImplicitDefIsDead || (SearchedWholeBlock && MBB->succ_empty())) {
     LLVM_DEBUG(dbgs() << "Deleting implicit-def: " << *MI);
+    MI->eraseFromParent();
+    return;
   }
+
+  if (SearchedWholeBlock && MRI->tracksLiveness() && !MRI->isReserved(Reg) &&
+      none_of(MBB->successors(), [&](MachineBasicBlock *Succ) {
+        return Succ->isLiveInOverlappedWith(Reg, *TRI);
+      }))
+    MI->eraseFromParent();
 }
 
 bool ProcessImplicitDefsLegacy::runOnMachineFunction(MachineFunction &MF) {
