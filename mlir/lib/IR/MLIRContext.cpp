@@ -187,7 +187,8 @@ public:
 
   /// A vector of operation info specifically for registered operations.
   llvm::DenseMap<TypeID, RegisteredOperationName> registeredOperations;
-  llvm::StringMap<RegisteredOperationName> registeredOperationsByName;
+  llvm::StringMap<std::unique_ptr<OperationName::Impl>, llvm::BumpPtrAllocator>
+      registeredOperationsByName;
 
   /// This is a sorted container of registered operations for a deterministic
   /// and efficient `getRegisteredOperations` implementation.
@@ -915,18 +916,18 @@ OperationName::Impl::Impl(StringRef name, Dialect *dialect, TypeID typeID,
 OperationName::OperationName(StringRef name, MLIRContext *context) {
   MLIRContextImpl &ctxImpl = context->getImpl();
 
+  // Check the registered info map first. In the overwhelmingly common case,
+  // the entry will be in here and it also removes the need to acquire any
+  // locks.
+  auto registeredIt = ctxImpl.registeredOperationsByName.find(name);
+  if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperationsByName.end())) {
+    impl = registeredIt->second.get();
+    return;
+  }
+
   // Check for an existing name in read-only mode.
   bool isMultithreadingEnabled = context->isMultithreadingEnabled();
   if (isMultithreadingEnabled) {
-    // Check the registered info map first. In the overwhelmingly common case,
-    // the entry will be in here and it also removes the need to acquire any
-    // locks.
-    auto registeredIt = ctxImpl.registeredOperationsByName.find(name);
-    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperationsByName.end())) {
-      impl = registeredIt->second.impl;
-      return;
-    }
-
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
     auto it = ctxImpl.operations.find(name);
     if (it != ctxImpl.operations.end()) {
@@ -1065,7 +1066,7 @@ RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
   auto &impl = ctx->getImpl();
   auto it = impl.registeredOperationsByName.find(name);
   if (it != impl.registeredOperationsByName.end())
-    return it->getValue();
+    return RegisteredOperationName(it->second.get());
   return std::nullopt;
 }
 
@@ -1091,15 +1092,13 @@ void RegisteredOperationName::insert(
     impl->attributeNames = cachedAttrNames;
   }
   StringRef name = impl->getName().strref();
-  // Insert the operation info if it doesn't exist yet.
-  ctxImpl.operations[name] = std::move(ownedImpl);
 
   // Update the registered info for this operation.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(
       impl->getTypeID(), RegisteredOperationName(impl));
   assert(emplaced.second && "operation name registration must be successful");
   auto emplacedByName = ctxImpl.registeredOperationsByName.try_emplace(
-      name, RegisteredOperationName(impl));
+      name, std::move(ownedImpl));
   (void)emplacedByName;
   assert(emplacedByName.second &&
          "operation name registration must be successful");
