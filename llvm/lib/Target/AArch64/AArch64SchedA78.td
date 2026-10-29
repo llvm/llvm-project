@@ -1130,7 +1130,7 @@ def : InstRW<[A78Write_2c_1V0], (instregex "^FRINT[AIMNPXZ][HSD]r$",
 def : InstRW<[A78Write_3c_1M0], (instregex "^[SU]CVTF[SU][WX][HSD]ri$")>;
 
 // FP convert, from vec to gen reg
-def : InstRW<[A78Write_3c_1V], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
+def : InstRW<[A78Write_3c_1V0], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
 
 // FP convert, Javascript from vec to gen reg
 // FP convert, from vec to vec reg

@@ -167,86 +167,86 @@ fmov	x0, d1
 # CHECK-NEXT:  1      3     3.00                        ucvtf	s0, x1
 # CHECK-NEXT:  1      3     3.00                        ucvtf	d0, w1
 # CHECK-NEXT:  1      3     3.00                        ucvtf	d0, x1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtas	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtau	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtms	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtmu	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtns	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtnu	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtps	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtpu	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x0, s1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x0, h1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w0, d1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtas	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtau	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtms	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtmu	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtns	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtnu	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtps	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtpu	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x0, s1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x0, h1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w0, d1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x0, d1
 # CHECK-NEXT:  1      2     0.50                        fmov	h0, #1.00000000
 # CHECK-NEXT:  1      2     0.50                        fmov	s0, #1.00000000
 # CHECK-NEXT:  1      2     0.50                        fmov	d0, #1.00000000
@@ -278,7 +278,7 @@ fmov	x0, d1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     40.00   -      -      -     51.50  44.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     40.00   -      -      -     91.50  4.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -301,86 +301,86 @@ fmov	x0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	s0, x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d0, w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     ucvtf	d0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtas	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtau	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtms	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtmu	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtns	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtnu	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtps	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtpu	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzs	x0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	w0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	x0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	w0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	x0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	w0, d1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtzu	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtas	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtau	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtms	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtmu	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtns	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtnu	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtps	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtpu	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzs	x0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x0, h1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	w0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtzu	x0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	h0, #1.00000000
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s0, #1.00000000
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	d0, #1.00000000
