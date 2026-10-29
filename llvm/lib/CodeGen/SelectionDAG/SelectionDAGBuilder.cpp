@@ -12619,7 +12619,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         const unsigned NumRegisters = TLI.getNumRegisters(*DAG.getContext(), VT);
         for (unsigned i = 0; i != NumRegisters; ++i)
           FuncInfo.PHINodesToUpdate.emplace_back(&*MBBI++, Reg + i);
-        Reg += NumRegisters;
+        Reg.incrementVirtRegIndex(NumRegisters);
       }
     }
   }
@@ -13340,7 +13340,8 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       // getRegistersForValue may produce 1 to many registers based on whether
       // the OpInfo.ConstraintVT is legal on the target or not.
       for (Register &Reg : OpInfo.AssignedRegs.Regs) {
-        Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
+        Register OriginalDef = FollowCopyChain(MRI, InitialDef);
+        InitialDef.incrementVirtRegIndex(1u);
         if (OriginalDef.isPhysical())
           FuncInfo.MBB->addLiveIn(OriginalDef);
         // Update the assigned registers to use the original defs.
@@ -13357,7 +13358,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       SDValue Flag;
       SDValue V = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
                                                   OpInfo, DAG);
-      ++InitialDef;
+      InitialDef.incrementVirtRegIndex(1u);
       ResultValues.push_back(V);
       ResultVTs.push_back(OpInfo.ConstraintVT);
       break;
