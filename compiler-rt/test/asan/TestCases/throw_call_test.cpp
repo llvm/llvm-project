@@ -8,8 +8,9 @@
 // MSVC doesn't support GCC style inline ASM
 // UNSUPPORTED: msvc
 
-// FIXME: Fails on Android: __cxa_throw interceptor does not run when
-// libclang_rt.asan links static libc++abi.a.
+// FIXME: https://github.com/llvm/llvm-project/issues/236665
+// Fails on Android: __cxa_throw interceptor does not run when libclang_rt.asan
+// links static libc++abi.a.
 // XFAIL: android
 
 #include "defines.h"
