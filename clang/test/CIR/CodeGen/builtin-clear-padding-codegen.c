@@ -382,7 +382,7 @@ void testBitFields(struct S11 *s) {
   __builtin_clear_padding(s);
 }
 
-// CIR-LABEL: cir.func no_inline dso_local @testArrayNoPadding() attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", no_trapping_math, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+// CIR-LABEL: cir.func no_inline dso_local @testArrayNoPadding() attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", module_default_attrs, nothrow, optnone} {
 // CIR: %[[I:.*]] = cir.alloca "i"
 // CIR: cir.clear_padding(align(16) %[[I]], []) : <!cir.array<!s32i x 4>> -> ()
 

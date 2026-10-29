@@ -3081,8 +3081,7 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
          attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
-         attr.getName() == CIRDialect::getNoTrappingMathAttrName() ||
-         attr.getName() == CIRDialect::getStackProtectorBufferSizeAttrName();
+         attr.getName() == CIRDialect::getModuleDefaultAttrsAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3257,15 +3256,18 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
-  if (op->hasAttr(CIRDialect::getNoTrappingMathAttrName()))
-    passthrough.push_back(
-        rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
-
-  if (auto sspBufferSize = op->getAttrOfType<mlir::IntegerAttr>(
-          CIRDialect::getStackProtectorBufferSizeAttrName()))
-    passthrough.push_back(rewriter.getStrArrayAttr(
-        {"stack-protector-buffer-size",
-         llvm::utostr(sspBufferSize.getValue().getZExtValue())}));
+  if (op->hasAttr(CIRDialect::getModuleDefaultAttrsAttrName())) {
+    if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
+                            ->getAttrOfType<cir::LoweringLangOptionsAttr>(
+                                CIRDialect::getLoweringLangOptionsAttrName())) {
+      if (langOpts.getNoTrappingMath())
+        passthrough.push_back(
+            rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
+      passthrough.push_back(rewriter.getStrArrayAttr(
+          {"stack-protector-buffer-size",
+           llvm::utostr(langOpts.getSspBufferSize())}));
+    }
+  }
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));

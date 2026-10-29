@@ -6,22 +6,22 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 extern "C" {
-  // CIR: cir.func{{.*}}@returns_twice() attributes {{{.*}}no_trapping_math, nothrow, optnone, returns_twice, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@returns_twice() attributes {{{.*}}nothrow, optnone, returns_twice} {
   // LLVM: Function Attrs:{{.*}}returns_twice
   // LLVM-NEXT: define{{.*}}@returns_twice() #[[RT_ATTR:.*]] {
   __attribute__((returns_twice))
   void returns_twice() {}
-  // CIR: cir.func{{.*}}@cold() attributes {{{.*}}cold,{{.*}}nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@cold() attributes {{{.*}}cold,{{.*}}nothrow, optnone} {
   // LLVM: Function Attrs:{{.*}}cold
   // LLVM-NEXT: define{{.*}}@cold() #[[COLD_ATTR:.*]] {
   __attribute__((cold))
   void cold() {}
-  // CIR: cir.func{{.*}}@hot() attributes {{{.*}}hot, {{.*}}nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@hot() attributes {{{.*}}hot, {{.*}}nothrow, optnone} {
   // LLVM: Function Attrs:{{.*}}hot
   // LLVM-NEXT: define{{.*}}@hot() #[[HOT_ATTR:.*]] {
   __attribute__((hot))
   void hot() {}
-  // CIR: cir.func{{.*}}@nodupes() attributes {{{.*}}noduplicate, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@nodupes() attributes {{{.*}}noduplicate, nothrow, optnone} {
   // LLVM: Function Attrs:{{.*}}noduplicate
   // LLVM-NEXT: define{{.*}}@nodupes() #[[ND_ATTR:.*]] {
   __attribute__((noduplicate))
@@ -31,27 +31,27 @@ extern "C" {
   // LLVM-NEXT: define{{.*}}@opt_none() #[[ON_ATTR:.*]] {
   __attribute__((optnone))
   void opt_none() {}
-  // CIR: cir.func{{.*}}@convergent() attributes {{{.*}}convergent, {{.*}}nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@convergent() attributes {{{.*}}convergent, {{.*}}nothrow, optnone} {
   // LLVM: Function Attrs:{{.*}}convergent
   // LLVM-NEXT: define{{.*}}@convergent() #[[CONV_ATTR:.*]] {
   __attribute__((convergent))
   void convergent() {}
 
-  // CIR: cir.func{{.*}}@no_caller_saved_registers() attributes {{{.*}}no_caller_saved_registers, no_trapping_math, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@no_caller_saved_registers() attributes {{{.*}}no_caller_saved_registers, nothrow, optnone} {
   // LLVM: Function Attrs:
   // LLVM-NOT: no_caller_saved_registers
   // LLVM-NEXT: define{{.*}}@no_caller_saved_registers() #[[NCSR_ATTR:.*]] {
   __attribute__((no_caller_saved_registers))
   void no_caller_saved_registers() {}
 
-  // CIR: cir.func{{.*}}@leaf() attributes {{{.*}}nocallback, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@leaf() attributes {{{.*}}nocallback, nothrow, optnone} {
   // LLVM: Function Attrs:
   // LLVM-NOT: leaf
   // LLVM-NEXT: define{{.*}}@leaf() #[[LEAF_ATTR:.*]] {
   __attribute__((leaf))
   void leaf() {}
 
-  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {{{.*}}modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2", {{.*}}nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
+  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {{{.*}}modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2", {{.*}}nothrow, optnone} {
   // LLVM: Function Attrs:
   // LLVM-NOT:modular_format
   // LLVM-NEXT: define{{.*}}@modular_format({{.*}}) #[[MOD_FORMAT_ATTR:.*]] {

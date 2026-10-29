@@ -207,7 +207,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
-          static_cast<int32_t>(langOpts.LongDoubleSize)));
+          static_cast<int32_t>(langOpts.LongDoubleSize),
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),

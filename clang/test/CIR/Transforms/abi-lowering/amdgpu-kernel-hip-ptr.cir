@@ -14,7 +14,7 @@ module attributes {
     exceptions = false, threadsafe_statics = true, cuda = true,
     cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false,
     openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-    long_double_size = 0>
+    long_double_size = 0, no_trapping_math = true, ssp_buffer_size = 8>
 } {
 
   // The kernel casts the incoming global pointer back to generic before the

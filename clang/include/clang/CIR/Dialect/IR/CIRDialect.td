@@ -99,8 +99,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
-    static llvm::StringRef getNoTrappingMathAttrName() { return "no_trapping_math"; }
-    static llvm::StringRef getStackProtectorBufferSizeAttrName() { return "stack_protector_buffer_size"; }
+    // Marks a function that gets the TU-wide default function attributes
+    // recorded in #cir.lowering_lang_options. Runtime library functions do not.
+    static llvm::StringRef getModuleDefaultAttrsAttrName() { return "module_default_attrs"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
