@@ -1017,6 +1017,12 @@ def : InstRW<[A78Write_5c_1M0, WriteLDHi], (instrs LDPSWi)>;
 def : InstRW<[WriteAdr, A78Write_5c_1M0, WriteLDHi],
              (instregex "^LDPSW(post|pre)$")>;
 
+def A78Write_ScaledLDRH : SchedWriteVariant<[
+  SchedVar<A78IsScaledLoadStore, [A78Write_5c_1I_1L]>,
+  SchedVar<NoSchedPred,          [A78Write_4c_1L]>]>;
+
+def : InstRW<[A78Write_ScaledLDRH], (instregex "^LDR(HH|SHW|SHX)ro[WX]$")>;
+
 // Store instructions
 // -----------------------------------------------------------------------------
 
