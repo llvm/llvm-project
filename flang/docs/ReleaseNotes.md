@@ -116,6 +116,9 @@ page](https://llvm.org/releases/).
   compressing DWARF debug info in ELF object files using zlib or zstd,
   reducing debug information size in compiled binaries.
 
+- The debug information no longer asks for a name table by default, matching
+  clang. Use `-gpubnames` to get the table back.
+
 - The FIR loop invariant code motion pass (`flang-licm`) is now enabled by
   default at optimization levels above `-O0`. It can be turned off with
   `-mmlir -disable-fir-licm`. The `-mmlir -enable-fir-licm` option that
@@ -150,6 +153,10 @@ page](https://llvm.org/releases/).
 
 - Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
   sections. Supported formats are `zlib`, `zstd`, and `none`.
+
+- Added `-gpubnames` and `-ggnu-pubnames`, which ask for a name table and for
+  GNU pubnames respectively, and their `-gno-pubnames` and `-gno-gnu-pubnames`
+  forms.
 
 - Added `-finit-local=<val>` to initialize automatic local
   variables that have no explicit or default initialization. Accepted values

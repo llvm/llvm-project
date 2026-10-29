@@ -273,6 +273,18 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
   }
+
+  // Handle name table requests (-gpubnames, -ggnu-pubnames).
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+          options::OPT_gpubnames, options::OPT_gno_pubnames);
+      A && checkDebugInfoOption(A, Args, D, TC)) {
+    if (A->getOption().matches(options::OPT_ggnu_pubnames))
+      CmdArgs.push_back("-ggnu-pubnames");
+    else if (A->getOption().matches(options::OPT_gpubnames))
+      CmdArgs.push_back("-gpubnames");
+  }
+
   if (Args.hasArg(options::OPT_gsplit_dwarf) ||
       Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
     // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
