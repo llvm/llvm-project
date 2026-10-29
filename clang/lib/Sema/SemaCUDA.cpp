@@ -266,7 +266,7 @@ SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
   // attribute are emitted
   //  - on both sides in host device functions
   //  - on device side in device or global functions
-  if (auto *FD = Var->getDeclContext()->getEnclosingFunction()) {
+  if (const FunctionDecl *FD = Var->getDeclContext()->getEnclosingFunction()) {
     switch (IdentifyTarget(FD)) {
     case CUDAFunctionTarget::HostDevice:
       return CVT_Both;
