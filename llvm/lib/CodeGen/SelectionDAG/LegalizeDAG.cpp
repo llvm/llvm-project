@@ -4751,9 +4751,18 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue InputChain = Node->getOperand(0);
     SDValue StartVal = Node->getOperand(1);
     SDValue EndVal = Node->getOperand(2);
-    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
-        DAG, RTLIB::CLEAR_CACHE, MVT::isVoid, {StartVal, EndVal}, CallOptions,
-        SDLoc(Node), InputChain);
+    RTLIB::LibcallImpl LCImpl =
+        DAG.getLibcalls().getLibcallImpl(RTLIB::CLEAR_CACHE);
+    if (LCImpl == RTLIB::Unsupported) {
+      DAG.getContext()->diagnose(DiagnosticInfoLegalizationFailure(
+          "llvm.clear_cache is not supported on this target.",
+          DAG.getMachineFunction().getFunction(), dl.getDebugLoc()));
+      Results.push_back(InputChain);
+      break;
+    }
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LCImpl, MVT::isVoid, {StartVal, EndVal},
+                        CallOptions, SDLoc(Node), InputChain);
     Results.push_back(Tmp.second);
     break;
   }
