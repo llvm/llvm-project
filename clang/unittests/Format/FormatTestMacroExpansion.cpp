@@ -230,8 +230,63 @@ a))",
 TEST_F(FormatTestMacroExpansion, KeepParensWhenExpandingObjectLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("FN=class C { int f");
-  verifyFormat("void f() { FN(a *b);\n"
+  verifyFormat("void f() {\n"
+               "  FN(a *b);\n"
                "  };\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ShortFunctionsAndBlocksWithMacroExpansion) {
+  FormatStyle Style = getLLVMStyleWithColumns(35);
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.Macros = {
+      "ID(x)=x",
+      "VERY_LONG_MACRO_NAME(x)=x",
+      "EXPANDS_LONG(x)=very_long_function_call(x)",
+      "IF_ERROR_RETURN(x)=if (x) return x",
+      "STMTS=f(); g();",
+      "STMTS_NO_SEMI=f(); g()",
+  };
+
+  verifyFormat("void f() { ID(a *b); }", Style);
+  verifyFormat("void f() { int x = ID(a * b); }", Style);
+  verifyFormat("void f() {\n"
+               "  VERY_LONG_MACRO_NAME(a *b);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  int x = VERY_LONG_MACRO_NAME(x);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  EXPANDS_LONG(a * b) +\n"
+               "      c;\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  IF_ERROR_RETURN(x);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  IF_ERROR_RETURN(a * b);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  STMTS\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  STMTS_NO_SEMI;\n"
+               "}",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "  if (a) ID(b *c);\n"
+               "  if (a)\n"
+               "    VERY_LONG_MACRO_NAME(b *c);\n"
+               "  if (a)\n"
+               "    IF_ERROR_RETURN(b * c);\n"
                "}",
                Style);
 }
@@ -299,6 +354,100 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                Style);
 }
 
+TEST_F(FormatTestMacroExpansion, PPDirectiveInDiscardedMacroArgs) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros = {"A=a", "ID(x)=x", "PAIR(x, y)=x y", "STMT=f();", "EMPTY="};
+
+  verifyIncompleteFormat("A(\n"
+                         "#endif",
+                         Style);
+  verifyIncompleteFormat("ID(\n"
+                         "#endif",
+                         Style);
+  verifyIncompleteFormat("ID(\n"
+                         "#define X 1",
+                         Style);
+  verifyFormat("A(\n"
+               "#if X\n"
+               "    b;\n"
+               "#endif\n"
+               ")",
+               Style);
+  verifyFormat("ID(a,\n"
+               "#if X\n"
+               "   b\n"
+               "#endif\n"
+               ");",
+               Style);
+  verifyFormat("PAIR(\n"
+               "#define X ,\n"
+               "    a)",
+               Style);
+  verifyFormat("ID(\n"
+               "#if 0\n"
+               ",\n"
+               "#endif\n"
+               "    if (a) {\n"
+               "      f();\n"
+               "    })",
+               Style);
+  verifyFormat("STMT\n"
+               "#define F(x) g(x)\n"
+               "b;",
+               "STMT\n"
+               "#define F(x) g( x )\n"
+               "b;",
+               Style);
+  verifyFormat("EMPTY(\n"
+               "#define F(x) g(x)\n"
+               "1)",
+               "EMPTY(\n"
+               "#define F(x)  g(x)\n"
+               "1)",
+               Style);
+  EXPECT_EQ("A(\n"
+            "ID(\n"
+            "#define F(x) g(x)\n"
+            "))",
+            format("A(ID(\n"
+                   "#define F(x)  g(x)\n"
+                   "))",
+                   Style, SC_ExpectIncomplete));
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("#if OUTER\n"
+               "EMPTY(\n"
+               "  #define X 1\n"
+               ")\n"
+               "#endif",
+               Style);
+  verifyFormat("void f() {\n"
+               "  if (x) {\n"
+               "    ID(a,\n"
+               "#if Y\n"
+               "  #define Z 1\n"
+               "#endif\n"
+               "    );\n"
+               "  }\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, PPDirectiveBeforeEmptyExpansion) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+  verifyFormat("#define X 1\n"
+               "ID()",
+               "#define X   1\n"
+               "ID()",
+               Style);
+  verifyFormat("#define X 1\n"
+               "ID()",
+               "#define X   1\n"
+               "ID()",
+               Style, {tooling::Range(0, 13)}); // line 1
+}
+
 TEST_F(FormatTestMacroExpansion, ObjectLikeMacroCalledWithArgsDoesNotHang) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("CASE=case");
@@ -343,6 +492,119 @@ TEST_F(FormatTestMacroExpansion, TokensAfterMacroCallAreNotPartOfCall) {
                "int b;\n"
                "#endif",
                Style);
+}
+
+TEST_F(FormatTestMacroExpansion,
+       SeparateDefinitionBlocksWithMacroExpandedStruct) {
+  // Reproduces https://llvm.org/PR78263
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterStruct = true;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.Macros.push_back("PACK(x)=x");
+
+  verifyFormat("static bool foo;\n"
+               "\n"
+               "//! \\brief Blah\n"
+               "PACK(\n"
+               "    struct Foo\n"
+               "    {\n"
+               "      uint16_t a;\n"
+               "    });\n"
+               "\n"
+               "PACK(\n"
+               "    struct Bar\n"
+               "    {\n"
+               "      uint32_t a;\n"
+               "    });\n"
+               "\n"
+               "PACK(\n"
+               "    struct Baz\n"
+               "    {\n"
+               "      uint16_t a;\n"
+               "    });",
+               "static bool foo;\n"
+               "\n"
+               "//! \\brief Blah\n"
+               "PACK(struct Foo\n"
+               "{\n"
+               "  uint16_t a;\n"
+               "});\n"
+               "\n"
+               "PACK(struct Bar\n"
+               "{\n"
+               "  uint32_t a;\n"
+               "});\n"
+               "\n"
+               "PACK(struct Baz\n"
+               "{\n"
+               "  uint16_t a;\n"
+               "});",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, MacroExpansionWithIfElseBranches) {
+  // Reproduces https://llvm.org/PR233300
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("M(x)=x");
+
+  verifyFormat("#if A\n"
+               "auto l = []\n"
+               "#else\n"
+               "if\n"
+               "#endif\n"
+               "    M((int a) {});",
+               Style);
+
+  Style.Macros = {"M(a,b,c)=a b(c)"};
+  verifyNoCrash("({\n"
+                "#if A\n"
+                "{[]\n"
+                "#else\n"
+                "if\n"
+                "#endif\n"
+                "M(, (int a){int b, ))",
+                Style);
+}
+
+TEST_F(FormatTestMacroExpansion, RawStringLiteralInMacroArg) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+
+  StringRef Code1 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(FlowConfig flow_config,\n"
+      "                   ParseTextProto<FlowConfig>(Substitute(\n"
+      "                       R\"pb(\n"
+      "                         key: value\n"
+      "                       )pb\",\n"
+      "                       arg1, arg2, arg3, arg4)));\n"
+      "}";
+  verifyFormat(Code1, Code1, Style);
+
+  StringRef Code2 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(\n"
+      "      FlowConfig flow_config,\n"
+      "      "
+      "proto2::contrib::parse_proto::ParseTextProto<FlowConfig>(absl::"
+      "Substitute(\n"
+      "          R\"pb(\n"
+      "            key: value\n"
+      "          )pb\",\n"
+      "          kPreprocessingFlowConfig, kAudioConfig, kPostConfig)));\n"
+      "}";
+  verifyFormat(Code2, Code2, Style);
+
+  StringRef Code3 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(\n"
+      "      // comment\n"
+      "      TestCase test_case, ParseTextProto<TestCase>(R\"pb(\n"
+      "        name: \"foo\"\n"
+      "      )pb\"));\n"
+      "}";
+  verifyFormat(Code3, Code3, Style);
 }
 
 } // namespace

@@ -3,12 +3,12 @@
 ; The coexec scheduler strategy pushes RewriteMFMAForm into its pipeline so MFMA
 ; chains can be rewritten to the AGPR form when ArchVGPR pressure is excessive.
 ;
-; This IR is reduced from a Triton-generated GEMM kernel with multiple (28 to be
+; This IR is reduced from a Triton-generated GEMM kernel with multiple (30 to be
 ; exact) MFMAs in a phi-carried loop with high VGPR pressure, every MFMA in the
 ; loop is rewritten to the AGPR-destination form (v_mfma_f32_16x16x32_f16 a*).
 
 ; CHECK-LABEL: v5_local_prefetch:
-; CHECK-COUNT-28: v_mfma_f32_16x16x32_f16 a
+; CHECK-COUNT-30: v_mfma_f32_16x16x32_f16 a
 ; CHECK-NOT: v_mfma_f32_16x16x32_f16 v
 
 define amdgpu_kernel void @v5_local_prefetch() #0 {
@@ -58,6 +58,8 @@ define amdgpu_kernel void @v5_local_prefetch() #0 {
   %40 = phi float [ 0.000000e+00, %.lr.ph ], [ %148, %3 ]
   %41 = phi float [ 0.000000e+00, %.lr.ph ], [ %153, %3 ]
   %42 = phi float [ 0.000000e+00, %.lr.ph ], [ %41, %3 ]
+  %p0 = phi float [ 0.000000e+00, %.lr.ph ], [ %e0, %3 ]
+  %p1 = phi float [ 0.000000e+00, %.lr.ph ], [ %e1, %3 ]
   %43 = phi <2 x half> [ %1, %.lr.ph ], [ zeroinitializer, %3 ]
   %44 = phi <2 x half> [ %2, %.lr.ph ], [ zeroinitializer, %3 ]
   %45 = phi <8 x half> [ zeroinitializer, %.lr.ph ], [ <half 0.000000e+00, half 0.000000e+00, half poison, half poison, half poison, half poison, half poison, half poison>, %3 ]
@@ -169,6 +171,12 @@ define amdgpu_kernel void @v5_local_prefetch() #0 {
   %151 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> zeroinitializer, <8 x half> zeroinitializer, <4 x float> %150, i32 0, i32 0, i32 0)
   %152 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> zeroinitializer, <8 x half> zeroinitializer, <4 x float> %151, i32 0, i32 0, i32 0)
   %153 = extractelement <4 x float> %152, i64 0
+  %x0 = insertelement <4 x float> zeroinitializer, float %p0, i64 0
+  %x1 = insertelement <4 x float> %x0, float %p1, i64 1
+  %x2 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> zeroinitializer, <8 x half> zeroinitializer, <4 x float> %x1, i32 0, i32 0, i32 0)
+  %x3 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> zeroinitializer, <8 x half> zeroinitializer, <4 x float> %x2, i32 0, i32 0, i32 0)
+  %e0 = extractelement <4 x float> %x3, i64 0
+  %e1 = extractelement <4 x float> %x3, i64 1
   br label %3
 }
 

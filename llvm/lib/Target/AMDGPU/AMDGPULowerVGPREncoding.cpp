@@ -571,7 +571,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has1024AddressableVGPRs())
+  if (!ST.hasVGPRMSBs())
     return false;
 
   TII = ST.getInstrInfo();
@@ -614,7 +614,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
       if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
         assert(!ClauseRemaining && "Nested clauses are not supported");
-        ClauseLen = MI.getOperand(0).getImm();
+        ClauseLen = static_cast<unsigned>(MI.getOperand(0).getImm());
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
         Clause = &MI;

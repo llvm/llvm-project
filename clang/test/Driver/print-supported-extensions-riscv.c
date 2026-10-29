@@ -247,8 +247,8 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
+// CHECK-NEXT:     y                    0.910     'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
-// CHECK-NEXT:     y                    0.98      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
@@ -296,16 +296,16 @@
 // CHECK-NEXT:     rva20u64
 // CHECK-NEXT:     rva22s64
 // CHECK-NEXT:     rva22u64
+// CHECK-NEXT:     rva23p1s64
 // CHECK-NEXT:     rva23s64
 // CHECK-NEXT:     rva23u64
+// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvb23s64
 // CHECK-NEXT:     rvb23u64
 // CHECK-NEXT:     rvi20u32
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
-// CHECK-NEXT:     rva23p1s64
-// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

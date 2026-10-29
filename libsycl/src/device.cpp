@@ -11,7 +11,7 @@
 #include <detail/device_impl.hpp>
 #include <detail/platform_impl.hpp>
 
-#include <algorithm>
+#include <cassert>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -27,55 +27,54 @@ platform device::get_platform() const {
 
 backend device::get_backend() const noexcept { return impl->getBackend(); }
 
-std::vector<device> device::get_devices(info::device_type DeviceType) {
+std::vector<device> device::get_devices(info::device_type type) {
   std::vector<device> Devices;
 
   // Not calling platform::get_devices to avoid multiple vector packing
-  for (auto &PlatformImpl : detail::PlatformImpl::getPlatforms()) {
-    assert(PlatformImpl && "PlatformImpl can not be nullptr");
-    PlatformImpl->iterateDevices(
-        DeviceType, [&Devices](detail::DeviceImpl *DevImpl) {
-          assert(DevImpl && "Device impl can't be nullptr");
-          Devices.push_back(detail::createSyclObjFromImpl<device>(*DevImpl));
-        });
+  for (const auto &Impl : detail::PlatformImpl::getPlatforms()) {
+    assert(Impl && "Platform impl can't be nullptr");
+    Impl->iterateDevices(type, [&Devices](detail::DeviceImpl *DevImpl) {
+      assert(DevImpl && "Device impl can't be nullptr");
+      Devices.push_back(detail::createSyclObjFromImpl<device>(*DevImpl));
+    });
   }
 
   return Devices;
 }
 
-template <info::partition_property prop>
-std::vector<device> device::create_sub_devices(size_t ComputeUnits) const {
+template <info::partition_property Prop>
+std::vector<device> device::create_sub_devices(std::size_t /*count*/) const {
   throw exception(make_error_code(errc::feature_not_supported),
                   "Partitioning is not supported.");
 }
 
 template _LIBSYCL_EXPORT std::vector<device>
 device::create_sub_devices<info::partition_property::partition_equally>(
-    size_t ComputeUnits) const;
+    std::size_t count) const;
 
-template <info::partition_property prop>
+template <info::partition_property Prop>
 std::vector<device>
-device::create_sub_devices(const std::vector<size_t> &Counts) const {
+device::create_sub_devices(const std::vector<std::size_t> & /*counts*/) const {
   throw exception(make_error_code(errc::feature_not_supported),
                   "Partitioning is not supported.");
 }
 
 template _LIBSYCL_EXPORT std::vector<device>
 device::create_sub_devices<info::partition_property::partition_by_counts>(
-    const std::vector<size_t> &Counts) const;
+    const std::vector<std::size_t> &counts) const;
 
-template <info::partition_property prop>
+template <info::partition_property Prop>
 std::vector<device> device::create_sub_devices(
-    info::partition_affinity_domain AffinityDomain) const {
+    info::partition_affinity_domain /*affinityDomain*/) const {
   throw exception(make_error_code(errc::feature_not_supported),
                   "Partitioning is not supported.");
 }
 
 template _LIBSYCL_EXPORT std::vector<device> device::create_sub_devices<
     info::partition_property::partition_by_affinity_domain>(
-    info::partition_affinity_domain AffinityDomain) const;
+    info::partition_affinity_domain affinityDomain) const;
 
-bool device::has(aspect Aspect) const { return impl->has(Aspect); }
+bool device::has(aspect asp) const { return impl->has(asp); }
 
 template <typename Param>
 detail::is_device_info_desc_t<Param> device::get_info() const {

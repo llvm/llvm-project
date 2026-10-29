@@ -38,6 +38,14 @@ class MemReverse8Template : Template<
     ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
     ["u8",      "u16",      "u32",      "u64"]>;
 
+class Load8UnsignedTemplate : Template<
+    ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
+    ["8",             "16",             "32",             "64"]>;
+
+class Load8SignedTemplate : Template<
+    ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
+    ["8",            "16",            "32",            "64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -992,7 +1000,7 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
 
 def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
   let Spellings = ["stdc_memreverse8"];
-  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Attributes = [NoThrow, Constexpr, NonNull<NonOptimizing, [1]>];
   let Prototype = "void(size_t, unsigned char*)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -1001,6 +1009,43 @@ def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Templa
   let Spellings = ["stdc_memreverse8"];
   let Attributes = [NoThrow, Pure, Const, Constexpr];
   let Prototype = "T(T)";
+}
+
+class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
+  let Prototype = "T(unsigned char const*)";
+}
+
+def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_leu"];
+}
+
+def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_beu"];
+}
+
+def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_leu"];
+}
+
+def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_beu"];
+}
+
+def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_les"];
+}
+
+def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_bes"];
+}
+
+def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_les"];
+}
+
+def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_bes"];
 }
 
 
@@ -3570,6 +3615,11 @@ def Fwrite : LibBuiltin<"stdio.h"> {
   let Prototype = "size_t(void const*, size_t, size_t, FILE*)";
 }
 
+def Fgets : LibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets"];
+  let Prototype = "char*(char*, int, FILE*)";
+}
+
 // C99 ctype.h
 
 def IsAlNum : LibBuiltin<"ctype.h"> {
@@ -3882,6 +3932,25 @@ def RecvFrom : LibBuiltin<"sys/socket.h"> {
   let Attributes = [IgnoreSignature];
   // ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*);
   // types are target-specific
+  let Prototype = "";
+}
+
+// POSIX poll.h
+
+def Poll : LibBuiltin<"poll.h"> {
+  let Spellings = ["poll"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, int); struct pollfd and nfds_t are
+  // target-specific
+  let Prototype = "";
+}
+
+def PPoll : LibBuiltin<"poll.h"> {
+  let Spellings = ["ppoll", "ppoll64"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
+  // struct pollfd, nfds_t, struct timespec, and sigset_t/sigset64_t are
+  // target-specific
   let Prototype = "";
 }
 
@@ -4792,7 +4861,7 @@ def Assume : Builtin {
 
 def AssumeSeparateStorage : Builtin {
   let Spellings = ["__builtin_assume_separate_storage"];
-  let Attributes = [NoThrow, Constexpr];
+  let Attributes = [NoThrow];
   let Prototype = "void(void const volatile*, void const volatile*)";
 }
 
@@ -5588,6 +5657,30 @@ def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStoreFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
 def HLSLInterlockedExchange : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_exchange"];
   let Attributes = [NoThrow, CustomTypeChecking];
@@ -5762,6 +5855,12 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsfinite : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isfinite"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -5874,6 +5973,12 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void()";
+}
+
+def HLSLBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_barrier"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 class HLSLScalarTemplate

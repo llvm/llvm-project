@@ -1113,6 +1113,8 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
   AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
       *DAG.getMachineFunction().getFunction().getParent());
+  CanDescribeGlobalAddressInLocationList =
+      canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
 }
 
 void SelectionDAGBuilder::clear() {
@@ -1552,6 +1554,26 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   DDIV.clear();
 }
 
+/// If \p V is the address of a describable global, possibly displaced by a
+/// constant, return the global and fold the displacement into location operand
+/// \p OpIdx of \p Expr. The displacement rides along in the expression rather
+/// than in the operand, so that it survives into a DBG_INSTR_REF.
+static const GlobalValue *
+getGlobalAddressDbgOperand(const Value *V, DIExpression *&Expr, unsigned OpIdx,
+                           const MachineFunction &MF) {
+  const auto *C = dyn_cast<Constant>(V);
+  if (!C)
+    return nullptr;
+  int64_t Offset;
+  const GlobalValue *GV = getDescribableGlobalAddress(C, Offset, MF);
+  if (GV && Offset) {
+    SmallVector<uint64_t, 3> Ops;
+    DIExpression::appendOffset(Ops, Offset);
+    Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx, /*StackValue=*/false);
+  }
+  return GV;
+}
+
 void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
                                                     DanglingDebugInfo &DDI) {
   // TODO: For the variadic implementation, instead of only checking the fail
@@ -1568,8 +1590,25 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // that DW_OP_stack_value is desired.
   bool StackValue = true;
 
+  // handleDebugValue holds out for a register with the address of a global
+  // that a location list could not name. With no such register forthcoming,
+  // naming the global still beats dropping the location.
+  auto HandleGlobalAddress = [&] {
+    DIExpression *GVExpr = Expr;
+    const GlobalValue *GV =
+        getGlobalAddressDbgOperand(V, GVExpr, 0, DAG.getMachineFunction());
+    if (!GV)
+      return false;
+    SDDbgValue *SDV = DAG.getDbgValueList(
+        Var, GVExpr, SDDbgOperand::fromGlobalAddr(GV), /*Dependencies=*/{},
+        /*IsIndirect=*/false, DL, SDOrder, /*IsVariadic=*/false);
+    DAG.AddDbgValue(SDV, /*isParameter=*/false);
+    return true;
+  };
+
   // Can this Value can be encoded without any further work?
-  if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false))
+  if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false) ||
+      HandleGlobalAddress())
     return;
 
   // Attempt to salvage back through as many instructions as possible. Bail if
@@ -1599,7 +1638,8 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
 
     // Some kind of simplification occurred: check whether the operand of the
     // salvaged debug expression can be encoded in this DAG.
-    if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false)) {
+    if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false) ||
+        HandleGlobalAddress()) {
       LLVM_DEBUG(
           dbgs() << "Salvaged debug location info for:\n  " << *Var << "\n"
                  << *OrigV << "\nBy stripping back to:\n  " << *V << "\n");
@@ -1642,7 +1682,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
 
   SmallVector<SDDbgOperand> LocationOps;
   SmallVector<SDNode *> Dependencies;
-  for (const Value *V : Values) {
+  for (const auto &[OpIdx, V] : enumerate(Values)) {
     // Constant value.
     if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V) ||
         isa<ConstantPointerNull>(V)) {
@@ -1654,6 +1694,18 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     if (auto *CE = dyn_cast<ConstantExpr>(V))
       if (CE->getOpcode() == Instruction::IntToPtr) {
         LocationOps.emplace_back(SDDbgOperand::fromConst(CE->getOperand(0)));
+        continue;
+      }
+
+    // The address of a global is a link-time constant, and so is a constant
+    // displacement from one. A global whose address cannot be described this
+    // way falls through to be described by whatever materializes it instead.
+    // So does one that a location list could not name, should the variable
+    // need one; salvageUnresolvedDbgValue names it if nothing materializes it.
+    if (CanDescribeGlobalAddressInLocationList)
+      if (const GlobalValue *GV = getGlobalAddressDbgOperand(
+              V, Expr, OpIdx, DAG.getMachineFunction())) {
+        LocationOps.emplace_back(SDDbgOperand::fromGlobalAddr(GV));
         continue;
       }
 
@@ -1822,6 +1874,8 @@ void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   V->getType(), ValueVTs);
+  if (ValueVTs.empty())
+    return;
   setValue(V, DAG.getErrorMergeValues(ValueVTs, SDValue(), dl));
 }
 
@@ -2119,7 +2173,7 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   // the start of an EH scope/funclet.
   FuncInfo.MBB->setIsEHScopeEntry();
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
-  if (Pers != EHPersonality::Wasm_CXX) {
+  if (Pers != EHPersonality::Wasm_CXX && Pers != EHPersonality::Wasm_D) {
     FuncInfo.MBB->setIsEHFuncletEntry();
     FuncInfo.MBB->setIsCleanupFuncletEntry();
   }
@@ -2143,6 +2197,7 @@ static void findUnwindDestinations(
   bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
   bool IsCoreCLR = Personality == EHPersonality::CoreCLR;
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
+  bool IsWasmD = Personality == EHPersonality::Wasm_D;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
   while (EHPadBB) {
@@ -2159,7 +2214,7 @@ static void findUnwindDestinations(
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
       // In Wasm, EH scopes are not funclets
-      if (!IsWasmCXX)
+      if (!IsWasmCXX && !IsWasmD)
         UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
@@ -3653,8 +3708,20 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   if (LP.getType()->isTokenTy())
     return;
 
-  SmallVector<EVT, 2> ValueVTs;
+  // LangRef leaves the result type target-specific, so diagnose types this
+  // lowering cannot represent instead of asserting.
   SDLoc dl = getCurSDLoc();
+  if (!isExceptionPointerAndSelectorType(LP.getType())) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *LP.getFunction(),
+        "landingpad result type must be a struct of an exception pointer and "
+        "an integer selector",
+        dl.getDebugLoc()));
+    setValueToPoison(&LP, dl);
+    return;
+  }
+
+  SmallVector<EVT, 2> ValueVTs;
   ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);
   assert(ValueVTs.size() == 2 && "Only two-valued landingpads are supported");
 
@@ -7974,7 +8041,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
       Value *Arg = I.getArgOperand(0);
-      Args.emplace_back(Arg, getValue(Arg));
+      Args.emplace_back(Arg, getValue(Arg),
+                        LibInfo->getExtAttrForI8Param(/*Signed=*/false));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -8561,6 +8629,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, SetCC);
     return;
   }
+  case Intrinsic::mask_beforefirst: {
+    SDValue Op = getValue(I.getOperand(0));
+    setValue(&I,
+             DAG.getNode(ISD::MASK_BEFOREFIRST, sdl, Op.getValueType(), Op));
+    return;
+  }
   case Intrinsic::experimental_get_vector_length: {
     assert(cast<ConstantInt>(I.getOperand(1))->getSExtValue() > 0 &&
            "Expected positive VF");
@@ -8604,11 +8678,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_fadd: {
+    SDNodeFlags Flags;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      Flags.copyFMF(*FPOp);
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(
-                     ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
-                     Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
+    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(),
+                             Acc, Input,
+                             DAG.getConstantFP(1.0, sdl, Input.getValueType()),
+                             Flags));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -9214,7 +9292,8 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Skip emitting EH_LABEL on targets whose exception tables don't reference
   // them (32-bit x86 SEH, Wasm).
-  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels(
+          FuncInfo.ExceptionModel)) {
     BeginLabel = nullptr;
     return Chain;
   }
@@ -10244,6 +10323,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
         MVT VT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
+        // No integer type of that size to bitcast to (e.g. f80).
+        if (!VT.isValid())
+          return std::nullopt;
         if (OpInfo.Type == InlineAsm::isInput)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, VT, OpInfo.CallOperand);
@@ -10466,7 +10548,7 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     //
     // Due to current llvm inline asm architecture designed to not "recognize"
     // the asm code, there are quite troubles for us to treat mem addressing
-    // differently for same value/adress used in different instuctions.
+    // differently for same value/adress used in different instructions.
     // For example, in pic model, call a func may in plt way or direclty
     // pc-related, but lea/mov a function adress may use got.
     //
@@ -11968,9 +12050,8 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       // We will look through cast uses, so ignore them completely.
       if (I.isCast())
         continue;
-      // Ignore debug info and pseudo op intrinsics, they don't escape or store
-      // to allocas.
-      if (I.isDebugOrPseudoInst())
+      // Ignore pseudo op intrinsics, they don't escape or store to allocas.
+      if (isa<PseudoProbeInst>(I))
         continue;
       // This is an unknown instruction. Assume it escapes or writes to all
       // static alloca operands.
@@ -12098,7 +12179,7 @@ static void tryToElideArgumentCopy(
   }
 }
 
-void SelectionDAGISel::LowerArguments(const Function &F) {
+void SelectionDAGISel::LowerArguments(const Function &F, bool FastISel) {
   SelectionDAG &DAG = SDB->DAG;
   SDLoc dl = SDB->getCurSDLoc();
   const DataLayout &DL = DAG.getDataLayout();
@@ -12434,7 +12515,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         continue;
       }
     }
-    if (!isOnlyUsedInEntryBlock(&Arg, TM.Options.EnableFastISel)) {
+    if (!isOnlyUsedInEntryBlock(&Arg, FastISel)) {
       FuncInfo->InitializeRegForValue(&Arg);
       SDB->CopyToExportRegsIfNeeded(&Arg);
     }
@@ -12507,7 +12588,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       if (const auto *C = dyn_cast<Constant>(PHIOp)) {
         Register &RegOut = ConstantsOut[C];
         if (!RegOut) {
-          RegOut = FuncInfo.CreateRegs(&PN);
+          RegOut = FuncInfo.CreateRegs(PHIOp);
           // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
           ISD::NodeType ExtendType = ISD::ANY_EXTEND;
@@ -12525,7 +12606,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
           assert(isa<AllocaInst>(PHIOp) &&
                  FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(PHIOp)) &&
                  "Didn't codegen value into a register!??");
-          Reg = FuncInfo.CreateRegs(&PN);
+          Reg = FuncInfo.CreateRegs(PHIOp);
           CopyValueToVirtualRegister(PHIOp, Reg);
         }
       }
@@ -12672,8 +12753,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -12714,16 +12795,22 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // JTH->FallthroughUnreachable which will use it to suppress the range
         // check.
         //
-        // However, don't do this if we're doing branch target enforcement,
-        // because a table branch _without_ a range check can be a tempting JOP
-        // gadget - out-of-bounds inputs that are impossible in correct
-        // execution become possible again if an attacker can influence the
-        // control flow. So if an attacker doesn't already have a BTI bypass
-        // available, we don't want them to be able to get one out of this
-        // table branch.
+        // However, don't do this if we're doing branch target enforcement
+        // (e.g. Arm BTI, or the cf-protection-branch module flag used by
+        // RISC-V Zicfilp and X86 IBT), because a table branch _without_ a
+        // range check can be a tempting JOP gadget - out-of-bounds inputs
+        // that are impossible in correct execution become possible again if
+        // an attacker can influence the control flow. So if an attacker
+        // doesn't already have a branch target enforcement bypass available,
+        // we don't want them to be able to get one out of this table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
+          bool HasCFBranch = false;
+          if (auto *CFBranch = mdconst::extract_or_null<ConstantInt>(
+                  CurFunc.getParent()->getModuleFlag("cf-protection-branch")))
+            HasCFBranch = !CFBranch->isZero();
+          if (!HasCFBranch &&
+              !CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 
@@ -13089,18 +13176,6 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
                              DAG.getVectorIdxConstant(OutNumElts * i, DL));
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
-    SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                        createStrideMask(0, 2, OutNumElts));
-    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                       createStrideMask(1, 2, OutNumElts));
-    SDValue Res = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
-    setValue(&I, Res);
-    return;
-  }
-
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
                             DAG.getVTList(ValueVTs), SubVecs);
   setValue(&I, Res);
@@ -13118,16 +13193,6 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
     InVecs[i] = getValue(I.getOperand(i));
     assert(InVecs[i].getValueType() == InVecs[0].getValueType() &&
            "Expected VTs to be the same");
-  }
-
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
-    unsigned NumElts = InVT.getVectorMinNumElements();
-    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
-    setValue(&I, DAG.getVectorShuffle(OutVT, DL, V, DAG.getUNDEF(OutVT),
-                                      createInterleaveMask(NumElts, 2)));
-    return;
   }
 
   SmallVector<EVT, 8> ValueVTs(Factor, InVT);

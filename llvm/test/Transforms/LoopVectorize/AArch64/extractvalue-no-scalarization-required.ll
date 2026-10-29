@@ -14,8 +14,8 @@
 
 ; Ensure the extractvalue + add instructions are hoisted out
 ; CM: vector.ph:
-; CM:  CLONE ir<%a> = extractvalue ir<%sv>
-; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CM:  CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CM:  Successor(s): vector loop
 
@@ -72,8 +72,8 @@ declare float @powf(float, float) readnone nounwind
 ; Ensure the extractvalue instructions are hoisted out
 ; CM-LABEL: Checking a loop in 'test_getVectorCallCost'
 ; CM: vector.ph:
-; CM:  CLONE ir<%a> = extractvalue ir<%sv>
-; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CM:  Successor(s): vector loop
 
 ; CM: LV: Scalar loop costs: 14.
@@ -114,6 +114,63 @@ loop.body:
   %addr = getelementptr float, ptr %dst, i32 %iv
   %p = call float @powf(float %a, float %b)
   store float %p, ptr %addr
+  %iv.next = add nsw i32 %iv, 1
+  %cond = icmp ne i32 %iv.next, 1000
+  br i1 %cond, label %loop.body, label %exit
+
+exit:
+  ret void
+}
+
+; Extractvalue with multiple indices; %a and %b share a prefix and must not be
+; CSE'd.
+; CM-LABEL: Checking a loop in 'test_multi_index'
+; CM: vector.ph:
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>, ir<0>, ir<1>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<0>, ir<0>
+; CM:  CLONE ir<%c> = extractvalue ir<%sv>, ir<1>
+; CM:  CLONE ir<%add.1> = add ir<%a>, ir<%b>
+; CM:  CLONE ir<%add.2> = add ir<%add.1>, ir<%c>
+; CM:  Successor(s): vector loop
+
+define void @test_multi_index(ptr %dst, {{i64, i64}, i64} %sv) {
+; FORCED-LABEL: define void @test_multi_index(
+; FORCED-SAME: ptr [[DST:%.*]], { { i64, i64 }, i64 } [[SV:%.*]]) {
+; FORCED-NEXT:  [[ENTRY:.*:]]
+; FORCED-NEXT:    br label %[[VECTOR_PH:.*]]
+; FORCED:       [[VECTOR_PH]]:
+; FORCED-NEXT:    [[TMP0:%.*]] = extractvalue { { i64, i64 }, i64 } [[SV]], 0, 1
+; FORCED-NEXT:    [[TMP1:%.*]] = extractvalue { { i64, i64 }, i64 } [[SV]], 0, 0
+; FORCED-NEXT:    [[TMP2:%.*]] = extractvalue { { i64, i64 }, i64 } [[SV]], 1
+; FORCED-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], [[TMP1]]
+; FORCED-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[TMP2]]
+; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
+; FORCED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FORCED:       [[VECTOR_BODY]]:
+; FORCED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[DST]], i32 [[INDEX]]
+; FORCED-NEXT:    store <2 x i64> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 4
+; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; FORCED-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; FORCED-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FORCED:       [[MIDDLE_BLOCK]]:
+; FORCED-NEXT:    br label %[[EXIT:.*]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.body ]
+  %a = extractvalue {{i64, i64}, i64} %sv, 0, 1
+  %b = extractvalue {{i64, i64}, i64} %sv, 0, 0
+  %c = extractvalue {{i64, i64}, i64} %sv, 1
+  %addr = getelementptr i64, ptr %dst, i32 %iv
+  %add.1 = add i64 %a, %b
+  %add.2 = add i64 %add.1, %c
+  store i64 %add.2, ptr %addr
   %iv.next = add nsw i32 %iv, 1
   %cond = icmp ne i32 %iv.next, 1000
   br i1 %cond, label %loop.body, label %exit

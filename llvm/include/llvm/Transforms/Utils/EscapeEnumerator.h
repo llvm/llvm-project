@@ -41,7 +41,7 @@ public:
   EscapeEnumerator(Function &F, const char *N = "cleanup",
                    bool HandleExceptions = true, DomTreeUpdater *DTU = nullptr)
       : F(F), CleanupBBName(N), StateBB(F.begin()), StateE(F.end()),
-        Builder(F.getContext()), HandleExceptions(HandleExceptions), DTU(DTU) {}
+        Builder(*F.getParent()), HandleExceptions(HandleExceptions), DTU(DTU) {}
 
   LLVM_ABI IRBuilder<> *Next();
 };

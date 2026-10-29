@@ -10,6 +10,8 @@ source_set("Basic") {
     "CodeGenIntrinsics.cpp",
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",
+    "OptEmitter.cpp",
+    "OptionParserEmitter.cpp",
     "PredicateExpanderDag.cpp",
     "RISCVTargetDefEmitter.cpp",
     "RuntimeLibcalls.cpp",

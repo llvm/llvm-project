@@ -102,13 +102,14 @@ class POOL16C_JRCADDIUSP_FM_MM16R6<bits<5> op> {
 
 class POOL16C_LWM_SWM_FM_MM16R6<bits<4> funct> {
   bits<2> rt;
-  bits<4> addr;
+  bits<0> base;
+  bits<4> offset;
 
   bits<16> Inst;
 
   let Inst{15-10} = 0x11;
   let Inst{9-8}   = rt;
-  let Inst{7-4}   = addr;
+  let Inst{7-4}   = offset;
   let Inst{3-0}   = funct;
 }
 
@@ -127,16 +128,17 @@ class POOL32A_BITSWAP_FM_MMR6<bits<6> funct> : MipsR6Inst {
 }
 
 class CACHE_PREF_FM_MMR6<bits<6> opgroup, bits<4> funct> : MipsR6Inst {
-  bits<21> addr;
+  bits<12> offset;
+  bits<5> base;
   bits<5> hint;
 
   bits<32> Inst;
 
   let Inst{31-26} = opgroup;
   let Inst{25-21} = hint;
-  let Inst{20-16} = addr{20-16};
+  let Inst{20-16} = base;
   let Inst{15-12} = funct;
-  let Inst{11-0}  = addr{11-0};
+  let Inst{11-0}  = offset;
 }
 
 class ARITH_FM_MMR6<string instr_asm, bits<10> funct> : MMR6Arch<instr_asm> {
@@ -168,10 +170,9 @@ class ADDI_FM_MMR6<string instr_asm, bits<6> op> : MMR6Arch<instr_asm> {
 }
 
 class LB32_FM_MMR6 : MipsR6Inst {
-  bits<21> addr;
   bits<5> rt;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
@@ -182,10 +183,9 @@ class LB32_FM_MMR6 : MipsR6Inst {
 }
 
 class LBU32_FM_MMR6 : MipsR6Inst {
-  bits<21> addr;
   bits<5> rt;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
@@ -286,16 +286,15 @@ class POOL32A_SYNC_FM_MMR6 {
 }
 
 class POOL32I_SYNCI_FM_MMR6 {
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<16> immediate = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
   let Inst{31-26} = 0b010000;
   let Inst{25-21} = 0b01100;
   let Inst{20-16} = base;
-  let Inst{15-0}  = immediate;
+  let Inst{15-0}  = offset;
 }
 
 class POOL32A_2R_FM_MMR6<bits<10> funct> : MipsR6Inst {
@@ -374,9 +373,8 @@ class POOL32A_LSA_FM<bits<6> funct> : MipsR6Inst {
 
 class SB32_SH32_STORE_FM_MMR6<bits<6> op> {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
@@ -388,9 +386,8 @@ class SB32_SH32_STORE_FM_MMR6<bits<6> op> {
 
 class LOAD_WORD_FM_MMR6 {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
@@ -540,15 +537,16 @@ class SHIFT_MMR6_ENC<string instr_asm, bits<10> funct, bit rotate>
 }
 
 class SW32_FM_MMR6<string instr_asm, bits<6> op> : MMR6Arch<instr_asm> {
+  bits<16> offset;
+  bits<5> base;
   bits<5> rt;
-  bits<21> addr;
 
   bits<32> Inst;
 
   let Inst{31-26} = op;
   let Inst{25-21} = rt;
-  let Inst{20-16} = addr{20-16};
-  let Inst{15-0}  = addr{15-0};
+  let Inst{20-16} = base;
+  let Inst{15-0}  = offset;
 }
 
 class POOL32F_ARITH_FM_MMR6<string instr_asm, bits<2> fmt, bits<8> funct>
@@ -986,9 +984,8 @@ class POOL32I_BRANCH_COP_1_2_FM_MMR6<string instr_asm, bits<5> funct>
 class LDWC1_SDWC1_FM_MMR6<string instr_asm, bits<6> funct>
     : MMR6Arch<instr_asm> {
   bits<5> ft;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
@@ -1001,9 +998,8 @@ class LDWC1_SDWC1_FM_MMR6<string instr_asm, bits<6> funct>
 class POOL32B_LDWC2_SDWC2_FM_MMR6<string instr_asm, bits<4> funct>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<11> offset = addr{10-0};
+  bits<5> base;
+  bits<11> offset;
 
   bits<32> Inst;
 
@@ -1019,9 +1015,8 @@ class POOL32C_LL_E_SC_E_FM_MMR6<string instr_asm, bits<4> majorFunc,
                                 bits<3> minorFunc> : MMR6Arch<instr_asm>,
                                                      MipsR6Inst {
   bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
 
   bits<32> Inst;
 

@@ -31,7 +31,7 @@ Derived::~Derived() { some_function(); }
 // CIR-NEXT:     cir.call @_Z13some_functionv()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[LAUNDERED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[LAUNDERED]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }

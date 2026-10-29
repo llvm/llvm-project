@@ -86,6 +86,18 @@ func.func @test_resize_invalid_boarder_x(%arg0: tensor<1x8x8x8xf32>) -> tensor<?
 
 // -----
 
+// CHECK-LABEL: test_resize_nonpositive_scale
+func.func @test_resize_nonpositive_scale(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
+  %scale = tosa.const_shape values(dense<[2, 0, -1, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border mode<BILINEAR> : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return %1 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_reshape_inferable_dim
 func.func @test_reshape_inferable_dim(%arg0: tensor<4xf32>) -> tensor<?x2xf32> {
   %shape = tosa.const_shape values(dense<[-1, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
@@ -144,6 +156,16 @@ func.func @test_mul_non_zero_shift(%arg0: tensor<1x8x8x8xi16>, %arg1: tensor<1x8
   // expected-error@+1 {{'tosa.mul' op requires shift = 0 for all input data types that are not int32_t, but got: 1}}
   %mul = tosa.mul %arg0, %arg1, %shift : (tensor<1x8x8x8xi16>, tensor<1x8x8x8xi16>, tensor<1xi8>) -> tensor<1x8x8x8xi32>
   return %mul : tensor<1x8x8x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mul_invalid_shift
+func.func @test_mul_invalid_shift(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -> tensor<13x21x3xf32> {
+  %shift = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.mul' op requires shift = 0 for all input data types that are not int32_t, but got: 1}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
 }
 
 // -----
@@ -260,6 +282,78 @@ func.func @test_error_i32_unsigned_output(%arg0: tensor<1xi8>) -> tensor<1xi32> 
 
 // -----
 
+func.func @test_rescale_invalid_input_zp_i32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0, got 1}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<13x21x3xi32>
+  return %0 : tensor<13x21x3xi32>
+}
+
+// -----
+
+func.func @test_rescale_invalid_input_zp_s16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0, got 1}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
+func.func @test_rescale_invalid_input_zp_u16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0 or 32768 for unsigned int16 input, got 1}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
+func.func @test_rescale_invalid_output_zp_i32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi32>}> : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0, got -1}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<13x21x3xi32>
+  return %0 : tensor<13x21x3xi32>
+}
+
+// -----
+
+func.func @test_rescale_invalid_output_zp_s16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi16>}> : () -> tensor<1xi16>
+  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0, got -1}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
+func.func @test_rescale_invalid_output_zp_u16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
+  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
+  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi16>}> : () -> tensor<1xi16>
+  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0 or 32768 for unsigned int16 output, got 65535}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(true) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
 func.func @test_cond_if_then_not_isolated_from_above(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
     // expected-error@+1 {{'tosa.cond_if' op is not conformant to the TOSA specification. It requires the 'then' region is isolated from above.}}
     %0 = "tosa.cond_if"(%arg2, %arg1) ({
@@ -335,4 +429,24 @@ func.func @test_while_loop_body_not_isolated_from_above(%arg0: tensor<i32>, %arg
     tosa.yield %3 : tensor<i32>
   }) : (tensor<i32>) -> (tensor<i32>)
   return
+}
+
+// -----
+
+func.func @test_matmul_rank3_lhs_broadcast_dynamic_rhs(%arg0: tensor<1x4x7xf32>, %arg1: tensor<?x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x4x7xf32>, tensor<?x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank3_rhs_broadcast_dynamic_lhs(%arg0: tensor<?x4x7xf32>, %arg1: tensor<1x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x4x7xf32>, tensor<1x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
 }

@@ -56,10 +56,15 @@ public:
   /// this policy.
   virtual bool isPtrType(const std::string &Name) const = 0;
 
-  /// \returns whether \p E is known to produce a safe value for this policy.
-  /// \p PtrIsLifetimeBoundToOrigin is whether the traversal that reached \p E
-  /// followed at least one [[clang::lifetimebound]] edge.
-  virtual bool isSafeExpr(const Expr *, bool PtrIsLifetimeBoundToOrigin) const {
+  /// \returns whether \p Origin is known to produce a safe value for this
+  /// policy. \p PtrIsLifetimeBoundToOrigin is whether the traversal that
+  /// reached \p Origin followed at least one [[clang::lifetimebound]] edge.
+  /// \p SinkType is the type of the variable or parameter that receives the
+  /// value, if known. \p SinkMayEscape is whether the receiving location may
+  /// outlive the scope that encloses \p Origin, as an escaping lambda capture
+  /// does.
+  virtual bool isSafeExpr(const Expr *Origin, bool PtrIsLifetimeBoundToOrigin,
+                          QualType SinkType, bool SinkMayEscape) const {
     return false;
   }
 
@@ -121,7 +126,7 @@ std::unique_ptr<PtrRefSafetyModel> makeCheckedPtrSafetyModel();
 std::unique_ptr<PtrRefSafetyModel> makeRetainPtrSafetyModel();
 
 /// \returns a policy that treats a loan on a CanBorrow object's interior as
-/// safe only when it is guarded by a Borrow<T>.
+/// safe only when it is guarded by const or a Borrow<T>.
 std::unique_ptr<PtrRefSafetyModel> makeBorrowSafetyModel();
 
 } // namespace clang

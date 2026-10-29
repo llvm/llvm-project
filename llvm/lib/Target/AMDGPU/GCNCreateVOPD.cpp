@@ -197,6 +197,14 @@ public:
     return Selected;
   }
 
+  // Commute the components the match was checked with commuted.
+  void applyCommutes(const SIInstrInfo &TII, VOPDMatchInfo &Match) {
+    for (unsigned I : {0u, 1u}) {
+      if (Match.Commute[I] && !TII.commuteInstruction(*Match.InOrder[I]))
+        llvm_unreachable("failed to commute VOPD component");
+    }
+  }
+
   void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate) {
     if (!Candidate.needsMaterialization())
       return;
@@ -326,6 +334,7 @@ public:
       assignMaterializationRegisters(MBB, Candidates);
       SmallVector<VOPDCandidate *, 8> Selected = selectCandidates(Candidates);
       for (VOPDCandidate *Candidate : Selected) {
+        applyCommutes(*SII, Candidate->Match);
         materializeLiteral(*SII, *Candidate);
         Changed |= doReplace(SII, Candidate->Match);
       }

@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "RegisterInfoInterface.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {

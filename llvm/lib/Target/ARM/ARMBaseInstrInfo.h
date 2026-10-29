@@ -119,6 +119,8 @@ protected:
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
@@ -169,10 +171,9 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
@@ -346,11 +347,9 @@ public:
   getExecutionDomain(const MachineInstr &MI) const override;
   void setExecutionDomain(MachineInstr &MI, unsigned Domain) const override;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &, unsigned,
-                               const TargetRegisterInfo *) const override;
-  void breakPartialRegDependency(MachineInstr &, unsigned,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &,
+                                        unsigned) const override;
+  void breakPartialRegDependency(MachineInstr &, unsigned) const override;
 
   /// Get the number of addresses by LDM or VLDM or zero for unknown.
   unsigned getNumLDMAddresses(const MachineInstr &MI) const;

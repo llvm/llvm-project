@@ -55,10 +55,17 @@ add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
 
-# Add subprojects specified using LLVM_EXTERNAL_PROJECTS
+# Add subprojects specified using LLVM_EXTERNAL_PROJECTS. Anything they install
+# without a component is installed by install-<project>.
+set(default_component "${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}")
 foreach(p ${LLVM_EXTERNAL_PROJECTS})
+  set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${p})
   add_llvm_external_project(${p})
+  if(NOT TARGET install-${p})
+    add_llvm_install_targets(install-${p} COMPONENT ${p})
+  endif()
 endforeach(p)
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "${default_component}")
 
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 

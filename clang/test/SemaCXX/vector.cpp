@@ -336,6 +336,23 @@ const int &reference_to_vec_element = vi4(1).x;
 // PR12649
 typedef bool bad __attribute__((__vector_size__(16)));  // expected-error {{invalid vector element type 'bool'}}
 
+namespace GH225037 {
+enum E { A };
+
+#if __cplusplus >= 201103L
+enum class ScopedE { A };
+typedef ScopedE ScopedEnumVector __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'ScopedE'}}
+typedef ScopedE ScopedEnumSizeVector __attribute__((vector_size(16))); // expected-error {{invalid vector element type 'ScopedE'}}
+#endif
+
+template <typename T> struct Vector {
+  // Rebuilding a fixed-size extended vector currently loses the attribute location.
+  typedef T type __attribute__((ext_vector_type(4))); // expected-error@*:* {{invalid vector element type 'GH225037::E'}}
+};
+Vector<E> enum_vector; // expected-note {{in instantiation of template class 'GH225037::Vector<GH225037::E>' requested here}}
+Vector<int> int_vector;
+} // namespace GH225037
+
 namespace Templates {
 template <typename Elt, unsigned long long Size>
 struct TemplateVectorType {
@@ -736,13 +753,9 @@ void test_enum_vector_scalar(Enum ea, v2u v2ua) {
   (void)(v2ua > ea); // expected-error{{cannot convert between vector values of different size}}
   (void)(ea > v2ua); // expected-error{{cannot convert between vector values of different size}}
   (void)(v2ua && ea); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(ea && v2ua); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(v2ua || ea); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(ea || v2ua); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
 
   (void)(v2ua & ea); // expected-error{{cannot convert between vector values of different size}}
   (void)(ea & v2ua); // expected-error{{cannot convert between vector values of different size}}

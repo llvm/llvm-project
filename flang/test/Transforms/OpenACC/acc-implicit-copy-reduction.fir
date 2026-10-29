@@ -16,7 +16,7 @@ acc.reduction.recipe @reduction_add_ref_i32 : !fir.ref<i32> reduction_operator <
 ^bb0(%arg0: !fir.ref<i32>):
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.alloca i32
-  %1 = fir.declare %0 {uniq_name = "acc.reduction.init"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("acc.reduction.init") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c0_i32 to %1 : !fir.ref<i32>
   acc.yield %1 : !fir.ref<i32>
 } combiner {
@@ -33,8 +33,8 @@ func.func @test_reduction_implicit_copy() {
   %cN = arith.constant 100 : i32
   %r = fir.alloca i32 {bindc_name = "r", uniq_name = "_QFEr"}
   %i = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-  %r_decl = fir.declare %r {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %i_decl = fir.declare %i {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %r_decl = fir.declare %r uniq_name("_QFEr") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %i_decl = fir.declare %i uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   %c0_i32 = arith.constant 0 : i32
   fir.store %c0_i32 to %r_decl : !fir.ref<i32>
 
@@ -78,7 +78,7 @@ acc.reduction.recipe @reduction_add_ref_i32 : !fir.ref<i32> reduction_operator <
 ^bb0(%arg0: !fir.ref<i32>):
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.alloca i32
-  %1 = fir.declare %0 {uniq_name = "acc.reduction.init"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("acc.reduction.init") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c0_i32 to %1 : !fir.ref<i32>
   acc.yield %1 : !fir.ref<i32>
 } combiner {
@@ -99,9 +99,9 @@ func.func @test_reduction_with_usage_outside_loop() {
   %i = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
   %out = fir.alloca i32 {bindc_name = "out", uniq_name = "_QFEout"}
 
-  %r_decl = fir.declare %r {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %i_decl = fir.declare %i {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %out_decl = fir.declare %out {uniq_name = "_QFEout"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %r_decl = fir.declare %r uniq_name("_QFEr") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %i_decl = fir.declare %i uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %out_decl = fir.declare %out uniq_name("_QFEout") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c0_i32 to %r_decl : !fir.ref<i32>
 
   %out_copyout = acc.create varPtr(%out_decl : !fir.ref<i32>) dataClause(acc_copyout) name("out") -> !fir.ref<i32>

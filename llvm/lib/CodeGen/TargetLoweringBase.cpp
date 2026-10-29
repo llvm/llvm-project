@@ -717,8 +717,9 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
+                         TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
         STI.initLibcallLoweringInfo(Info);
@@ -882,10 +883,10 @@ void TargetLoweringBase::initActions() {
     // [US]CMP default to expand
     setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
 
-    // Halving adds
-    setOperationAction(
-        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
-        Expand);
+    // Halving adds and subtracts
+    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
+                        ISD::AVGCEILU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+                       VT, Expand);
 
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
@@ -966,6 +967,8 @@ void TargetLoweringBase::initActions() {
 
     setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Expand);
     setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Expand);
+
+    setOperationAction(ISD::MASK_BEFOREFIRST, VT, Expand);
 
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
@@ -1247,13 +1250,13 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
 
   // Scalable vectors cannot be scalarized, so splitting or widening is
   // required.
-  if (VT.isScalableVector() && !isPowerOf2_32(EC.getKnownMinValue()))
+  if (VT.isScalableVector() && !EC.isPowerOf2())
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EC.getKnownMinValue())) {
+  if (!EC.isPowerOf2()) {
     // Split EC to unit size (scalable property is preserved).
     NumVectorRegs = EC.getKnownMinValue();
     EC = ElementCount::getFixed(1);
@@ -1404,7 +1407,7 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
   // Compute the set of all super-register classes.
   BitVector SuperRegRC(TRI->getNumRegClasses());
-  for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI)
+  for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI)
     SuperRegRC.setBitsInMask(RCI.getMask());
 
   // Find the first legal register class with the largest spill size.
@@ -1583,7 +1586,7 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(EC.getKnownMinValue())) {
+      if (EC.isPowerOf2()) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1746,7 +1749,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
 
   // FIXME: We don't generically support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
+  if (!EltCnt.isPowerOf2()) {
     assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
     unsigned NumElts = EltCnt.getKnownMinValue();
 
@@ -2077,7 +2080,7 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
                                                        bool UseTLS) const {
   // compiler-rt provides a variable with a magic name.  Targets that do not
   // link with compiler-rt may also provide such a variable.
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
 
   RTLIB::LibcallImpl UnsafeStackPtrImpl =
       Libcalls.getLibcallImpl(RTLIB::SAFESTACK_UNSAFE_STACK_PTR);
@@ -2122,7 +2125,7 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(
   if (SafestackPointerAddressImpl == RTLIB::Unsupported)
     return getDefaultSafeStackPointerLocation(IRB, true);
 
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
   // Android provides a libc function to retrieve the address of the current
@@ -2193,7 +2196,7 @@ TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
-  Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
+  Module &M = *IRB.getModule();
   const DataLayout &DL = M.getDataLayout();
   PointerType *PtrTy =
       PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
@@ -2221,10 +2224,10 @@ void TargetLoweringBase::insertSSPDeclarations(
 
         // FreeBSD has "__stack_chk_guard" defined externally on libc.so
         if (M.getDirectAccessExternalData() &&
-            !TM.getTargetTriple().isOSCygMing() &&
-            !(TM.getTargetTriple().isPPC64() &&
-              TM.getTargetTriple().isOSFreeBSD()) &&
-            (!TM.getTargetTriple().isOSDarwin() ||
+            !M.getTargetTriple().isOSCygMing() &&
+            !(M.getTargetTriple().isPPC64() &&
+              M.getTargetTriple().isOSFreeBSD()) &&
+            (!M.getTargetTriple().isOSDarwin() ||
              TM.getRelocationModel() == Reloc::Static))
           GV->setDSOLocal(true);
 
@@ -2285,7 +2288,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;
@@ -2302,8 +2306,7 @@ unsigned TargetLoweringBase::getMaxPermittedBytesForAlignment(
 
 /// Get the reciprocal estimate attribute string for a function that will
 /// override the target defaults.
-static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
+static StringRef getRecipEstimateForFunc(const Function &F) {
   return F.getFnAttribute("reciprocal-estimates").getValueAsString();
 }
 
@@ -2463,23 +2466,22 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
 }
 
 int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,
-                                                    MachineFunction &MF) const {
-  return getOpEnabled(true, VT, getRecipEstimateForFunc(MF));
+                                                    const Function &F) const {
+  return getOpEnabled(true, VT, getRecipEstimateForFunc(F));
 }
 
 int TargetLoweringBase::getRecipEstimateDivEnabled(EVT VT,
-                                                   MachineFunction &MF) const {
-  return getOpEnabled(false, VT, getRecipEstimateForFunc(MF));
+                                                   const Function &F) const {
+  return getOpEnabled(false, VT, getRecipEstimateForFunc(F));
 }
 
 int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
-                                               MachineFunction &MF) const {
-  return getOpRefinementSteps(true, VT, getRecipEstimateForFunc(MF));
+                                               const Function &F) const {
+  return getOpRefinementSteps(true, VT, getRecipEstimateForFunc(F));
 }
 
-int TargetLoweringBase::getDivRefinementSteps(EVT VT,
-                                              MachineFunction &MF) const {
-  return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
+int TargetLoweringBase::getDivRefinementSteps(EVT VT, const Function &F) const {
+  return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(F));
 }
 
 bool TargetLoweringBase::isLoadBitCastBeneficial(

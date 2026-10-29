@@ -3,9 +3,13 @@
 ; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=save-temps -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o.0.4.opt.bc -o - | FileCheck %s
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    --plugin-opt=save-temps --plugin-opt=-vectorize-loops=0 -shared %t.o -o %t3.so
+; RUN: llvm-dis %t3.so.0.4.opt.bc -o - | FileCheck %s --check-prefix=NOVEC
 
 ; test that the vectorizer is run.
 ; CHECK: fadd <4 x float>
+; NOVEC-NOT: <4 x float>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

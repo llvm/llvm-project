@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -24,18 +25,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-static cl::opt<bool>
-    VerifyKnownBits("instcombine-verify-known-bits",
-                    cl::desc("Verify that computeKnownBits() and "
-                             "SimplifyDemandedBits() are consistent"),
-                    cl::Hidden, cl::init(false));
-
-static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
-    "instcombine-simplify-vector-elts-depth",
-    cl::desc(
-        "Depth limit when simplifying vector instructions and their operands"),
-    cl::Hidden, cl::init(10));
 
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
@@ -1208,7 +1197,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
 
-  if (VerifyKnownBits) {
+  if (CLOpts.verify_known_bits) {
     KnownBits ReferenceKnown = llvm::computeKnownBits(I, Q, Depth);
     if (Known != ReferenceKnown) {
       errs() << "Mismatched known bits for " << *I << " in "
@@ -1585,7 +1574,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == SimplifyDemandedVectorEltsDepthLimit)
+  if (Depth == CLOpts.simplify_vector_elts_depth)
     return nullptr;
 
   if (!AllowMultipleUsers) {
@@ -1663,7 +1652,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
-    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+    unsigned DepthLimit = CLOpts.simplify_vector_elts_depth;
     auto *IE = cast<InsertElementInst>(I);
     // Skip only when SDVE cannot simplify this insert chain before the limit.
     if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
@@ -2002,6 +1991,27 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
           simplifyAndSetOp);
       if (V)
         return *V;
+
+      // Trivially vectorizable intrinsics operate elementwise: each result lane
+      // uses only the matching lane of the (vector) operands, so the demand
+      // passes through unchanged to every vector operand.
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if (isTriviallyVectorizable(IID)) {
+        APInt PoisonEltsAcc(VWidth, 0);
+        for (Use &Arg : II->args()) {
+          unsigned OpNo = Arg.getOperandNo();
+          // Scalar operands do not carry per-lane demand.
+          if (isVectorIntrinsicWithScalarOpAtArg(IID, OpNo, /*TTI=*/nullptr))
+            continue;
+          APInt OpPoisonElts(VWidth, 0);
+          simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
+          PoisonEltsAcc |= OpPoisonElts;
+        }
+        // A result lane is poison if any operand lane is poison, but only for
+        // intrinsics that are known to propagate poison elementwise.
+        if (intrinsicPropagatesPoison(IID))
+          PoisonElts = PoisonEltsAcc;
+      }
       break;
     }
     } // switch on IntrinsicID
@@ -2386,7 +2396,17 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                  Depth + 1))
     return &I;
 
-  Known = KnownFPClass::fptrunc(KnownSrc);
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const Function *Fn = I.getFunction();
+  DenormalMode DstMode =
+      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
 
   return simplifyDemandedFPClassResult(&I, FMF, DemandedMask, Known,
@@ -2884,6 +2904,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if ((DemandedMask & fcPosNormal) != fcNone)
       SrcDemandedMask |= fcPosSubnormal;
 
+    // TODO: Properly handle ppcf128 = fpext(f80) (since f80 has a larger
+    // exponent range than ppcf128).
+
     KnownFPClass KnownSrc;
     if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ, Depth + 1))
       return I;
@@ -2892,7 +2915,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     const fltSemantics &SrcTy =
         I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    Known =
+        KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, F.getDenormalMode(DstTy),
+                            F.getDenormalMode(SrcTy));
     Known.knownNot(~DemandedMask);
 
     return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,
@@ -3177,12 +3202,23 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::log:
     case Intrinsic::log2:
     case Intrinsic::log10: {
+      Type *EltTy = VTy->getScalarType();
+      bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+
       FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
 
-      Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      // log(x) can be negative zero or subnormal if x is close to +1.0 for the
+      // PPCDoubleDouble type.
+      if (IsMultiUnitFPType && (DemandedMask & (fcNegZero | fcSubnormal))) {
+        DemandedSrcMask |= fcPosNormal;
+        // Note that DoubleAPFloat::isDenormal considers 1.0 + DBL_TRUE_MIN to
+        // be denormal, which APFloat::classify treats as fcSubnormal.
+        DemandedSrcMask |= fcPosSubnormal;
+      }
 
       // log(x < 0) = nan
       if (DemandedMask & fcNan)
@@ -3192,7 +3228,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNegInf) {
         DemandedSrcMask |= fcZero;
 
-        // No value produces subnormal result.
+        // Subnormals may be treated as logical zero.
         if (Mode.inputsMayBeZero())
           DemandedSrcMask |= fcSubnormal;
       }
@@ -3209,7 +3245,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::log(KnownSrc, Mode);
+      Known = KnownFPClass::log(KnownSrc, Mode, IsMultiUnitFPType);
       Known.knownNot(~DemandedMask);
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
@@ -3310,16 +3346,39 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
       FPClassTest DemandedSrcMask = DemandedMask;
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
+
+      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+      // Rounding a finite multi-unit value may overflow to an infinity.
+      if (IsMultiUnitFPType) {
+        if (IID != Intrinsic::trunc && IID != Intrinsic::floor &&
+            (DemandedMask & fcPosInf))
+          DemandedSrcMask |= fcPosNormal;
+        if (IID != Intrinsic::trunc && IID != Intrinsic::ceil &&
+            (DemandedMask & fcNegInf))
+          DemandedSrcMask |= fcNegNormal;
+      }
 
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
 
-      if (DemandedMask & fcPosZero)
+      if (DemandedMask & fcPosZero) {
         DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+
+      // Rounding a subnormal away from zero may produce a normal value.
+      if (DemandedMask & fcNegNormal)
+        DemandedSrcMask |= fcNegSubnormal;
+      if (DemandedMask & fcPosNormal)
+        DemandedSrcMask |= fcPosSubnormal;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, SQ,
@@ -3350,9 +3409,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          VTy->getScalarType()->isMultiUnitFPType());
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
 
       Known.knownNot(~DemandedMask);
 
@@ -3530,12 +3601,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
+
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
-          if (DemandedMask & fcNegFinite)
-            SrcDemandedMask |= fcNegFinite;
-          if (DemandedMask & fcPosFinite)
-            SrcDemandedMask |= fcPosFinite;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosZero | fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+
+          if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+            SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+          if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+            SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+
           if (DemandedMask & fcPosInf)
             SrcDemandedMask |= fcPosInf;
           if (DemandedMask & fcNegInf)
@@ -3557,7 +3640,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
-          if (Known.isKnownAlways(fcInf | fcNan))
+          // frexp returns zero, infinity, and NaN inputs unchanged.
+          if (KnownSrc.isKnownAlways(fcZero | fcInf | fcNan))
             return II->getArgOperand(0);
 
           return nullptr;

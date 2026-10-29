@@ -37,7 +37,7 @@ let test_linker () =
   let make_module name =
     let m = create_module context name in
     let fn = define_function ("fn_" ^ name) fty m in
-    ignore (build_ret_void (builder_at_end context (entry_block fn)));
+    ignore (build_ret_void (builder_at_end (entry_block fn)));
     m
   in
 

@@ -206,6 +206,21 @@ void foo() {
 }
 } // namespace ReturnTypeRequirementInLambda
 
+namespace GH236286 {
+template <class T, class U>
+concept DecaysTo = __is_same(__decay(T), U);
+
+template <class T, auto Constraint>
+concept Satisfies = requires { Constraint.template operator()<T>(); };
+
+static_assert(requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<int>> {}>;
+});
+static_assert(!requires(int i) {
+  { i } -> Satisfies<[]<DecaysTo<double>> {}>;
+});
+} // namespace GH236286
+
 namespace GH73418 {
 void foo() {
   int x;

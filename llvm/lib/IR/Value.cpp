@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Value.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,16 +31,11 @@
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
-
-static cl::opt<bool> UseDerefAtPointSemantics(
-    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(true),
-    cl::desc("Deref attributes and metadata infer facts at definition only"));
 
 //===----------------------------------------------------------------------===//
 //                                Value Class
@@ -945,27 +941,15 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       DerefBytes = Call->getRetDereferenceableOrNullBytes();
       CanBeNull = true;
     }
-  } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
-    if (MDNode *MD = LI->getMetadata(LLVMContext::MD_dereferenceable)) {
+  } else if (isa<LoadInst, IntToPtrInst>(this)) {
+    auto *I = cast<Instruction>(this);
+    if (MDNode *MD = I->getMetadata(LLVMContext::MD_dereferenceable)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       DerefBytes = CI->getLimitedValue();
     }
     if (DerefBytes == 0) {
       if (MDNode *MD =
-              LI->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-        DerefBytes = CI->getLimitedValue();
-      }
-      CanBeNull = true;
-    }
-  } else if (auto *IP = dyn_cast<IntToPtrInst>(this)) {
-    if (MDNode *MD = IP->getMetadata(LLVMContext::MD_dereferenceable)) {
-      ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-      DerefBytes = CI->getLimitedValue();
-    }
-    if (DerefBytes == 0) {
-      if (MDNode *MD =
-              IP->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+              I->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
         DerefBytes = CI->getLimitedValue();
       }
@@ -991,7 +975,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     // Call canBeFreed() only if there are dereferenceable bytes and it's not
     // one of the cases that can never be freed.
     if (!CanNotBeFreed && DerefBytes != 0)
-      *CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+      *CanBeFreed = canBeFreed();
     else
       *CanBeFreed = false;
   }
@@ -1037,10 +1021,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
     return AI->getAlign();
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    MaybeAlign Alignment = Call->getRetAlign();
-    if (!Alignment && Call->getCalledFunction())
-      Alignment = Call->getCalledFunction()->getAttributes().getRetAlignment();
-    return Alignment.valueOrOne();
+    return Call->getRetAlign().valueOrOne();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
@@ -1175,12 +1156,17 @@ bool Value::isSwiftError() const {
 //                             ValueHandleBase Class
 //===----------------------------------------------------------------------===//
 
+ValueHandleHead::ValueHandleHead(ValueHandleHead &&Other) noexcept
+    : Head(Other.Head) {
+  if (ValueHandleBase *Ptr = get())
+    Ptr->setPrevPtr(&Head);
+}
+
 void ValueHandleBase::AddToExistingUseList(ValueHandleBase **List) {
   assert(List && "Handle list is null?");
 
   // Splice ourselves into the list.
-  Next = *List;
-  *List = this;
+  Next = ValueHandleHead::exchange(List, this).getPointer();
   setPrevPtr(List);
   if (Next) {
     Next->setPrevPtr(&Next);
@@ -1202,42 +1188,11 @@ void ValueHandleBase::AddToUseList() {
   assert(getValPtr() && "Null pointer doesn't have a use list!");
 
   LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
-
-  if (getValPtr()->HasValueHandle) {
-    // If this value already has a ValueHandle, then it must be in the
-    // ValueHandles map already.
-    ValueHandleBase *&Entry = pImpl->ValueHandles[getValPtr()];
-    assert(Entry && "Value doesn't have any handles?");
-    AddToExistingUseList(&Entry);
-    return;
-  }
-
-  // Ok, it doesn't have any handles yet, so we must insert it into the
-  // DenseMap.  However, doing this insertion could cause the DenseMap to
-  // reallocate itself, which would invalidate all of the PrevP pointers that
-  // point into the old table.  Handle this by checking for reallocation and
-  // updating the stale pointers only if needed.
-  DenseMap<Value*, ValueHandleBase*> &Handles = pImpl->ValueHandles;
-  const void *OldBucketPtr = Handles.getPointerIntoBucketsArray();
-
-  ValueHandleBase *&Entry = Handles[getValPtr()];
-  assert(!Entry && "Value really did already have handles?");
-  AddToExistingUseList(&Entry);
+  ValueHandleHead &Entry = pImpl->ValueHandles[getValPtr()];
+  assert(getValPtr()->hasValueHandle() == (Entry.get() != nullptr) &&
+         "HasValueHandle and ValueHandles out of sync!");
+  AddToExistingUseList(Entry.getAddress());
   getValPtr()->HasValueHandle = true;
-
-  // If reallocation didn't happen or if this was the first insertion, don't
-  // walk the table.
-  if (Handles.isPointerIntoBucketsArray(OldBucketPtr) ||
-      Handles.size() == 1) {
-    return;
-  }
-
-  // Okay, reallocation did happen.  Fix the Prev Pointers.
-  for (auto I = Handles.begin(), E = Handles.end(); I != E; ++I) {
-    assert(I->second && I->first == I->second->getValPtr() &&
-           "List invariant broken!");
-    I->second->setPrevPtr(&I->second);
-  }
 }
 
 void ValueHandleBase::RemoveFromUseList() {
@@ -1246,9 +1201,8 @@ void ValueHandleBase::RemoveFromUseList() {
 
   // Unlink this from its use list.
   ValueHandleBase **PrevPtr = getPrevPtr();
-  assert(*PrevPtr == this && "List invariant broken");
-
-  *PrevPtr = Next;
+  auto [OldPtr, IsHead] = ValueHandleHead::exchange(PrevPtr, Next);
+  assert(OldPtr == this && "List invariant broken");
   if (Next) {
     assert(Next->getPrevPtr() == &Next && "List invariant broken");
     Next->setPrevPtr(PrevPtr);
@@ -1258,13 +1212,9 @@ void ValueHandleBase::RemoveFromUseList() {
   // If the Next pointer was null, then it is possible that this was the last
   // ValueHandle watching VP.  If so, delete its entry from the ValueHandles
   // map.
-  LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
-  DenseMap<Value*, ValueHandleBase*> &Handles = pImpl->ValueHandles;
-  if (Handles.isPointerIntoBucketsArray(PrevPtr)) {
-    // TODO: Remove the only user of DenseMap's callback erase.
-    Handles.erase(getValPtr(), [](auto &Bucket) {
-      Bucket.second->setPrevPtr(&Bucket.second);
-    });
+  if (IsHead) {
+    LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
+    pImpl->ValueHandles.erase(getValPtr());
     getValPtr()->HasValueHandle = false;
   }
 }
@@ -1275,7 +1225,7 @@ void ValueHandleBase::ValueIsDeleted(Value *V) {
   // Get the linked list base, which is guaranteed to exist since the
   // HasValueHandle flag is set.
   LLVMContextImpl *pImpl = V->getContext().pImpl;
-  ValueHandleBase *Entry = pImpl->ValueHandles[V];
+  ValueHandleBase *Entry = pImpl->ValueHandles[V].get();
   assert(Entry && "Value bit set but no entries exist");
 
   // We use a local ValueHandleBase as an iterator so that ValueHandles can add
@@ -1313,7 +1263,7 @@ void ValueHandleBase::ValueIsDeleted(Value *V) {
 #ifndef NDEBUG      // Only in +Asserts mode...
     dbgs() << "While deleting: " << *V->getType() << " %" << V->getName()
            << "\n";
-    if (pImpl->ValueHandles[V]->getKind() == Assert)
+    if (pImpl->ValueHandles[V].get()->getKind() == Assert)
       llvm_unreachable("An asserting value handle still pointed to this"
                        " value!");
 
@@ -1331,7 +1281,7 @@ void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
   // Get the linked list base, which is guaranteed to exist since the
   // HasValueHandle flag is set.
   LLVMContextImpl *pImpl = Old->getContext().pImpl;
-  ValueHandleBase *Entry = pImpl->ValueHandles[Old];
+  ValueHandleBase *Entry = pImpl->ValueHandles[Old].get();
 
   assert(Entry && "Value bit set but no entries exist");
 
@@ -1364,7 +1314,7 @@ void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
   // If any new weak value handles were added while processing the
   // list, then complain about it now.
   if (Old->HasValueHandle)
-    for (Entry = pImpl->ValueHandles[Old]; Entry; Entry = Entry->Next)
+    for (Entry = pImpl->ValueHandles[Old].get(); Entry; Entry = Entry->Next)
       switch (Entry->getKind()) {
       case WeakTracking:
         dbgs() << "After RAUW from " << *Old->getType() << " %"

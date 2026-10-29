@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -28,15 +28,10 @@ using namespace llvm;
 
 STATISTIC(FilledSlots, "Number of delay slots filled");
 
-static cl::opt<bool> DisableDelaySlotFiller(
-  "disable-sparc-delay-filler",
-  cl::init(false),
-  cl::desc("Disable the Sparc delay slot filler."),
-  cl::Hidden);
-
 namespace {
   struct Filler : public MachineFunctionPass {
     const SparcSubtarget *Subtarget = nullptr;
+    bool FillSlots = false;
 
     static char ID;
     Filler() : MachineFunctionPass(ID) {}
@@ -47,6 +42,8 @@ namespace {
     bool runOnMachineFunction(MachineFunction &F) override {
       bool Changed = false;
       Subtarget = &F.getSubtarget<SparcSubtarget>();
+      FillSlots = !Subtarget->getCLOpts().disable_sparc_delay_filler &&
+                  F.getTarget().getOptLevel() != CodeGenOptLevel::None;
 
       // This pass invalidates liveness information when it reorders
       // instructions to fill delay slot.
@@ -76,6 +73,10 @@ namespace {
                         bool &sawLoad, bool &sawStore,
                         SmallSet<unsigned, 32> &RegDefs,
                         SmallSet<unsigned, 32> &RegUses);
+
+    MachineBasicBlock::iterator
+    findRequiredDelayInstr(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator slot);
 
     MachineBasicBlock::iterator
     findDelayInstr(MachineBasicBlock &MBB, MachineBasicBlock::iterator slot);
@@ -108,9 +109,8 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     ++I;
 
     // If MI is restore, try combining it with previous inst.
-    if (!DisableDelaySlotFiller &&
-        (MI->getOpcode() == SP::RESTORErr
-         || MI->getOpcode() == SP::RESTOREri)) {
+    if (FillSlots && (MI->getOpcode() == SP::RESTORErr ||
+                      MI->getOpcode() == SP::RESTOREri)) {
       Changed |= tryCombineRestoreWithPrevInst(MBB, MI);
       continue;
     }
@@ -129,9 +129,9 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     if (!MI->hasDelaySlot())
       continue;
 
-    MachineBasicBlock::iterator D = MBB.end();
+    MachineBasicBlock::iterator D = findRequiredDelayInstr(MBB, MI);
 
-    if (!DisableDelaySlotFiller)
+    if (D == MBB.end() && FillSlots)
       D = findDelayInstr(MBB, MI);
 
     ++FilledSlots;
@@ -156,6 +156,30 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     }
   }
   return Changed;
+}
+
+/// The restore before a tail call must run in its delay slot: `jmp %reg`
+/// reads a register of the current window, and `call` writes %o7. For the
+/// same reason a leaf `call` needs the copy of %o7 back from %g1 that
+/// SparcFrameLowering emits.
+MachineBasicBlock::iterator
+Filler::findRequiredDelayInstr(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator slot) {
+  unsigned Opc = slot->getOpcode();
+  if ((Opc != SP::TAIL_CALL && Opc != SP::TAIL_CALLri) || slot == MBB.begin())
+    return MBB.end();
+
+  MachineBasicBlock::iterator J = slot;
+  do {
+    --J;
+  } while (J->isMetaInstruction() && J != MBB.begin());
+
+  if (J->getOpcode() == SP::RESTORErr || J->getOpcode() == SP::RESTOREri)
+    return J;
+  if (Opc == SP::TAIL_CALL && J->getOpcode() == SP::ORrr &&
+      J->getOperand(0).getReg() == SP::O7)
+    return J;
+  return MBB.end();
 }
 
 MachineBasicBlock::iterator
@@ -341,7 +365,7 @@ void Filler::insertDefsUses(MachineBasicBlock::iterator MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (Reg == 0)
+    if (Reg == 0 || Subtarget->getRegisterInfo()->isConstantPhysReg(Reg))
       continue;
     if (MO.isDef())
       RegDefs.insert(Reg);

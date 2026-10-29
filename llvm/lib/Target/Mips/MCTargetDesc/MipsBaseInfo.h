@@ -137,7 +137,9 @@ enum {
 enum OperandType : unsigned {
   OPERAND_FIRST_MIPS_MEM_IMM = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_MEM_SIMM9 = OPERAND_FIRST_MIPS_MEM_IMM,
-  OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9
+  OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9,
+  OPERAND_JUMP_TARGET,
+  OPERAND_JUMP_TARGET_MM
 };
 
 static inline unsigned getFormat(uint64_t TSFlags) {
@@ -152,16 +154,6 @@ inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
     return Reg - Mips::D0_64 + Mips::W0;
   else
     return MCRegister();
-}
-
-inline static MCRegister getFloatRegFromFReg(MCRegister Reg) {
-  if (Reg >= Mips::F0 && Reg <= Mips::F31)
-    return Reg;
-  else if (Reg >= Mips::D0_64 && Reg <= Mips::D31_64)
-    return Reg - Mips::D0_64 + Mips::F0;
-  else if (Reg >= Mips::W0 && Reg <= Mips::W31)
-    return Reg - Mips::W0 + Mips::F0;
-  return Mips::NoRegister;
 }
 
 } // namespace llvm

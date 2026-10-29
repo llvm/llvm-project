@@ -446,13 +446,6 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::init(true),
   cl::Hidden);
 
-// Option to control global loads scalarization
-static cl::opt<bool> ScalarizeGlobal(
-  "amdgpu-scalarize-global-loads",
-  cl::desc("Enable global load scalarization"),
-  cl::init(true),
-  cl::Hidden);
-
 // Option to run internalize pass.
 static cl::opt<bool> InternalizeSymbols(
   "amdgpu-internalize-symbols",
@@ -643,8 +636,9 @@ diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
 static bool useNoopPostScheduler(const Function &F) {
   Attribute PostSchedStrategyAttr =
       F.getFnAttribute("amdgpu-post-sched-strategy");
-  return PostSchedStrategyAttr.isValid() &&
-         PostSchedStrategyAttr.getValueAsString() == "nop";
+  if (PostSchedStrategyAttr.isValid())
+    return PostSchedStrategyAttr.getValueAsString() == "nop";
+  return AMDGPU::getSchedStrategy(F) == "coexec";
 }
 
 static cl::opt<bool> EnableRewritePartialRegUses(
@@ -673,8 +667,8 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
     cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-    EnableMachinePipeliner("amdgpu-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for AMDGCN"),
+    UseSSAMachineScheduler("amdgpu-use-ssa-machine-scheduler",
+                           cl::desc("Use the machine scheduler in SSA mode."),
                            cl::init(false), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
@@ -784,9 +778,9 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG =
     new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
@@ -808,9 +802,9 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<GCNMaxMemoryClauseSchedStrategy>(C));
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
@@ -822,9 +816,9 @@ createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto *DAG = new GCNIterativeScheduler(
       C, GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   return DAG;
 }
@@ -840,9 +834,9 @@ static ScheduleDAGInstrs *
 createIterativeILPMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto *DAG = new GCNIterativeScheduler(C, GCNIterativeScheduler::SCHEDULE_ILP);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   return DAG;
@@ -963,9 +957,9 @@ llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   return DAG;
 }
 
@@ -1285,7 +1279,7 @@ bool AMDGPUTargetMachine::splitModule(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB(this);
+  PassBuilder PB(M.getContext(), this);
   PB.registerModuleAnalyses(MAM);
   PB.registerFunctionAnalyses(FAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
@@ -1308,6 +1302,8 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setEnableDefaultMachineVerifier(false);
+  // addFastRegAlloc inserts SIWholeQuadMode after TwoAddressInstructionPass.
+  setEnableTiedFastRegAlloc(false);
 }
 
 enum class OOBFlagValue {
@@ -1374,7 +1370,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   }
   if (SramEcc != TargetIDSetting::Any) {
     SubtargetKey.append(",sramecc=");
-    SubtargetKey.push_back(Xnack == TargetIDSetting::On ? '1' : '0');
+    SubtargetKey.push_back(SramEcc == TargetIDSetting::On ? '1' : '0');
   }
 
   auto &I = SubtargetMap[SubtargetKey];
@@ -1401,8 +1397,6 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
                                        TBufRelaxed, Xnack, SramEcc);
   }
-
-  I->setScalarizeGlobalBehavior(ScalarizeGlobal);
 
   return I.get();
 }
@@ -1461,9 +1455,9 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
       new GCNPostScheduleDAGMILive(C, std::make_unique<PostGenericScheduler>(C),
                                    /*RemoveKillFlags=*/true);
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
   if ((EnableVOPD.getNumOccurrences() ||
        getOptLevel() >= CodeGenOptLevel::Less) &&
@@ -1489,10 +1483,6 @@ public:
   GCNPassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {
     substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
-  }
-
-  GCNTargetMachine &getGCNTargetMachine() const {
-    return getTM<GCNTargetMachine>();
   }
 
   bool addPreISel() override;
@@ -1536,6 +1526,12 @@ AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Garbage collection is not supported.
   disablePass(&GCLoweringID);
   disablePass(&ShadowStackGCLoweringID);
+
+  if (UseSSAMachineScheduler) {
+    // Use SSA Machine Scheduler instead of regular Machine Scheduler.
+    disablePass(&MachineSchedulerID);
+    setEnableSSAMachineScheduler(true);
+  }
 }
 
 void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
@@ -1732,7 +1728,7 @@ bool GCNPassConfig::addPreISel() {
   addPass(&AMDGPUUnifyDivergentExitNodesID);
   addPass(createFixIrreduciblePass());
   addPass(createUnifyLoopExitsPass());
-  addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
+  addPass(createStructurizeCFGPass(/*SkipUniformRegions=*/true));
 
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
   addPass(createSIAnnotateControlFlowLegacyPass());
@@ -1743,7 +1739,7 @@ bool GCNPassConfig::addPreISel() {
 
   // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
   // without any of the fallback options.
-  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+  if (getCGPassBuilderOption(*TM).EnableGlobalISelOption !=
           cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled())
     addPass(createLCSSAPass());
@@ -1848,20 +1844,14 @@ void GCNPassConfig::addFastRegAlloc() {
 void GCNPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableDCEInRA)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
 
-  // FIXME: when an instruction has a Killed operand, and the instruction is
-  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
-  // the register in LiveVariables, this would trigger a failure in verifier,
-  // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
-    insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
+    insertPass(&MachineLoopInfoID, &SIOptimizeVGPRLiveRangeLegacyID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
@@ -1871,20 +1861,24 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
+  // Insertion point for passes depends on whether MachineScheduler is enabled.
+  AnalysisID EndOfPreRA = UseSSAMachineScheduler ? &RenameIndependentSubregsID
+                                                 : &MachineSchedulerID;
+
   if (isPassEnabled(EnablePreRAOptimizations))
-    insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
+    insertPass(EndOfPreRA, &GCNPreRAOptimizationsID);
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.
-  insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
+  insertPass(EndOfPreRA, &SIWholeQuadModeID);
 
   if (OptExecMaskPreRA)
-    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+    insertPass(EndOfPreRA, &SIOptimizeExecMaskingPreRAID);
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
-    insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
+    insertPass(EndOfPreRA, &SIFormMemoryClausesID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -2356,11 +2350,17 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
     : CodeGenPassBuilder(TM, Opts, PIC) {
   Opt.MISchedPostRA = true;
   Opt.RequiresCodeGenSCCOrder = true;
+  Opt.EnableSSAMachineScheduler = UseSSAMachineScheduler;
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
   // Garbage collection is not supported.
   disablePass<StackMapLivenessPass, FuncletLayoutPass, PatchableFunctionPass,
               ShadowStackGCLoweringPass, GCLoweringPass>();
+
+  // If enabled, use the SSA machine scheduler instead of the regular machine
+  // scheduler.
+  if (Opt.EnableSSAMachineScheduler)
+    disablePass<MachineSchedulerPass>();
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
@@ -2496,7 +2496,7 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   addFunctionPass(AMDGPUUnifyDivergentExitNodesPass(), PMW);
   addFunctionPass(FixIrreduciblePass(), PMW);
   addFunctionPass(UnifyLoopExitsPass(), PMW);
-  addFunctionPass(StructurizeCFGPass(/*SkipUniformRegions=*/false), PMW);
+  addFunctionPass(StructurizeCFGPass(/*SkipUniformRegions=*/true), PMW);
 
   addFunctionPass(AMDGPUAnnotateUniformValuesPass(), PMW);
 
@@ -2507,7 +2507,7 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   // control flow modifications.
   addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
-  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+  if (getCGPassBuilderOption(TM).EnableGlobalISelOption !=
           cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled())
     addFunctionPass(LCSSAPass(), PMW);
@@ -2662,12 +2662,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   if (EnableDCEInRA)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 
-  // FIXME: when an instruction has a Killed operand, and the instruction is
-  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
-  // the register in LiveVariables, this would trigger a failure in verifier,
-  // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
-    insertPass<RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>>(
+    insertPass<RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>>(
         SIOptimizeVGPRLiveRangePass());
 
   // This must be run immediately after phi elimination and before
@@ -2678,20 +2674,29 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
 
+  // Following passes run at the end of the pre-RA pipeline, so the pass they
+  // are anchored on depends on which scheduler is enabled.
+  auto insertAtEndOfPreRA = [this](auto &&Pass) {
+    if (Opt.EnableSSAMachineScheduler)
+      insertPass<RenameIndependentSubregsPass>(std::move(Pass));
+    else
+      insertPass<MachineSchedulerPass>(std::move(Pass));
+  };
+
   if (isPassEnabled(EnablePreRAOptimizations))
-    insertPass<MachineSchedulerPass>(GCNPreRAOptimizationsPass());
+    insertAtEndOfPreRA(GCNPreRAOptimizationsPass());
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.
-  insertPass<MachineSchedulerPass>(SIWholeQuadModePass());
+  insertAtEndOfPreRA(SIWholeQuadModePass());
 
   if (OptExecMaskPreRA)
-    insertPass<MachineSchedulerPass>(SIOptimizeExecMaskingPreRAPass());
+    insertAtEndOfPreRA(SIOptimizeExecMaskingPreRAPass());
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
-    insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
+    insertAtEndOfPreRA(SIFormMemoryClausesPass());
 
   return Base::addOptimizedRegAlloc(PMW);
 }
@@ -2699,8 +2704,6 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addMachineFunctionPass(MachinePipelinerPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

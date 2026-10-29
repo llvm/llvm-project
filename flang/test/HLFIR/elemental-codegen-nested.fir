@@ -6,23 +6,23 @@
 // CHECK-SAME:                       %[[VAL_1:.*]]: !fir.ref<!fir.array<2xf32>> {fir.bindc_name = "h1"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {uniq_name = "_QFtestEh1"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) uniq_name("_QFtestEh1") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
 // CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFtestEk"}>
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtestEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFtestEk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "l", uniq_name = "_QFtestEl"}>
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFtestEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFtestEl") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QFtestECn) : !fir.ref<i32>
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtestECn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtestEpi"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] uniq_name("_QFtestECn") fortran_attrs<parameter> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFtestEpi") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<2xf32> <{bindc_name = ".tmp.array", uniq_name = ""}>
-// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_12]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
+// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_12]]) uniq_name(".tmp.array") : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
 // CHECK:           %[[VAL_15:.*]] = arith.constant true
 // CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_16]] to %[[VAL_2]] step %[[VAL_16]] {
 // CHECK:             %[[VAL_18:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:             %[[VAL_19:.*]] = fir.allocmem !fir.array<2xf32> <{bindc_name = ".tmp.array", uniq_name = ""}>
-// CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_18]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
+// CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_18]]) uniq_name(".tmp.array") : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
 // CHECK:             %[[VAL_21:.*]] = arith.constant true
 // CHECK:             %[[VAL_22:.*]] = arith.constant 1 : index
 // CHECK:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_22]] to %[[VAL_2]] step %[[VAL_22]] {
@@ -53,14 +53,14 @@
 func.func @_QPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "pi"}, %arg1: !fir.ref<!fir.array<2xf32>> {fir.bindc_name = "h1"}) {
   %c2 = arith.constant 2 : index
   %0 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg1(%0) {uniq_name = "_QFtestEh1"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
+  %1:2 = hlfir.declare %arg1(%0) uniq_name("_QFtestEh1") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
   %2 = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFtestEk"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.alloca i32 {bindc_name = "l", uniq_name = "_QFtestEl"}
-  %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QFtestEl") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %6 = fir.address_of(@_QFtestECn) : !fir.ref<i32>
-  %7:2 = hlfir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtestECn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %8:2 = hlfir.declare %arg0 {uniq_name = "_QFtestEpi"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtestECn") fortran_attrs<parameter> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %8:2 = hlfir.declare %arg0 uniq_name("_QFtestEpi") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %9 = fir.shape %c2 : (index) -> !fir.shape<1>
   %10 = hlfir.elemental %9 : (!fir.shape<1>) -> !hlfir.expr<2xf32> {
   ^bb0(%arg2: index):
@@ -70,7 +70,7 @@ func.func @_QPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "pi"}, %arg1: !fir.ref
       %17 = fir.load %8#0 : !fir.ref<f32>
       hlfir.yield_element %17 : f32
     }
-    %13:3 = hlfir.associate %12(%11) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<2xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>, i1)
+    %13:3 = hlfir.associate %12(%11) uniq_name("adapt.valuebyref") : (!hlfir.expr<2xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>, i1)
     %14 = fir.embox %13#0(%11) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
     %15 = fir.convert %14 : (!fir.box<!fir.array<2xf32>>) -> !fir.box<!fir.array<?xf32>>
     %16 = fir.call @_QPfoo(%15) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> f32
