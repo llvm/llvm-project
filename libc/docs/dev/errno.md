@@ -84,9 +84,8 @@ through `libc_errno`.
   - `ErrnoSetterMatcher` (`ASSERT_THAT(..., Fails(EINVAL))` / `Succeeds()`)
     checks and resets `libc_errno` automatically.
 - **Header-only `libc/shared/*` tests (`libc/test/shared/*`)**:
-  Include `shared/<header>.h` before any internal or test headers so
-  `LLVM_LIBC_SHARED_LIBC_COMMON_H` is defined before `src/__support/libc_errno.h`,
-  and check `errno` directly.
+  Compiled with `LIBC_ERRNO_MODE_SYSTEM_INLINE` in overlay mode; check `errno`
+  directly when testing error conditions.
 
 ## `LIBC_ERRNO_MODE` Configurations
 
@@ -107,7 +106,7 @@ controls how `libc_errno` is implemented:
 When `LIBC_ERRNO_MODE` is unset or set to `LIBC_ERRNO_MODE_DEFAULT`:
 
 - **Full build (`LIBC_FULL_BUILD`)**: resolves to `LIBC_ERRNO_MODE_THREAD_LOCAL`.
-- **Overlay public archive (`LIBC_COPT_PUBLIC_PACKAGING`) or `libc/shared/*` (`LLVM_LIBC_SHARED_LIBC_COMMON_H`)**: resolves to `LIBC_ERRNO_MODE_SYSTEM_INLINE`.
+- **Overlay public archive (`LIBC_COPT_PUBLIC_PACKAGING`)**: resolves to `LIBC_ERRNO_MODE_SYSTEM_INLINE` (`libc/shared/libc_common.h` and `libc/test/shared/` also configure `LIBC_ERRNO_MODE_SYSTEM_INLINE` in non-full builds).
 - **Overlay tests, fuzzers, and benchmarks**: resolves to `LIBC_ERRNO_MODE_THREAD_LOCAL`.
 
 ## Why `libc_errno` Header and Runtime Storage Are Separated

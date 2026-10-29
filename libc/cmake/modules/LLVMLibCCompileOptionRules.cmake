@@ -154,7 +154,7 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
-  if(LIBC_CONF_ERRNO_MODE)
+  if(LIBC_CONF_ERRNO_MODE AND NOT "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
     libc_add_definition(config_options "LIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
   endif()
 

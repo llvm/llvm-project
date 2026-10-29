@@ -9,15 +9,10 @@
 #ifndef LLVM_LIBC_SHARED_LIBC_COMMON_H
 #define LLVM_LIBC_SHARED_LIBC_COMMON_H
 
-// Use system errno.
-#ifndef LIBC_ERRNO_MODE
+// Use system errno by default in non-full builds.
+#if !defined(LIBC_ERRNO_MODE) && !defined(LIBC_FULL_BUILD)
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
-#elif defined(LLVM_LIBC_SRC___SUPPORT_LIBC_ERRNO_H) &&                         \
-    !defined(LIBC_FULL_BUILD) &&                                               \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
-#error                                                                         \
-    "LIBC_ERRNO_MODE was set to something different from LIBC_ERRNO_MODE_SYSTEM_INLINE."
-#endif // LIBC_ERRNO_MODE
+#endif // !defined(LIBC_ERRNO_MODE) && !defined(LIBC_FULL_BUILD)
 
 // Use system fenv functions in math implementations.
 #ifndef LIBC_MATH_USE_SYSTEM_FENV

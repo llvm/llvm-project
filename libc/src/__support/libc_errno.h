@@ -47,19 +47,12 @@
 
 #if !defined(LIBC_ERRNO_MODE) || LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_DEFAULT
 #undef LIBC_ERRNO_MODE
-#if defined(LIBC_FULL_BUILD) || (!defined(LIBC_COPT_PUBLIC_PACKAGING) &&       \
-                                 !defined(LLVM_LIBC_SHARED_LIBC_COMMON_H))
+#if defined(LIBC_FULL_BUILD) || !defined(LIBC_COPT_PUBLIC_PACKAGING)
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
 #else
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
 #endif
 #endif // LIBC_ERRNO_MODE
-
-#if defined(LLVM_LIBC_SHARED_LIBC_COMMON_H) && !defined(LIBC_FULL_BUILD) &&    \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
-#error                                                                         \
-    "LIBC_ERRNO_MODE was set to something different from LIBC_ERRNO_MODE_SYSTEM_INLINE."
-#endif
 
 #if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_DEFAULT &&                              \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_UNDEFINED &&                            \
