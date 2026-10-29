@@ -152,13 +152,23 @@ void StackMapLiveness::addLiveOutSetToMI(MachineFunction &MF,
   MI.addOperand(MF, MO);
 }
 
+/// Returns false if \p Reg has no DWARF register number, directly or through
+/// a super-register, like MXCSR (X86), FPCR (AArch64) or FPC (SystemZ).
+static bool hasDwarfRegNum(MCRegister Reg, const TargetRegisterInfo *TRI) {
+  for (MCPhysReg SR : TRI->superregs_inclusive(Reg))
+    if (TRI->getDwarfRegNum(SR, /*isEH=*/false) >= 0)
+      return true;
+  return false;
+}
+
 /// Create a register mask and initialize it with the registers from the
 /// register live set.
 uint32_t *StackMapLiveness::createRegisterMask(MachineFunction &MF) const {
   // The mask is owned and cleaned up by the Machine Function.
   uint32_t *Mask = MF.allocateRegMask();
   for (auto Reg : LiveRegs)
-    Mask[Reg / 32] |= 1U << (Reg % 32);
+    if (hasDwarfRegNum(Reg, TRI))
+      Mask[Reg / 32] |= 1U << (Reg % 32);
 
   // Give the target a chance to adjust the mask.
   TRI->adjustStackMapLiveOutMask(Mask);
