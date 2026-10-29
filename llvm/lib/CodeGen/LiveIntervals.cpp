@@ -149,6 +149,7 @@ void LiveIntervals::clear() {
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
+  LiveOutTags.clear();
 
   for (LiveRange *LR : RegUnitRanges)
     delete LR;
@@ -169,6 +170,7 @@ void LiveIntervals::analyze(MachineFunction &fn) {
 
   // Allocate space for all virtual registers.
   VirtRegIntervals.resize(MRI->getNumVirtRegs());
+  LiveOutTags.assign(MF->getNumBlockIDs(), 0);
 
   computeVirtRegs();
   computeRegMasks();
@@ -351,6 +353,7 @@ void LiveIntervals::insertMBBInMapsImpl(
   assert(unsigned(MBB->getNumber()) == RegMaskBlocks.size() &&
          "Blocks must be added in order.");
   RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));
+  LiveOutTags.push_back(0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,7 +468,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
   // Keep track of the PHIs that are in use.
   SmallPtrSet<VNInfo*, 8> UsedPHIs;
   // Blocks that have already been added to WorkList as live-out.
-  SmallPtrSet<const MachineBasicBlock*, 16> LiveOut;
+  if (++LiveOutTag == 0) {
+    fill(LiveOutTags, 0);
+    LiveOutTag = 1;
+  }
 
   auto getSubRange = [](const LiveInterval &I, LaneBitmask M)
         -> const LiveRange& {
@@ -501,8 +507,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
         continue;
       // The PHI is live, make sure the predecessors are live-out.
       for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (!LiveOut.insert(Pred).second)
+        unsigned &Tag = LiveOutTags[Pred->getNumber()];
+        if (Tag == LiveOutTag)
           continue;
+        Tag = LiveOutTag;
         SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
         // A predecessor is not required to have a live-out value for a PHI.
         if (VNInfo *PVNI = OldRange.getVNInfoBefore(Stop))
@@ -517,8 +525,10 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 
     // Make sure VNI is live-out from the predecessors.
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-      if (!LiveOut.insert(Pred).second)
+      unsigned &Tag = LiveOutTags[Pred->getNumber()];
+      if (Tag == LiveOutTag)
         continue;
+      Tag = LiveOutTag;
       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
       if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
         assert(OldVNI == VNI && "Wrong value out of predecessor");
