@@ -133,12 +133,15 @@
 // G1_NOSPLIT-NOT: "-split-dwarf-file"
 // G1_NOSPLIT-NOT: "-split-dwarf-output"
 
-/// Do not generate -ggnu-pubnames for -glldb
+/// Do not generate -ggnu-pubnames or -gpubnames by default for -glldb with -gsplit-dwarf
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT
 
 // GLLDBSPLIT-NOT: "-ggnu-pubnames"
+// GLLDBSPLIT-NOT: "-gpubnames"
 
-/// Generate -ggnu-pubnames for -glldb when it is explicitly enabled
+/// Generate -ggnu-pubnames or -gpubnames for -glldb when explicitly enabled
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb -ggnu-pubnames %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT2
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -glldb -gpubnames %s 2>&1 | FileCheck %s --check-prefixes=GLLDBSPLIT3
 
 // GLLDBSPLIT2: "-ggnu-pubnames"
+// GLLDBSPLIT3: "-gpubnames"

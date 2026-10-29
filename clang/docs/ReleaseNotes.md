@@ -1374,6 +1374,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### DWARF Support in Clang
 
+- Clang now enables `-gpubnames` by default when generating DWARF v5 or later (at `-g2` and above without `-gsplit-dwarf` or `-fdebug-types-section`), causing the `.debug_names` accelerator table section to be emitted by default.
+  This can be disabled with `-gno-pubnames` (or `-gno-gnu-pubnames`).
+
 ### Floating Point Support in Clang
 
 ### Fixed Point Support in Clang

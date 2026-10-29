@@ -252,12 +252,21 @@
 // RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 | FileCheck -check-prefix=GIGNORE %s
 
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GPUB %s
-// RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-4 -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -ggdb %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -fno-debug-types-section -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -gpubnames -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c -gdwarf-5 -g1 %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -gline-tables-only %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -gline-directives-only %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -g0 %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -ggnu-pubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -gpubnames %s 2>&1 | FileCheck -check-prefix=PUB %s
-// RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -ggdb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -ggdb -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 
@@ -274,7 +283,8 @@
 // RUN:        | FileCheck -check-prefix=NOINCTYPES %s
 // RUN: %clang -### -c -g -gomit-unreferenced-methods -fstandalone-debug %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
 //
-// RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-4 -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -glldb %s 2>&1 | FileCheck -check-prefix=PUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s

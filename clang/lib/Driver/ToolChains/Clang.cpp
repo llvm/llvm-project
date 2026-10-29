@@ -5016,24 +5016,25 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                              D, TC))
       CmdArgs.push_back("-debug-info-macro");
 
-  // -ggnu-pubnames turns on gnu style pubnames in the backend.
+  // -ggnu-pubnames / -gpubnames turn on DWARF name tables in the backend.
   const auto *PubnamesArg =
       Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
                       options::OPT_gpubnames, options::OPT_gno_pubnames);
-  if (DwarfFission != DwarfFissionKind::None ||
-      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
-    const bool OptionSet =
-        (PubnamesArg &&
-         (PubnamesArg->getOption().matches(options::OPT_gpubnames) ||
-          PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames)));
-    if ((DebuggerTuning != llvm::DebuggerKind::LLDB || OptionSet) &&
-        (!PubnamesArg ||
-         (!PubnamesArg->getOption().matches(options::OPT_gno_gnu_pubnames) &&
-          !PubnamesArg->getOption().matches(options::OPT_gno_pubnames))))
-      CmdArgs.push_back(PubnamesArg && PubnamesArg->getOption().matches(
-                                           options::OPT_gpubnames)
-                            ? "-gpubnames"
-                            : "-ggnu-pubnames");
+  if (PubnamesArg) {
+    if (checkDebugInfoOption(PubnamesArg, Args, D, TC)) {
+      if (PubnamesArg->getOption().matches(options::OPT_gpubnames))
+        CmdArgs.push_back("-gpubnames");
+      else if (PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames))
+        CmdArgs.push_back("-ggnu-pubnames");
+    }
+  } else if (DwarfFission != DwarfFissionKind::None) {
+    if (DebuggerTuning != llvm::DebuggerKind::LLDB)
+      CmdArgs.push_back("-ggnu-pubnames");
+  } else if (EffectiveDWARFVersion >= 5 &&
+             DebugInfoKind > llvm::codegenoptions::DebugLineTablesOnly &&
+             !Args.hasFlag(options::OPT_fdebug_types_section,
+                           options::OPT_fno_debug_types_section, false)) {
+    CmdArgs.push_back("-gpubnames");
   }
 
   bool ForwardTemplateParams = DebuggerTuning == llvm::DebuggerKind::SCE;
