@@ -4831,6 +4831,66 @@ func.func @test_remsi_1(%arg : vector<4xi32>) -> (vector<4xi32>) {
 
 // -----
 
+// CHECK-LABEL: @test_remsi_overflow_zero_constant
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : i32
+// CHECK-NEXT: return %[[ZERO]], %[[ZERO]] : i32, i32
+func.func @test_remsi_overflow_zero_constant() -> (i32, i32) {
+  %min = arith.constant -2147483648 : i32
+  %m1 = arith.constant -1 : i32
+  %defined = arith.remsi %min, %m1 overflow<zero> : i32
+  // Folding the default UB case to zero is a valid refinement, too.
+  %default = arith.remsi %min, %m1 : i32
+  return %defined, %default : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @test_remsi_minus_one
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : i32
+// CHECK-NEXT: return %[[ZERO]], %[[ZERO]] : i32, i32
+func.func @test_remsi_minus_one(%a: i32) -> (i32, i32) {
+  %m1 = arith.constant -1 : i32
+  %defined = arith.remsi %a, %m1 overflow<zero> : i32
+  %default = arith.remsi %a, %m1 : i32
+  return %defined, %default : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @test_remsi_overflow_zero_vector
+// CHECK: %[[R:.*]] = arith.constant dense<[0, -1, 1, 0]> : vector<4xi8>
+// CHECK-NEXT: return %[[R]] : vector<4xi8>
+func.func @test_remsi_overflow_zero_vector() -> vector<4xi8> {
+  %a = arith.constant dense<[-128, -7, 7, -128]> : vector<4xi8>
+  %b = arith.constant dense<[-1, 3, -3, 1]> : vector<4xi8>
+  %r = arith.remsi %a, %b overflow<zero> : vector<4xi8>
+  return %r : vector<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @test_remsi_minus_one_tensor
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : tensor<4xi8>
+// CHECK-NEXT: return %[[ZERO]] : tensor<4xi8>
+func.func @test_remsi_minus_one_tensor(%a: tensor<4xi8>) -> tensor<4xi8> {
+  %b = arith.constant dense<-1> : tensor<4xi8>
+  %r = arith.remsi %a, %b overflow<zero> : tensor<4xi8>
+  return %r : tensor<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @test_remsi_overflow_zero_i1
+// CHECK: %[[ZERO:.*]] = arith.constant false
+// CHECK-NEXT: return %[[ZERO]] : i1
+func.func @test_remsi_overflow_zero_i1(%a: i1) -> i1 {
+  %m1 = arith.constant true
+  %r = arith.remsi %a, %m1 overflow<zero> : i1
+  return %r : i1
+}
+
+// -----
+
 // CHECK-LABEL: @test_remf(
 // CHECK: %[[res:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK: return %[[res]]

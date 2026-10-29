@@ -1143,8 +1143,12 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
   // could fold to poison, but that would make the arith dialect depend on the
   // ub dialect to materialize ub.poison; left out for now.
 
-  // remsi (x, 1) -> 0.
-  if (matchPattern(adaptor.getRhs(), m_One()))
+  // remsi (x, +/-1) -> 0. Without overflow<zero>, refining signed division
+  // overflow to zero is still valid.
+  APInt divisor;
+  if (matchPattern(adaptor.getRhs(), m_One()) ||
+      (matchPattern(adaptor.getRhs(), m_ConstantInt(&divisor)) &&
+       divisor.isAllOnes()))
     return getIntegerAttrOfType(getType(), 0);
 
   // remsi (0, x) -> 0 and remsi (x, x) -> 0. Division by zero is UB, so
@@ -1167,12 +1171,12 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
-  // X % 0 => UB
-  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
-  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
+  // Even with overflow<zero>, division by zero remains UB.
+  if (getIsOverflowZero())
+    return matchPattern(getRhs(), m_IntRangeWithoutZeroS())
+               ? Speculation::Speculatable
+               : Speculation::NotSpeculatable;
+  return getDivSISpeculatability(getRhs());
 }
 
 //===----------------------------------------------------------------------===//

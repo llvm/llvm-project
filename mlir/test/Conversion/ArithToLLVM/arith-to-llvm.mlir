@@ -95,6 +95,65 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 
 // -----
 
+// CHECK-LABEL: @remsi_default(
+// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NEXT: %[[R:.*]] = llvm.srem %[[A]], %[[B]] : i32
+// CHECK-NEXT: return %[[R]] : i32
+func.func @remsi_default(%a: i32, %b: i32) -> i32 {
+  %r = arith.remsi %a, %b : i32
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero(
+// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-DAG: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-DAG: %[[M1:.*]] = llvm.mlir.constant(-1 : i32) : i32
+// CHECK-NEXT: %[[ISM1:.*]] = llvm.icmp "eq" %[[B]], %[[M1]] : i32
+// CHECK-NEXT: %[[SAFE_A:.*]] = llvm.select %[[ISM1]], %[[ZERO]], %[[A]] : i1, i32
+// CHECK-NEXT: %[[R:.*]] = llvm.srem %[[SAFE_A]], %[[B]] : i32
+// CHECK-NEXT: return %[[R]] : i32
+func.func @remsi_overflow_zero(%a: i32, %b: i32) -> i32 {
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero_vector(
+// CHECK: llvm.icmp "eq" {{.*}} : vector<4xi32>
+// CHECK: %[[A:.*]] = llvm.select {{.*}} : vector<4xi1>, vector<4xi32>
+// CHECK: llvm.srem %[[A]], {{.*}} : vector<4xi32>
+func.func @remsi_overflow_zero_vector(%a: vector<4xi32>, %b: vector<4xi32>) -> vector<4xi32> {
+  %r = arith.remsi %a, %b overflow<zero> : vector<4xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero_scalable_vector(
+// CHECK: llvm.icmp "eq" {{.*}} : vector<[4]xi32>
+// CHECK: %[[A:.*]] = llvm.select {{.*}} : vector<[4]xi1>, vector<[4]xi32>
+// CHECK: llvm.srem %[[A]], {{.*}} : vector<[4]xi32>
+func.func @remsi_overflow_zero_scalable_vector(%a: vector<[4]xi32>, %b: vector<[4]xi32>) -> vector<[4]xi32> {
+  %r = arith.remsi %a, %b overflow<zero> : vector<[4]xi32>
+  return %r : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero_i1(
+// CHECK: llvm.icmp "eq" {{.*}} : i1
+// CHECK: llvm.select {{.*}} : i1, i1
+// CHECK: llvm.srem {{.*}} : i1
+func.func @remsi_overflow_zero_i1(%a: i1, %b: i1) -> i1 {
+  %r = arith.remsi %a, %b overflow<zero> : i1
+  return %r : i1
+}
+
+// -----
+
 // Checking conversion of index types to integers using i1, assuming no target
 // system would have a 1-bit address space.  Otherwise, we would have had to
 // make this test dependent on the pointer size on the target system.

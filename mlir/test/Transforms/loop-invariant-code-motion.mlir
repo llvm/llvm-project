@@ -1582,3 +1582,23 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
   }
   func.return %final : vector<4x4xf32>
 }
+
+// -----
+
+// INT_MIN % -1 can only be speculated with overflow<zero>.
+// CHECK-LABEL: @remsi_overflow_zero
+// CHECK-DAG: %[[MIN:.*]] = arith.constant -2147483648 : i32
+// CHECK-DAG: %[[MINUS_ONE:.*]] = arith.constant -1 : i32
+// CHECK-NEXT: %{{.*}} = arith.remsi %[[MIN]], %[[MINUS_ONE]] overflow<zero> : i32
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: %{{.*}} = arith.remsi %[[MIN]], %[[MINUS_ONE]] : i32
+// CHECK-NEXT: }
+func.func @remsi_overflow_zero(%lb: index, %ub: index, %step: index) {
+  %min = arith.constant -2147483648 : i32
+  %minus_one = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+    %default = arith.remsi %min, %minus_one : i32
+    %defined = arith.remsi %min, %minus_one overflow<zero> : i32
+  }
+  return
+}

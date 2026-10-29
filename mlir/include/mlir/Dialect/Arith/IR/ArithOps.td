@@ -820,9 +820,15 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
     Signed integer division remainder. Treats the leading bit as sign, i.e. `6 %
     -2 = 0`.
 
-    Division by zero is undefined behavior. When applied to `vector` and
-    `tensor` values, the behavior is undefined if _any_ elements are divided by
-    zero.
+    Division by zero, or signed division overflow (the minimum signed value
+    divided by -1), is undefined behavior. The remainder itself does not
+    overflow, but this permits lowering to instructions that compute both the
+    quotient and remainder. When applied to `vector` and `tensor` values, the
+    behavior is undefined if _any_ element encounters either case.
+
+    With `overflow<zero>`, the remainder of the minimum signed value divided by
+    -1 is instead defined to be zero. This guarantee applies elementwise to
+    vectors and tensors.
 
     Example:
 
@@ -830,12 +836,24 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
     // Scalar signed integer division remainder.
     %a = arith.remsi %b, %c : i64
 
+    // Signed remainder with a defined zero result on signed division overflow.
+    %r = arith.remsi %b, %c overflow<zero> : i64
+
     // SIMD vector element-wise division remainder.
     %f = arith.remsi %g, %h : vector<4xi32>
 
     // Tensor element-wise integer division remainder.
     %x = arith.remsi %y, %z : tensor<4x?xi8>
     ```
+  }];
+
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs,
+                       Arith_SignlessIntegerOrIndexLike:$rhs,
+                       UnitAttr:$isOverflowZero);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs (`overflow` `` `<` `zero` $isOverflowZero^ `>`)?
+    attr-dict `:` type($result)
   }];
 
   let extraClassDeclaration = [{

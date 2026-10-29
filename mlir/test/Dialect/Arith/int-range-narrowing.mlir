@@ -820,3 +820,35 @@ func.func @zero_element_tensor_constant() -> tensor<2x0xi32> {
   %0 = arith.constant dense<> : tensor<2x0xi32>
   return %0 : tensor<2x0xi32>
 }
+
+// Narrowing introduces the exceptional pair at i8. Preserve the original
+// defined zero result even though the original operation has no flag.
+// CHECK-LABEL: @remsi_introduced_overflow
+// CHECK: arith.remsi {{.*}} overflow<zero> : i8
+// CHECK: arith.extsi {{.*}} : i8 to i32
+func.func @remsi_introduced_overflow() -> i32 {
+  %a = test.with_bounds <smin = -128 : i32, smax = -127 : i32, umin = -128 : i32, umax = -127 : i32> : i32
+  %b = test.with_bounds <smin = -2 : i32, smax = -1 : i32, umin = -2 : i32, umax = -1 : i32> : i32
+  %r = arith.remsi %a, %b : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @remsi_no_introduced_overflow
+// CHECK: arith.remsi %{{[^,]+}}, %{{[^ ]+}} : i8
+// CHECK: return
+func.func @remsi_no_introduced_overflow() -> i32 {
+  %a = test.with_bounds <smin = -127 : i32, smax = -126 : i32, umin = -127 : i32, umax = -126 : i32> : i32
+  %b = test.with_bounds <smin = -2 : i32, smax = -1 : i32, umin = -2 : i32, umax = -1 : i32> : i32
+  %r = arith.remsi %a, %b : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @remsi_preserve_overflow_zero
+// CHECK: arith.remsi {{.*}} overflow<zero> : i8
+// CHECK: arith.extsi {{.*}} : i8 to i32
+func.func @remsi_preserve_overflow_zero() -> i32 {
+  %a = test.with_bounds <smin = -128 : i32, smax = -127 : i32, umin = -128 : i32, umax = -127 : i32> : i32
+  %b = test.with_bounds <smin = -2 : i32, smax = -1 : i32, umin = -2 : i32, umax = -1 : i32> : i32
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
+}

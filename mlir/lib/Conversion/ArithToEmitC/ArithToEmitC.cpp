@@ -447,6 +447,49 @@ public:
   }
 };
 
+class RemSIOpConversion final : public OpConversionPattern<arith::RemSIOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type type = getTypeConverter()->convertType(op.getType());
+    if (!type)
+      return rewriter.notifyMatchFailure(op, "converting result type failed");
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+    Type remainderType = type;
+    if (op.getIsOverflowZero()) {
+      // C/C++ '%' is undefined for INT_MIN % -1. Since x % -1 is zero,
+      // replace the dividend with zero when rhs is -1 before evaluating '%'.
+      if (!isa<IntegerType>(type) && !emitc::isPointerWideType(type))
+        return rewriter.notifyMatchFailure(op, "unsupported result type");
+      Location loc = op.getLoc();
+      remainderType =
+          adaptIntegralTypeSignedness(type, /*needsUnsigned=*/false);
+      lhs = adaptValueType(lhs, rewriter, remainderType);
+      rhs = adaptValueType(rhs, rewriter, remainderType);
+      Type attrType = emitc::isPointerWideType(remainderType)
+                          ? rewriter.getIndexType()
+                          : remainderType;
+      Value zero = emitc::ConstantOp::create(
+          rewriter, loc, remainderType, rewriter.getIntegerAttr(attrType, 0));
+      Value minusOne = emitc::ConstantOp::create(
+          rewriter, loc, remainderType, rewriter.getIntegerAttr(attrType, -1));
+      Value isMinusOne =
+          emitc::CmpOp::create(rewriter, loc, rewriter.getI1Type(),
+                               emitc::CmpPredicate::eq, rhs, minusOne);
+      lhs = emitc::ConditionalOp::create(rewriter, loc, remainderType,
+                                         isMinusOne, zero, lhs);
+    }
+    Value remainder =
+        emitc::RemOp::create(rewriter, op.getLoc(), remainderType, lhs, rhs);
+    rewriter.replaceOp(op, adaptValueType(remainder, rewriter, type));
+    return success();
+  }
+};
+
 template <class ArithOp, class EmitCOp>
 class BinaryUIOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -821,7 +864,7 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
     ArithOpConversion<arith::DivSIOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
-    ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
+    RemSIOpConversion,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
     BinaryUIOpConversion<arith::DivUIOp, emitc::DivOp>,
     BinaryUIOpConversion<arith::RemUIOp, emitc::RemOp>,
