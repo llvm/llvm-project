@@ -162,6 +162,7 @@ template void HiddenPack<int, float>();
 template<typename ...Ts> void HiddenPackInvalid() {
   Int<Ts>(); // expected-error {{unexpanded}}
   Int<Ts>{}; // expected-error {{unexpanded}}
+  Int<Ts>({}); // expected-error {{unexpanded}} expected-error {{cannot initialize non-class type}}
   Class<Ts>(); // expected-error {{unexpanded}}
   Class<Ts>{}; // expected-error {{unexpanded}}
 }
