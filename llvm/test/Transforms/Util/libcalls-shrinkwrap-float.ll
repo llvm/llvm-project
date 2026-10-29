@@ -158,6 +158,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call float @tanf(float %value)
+; CHECK: [[COND1:%[0-9]+]] = fcmp oeq float %value, -inf
+; CHECK: [[COND2:%[0-9]+]] = fcmp oeq float %value, +inf
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call float @tanf(float %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call float @acoshf(float %value)
 ; CHECK: [[COND:%[0-9]+]] = fcmp olt float %value, 1.000000e+00
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -269,6 +279,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call float @tanf(float %value) strictfp
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[VALUE]], float -inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[VALUE]], float +inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call float @tanf(float %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call float @acoshf(float %value) strictfp
 ; CHECK: [[COND:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[VALUE]], float 1.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -341,6 +361,7 @@ declare float @acosf(float)
 declare float @asinf(float)
 declare float @cosf(float)
 declare float @sinf(float)
+declare float @tanf(float)
 declare float @acoshf(float)
 declare float @sqrtf(float)
 declare float @atanhf(float)
