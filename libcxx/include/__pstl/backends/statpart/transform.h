@@ -66,7 +66,7 @@ struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      __statpart::__for_each(
+      auto res = __statpart::__for_each(
           __first,
           __last,
           [&__policy, __op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -79,6 +79,8 @@ struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
                 __result + (__brick_first - __first),
                 __op);
           });
+      if (!res)
+        return nullopt; // Failed to perform "__for_each", propagate the error upwards
       return __result + (__last - __first);
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&

@@ -23,9 +23,13 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 namespace __statpart {
 
@@ -66,8 +70,11 @@ struct __fill<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___PSTL_BACKENDS_STATPART_FILL_H
