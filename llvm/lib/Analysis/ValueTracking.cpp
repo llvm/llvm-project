@@ -2045,8 +2045,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
       break;
 
     // Otherwise take the unions of the known bit sets of the operands,
-    // taking conservative care to avoid excessive recursion.
-    if (Depth < MaxAnalysisRecursionDepth - 1 && Known.isUnknown()) {
+    // taking conservative care to avoid excessive recursion. Limit recursion
+    // to 2 levels, so that search complexity is limited to number of
+    // operands^2. A phi with a single incoming value is just a copy, so don't
+    // clamp the depth for it.
+    unsigned NewDepth =
+        P->getNumIncomingValues() == 1
+            ? Depth + 1
+            : std::max(Depth + 1, MaxAnalysisRecursionDepth - 1);
+    if (NewDepth < MaxAnalysisRecursionDepth && Known.isUnknown()) {
       // Skip if every incoming value references to ourself.
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
@@ -2069,12 +2076,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         Known2 = KnownBits(BitWidth);
 
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
         // TODO: See if we can base recursion limiter on number of incoming phi
         // edges so we don't overly clamp analysis.
-        computeKnownBits(IncValue, DemandedElts, Known2, RecQ,
-                         MaxAnalysisRecursionDepth - 1);
+        computeKnownBits(IncValue, DemandedElts, Known2, RecQ, NewDepth);
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
@@ -2951,8 +2955,11 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
       return true;
 
     // Recursively check all incoming values. Limit recursion to 2 levels, so
-    // that search complexity is limited to number of operands^2.
-    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    // that search complexity is limited to number of operands^2. A phi with a
+    // single incoming value is just a copy, so don't limit the depth for it.
+    unsigned NewDepth = PN->getNumIncomingValues() == 1
+                            ? Depth
+                            : std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       // Value is power of 2 if it is coming from PHI node itself by induction.
       if (U.get() == PN)
@@ -3633,9 +3640,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
       return true;
 
-    // Check if all incoming values are non-zero using recursion.
+    // Check if all incoming values are non-zero using recursion. A phi with a
+    // single incoming value is just a copy, so don't limit the depth for it.
     SimplifyQuery RecQ = Q.getWithoutCondContext();
-    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    unsigned NewDepth = PN->getNumIncomingValues() == 1
+                            ? Depth
+                            : std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
         return true;
@@ -6523,10 +6533,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
 
     // Otherwise take the unions of the known bit sets of the operands,
-    // taking conservative care to avoid excessive recursion.
+    // taking conservative care to avoid excessive recursion. Cap the
+    // recursion to two levels, because we don't want to waste time spinning
+    // around in loops. We need at least depth 2 to detect known sign bits. A
+    // phi with a single incoming value is just a copy, so don't clamp the
+    // depth for it.
     const unsigned PhiRecursionLimit = MaxAnalysisRecursionDepth - 2;
-
-    if (Depth < PhiRecursionLimit) {
+    unsigned NewDepth = P->getNumIncomingValues() == 1
+                            ? Depth + 1
+                            : std::max(Depth + 1, PhiRecursionLimit);
+    if (NewDepth <= PhiRecursionLimit) {
       // Skip if every incoming value references to ourself.
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
@@ -6542,12 +6558,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           continue;
 
         KnownFPClass KnownSrc;
-        // Recurse, but cap the recursion to two levels, because we don't want
-        // to waste time spinning around in loops. We need at least depth 2 to
-        // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             Q.getWithoutCondContext().getWithInstruction(CtxI),
-                            PhiRecursionLimit);
+                            NewDepth);
 
         if (First) {
           Known = KnownSrc;
