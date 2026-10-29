@@ -1260,6 +1260,7 @@ void CondBrInst::swapSuccessors() {
   // Update profile metadata if present and it matches our structural
   // expectations.
   swapProfMetadata();
+  swapBlockWaveCountSuccessors(*this);
 }
 
 //===----------------------------------------------------------------------===//
