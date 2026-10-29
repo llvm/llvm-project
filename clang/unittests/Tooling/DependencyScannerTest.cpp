@@ -494,6 +494,31 @@ TEST_F(GetModuleMapsForModulesTest, Found) {
             "/root/b/module.modulemap");
 }
 
+// Verify a module provided by a prebuilt module file is omitted, even though
+// it's resolvable through search paths.
+TEST_F(GetModuleMapsForModulesTest, PrebuiltModule) {
+  // Set up a scenario where 'A' is a prebuilt module but its modulemap is
+  // resolved during the lookup for a different module 'B'.
+  std::vector<std::string> CommandLine = {
+      "clang",  "-target",   "x86_64-apple-macosx10.7",     "-c",
+      "test.m", "-fmodules", "-fmodule-file=A=/root/a.pcm", "-I/root/a"};
+  addFile("/root/test.m", "\n");
+  addFile("/root/a.pcm", "");
+  addFile("/root/a/module.modulemap", "module A { header \"a.h\" }\n"
+                                      "module B { header \"b.h\" }\n");
+  addFile("/root/a/a.h", "\n");
+  addFile("/root/a/b.h", "\n");
+
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"A", "B"}, DiagConsumer);
+  ASSERT_TRUE(ModuleMaps);
+  EXPECT_EQ(ModuleMaps->size(), 1u);
+  EXPECT_EQ(llvm::sys::path::convert_to_slash(ModuleMaps->lookup("B")),
+            "/root/a/module.modulemap");
+  EXPECT_FALSE(ModuleMaps->contains("A"));
+}
+
 // Verify a module that is not found is omitted, leaving an empty result.
 TEST_F(GetModuleMapsForModulesTest, NotFound) {
   std::vector<std::string> CommandLine = {

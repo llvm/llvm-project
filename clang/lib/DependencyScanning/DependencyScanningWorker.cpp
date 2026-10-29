@@ -728,9 +728,15 @@ public:
         HS.parseModuleMapFile(*File, /*IsSystem=*/false,
                               /*ImplicitlyDiscovered=*/false);
 
+    const bool HasPrebuiltModules = !HSOpts.PrebuiltModuleFiles.empty() ||
+                                    !HSOpts.PrebuiltModulePaths.empty();
+
     llvm::StringMap<std::string> Result;
     // Then resolve modulemaps through header search.
     for (StringRef Name : ModuleNames) {
+      // Skip over prebuilt modules.
+      if (HasPrebuiltModules && !HS.getPrebuiltModuleFileName(Name).empty())
+        continue;
       OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(Name);
       // Skip over modules that didn't find a modulemap.
       if (!File)

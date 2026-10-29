@@ -123,7 +123,8 @@ public:
   ///
   /// \returns a map from each module name that is found to the path of the
   /// module map that defines it, or std::nullopt if the compiler invocation
-  /// could not be set up.
+  /// could not be set up. Names provided by a prebuilt module file, or with no
+  /// module map found, are omitted.
   std::optional<llvm::StringMap<std::string>>
   getModuleMapsForModules(StringRef CWD, ArrayRef<std::string> CommandLine,
                           DiagnosticConsumer &DiagConsumer,
