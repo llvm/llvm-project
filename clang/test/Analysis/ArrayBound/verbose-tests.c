@@ -65,7 +65,7 @@ void gh86959(void) {
   // Previously code like this produced many almost-identical bug reports that
   // only differed in the offset value. Verify that now we only see one report.
 
-  // expected-note@+1 {{entering loop body}}
+  // expected-note@+1 {{Entering loop body}}
   while (rng())
     TenElements[getIndex()] = 10;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}

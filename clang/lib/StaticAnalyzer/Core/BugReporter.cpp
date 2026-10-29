@@ -972,7 +972,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is false; exiting loop"));
+              Start, End, "Loop condition is false.  Exiting loop"));
     }
     break;
 
@@ -996,7 +996,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is true; entering loop body"));
+              Start, End, "Loop condition is true.  Entering loop body"));
     }
 
     break;
