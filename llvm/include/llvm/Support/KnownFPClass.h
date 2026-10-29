@@ -261,17 +261,6 @@ public:
   /// Return true if it's known this can never be a negative subnormal
   bool isKnownNeverNegSubnormal() const { return isKnownNever(fcNegSubnormal); }
 
-  /// Return true if it's known this can never be a zero. This means a literal
-  /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
-  bool isKnownNeverZero() const { return isKnownNever(fcZero); }
-
-  /// Return true if it's known this can never be a literal positive zero.
-  bool isKnownNeverPosZero() const { return isKnownNever(fcPosZero); }
-
-  /// Return true if it's known this can never be a negative zero. This means a
-  /// literal -0 and does not include denormal inputs implicitly treated as -0.
-  bool isKnownNeverNegZero() const { return isKnownNever(fcNegZero); }
-
   /// Return true if it's known this can never be interpreted as a zero. This
   /// extends isKnownNeverZero to cover the case where the assumed
   /// floating-point mode for the function interprets denormals as zero.
