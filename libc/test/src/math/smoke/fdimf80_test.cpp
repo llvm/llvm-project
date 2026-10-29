@@ -17,4 +17,4 @@
 
 using LIBC_NAMESPACE::fputil::Float80;
 
-LIST_FDIM_TESTS(Fdimf80, Float80, LIBC_NAMESPACE::fdimf80)
+LIST_FDIM_TESTS(Fdimf80, Float80, LIBC_NAMESPACE::fdimf80);
