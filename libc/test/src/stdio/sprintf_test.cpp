@@ -3865,6 +3865,8 @@ TEST(LlvmLibcSprintfTest, WideCharConversion) {
   EXPECT_EQ(written, 4);
   ASSERT_STREQ_LEN(written, buff, " €");
 
+  // UTF-16 wide char cannot encode non-BMP character in a single wchar_t
+#if !defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
   // Grinning face emoji is a 4-byte UTF-8 character.
   written = LIBC_NAMESPACE::sprintf(buff, "%lc", L'😀');
   EXPECT_EQ(written, 4);
@@ -3889,15 +3891,22 @@ TEST(LlvmLibcSprintfTest, WideCharConversion) {
   written = LIBC_NAMESPACE::sprintf(buff, "%3lc", L'😀');
   EXPECT_EQ(written, 4);
   ASSERT_STREQ_LEN(written, buff, "😀");
+#endif
 
   // WEOF test.
   EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%lc", WEOF), -1);
   ASSERT_ERRNO_EQ(EILSEQ);
 
   // Invalid wide character test
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
   EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%lc", static_cast<wint_t>(0x12ffff)),
             -1);
   ASSERT_ERRNO_EQ(EILSEQ);
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+  EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%lc", static_cast<wint_t>(0xdc00)),
+            -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+#endif
 }
 
 TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
@@ -4001,5 +4010,11 @@ TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
   written = LIBC_NAMESPACE::sprintf(buff, "%6.3ls", nullptr);
   EXPECT_EQ(written, 6);
   ASSERT_STREQ_LEN(written, buff, "   (nu");
+
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+  // (UTF-16) Lone high surrogate at the end is rejected.
+  EXPECT_EQ(LIBC_NAMESPACE::sprintf(buff, "%ls", L"a\xD83D"), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+#endif
 }
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE && !LIBC_TARGET_ARCH_IS_GPU

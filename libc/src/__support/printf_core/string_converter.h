@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_PRINTF_CORE_STRING_CONVERTER_H
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
-#include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/string_converter.h"
@@ -75,27 +74,29 @@ LIBC_INLINE int
 write_wchar_string_as_chars(Writer<mode, char> *writer,
                             const FormatSection<char> &to_conv) {
   size_t string_len = 0;
-  const char32_t *wstr_ptr =
-      reinterpret_cast<const char32_t *>(to_conv.conv_val_ptr);
+  const wchar_t *wstr_ptr =
+      reinterpret_cast<const wchar_t *>(to_conv.conv_val_ptr);
   size_t precision =
       to_conv.precision < 0 ? SIZE_MAX : static_cast<size_t>(to_conv.precision);
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (wstr_ptr == nullptr) {
-    wstr_ptr = U"(null)";
+    wstr_ptr = L"(null)";
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   internal::mbstate mbstate;
 
-  internal::StringConverter<char32_t> length_counter(wstr_ptr, &mbstate,
-                                                     precision);
+  internal::StringConverter<wchar_t> length_counter(wstr_ptr, &mbstate,
+                                                    precision);
 
-  for (auto converted = length_counter.pop<char8_t>();
-       converted.has_value() && converted.value() != '\0';
+  auto converted = length_counter.pop<char8_t>();
+  for (; converted.has_value() && converted.value() != '\0';
        converted = length_counter.pop<char8_t>()) {
     ++string_len;
   }
+  if (!converted.has_value() && converted.error() == EILSEQ)
+    return MB_CONVERSION_ERROR;
 
   size_t padding_spaces = to_conv.min_width > static_cast<int>(string_len)
                               ? to_conv.min_width - string_len
@@ -108,13 +109,15 @@ write_wchar_string_as_chars(Writer<mode, char> *writer,
   }
 
   mbstate = internal::mbstate();
-  internal::StringConverter<char32_t> out_conv(wstr_ptr, &mbstate, precision);
+  internal::StringConverter<wchar_t> out_conv(wstr_ptr, &mbstate, precision);
 
-  for (auto converted = out_conv.pop<char8_t>();
-       converted.has_value() && converted.value() != '\0';
+  converted = out_conv.pop<char8_t>();
+  for (; converted.has_value() && converted.value() != '\0';
        converted = out_conv.pop<char8_t>()) {
     RET_IF_RESULT_NEGATIVE(writer->write(static_cast<char>(converted.value())));
   }
+  if (!converted.has_value() && converted.error() == EILSEQ)
+    return MB_CONVERSION_ERROR;
 
   // If the padding is on the right side, write the spaces last.
   if (padding_spaces > 0 &&
