@@ -69,6 +69,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
+  initializeX86FenceNonTemporalStoresLegacyPass(PR);
   initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
@@ -371,7 +372,7 @@ public:
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
-  bool addPostFastRegAllocRewrite() override;
+  bool addRegAssignAndRewriteFast() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -438,6 +439,8 @@ void X86PassConfig::addIRPasses() {
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
+
+  addPass(createX86FenceNonTemporalStoresLegacyPass());
 }
 
 bool X86PassConfig::addInstSelector() {
@@ -526,6 +529,12 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86FastPreTileConfigLegacyPass());
 }
 
+bool X86PassConfig::addRegAssignAndRewriteFast() {
+  bool ToReturn = TargetPassConfig::addRegAssignAndRewriteFast();
+  addPass(createX86FastTileConfigLegacyPass());
+  return ToReturn;
+}
+
 void X86PassConfig::addMachineSSAOptimization() {
   addPass(createX86DomainReassignmentLegacyPass());
   TargetPassConfig::addMachineSSAOptimization();
@@ -559,7 +568,7 @@ void X86PassConfig::addPreEmitPass() {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());
-    addPass(createX86PadShortFunctions());
+    addPass(createX86PadShortFunctionsLegacyPass());
     addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuningLegacyPass());
     addPass(createX86FixupVectorConstantsLegacyPass());
@@ -573,7 +582,6 @@ void X86PassConfig::addPreEmitPass() {
 
 void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
-  const MCAsmInfo &MAI = TM->getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -595,22 +603,21 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
-  if (!TT.isOSDarwin() &&
-      (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+  // instructions. CFIInstrInserter self-skips targets that do not use DWARF
+  // CFI.
+  if (!TT.isOSDarwin())
     addPass(createCFIInstrInserterLegacy());
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
   addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
@@ -631,11 +638,6 @@ void X86PassConfig::addPreEmitPass2() {
     addPass(createX86WinEHUnwindV2LegacyPass());
     addPass(createX86WinEHUnwindV3Pass());
   }
-}
-
-bool X86PassConfig::addPostFastRegAllocRewrite() {
-  addPass(createX86FastTileConfigLegacyPass());
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {

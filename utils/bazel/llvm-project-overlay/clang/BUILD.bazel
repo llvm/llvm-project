@@ -352,6 +352,14 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_avr_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAVR.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAVR.td",
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_bpf_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsBPF.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -936,6 +944,7 @@ cc_library(
         ":basic_builtins_aarch64_gen",
         ":basic_builtins_amdgpu_gen",
         ":basic_builtins_arm_gen",
+        ":basic_builtins_avr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
@@ -1836,6 +1845,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
+            "lib/Driver/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -3167,6 +3177,7 @@ cc_library(
         ":cir_dialect",
         ":cir_openacc_support",
         ":cir_openmp_support",
+        "//mlir:ArithDialect",
         "//mlir:DLTIDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",
@@ -3204,6 +3215,7 @@ cc_library(
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:ABI",

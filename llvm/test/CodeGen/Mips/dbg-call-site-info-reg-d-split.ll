@@ -17,9 +17,9 @@
 ; CHECK: name:            foo
 ; CHECK: callSites:
 ; CHECK-NEXT: bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; CHECK-NOT:   arg: 0, reg: '$a0'
+; CHECK-NOT:   arg: 0, reg: '$r4'
 ; CHECK-NOT:   arg: 0, reg: '$d6'
-; CHECK-NEXT:   arg: 1, reg: '$a2'
+; CHECK-NEXT:   arg: 1, reg: '$r6'
 
 ; ModuleID = 'm.c'
 source_filename = "m.c"

@@ -351,6 +351,19 @@ public:
                                                   Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
+          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
+            // A loan still held by the object at the method's exit was
+            // invalidated.
+            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
+                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
+                  ExprChain);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(
+                  InvalidatedPVD, ThisEscape->getLoc(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
@@ -373,7 +386,16 @@ public:
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
                                            MovedExpr, ExpiryLoc, IsMain);
-        } else
+        } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
+          // A borrow is still held by the object (e.g. captured via
+          // lifetime_capture_by_this) when the captured local goes out of
+          // scope; reuse the use-after-scope diagnostic at the capturing
+          // method.
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, ThisEscape->getLoc(), MovedExpr, ExpiryLoc,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");

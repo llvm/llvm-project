@@ -27,6 +27,18 @@ constexpr StringLiteral MaxNReg("nvvm.maxnreg");
 constexpr StringLiteral BlocksAreClusters("nvvm.blocksareclusters");
 constexpr StringLiteral GridConstant("nvvm.grid_constant");
 
+// Custom ABI attributes: the number of registers a function preserves across a
+// call. Valid on function definitions and declarations, and on callsites for
+// indirect calls.
+// Ref:
+// https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve
+constexpr StringLiteral AbiPreserve("nvvm.abi_preserve");
+constexpr StringLiteral AbiPreserveControl("nvvm.abi_preserve_control");
+
+// All custom ABI attributes, in PTX emission order.
+inline constexpr StringLiteral AbiPreserveAttrs[] = {AbiPreserve,
+                                                     AbiPreserveControl};
+
 } // namespace NVVMAttr
 } // namespace llvm
 

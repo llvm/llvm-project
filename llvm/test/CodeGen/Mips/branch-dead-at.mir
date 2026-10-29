@@ -11,39 +11,39 @@ body:             |
   ; CHECK-LABEL: name: invert_cond_branch
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x60000000), %bb.1(0x20000000)
-  ; CHECK-NEXT:   liveins: $a0
+  ; CHECK-NEXT:   liveins: $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BEQ renamable $a0, $zero, %bb.1, implicit-def dead $at
+  ; CHECK-NEXT:   BEQ renamable $r4, $r0, %bb.1, implicit-def dead $r1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $v0 = ADDiu $zero, 2
-  ; CHECK-NEXT:   PseudoReturn undef $ra, implicit killed $v0
+  ; CHECK-NEXT:   $r2 = ADDiu $r0, 2
+  ; CHECK-NEXT:   PseudoReturn undef $r31, implicit killed $r2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $v0 = ADDiu $zero, 1
-  ; CHECK-NEXT:   PseudoReturn undef $ra, implicit killed $v0
+  ; CHECK-NEXT:   $r2 = ADDiu $r0, 1
+  ; CHECK-NEXT:   PseudoReturn undef $r31, implicit killed $r2
   bb.0:
     successors: %bb.2(0x60000000), %bb.1(0x20000000)
-    liveins: $a0
+    liveins: $r4
 
-    BNE renamable $a0, $zero, %bb.2, implicit-def dead $at
-    B %bb.1, implicit-def dead $at
+    BNE renamable $r4, $r0, %bb.2, implicit-def dead $r1
+    B %bb.1, implicit-def dead $r1
 
   bb.1:
     successors: %bb.3(0x80000000)
 
-    $v0 = ADDiu $zero, 1
-    B %bb.3, implicit-def dead $at
+    $r2 = ADDiu $r0, 1
+    B %bb.3, implicit-def dead $r1
 
   bb.2:
     successors: %bb.3(0x80000000)
 
-    $v0 = ADDiu $zero, 2
+    $r2 = ADDiu $r0, 2
 
   bb.3:
-    liveins: $v0
+    liveins: $r2
 
-    PseudoReturn undef $ra, implicit killed $v0
+    PseudoReturn undef $r31, implicit killed $r2
 ...
 ---
 name:            insert_uncond_branch
@@ -52,57 +52,57 @@ body:             |
   ; CHECK-LABEL: name: insert_uncond_branch
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x70000000), %bb.2(0x10000000)
-  ; CHECK-NEXT:   liveins: $a0
+  ; CHECK-NEXT:   liveins: $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BNE renamable $a0, $zero, %bb.2, implicit-def dead $at
+  ; CHECK-NEXT:   BNE renamable $r4, $r0, %bb.2, implicit-def dead $r1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $v0 = ADDiu $zero, 1
+  ; CHECK-NEXT:   $r2 = ADDiu $r0, 1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   liveins: $v0
+  ; CHECK-NEXT:   liveins: $r2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 3
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 4
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 5
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 6
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 7
-  ; CHECK-NEXT:   $v0 = ADDiu killed $v0, 8
-  ; CHECK-NEXT:   PseudoReturn undef $ra, implicit killed $v0
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 3
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 4
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 5
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 6
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 7
+  ; CHECK-NEXT:   $r2 = ADDiu killed $r2, 8
+  ; CHECK-NEXT:   PseudoReturn undef $r31, implicit killed $r2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $v0 = ADDiu $zero, 2
-  ; CHECK-NEXT:   J %bb.3, implicit-def dead $at
+  ; CHECK-NEXT:   $r2 = ADDiu $r0, 2
+  ; CHECK-NEXT:   J %bb.3, implicit-def dead $r1
   bb.0:
     successors: %bb.1(0x70000000), %bb.2(0x10000000)
-    liveins: $a0
+    liveins: $r4
 
-    BNE renamable $a0, $zero, %bb.2, implicit-def dead $at
-    B %bb.1, implicit-def dead $at
+    BNE renamable $r4, $r0, %bb.2, implicit-def dead $r1
+    B %bb.1, implicit-def dead $r1
 
   bb.1:
     successors: %bb.3(0x80000000)
 
-    $v0 = ADDiu $zero, 1
-    B %bb.3, implicit-def dead $at
+    $r2 = ADDiu $r0, 1
+    B %bb.3, implicit-def dead $r1
 
   bb.2:
     successors: %bb.3(0x80000000)
 
-    $v0 = ADDiu $zero, 2
+    $r2 = ADDiu $r0, 2
 
   bb.3:
-    liveins: $v0
+    liveins: $r2
 
-    $v0 = ADDiu killed $v0, 3
-    $v0 = ADDiu killed $v0, 4
-    $v0 = ADDiu killed $v0, 5
-    $v0 = ADDiu killed $v0, 6
-    $v0 = ADDiu killed $v0, 7
-    $v0 = ADDiu killed $v0, 8
-    PseudoReturn undef $ra, implicit killed $v0
+    $r2 = ADDiu killed $r2, 3
+    $r2 = ADDiu killed $r2, 4
+    $r2 = ADDiu killed $r2, 5
+    $r2 = ADDiu killed $r2, 6
+    $r2 = ADDiu killed $r2, 7
+    $r2 = ADDiu killed $r2, 8
+    PseudoReturn undef $r31, implicit killed $r2
 ...

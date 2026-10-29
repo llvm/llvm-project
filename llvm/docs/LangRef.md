@@ -1940,6 +1940,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+(attr_range)=
+
 `range(<ty> <a>, <b>)`
 :   This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -3331,6 +3333,10 @@ The following attributes are currently accepted:
 `"separate_storage"(ptr %p1, ptr %p2)`
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
+
+`"range"(iN %val, iN %lower_bound, iN %upper_bound)`
+:   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
+    `%val`.
 
 For example:
 
@@ -14316,9 +14322,10 @@ the `va_arg` macro in C.
 ##### Arguments:
 
 This instruction takes a `va_list*` value and the type of the
-argument. It returns a value of the specified argument type and
-increments the `va_list` to point to the next argument. The actual
-type of `va_list` is target specific.
+argument, which must not be an {ref}`aggregate <t_aggregate>` type. It
+returns a value of the specified argument type and increments the
+`va_list` to point to the next argument. The actual type of `va_list` is
+target specific.
 
 ##### Semantics:
 
@@ -14338,8 +14345,7 @@ function.
 See the {ref}`variable argument processing <int_varargs>` section.
 
 Note that the code generator does not yet fully support `va_arg` on many
-targets. Also, it does not currently support `va_arg` with aggregate
-types on any target.
+targets.
 
 (i_landingpad)=
 
@@ -26913,7 +26919,7 @@ The '`llvm.ubsantrap`' intrinsic.
 
 ##### Arguments:
 
-An integer describing the kind of failure detected.
+An unsigned integer describing the kind of failure detected.
 
 ##### Semantics:
 

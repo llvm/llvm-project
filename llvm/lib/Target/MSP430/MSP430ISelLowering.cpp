@@ -27,7 +27,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,14 +34,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "msp430-lower"
 
-static cl::opt<bool>MSP430NoLegalImmediate(
-  "msp430-no-legal-immediate", cl::Hidden,
-  cl::desc("Enable non legal immediates (for testing purposes only)"),
-  cl::init(false));
-
 MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
                                            const MSP430Subtarget &STI)
-    : TargetLowering(TM, STI) {
+    : TargetLowering(TM, STI), CLOpts(STI.getCLOpts()) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i8,  &MSP430::GR8RegClass);
@@ -184,7 +178,7 @@ bool MSP430TargetLowering::shouldAvoidTransformToShift(EVT VT,
 // Implemented to verify test case assertions in
 // tests/codegen/msp430/shift-amount-threshold-b.ll
 bool MSP430TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
-  if (MSP430NoLegalImmediate)
+  if (CLOpts.no_legal_immediate)
     return Immed >= -32 && Immed < 32;
   return TargetLowering::isLegalICmpImmediate(Immed);
 }

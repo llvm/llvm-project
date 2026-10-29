@@ -1921,12 +1921,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   // synthesize a zero shift for other data type.
   int32_t shift = 0;
   if (resultETy.isInteger(32)) {
-    ElementsAttr shift_elem;
+    ElementsAttr shiftElem;
     if (getShift().getImpl()) {
-      if (!matchPattern(getShift(), m_Constant(&shift_elem)))
+      if (!matchPattern(getShift(), m_Constant(&shiftElem)))
         // cannot be folded when the shift value is unknown.
         return {};
-      shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
+      if (shift < 0 || shift > 63)
+        return {};
     }
   }
 
@@ -2063,10 +2065,12 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<FloatType>(inETy) && llvm::isa<IntegerType>(outETy)) {
+      auto floatVal = operand.getSplatValue<APFloat>();
+      if (outETy.isInteger(1))
+        return SplatElementsAttr::get(outTy, !floatVal.isZero());
       auto unsign = llvm::cast<IntegerType>(outETy).isUnsignedInteger();
       auto intVal = APSInt(
           llvm::cast<IntegerType>(outETy).getIntOrFloatBitWidth(), unsign);
-      auto floatVal = operand.getSplatValue<APFloat>();
       bool exact;
       floatVal.convertToInteger(intVal, llvm::RoundingMode::NearestTiesToEven,
                                 &exact);
@@ -2299,7 +2303,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     }
 
     if (sizeMatchesInput)
-      return getInput1();
+      return foldToInputIfTypeMatches(getType(), getInput1());
   }
 
   // The following checks require the input to be a constant

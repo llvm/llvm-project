@@ -101,7 +101,6 @@ public:
 
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
-  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
 
@@ -148,27 +147,10 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
     }
 
     Local.EnabledByDefault = this->LocalsAlwaysEnabled;
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
-  }
-
-  /// Force-initialize this scope. Usually, scopes are lazily initialized when
-  /// the first local variable is created, but in scenarios with conditonal
-  /// operators, we need to ensure scope is initialized just in case one of the
-  /// arms will create a local and the other won't. In such a case, the
-  /// InitScope() op would be part of the arm that created the local.
-  void forceInit() override {
-    if (!Idx) {
-      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
-      this->Ctx->Descriptors.emplace_back();
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
-    }
   }
 
   bool emitDestructors(const Expr *E = nullptr) override {
@@ -799,8 +781,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     }
     QualType SubExprTy = SubExpr->getType();
     OptPrimType FromT = classify(SubExprTy);
-    // Casts from integer/vector to vector.
-    if (E->getType()->isVectorType())
+    // Casts between vectors and integers of the same same size.
+    if (ETy->isVectorType() || SubExprTy->isVectorType())
       return this->emitBuiltinBitCast(E);
 
     OptPrimType ToT = classify(E->getType());
@@ -3183,9 +3165,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return false;
   }
 
-  // Force-init the scope, which creates a InitScope op. This is necessary so
-  // the scope is not only initialized in one arm of the conditional operator.
-  this->VarScope->forceInit();
   // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
   // scope, which means the local variables created within them unconditionally
   // always exist. However, we need to later differentiate which branch was
@@ -6421,6 +6400,7 @@ static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
     return false;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return false;
+  assert(!MD->getParent()->isInvalidDecl());
   return MD->getParent()->isUnion() ||
          (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
 }
@@ -6455,6 +6435,11 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
              this->emitPopPtr(E);
     }
   }
+
+  // Don't generate code for method with invalid parent decls.
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
+      MD && MD->getParent()->isInvalidDecl())
+    return false;
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
   ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
@@ -7282,13 +7267,13 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7297,6 +7282,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7322,13 +7313,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7337,6 +7327,12 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;

@@ -2,7 +2,7 @@
 
 !s32i = !cir.int<s, 32>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa"} {
   cir.global external lang_address_space(offload_global) @g = #cir.int<0> : !s32i align(4)
 
   cir.func @f(%arg0: !cir.ptr<!s32i, lang_address_space(offload_local)>) {

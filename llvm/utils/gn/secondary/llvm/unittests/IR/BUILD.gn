@@ -8,7 +8,6 @@ unittest("IRTests") {
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
-    "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [

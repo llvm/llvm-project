@@ -246,19 +246,20 @@ def update_test(ti: common.TestInfo):
                         output_lines.append(input_line)
                         continue
 
-                # Print out the various check lines here.
-                generated_prefixes.extend(
-                    output_type.add_checks(
-                        output_lines,
-                        check_indent + ";",
-                        run_list,
-                        func_dict,
-                        func_name,
-                        ginfo,
-                        global_vars_seen_dict,
-                        is_filtered=builder.is_filtered(),
+                if run_list:
+                    # Print out the various check lines here.
+                    generated_prefixes.extend(
+                        output_type.add_checks(
+                            output_lines,
+                            check_indent + ";",
+                            run_list,
+                            func_dict,
+                            func_name,
+                            ginfo,
+                            global_vars_seen_dict,
+                            is_filtered=builder.is_filtered(),
+                        )
                     )
-                )
 
                 # Also add MIR checks if we have them for this function
                 if mir_run_list and func_name:
