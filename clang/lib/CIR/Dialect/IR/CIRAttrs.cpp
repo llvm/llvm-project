@@ -618,6 +618,11 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", managed";
   if (getKind() == CUDADeviceVarKind::Surface)
     p << ", surface_type = " << getSurfTexType();
+  else if (getKind() == CUDADeviceVarKind::Texture) {
+    p << ", texture_type = " << getSurfTexType();
+    if (getNormalized())
+      p << ", normalized";
+  }
   p << ">";
 }
 
@@ -653,6 +658,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isConstant = false;
   bool isManaged = false;
   int32_t surfTexType = 0;
+  bool normalized = false;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -668,7 +674,9 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else if (flag == "surface_type") {
+    else if (flag == "normalized")
+      normalized = true;
+    else if (flag == "surface_type" || flag == "texture_type") {
       if (parser.parseEqual() || parser.parseInteger(surfTexType))
         return {};
     } else {
@@ -678,7 +686,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged, surfTexType);
+             isManaged, surfTexType, normalized);
 }
 
 //===----------------------------------------------------------------------===//
