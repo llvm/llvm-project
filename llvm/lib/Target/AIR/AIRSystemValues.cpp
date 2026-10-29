@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRSystemValues.h"
+#include "AIRKernelParams.h"
 #include "AIRLowerAtomicRMW.h"
 #include "AIRWriter/AIRVersion.h"
 #include "AIRWriter/PointeeTypeMap.h"
 #include "AIR.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
@@ -205,74 +207,94 @@ static bool airSystemValues(Module &M) {
   // may be named tid.
   DenseMap<Function *, SmallVector<AddedSysVal, 4>> SysValArgs;
 
-  SmallVector<Function *, 4> Funcs;
-  for (Function &F : M)
-    if (!F.isDeclaration())
-      Funcs.push_back(&F);
-
-  for (Function *FPtr : Funcs) {
-    Function &F = *FPtr;
-
-    struct UsedSysVal {
-      const SysValParam *Info;
-      SmallVector<CallInst *, 4> Calls;
-    };
-    SmallVector<UsedSysVal, 5> UsedSysVals;
-
-    for (const SysValParam &SV : kSysVals) {
-      Function *Decl = findDeclByPrefix(M, SV.IntrinsicName);
-      if (!Decl)
-        continue;
-      SmallVector<CallInst *, 4> Calls;
-      for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
-          if (auto *CI = dyn_cast<CallInst>(&I))
-            if (CI->getCalledFunction() == Decl)
-              Calls.push_back(CI);
-      if (!Calls.empty())
-        UsedSysVals.push_back({&SV, std::move(Calls)});
-    }
-
-    if (UsedSysVals.empty())
+  // The system-value calls in each function.
+  struct UsedSysVal {
+    Function *F;
+    const SysValParam *Info;
+    SmallVector<CallInst *, 4> Calls;
+  };
+  SmallVector<UsedSysVal, 8> UsedSysVals;
+  for (const SysValParam &SV : kSysVals) {
+    Function *Decl = findDeclByPrefix(M, SV.IntrinsicName);
+    if (!Decl)
       continue;
-
-    // Build a new function type with extra params at the end.
-    auto *OldFTy = F.getFunctionType();
-    SmallVector<Type *, 8> NewParamTypes(OldFTy->params());
-    for (const UsedSysVal &USV : UsedSysVals)
-      NewParamTypes.push_back(USV.Info->IsVector ? Vec3 : I32);
-
-    auto *NewFTy = FunctionType::get(OldFTy->getReturnType(), NewParamTypes,
-                                     OldFTy->isVarArg());
-
-    auto *NewF =
-        Function::Create(NewFTy, F.getLinkage(), F.getAddressSpace(), "", &M);
-    NewF->copyAttributesFrom(&F);
-    NewF->copyMetadata(&F, 0);
-    NewF->splice(NewF->begin(), &F);
-
-    auto NewArgIt = NewF->arg_begin();
-    for (Argument &OldArg : F.args()) {
-      NewArgIt->setName(OldArg.getName());
-      OldArg.replaceAllUsesWith(&*NewArgIt);
-      ++NewArgIt;
+    MapVector<Function *, SmallVector<CallInst *, 4>> Calls;
+    for (User *U : Decl->users())
+      if (auto *CI = dyn_cast<CallInst>(U))
+        if (CI->getCalledFunction() == Decl)
+          Calls[CI->getFunction()].push_back(CI);
+    for (auto &[F, FCalls] : Calls) {
+      // (Their names are the parameters'.)
+      for (CallInst *CI : FCalls)
+        CI->setName("");
+      UsedSysVals.push_back({F, &SV, std::move(FCalls)});
     }
+  }
 
-    // Keep metadata that names the kernel (e.g. a pre-baked !air.kernel)
-    // pointing at the rewritten function; erasing F would null it out.
-    ValueAsMetadata::handleRAUW(&F, NewF);
+  // Each function using a system value gets it as a parameter, from its
+  // callers, up to the kernel's parameter (a pre-baked !air.kernel's when it
+  // has one already).
+  NamedMDNode *PreBaked = M.getNamedMetadata(kNMDKernel);
+  auto KernelNode = [&](Function &F) -> MDNode * {
+    if (PreBaked)
+      for (MDNode *K : PreBaked->operands())
+        if (K->getNumOperands() == 3 &&
+            mdconst::dyn_extract_or_null<Function>(K->getOperand(0)) == &F)
+          return K;
+    return nullptr;
+  };
+  auto Existing = [&](Function &F, StringRef Key) -> Argument * {
+    MDNode *K = KernelNode(F);
+    auto *Args = K ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+    if (!Args)
+      return nullptr;
+    for (const MDOperand &Op : Args->operands()) {
+      auto *A = dyn_cast<MDNode>(Op);
+      if (!A || A->getNumOperands() < 2)
+        continue;
+      auto *Tag = dyn_cast<MDString>(A->getOperand(1));
+      auto *Idx = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(0));
+      if (Tag && Idx && Tag->getString() == Key &&
+          Idx->getZExtValue() < F.arg_size())
+        return F.getArg(Idx->getZExtValue());
+    }
+    return nullptr;
+  };
+  SmallVector<AIRKernelParamRequest, 8> Requests;
+  for (const UsedSysVal &USV : UsedSysVals)
+    Requests.push_back({USV.F, USV.Info->MDTag,
+                        USV.Info->IsVector ? Vec3 : I32,
+                        USV.Info->ParamName});
+  AIRKernelParams Params = addKernelParams(M, Requests, Existing);
+  Changed |= !UsedSysVals.empty();
 
-    std::string FName = F.getName().str();
-    F.eraseFromParent();
-    NewF->setName(FName);
+  // The parameters added to kernels, described in !air.kernel: by the code
+  // below, or, pre-baked, here.
+  for (auto &[F, Key, A] : Params.Added) {
+    const SysValParam *Info = nullptr;
+    for (const SysValParam &SV : kSysVals)
+      if (SV.MDTag == Key)
+        Info = &SV;
+    SysValArgs[F].push_back({A->getArgNo(), Info});
+    MDNode *K = KernelNode(*F);
+    auto *Args = K ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+    if (!Args)
+      continue;
+    SmallVector<Metadata *, 8> Ops(Args->operands());
+    Ops.push_back(MDNode::get(
+        Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, A->getArgNo())),
+              MDString::get(Ctx, Info->MDTag),
+              MDString::get(Ctx, kMDArgTypeName),
+              MDString::get(Ctx, Info->IsVector ? "uint3" : "uint"),
+              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, A->getName())}));
+    K->replaceOperandWith(2, MDNode::get(Ctx, Ops));
+  }
 
+  for (UsedSysVal &USV : UsedSysVals) {
+    Function *NewF = Params.get(USV.F);
+    Argument *SysArg = Params.Args[NewF].lookup(USV.Info->MDTag);
     BasicBlock &EntryBB = NewF->getEntryBlock();
-
-    for (UsedSysVal &USV : UsedSysVals) {
-      Argument *SysArg = &*NewArgIt++;
-      SysArg->setName(USV.Info->ParamName);
-      SysValArgs[NewF].push_back({SysArg->getArgNo(), USV.Info});
-
+    {
       if (USV.Info->IsVector) {
         // The components, extracted at the entry only for the calls that
         // return an array (a vector result is the parameter itself, and its
@@ -280,7 +302,7 @@ static bool airSystemValues(Module &M) {
         Value *Components[3] = {};
         auto Component = [&](unsigned K) {
           if (!Components[K]) {
-            IRBuilder<> B(&*EntryBB.begin());
+            IRBuilder<> B(&*EntryBB.getFirstInsertionPt());
             Components[K] = B.CreateExtractElement(
                 SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
           }
@@ -330,8 +352,6 @@ static bool airSystemValues(Module &M) {
         }
       }
     }
-
-    Changed = true;
   }
 
   // Remove unused intrinsic declarations.

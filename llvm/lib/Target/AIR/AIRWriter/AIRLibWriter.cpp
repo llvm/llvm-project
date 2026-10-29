@@ -193,6 +193,24 @@ static std::unique_ptr<Module> cloneSingleKernel(const Module &M,
       F->eraseFromParent();
     }
 
+  // The functions only the other kernels call (and the variables only they
+  // use) are not this kernel's: dropped, a module holds this kernel's code.
+  bool Erased = true;
+  while (Erased) {
+    Erased = false;
+    SmallVector<GlobalValue *, 8> Dead;
+    for (Function &F : *Clone)
+      if (F.hasLocalLinkage() && F.use_empty())
+        Dead.push_back(&F);
+    for (GlobalVariable &GV : Clone->globals())
+      if (GV.hasLocalLinkage() && GV.use_empty())
+        Dead.push_back(&GV);
+    for (GlobalValue *GV : Dead) {
+      GV->eraseFromParent();
+      Erased = true;
+    }
+  }
+
   return Clone;
 }
 

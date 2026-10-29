@@ -1,6 +1,5 @@
-; AIR has no call stack and the AIR target inlines every call: a recursive
-; function is an error, not an endless inlining loop (which ran llc out of
-; memory).
+; AIR has no call stack: a recursive function is an error, not an endless
+; inlining loop (which ran llc out of memory).
 ; RUN: not llc -mtriple=air -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: AIR has no call stack: recursive function 'fact' cannot be compiled
 

@@ -22,6 +22,7 @@ add_llvm_target(AIRCodeGen
   AIREmulateF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp
+  AIRKernelParams.cpp
   LLVMToAIRIntrinsics.cpp
   AIRLowerAtomicRMW.cpp
   AIRLowerFNeg.cpp

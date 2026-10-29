@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// AIR has no call stack: every non-kernel function must be inlined into its
-/// callers before lowering to AIR.
+/// AIR has no call stack (no recursion): the functions kernels call are
+/// inlined, except large ones called from many places, which stay internal
+/// functions called directly (AIRInlineNonKernel.cpp).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -20,8 +21,8 @@
 
 namespace llvm {
 
-/// New-PM pass: inline every call to a defined function (AIR has no call
-/// stack).
+/// New-PM pass: inline the calls to defined functions, keeping the large
+/// ones called from many places as functions.
 class AIRInlineNonKernelPass
     : public RequiredPassInfoMixin<AIRInlineNonKernelPass> {
 public:

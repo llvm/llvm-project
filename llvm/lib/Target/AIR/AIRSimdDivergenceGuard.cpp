@@ -37,6 +37,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRSimdDivergenceGuard.h"
+#include "AIRKernelParams.h"
+#include "llvm/ADT/DenseMap.h"
 #include "AIR.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -54,22 +56,42 @@ using namespace llvm;
 
 #define DEBUG_TYPE "air-simd-divergence-guard"
 
-static bool isSimdGroupCall(const Instruction &I) {
+namespace {
+// The defined functions with SIMD-group calls, in them or in the functions
+// they call: a call of one is a SIMD-group call too.
+using SimdFunctions = DenseMap<const Function *, bool>;
+} // namespace
+
+static bool isSimdGroupCall(const Instruction &I, SimdFunctions &Funcs);
+
+static bool hasSimdGroupCalls(const Function &F, SimdFunctions &Funcs) {
+  if (auto It = Funcs.find(&F); It != Funcs.end())
+    return It->second;
+  Funcs[&F] = false; // (no recursion in AIR)
+  bool Has = any_of(instructions(F), [&](const Instruction &I) {
+    return isSimdGroupCall(I, Funcs);
+  });
+  return Funcs[&F] = Has;
+}
+
+static bool isSimdGroupCall(const Instruction &I, SimdFunctions &Funcs) {
   const auto *CI = dyn_cast<CallInst>(&I);
   if (!CI)
     return false;
   const Function *Callee = CI->getCalledFunction();
   if (!Callee)
     return false;
+  if (!Callee->isDeclaration())
+    return hasSimdGroupCalls(*Callee, Funcs);
   StringRef Name = Callee->getName();
   return Name.starts_with("air.simd_") || Name.starts_with("air.quad_");
 }
 
-static bool guardFunction(Function &F) {
+static bool guardFunction(Function &F, SimdFunctions &Funcs) {
   SmallVector<Instruction *, 8> First;
   for (BasicBlock &BB : F)
     for (Instruction &I : BB)
-      if (isSimdGroupCall(I)) {
+      if (isSimdGroupCall(I, Funcs)) {
         First.push_back(&I);
         break;
       }
@@ -85,10 +107,13 @@ static bool guardFunction(Function &F) {
 
   PostDominatorTree PDT(F);
   const BasicBlock *Entry = &F.getEntryBlock();
+  // A function a kernel calls may be called under a branch: all its blocks
+  // depend on one.
+  bool Called = isCalledFunction(F);
   bool Changed = false;
   for (Instruction *I : First) {
     BasicBlock *BB = I->getParent();
-    if (!OnCycle.count(BB) && PDT.dominates(BB, Entry))
+    if (!Called && !OnCycle.count(BB) && PDT.dominates(BB, Entry))
       continue;
     // Already guarded (the pass ran before).
     if (auto *Prev = dyn_cast_or_null<IntrinsicInst>(I->getPrevNode()))
@@ -137,9 +162,10 @@ static bool voteAllOverActiveThreads(Module &M) {
 
 static bool guardModule(Module &M) {
   bool Changed = voteAllOverActiveThreads(M);
+  SimdFunctions Funcs;
   for (Function &F : M)
     if (!F.isDeclaration())
-      Changed |= guardFunction(F);
+      Changed |= guardFunction(F, Funcs);
   return Changed;
 }
 

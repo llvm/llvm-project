@@ -11,6 +11,8 @@
 #include "llvm/IR/Instructions.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
+#include "AIRKernelParams.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -234,33 +236,28 @@ struct AtomicEmulation {
     return B.CreateIntToPtr(A, Ptr->getType());
   }
 
-  Argument *lockTable(Function *&F) {
-    if (Argument *A = LockTables.lookup(F))
-      return A;
-    SmallVector<Type *, 8> Params(F->getFunctionType()->params());
-    Params.push_back(PointerType::get(Ctx, metal::AS::Device));
-    auto *NewF = Function::Create(
-        FunctionType::get(F->getReturnType(), Params, false), F->getLinkage(),
-        F->getAddressSpace(), "", &M);
-    NewF->copyAttributesFrom(F);
-    NewF->copyMetadata(F, 0);
-    NewF->splice(NewF->begin(), F);
-    for (auto [Old, New] : zip(F->args(), NewF->args())) {
-      New.setName(Old.getName());
-      Old.replaceAllUsesWith(&New);
-    }
-    ValueAsMetadata::handleRAUW(F, NewF);
-    NewF->takeName(F);
-    F->eraseFromParent();
-    F = NewF;
-    Argument *Table = NewF->getArg(Params.size() - 1);
-    Table->setName(kAtomicLockTableName);
-    // A pre-baked !air.kernel describes the parameter; without one
+  // Gives each function with a locked operation (and its callers, up to the
+  // kernels) the lock table as a parameter.
+  void addLockTables(ArrayRef<Instruction *> Locked) {
+    SmallVector<AIRKernelParamRequest, 4> Requests;
+    SmallPtrSet<Function *, 4> Seen;
+    Type *Ptr = PointerType::get(Ctx, metal::AS::Device);
+    for (Instruction *I : Locked)
+      if (Seen.insert(I->getFunction()).second)
+        Requests.push_back({I->getFunction(), kAtomicLockTableName, Ptr,
+                            kAtomicLockTableName});
+    AIRKernelParams Params = addKernelParams(M, Requests);
+    for (auto &[F, Args] : Params.Args)
+      LockTables[F] = Args.lookup(kAtomicLockTableName);
+    // A pre-baked !air.kernel describes the kernel's parameter; without one
     // AIRSystemValues does (at the same location index).
-    if (NamedMDNode *Kernels = M.getNamedMetadata("air.kernel")) {
-      auto C32 = [&](unsigned V) {
-        return ConstantAsMetadata::get(ConstantInt::get(I32, V));
-      };
+    NamedMDNode *Kernels = M.getNamedMetadata("air.kernel");
+    if (!Kernels)
+      return;
+    auto C32 = [&](unsigned V) {
+      return ConstantAsMetadata::get(ConstantInt::get(I32, V));
+    };
+    for (auto &[KF, Key, Table] : Params.Added) {
       MDNode *Arg = MDNode::get(
           Ctx, {C32(Table->getArgNo()), MDString::get(Ctx, "air.buffer"),
                 MDString::get(Ctx, "air.location_index"),
@@ -273,11 +270,11 @@ struct AtomicEmulation {
                 MDString::get(Ctx, "uint"), MDString::get(Ctx, "air.arg_name"),
                 MDString::get(Ctx, kAtomicLockTableName)});
       for (MDNode *K : Kernels->operands()) {
-        auto *KF =
+        auto *F =
             K->getNumOperands() == 3
                 ? mdconst::dyn_extract_or_null<Function>(K->getOperand(0))
                 : nullptr;
-        auto *Args = KF == NewF ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+        auto *Args = F == KF ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
         if (!Args)
           continue;
         SmallVector<Metadata *, 8> Ops(Args->operands());
@@ -285,8 +282,6 @@ struct AtomicEmulation {
         K->replaceOperandWith(2, MDNode::get(Ctx, Ops));
       }
     }
-    LockTables[NewF] = Table;
-    return Table;
   }
 
   // The new value of an emulated operation on Old: an atomicrmw's, or a
@@ -390,9 +385,7 @@ struct AtomicEmulation {
 
     BasicBlock *Entry = I->getParent();
     Function *F = Entry->getParent();
-    // (Before the operands are read: adding the parameter replaces the
-    // function's arguments.)
-    Argument *Table = lockTable(F);
+    Argument *Table = LockTables.lookup(F);
     Value *Ptr = pointerOf(I);
     BasicBlock *Exit = SplitBlock(Entry, I);
     BasicBlock *Loop = BasicBlock::Create(Ctx, "atomiclock.loop", F, Exit);
@@ -509,6 +502,8 @@ struct AtomicEmulation {
       }
     for (Instruction *I : SubWord)
       subWord(I);
+    if (!Locked.empty())
+      addLockTables(Locked);
     for (Instruction *I : Locked)
       locked(I);
     for (AtomicCmpXchgInst *CX : CX32)

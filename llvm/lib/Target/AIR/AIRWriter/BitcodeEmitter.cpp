@@ -39,6 +39,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Allocator.h"
+#include <functional>
 #include <map>
 
 using namespace llvm;
@@ -550,6 +551,51 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
       AttrLists.push_back(std::move(GroupIDs));
       FnAttrListID[&F] = ListID;
       LocalUnnamedFns.insert(&F);
+    }
+
+    // A defined function making such calls, itself or in the functions it
+    // calls, is convergent too: Metal's compiler must not merge or move its
+    // calls across divergent branches either.
+    {
+      DenseMap<const Function *, bool> Convergent;
+      std::function<bool(const Function &)> IsConvergent =
+          [&](const Function &F) -> bool {
+        if (F.isDeclaration()) {
+          StringRef Name = F.getName();
+          return Name.starts_with("air.simd_") ||
+                 Name.starts_with("air.quad_") || Name == "air.wg.barrier" ||
+                 Name == "air.simdgroup.barrier" ||
+                 Name.starts_with("air.simdgroup_matrix_8x8_");
+        }
+        if (auto It = Convergent.find(&F); It != Convergent.end())
+          return It->second;
+        Convergent[&F] = false; // (no recursion in AIR)
+        bool C = false;
+        for (const BasicBlock &BB : F)
+          for (const Instruction &I : BB)
+            if (auto *CB = dyn_cast<CallBase>(&I))
+              if (const Function *Callee = CB->getCalledFunction())
+                C = C || IsConvergent(*Callee);
+        return Convergent[&F] = C;
+      };
+      for (auto &F : M) {
+        bool Called = any_of(F.users(), [](const User *U) {
+          return isa<CallBase>(U);
+        });
+        if (F.isDeclaration() || !Called || !IsConvergent(F))
+          continue;
+        SynthGroup FnG;
+        FnG.Index = ~0u;
+        FnG.EnumKinds.push_back(BK_CONVERGENT);
+        unsigned GID = addSynthGroup(std::move(FnG));
+        auto It = FnAttrListID.find(&F);
+        if (It != FnAttrListID.end()) {
+          AttrLists[It->second - 1].push_back(GID);
+        } else {
+          AttrLists.push_back({GID});
+          FnAttrListID[&F] = AttrLists.size();
+        }
+      }
     }
 
     if (!GroupID.empty() || !SynthGroups.empty()) {

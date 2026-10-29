@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRSplitI64Shuffle.h"
+#include "AIRKernelParams.h"
 #include "AIR.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,8 +45,9 @@ static bool isUniform(Value *V, unsigned Depth = 0) {
     return true;
   if (Depth > 8)
     return false;
+  // (A kernel's buffer; a function the kernel calls may be passed anything.)
   if (auto *A = dyn_cast<Argument>(V))
-    return A->getType()->isPointerTy();
+    return A->getType()->isPointerTy() && !isCalledFunction(*A->getParent());
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return false;
@@ -59,64 +61,14 @@ static bool isUniform(Value *V, unsigned Depth = 0) {
   return false;
 }
 
-// The thread's index in its SIMD-group in F: the kernel's parameter for it
-// when !air.kernel is pre-baked (one is added, with its metadata, when the
-// kernel has none), else a call AIRSystemValues turns into the parameter.
-static Value *simdLane(Function *&F) {
+// The thread's index in its SIMD-group in F: a call AIRSystemValues turns
+// into a parameter (the kernel's, passed down to F when F is a function it
+// calls).
+static Value *simdLane(Function *F) {
   Module &M = *F->getParent();
-  LLVMContext &Ctx = M.getContext();
-  Type *I32 = Type::getInt32Ty(Ctx);
-  MDNode *Kernel = nullptr;
-  if (NamedMDNode *Kernels = M.getNamedMetadata("air.kernel"))
-    for (MDNode *K : Kernels->operands())
-      if (K->getNumOperands() == 3 &&
-          mdconst::dyn_extract_or_null<Function>(K->getOperand(0)) == F)
-        Kernel = K;
-  auto *Args = Kernel ? dyn_cast<MDNode>(Kernel->getOperand(2)) : nullptr;
-  if (!Args) {
-    IRBuilder<> B(&*F->getEntryBlock().getFirstInsertionPt());
-    return B.CreateCall(M.getOrInsertFunction(kSimdlaneName, I32), {},
-                        "simdlane");
-  }
-  for (const MDOperand &Op : Args->operands()) {
-    auto *A = dyn_cast<MDNode>(Op);
-    if (!A || A->getNumOperands() < 2)
-      continue;
-    auto *Tag = dyn_cast<MDString>(A->getOperand(1));
-    auto *Idx = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(0));
-    if (Tag && Idx && Tag->getString() == kSimdlaneName &&
-        Idx->getZExtValue() < F->arg_size())
-      return F->getArg(Idx->getZExtValue());
-  }
-  // Add the parameter, as AIRLegalizeUnsupportedIR adds the dynamic
-  // threadgroup memory one.
-  SmallVector<Type *, 8> Params(F->getFunctionType()->params());
-  Params.push_back(I32);
-  auto *NewF = Function::Create(
-      FunctionType::get(F->getReturnType(), Params, false), F->getLinkage(),
-      F->getAddressSpace(), "", &M);
-  NewF->copyAttributesFrom(F);
-  NewF->copyMetadata(F, 0);
-  NewF->splice(NewF->begin(), F);
-  for (auto [Old, New] : zip(F->args(), NewF->args())) {
-    New.setName(Old.getName());
-    Old.replaceAllUsesWith(&New);
-  }
-  ValueAsMetadata::handleRAUW(F, NewF);
-  NewF->takeName(F);
-  F->eraseFromParent();
-  F = NewF;
-  Argument *Lane = NewF->getArg(Params.size() - 1);
-  Lane->setName("simdlane");
-  SmallVector<Metadata *, 8> Ops(Args->operands());
-  Ops.push_back(MDNode::get(
-      Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, Lane->getArgNo())),
-            MDString::get(Ctx, kSimdlaneName),
-            MDString::get(Ctx, "air.arg_type_name"), MDString::get(Ctx, "uint"),
-            MDString::get(Ctx, "air.arg_name"),
-            MDString::get(Ctx, "simdlane")}));
-  Kernel->replaceOperandWith(2, MDNode::get(Ctx, Ops));
-  return Lane;
+  IRBuilder<> B(&*F->getEntryBlock().getFirstInsertionPt());
+  return B.CreateCall(
+      M.getOrInsertFunction(kSimdlaneName, B.getInt32Ty()), {}, "simdlane");
 }
 
 // Metal takes the delta of air.simd_shuffle_{up,down,xor} (and of the quad
