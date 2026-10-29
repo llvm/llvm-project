@@ -26,7 +26,7 @@ enum PropertyType { INT, STRING, POINTER, UNKNOWN };
 /// (startswith), and logical operators (&&, ||).
 class FilterEvaluator {
   StringRef Expr;
-  DenseMap<StringRef, int64_t> &IntPropertyValues;
+  DenseMap<StringRef, APInt> &IntPropertyValues;
   DenseMap<StringRef, StringRef> &StringPropertyValues;
   DenseMap<StringRef, Value *> &PointerPropertyValues;
   DenseMap<StringRef, PropertyType> &DynamicProperties;
@@ -34,8 +34,7 @@ class FilterEvaluator {
   size_t Pos = 0;
 
 public:
-  FilterEvaluator(StringRef Expr,
-                  DenseMap<StringRef, int64_t> &IntPropertyValues,
+  FilterEvaluator(StringRef Expr, DenseMap<StringRef, APInt> &IntPropertyValues,
                   DenseMap<StringRef, StringRef> &StringPropertyValues,
                   DenseMap<StringRef, Value *> &PointerPropertyValues,
                   DenseMap<StringRef, PropertyType> &DynamicProperties,
@@ -188,7 +187,7 @@ private:
           auto FlagNameIt = FlagNameVals.find(FieldName);
           if (FlagNameIt == FlagNameVals.end())
             return createStringError("Invalid flag '" + FieldName + "'");
-          return ((static_cast<int32_t>(FlagValIt->second) &
+          return ((static_cast<int32_t>(FlagValIt->second.getZExtValue()) &
                    FlagNameIt->second) == FlagNameIt->second) ^
                  LogicalNot;
         }
@@ -243,7 +242,7 @@ private:
     // Check if this is an integer property.
     auto IntIt = IntPropertyValues.find(PropName);
     if (IntIt != IntPropertyValues.end()) {
-      int64_t LHS = IntIt->second;
+      auto LHS = IntIt->second;
 
       // Parse operator.
       enum OpKind { EQ, NE, LT, GT, LE, GE } Op;
@@ -290,10 +289,12 @@ private:
       }
 
       size_t DigitStart = Pos;
+      uint8_t DigitRadix = 10;
 
       // Parse binary literals.
       if (Pos + 1 < Expr.size() && Expr[Pos] == '0' && Expr[Pos + 1] == 'b') {
-        Pos += 2;
+        DigitStart = (Pos += 2);
+        DigitRadix = 2;
         while (Pos < Expr.size() && (Expr[Pos] == '0' || Expr[Pos] == '1'))
           ++Pos;
       } else {
@@ -306,13 +307,11 @@ private:
         return createStringError("expected integer value at position " +
                                  std::to_string(Pos));
 
-      StringRef ValueStr = Expr.slice(Start, Pos);
-      int64_t RHS = 0;
-      if (ValueStr.getAsInteger(0, RHS))
-        return createStringError("invalid integer value '" + ValueStr + "'");
+      StringRef ValueStr = Expr.slice(DigitStart, Pos);
+      APInt RHS(LHS.getBitWidth(), ValueStr, DigitRadix);
 
       if (Negative)
-        RHS = -RHS;
+        RHS.negate();
 
       // Evaluate comparison.
       switch (Op) {
@@ -321,13 +320,13 @@ private:
       case NE:
         return LHS != RHS;
       case LT:
-        return LHS < RHS;
+        return LHS.slt(RHS);
       case GT:
-        return LHS > RHS;
+        return LHS.sgt(RHS);
       case LE:
-        return LHS <= RHS;
+        return LHS.sle(RHS);
       case GE:
-        return LHS >= RHS;
+        return LHS.sge(RHS);
       }
       return true;
     }
@@ -450,7 +449,7 @@ bool llvm::instrumentor::evaluateFilter(Value &V, bool &Changed,
     return true;
 
   // Collect constant property values for filter evaluation.
-  DenseMap<StringRef, int64_t> IntPropertyValues;
+  DenseMap<StringRef, APInt> IntPropertyValues;
   DenseMap<StringRef, StringRef> StringPropertyValues;
   DenseMap<StringRef, Value *> PointerPropertyValues;
   DenseMap<StringRef, PropertyType> DynamicProperties;
@@ -470,7 +469,7 @@ bool llvm::instrumentor::evaluateFilter(Value &V, bool &Changed,
 
     if (auto *CI = dyn_cast<ConstantInt>(ArgValue)) {
       // Check for constant integer values.
-      IntPropertyValues[Arg.Name] = CI->getSExtValue();
+      IntPropertyValues[Arg.Name] = CI->getValue();
     } else if ((Arg.Flags & IRTArg::STRING) && isa<Constant>(ArgValue)) {
       // Check for constant string values (marked with STRING flag).
       if (auto *GV = dyn_cast<GlobalVariable>(ArgValue))

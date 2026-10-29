@@ -1,0 +1,9 @@
+{
+    "instruction_pre": {
+        "compare": {
+            "enabled": true,
+            "filter":"right==0b101||right==-25",
+            "right":true
+        }
+    }
+}
