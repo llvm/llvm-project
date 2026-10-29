@@ -212,14 +212,13 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 }
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
-/// llvm.signext / llvm.zeroext on Extend args (only on call sites, as given by
-/// \p isCallSite, if the extension is not assumed by the callee), adds the
-/// pointer attributes for Indirect args in place of llvm.nofpclass, drops
-/// llvm.noundef from a coerced Direct arg that passes undefined bits, gives
-/// each field of a Direct+canFlatten argument the argument's attributes, and
-/// gives each field of an Expand argument an empty dict.  Direct and Extend
-/// slots keep their other existing attributes.  \p origArgTypes provides the
-/// pre-rewrite type for each arg slot.
+/// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
+/// for Indirect args in place of llvm.nofpclass, drops llvm.noundef from a
+/// coerced Direct arg that passes undefined bits, gives each field of a
+/// Direct+canFlatten argument the argument's attributes, and gives each field
+/// of an Expand argument an empty dict.  Direct and Extend slots keep their
+/// other existing attributes.  \p origArgTypes provides the pre-rewrite type
+/// for each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -249,8 +248,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
       // fields, so each field gets an empty dict.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
-    } else if (ac.kind == ArgKind::Extend &&
-               (isCallSite || !ac.extendOnCallSiteOnly)) {
+    } else if (ac.kind == ArgKind::Extend && (isCallSite || !ac.conservative)) {
       StringRef attrName = ac.signExtend
                                ? mlir::LLVM::LLVMDialect::getSExtAttrName()
                                : mlir::LLVM::LLVMDialect::getZExtAttrName();

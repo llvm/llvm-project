@@ -671,18 +671,15 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   }
   // An extended value is always read from byte 0 of its own storage, so
   // there is no offset to honor here.
-  // A conservative extension is performed by the caller, but the callee does
-  // not get to assume it, so its attribute only goes on call sites.
   if (info.isExtend()) {
-    bool onCallSiteOnly = info.isConservative();
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt(),
-                                          onCallSiteOnly);
+                                          info.isConservative());
     assert((!origTy || isa<cir::IntType>(origTy)) &&
            "the x86_64 classifier only returns Extend for integers and bool");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt(),
-                                        onCallSiteOnly);
+                                        info.isConservative());
   }
   // ArgClassification has no address space for the indirect pointer yet.
   if (info.isIndirectAliased() ||

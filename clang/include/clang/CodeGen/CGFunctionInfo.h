@@ -394,8 +394,9 @@ public:
     return !SignExt && !ZeroExt;
   }
 
-  /// Whether the extension is conservative, i.e. the caller should extend, but
-  /// the callee not assume the extension. Only supported for arguments.
+  /// Whether the extension is conservative, i.e. the sender extends, but the
+  /// receiver does not assume the extension. Currently only supported for
+  /// arguments, i.e. caller extends, but callee does not assume extension.
   bool isConservative() const {
     assert(isExtend() && "Invalid kind");
     return Conservative;
