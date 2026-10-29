@@ -17,6 +17,7 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -423,15 +424,12 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   return run_in_terminal_args;
 }
 
-// Keep all the top level items from the statistics dump, except for the
-// "modules" array. It can be huge and cause delay
+// Copy a top level item from the statistics dump into `out`.
 // Array and dictionary value will return as <key, JSON string> pairs
-static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
+static void GetStatisticValueForKey(const lldb::SBStructuredData data,
                                     const char *key, llvm::json::Object &out) {
   lldb::SBStructuredData value = data.GetValueForKey(key);
   std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (llvm::StringRef(key) == "modules")
-    return;
   switch (value.GetType()) {
   case lldb::eStructuredDataTypeFloat:
     out.try_emplace(key_utf8, value.GetFloatValue());
@@ -466,7 +464,10 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
 }
 
 static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
-  lldb::SBStructuredData statistics = target.GetStatistics();
+  // Skip the module statistics. They can be huge and cause delay.
+  lldb::SBStatisticsOptions options;
+  options.SetIncludeModules(false);
+  lldb::SBStructuredData statistics = target.GetStatistics(options);
   bool is_dictionary =
       statistics.GetType() == lldb::eStructuredDataTypeDictionary;
   if (!is_dictionary)
@@ -478,7 +479,7 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
     return;
   for (size_t i = 0; i < keys.GetSize(); i++) {
     const char *key = keys.GetStringAtIndex(i);
-    FilterAndGetValueForKey(statistics, key, stats_body);
+    GetStatisticValueForKey(statistics, key, stats_body);
   }
   llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
   event.try_emplace("body", std::move(body));
