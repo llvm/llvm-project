@@ -632,6 +632,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_netinet_tcp_macros",
+    hdrs = [
+        "include/llvm-libc-macros/linux/netinet-tcp-macros.h",
+        "include/llvm-libc-macros/netinet-tcp-macros.h",
+    ],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_sys_wait_macros",
     hdrs = [
         "include/llvm-libc-macros/linux/sys-wait-macros.h",
@@ -816,6 +824,17 @@ libc_support_library(
 libc_support_library(
     name = "hdr_netinet_in_macros",
     hdrs = ["hdr/netinet_in_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_netinet_tcp_macros",
+    hdrs = ["hdr/netinet_tcp_macros.h"],
+    deps = select({
+        ":full_build": [
+            ":llvm_libc_macros_netinet_tcp_macros",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(
