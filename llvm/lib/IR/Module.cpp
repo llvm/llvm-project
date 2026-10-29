@@ -733,6 +733,9 @@ DebuggerKind Module::getDebuggerTuning() const {
 }
 
 void Module::setDebuggerTuning(DebuggerKind Tuning) {
+  assert(Tuning != DebuggerKind::Default &&
+         "removing existing flag not handled");
+
   addModuleFlag(ModFlagBehavior::Warning, "debugger-tuning",
                 MDString::get(getContext(), getDebuggerTuningName(Tuning)));
 }
