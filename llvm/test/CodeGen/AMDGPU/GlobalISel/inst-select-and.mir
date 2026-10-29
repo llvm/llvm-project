@@ -472,3 +472,34 @@ body: |
     %6:vcc(s1) = G_AND %4, %5
     S_ENDPGM 0, implicit %6
 ...
+
+---
+
+name:            and_s32_sgpr_sgpr_sgpr_result_reg_class
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    ; WAVE64-LABEL: name: and_s32_sgpr_sgpr_sgpr_result_reg_class
+    ; WAVE64: liveins: $sgpr0, $sgpr1
+    ; WAVE64-NEXT: {{  $}}
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE64-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
+    ;
+    ; WAVE32-LABEL: name: and_s32_sgpr_sgpr_sgpr_result_reg_class
+    ; WAVE32: liveins: $sgpr0, $sgpr1
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sreg_32(s32) = G_AND %0, %1
+    S_ENDPGM 0, implicit %2
+...
