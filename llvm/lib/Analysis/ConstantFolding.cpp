@@ -1942,6 +1942,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_fma_legacy:
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_sin:
+  case Intrinsic::x86_vcvtps2ph_128:
+  case Intrinsic::x86_vcvtps2ph_256:
   // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
@@ -4446,6 +4448,70 @@ static Constant *ConstantFoldFixedVectorCall(
   Type *Ty = FVTy->getElementType();
 
   switch (IntrinsicID) {
+  case Intrinsic::x86_vcvtps2ph_128:
+  case Intrinsic::x86_vcvtps2ph_256: {
+    Constant *SrcVec = Operands[0];
+    auto *Imm = dyn_cast<ConstantInt>(Operands[1]);
+    if (!Imm)
+      return nullptr;
+
+    const auto *SrcVTy = cast<FixedVectorType>(SrcVec->getType());
+    unsigned SrcNumElems = SrcVTy->getNumElements();
+    unsigned DstNumElems = FVTy->getNumElements();
+    const fltSemantics &HalfSem = APFloat::IEEEhalf();
+
+    unsigned ImmVal = Imm->getZExtValue();
+    bool UseMXCSR = (ImmVal & 4) != 0;
+
+    RoundingMode RM;
+    if (!UseMXCSR) {
+      switch (ImmVal & 3) {
+      case 0:
+        RM = RoundingMode::NearestTiesToEven;
+        break;
+      case 1:
+        RM = RoundingMode::TowardNegative;
+        break;
+      case 2:
+        RM = RoundingMode::TowardPositive;
+        break;
+      case 3:
+        RM = RoundingMode::TowardZero;
+        break;
+      default:
+        llvm_unreachable("Invalid immediate rounding mode");
+      }
+    } else {
+      RM = RoundingMode::NearestTiesToEven;
+    }
+
+    for (unsigned I = 0; I < SrcNumElems; ++I) {
+      auto *Elt =
+          dyn_cast_if_present<ConstantFP>(SrcVec->getAggregateElement(I));
+      if (!Elt)
+        return nullptr;
+
+      APFloat SrcVal = Elt->getValueAPF();
+
+      bool LostInfo;
+      APFloat::opStatus St = SrcVal.convert(HalfSem, RM, &LostInfo);
+
+      // With dynamic rounding, only fold conversions that are exact.
+      if (UseMXCSR && St != APFloat::opOK)
+        return nullptr;
+
+      Result[I] = ConstantInt::get(Ty, SrcVal.bitcastToAPInt());
+    }
+
+    // The 128-bit intrinsic zeros the upper four elements of its result.
+    if (DstNumElems > SrcNumElems) {
+      Constant *Zero = ConstantInt::get(Ty, 0);
+      for (unsigned I = SrcNumElems; I < DstNumElems; ++I)
+        Result[I] = Zero;
+    }
+
+    return ConstantVector::get(Result);
+  }
   case Intrinsic::masked_load: {
     auto *SrcPtr = Operands[0];
     auto *Mask = Operands[1];
