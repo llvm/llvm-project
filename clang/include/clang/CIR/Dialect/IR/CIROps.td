@@ -7647,11 +7647,10 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 }
 
 class CIR_ComplexFPBinOp<string mnemonic>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins
+    : CIR_FenvOp<mnemonic, [SameOperandsAndResultType]> {
+  let prepend arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
-    CIR_ComplexOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_ComplexOfFloatType:$rhs
   );
 
   let results = (outs CIR_ComplexOfFloatType:$result);
