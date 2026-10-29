@@ -1,8 +1,11 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan1.3-pixel %s -o - | FileCheck %s --implicit-check-not=OpExtension
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan1.2-pixel %s -o - | FileCheck %s --implicit-check-not=OpExtension
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-pixel %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; SV_PrimitiveID is lowered to a flat load of the PrimitiveId built-in. In a
-; fragment shader it is enabled by the Geometry capability.
+; pixel shader it is enabled by the Geometry capability. Geometry needs no
+; SPIR-V extension in any Vulkan version, so there is no minimum version beyond
+; Vulkan 1.2, the lowest version Clang accepts.
 
 ; CHECK-DAG: OpCapability Geometry
 ; CHECK-DAG: OpDecorate %[[#PRIM:]] BuiltIn PrimitiveId
