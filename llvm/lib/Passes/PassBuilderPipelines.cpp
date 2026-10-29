@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -190,10 +191,6 @@ PipelineTuningOptions::PipelineTuningOptions(
   EagerlyInvalidateAnalyses = Opts.eagerly_invalidate_analyses;
   DevirtualizeSpeculatively = Opts.enable_devirtualize_speculatively;
 }
-
-namespace llvm {
-extern cl::opt<unsigned> MaxDevirtIterations;
-} // namespace llvm
 
 void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
                                             OptimizationLevel Level) {
@@ -868,7 +865,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   ModuleInlinerWrapperPass MIWP(IP, Opts.mandatory_inlining_first,
                                 InlineContext{Phase, InlinePass::CGSCCInliner},
-                                Opts.enable_ml_inliner, MaxDevirtIterations);
+                                Opts.enable_ml_inliner,
+                                getMaxDevirtIterations(Context));
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.

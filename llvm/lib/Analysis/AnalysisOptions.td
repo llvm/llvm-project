@@ -44,6 +44,24 @@ defm : BoolField<"basic-aa-separate-storage", "true", "">;
 // BlockFrequencyInfo.cpp
 defm : BoolField<"print-bfi", "false",
   "Print the block frequency info">;
+defm : ValueField<"view-bfi-func-name", "StringRef", "",
+  "The option to specify the name of the function whose CFG will be displayed">;
+defm : ValueField<"view-hot-freq-percent", "unsigned", "10",
+  "An integer in percent used to specify the hot blocks/edges to be displayed in red: a block or edge whose frequency is no less than the max frequency of the function multiplied by this percent">;
+defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "PGOVCT_None",
+  "none,graph,text",
+  ["PGOVCT_None", "PGOVCT_Graph", "PGOVCT_Text"],
+  "A boolean option to show CFG dag or text with block profile counts and branch probabilities right after PGO profile annotation step. The profile counts are computed using branch probabilities from the runtime profile data and block frequency propagation algorithm. To view the raw counts from the profile, use option -pgo-view-raw-counts instead. To limit graph display to only one function, use filtering option -view-bfi-func-name">;
+defm : ValueField<"print-bfi-func-name", "StringRef", "",
+  "The option to specify the name of the function whose block frequency info is printed">;
+
+// BlockFrequencyInfoImpl.cpp
+defm : BoolField<"check-bfi-unknown-block-queries", "false",
+  "Check if block frequency is queried for an unknown block for debugging missed BFI updates">;
+defm : ValueField<"iterative-bfi-max-iterations-per-block", "unsigned", "1000",
+  "Iterative inference: maximum number of update iterations per block">;
+defm : ValueField<"iterative-bfi-precision", "double", "1e-12",
+  "Iterative inference: delta convergence precision; smaller values typically lead to better results at the cost of worsen runtime">;
 
 // BranchProbabilityInfo.cpp
 defm : BoolField<"print-bpi", "false",
@@ -70,6 +88,9 @@ defm : BoolField<"cfg-weights", "false",
 // CGSCCPassManager.cpp
 defm : BoolField<"abort-on-max-devirt-iterations-reached", "false",
   "Abort when the max iterations for devirtualization CGSCC repeat pass is reached">;
+
+// CallGraphSCCPass.cpp
+defm : ValueField<"max-devirt-iterations", "unsigned", "4", "">;
 
 // CallPrinter.cpp
 defm : ValueField<"callgraph-dot-filename-prefix", "StringRef", "",
@@ -143,6 +164,8 @@ defm : BoolField<"enable-unsafe-globalsmodref-alias-results", "false", "">;
 // IndirectCallPromotionAnalysis.cpp
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.
+defm : ValueField<"icp-max-num-vtables", "unsigned", "6",
+  "Max number of vtables annotated for a vtable load instruction">;
 defm : ValueField<"icp-max-prom", "unsigned", "3",
   "Max number of promotions for a single indirect call callsite">;
 // Set the minimum absolute count threshold for indirect call promotion.
@@ -320,12 +343,23 @@ defm : EnumField<"force-summary-edges-cold", "ForceSummaryHotness", "ForceSummar
   "Force all edges in the function summary to cold">;
 defm : ValueField<"module-summary-dot-file", "StringRef", "",
   "File to emit dot graph of new summary into">;
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+defm : ValueField<"module-summary-max-indirect-edges", "unsigned", "0",
+  "Max number of summary edges added from indirect call profile metadata">;
 
 // PHITransAddr.cpp
 defm : BoolField<"gvn-add-phi-translation", "false",
   "Enable phi-translation of add instructions">;
 
 // ProfileSummaryInfo.cpp
+defm : BoolField<"scale-partial-sample-profile-working-set-size", "true",
+  "If true, scale the working set size of the partial sample profile by the partial profile ratio to reflect the size of the program being compiled">;
 defm : BoolField<"partial-profile", "false",
   "Specify the current profile is used as a partial profile">;
 defm : ValueField<"partial-sample-profile-working-set-size-scale-factor", "double", "0.008",
@@ -379,6 +413,16 @@ defm : BoolField<"verify-scev-strict", "false",
 defm : ValueField<"stack-safety-max-iterations", "int", "20", "">;
 defm : BoolField<"stack-safety-print", "false", "">;
 defm : BoolField<"stack-safety-run", "false", "">;
+
+// StaticDataProfileInfo.cpp
+// FIXME: This option is added for incremental rollout purposes.
+// After the option, string literal partitioning should be implied by
+// AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
+// cleaned up.
+defm : BoolField<"memprof-annotate-string-literal-section-prefix", "true",
+  "If true, annotate the string literal data section prefix">;
+defm : BoolField<"preserve-hot-data-section-prefix", "true",
+  "If true, hot data section prefixes are preserved">;
 
 // VectorUtils.cpp
 // Maximum factor for an interleaved memory access.

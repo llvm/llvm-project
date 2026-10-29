@@ -47,48 +47,23 @@ static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
                                                "profile count if available.")));
 
-namespace llvm {
-cl::opt<std::string>
-    ViewBlockFreqFuncName("view-bfi-func-name", cl::Hidden,
-                          cl::desc("The option to specify "
-                                   "the name of the function "
-                                   "whose CFG will be displayed."));
-
-cl::opt<unsigned>
-    ViewHotFreqPercent("view-hot-freq-percent", cl::init(10), cl::Hidden,
-                       cl::desc("An integer in percent used to specify "
-                                "the hot blocks/edges to be displayed "
-                                "in red: a block or edge whose frequency "
-                                "is no less than the max frequency of the "
-                                "function multiplied by this percent."));
-
-// Command line option to turn on CFG dot or text dump after profile annotation.
-cl::opt<PGOViewCountsType> PGOViewCounts(
-    "pgo-view-counts", cl::Hidden,
-    cl::desc("A boolean option to show CFG dag or text with "
-             "block profile counts and branch probabilities "
-             "right after PGO profile annotation step. The "
-             "profile counts are computed using branch "
-             "probabilities from the runtime profile data and "
-             "block frequency propagation algorithm. To view "
-             "the raw counts from the profile, use option "
-             "-pgo-view-raw-counts instead. To limit graph "
-             "display to only one function, use filtering option "
-             "-view-bfi-func-name."),
-    cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
-               clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
-               clEnumValN(PGOVCT_Text, "text", "show in text.")));
-
-cl::opt<std::string>
-    PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
-                     cl::desc("The option to specify the name of the function "
-                              "whose block frequency info is printed."));
-} // namespace llvm
+StringRef llvm::getViewBlockFreqFuncName(const LLVMContext &C) {
+  return getAnalysisOptions(C).view_bfi_func_name;
+}
+unsigned llvm::getViewHotFreqPercent(const LLVMContext &C) {
+  return getAnalysisOptions(C).view_hot_freq_percent;
+}
+PGOViewCountsType llvm::getPGOViewCounts(const LLVMContext &C) {
+  return getAnalysisOptions(C).pgo_view_counts;
+}
+StringRef llvm::getPrintBFIFuncName(const LLVMContext &C) {
+  return getAnalysisOptions(C).print_bfi_func_name;
+}
 
 namespace llvm {
 
-static GVDAGType getGVDT() {
-  if (PGOViewCounts == PGOVCT_Graph)
+static GVDAGType getGVDT(const LLVMContext &C) {
+  if (getPGOViewCounts(C) == PGOVCT_Graph)
     return GVDT_Count;
   return ViewBlockFreqPropagationDAG;
 }
@@ -129,19 +104,21 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
   std::string getNodeLabel(const BasicBlock *Node,
                            const BlockFrequencyInfo *Graph) {
 
-    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph, getGVDT());
+    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph,
+                                           getGVDT(Node->getContext()));
   }
 
   std::string getNodeAttributes(const BasicBlock *Node,
                                 const BlockFrequencyInfo *Graph) {
-    return BFIDOTGTraitsBase::getNodeAttributes(Node, Graph,
-                                                ViewHotFreqPercent);
+    return BFIDOTGTraitsBase::getNodeAttributes(
+        Node, Graph, getViewHotFreqPercent(Node->getContext()));
   }
 
   std::string getEdgeAttributes(const BasicBlock *Node, EdgeIter EI,
                                 const BlockFrequencyInfo *BFI) {
-    return BFIDOTGTraitsBase::getEdgeAttributes(Node, EI, BFI, BFI->getBPI(),
-                                                ViewHotFreqPercent);
+    return BFIDOTGTraitsBase::getEdgeAttributes(
+        Node, EI, BFI, BFI->getBPI(),
+        getViewHotFreqPercent(Node->getContext()));
   }
 };
 
@@ -185,12 +162,14 @@ void BlockFrequencyInfo::calculate(const Function &F,
   if (!BFI)
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, CI);
+  const AnalysisOptions &Opts = getAnalysisOptions(F);
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
+      (Opts.view_bfi_func_name.empty() ||
+       F.getName() == Opts.view_bfi_func_name)) {
     view();
   }
-  if (getAnalysisOptions(F).print_bfi &&
-      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
+  if (Opts.print_bfi && (Opts.print_bfi_func_name.empty() ||
+                         F.getName() == Opts.print_bfi_func_name)) {
     print(dbgs());
   }
 }

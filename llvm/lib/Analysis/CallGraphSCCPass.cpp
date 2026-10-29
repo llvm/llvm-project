@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,10 +43,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cgscc-passmgr"
 
-namespace llvm {
-cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
-                                      cl::init(4));
-} // namespace llvm
+unsigned llvm::getMaxDevirtIterations(const LLVMContext &C) {
+  return getAnalysisOptions(C).max_devirt_iterations;
+}
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 
@@ -497,6 +496,8 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
 /// Execute all of the passes scheduled for execution.  Keep track of
 /// whether any of the passes modifies the module, and if so, return true.
 bool CGPassManager::runOnModule(Module &M) {
+  const unsigned MaxDevirtIterations =
+      getAnalysisOptions(M).max_devirt_iterations;
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   bool Changed = doInitialization(CG);
 

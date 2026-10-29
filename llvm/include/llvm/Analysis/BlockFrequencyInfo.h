@@ -27,11 +27,21 @@ namespace llvm {
 class BasicBlock;
 class BranchProbabilityInfo;
 class CycleInfo;
+class LLVMContext;
 class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
 enum PGOViewCountsType { PGOVCT_None, PGOVCT_Graph, PGOVCT_Text };
+
+/// Return -view-bfi-func-name.
+LLVM_ABI StringRef getViewBlockFreqFuncName(const LLVMContext &C);
+/// Return -view-hot-freq-percent.
+LLVM_ABI unsigned getViewHotFreqPercent(const LLVMContext &C);
+/// Return -pgo-view-counts.
+LLVM_ABI PGOViewCountsType getPGOViewCounts(const LLVMContext &C);
+/// Return -print-bfi-func-name.
+LLVM_ABI StringRef getPrintBFIFuncName(const LLVMContext &C);
 
 /// BlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation to
 /// estimate IR basic block frequencies.

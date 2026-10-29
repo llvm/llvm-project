@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_ANALYSIS_ANALYSISOPTIONS_H
 #define LLVM_LIB_ANALYSIS_ANALYSISOPTIONS_H
 
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include <optional>

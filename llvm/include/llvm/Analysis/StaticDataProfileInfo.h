@@ -13,6 +13,13 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
+
+/// Return -preserve-hot-data-section-prefix.
+LLVM_ABI bool shouldPreserveHotDataSectionPrefix(const LLVMContext &C);
+/// Return -memprof-annotate-string-literal-section-prefix.
+LLVM_ABI bool shouldAnnotateStringLiteralSectionPrefix(const LLVMContext &C);
+
 namespace memprof {
 // Represents the eligibility status of a global variable for section prefix
 // annotation. Other than AnnotationOk, each enum value indicates a specific
@@ -70,11 +77,12 @@ public:
   /// Return the string representation of the hotness enum \p Hotness.
   LLVM_ABI StringRef hotnessToStr(StaticDataHotness Hotness) const;
 
+  const AnalysisOptions &Opts;
   bool EnableDataAccessProf = false;
 
 public:
-  StaticDataProfileInfo(bool EnableDataAccessProf)
-      : EnableDataAccessProf(EnableDataAccessProf) {}
+  StaticDataProfileInfo(const AnalysisOptions &Opts, bool EnableDataAccessProf)
+      : Opts(Opts), EnableDataAccessProf(EnableDataAccessProf) {}
 
   /// If \p Count is not nullopt, add it to the profile count of the constant \p
   /// C in a saturating way, and clamp the count to \p getInstrMaxCountValue if

@@ -63,6 +63,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -167,16 +168,6 @@ cl::opt<bool>
     NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false), cl::Hidden,
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
-
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
-// Command line option to turn on CFG dot dump after profile annotation.
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
-extern cl::opt<PGOViewCountsType> PGOViewCounts;
-
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
@@ -1728,11 +1719,12 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
 }
 
 static uint32_t getMaxNumAnnotations(const InstrumentationOptions &Opts,
+                                     const LLVMContext &C,
                                      InstrProfValueKind ValueProfKind) {
   if (ValueProfKind == IPVK_MemOPSize)
     return Opts.memop_max_annotations;
   if (ValueProfKind == llvm::IPVK_VTableTarget)
-    return MaxNumVTableAnnotations;
+    return getMaxNumVTableAnnotations(C);
   return Opts.icp_max_annotations;
 }
 
@@ -1763,7 +1755,7 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   // TODO: Remove this if/when -enable-vtable-value-profiling is on by default.
   if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
       NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
-      MaxNumVTableAnnotations != 0)
+      getMaxNumVTableAnnotations(M->getContext()) != 0)
     FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
   auto &ValueSites = FuncInfo.ValueSites[Kind];
   if (NumValueSites != ValueSites.size()) {
@@ -1785,7 +1777,8 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     annotateValueSite(
         *M, *I.AnnotatedInst, ProfileRecord,
         static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
-        getMaxNumAnnotations(Opts, static_cast<InstrProfValueKind>(Kind)));
+        getMaxNumAnnotations(Opts, M->getContext(),
+                             static_cast<InstrProfValueKind>(Kind)));
     ValueSiteIndex++;
   }
 }
@@ -2172,27 +2165,27 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-    if (PGOViewCounts != PGOVCT_None &&
-        (ViewBlockFreqFuncName.empty() ||
-         F.getName() == ViewBlockFreqFuncName)) {
+    PGOViewCountsType ViewCounts = getPGOViewCounts(F.getContext());
+    StringRef ViewFuncName = getViewBlockFreqFuncName(F.getContext());
+    if (ViewCounts != PGOVCT_None &&
+        (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
       CycleInfo CI;
       CI.compute(F);
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, CI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
           std::make_unique<BlockFrequencyInfo>(F, *NewBPI, CI);
-      if (PGOViewCounts == PGOVCT_Graph)
+      if (ViewCounts == PGOVCT_Graph)
         NewBFI->view();
-      else if (PGOViewCounts == PGOVCT_Text) {
+      else if (ViewCounts == PGOVCT_Text) {
         dbgs() << "pgo-view-counts: " << Func.getFunc().getName() << "\n";
         NewBFI->print(dbgs());
       }
     }
     if (Opts.pgo_view_raw_counts != PGOVCT_None &&
-        (ViewBlockFreqFuncName.empty() ||
-         F.getName() == ViewBlockFreqFuncName)) {
+        (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
       if (Opts.pgo_view_raw_counts == PGOVCT_Graph)
-        if (ViewBlockFreqFuncName.empty())
+        if (ViewFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
         else
           ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());

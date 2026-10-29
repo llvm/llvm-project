@@ -154,8 +154,7 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    // and this value will be populated in the var VocabFile
-    if (VocabFile.empty()) {
+    if (ir2vec::getVocabFile().empty()) {
       return createStringError(
           errc::invalid_argument,
           "IR2Vec vocabulary file path not specified; "
@@ -163,7 +162,8 @@ static Error processModule(Module &M, raw_ostream &OS) {
     }
 
     std::shared_ptr<Vocabulary> Vocab;
-    if (auto Err = ir2vec::loadVocabulary(VocabFile).moveInto(Vocab))
+    if (auto Err =
+            ir2vec::loadVocabulary(ir2vec::getVocabFile()).moveInto(Vocab))
       return Err;
     if (auto Err = Tool.setVocabulary(std::move(Vocab)))
       return Err;

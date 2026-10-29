@@ -30,7 +30,11 @@ namespace llvm {
 class CallGraph;
 class CallGraphNode;
 class CallGraphSCC;
+class LLVMContext;
 class PMStack;
+
+/// Return -max-devirt-iterations.
+LLVM_ABI unsigned getMaxDevirtIterations(const LLVMContext &C);
 
 class LLVM_ABI CallGraphSCCPass : public Pass {
 public:

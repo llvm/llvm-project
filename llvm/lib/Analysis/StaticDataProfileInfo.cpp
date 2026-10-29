@@ -1,4 +1,5 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -12,19 +13,14 @@
 
 using namespace llvm;
 
-cl::opt<bool> PreserveHotDataSectionPrefix(
-    "preserve-hot-data-section-prefix", cl::Hidden, cl::init(true),
-    cl::desc("If true, hot data section prefixes are preserved"));
-
 namespace llvm {
-// FIXME: This option is added for incremental rollout purposes.
-// After the option, string literal partitioning should be implied by
-// AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
-// cleaned up.
-cl::opt<bool> AnnotateStringLiteralSectionPrefix(
-    "memprof-annotate-string-literal-section-prefix", cl::init(true),
-    cl::Hidden,
-    cl::desc("If true, annotate the string literal data section prefix"));
+bool shouldPreserveHotDataSectionPrefix(const LLVMContext &C) {
+  return getAnalysisOptions(C).preserve_hot_data_section_prefix;
+}
+bool shouldAnnotateStringLiteralSectionPrefix(const LLVMContext &C) {
+  return getAnalysisOptions(C).memprof_annotate_string_literal_section_prefix;
+}
+
 namespace memprof {
 // Returns true iff the global variable has custom section either by
 // __attribute__((section("name")))
@@ -112,7 +108,7 @@ StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
   case StaticDataHotness::Cold:
     return "unlikely";
   case StaticDataHotness::Hot:
-    return PreserveHotDataSectionPrefix ? "hot" : "";
+    return Opts.preserve_hot_data_section_prefix ? "hot" : "";
   default:
     return "";
   }
@@ -145,7 +141,7 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     // cold pages.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && llvm::memprof::IsAnnotationOK(*GV) &&
-        (AnnotateStringLiteralSectionPrefix ||
+        (Opts.memprof_annotate_string_literal_section_prefix ||
          !GV->getName().starts_with(".str"))) {
       // Note a global var is covered by data access profiles iff the
       // symbol name is preserved in the symbol table; most notably, a string
@@ -199,7 +195,8 @@ computeStaticDataProfileInfo(Module &M) {
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableDataAccessProf")))
     EnableDataAccessProf = MD->getZExtValue();
-  return std::make_unique<StaticDataProfileInfo>(EnableDataAccessProf);
+  return std::make_unique<StaticDataProfileInfo>(getAnalysisOptions(M),
+                                                 EnableDataAccessProf);
 }
 
 bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
