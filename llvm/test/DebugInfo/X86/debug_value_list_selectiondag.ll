@@ -23,10 +23,10 @@
 ; FAST-DAG: DBG_VALUE $noreg, $noreg, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
 ; FAST: DBG_VALUE $noreg, $noreg, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
 ; FAST: DBG_VALUE $noreg, $noreg, [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), debug-location
-; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
-; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
-; GLOBAL: DBG_VALUE $noreg, 0, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
-; GLOBAL: DBG_VALUE $noreg, 0, [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), debug-location
+; GLOBAL-DAG: DBG_VALUE_LIST [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %0, debug-location
+; GLOBAL-DAG: DBG_VALUE_LIST [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %1, debug-location
+; GLOBAL: DBG_VALUE_LIST [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %0, %1, debug-location
+; GLOBAL: DBG_VALUE_LIST [[D_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le), %0, %1, debug-location
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27034"

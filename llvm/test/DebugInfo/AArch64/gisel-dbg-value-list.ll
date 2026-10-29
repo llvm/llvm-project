@@ -3,27 +3,28 @@
 ; RUN: llc -O2 -mtriple=aarch64-unknown-linux-gnu -global-isel -filetype=obj %s -o - \
 ; RUN:   | llvm-dwarfdump --name=sum --name=wsum - | FileCheck %s --check-prefix=DWARF
 
-; Variadic dbg_values are currently dropped by GlobalISel: the IRTranslator
-; emits an undef DBG_VALUE and no DWARF location is produced.
+; Check that a variadic dbg_value lowered by GlobalISel survives as a
+; DBG_VALUE_LIST through legalization, register bank selection and
+; instruction selection, and produces a DWARF location.
 
 ; MIR-LABEL: name: f
 ; MIR:       [[A:%[0-9]+]]:gpr32 = COPY $w0
 ; MIR:       [[B:%[0-9]+]]:gpr32 = COPY $w1
-; MIR:       DBG_VALUE $noreg, 0, ![[SUM:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)
+; MIR:       DBG_VALUE_LIST ![[SUM:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[A]], [[B]]
 
 ; MIR-LABEL: name: g
 ; MIR:       [[X:%[0-9]+]]:gpr32 = COPY $w0
 ; MIR:       [[Y:%[0-9]+]]:gpr32 = COPY $w1
-; MIR:       DBG_VALUE $noreg, 0, ![[WSUM:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)
+; MIR:       DBG_VALUE_LIST ![[WSUM:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_plus, DW_OP_stack_value), [[X]], [[Y]]
 
 ; DWARF:      DW_TAG_variable
-; DWARF-NOT:    DW_AT_location
+; DWARF:        DW_AT_location
+; DWARF-NEXT:     DW_OP_breg0 W0+0, DW_OP_breg1 W1+0, DW_OP_plus, DW_OP_stack_value
 ; DWARF:        DW_AT_name ("sum")
-; DWARF-NOT:    DW_AT_location
 ; DWARF:      DW_TAG_variable
-; DWARF-NOT:    DW_AT_location
+; DWARF:        DW_AT_location
+; DWARF-NEXT:     DW_OP_breg0 W0+0, DW_OP_convert {{.*}}, DW_OP_convert {{.*}}, DW_OP_breg1 W1+0, DW_OP_convert {{.*}}, DW_OP_convert {{.*}}, DW_OP_plus, DW_OP_stack_value
 ; DWARF:        DW_AT_name ("wsum")
-; DWARF-NOT:    DW_AT_location
 
 define i32 @f(i32 %a, i32 %b) !dbg !5 {
 entry:

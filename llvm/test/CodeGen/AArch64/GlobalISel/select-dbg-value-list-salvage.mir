@@ -40,7 +40,7 @@ body: |
     ; CHECK: liveins: $w1, $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 1, column: 1, scope: !4)
+    ; CHECK-NEXT: DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $x0, [[COPY]], debug-location !DILocation(line: 1, column: 1, scope: !4)
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(i64) = COPY $x0
@@ -60,7 +60,7 @@ body: |
     ; CHECK-LABEL: name: list_trunc_twice
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 2, column: 1, scope: !6)
+    ; CHECK-NEXT: DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_mul, DW_OP_stack_value), $x0, $x0, debug-location !DILocation(line: 2, column: 1, scope: !6)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(i64) = COPY $x0
     %1:gpr(i32) = G_TRUNC %0(i64)
