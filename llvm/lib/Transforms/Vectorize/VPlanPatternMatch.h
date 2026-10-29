@@ -823,11 +823,6 @@ m_Cmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
       Pred, Op0, Op1);
 }
 
-inline auto m_Cmp() {
-  return m_CombineOr(m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()),
-                     m_Binary<Instruction::FCmp>(m_VPValue(), m_VPValue()));
-}
-
 template <typename Op0_t, typename Op1_t>
 inline SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
 m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {

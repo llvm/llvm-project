@@ -6555,11 +6555,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          *find_if(PhiR->users(),
-                   match_fn(m_CombineOr(
-                       m_Select(m_Cmp(), m_VPValue(), m_Specific(PhiR)),
-                       m_Select(m_Cmp(), m_Specific(PhiR), m_VPValue())))));
+      auto *AnyOfSelect = findSingletonUser<VPSingleDefRecipe>(
+          PhiR,
+          m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
