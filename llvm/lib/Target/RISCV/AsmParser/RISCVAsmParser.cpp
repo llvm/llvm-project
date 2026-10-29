@@ -119,6 +119,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   MCRegister matchRegisterNameHelper(StringRef Name) const;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  bool parseCFIRegister(int64_t &DwarfReg, SMLoc &StartLoc,
+                        SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
@@ -195,6 +197,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   // Check instruction constraints.
   bool validateInstruction(MCInst &Inst, OperandVector &Operands);
+
+  // Check that the system register referred to as Name at Loc is available on
+  // the current subtarget, and warn if Name is deprecated. Returns true on
+  // error.
+  bool validateSysReg(const RISCVSysReg::SysReg &SysReg, StringRef Name,
+                      SMLoc Loc);
 
   /// Helper for processing MC instructions that have been successfully matched
   /// by matchAndEmitInstruction. Modifications to the emitted instructions,
@@ -1896,6 +1904,26 @@ bool RISCVAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return false;
 }
 
+bool RISCVAsmParser::parseCFIRegister(int64_t &DwarfReg, SMLoc &StartLoc,
+                                      SMLoc &EndLoc) {
+  if (getLexer().is(AsmToken::Identifier)) {
+    const AsmToken &Tok = getParser().getTok();
+    StringRef Name = Tok.getIdentifier();
+    if (const auto *SysReg = RISCVSysReg::lookupSysRegByName(Name)) {
+      if (validateSysReg(*SysReg, Name, Tok.getLoc()))
+        return true;
+      // RISC-V DWARF register numbers for CSRs start at 4096.
+      constexpr int64_t FirstCSRDwarfReg = 4096;
+      DwarfReg = FirstCSRDwarfReg + SysReg->Encoding;
+      StartLoc = Tok.getLoc();
+      EndLoc = Tok.getEndLoc();
+      getParser().Lex();
+      return false;
+    }
+  }
+  return MCTargetAsmParser::parseCFIRegister(DwarfReg, StartLoc, EndLoc);
+}
+
 ParseStatus RISCVAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                              SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
@@ -2074,6 +2102,44 @@ ParseStatus RISCVAsmParser::parseInsnCDirectiveOpcode(OperandVector &Operands) {
       "opcode must be a valid opcode name or an immediate in the range");
 }
 
+bool RISCVAsmParser::validateSysReg(const RISCVSysReg::SysReg &SysReg,
+                                    StringRef Name, SMLoc Loc) {
+  if (SysReg.IsDeprecatedName) {
+    // Lookup the undeprecated name.
+    auto Range = RISCVSysReg::lookupSysRegByEncoding(SysReg.Encoding);
+    for (auto &Reg : Range) {
+      if (Reg.IsAltName || Reg.IsDeprecatedName)
+        continue;
+      Warning(Loc, "'" + Name + "' is a deprecated alias for '" +
+                       RISCVSysReg::getSysRegStr(Reg.Name) + "'");
+    }
+  }
+
+  // Accept a named Sys Reg if the required features are present.
+  const auto &FeatureBits = getSTI().getFeatureBits();
+  const auto &AllFeatures = getSTI().getAllProcessorFeatures();
+  if (!SysReg.haveRequiredFeatures(FeatureBits)) {
+    const auto *Feature = llvm::find_if(AllFeatures, [&](const auto &Feature) {
+      return SysReg.FeaturesRequired[Feature.Value];
+    });
+    std::string ErrorMsg = std::string("system register '") +
+                           std::string(RISCVSysReg::getSysRegStr(SysReg.Name)) +
+                           "' ";
+    if (SysReg.IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
+      ErrorMsg += "is RV32 only";
+      if (Feature != std::end(AllFeatures))
+        ErrorMsg += " and ";
+    }
+    if (Feature != std::end(AllFeatures)) {
+      ErrorMsg +=
+          "requires '" + std::string(Feature->key()) + "' to be enabled";
+    }
+
+    return Error(Loc, ErrorMsg);
+  }
+  return false;
+}
+
 ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Res;
@@ -2128,40 +2194,8 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     const auto *SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
 
     if (SysReg) {
-      if (SysReg->IsDeprecatedName) {
-        // Lookup the undeprecated name.
-        auto Range = RISCVSysReg::lookupSysRegByEncoding(SysReg->Encoding);
-        for (auto &Reg : Range) {
-          if (Reg.IsAltName || Reg.IsDeprecatedName)
-            continue;
-          Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
-                         RISCVSysReg::getSysRegStr(Reg.Name) + "'");
-        }
-      }
-
-      // Accept a named Sys Reg if the required features are present.
-      const auto &FeatureBits = getSTI().getFeatureBits();
-      const auto &AllFeatures = getSTI().getAllProcessorFeatures();
-      if (!SysReg->haveRequiredFeatures(FeatureBits)) {
-        const auto *Feature =
-            llvm::find_if(AllFeatures, [&](const auto &Feature) {
-              return SysReg->FeaturesRequired[Feature.Value];
-            });
-        std::string ErrorMsg =
-            std::string("system register '") +
-            std::string(RISCVSysReg::getSysRegStr(SysReg->Name)) + "' ";
-        if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
-          ErrorMsg += "is RV32 only";
-          if (Feature != std::end(AllFeatures))
-            ErrorMsg += " and ";
-        }
-        if (Feature != std::end(AllFeatures)) {
-          ErrorMsg +=
-              "requires '" + std::string(Feature->key()) + "' to be enabled";
-        }
-
-        return Error(S, ErrorMsg);
-      }
+      if (validateSysReg(*SysReg, Identifier, S))
+        return ParseStatus::Failure;
       Operands.push_back(
           RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return ParseStatus::Success;

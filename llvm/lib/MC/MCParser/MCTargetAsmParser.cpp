@@ -10,6 +10,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
 using namespace llvm;
 
@@ -32,6 +33,15 @@ MCSubtargetInfo &MCTargetAsmParser::copySTI() {
 
 const MCSubtargetInfo &MCTargetAsmParser::getSTI() const {
   return *STI;
+}
+
+bool MCTargetAsmParser::parseCFIRegister(int64_t &DwarfReg, SMLoc &StartLoc,
+                                         SMLoc &EndLoc) {
+  MCRegister Reg;
+  if (parseRegister(Reg, StartLoc, EndLoc))
+    return true;
+  DwarfReg = getContext().getRegisterInfo()->getDwarfRegNum(Reg, true);
+  return false;
 }
 
 ParseStatus MCTargetAsmParser::parseDirective(AsmToken DirectiveID) {
