@@ -51,7 +51,7 @@ void UncheckedExpectedAccessCheck::check(
   if (FuncDecl->isTemplated())
     return;
 
-  UncheckedExpectedAccessDiagnoser Diagnoser;
+  UncheckedExpectedAccessDiagnoser Diagnoser(ModelOptions);
   if (llvm::Expected<SmallVector<UncheckedExpectedAccessDiagnostic>> Diags =
           dataflow::diagnoseFunction<UncheckedExpectedAccessModel,
                                      UncheckedExpectedAccessDiagnostic>(

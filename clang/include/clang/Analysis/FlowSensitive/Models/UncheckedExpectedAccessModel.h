@@ -68,11 +68,17 @@ struct UncheckedExpectedAccessDiagnostic {
   llvm::StringRef TypeName;
 };
 
+struct UncheckedExpectedAccessModelOptions {
+  /// In generating diagnostics, ignore calls to `expected::value()`.
+  bool IgnoreValueCalls = false;
+};
+
 /// Reports accesses to the value (or error) of expected objects that are not
 /// provably preceded by a check that the object holds a value (or error).
 class UncheckedExpectedAccessDiagnoser {
 public:
-  UncheckedExpectedAccessDiagnoser();
+  UncheckedExpectedAccessDiagnoser(
+      UncheckedExpectedAccessModelOptions Options = {});
 
   llvm::SmallVector<UncheckedExpectedAccessDiagnostic>
   operator()(const CFGElement &Elt, ASTContext &Ctx,

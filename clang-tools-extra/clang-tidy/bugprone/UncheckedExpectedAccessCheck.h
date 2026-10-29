@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNCHECKEDEXPECTEDACCESSCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/Analysis/FlowSensitive/Models/UncheckedExpectedAccessModel.h"
 
 namespace clang::tidy::bugprone {
 
@@ -22,7 +23,8 @@ namespace clang::tidy::bugprone {
 class UncheckedExpectedAccessCheck : public ClangTidyCheck {
 public:
   UncheckedExpectedAccessCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        ModelOptions{Options.get("IgnoreValueCalls", false)} {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   // TODO: Consider limiting to C++23 and later
@@ -30,6 +32,12 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "IgnoreValueCalls", ModelOptions.IgnoreValueCalls);
+  }
+
+private:
+  dataflow::UncheckedExpectedAccessModelOptions ModelOptions;
 };
 
 } // namespace clang::tidy::bugprone

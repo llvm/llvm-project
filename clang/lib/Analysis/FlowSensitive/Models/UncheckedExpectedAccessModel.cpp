@@ -434,43 +434,52 @@ diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
   return {{AccessLoc, Kind, getExpectedTypeName(ExpectedClass)}};
 }
 
-auto buildDiagnoseMatchSwitch() {
-  return CFGMatchSwitchBuilder<
-             const Environment,
-             llvm::SmallVector<UncheckedExpectedAccessDiagnostic>>()
-      // expected::value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          expectedMemberCall(hasName("value")),
-          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            return diagnoseAccess(E->getExprLoc(),
-                                  UncheckedExpectedAccessKind::Value,
-                                  *E->getMethodDecl()->getParent(),
-                                  getImplicitObjectLocation(*E, Env), Env);
-          })
-      // expected::operator*, expected::operator->
-      .CaseOfCFGStmt<CXXOperatorCallExpr>(
-          expectedOperatorCall({"*", "->"}),
-          [](const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            // `getExprLoc` of `operator->` is the start of the object
-            // expression, so point at the operator token instead.
-            return diagnoseAccess(
-                E->getOperatorLoc(), UncheckedExpectedAccessKind::Value,
-                *cast<CXXMethodDecl>(E->getCalleeDecl())->getParent(),
-                Env.get<RecordStorageLocation>(*E->getArg(0)), Env);
-          })
-      // expected::error
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          expectedMemberCall(hasName("error")),
-          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            return diagnoseAccess(E->getExprLoc(),
-                                  UncheckedExpectedAccessKind::Error,
-                                  *E->getMethodDecl()->getParent(),
-                                  getImplicitObjectLocation(*E, Env), Env);
-          })
-      .Build();
+auto buildDiagnoseMatchSwitch(
+    const UncheckedExpectedAccessModelOptions &Options) {
+  auto DiagBuilder =
+      CFGMatchSwitchBuilder<
+          const Environment,
+          llvm::SmallVector<UncheckedExpectedAccessDiagnostic>>()
+          // expected::operator*, expected::operator->
+          .CaseOfCFGStmt<CXXOperatorCallExpr>(
+              expectedOperatorCall({"*", "->"}),
+              [](const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &,
+                 const Environment &Env) {
+                // `getExprLoc` of `operator->` is the start of the object
+                // expression, so point at the operator token instead.
+                return diagnoseAccess(
+                    E->getOperatorLoc(), UncheckedExpectedAccessKind::Value,
+                    *cast<CXXMethodDecl>(E->getCalleeDecl())->getParent(),
+                    Env.get<RecordStorageLocation>(*E->getArg(0)), Env);
+              })
+          // expected::error
+          .CaseOfCFGStmt<CXXMemberCallExpr>(
+              expectedMemberCall(hasName("error")),
+              [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+                 const Environment &Env) {
+                return diagnoseAccess(E->getExprLoc(),
+                                      UncheckedExpectedAccessKind::Error,
+                                      *E->getMethodDecl()->getParent(),
+                                      getImplicitObjectLocation(*E, Env), Env);
+              });
+
+  auto Builder =
+      Options.IgnoreValueCalls
+          ? std::move(DiagBuilder)
+          : std::move(DiagBuilder)
+                // expected::value
+                .CaseOfCFGStmt<CXXMemberCallExpr>(
+                    expectedMemberCall(hasName("value")),
+                    [](const CXXMemberCallExpr *E,
+                       const MatchFinder::MatchResult &,
+                       const Environment &Env) {
+                      return diagnoseAccess(
+                          E->getExprLoc(), UncheckedExpectedAccessKind::Value,
+                          *E->getMethodDecl()->getParent(),
+                          getImplicitObjectLocation(*E, Env), Env);
+                    });
+
+  return std::move(Builder).Build();
 }
 
 } // namespace
@@ -498,8 +507,9 @@ void UncheckedExpectedAccessModel::transfer(const CFGElement &Elt,
   TransferMatchSwitch(Elt, getASTContext(), State);
 }
 
-UncheckedExpectedAccessDiagnoser::UncheckedExpectedAccessDiagnoser()
-    : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch()) {}
+UncheckedExpectedAccessDiagnoser::UncheckedExpectedAccessDiagnoser(
+    UncheckedExpectedAccessModelOptions Options)
+    : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch(Options)) {}
 
 } // namespace dataflow
 } // namespace clang

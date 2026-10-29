@@ -117,6 +117,14 @@ int p(std::expected<int, Error> e) {
 }
 ```
 
+## Options
+
+```{option} IgnoreValueCalls
+If set to `true`, the check does not diagnose calls to `expected::value()`,
+which throws `bad_expected_access` when there is no value. Diagnostics for
+`operator*()`, `operator->()` and `error()` remain enabled. Default is `false`.
+```
+
 ## Limitations
 
 1. The check does not yet model some member functions of `std::expected`. These
