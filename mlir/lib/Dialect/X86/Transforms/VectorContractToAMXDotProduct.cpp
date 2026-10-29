@@ -215,7 +215,7 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
       return failure();
   }
 
-  if (!contractionUsersAfterYield(contractOp.getResult()))
+  if (!contractionResultAfterYield(contractOp.getResult()))
     return failure();
 
   VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
