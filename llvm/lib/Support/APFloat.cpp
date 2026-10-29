@@ -3330,12 +3330,14 @@ unsigned int IEEEFloat::convertToHexString(char *dst, unsigned int hexDigits,
 
   switch (category) {
   case fcInfinity:
-    memcpy (dst, upperCase ? infinityU: infinityL, sizeof infinityU - 1);
+    llvm::copy(
+        ArrayRef<char>(upperCase ? infinityU : infinityL, sizeof infinityU - 1),
+        dst);
     dst += sizeof infinityL - 1;
     break;
 
   case fcNaN:
-    memcpy (dst, upperCase ? NaNU: NaNL, sizeof NaNU - 1);
+    llvm::copy(ArrayRef<char>(upperCase ? NaNU : NaNL, sizeof NaNU - 1), dst);
     dst += sizeof NaNU - 1;
     break;
 

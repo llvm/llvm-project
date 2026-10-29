@@ -86,12 +86,8 @@ public:
     }
 
     unsigned hashValue() const {
-      uint64_t H = 0;
-      std::memcpy(&H, this, sizeof(uint64_t));
-      static_assert(sizeof(LocalVarDef) == 8 + 4 &&
-                    offsetof(LocalVarDef, DerefOffset) == 8);
-      H = hash_combine(H, DerefOffset);
-      return H;
+      return hash_combine(InMemory, DataOffset, IsSubfield, StructOffset,
+                          CVRegister, DerefOffset);
     }
 
     bool operator==(const LocalVarDef &Other) const {

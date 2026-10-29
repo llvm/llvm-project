@@ -19,6 +19,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
 #include <bitset>
 #include <optional>
 
@@ -93,7 +94,7 @@ public:
 class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
-  unsigned char AvailableArray[(NumLibFuncs+3)/4];
+  std::array<unsigned char, (NumLibFuncs + 3) / 4> AvailableArray;
   DenseMap<unsigned, std::string> CustomNames;
 #define GET_TARGET_LIBRARY_INFO_IMPL_DECL
 #include "llvm/Analysis/TargetLibraryInfo.inc"
