@@ -861,6 +861,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Attribute Support
 
+- Fixed a crash when using a zero-argument call to an undeclared
+  `__CFStringMakeConstantString` as a format string. (#GH225034)
+
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
 
