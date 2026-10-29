@@ -30,7 +30,7 @@ using namespace mlir::scf;
 
 namespace {
 struct ForLoopRangeFoldingPattern : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() { setHasBoundedRewriteRecursion(); }
 
