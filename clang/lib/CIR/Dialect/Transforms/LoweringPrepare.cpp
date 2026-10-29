@@ -3356,6 +3356,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
           {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
           voidTy));
 
+  // void __cudaRegisterTexture(void **fatbinHandle,
+  //                            const struct textureReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int textureType, int normalized, int ext);
+  FuncOp cudaRegisterTexture = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterTexture"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy, intTy},
+          voidTy));
+
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
     auto tmpString = cir::GlobalOp::create(
@@ -3451,8 +3462,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
         break;
       }
 
-      case cir::CUDADeviceVarKind::Texture:
-        llvm_unreachable("Texture registration NYI");
+      case cir::CUDADeviceVarKind::Texture: {
+        auto textureType = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
+        auto normalized = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getNormalized() ? 1 : 0));
+
+        builder.createCallOp(loc, cudaRegisterTexture,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              textureType, normalized, isExtern});
+        break;
+      }
       }
     }
   }
