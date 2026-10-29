@@ -1,0 +1,67 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+# Tests that read another test file through %p.
+_EXTRA_DATA = {
+    "PECOFF/dep-modules.yaml": ["PECOFF/export-dllfunc.yaml"],
+}
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = glob([
+            "**/Inputs/**",
+            "**/lit.local.cfg",
+        ]) + _EXTRA_DATA.get(src, []) + [
+            "//lldb/test/Shell:lit_data",
+        ],
+    )
+    for src in glob(
+        [
+            "**/*.s",
+            "**/*.test",
+            "**/*.yaml",
+        ],
+        exclude = [
+            "**/Inputs/**",
+            # These run lldb itself through %lldb, which sources the
+            # lit-lldb-init-quiet file CMake writes into the test execution
+            # root. Bazel can't put a generated file there yet.
+            "Breakpad/uuid-matching-mac.test",
+            "ELF/PT_LOAD-overlap-PT_TLS.yaml",
+            "ELF/PT_TLS-overlap-PT_LOAD.yaml",
+            "ELF/build-id-case-debug-only.yaml",
+            "ELF/eh_frame-symbols.yaml",
+            "ELF/elf-dynamic-no-shdrs.yaml",
+            "ELF/elf-dynsym.test",
+            "ELF/elf-memory.test",
+            "ELF/elf-no-shdrs-pt-notes.yaml",
+            "ELF/minidebuginfo-corrupt-xz.yaml",
+            "ELF/minidebuginfo-find-symbols.yaml",
+            "ELF/minidebuginfo-no-lzma.yaml",
+            "ELF/minidebuginfo-set-and-hit-breakpoint.test",
+            "ELF/stt-tls-symbol.yaml",
+            "MachO/section-overflow-binary.test",
+            "MachO/symtab.yaml",
+            "MachO/unterminated-symbol-name.yaml",
+            "PECOFF/disassemble-thumb.yaml",
+            "PECOFF/invalid-export-table.yaml",
+            "PECOFF/settings-abi-i686.yaml",
+            "PECOFF/settings-abi.yaml",
+            "XCOFF/symbol-info.yaml",
+            "XCOFF/symbol-info32.yaml",
+            "invalid.test",
+            "wasm/data-segment-names.yaml",
+            "wasm/wasm-data-section-load-address.yaml",
+            "wasm/wasm-formatter-sections.yaml",
+            "wasm/wasm-globals.yaml",
+            "wasm/wasm-local-decls.yaml",
+        ],
+    )
+]
