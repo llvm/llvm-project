@@ -76,7 +76,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::ShadingRate,
                                            SemanticKind::Barycentrics,
                                            SemanticKind::StartVertexLocation,
-                                           SemanticKind::StartInstanceLocation};
+                                           SemanticKind::StartInstanceLocation,
+                                           SemanticKind::SampleIndex};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -189,6 +190,16 @@ TEST(HLSLSemanticStagesTest, StartInstanceLocationSignaturePoints) {
       {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
   };
   expectOnlySignaturePoints(SemanticKind::StartInstanceLocation, Valid);
+}
+
+// SV_SampleIndex is read with a dedicated operation, but is still added to the
+// pixel input signature for compatibility. Valid only on pixel inputs, where it
+// is in the signature but not packed.
+TEST(HLSLSemanticStagesTest, SampleIndexSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked},
+  };
+  expectOnlySignaturePoints(SemanticKind::SampleIndex, Valid);
 }
 
 } // namespace
