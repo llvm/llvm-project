@@ -429,6 +429,7 @@ namespace clang {
     Error ImportFieldDeclDefinition(const FieldDecl *From, const FieldDecl *To);
     Expected<CXXCastPath> ImportCastPath(CastExpr *E);
     Expected<APValue> ImportAPValue(const APValue &FromValue);
+    Expected<ReflectionValue> ImportReflection(ReflectionValue FromValue);
 
     using Designator = DesignatedInitExpr::Designator;
 
@@ -8779,11 +8780,12 @@ ExpectedStmt ASTNodeImporter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E) {
 ExpectedStmt ASTNodeImporter::VisitCXXReflectExpr(CXXReflectExpr *E) {
   Error Err = Error::success();
   auto ToOperatorLoc = importChecked(Err, E->getOperatorLoc());
-  auto ToTSI = importChecked(Err, E->getTypeSourceInfo());
+  auto ToValue = importChecked(Err, E->getValue());
   if (Err)
     return std::move(Err);
 
-  return CXXReflectExpr::Create(Importer.getToContext(), ToOperatorLoc, ToTSI);
+  return CXXReflectExpr::Create(Importer.getToContext(), ToOperatorLoc,
+                                ToValue);
 }
 
 ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
@@ -10636,6 +10638,11 @@ llvm::Expected<APValue> ASTImporter::Import(const APValue &FromValue) {
   return Importer.ImportAPValue(FromValue);
 }
 
+llvm::Expected<ReflectionValue> ASTImporter::Import(ReflectionValue FromValue) {
+  ASTNodeImporter Importer(*this);
+  return Importer.ImportReflection(FromValue);
+}
+
 Error ASTImporter::ImportDefinition(Decl *From) {
   ExpectedDecl ToOrErr = Import(From);
   if (!ToOrErr)
@@ -10771,6 +10778,29 @@ Expected<Selector> ASTImporter::Import(Selector FromSel) {
   for (unsigned I = 1, N = FromSel.getNumArgs(); I < N; ++I)
     Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(I)));
   return ToContext.Selectors.getSelector(FromSel.getNumArgs(), Idents.data());
+}
+
+Expected<ReflectionValue>
+ASTNodeImporter::ImportReflection(ReflectionValue FromValue) {
+  llvm::Error Err = llvm::Error::success();
+  ReflectionValue Result;
+
+  switch (FromValue.getKind()) {
+  case ReflectionKind::Null:
+    break;
+
+  case ReflectionKind::Type: {
+    const TypeSourceInfo *ToTSI = importChecked(Err, FromValue.castAsType());
+    if (Err)
+      return std::move(Err);
+    Result = ReflectionValue(ToTSI);
+    break;
+  }
+  }
+
+  if (Err)
+    return std::move(Err);
+  return Result;
 }
 
 llvm::Expected<APValue>
@@ -10934,21 +10964,11 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     break;
   }
   case APValue::Reflection: {
-    switch (FromValue.getReflectionOperandKind()) {
-    case ReflectionKind::Null:
-      Result = APValue(ReflectionKind::Null, nullptr);
-      break;
-    case ReflectionKind::Type: {
-      auto *FromTSI =
-          const_cast<TypeSourceInfo *>(static_cast<const TypeSourceInfo *>(
-              FromValue.getReflectionOpaqueOperand()));
-      TypeSourceInfo *ToTSI = importChecked(Err, FromTSI);
-      if (Err)
-        return std::move(Err);
-      Result = APValue(ReflectionKind::Type, ToTSI);
-      break;
-    }
-    }
+    ReflectionValue ToValue =
+        importChecked(Err, FromValue.getReflectionValue());
+    if (Err)
+      return std::move(Err);
+    Result = APValue(ToValue);
     break;
   }
   }

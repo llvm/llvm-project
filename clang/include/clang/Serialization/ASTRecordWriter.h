@@ -245,7 +245,10 @@ public:
   }
 
   /// Emits a reference to a declarator info.
-  void AddTypeSourceInfo(TypeSourceInfo *TInfo);
+  void AddTypeSourceInfo(const TypeSourceInfo *TInfo);
+  void writeTypeSourceInfo(const TypeSourceInfo *TInfo) {
+    AddTypeSourceInfo(TInfo);
+  }
 
   /// Emits source location information for a type. Does not emit the type.
   void AddTypeLoc(TypeLoc TL);

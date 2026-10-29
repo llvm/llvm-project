@@ -4638,19 +4638,9 @@ bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   if (DiscardResult)
     return true;
 
-  switch (E->getKind()) {
-  case ReflectionKind::Null: {
-    assert(false && "null reflection can't be constructed from parsing a "
-                    "reflection operand");
-    return false;
-  }
-  case ReflectionKind::Type: {
-    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
-  }
-  }
-
-  assert(false && "unknown or unimplemented reflection entities");
-  return false;
+  ReflectionValue Val = E->getValue();
+  return this->emitReflectValue(Val.getKind(),
+                                Val.getOperand().getOpaqueValue(), E);
 }
 
 template <class Emitter>

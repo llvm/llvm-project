@@ -13638,10 +13638,11 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
 
-  switch (E->getKind()) {
+  ReflectionValue OldValue = E->getValue();
+  switch (OldValue.getKind()) {
   case ReflectionKind::Type: {
     TypeSourceInfo *NewT = getDerived().TransformType(
-        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+        const_cast<TypeSourceInfo *>(OldValue.castAsType()));
     if (!NewT)
       return ExprError();
     return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);

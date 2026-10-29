@@ -8162,10 +8162,8 @@ static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
                                                 SourceLocation CaretCaretLoc) {
   // TODO(Reflection): Add support for NamespaceReference, TemplateReference,
   // and DeclRefExpr.
-  return CXXReflectExpr::Create(
-      S.Context, CaretCaretLoc,
-      static_cast<TypeSourceInfo *>(
-          const_cast<void *>(RV.getReflectionOpaqueOperand())));
+  return CXXReflectExpr::Create(S.Context, CaretCaretLoc,
+                                RV.getReflectionValue());
 }
 
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(

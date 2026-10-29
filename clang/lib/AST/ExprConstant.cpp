@@ -11418,24 +11418,11 @@ public:
 };
 
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  switch (E->getKind()) {
-  case ReflectionKind::Null: {
-    assert(false && "null reflection can't be constructed from parsing a "
-                    "reflection operand");
-    return false;
-  }
-  case ReflectionKind::Type: {
-    APValue ReflectionValue(ReflectionKind::Type, E->getOpaqueValue());
-    return Success(ReflectionValue, E);
-  }
-  }
-  assert(false && "unknown or unimplemented reflection entities");
-  return false;
+  return Success(APValue(E->getValue()), E);
 }
 
 bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
-  Result = APValue(ReflectionKind::Null, /*Operand=*/nullptr);
-  return true;
+  return Success(APValue(ReflectionValue()), E);
 }
 
 } // end anonymous namespace
@@ -11455,7 +11442,7 @@ static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info,
     if (!EvaluateReflection(E->getArg(0), Reflection, Info))
       return false;
     Result = APValue(Info.Ctx.MakeIntValue(
-        Reflection.getReflectionOperandKind() == ReflectionKind::Type,
+        Reflection.getReflectionValue().getKind() == ReflectionKind::Type,
         E->getType()));
     return true;
   }
