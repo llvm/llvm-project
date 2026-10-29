@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
 #include <array>
+#include <functional>
 
 namespace llvm {
 
@@ -338,8 +339,17 @@ protected:
   GCNRegPressure CurPressure, MaxPressure;
   MachineBasicBlock::const_iterator LastTrackedMI;
   mutable const MachineRegisterInfo *MRI = nullptr;
+  std::function<void(const GCNRegPressure &)> PressureCallback;
 
   GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
+
+  /// Folds the pressure \p RP of one program point into MaxPressure and passes
+  /// it to the pressure callback.
+  void updateMaxPressure(const GCNRegPressure &RP) {
+    MaxPressure = maxPerRegFile(MaxPressure, RP);
+    if (PressureCallback)
+      PressureCallback(RP);
+  }
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
   /// instruction.
@@ -368,6 +378,13 @@ public:
   const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
 
   void resetMaxPressure() { MaxPressure = CurPressure; }
+
+  /// Sets a function that the tracker calls with the pressure of every program
+  /// point that it folds into the maximum pressure. A user can compute there a
+  /// maximum that maxPerRegFile() does not keep, e.g. of one register kind.
+  void setPressureCallback(std::function<void(const GCNRegPressure &)> CB) {
+    PressureCallback = std::move(CB);
+  }
 
   GCNRegPressure getPressure() const { return CurPressure; }
 

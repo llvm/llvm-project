@@ -627,7 +627,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   DefPressure += CurPressure;
   if (HasECDefs)
     DefPressure += ECDefPressure;
-  MaxPressure = maxPerRegFile(DefPressure, MaxPressure);
+  updateMaxPressure(DefPressure);
 
   // Make uses alive.
   SmallVector<VRegMaskOrUnit, 8> RegUses;
@@ -640,9 +640,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   }
 
   // Update MaxPressure with uses plus early-clobber defs pressure.
-  MaxPressure = HasECDefs
-                    ? maxPerRegFile(CurPressure + ECDefPressure, MaxPressure)
-                    : maxPerRegFile(CurPressure, MaxPressure);
+  updateMaxPressure(HasECDefs ? CurPressure + ECDefPressure : CurPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
@@ -714,7 +712,7 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
                         *MRI);
   }
 
-  MaxPressure = maxPerRegFile(MaxPressure, CurPressure + ECDefPressure);
+  updateMaxPressure(CurPressure + ECDefPressure);
 
   SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
   assert(SI.isValid());
@@ -737,7 +735,7 @@ void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
       retireVirtReg(Reg, SI);
   }
 
-  MaxPressure = maxPerRegFile(MaxPressure, CurPressure);
+  updateMaxPressure(CurPressure);
 }
 
 void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
@@ -753,7 +751,7 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
     LiveMask |= getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
-  MaxPressure = maxPerRegFile(MaxPressure, CurPressure);
+  updateMaxPressure(CurPressure);
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext() {
@@ -1118,42 +1116,47 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   auto &OS = dbgs();
   const char *RegName = GCNRegPressure::getName(Kind);
 
-  // Count only the registers of Kind, from the live sets. The maximum of a
-  // pressure tracker pairs the VGPR and AVGPR components, so its VGPR component
-  // alone can miss the VGPR peak. Max pressure can occur at either the
-  // early-clobber or register slot. This is slow but this is diagnostic code.
   unsigned MaxNumRegs = 0;
   const MachineInstr *MaxPressureMI = nullptr;
-  SlotIndex MaxPressureSlot;
-  GCNRPTracker::LiveRegSet LiveSet;
+  GCNUpwardRPTracker RPT(LIS);
+  // The maximum pressure of the tracker pairs the VGPR and AVGPR components,
+  // so take the maximum of Kind alone from each point.
+  unsigned NumRegs = 0;
+  RPT.setPressureCallback([&](const GCNRegPressure &RP) {
+    NumRegs = std::max(NumRegs, RP.getNumRegs(Kind));
+  });
   for (const MachineBasicBlock &MBB : MF) {
+    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+    NumRegs = RPT.getPressure().getNumRegs(Kind);
     for (const MachineInstr &MI : reverse(MBB)) {
-      if (MI.isDebugInstr())
-        continue;
-      SlotIndex MISlot = LIS.getInstructionIndex(MI);
-      for (SlotIndex SI : {MISlot.getRegSlot(false), MISlot.getRegSlot(true)}) {
-        GCNRPTracker::LiveRegSet SILiveSet = getLiveRegs(SI, LIS, MRI, Kind);
-        unsigned NumRegs = getRegPressure(MRI, SILiveSet).getNumRegs(Kind);
-        if (NumRegs > MaxNumRegs) {
-          MaxNumRegs = NumRegs;
-          MaxPressureMI = &MI;
-          MaxPressureSlot = SI;
-          LiveSet = std::move(SILiveSet);
-        }
+      RPT.recede(MI);
+      if (NumRegs > MaxNumRegs) {
+        MaxNumRegs = NumRegs;
+        MaxPressureMI = &MI;
       }
     }
   }
 
-  if (!MaxPressureMI) {
-    OS << "\n*** Register pressure info (" << RegName << "s) for "
-       << MF.getName() << " ***\nNo live " << RegName << "s\n";
-    return;
-  }
+  SlotIndex MISlot = LIS.getInstructionIndex(*MaxPressureMI);
+
+  // Max pressure can occur at either the early-clobber or register slot.
+  // Choose the maximum liveset between both slots. This is ugly but this is
+  // diagnostic code.
+  SlotIndex ECSlot = MISlot.getRegSlot(true);
+  SlotIndex RSlot = MISlot.getRegSlot(false);
+  GCNRPTracker::LiveRegSet ECLiveSet = getLiveRegs(ECSlot, LIS, MRI, Kind);
+  GCNRPTracker::LiveRegSet RLiveSet = getLiveRegs(RSlot, LIS, MRI, Kind);
+  unsigned ECNumRegs = getRegPressure(MRI, ECLiveSet).getNumRegs(Kind);
+  unsigned RNumRegs = getRegPressure(MRI, RLiveSet).getNumRegs(Kind);
+  GCNRPTracker::LiveRegSet *LiveSet =
+      ECNumRegs > RNumRegs ? &ECLiveSet : &RLiveSet;
+  SlotIndex MaxPressureSlot = ECNumRegs > RNumRegs ? ECSlot : RSlot;
+  assert(getRegPressure(MRI, *LiveSet).getNumRegs(Kind) == MaxNumRegs);
 
   // Split live registers into single-def and multi-def sets.
   GCNRegPressure SDefPressure, MDefPressure;
   SmallVector<Register, 16> SDefRegs, MDefRegs;
-  for (auto [Reg, LaneMask] : LiveSet) {
+  for (auto [Reg, LaneMask] : *LiveSet) {
     assert(GCNRegPressure::getRegKind(Reg, MRI) == Kind);
     LiveInterval &LI = LIS.getInterval(Reg);
     if (LI.getNumValNums() == 1 ||
@@ -1222,13 +1225,13 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   });
 
   for (const Register Reg : SDefRegs) {
-    PrintRegInfo(Reg, LiveSet.lookup(Reg));
+    PrintRegInfo(Reg, LiveSet->lookup(Reg));
   }
 
   OS << "\nLive registers with multiple definitions (" << MDefNumRegs << ' '
      << RegName << "s):\n";
   for (const Register Reg : MDefRegs) {
-    PrintRegInfo(Reg, LiveSet.lookup(Reg));
+    PrintRegInfo(Reg, LiveSet->lookup(Reg));
   }
 }
 #endif
