@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=riscv32 -mattr=+d -run-pass=reg-bank-select \
+# RUN:   -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+
+# A debug use keeps a bank selected by its definition. A def-less vreg gets a
+# simple target mapping when it fits; otherwise its location is unavailable.
+
+--- |
+  define void @debug_values() !dbg !3 { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!7}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !DISubroutineType(types: !{})
+  !3 = distinct !DISubprogram(name: "debug_values", scope: !1, file: !1, type: !2, spFlags: DISPFlagDefinition, unit: !0)
+  !4 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
+  !5 = !DILocalVariable(name: "d", scope: !3, file: !1, type: !4)
+  !6 = !DILocation(line: 1, scope: !3)
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocalVariable(name: "i", scope: !3, file: !1, type: !8)
+...
+---
+name:            debug_values
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f10_d
+
+    ; CHECK-LABEL: name: debug_values
+    ; CHECK:       [[COPY:%[0-9]+]]:fprb(s64) = COPY $f10_d
+    ; CHECK-NEXT:  DBG_VALUE [[COPY]](s64), $noreg
+    ; CHECK-NEXT:  DBG_VALUE {{%[0-9]+}}:gprb(s32), $noreg
+    ; CHECK-NEXT:  DBG_VALUE $noreg, $noreg
+    %0:_(s64) = COPY $f10_d
+    DBG_VALUE %0(s64), $noreg, !5, !DIExpression(), debug-location !6
+    DBG_VALUE %1:_(s32), $noreg, !9, !DIExpression(), debug-location !6
+    DBG_VALUE %2:_(s64), $noreg, !5, !DIExpression(), debug-location !6
+    PseudoRET
+...
