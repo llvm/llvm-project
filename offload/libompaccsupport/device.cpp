@@ -832,17 +832,20 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, Device.DeviceID,
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
   // The allocation is fresh, so no work pending on the queue accesses it and
-  // the copy can bypass the queue. Without a queue, the plugin may write the
-  // memory directly.
-  if (Device.submitDataSync(*AllocOrErr, &LocalKLE,
-                            sizeof(KernelLaunchEnvironmentTy)))
+  // the copy can bypass the queue. Without a queue, the AMDGPU plugin may write
+  // the memory directly. Other backends copy on the queue.
+  int32_t Ret =
+      Device.getBackend() == OL_PLATFORM_BACKEND_AMDGPU
+          ? Device.submitDataSync(*AllocOrErr, &LocalKLE,
+                                  sizeof(KernelLaunchEnvironmentTy),
+                                  /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                                  /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv")
+          : Device.submitData(*AllocOrErr, &LocalKLE,
+                              sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
+                              /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                              /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv");
+  if (Ret)
     return createError(ErrorCode::BackendFailure,
                        "failed to copy the kernel launch environment to "
                        "device %d",
