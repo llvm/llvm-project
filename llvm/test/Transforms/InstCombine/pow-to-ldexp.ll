@@ -29,8 +29,8 @@ define float @pow_sitofp_f32_const_base_2__flags(i32 %x) {
 define float @pow_uitofp_f32_const_base_2(i32 %x) {
 ; LDEXP-EXP2-LABEL: define float @pow_uitofp_f32_const_base_2(
 ; LDEXP-EXP2-SAME: i32 [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call float @llvm.exp2.f32(float [[ITOFP]])
+; LDEXP-EXP2-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 128)
+; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP-EXP2-NEXT:    ret float [[EXP2]]
 ;
 ; LDEXP-NOEXP2-LABEL: define float @pow_uitofp_f32_const_base_2(
@@ -41,8 +41,8 @@ define float @pow_uitofp_f32_const_base_2(i32 %x) {
 ;
 ; NOLDEXP-LABEL: define float @pow_uitofp_f32_const_base_2(
 ; NOLDEXP-SAME: i32 [[X:%.*]]) {
-; NOLDEXP-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; NOLDEXP-NEXT:    [[EXP2:%.*]] = tail call float @llvm.exp2.f32(float [[ITOFP]])
+; NOLDEXP-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 128)
+; NOLDEXP-NEXT:    [[EXP2:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXP-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i32 %x to float
