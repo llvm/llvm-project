@@ -47,6 +47,10 @@ void addFIRToLLVMIRExtension(mlir::DialectRegistry &registry);
 void registerFortranTempArrayCopyIsSafeExternalModels(
     mlir::DialectRegistry &registry);
 
+// Register FortranObjectViewOpInterface models for the memref view operations.
+void registerMemRefFortranObjectViewExternalModels(
+    mlir::DialectRegistry &registry);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
