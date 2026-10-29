@@ -13,7 +13,7 @@ f:
         # CHECK: error: modified CFA register RSP but not changed CFA rule
         
         addq    $10, %rax
-        # CHECK: error: did not modify CFA register RSP but changed CFA rule
+        # CHECK: error: expected CFA offset 8 from CFA register RSP, but the CFI directives set it to 16
         .cfi_adjust_cfa_offset 8
 
 .Lfunc_end0:

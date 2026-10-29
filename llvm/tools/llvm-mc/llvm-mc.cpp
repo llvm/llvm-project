@@ -20,6 +20,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -577,10 +578,14 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<buffer_ostream> BOS;
   raw_pwrite_stream *OS = &Out->os();
-  std::unique_ptr<MCStreamer> Str;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
+
+  // Declared before the streamer, since the CFI checker inside it keeps a
+  // pointer to the instruction analysis.
+  std::unique_ptr<MCInstrAnalysis> MCIA;
+  std::unique_ptr<MCStreamer> Str;
 
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
@@ -588,7 +593,9 @@ int main(int argc, char **argv) {
     // errors and warnings has not been implemented yet. Because of this, it is
     // assert-checked that the filetype output is null.
     assert(FileType == OFT_Null);
-    auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
+    MCIA.reset(TheTarget->createMCInstrAnalysis(MCII.get()));
+    auto FFA =
+        std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII, MCIA.get());
     auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
     TheTarget->createNullTargetStreamer(*FFS);
     Str = std::move(FFS);
