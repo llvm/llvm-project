@@ -11,9 +11,11 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Analysis/SliceAnalysis.h"
@@ -1188,6 +1190,55 @@ struct CallbackListener : public mlir::RewriterBase::Listener {
   std::function<void(mlir::Operation *op)> onOperationErased;
 };
 
+/// Warns about pure procedures that are reachable from a `do concurrent` loop
+/// mapped to the device, but are only declared in this translation unit and
+/// have no `declare target` information. Implicit `declare target` only
+/// applies to procedures defined in the same translation unit, so no device
+/// version of these procedures is emitted unless the user marks them
+/// `declare target` where they are defined.
+static void
+warnAboutCalleesWithoutDeviceVersion(mlir::ModuleOp module,
+                                     mlir::SymbolTable &moduleSymbolTable) {
+  llvm::SmallPtrSet<mlir::Operation *, 16> visitedCallees;
+  llvm::SmallVector<mlir::Operation *> worklist;
+  module.walk([&](fir::DoConcurrentOp loop) { worklist.push_back(loop); });
+
+  while (!worklist.empty()) {
+    mlir::Operation *op = worklist.pop_back_val();
+    op->walk([&](fir::CallOp callOp) {
+      mlir::SymbolRefAttr callee = callOp.getCalleeAttr();
+      if (!callee)
+        return;
+
+      auto funcOp = moduleSymbolTable.lookup<mlir::func::FuncOp>(
+          callee.getRootReference());
+      if (!funcOp || !visitedCallees.insert(funcOp).second)
+        return;
+
+      if (!funcOp.isExternal()) {
+        worklist.push_back(funcOp);
+        return;
+      }
+
+      if (!fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp))
+        return;
+
+      auto declareTargetOp =
+          mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*funcOp);
+      if (!declareTargetOp || declareTargetOp.getDeclareTarget())
+        return;
+
+      mlir::emitWarning(callOp.getLoc())
+          << "'"
+          << fir::NameUniquer::deconstruct(funcOp.getSymName()).second.name
+          << "' is called from device code generated for a DO CONCURRENT "
+             "loop, but it is not defined in this file and is not marked "
+             "DECLARE TARGET; add '!$omp declare target' to its definition to "
+             "generate a device version of it";
+    });
+  }
+}
+
 class DoConcurrentConversionPass
     : public flangomp::impl::DoConcurrentConversionPassBase<
           DoConcurrentConversionPass> {
@@ -1210,6 +1261,9 @@ public:
                         "Valid values are: `host` or `device`");
       return;
     }
+
+    if (mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device)
+      warnAboutCalleesWithoutDeviceVersion(module, moduleSymbolTable);
 
     llvm::DenseSet<fir::DoConcurrentOp> concurrentLoopsToSkip;
     CallbackListener callbackListener([&](mlir::Operation *op) {
