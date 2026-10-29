@@ -819,7 +819,7 @@ private:
   /// "interesting" and should be modeled explicitly.
   ///
   /// \param [out] EscapingSymbol A function might not free memory in general,
-  ///   but could be known to free a particular symbol. In this case, false is
+  ///   but could be known to free a particular symbol. In this case, true is
   ///   returned and the single escaping symbol is returned through the out
   ///   parameter.
   ///
@@ -3778,7 +3778,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     // after the call.
     if (Msg->getMethodFamily() == OMF_init) {
       EscapingSymbol = Msg->getReceiverSVal().getAsSymbol();
-      return true;
+      return true; // (temporary comment to show this line in diff)
     }
 
     // Otherwise, assume that the method does not free memory.
