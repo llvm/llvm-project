@@ -40,7 +40,6 @@ static_library("Commands") {
     "CommandObjectDisassemble.cpp",
     "CommandObjectExpression.cpp",
     "CommandObjectFrame.cpp",
-    "CommandObjectGUI.cpp",
     "CommandObjectHelp.cpp",
     "CommandObjectLanguage.cpp",
     "CommandObjectLog.cpp",

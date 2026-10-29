@@ -4341,11 +4341,9 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
               StateAsCString(GetState()), is_hijacked ? "hijacked" : "public");
     Process::ProcessEventData::SetUpdateStateOnRemoval(event_sp.get());
     if (StateIsRunningState(new_state)) {
-      // Only push the input handler if we aren't fowarding events, as this
-      // means the curses GUI is in use... Or don't push it if we are launching
-      // since it will come up stopped.
-      if (!GetTarget().GetDebugger().IsForwardingEvents() &&
-          new_state != eStateLaunching && new_state != eStateAttaching) {
+      // Don't push the input handler if we are launching since it will come
+      // up stopped.
+      if (new_state != eStateLaunching && new_state != eStateAttaching) {
         PushProcessIOHandler();
         m_iohandler_sync.SetValue(m_iohandler_sync.GetValue() + 1,
                                   eBroadcastAlways);

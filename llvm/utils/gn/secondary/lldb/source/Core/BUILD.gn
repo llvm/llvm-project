@@ -45,12 +45,9 @@ static_library("Core") {
 
     #"//lldb/source/Plugins/Language/CPlusPlus", # 3-hop dependency cycle.
     #"//lldb/source/Plugins/Language/ObjC",  # Many-hop dependency cycle.
-
-    # FIXME:
-    #  ${LLDB_CURSES_LIBS}
   ]
 
-  # FIXME: Link curses, libedit if needed.
+  # FIXME: Link libedit if needed.
   include_dirs = [ ".." ]
   sources = [
     "Address.cpp",
@@ -76,7 +73,6 @@ static_library("Core") {
     "FormatEntity.cpp",
     "Highlighter.cpp",
     "IOHandler.cpp",
-    "IOHandlerCursesGUI.cpp",
     "Mangled.cpp",
     "Module.cpp",
     "ModuleChild.cpp",

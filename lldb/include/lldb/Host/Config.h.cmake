@@ -33,10 +33,6 @@
 
 #cmakedefine01 LLVM_ENABLE_CURL
 
-#cmakedefine01 LLDB_ENABLE_CURSES
-
-#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H
-
 #cmakedefine01 LLDB_ENABLE_LIBEDIT
 
 #cmakedefine01 LLDB_ENABLE_LIBXML2

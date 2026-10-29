@@ -31,24 +31,6 @@ exports_files([
 ])
 
 bool_flag(
-    name = "enable_curses",
-    build_setting_default = False,
-)
-
-config_setting(
-    name = "curses_enabled_setting",
-    flag_values = {":enable_curses": "true"},
-)
-
-selects.config_setting_group(
-    name = "curses_enabled",
-    match_any = [
-        ":curses_enabled_setting",
-        "@platforms//os:macos",
-    ],
-)
-
-bool_flag(
     name = "enable_libedit",
     build_setting_default = False,
 )
@@ -155,7 +137,6 @@ expand_template(
         "#cmakedefine01 LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS": "#define LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS 0",
 
         # Unsupported
-        "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
         "#cmakedefine01 LLDB_ENABLE_FBSDVMCORE": "#define LLDB_ENABLE_FBSDVMCORE 0",
 
         # TODO: treesitter support
@@ -210,13 +191,6 @@ expand_template(
         },
         "//conditions:default": {
             "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
-        },
-    }) | select({
-        ":curses_enabled": {
-            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 0",
         },
     }) | select({
         ":libedit_enabled": {
@@ -559,12 +533,6 @@ cc_library(
             "-lcompression",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
-        ],
-        "//conditions:default": [],
-    }) + select({
-        ":curses_enabled": [
-            "-lcurses",
-            "-lpanel",
         ],
         "//conditions:default": [],
     }) + select({
