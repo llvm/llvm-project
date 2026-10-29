@@ -8151,12 +8151,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+    // RMWs need SM 90 for 128-bit operations, unlike atomic loads/stores.
+    const unsigned MaxRMWBits = STI.hasAtomSwap128() ? 128 : 64;
 
     if (Op == AtomicRMWInst::BinOp::Xchg) {
       // Split exchanges that are too wide or insufficiently aligned until
       // each piece can be lowered atomically.
-      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
-          AI->getAlign().value() < VecBytes)
+      if (VecBits > MaxRMWBits || AI->getAlign().value() < VecBytes)
         return AtomicExpansionKind::Expand;
 
       // Expand subword exchanges to a masked cmpxchg loop.
@@ -8178,7 +8179,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
-    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+    if (VecBits <= MaxRMWBits)
       return AtomicExpansionKind::CmpXChg;
 
     // If the vector is too wide for a single native cmpxchg, halve further to
