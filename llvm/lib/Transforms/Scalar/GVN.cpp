@@ -3543,6 +3543,34 @@ bool GVNPassImpl::propagateEquality(
     bool IsKnownTrue = CI->isMinusOne();
     bool IsKnownFalse = !IsKnownTrue;
 
+    // Find select instructions whose condition matches LHS, and propagate
+    // replacements of the selected value into dominated successors.
+    for (User *U : LHS->users()) {
+      auto *SI = dyn_cast<SelectInst>(U);
+      if (!SI || SI->getCondition() != LHS)
+        continue;
+
+      Value *SIVal = IsKnownTrue ? SI->getTrueValue() : SI->getFalseValue();
+
+      unsigned NumReplacements;
+      if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root)) {
+        if (!DT->dominates(SI->getParent(), Edge->getStart()))
+          continue;
+        NumReplacements = replaceDominatedUsesWith(SI, SIVal, *DT, *Edge);
+      } else {
+        auto *InstBB = std::get<Instruction *>(Root)->getParent();
+        if (!DT->dominates(SI->getParent(), InstBB))
+          continue;
+        NumReplacements = replaceDominatedUsesWith(
+            SI, SIVal, *DT, std::get<Instruction *>(Root));
+      }
+      Changed |= NumReplacements > 0;
+      NumGVNEqProp += NumReplacements;
+      // Cached information for anything that uses SI will be invalid.
+      if (MD)
+        MD->invalidateCachedPointerInfo(SI);
+    }
+
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
     Value *A, *B;
