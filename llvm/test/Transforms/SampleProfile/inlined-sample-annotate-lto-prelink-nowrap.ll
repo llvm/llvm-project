@@ -25,10 +25,7 @@
 ;
 ; // heavy.cpp
 ; #include "lib.h"
-; #define S r = (r ^ n) * 33;
-; #define S8 S S S S S S S S
-; #define S64 S8 S8 S8 S8 S8 S8 S8 S8
-; template <class T> int heavy(int n) { int r = n; S64 S64 S64 S64 S64 S64 S64 S64 S64 S64 return r; }
+; template <class T> int heavy(int n) { return (n ^ 5) * 33; }
 ; template int heavy<lib::Tag>(int);
 
 ; REQUIRES: x86-registered-target
@@ -37,7 +34,7 @@
 ; RUN: opt -passes='pseudo-probe,thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/inlined-sample-annotate-lto-prelink-nowrap.prof --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl %S/Inputs/inlined-sample-annotate-lto-prelink-nowrap-callees.ll -S -o %t2.prelink.ll
 ; RUN: opt -module-summary %t1.prelink.ll -o %t1.o
 ; RUN: opt -module-summary %t2.prelink.ll -o %t2.o
-; RUN: llvm-lto2 run -thinlto-distributed-indexes -o %t/lto2 %t1.o %t2.o -r %t1.o,_Z6calleri,px -r %t1.o,_Z5heavyIN3lib2v23TagEEii, -r %t2.o,_Z5heavyIN3lib2v23TagEEii,px
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -import-hot-multiplier=0 -o %t/lto2 %t1.o %t2.o -r %t1.o,_Z6calleri,px -r %t1.o,_Z5heavyIN3lib2v23TagEEii, -r %t2.o,_Z5heavyIN3lib2v23TagEEii,px
 ; RUN: opt -passes=function-import,sample-profile -summary-file=%t1.o.thinlto.bc -sample-profile-file=%S/Inputs/inlined-sample-annotate-lto-prelink-nowrap.prof -pass-remarks=sample-profile --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl %t1.o -S -o %t1.opt.ll 2>&1 | FileCheck %s --check-prefix=POSTLINK
 
 ; PRELINK: Function _Z5heavyIN3lib2v23TagEEii is not in profile or profile symbol list.
@@ -45,7 +42,7 @@
 ; PRELINK: Function:_Z5heavyIN3lib2v23TagEEii matches profile:_Z5heavyIN3lib3TagEEii
 
 ; PRELINK-GUID: define dso_local noundef i32 @_Z6calleri(i32 noundef %n) local_unnamed_addr #0 !dbg !41 !prof !50 !guid !51 {
-; PRELINK-GUID: !50 = !{!"function_entry_count", i64 1000000, i64 -7245025397704601654} 
+; PRELINK-GUID: !50 = !{!"function_entry_count", i64 1000000, i64 -7245025397704601654}
 
 ; POSTLINK: remark: src/caller.cpp:4:36: '_Z5heavyIN3lib2v23TagEEii' inlined into '_Z6calleri' to match profiling context with (cost=always): preinliner at callsite _Z6calleri:2:36;
 
@@ -118,12 +115,12 @@ attributes #3 = { nounwind }
 !llvm.ident = !{!5}
 !llvm.errno.tbaa = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 24.0.0git (https://github.com/llvm/llvm-project.git 130c3b4643ceaa065632adf823a7005091df0dc6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 24.0.0git (https://github.com/llvm/llvm-project.git 0d266b728984b5cb6c513ba3cc374ae158b5cbdd)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "src/caller.cpp", directory: "/home/h2h/test/repro_import_guid_nowrapper", checksumkind: CSK_MD5, checksum: "c4e4f651541a748ac54e2d70a61e484d")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 7, !"uwtable", i32 2}
-!5 = !{!"clang version 24.0.0git (https://github.com/llvm/llvm-project.git 130c3b4643ceaa065632adf823a7005091df0dc6)"}
+!5 = !{!"clang version 24.0.0git (https://github.com/llvm/llvm-project.git 0d266b728984b5cb6c513ba3cc374ae158b5cbdd)"}
 !6 = !{!7, !8, i64 0}
 !7 = !{!"__libc_errno", !8, i64 0}
 !8 = !{!"int", !9, i64 0}
