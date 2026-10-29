@@ -1141,6 +1141,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed incorrect evaluation of compound requirements when a return-type
   requirement contains a lambda with constrained template parameters.
 
+- Fixed a bug where Clang could ignore lambda constraints in return-type
+  requirements.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
