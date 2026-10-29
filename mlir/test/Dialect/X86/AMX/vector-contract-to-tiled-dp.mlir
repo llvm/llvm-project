@@ -625,6 +625,69 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The RHS read drops a leading dim of its buffer and starts at non-zero
+// offsets: the packing subview covers the read's offsets, and the packing loads
+// index it from zero.
+
+!vecA = vector<16x32xbf16>
+!vecB = vector<32x16xbf16>
+!vecC = vector<16x16xf32>
+!memrefA = memref<32x32xbf16>
+!memrefB = memref<2x32x32xbf16>
+!memrefC = memref<32x32xf32>
+#map = affine_map<(d1, d2, d3) -> (d1, d3)>
+#map1 = affine_map<(d1, d2, d3) -> (d3, d2)>
+#map2 = affine_map<(d1, d2, d3) -> (d1, d2)>
+func.func @online_packing_bf16_rank_reducing_rhs(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c1, %c0, %c16], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+
+  %3 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} : !memrefC, !vecC
+
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3 : !vecA, !vecB into !vecC
+
+  vector.transfer_write %4, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @online_packing_bf16_rank_reducing_rhs
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+// CHECK: %[[SUBVIEW:.+]] = memref.subview %arg1[%[[C1]], %[[C0]], %[[C16]]] [1, 32, 16] [1, 1, 1]
+// CHECK: scf.for %[[IV:.+]] = %[[C0]]
+// CHECK: vector.load %[[SUBVIEW]][%[[C0]], %[[IV]], %[[C0]]]
+// CHECK: vector.load %[[SUBVIEW]][%[[C0]], %{{.+}}, %[[C0]]]
+// CHECK: x86.amx.tile_mulf
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecAB = vector<1x16x16x2xbf16>
 !vecC = vector<16x16xf32>
 !memrefA = memref<1x32x16x2xbf16, strided<[8192, 128, 2, 1], offset: ?>>
@@ -709,12 +772,15 @@ func.func @brgemm_bf16_loop(%arg0: memref<16x64x64x2xbf16>, %arg1: memref<16x64x
 }
 
 // CHECK-LABEL: @brgemm_bf16_loop
-// CHECK-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) { 
-// CHECK-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
-// CHECK-4: x86.amx.tile_load
-// CHECK-4: x86.amx.tile_mulf
+// CHECK-COUNT-2: scf.for
+// CHECK-COUNT-4: x86.amx.tile_load {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>> into !x86.amx.tile<16x16xf32>
+// CHECK-COUNT-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
+// CHECK-DAG: x86.amx.tile_load
+// CHECK-DAG: x86.amx.tile_mulf
 // CHECK: scf.yield {{.*}} : !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>
-// CHECK-NOT: scf.for {{.*}} vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>
+// CHECK-NOT: x86.amx.tile_zero
+// CHECK-COUNT-4: x86.amx.tile_store {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>>, !x86.amx.tile<16x16xf32>
+// CHECK-NOT: vector.transfer_write
 // CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {

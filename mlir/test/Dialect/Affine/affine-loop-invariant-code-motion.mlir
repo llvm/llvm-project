@@ -1010,3 +1010,40 @@ func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
   %r = affine.load %alloc[0] : memref<1xi32>
   return %r : i32
 }
+
+
+// -----
+
+func.func private @bump(memref<1xi32>)
+
+// The call may write %A, so the load must stay inside the loop.
+// CHECK-LABEL: func @load_not_hoisted_past_unknown_effect_call
+func.func @load_not_hoisted_past_unknown_effect_call(%A: memref<1xi32>, %out: memref<4xi32>) {
+  affine.for %i = 0 to 4 {
+    func.call @bump(%A) : (memref<1xi32>) -> ()
+    %v = affine.load %A[0] : memref<1xi32>
+    affine.store %v, %out[%i] : memref<4xi32>
+  }
+  return
+}
+// CHECK:      affine.for
+// CHECK-NEXT:   func.call @bump
+// CHECK-NEXT:   affine.load
+// CHECK-NEXT:   affine.store
+
+// -----
+
+func.func private @use(memref<1xi32>)
+
+// The call may read %A, so the store must stay inside the loop.
+// CHECK-LABEL: func @store_not_hoisted_past_unknown_effect_call
+func.func @store_not_hoisted_past_unknown_effect_call(%A: memref<1xi32>, %c: i32) {
+  affine.for %i = 0 to 4 {
+    affine.store %c, %A[0] : memref<1xi32>
+    func.call @use(%A) : (memref<1xi32>) -> ()
+  }
+  return
+}
+// CHECK:      affine.for
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT:   func.call @use

@@ -3036,6 +3036,10 @@ bool HexagonDAGToDAGISel::isIEEEHVXIntrinsic(unsigned Opcode) {
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_uh_128B ||
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_b_128B ||
          Opcode == Intrinsic::hexagon_V6_vcvt_hf_ub_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_h_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_b_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_ub_hf_128B ||
+         Opcode == Intrinsic::hexagon_V6_vcvt_uh_hf_128B ||
          Opcode == Intrinsic::hexagon_V6_vdmpy_sf_hf_128B ||
          Opcode == Intrinsic::hexagon_V6_vdmpy_sf_hf_acc_128B;
 }
@@ -3542,24 +3546,43 @@ void HexagonDAGToDAGISel::translateIEEEIntrinsicToQFloat(SDNode *N,
   }
 
   // v0.hf = vcvt(v0.uh) is translated to
-  // v1 = vxor(v1,v1); v1:0.w = vadd(v0.uh,v1.uh);
-  // v2.h = vpack(v1.w,v0.w):sat; v3.h = vshuff(v2.h); v0.hf = v3.h
+  // v1:0.uw = vzxt(v0.uh); v2 = vxor(v2,v2)
+  // v3.sf = v0.w ; v1.sf = v1.w
+  // v4.qf32 = vadd(v3.sf,v2.sf); v5.qf32 = vadd(v1.sf,v2.sf)
+  // v0.hf = v5:4.qf32
   case Intrinsic::hexagon_V6_vcvt_hf_uh_128B: {
     SDNode *ZeroNode = CurDAG->getMachineNode(Hexagon::V6_vd0, DL, ResTy);
-    SDNode *WidenAddNode = CurDAG->getMachineNode(
-        Hexagon::V6_vadduhw, DL, ResTy, N->getOperand(1), SDValue(ZeroNode, 0));
+
+    SDNode *ZExtNode = CurDAG->getMachineNode(Hexagon::V6_vzh, DL, MVT::v64i32,
+                                              N->getOperand(1));
 
     SDValue LoReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_lo, DL, MVT::v32i32, SDValue(WidenAddNode, 0));
+        Hexagon::vsub_lo, DL, MVT::v32i32, SDValue(ZExtNode, 0));
     SDValue HiReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_hi, DL, MVT::v32i32, SDValue(WidenAddNode, 0));
+        Hexagon::vsub_hi, DL, MVT::v32i32, SDValue(ZExtNode, 0));
 
-    SDNode *PackNode = CurDAG->getMachineNode(Hexagon::V6_vpackwh_sat, DL,
-                                              ResTy, HiReg, LoReg);
-    SDNode *ShuffNode = CurDAG->getMachineNode(Hexagon::V6_vshuffh, DL, ResTy,
-                                               SDValue(PackNode, 0));
-    SDNode *ConvNode = CurDAG->getMachineNode(Hexagon::V6_vconv_hf_h, DL, ResTy,
-                                              SDValue(ShuffNode, 0));
+    SDNode *ConvLoNode =
+        CurDAG->getMachineNode(Hexagon::V6_vconv_sf_w, DL, ResTy, LoReg);
+    SDNode *ConvHiNode =
+        CurDAG->getMachineNode(Hexagon::V6_vconv_sf_w, DL, ResTy, HiReg);
+
+    SDNode *WidenAddLoNode =
+        CurDAG->getMachineNode(Hexagon::V6_vadd_sf, DL, ResTy,
+                               SDValue(ConvLoNode, 0), SDValue(ZeroNode, 0));
+    SDNode *WidenAddHiNode =
+        CurDAG->getMachineNode(Hexagon::V6_vadd_sf, DL, ResTy,
+                               SDValue(ConvHiNode, 0), SDValue(ZeroNode, 0));
+
+    SDValue RC =
+        CurDAG->getTargetConstant(Hexagon::HvxWRRegClassID, DL, MVT::i32);
+    SDValue SubRegL = CurDAG->getTargetConstant(Hexagon::vsub_lo, DL, MVT::i32);
+    SDValue SubRegH = CurDAG->getTargetConstant(Hexagon::vsub_hi, DL, MVT::i32);
+    const SDValue Ops[] = {RC, SDValue(WidenAddHiNode, 0), SubRegH,
+                           SDValue(WidenAddLoNode, 0), SubRegL};
+    SDNode *RS = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                        MVT::v64i32, Ops);
+    SDNode *ConvNode = CurDAG->getMachineNode(Hexagon::V6_vconv_hf_qf32, DL,
+                                              ResTy, SDValue(RS, 0));
 
     ReplaceUses(SDValue(N, 0), SDValue(ConvNode, 0));
     CurDAG->RemoveDeadNode(N);
@@ -3602,16 +3625,13 @@ void HexagonDAGToDAGISel::translateIEEEIntrinsicToQFloat(SDNode *N,
   }
 
   // v1:0.hf = vcvt(v0.ub) is translated to
-  // v1.h = vdeal(v0.h); v2 = vxor(v2,v2)
-  // v5:4.uh = vunpack(v1.ub) - Lower in V0, upper in V1
-  // v7:6.w = vadd(v4.uh,v2.uh); v31:30.w = vadd(v5.uh,v2.uh)
-  // v4.h = vpack(v7.w,v6.w):sat; v3.h = vpack(v31.w,v30.w):sat
-  // v30.h = vshuff(v4.h);v31.h = vshuff(v3.h)
-  // v0.hf = v30.h;v1.hf = v31.h
+  // v1.h = vdeal(v0.h); v3:2.uh = vunpack(v1.ub)
+  // v0.hf = v2.h; v1.hf = v3.h
   case Intrinsic::hexagon_V6_vcvt_hf_ub_128B: {
 
     SDNode *DealNode =
         CurDAG->getMachineNode(Hexagon::V6_vdealh, DL, ResTy, N->getOperand(1));
+
     SDNode *UnpackNode = CurDAG->getMachineNode(Hexagon::V6_vunpackub, DL,
                                                 ResTy, SDValue(DealNode, 0));
 
@@ -3620,37 +3640,10 @@ void HexagonDAGToDAGISel::translateIEEEIntrinsicToQFloat(SDNode *N,
     SDValue HiReg = CurDAG->getTargetExtractSubreg(
         Hexagon::vsub_hi, DL, MVT::v32i32, SDValue(UnpackNode, 0));
 
-    SDNode *ZeroNode = CurDAG->getMachineNode(Hexagon::V6_vd0, DL, ResTy);
-
-    // Handle Lo Reg.
-    SDNode *WidenAddLoNode = CurDAG->getMachineNode(
-        Hexagon::V6_vadduhw, DL, ResTy, LoReg, SDValue(ZeroNode, 0));
-    SDValue Lo_LoReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_lo, DL, MVT::v32i32, SDValue(WidenAddLoNode, 0));
-    SDValue Lo_HiReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_hi, DL, MVT::v32i32, SDValue(WidenAddLoNode, 0));
-
-    SDNode *PackLoNode = CurDAG->getMachineNode(
-        Hexagon::V6_vpackwh_sat, DL, MVT::v32i32, Lo_HiReg, Lo_LoReg);
-    SDNode *ShufLoNode = CurDAG->getMachineNode(
-        Hexagon::V6_vshuffh, DL, MVT::v32i32, SDValue(PackLoNode, 0));
-    SDNode *ConvLoNode = CurDAG->getMachineNode(
-        Hexagon::V6_vconv_hf_h, DL, MVT::v32i32, SDValue(ShufLoNode, 0));
-
-    // Handle Hi Reg.
-    SDNode *WidenAddHiNode = CurDAG->getMachineNode(
-        Hexagon::V6_vadduhw, DL, ResTy, HiReg, SDValue(ZeroNode, 0));
-    SDValue Hi_LoReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_lo, DL, MVT::v32i32, SDValue(WidenAddHiNode, 0));
-    SDValue Hi_HiReg = CurDAG->getTargetExtractSubreg(
-        Hexagon::vsub_hi, DL, MVT::v32i32, SDValue(WidenAddHiNode, 0));
-
-    SDNode *PackHiNode = CurDAG->getMachineNode(
-        Hexagon::V6_vpackwh_sat, DL, MVT::v32i32, Hi_HiReg, Hi_LoReg);
-    SDNode *ShufHiNode = CurDAG->getMachineNode(
-        Hexagon::V6_vshuffh, DL, MVT::v32i32, SDValue(PackHiNode, 0));
-    SDNode *ConvHiNode = CurDAG->getMachineNode(
-        Hexagon::V6_vconv_hf_h, DL, MVT::v32i32, SDValue(ShufHiNode, 0));
+    SDNode *ConvLoNode =
+        CurDAG->getMachineNode(Hexagon::V6_vconv_hf_h, DL, MVT::v32i32, LoReg);
+    SDNode *ConvHiNode =
+        CurDAG->getMachineNode(Hexagon::V6_vconv_hf_h, DL, MVT::v32i32, HiReg);
 
     SDValue RC =
         CurDAG->getTargetConstant(Hexagon::HvxWRRegClassID, DL, MVT::i32);
@@ -3663,6 +3656,14 @@ void HexagonDAGToDAGISel::translateIEEEIntrinsicToQFloat(SDNode *N,
 
     ReplaceUses(SDValue(N, 0), SDValue(RS, 0));
     CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
+  case Intrinsic::hexagon_V6_vcvt_h_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_b_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_ub_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
+    llvm_unreachable("This intrinsic should be lowered to a call");
     return;
   }
 

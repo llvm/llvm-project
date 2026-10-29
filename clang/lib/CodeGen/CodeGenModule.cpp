@@ -153,7 +153,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
-    else if (Triple.isOSWindows())
+    else if (Triple.isOSWindowsOrUEFI())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
@@ -337,6 +337,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
+  case llvm::Triple::xtensa:
+    return createXtensaTargetCodeGenInfo(CGM);
   }
 }
 
@@ -437,6 +439,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
@@ -628,10 +631,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       CodeGenOpts.CoverageNotesFile.size() ||
       CodeGenOpts.CoverageDataFile.size())
     DebugInfo.reset(new CGDebugInfo(*this));
-  else if (getTriple().isOSWindows())
-    // On Windows targets, we want to emit compiler info even if debug info is
-    // otherwise disabled. Use a temporary CGDebugInfo instance to emit only
-    // basic compiler metadata.
+  else if (getTriple().isOSWindows() || getTriple().isUEFI())
+    // On Windows and UEFI targets, we want to emit compiler info even if debug
+    // info is otherwise disabled. Use a temporary CGDebugInfo instance to emit
+    // only basic compiler metadata.
     CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
@@ -1433,7 +1436,7 @@ void CodeGenModule::Release() {
                               "StrictVTablePointersRequirement",
                               llvm::MDNode::get(VMContext, Ops));
   }
-  if (getModuleDebugInfo() || getTriple().isOSWindows())
+  if (getModuleDebugInfo() || getTriple().isOSWindows() || getTriple().isUEFI())
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).
@@ -4246,28 +4249,39 @@ void CodeGenModule::EmitDeferred() {
       }
     }
 
+    // Check to see if we've already emitted this. This is necessary for a
+    // couple of reasons: first, decls can end up in the deferred-decls queue
+    // multiple times, and second, decls can end up with definitions in unusual
+    // ways (e.g. by an extern inline function acquiring a strong function
+    // redefinition). Just ignore these cases. Do this before requesting a
+    // correctly typed value for the definition, since that operation may
+    // replace an existing global whose LLVM type differs.
+    StringRef MangledName = getMangledName(D);
+    llvm::GlobalValue *GV = GetGlobalValue(MangledName);
+    if (GV && !GV->isDeclaration()) {
+      GlobalDecl ExistingGD;
+      if (lookupRepresentativeDecl(MangledName, ExistingGD) &&
+          D.getCanonicalDecl().getDecl() ==
+              ExistingGD.getCanonicalDecl().getDecl())
+        continue;
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
     // different type.
-    llvm::GlobalValue *GV = dyn_cast<llvm::GlobalValue>(
-        GetAddrOfGlobal(D, ForDefinition));
+    GV = dyn_cast<llvm::GlobalValue>(GetAddrOfGlobal(D, ForDefinition));
 
     // In case of different address spaces, we may still get a cast, even with
     // IsForDefinition equal to true. Query mangled names table to get
     // GlobalValue.
     if (!GV)
-      GV = GetGlobalValue(getMangledName(D));
+      GV = GetGlobalValue(MangledName);
 
     // Make sure GetGlobalValue returned non-null.
     assert(GV);
 
-    // Check to see if we've already emitted this.  This is necessary
-    // for a couple of reasons: first, decls can end up in the
-    // deferred-decls queue multiple times, and second, decls can end
-    // up with definitions in unusual ways (e.g. by an extern inline
-    // function acquiring a strong function redefinition).  Just
-    // ignore these cases.
+    // GetAddrOfGlobal may itself cause the declaration to be emitted.
     if (!GV->isDeclaration())
       continue;
 
@@ -4566,6 +4580,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In an OpenMP compilation Sema may defer a function's diagnostics to the end
+  // of the TU (see Sema::emitDeferredDiags). Emitting it before then would let
+  // code with pending errors reach CodeGen.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && isa<FunctionDecl>(Global))
+    return false;
+
   // In OpenMP 5.0 variables and function may be marked as
   // device_type(host/nohost) and we should not emit them eagerly unless we sure
   // that they must be emitted on the host/device. To be sure we need to have

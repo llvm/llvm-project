@@ -1287,7 +1287,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   std::string copyFuncName =
       fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = builder.getNamedFunction(copyFuncName))
     return decl;
 
   // create function
@@ -1298,6 +1298,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
@@ -1745,8 +1746,9 @@ bool ClauseProcessor::processIsDevicePtr(
   return clauseFound;
 }
 
-bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
-                                    bool isDeclareSimd) const {
+bool ClauseProcessor::processLinear(
+    mlir::omp::LinearClauseOps &result, bool isDeclareSimd,
+    llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms) const {
   lower::StatementContext stmtCtx;
   std::vector<mlir::Attribute> typeAttrs;
   std::vector<mlir::Attribute> linearModAttrs;
@@ -1776,6 +1778,8 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      if (linearSyms)
+        linearSyms->push_back(sym);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
 
@@ -1784,7 +1788,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
                   clause.t)) {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1792,7 +1796,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
         mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
         mlir::Value operand =
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       }
 
       // Determine the linear modifier:

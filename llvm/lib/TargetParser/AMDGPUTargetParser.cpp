@@ -458,9 +458,14 @@ unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32) {
   // The unified register file makes the AGPRs addressable as VGPRs.
   if (Features.test(FEAT_GFX90A_INSTS))
     return 512;
-  if (Features.test(FEAT_1024_ADDRESSABLE_VGPRS))
-    return IsWave32 ? 1024 : 512;
-  return 256;
+
+  // VGPR operand fields are 8 bits; VGPR MSBs add 2 more per operand.
+  constexpr unsigned OperandBits = 8;
+  constexpr unsigned MSBBits = 2;
+  unsigned Bits = OperandBits;
+  if (Features.test(FEAT_VGPR_MSBS))
+    Bits += MSBBits;
+  return std::min(1u << Bits, getTotalNumVGPRs(AK, IsWave32));
 }
 
 unsigned AMDGPU::getAddressableNumVGPRs(Triple::SubArchType SubArch,
@@ -613,7 +618,7 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_AGPR_ALLOC,
     FEAT_1536_PHYSICAL_VGPRS,
     FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY,
-    FEAT_1024_ADDRESSABLE_VGPRS,
+    FEAT_VGPR_MSBS,
     FEAT_LDS_ALLOC_GRANULARITY_256,
     FEAT_LDS_ALLOC_GRANULARITY_512,
     FEAT_LDS_ALLOC_GRANULARITY_1024,
@@ -890,11 +895,8 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
-  // Filter out unrecognized subarch suffixes. The bare arch may be spelled
-  // either "amdgcn" (legacy) or "amdgpu" (new subarch triples); anything else
-  // with no recognized subarch is a stray suffix.
-  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn" &&
-      TT.getArchName() != "amdgpu")
+  // Filter out unrecognized subarch suffixes.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
     return std::nullopt;
 
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
@@ -987,7 +989,7 @@ void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
                         isSramEccHardwiredOn(Arch), isXnackHardwiredOn(Arch));
 }
 
-std::string TargetID::getCanonicalTargetIDString() const {
+std::string TargetID::getCanonicalFeatureString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   printCanonicalTargetIDString(OS);

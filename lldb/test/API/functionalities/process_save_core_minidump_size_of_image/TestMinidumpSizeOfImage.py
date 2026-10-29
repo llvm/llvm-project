@@ -118,7 +118,7 @@ class MinidumpSizeOfImageTestCase(TestBase):
 
         return total
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     # Building the shared library assumes we will run on the host.
     @skipIfRemote

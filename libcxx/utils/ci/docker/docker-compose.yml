@@ -23,7 +23,7 @@ services:
       context: ../../../.. # monorepo root
       dockerfile: libcxx/utils/ci/docker/android-builder.dockerfile
       args:
-        BASE_IMAGE_VERSION: 8ece73c9f8b54fea6a98e9e4c55f9a2e6ccc9b3c
-        ANDROID_CLANG_VERSION: r584948b
-        ANDROID_CLANG_PREBUILTS_COMMIT: 2b062008b0a7be59ad85f012cfeee60f052808f1
-        ANDROID_SYSROOT_COMMIT: f8b85cc5262c6e5cbc9a92c1bab2b18b32a4c63f
+        BASE_IMAGE_VERSION: 5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
+        ANDROID_CLANG_VERSION: r596125
+        ANDROID_CLANG_PREBUILTS_COMMIT: c757e540eeaac1661fd7495764aec83254ef81fe
+        ANDROID_SYSROOT_COMMIT: d3a4496257f6e19fe25dd960a8ceee1d848a31a8

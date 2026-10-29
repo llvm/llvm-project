@@ -12,7 +12,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   FlattenMemRefs.cpp
   FoldMemRefAliasOps.cpp
   IndependenceTransforms.cpp
-  MemorySlotOpInterfaceImpl.cpp
+  MemorySlotInterfacesImpl.cpp
   MultiBuffer.cpp
   NormalizeMemRefs.cpp
   ReifyResultShapes.cpp

@@ -27,7 +27,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 
 #ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
@@ -762,32 +764,34 @@ template <char... Cs>
 using RuntimeIdentifier = std::integer_sequence<char, Cs...>;
 
 namespace details {
-template <typename T, T... As, T... Bs>
-static constexpr std::integer_sequence<T, As..., Bs...>
-concat(std::integer_sequence<T, As...>, std::integer_sequence<T, Bs...>) {
-  return {};
+template <typename T, std::size_t N>
+static constexpr std::size_t leadingNonZero(const T (&arr)[N]) {
+  std::size_t i = 0;
+  while (i < N && arr[i] != 0)
+    ++i;
+  return i;
 }
-template <typename T, T... As, T... Bs, typename... Cs>
-static constexpr auto concat(std::integer_sequence<T, As...>,
-                             std::integer_sequence<T, Bs...>, Cs...) {
-  return concat(std::integer_sequence<T, As..., Bs...>{}, Cs{}...);
+template <typename T, T... b>
+struct LeadingNonZero {
+  static constexpr T arr[] = {b...};
+  static constexpr std::size_t value = leadingNonZero(arr);
+};
+template <typename T, T... b, std::size_t... I>
+static constexpr auto take(std::integer_sequence<T, b...>,
+                           std::index_sequence<I...>) {
+  return std::integer_sequence<T, LeadingNonZero<T, b...>::arr[I]...>{};
 }
-template <typename T>
-static constexpr std::integer_sequence<T> concat(std::integer_sequence<T>) {
-  return {};
-}
-template <typename T, T a>
-static constexpr auto filterZero(std::integer_sequence<T, a>) {
-  if constexpr (a != 0) {
-    return std::integer_sequence<T, a>{};
-  } else {
-    return std::integer_sequence<T>{};
-  }
-}
+
+/// This is a helper for the mkRTKey macro; FirMacroExpandKey encodes runtime
+/// function names fixed-width template sequences of exactly 50 characters. This
+/// filter function removes the trailing '\0' characters. This is deliberately
+/// non-recursive because 50 nested template expansions might hit compiler
+/// limits, such as msvc's C1202.
 template <typename T, T... b>
 static constexpr auto filter(std::integer_sequence<T, b...>) {
   if constexpr (sizeof...(b) > 0) {
-    return details::concat(filterZero(std::integer_sequence<T, b>{})...);
+    return take(std::integer_sequence<T, b...>{},
+                std::make_index_sequence<LeadingNonZero<T, b...>::value>{});
   } else {
     return std::integer_sequence<T>{};
   }

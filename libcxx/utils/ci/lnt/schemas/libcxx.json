@@ -43,6 +43,23 @@
       "type": "text",
       "display_name": "Short SHA",
       "display": true
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "display_name": "Title",
+      "searchable": true
+    },
+    {
+      "name": "author",
+      "type": "text",
+      "display_name": "Author",
+      "searchable": true
+    },
+    {
+      "name": "committed_at",
+      "type": "datetime",
+      "display_name": "Commit Date"
     }
   ],
   "machine_fields": [

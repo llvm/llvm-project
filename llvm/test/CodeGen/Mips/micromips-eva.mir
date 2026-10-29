@@ -141,7 +141,7 @@ registers:
   - { id: 7, class: gpr32, preferred-register: '' }
   - { id: 8, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
+  - { reg: '$r4', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -169,14 +169,14 @@ constants:
 body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
-    liveins: $a0
+    liveins: $r4
 
-    %0:gpr32 = COPY $a0
+    %0:gpr32 = COPY $r4
     %1:gpr32 = COPY %0
     SW %0, %stack.0.z.addr, 0 :: (store (s32) into %ir.z.addr)
     %2:gpr32 = LW %stack.0.z.addr, 0 :: (dereferenceable load (s32) from %ir.z.addr)
     SYNC 0
-    %3:gpr32 = ADDiu $zero, 42
+    %3:gpr32 = ADDiu $r0, 42
 
   bb.1.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -184,15 +184,15 @@ body:             |
     %4:gpr32 = LLE %2, 0
     %6:gpr32 = ADDu %4, %3
     %8:gpr32 = SCE %6, %2, 0
-    BEQ %8, $zero, %bb.1, implicit-def $at
+    BEQ %8, $r0, %bb.1, implicit-def $r1
 
   bb.2.entry:
     SYNC 0
     %5:gpr32 = ADDiu killed %4, 42
-    $v0 = COPY %5
+    $r2 = COPY %5
     CACHEE %1, 5, 2
     PREFE %1, 5, 2
-    RetRA implicit $v0
+    RetRA implicit $r2
 
 ...
 

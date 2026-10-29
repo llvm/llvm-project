@@ -1,0 +1,42 @@
+add_header_library(
+  ether_utils
+  HDRS
+    ether_utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_ether_addr
+    libc.src.__support.CPP.span
+    libc.src.__support.common
+    libc.src.__support.ctype_utils
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  ether_ntoa
+  SRCS
+    ether_ntoa.cpp
+  HDRS
+    ether_ntoa.h
+  DEPENDS
+    .ether_utils
+    libc.hdr.types.struct_ether_addr
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  ether_ntoa_r
+  SRCS
+    ether_ntoa_r.cpp
+  HDRS
+    ether_ntoa_r.h
+  DEPENDS
+    .ether_utils
+    libc.hdr.types.struct_ether_addr
+    libc.src.__support.CPP.span
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)

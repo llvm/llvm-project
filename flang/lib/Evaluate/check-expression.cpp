@@ -1858,7 +1858,7 @@ public:
     return {}; // doesn't count as a use
   }
   Result operator()(const RankOneBoundElement &x) const {
-    return {}; // unreachable
+    return (*this)(x.base());
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

@@ -676,7 +676,7 @@ define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_st
 define void @invoke_opaque_fptr(ptr %fptr) alwaysinline personality ptr null {
 ; CHECK-LABEL: define void @invoke_opaque_fptr
 ; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR6]] personality ptr null {
-; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR14:[0-9]+]]
+; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR15:[0-9]+]]
 ; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[UNWIND_CLEANUP:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void
@@ -1122,4 +1122,61 @@ define i64 @llvm_vscale_vl_dependent_args_caller() "aarch64_pstate_sm_enabled" {
 ;
   %res = call i64 @llvm_vscale_vl_dependent_args(<vscale x 2 x i64> zeroinitializer)
   ret i64 %res
+}
+
+;
+; Test that invalid instructions (in other mode) in combination with vl-dependent instructions,
+; are not inlined, due to the invalid instruction.
+;
+
+define void @llvm_vscale_vl_dependent_args_incompatible_instruction(<vscale x 2 x i64> %in, ptr %ptr_to_ptrs, ptr %ptr_to_vals) {
+; CHECK-LABEL: define void @llvm_vscale_vl_dependent_args_incompatible_instruction
+; CHECK-SAME: (<vscale x 2 x i64> [[IN:%.*]], ptr [[PTR_TO_PTRS:%.*]], ptr [[PTR_TO_VALS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[PTRS:%.*]] = load <vscale x 2 x ptr>, ptr [[PTR_TO_PTRS]], align 16
+; CHECK-NEXT:    [[VALS:%.*]] = load <vscale x 2 x i64>, ptr [[PTR_TO_VALS]], align 16
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[VALS]], <vscale x 2 x ptr> align 8 [[PTRS]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[RES]])
+; CHECK-NEXT:    ret void
+;
+  ; This is safe (due to vl-dependent args)
+  %res = call i64 @llvm.vscale.i64()
+
+  ; This instruction is not safe, it's a scatter which is not valid in streaming mode.
+  %ptrs = load <vscale x 2 x ptr>, ptr %ptr_to_ptrs
+  %vals = load <vscale x 2 x i64>, ptr %ptr_to_vals
+  call void @llvm.masked.scatter(<vscale x 2 x i64> %vals, <vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> splat(i1 true))
+  call void (...) @llvm.fake.use(i64 %res)
+  ret void
+}
+
+define void @llvm_vscale_vl_dependent_args_incompatible_instruction2(<vscale x 2 x i64> %in, ptr %ptr_to_ptrs, ptr %ptr_to_vals, ptr %p) {
+; CHECK-LABEL: define void @llvm_vscale_vl_dependent_args_incompatible_instruction2
+; CHECK-SAME: (<vscale x 2 x i64> [[IN:%.*]], ptr [[PTR_TO_PTRS:%.*]], ptr [[PTR_TO_VALS:%.*]], ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    store <vscale x 2 x i64> [[IN]], ptr [[P]], align 16
+; CHECK-NEXT:    [[PTRS:%.*]] = load <vscale x 2 x ptr>, ptr [[PTR_TO_PTRS]], align 16
+; CHECK-NEXT:    [[VALS:%.*]] = load <vscale x 2 x i64>, ptr [[PTR_TO_VALS]], align 16
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[VALS]], <vscale x 2 x ptr> align 8 [[PTRS]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  ; This is safe (due to vl-dependent args)
+  store <vscale x 2 x i64> %in, ptr %p
+
+  ; This instruction is not safe, it's a scatter which is not valid in streaming mode.
+  %ptrs = load <vscale x 2 x ptr>, ptr %ptr_to_ptrs
+  %vals = load <vscale x 2 x i64>, ptr %ptr_to_vals
+  call void @llvm.masked.scatter(<vscale x 2 x i64> %vals, <vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> splat(i1 true))
+  ret void
+}
+
+define void @llvm_vscale_vl_dependent_args_incompatible_instruction_caller(ptr %ptr_to_ptrs, ptr %ptr_to_vals, ptr %p) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @llvm_vscale_vl_dependent_args_incompatible_instruction_caller
+; CHECK-SAME: (ptr [[PTR_TO_PTRS:%.*]], ptr [[PTR_TO_VALS:%.*]], ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    call void @llvm_vscale_vl_dependent_args_incompatible_instruction(<vscale x 2 x i64> zeroinitializer, ptr [[PTR_TO_PTRS]], ptr [[PTR_TO_VALS]])
+; CHECK-NEXT:    call void @llvm_vscale_vl_dependent_args_incompatible_instruction2(<vscale x 2 x i64> zeroinitializer, ptr [[PTR_TO_PTRS]], ptr [[PTR_TO_VALS]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm_vscale_vl_dependent_args_incompatible_instruction(<vscale x 2 x i64> zeroinitializer, ptr %ptr_to_ptrs, ptr %ptr_to_vals)
+  call void @llvm_vscale_vl_dependent_args_incompatible_instruction2(<vscale x 2 x i64> zeroinitializer, ptr %ptr_to_ptrs, ptr %ptr_to_vals, ptr %p)
+  ret void
 }

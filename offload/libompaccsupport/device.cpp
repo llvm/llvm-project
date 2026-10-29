@@ -45,6 +45,12 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
+namespace llvm::offload::tmp {
+GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
+} // namespace llvm::offload::tmp
+
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
@@ -65,10 +71,10 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+DeviceTy::DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
                    ol_device_handle_t DeviceHandle, PluginManager *PM)
-    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      DeviceHandle(DeviceHandle), PM(PM), MappingInfo(*this) {}
+    : DeviceID(DeviceID), Platform(Platform), DeviceHandle(DeviceHandle),
+      PM(PM), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -78,36 +84,90 @@ DeviceTy::~DeviceTy() {
   dumpTargetPointerMappings(&Loc, *this);
 }
 
+llvm::Error DeviceTy::initGeometryProps() {
+  auto Query = [&](ol_device_info_t Info, auto &Dest) -> llvm::Error {
+    if (auto Res = olGetDeviceInfo(DeviceHandle, Info, sizeof(Dest), &Dest))
+      return createError(ErrorCode::BackendFailure,
+                         "failed to get property %d of device %d: %s",
+                         static_cast<int>(Info), DeviceID, Res->Details);
+    return llvm::Error::success();
+  };
+
+  if (auto Err = Query(OL_DEVICE_INFO_NUM_LANES, GeometryProps.WarpSize))
+    return Err;
+  // A block is one dimensional, so it is limited both by the maximum number of
+  // threads a block can have and by the maximum size of its first dimension.
+  uint32_t MaxBlockSize = 0;
+  if (auto Err = Query(OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, MaxBlockSize))
+    return Err;
+  ol_dimensions_t MaxBlockSizePerDim{};
+  if (auto Err = Query(OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
+                       MaxBlockSizePerDim))
+    return Err;
+  GeometryProps.ThreadLimit = std::min(MaxBlockSize, MaxBlockSizePerDim.x);
+  if (auto Err = Query(OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE,
+                       GeometryProps.DefaultNumThreads))
+    return Err;
+  if (auto Err = Query(OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS,
+                       GeometryProps.DefaultNumBlocks))
+    return Err;
+  if (auto Err = Query(OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS,
+                       GeometryProps.MaxNumBlocks))
+    return Err;
+  if (auto Err =
+          Query(OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE, GeometryProps.MaxGridSize))
+    return Err;
+  // This is the same property reported by omp_get_gprivate_limit().
+  if (auto Err = Query(OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                       GeometryProps.MaxBlockSharedMemSize))
+    return Err;
+  // Not every device reports its number of compute units; zero turns off the
+  // heuristics that need it.
+  GeometryProps.NumComputeUnits =
+      getInfo<uint32_t>(OL_DEVICE_INFO_NUM_COMPUTE_UNITS);
+  // Some defaults depend on the backend. If it is unknown, the generic ones
+  // apply.
+  GeometryProps.Backend = Backend;
+
+  return llvm::Error::success();
+}
+
+uint32_t DeviceTy::getThreadLimit() const {
+  static Int32Envar OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT");
+
+  if (OMP_TeamsThreadLimit > 0)
+    return std::min(GeometryProps.ThreadLimit, uint32_t(OMP_TeamsThreadLimit));
+  return GeometryProps.ThreadLimit;
+}
+
 llvm::Error DeviceTy::init() {
   if (auto Res = olCreateContext(1, &DeviceHandle, &Context))
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
   IsHostDevice =
-      getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
+      getInfo<ol_device_type_t>(OL_DEVICE_INFO_TYPE) == OL_DEVICE_TYPE_HOST;
 
-  size_t UidSize = 0;
-  if (!olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_UID, &UidSize) &&
-      UidSize > 0) {
-    Uid.resize(UidSize);
-    if (olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_UID, UidSize, Uid.data()))
-      Uid.clear();
-    else
-      // Drop the null terminator from the size but keep it in the buffer, so
-      // that getUid() can be handed out as a C string.
-      Uid.pop_back();
-  }
-  if (Uid.empty()) {
+  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
+  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
+
+  // Needs to be initialized before the GeometryProps.
+  if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                        &Backend))
+    Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+
+  getInfoString(OL_DEVICE_INFO_UID, Uid);
+  if (Uid.empty())
     ODBG(ODT_Init) << "Failed to get UID for device " << DeviceID;
-    // An empty SmallString is not guaranteed to be null-terminated.
-    Uid.c_str();
-  }
+
+  if (auto Err = initGeometryProps())
+    return Err;
 
   OMPT_IF_BUILT_AND_INITIALIZED({
-    GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
-    std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
+    llvm::SmallString<32> ComputeUnitKind;
+    getInfoString(OL_DEVICE_INFO_COMPUTE_UNIT_KIND, ComputeUnitKind);
     performOmptCallback(device_initialize, DeviceID, ComputeUnitKind.c_str(),
-                        reinterpret_cast<ompt_device_t *>(&GenericDevice),
+                        reinterpret_cast<ompt_device_t *>(this),
                         lookupCallbackByName, /*documentation=*/nullptr);
   });
 
@@ -182,14 +242,36 @@ llvm::Error DeviceTy::deinit() {
   return llvm::Error::success();
 }
 
+llvm::Expected<void *>
+DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
+                                    size_t ExpectedSize) {
+  size_t Size = 0;
+  auto AddrOrErr = Program.getGlobalAddress(Name, &Size);
+  if (!AddrOrErr)
+    return AddrOrErr;
+  // Some backends return size 0 if the size is unknown.
+  // Only check the size if it is non-zero.
+  if (Size && Size != ExpectedSize)
+    return createError(ErrorCode::InvalidBinary,
+                       "size of global symbol %s does not match expected size "
+                       "(expected %zu, got %zu)",
+                       Name, ExpectedSize, Size);
+
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
+  if (RecordReplay && RecordReplay->isRecording())
+    RecordReplay->addGlobal(Name, Size, *AddrOrErr);
+
+  return AddrOrErr;
+}
+
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
 // offloading entries generated for them which map the host's function pointer
 // to a global containing the corresponding function pointer on the device.
 static llvm::Expected<std::pair<void *, uint64_t>>
 setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
-                       __tgt_device_binary Binary) {
-  AsyncInfoTy AsyncInfo(Device);
+                       const ProgramTy &Program) {
   llvm::ArrayRef<llvm::offloading::EntryTy> Entries(Image->EntriesBegin,
                                                     Image->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
@@ -206,19 +288,16 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // VTable and Entry.Size is the total size of the VTable. Unlike the
       // indirect function case below, the Global is not of size Entry.Size and
       // is instead of size PtrSize (sizeof(void*)).
-      void *Vtable;
       void *res;
-      if (Device.RTL->get_global(Binary, PtrSize, Entry.SymbolName, &Vtable))
-        return createError(ErrorCode::InvalidBinary, "failed to load %s",
-                           Entry.SymbolName);
+      auto VtableOrErr =
+          Device.getAndRecordGlobalAddress(Program, Entry.SymbolName, PtrSize);
+      if (!VtableOrErr)
+        return VtableOrErr.takeError();
+      void *Vtable = *VtableOrErr;
 
       // HstPtr = Entry.Address;
-      if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
+      if (Device.retrieveDataSync(&res, Vtable, PtrSize))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
-                           Entry.SymbolName);
-      if (Device.synchronize(AsyncInfo))
-        return createError(ErrorCode::InvalidBinary,
-                           "failed to synchronize after retrieving %s",
                            Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
@@ -233,20 +312,17 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // dealing with a single function pointer (not a VTable)
       assert(Entry.Size == PtrSize && "Global not a function pointer?");
       auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
-      void *Ptr;
-      if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
-        return createError(ErrorCode::InvalidBinary, "failed to load %s",
-                           Entry.SymbolName);
+      auto PtrOrErr = Device.getAndRecordGlobalAddress(
+          Program, Entry.SymbolName, Entry.Size);
+      if (!PtrOrErr)
+        return PtrOrErr.takeError();
+      void *Ptr = *PtrOrErr;
 
       HstPtr = Entry.Address;
-      if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
+      if (Device.retrieveDataSync(&DevPtr, Ptr, Entry.Size))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
                            Entry.SymbolName);
     }
-    if (Device.synchronize(AsyncInfo))
-      return createError(ErrorCode::InvalidBinary,
-                         "failed to synchronize after retrieving %s",
-                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -260,69 +336,79 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   uint64_t TableSize =
       IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
-  if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
-                        AsyncInfo))
+  // The IndirectCallTable is on the stack, so the copy must be synchronous to
+  // ensure the data is copied before we return.
+  if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(), TableSize,
+                            /*Entry=*/nullptr,
+                            /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                            /*Name=*/"IndirectCallTable"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
-  // The IndirectCallTable is on the stack, so we must synchronize to ensure
-  // the data is copied before we return.
-  if (Device.synchronize(AsyncInfo))
-    return createError(ErrorCode::InvalidBinary,
-                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
 
+namespace llvm::offload::tmp {
+llvm::omp::target::plugin::DeviceImageTy *
+__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
+} // namespace llvm::offload::tmp
+
 // Load binary to device and perform global initialization if needed.
-llvm::Expected<__tgt_device_binary>
-DeviceTy::loadBinary(__tgt_device_image *Img) {
-  __tgt_device_binary Binary;
+llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
+  auto ProgramOrErr = ProgramTy::create(Context, DeviceHandle, Img);
+  if (!ProgramOrErr)
+    return ProgramOrErr.takeError();
+  ProgramTy Program = std::move(*ProgramOrErr);
 
-  if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
-    return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
-                       Img);
-
-  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
-      device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
-      /*VmaInFile=*/nullptr,
-      reinterpret_cast<uintptr_t>(Img->ImageEnd) -
-          reinterpret_cast<uintptr_t>(Img->ImageStart),
-      const_cast<void *>(Img->ImageStart),
-      /*DeviceAddr=*/nullptr, /*ModuleId=*/0));
+  OMPT_IF_BUILT_AND_INITIALIZED({
+    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
+        Program.getHandle());
+    performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
+                        /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
+  });
 
   // This symbol is optional.
-  void *DeviceEnvironmentPtr;
-  if (RTL->get_global(Binary, sizeof(DeviceEnvironmentTy),
-                      "__omp_rtl_device_environment", &DeviceEnvironmentPtr))
-    return Binary;
+  auto DeviceEnvironmentPtrOrErr = getAndRecordGlobalAddress(
+      Program, "__omp_rtl_device_environment", sizeof(DeviceEnvironmentTy));
+  if (!DeviceEnvironmentPtrOrErr) {
+    llvm::consumeError(DeviceEnvironmentPtrOrErr.takeError());
+    return Program;
+  }
+  void *DeviceEnvironmentPtr = *DeviceEnvironmentPtrOrErr;
 
   // Obtain a table mapping host function pointers to device function pointers.
-  auto CallTablePairOrErr = setupIndirectCallTable(*this, Img, Binary);
+  auto CallTablePairOrErr = setupIndirectCallTable(*this, Img, Program);
   if (!CallTablePairOrErr)
     return CallTablePairOrErr.takeError();
 
   // Debug flags for the device runtime.
   static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
 
-  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   DeviceEnvironmentTy DeviceEnvironment;
   DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind.get();
   DeviceEnvironment.NumDevices = RTL->getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = RTLDeviceID;
   DeviceEnvironment.DynamicMemSize = 0;
-  DeviceEnvironment.ClockFrequency = GenericDevice.getClockFrequency();
+  DeviceEnvironment.ClockFrequency =
+      getInfo<uint64_t>(OL_DEVICE_INFO_TIMESTAMP_FREQUENCY);
   DeviceEnvironment.IndirectCallTable =
       reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
   DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
   DeviceEnvironment.HardwareParallelism =
-      GenericDevice.getHardwareParallelism();
+      getInfo<uint64_t>(OL_DEVICE_INFO_HARDWARE_PARALLELISM);
 
-  AsyncInfoTy AsyncInfo(*this);
-  if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
-                 sizeof(DeviceEnvironment), AsyncInfo))
+  // DeviceEnvironment is on the stack, so the copy must be synchronous.
+  if (submitDataSync(DeviceEnvironmentPtr, &DeviceEnvironment,
+                     sizeof(DeviceEnvironment),
+                     /*Entry=*/nullptr,
+                     /*HDTTMapPtr=*/nullptr,
+                     /*Loc=*/nullptr,
+                     /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
-  return Binary;
+  return Program;
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
@@ -368,10 +454,33 @@ llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
-                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                             const ident_t *Loc, const char *Name) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, Queue, Entry,
+                        HDTTMapPtr, Loc, Name);
+}
+
+// Submit data to device synchronously
+int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, /*Queue=*/nullptr,
+                        Entry, HDTTMapPtr, Loc, Name);
+}
+
+int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, ol_queue_handle_t Queue,
+                                 HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc, Name);
 
   /// RAII to establish tool anchors before and after data submit
   OMPT_IF_BUILT(
@@ -380,18 +489,47 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                AsyncInfo);
+  if (auto Res = olMemcpy(Queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
+                          /*Src=*/nullptr, Size)) {
+    REPORT() << "Failure to copy data from host to device. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
                                HostDataToTargetTy *Entry,
-                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                               const ident_t *Loc) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, Queue, Entry,
+                          HDTTMapPtr, Loc);
+}
+
+// Retrieve data from device synchronously
+int32_t DeviceTy::retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, /*Queue=*/nullptr,
+                          Entry, HDTTMapPtr, Loc);
+}
+
+int32_t DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, ol_queue_handle_t Queue,
+                                   HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc);
 
   /// RAII to establish tool anchors before and after data retrieval
   OMPT_IF_BUILT(
@@ -400,8 +538,14 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                  AsyncInfo);
+  if (auto Res = olMemcpy(Queue, HstPtrBegin, /*Dst=*/nullptr, TgtPtrBegin,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device to host. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Copy data from current device to destination device directly
@@ -418,16 +562,19 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
-  return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                  DstPtr, Size, AsyncInfo);
-}
 
-int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
-  return RTL->data_fence(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device (" << RTLDeviceID
+             << ") to device (" << DstDev.RTLDeviceID
+             << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
@@ -532,8 +679,7 @@ prepareBlockMemory(DeviceTy &Device, const KernelLaunchInfoTy &KernelEnv,
     return DynBlockMemConfTy{DynCGroupMem, DynCGroupMem,
                              DynCGroupMemFallbackType::Abort, nullptr};
 
-  GenericDeviceTy &GenericDevice = Device.RTL->getDevice(Device.RTLDeviceID);
-  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  uint32_t MaxBlockMemSize = Device.getMaxBlockSharedMemSize();
   uint32_t DynBlockMemSize = DynCGroupMem;
   uint32_t TotalBlockMemSize = KernelEnv.StaticBlockMemSize + DynBlockMemSize;
   uint32_t DynNativeBlockMemSize = DynBlockMemSize;
@@ -583,14 +729,13 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
                            const DynBlockMemConfTy &DynBlockMemConf,
                            uint32_t DynCGroupMem, void **DynPtrSlot,
                            AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
-  GenericDeviceTy &GenericDevice = Device.RTL->getDevice(Device.RTLDeviceID);
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(Device.DeviceHandle);
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment, and launches with no reserved dyn_ptr slot (e.g. older
   // compiler versions, or non-OpenMP launches) have nowhere to store one.
-  if ((GenericDevice.getRecordReplay() &&
-       GenericDevice.getRecordReplay()->isReplaying()) ||
-      !DynPtrSlot)
+  if ((RecordReplay && RecordReplay->isReplaying()) || !DynPtrSlot)
     return nullptr;
 
   const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
@@ -633,28 +778,25 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
-  if (auto Err = GenericDevice.dataSubmit(
-          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
-    return Err;
+  if (Device.submitData(*AllocOrErr, &LocalKLE,
+                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
+                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment");
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
 /// Get the effective number of threads for the kernel based on the
 /// user-defined number of threads.
-static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+static uint32_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
                                        uint32_t UserThreadLimit,
                                        const KernelLaunchInfoTy &KernelEnv) {
   assert(!KernelEnv.isBareMode() &&
          "bare kernel should not call this function");
 
   if (UserThreadLimit > 0 && KernelEnv.isGenericMode())
-    UserThreadLimit += GenericDevice.getWarpSize();
+    UserThreadLimit += Props.WarpSize;
 
   return std::min(KernelEnv.MaxNumThreads, (UserThreadLimit > 0)
                                                ? UserThreadLimit
@@ -664,14 +806,33 @@ static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
 /// Get the maximum number of blocks the device can launch for a kernel using
 /// \p NumThreads threads per block, further limited by OMP_NUM_TEAMS if the
 /// user set it.
-static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
+static uint32_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
                                     uint32_t NumThreads) {
   static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
 
-  uint32_t BlockLimit = GenericDevice.getBlockLimit(NumThreads);
+  uint32_t BlockLimit = Props.MaxNumBlocks;
+  // Some devices limit the total number of threads of a launch, which makes
+  // the block limit depend on the thread count.
+  if (Props.MaxGridSize && NumThreads > 0)
+    BlockLimit = std::min<uint64_t>(BlockLimit, Props.MaxGridSize / NumThreads);
   if (OMP_NumTeams > 0)
     return std::min(BlockLimit, uint32_t(OMP_NumTeams));
   return BlockLimit;
+}
+
+/// Get the default number of blocks for a kernel in Generic-SPMD mode.
+static uint32_t
+getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
+  // Envar to set the default number of blocks per compute unit for a kernel in
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
+  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+
+  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
+      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+    return Props.DefaultNumBlocks;
+  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
 }
 
 /// Get the effective number of blocks for the kernel based on the
@@ -679,11 +840,13 @@ static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
 /// The number of threads \p EffectiveNumThreads can be adjusted by this
 /// method. \p IsNumThreadsFromUser is true if \p EffectiveNumThreads is
 /// defined by the user via the thread_limit clause.
-static uint32_t
-getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
-                      uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-                      bool IsNumThreadsStrict, bool IsNumThreadsFromUser,
-                      const KernelLaunchInfoTy &KernelEnv) {
+static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
+                                      uint32_t UserNumBlocks,
+                                      uint64_t LoopTripCount,
+                                      uint32_t &EffectiveNumThreads,
+                                      bool IsNumThreadsStrict,
+                                      bool IsNumThreadsFromUser,
+                                      const KernelLaunchInfoTy &KernelEnv) {
   assert(!KernelEnv.isBareMode() &&
          "bare kernel should not call this function");
 
@@ -693,14 +856,16 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
   // reusing blocks until the requested count has been served.
   if (UserNumBlocks > 0)
     return std::min(UserNumBlocks,
-                    getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
+                    getDeviceBlockLimit(Props, EffectiveNumThreads));
 
   // Return the number of blocks required to cover the loop iterations.
   if (KernelEnv.isNoLoopMode())
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
                              : 1;
 
-  uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
+  uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
+                                  ? getDefaultNumBlocksGenericSPMD(Props)
+                                  : Props.DefaultNumBlocks;
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (KernelEnv.isSPMDMode()) {
@@ -709,8 +874,12 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
       // will execute one iteration of the loop; rounded up to the nearest
       // integer. However, if that results in too few blocks, we artificially
       // reduce the thread count per block to increase the outer parallelism.
-      auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
-      MinThreads = std::min(MinThreads, EffectiveNumThreads);
+      // Envar that sets the minimum number of threads to use for such a loop.
+      static UInt32Envar OMPX_MinThreadsForLowTripCount(
+          "LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
+      uint32_t MinThreads =
+          std::min(OMPX_MinThreadsForLowTripCount.get(), EffectiveNumThreads);
 
       // Honor the thread_limit clause; only lower the number of threads.
       [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
@@ -768,29 +937,64 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
 
   uint32_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
-  if (GenericDevice.getReuseBlocksForHighTripCount())
+  static BoolEnvar OMPX_ReuseBlocksForHighTripCount(
+      "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
+  if (OMPX_ReuseBlocksForHighTripCount.get())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+
+  // In Generic-SPMD mode, the threads of a block run the iterations of the
+  // inner parallel loops, whose trip counts are unknown. If they are lower than
+  // the number of threads, most threads idle. So trade threads for blocks, down
+  // to one warp per block, as long as the distribute loop has an iteration for
+  // every block. This keeps the device as busy if the inner trip counts are
+  // high. The trade is not done if the user set the number of threads, and the
+  // number of blocks stays within the device's limit, which OMP_NUM_TEAMS may
+  // lower.
+  if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
+      !IsNumThreadsStrict) {
+    while (EffectiveNumThreads > Props.WarpSize) {
+      uint64_t MaxNumBlocks = std::min<uint64_t>(
+          LoopTripCount, getDeviceBlockLimit(Props, EffectiveNumThreads / 2));
+      if (uint64_t(PreferredNumBlocks) * 2 > MaxNumBlocks)
+        break;
+      EffectiveNumThreads /= 2;
+      PreferredNumBlocks *= 2;
+    }
+  }
   return std::min(PreferredNumBlocks,
-                  getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
+                  getDeviceBlockLimit(Props, EffectiveNumThreads));
 }
 
 /// Build the base KernelLaunchArgsTy for a launch from the public
 /// KernelArgsTy and the kernel's cached launch-geometry properties.
-static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs,
-                                          KernelReplayOutcomeTy *ReplayOutcome,
-                                          const KernelLaunchInfoTy &KernelEnv) {
+static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs) {
   KernelLaunchArgsTy LaunchArgs;
-  LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
-  // Save the requested value before computing the effective number of blocks so
-  // it can be used by record-replay mechanisms.
-  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
-  LaunchArgs.KernelLaunchInfo.MaxNumThreads = KernelEnv.MaxNumThreads;
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
   return LaunchArgs;
+}
+
+/// Build the record/replay view of a launch, once the effective geometry and
+/// dynamic block memory in \p LaunchArgs have been resolved.
+static KernelRecordArgsTy buildRecordArgs(
+    const KernelArgsTy &KernelArgs, const KernelLaunchArgsTy &LaunchArgs,
+    const KernelLaunchInfoTy &KernelEnv, KernelReplayOutcomeTy *ReplayOutcome) {
+  KernelRecordArgsTy RecordArgs;
+  RecordArgs.NumArgs = LaunchArgs.NumArgs;
+  RecordArgs.Args = LaunchArgs.Args;
+  RecordArgs.Tripcount = KernelArgs.Tripcount;
+  // The value requested by the program, before adjustEffectiveGeometry()
+  // computed the effective number of blocks.
+  RecordArgs.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
+  RecordArgs.MaxNumThreads = KernelEnv.MaxNumThreads;
+  llvm::copy(LaunchArgs.UserNumBlocks, RecordArgs.NumBlocks);
+  llvm::copy(LaunchArgs.UserThreadLimit, RecordArgs.NumThreads);
+  RecordArgs.DynCGroupMem = LaunchArgs.DynCGroupMem;
+  RecordArgs.ReplayOutcome = ReplayOutcome;
+  return RecordArgs;
 }
 
 /// Assert the launch geometry invariants expected by the plugin layer.
@@ -819,7 +1023,7 @@ static void checkLaunchInvariants(const KernelLaunchArgsTy &LaunchArgs,
 
 /// Calculate or adjust, in place, the effective number of threads and blocks
 /// for the first dimension, unless the caller requested strict counts.
-static void adjustEffectiveGeometry(GenericDeviceTy &GenericDevice,
+static void adjustEffectiveGeometry(const DeviceGeometryPropsTy &Props,
                                     KernelLaunchArgsTy &LaunchArgs,
                                     const KernelArgsTy &KernelArgs,
                                     const KernelLaunchInfoTy &KernelEnv) {
@@ -839,11 +1043,11 @@ static void adjustEffectiveGeometry(GenericDeviceTy &GenericDevice,
   uint32_t EffectiveNumThreads = LaunchArgs.UserThreadLimit[0];
   if (!StrictThreads)
     EffectiveNumThreads =
-        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads, KernelEnv);
+        getEffectiveNumThreads(Props, EffectiveNumThreads, KernelEnv);
 
   if (!StrictBlocks)
     LaunchArgs.UserNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, LaunchArgs.UserNumBlocks[0], LaunchArgs.Tripcount,
+        Props, LaunchArgs.UserNumBlocks[0], LaunchArgs.Tripcount,
         EffectiveNumThreads, StrictThreads, ThreadLimitFromUser, KernelEnv);
 
   LaunchArgs.UserThreadLimit[0] = EffectiveNumThreads;
@@ -941,10 +1145,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   llvm::SmallVector<void *> Args, Ptrs;
   llvm::SmallVector<int64_t> ArgSizes;
 
-  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
-  KernelLaunchArgsTy LaunchArgs =
-      buildLaunchArgs(KernelArgs, ReplayOutcome, KernelLaunchInfo);
+  KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs);
 
   // Host kernels are only supported for the latest ABI.
   if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
@@ -955,7 +1157,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   checkLaunchInvariants(LaunchArgs, KernelArgs, KernelLaunchInfo);
-  adjustEffectiveGeometry(GenericDevice, LaunchArgs, KernelArgs,
+  adjustEffectiveGeometry(GeometryProps, LaunchArgs, KernelArgs,
                           KernelLaunchInfo);
 
   void **DynPtrSlot = resolveArgsAndDynPtrSlot(
@@ -973,7 +1175,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID,
        "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
        "%s mode\n",
        Kernel->getName(), LaunchArgs.UserNumBlocks[0],
@@ -981,17 +1183,43 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        LaunchArgs.UserThreadLimit[0], LaunchArgs.UserThreadLimit[1],
        LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
 
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
-}
+  // Record the kernel prologue data before the launch.
+  RecordReplayTy *RecordReplay =
+      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
+  RecordReplayTy::HandleTy RRHandle;
+  if (RecordReplay) {
+    // Record replay requires synchronization of any previous operation.
+    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
 
-// Whether data can be copied to DstDevice directly
-bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL)
-    return false;
+    KernelRecordArgsTy RecordArgs = buildRecordArgs(
+        KernelArgs, LaunchArgs, KernelLaunchInfo, ReplayOutcome);
+    auto RRHandleOrErr = RecordReplay->recordPrologue(*Kernel, RecordArgs);
+    if (!RRHandleOrErr) {
+      REPORT() << "Failure to record prologue for kernel " << Kernel->getName()
+               << ": " << toString(RRHandleOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    RRHandle = *RRHandleOrErr;
+  }
 
-  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return true;
-  return false;
+  if (RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo) !=
+      OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  // Record the epilogue data after kernel synchronization.
+  if (RecordReplay) {
+    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+
+    if (auto Err = RecordReplay->recordEpilogue(*Kernel, RRHandle)) {
+      REPORT() << "Failure to record epilogue for kernel " << Kernel->getName()
+               << ": " << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {

@@ -56,6 +56,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -413,7 +414,8 @@ static CodeGenOptLevel getOptLevel() {
 }
 
 static Error loadDylibs();
-static int runOrcJIT(const char *ProgName);
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName);
 static void disallowOrcOptions();
 static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 
@@ -432,7 +434,8 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
 
   if (HostJITTriple) {
@@ -455,10 +458,11 @@ int main(int argc, char **argv, char * const *envp) {
   if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
     disallowOrcOptions();
   else
-    return runOrcJIT(argv[0]);
+    return runOrcJIT(LibraryOptions, argv[0]);
 
   // Old lli implementation based on ExecutionEngine and MCJIT.
   LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -933,11 +937,14 @@ static Error tryEnableDebugSupport(orc::LLJIT &J) {
   return Error::success();
 }
 
-static int runOrcJIT(const char *ProgName) {
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
-  orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  auto Context = std::make_unique<LLVMContext>();
+  Context->getLibraryOptions().assign(LibraryOptions);
+  orc::ThreadSafeContext TSCtx(std::move(Context));
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
   // Get TargetTriple and DataLayout from the main module if they're explicitly

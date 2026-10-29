@@ -73,10 +73,8 @@ struct VFRange {
       : Start(Start), End(End) {
     assert(Start.isScalable() == End.isScalable() &&
            "Both Start and End should have the same scalable flag");
-    assert(isPowerOf2_32(Start.getKnownMinValue()) &&
-           "Expected Start to be a power of 2");
-    assert(isPowerOf2_32(End.getKnownMinValue()) &&
-           "Expected End to be a power of 2");
+    assert(Start.isPowerOf2() && "Expected Start to be a power of 2");
+    assert(End.isPowerOf2() && "Expected End to be a power of 2");
   }
 
   /// Iterator to iterate over vectorization factors in a VFRange.
@@ -100,7 +98,7 @@ struct VFRange {
 
   iterator begin() { return iterator(Start); }
   iterator end() {
-    assert(isPowerOf2_32(End.getKnownMinValue()));
+    assert(End.isPowerOf2());
     return iterator(End);
   }
 };

@@ -122,6 +122,26 @@ def G_FCVT_WU_RV64 : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_FCVT_WU_RV64, riscv_fcvt_wu_rv64>;
 
+// Pseudo equivalent to a RISCVISD::FCVT_X. Corresponds to fcvt.w(u).* on RV32
+// and fcvt.l(u).* on RV64. Saturates out-of-range inputs. Rounding mode is
+// passed as an untyped immediate using the RISCVFPRndMode enum.
+def G_FCVT_X : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$frm);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_FCVT_X, riscv_fcvt_x>;
+
+// Pseudo equivalent to a RISCVISD::FCVT_XU. Corresponds to fcvt.wu.* on RV32
+// and fcvt.lu.* on RV64. Saturates out-of-range inputs. Rounding mode is
+// passed as an untyped immediate using the RISCVFPRndMode enum.
+def G_FCVT_XU : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$frm);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_FCVT_XU, riscv_fcvt_xu>;
+
 // Pseudo equivalent to a RISCVISD::FCLASS.
 def G_FCLASS : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);

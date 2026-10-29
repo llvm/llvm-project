@@ -549,6 +549,10 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
       CallerAttrs.hasRetAttr(Attribute::SExt))
     return false;
 
+  // Check if tail calls have been disabled in this function.
+  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
+    return false;
+
   // Only tail call if the following instruction is a standard return or if we
   // have a `thisreturn` callee, and a sequence like:
   //
