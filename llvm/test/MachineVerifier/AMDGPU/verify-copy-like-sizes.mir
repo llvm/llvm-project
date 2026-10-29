@@ -50,6 +50,13 @@ body: |
     ; GFX9: *** Bad machine code: COPY operands have mismatched sizes ***
     ; GFX9: - instruction: {{%[0-9]+}}:vgpr_32 = COPY {{%[0-9]+}}:vgpr_16
     %19:vgpr_32 = COPY %5
+    %36:vgpr_32 = COPY %0
+    %37:vgpr_32_lo128 = COPY %2
+    %38:agpr_32 = COPY %2
+    %39:sreg_32_xm0 = COPY %0
+    %41:_(s32) = COPY %2
+    %42:_(s32) = COPY %41
+    %43:vgpr_32 = COPY %42
     S_BRANCH %bb.1
 
   bb.1:
@@ -68,6 +75,7 @@ body: |
     ; CHECK: *** Bad machine code: PHI operands have mismatched sizes ***
     ; CHECK: - instruction: {{%[0-9]+}}:vgpr_32 = PHI {{%[0-9]+}}.lo16:vgpr_32, %bb.0
     %24:vgpr_32 = PHI %2.lo16, %bb.0
+    %40:sreg_32_xm0 = PHI %0, %bb.0
     %25:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %2, %subreg.sub1
     %26:vreg_128 = REG_SEQUENCE %3, %subreg.sub0_sub1, %3, %subreg.sub2_sub3
     ; CHECK: *** Bad machine code: REG_SEQUENCE source does not match its subregister index ***
@@ -93,5 +101,5 @@ body: |
     ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = INSERT_SUBREG {{%[0-9]+}}:vreg_128(tied-def 0), {{%[0-9]+}}:vgpr_32, %subreg.sub0
     %35:vreg_64 = INSERT_SUBREG %4, %2, %subreg.sub0
 
-    S_ENDPGM 0, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %14, implicit %15, implicit %16, implicit %17, implicit %18, implicit %19, implicit %20, implicit %21, implicit %22, implicit %23, implicit %24, implicit %25, implicit %26, implicit %27, implicit %28, implicit %29, implicit %30, implicit %31, implicit %32, implicit %33, implicit %34, implicit %35
+    S_ENDPGM 0, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %14, implicit %15, implicit %16, implicit %17, implicit %18, implicit %19, implicit %20, implicit %21, implicit %22, implicit %23, implicit %24, implicit %25, implicit %26, implicit %27, implicit %28, implicit %29, implicit %30, implicit %31, implicit %32, implicit %33, implicit %34, implicit %35, implicit %36, implicit %37, implicit %38, implicit %39, implicit %40
 ...

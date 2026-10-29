@@ -332,8 +332,11 @@ public:
                                 const MachineFunction &MF,
                                 bool ReserveHighestVGPR = false) const;
 
+  /// Return the register class, or null if the register has no class.
   const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
                                                Register Reg) const;
+  /// Return the class selected by the operand's subregister index, or null if
+  /// it is not known.
   const TargetRegisterClass *
   getRegClassForOperandReg(const MachineRegisterInfo &MRI,
                            const MachineOperand &MO) const;
