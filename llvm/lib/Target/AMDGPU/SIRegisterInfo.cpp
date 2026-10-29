@@ -4201,14 +4201,15 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
 const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   Register Reg) const {
-  return Reg.isVirtual() ? MRI.getRegClass(Reg) : getPhysRegBaseClass(Reg);
+  return Reg.isVirtual() ? MRI.getRegClassOrNull(Reg)
+                         : getPhysRegBaseClass(Reg);
 }
 
 const TargetRegisterClass *
 SIRegisterInfo::getRegClassForOperandReg(const MachineRegisterInfo &MRI,
                                          const MachineOperand &MO) const {
   const TargetRegisterClass *SrcRC = getRegClassForReg(MRI, MO.getReg());
-  return getSubRegisterClass(SrcRC, MO.getSubReg());
+  return SrcRC ? getSubRegisterClass(SrcRC, MO.getSubReg()) : nullptr;
 }
 
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
