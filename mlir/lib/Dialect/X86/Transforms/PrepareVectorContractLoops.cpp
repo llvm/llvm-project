@@ -438,6 +438,10 @@ struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
     auto lhsType = contract.getLhsType();
     auto rhsType = contract.getRhsType();
     Type element = lhsType.getElementType();
+    assert(lhsType.getRank() == 2 && rhsType.getRank() == 2 &&
+           lhsType.getDimSize(1) == rhsType.getDimSize(0) &&
+           element == rhsType.getElementType() &&
+           "expected canonical matmul contraction");
     if (lhsType.isScalable() || rhsType.isScalable())
       return rewriter.notifyMatchFailure(contract, "scalable operand vectors");
     if (!(element.isBF16() || element.isInteger(8)))
