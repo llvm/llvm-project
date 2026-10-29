@@ -2753,8 +2753,7 @@ define <8 x i16> @pr149380(<4 x i16> %u1, <1 x i64> %u2, <8 x i16> %vqshlu_n169)
 ; CHECK-GI-LABEL: pr149380:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v0.8h, #1
-; CHECK-GI-NEXT:    bic v1.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    orr v1.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    sqadd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
