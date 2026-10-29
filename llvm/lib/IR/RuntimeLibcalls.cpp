@@ -79,6 +79,26 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                           M.getFloatABI(), M.getLongDoubleFormat(), ABIName,
                           VecLib) {}
 
+RTLIB::Libcall RuntimeLibcallsInfo::selectLongDoubleLibcall(
+    RTLIB::Libcall F80, RTLIB::Libcall F128, RTLIB::Libcall PPCF128) const {
+  switch (LongDoubleFmt) {
+  case LongDoubleFormat::X87DoubleExtended:
+    return F80;
+  case LongDoubleFormat::IEEEquad:
+    return F128;
+  case LongDoubleFormat::PPCDoubleDouble:
+    return PPCF128;
+  case LongDoubleFormat::IEEEsingle:
+  case LongDoubleFormat::IEEEdouble:
+    // These long double formats aren't properly handled, but we also don't emit
+    // calls for them. TODO: We could fix the avr_sin/avr_cos hack if we handled
+    // the float case.
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+
+  llvm_unreachable("unhandled long double format");
+}
+
 bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
   // every named library is reported as available.
