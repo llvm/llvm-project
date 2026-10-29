@@ -6111,5 +6111,3 @@ attributes #1 = { noinline }
 attributes #2 = { strictfp }
 attributes #3 = { nobuiltin }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}

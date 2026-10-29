@@ -1073,21 +1073,6 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   if (!fInfo.isCompatibleSignature(*M, F->getFunctionType()))
     return nullptr;
 
-  switch (fInfo.getId()) {
-  case AMDGPULibFunc::EI_POW_FAST:
-  case AMDGPULibFunc::EI_POWR_FAST:
-  case AMDGPULibFunc::EI_POWN_FAST:
-  case AMDGPULibFunc::EI_ROOTN_FAST:
-    // TODO: Remove this. This is not a real module flag used anywhere. This is
-    // a bringup hack so this transform is testable prior to the library
-    // functions existing.
-    if (!M->getModuleFlag("amdgpu-libcall-have-fast-pow"))
-      return nullptr;
-    break;
-  default:
-    break;
-  }
-
   return F;
 }
 
