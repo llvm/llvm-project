@@ -286,6 +286,15 @@ aankit@qti.qualcomm.com (email), [aankit-ca](https://github.com/aankit-ca)
 Jacques Pienaar \
 jpienaar@google.com (email), [jpienaar](https://github.com/jpienaar) (GitHub)
 
+#### LFI backend
+
+Zachary Yedidia \
+zyedidia@gmail.com (email), [zyedidia](https://github.com/zyedidia) (GitHub) \
+Sharjeel Khan \
+sharjeelkhan@google.com (email), [Sharjeel-Khan](https://github.com/Sharjeel-Khan) \
+Nick Desaulniers \
+ndesaulniers@google.com (email), [nickdesaulniers](https://github.com/nickdesaulniers)
+
 #### LoongArch backend
 
 Weining Lu \
