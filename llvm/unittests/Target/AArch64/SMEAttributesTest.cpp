@@ -18,8 +18,6 @@ std::unique_ptr<Module> parseIR(const char *IR) {
 }
 
 TEST(SMEAttributes, Constructors) {
-  LLVMContext Context;
-
   ASSERT_TRUE(SA(*parseIR("declare void @foo()")->getFunction("foo"))
                   .hasNonStreamingInterfaceAndBody());
 

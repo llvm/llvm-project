@@ -143,8 +143,6 @@ TEST(RandomIRBuilderTest, ShuffleVectorSink) {
       "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
-  fuzzerop::OpDescriptor IVDescr = fuzzerop::insertValueDescriptor(1);
-
   RandomIRBuilder IB(Seed, {});
 
   // Get first basic block of the first function

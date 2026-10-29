@@ -1798,7 +1798,6 @@ TEST(ConstantRange, MakeExactICmpRegion) {
 TEST(ConstantRange, MakeSatisfyingICmpRegion) {
   ConstantRange LowHalf(APInt(8, 0), APInt(8, 128));
   ConstantRange HighHalf(APInt(8, 128), APInt(8, 0));
-  ConstantRange EmptySet(8, /* isFullSet = */ false);
 
   EXPECT_EQ(ConstantRange::makeSatisfyingICmpRegion(ICmpInst::ICMP_NE, LowHalf),
             HighHalf);

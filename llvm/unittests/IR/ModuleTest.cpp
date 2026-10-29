@@ -206,7 +206,6 @@ TEST(ModuleTest, setPartialSampleProfileRatio) {
 
 TEST(ModuleTest, AliasList) {
   // This tests all Module's functions that interact with Module::AliasList.
-  LLVMContext C;
   SMDiagnostic Err;
   LLVMContext Context;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
@@ -246,7 +245,6 @@ declare void @Foo()
 
 TEST(ModuleTest, IFuncList) {
   // This tests all Module's functions that interact with Module::IFuncList.
-  LLVMContext C;
   SMDiagnostic Err;
   LLVMContext Context;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
@@ -287,8 +285,6 @@ declare void @Foo()
 TEST(ModuleTest, NamedMDList) {
   // This tests all Module's functions that interact with Module::NamedMDList.
   LLVMContext C;
-  SMDiagnostic Err;
-  LLVMContext Context;
   auto M = std::make_unique<Module>("M", C);
   NamedMDNode *MDN1 = M->getOrInsertNamedMetadata("MDN1");
   EXPECT_EQ(M->named_metadata_size(), 1u);
@@ -385,7 +381,6 @@ TEST(ModuleTest, MoveAssign) {
   // This tests that we can move-assign modules, we parse two modules and
   // move assign the second one to the first one, and check that the print
   // is equal to what we loaded.
-  LLVMContext C;
   SMDiagnostic Err;
   LLVMContext Context;
   std::unique_ptr<Module> M1 = parseAssemblyString(R"(

@@ -600,8 +600,6 @@ TEST_F(BinaryStreamTest, StreamReaderEnum) {
 
     BinaryStreamReader Reader(*Stream.Input);
 
-    FixedStreamArray<MyEnum> FSA;
-
     for (size_t I = 0; I < Enums.size(); ++I) {
       MyEnum Value;
       ASSERT_THAT_ERROR(Reader.readEnum(Value), Succeeded());

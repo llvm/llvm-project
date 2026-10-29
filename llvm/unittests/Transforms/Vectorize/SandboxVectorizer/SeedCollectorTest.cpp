@@ -188,7 +188,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -244,7 +243,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -304,7 +302,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -387,7 +384,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -432,7 +428,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -493,7 +488,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -535,7 +529,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -577,7 +570,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
@@ -618,7 +610,6 @@ bb:
   DominatorTree DT(LLVMF);
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
   AssumptionCache AC(LLVMF);
   ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);

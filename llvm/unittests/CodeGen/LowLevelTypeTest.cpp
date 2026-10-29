@@ -19,8 +19,6 @@ using namespace llvm;
 namespace {
 
 TEST(LowLevelTypeTest, Token) {
-  LLVMContext C;
-
   const LLT TTy = LLT::token();
 
   // Test kind.

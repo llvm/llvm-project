@@ -2,7 +2,6 @@
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace {
@@ -58,8 +57,6 @@ TEST_F(AArch64GISelMITest, TestInstructionSelectErase) {
   setUp(MIRString);
   if (!TM)
     GTEST_SKIP();
-
-  legacy::PassManager PM;
 
   EraseMockInstructionSelector ISel;
   for (auto &MI : *EntryMBB) {

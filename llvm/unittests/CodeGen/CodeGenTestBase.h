@@ -70,7 +70,6 @@ protected:
 
   /// Parses \p MIRCode into a module. Returns whether parsing was successful.
   bool parseMIR(StringRef MIRCode) {
-    SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
     if (!MIR)

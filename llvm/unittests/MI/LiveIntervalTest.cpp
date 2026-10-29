@@ -11,7 +11,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -58,7 +57,6 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                  legacy::PassManagerBase &PM,
                                  std::unique_ptr<MIRParser> &MIR,
                                  const TargetMachine &TM, StringRef MIRCode) {
-  SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
   if (!MIR)

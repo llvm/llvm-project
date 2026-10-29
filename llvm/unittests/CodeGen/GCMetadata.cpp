@@ -64,8 +64,6 @@ TEST_F(GCMetadataTest, Basic) {
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM;
-  FunctionPassManager FPM;
   GCStrategyMap &StrategyMap = MAM.getResult<CollectorMetadataAnalysis>(*M);
   for (auto &[GCName, Strategy] : StrategyMap)
     EXPECT_EQ(GCName, Strategy->getName());

@@ -4396,7 +4396,6 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
 static bool
 canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable,
              DenseMap<VPValue *, SmallVector<VPValue *>> &FirstMembersOf) {
-  SmallVector<VPValue *> Ops0;
   auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;

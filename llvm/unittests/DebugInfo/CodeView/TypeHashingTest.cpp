@@ -60,8 +60,6 @@ static void verifyHashUniqueness(ArrayRef<GloballyHashedType> Hashes) {
 }
 
 TEST(TypeHashingTest, ContentHash) {
-  SimpleTypeSerializer Serializer;
-
   TypeIndex CharStar(SimpleTypeKind::SignedCharacter,
                      SimpleTypeMode::NearPointer32);
 
