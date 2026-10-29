@@ -560,19 +560,33 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                    return A.Offset < B.Offset;
                  });
     }
+    SmallVector<std::pair<uint64_t, uint64_t>, 4> BitFieldStorageUnits;
     for (FieldDecl *Field : RD->fields()) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
-                                   ? getValidBaseTypeInfo(FieldQTy)
-                                   : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode;
+      uint64_t Offset;
+      uint64_t Size;
+      if (CodeGenOpts.NewStructPathTBAA && Field->isBitField()) {
+        const CGBitFieldInfo &Info =
+            CGTypes.getCGRecordLayout(RD).getBitFieldInfo(Field);
+        TypeNode = getChar();
+        Offset = Info.StorageOffset.getQuantity();
+        Size = llvm::divideCeil(Info.StorageSize, Context.getCharWidth());
+        if (llvm::is_contained(BitFieldStorageUnits,
+                               std::make_pair(Offset, Size)))
+          continue;
+        BitFieldStorageUnits.emplace_back(Offset, Size);
+      } else {
+        TypeNode = isValidBaseType(FieldQTy) ? getValidBaseTypeInfo(FieldQTy)
+                                             : getTypeInfo(FieldQTy);
+        uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
+        Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
+        Size = Context.getTypeSizeInChars(FieldQTy).getQuantity();
+      }
       if (!TypeNode)
         return nullptr;
-
-      uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
-      uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
-      uint64_t Size = Context.getTypeSizeInChars(FieldQTy).getQuantity();
       Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size,
                                                         TypeNode));
     }
