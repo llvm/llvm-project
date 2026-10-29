@@ -6401,6 +6401,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         Check(OBU.Inputs.size() == 1,
               "noundef assumptions should have 1 argument", Call);
         break;
+      case BundleAttr::Range: {
+        Check(OBU.Inputs.size() == 3,
+              "range assumptions should have 3 arguments", Call);
+        Check(GetTypeAt(0)->isIntegerTy(),
+              "first argument should be an integer", Call);
+        auto *LowerBound = dyn_cast<ConstantInt>(OBU.Inputs[1]);
+        Check(LowerBound, "second argument should be a constant integer", Call);
+        auto *UpperBound = dyn_cast<ConstantInt>(OBU.Inputs[2]);
+        Check(UpperBound, "third argument should be a constant integer", Call);
+        Check(LowerBound != UpperBound || LowerBound->isZero(),
+              "an empty range has to be represented as `0, 0`");
+        Check(GetTypeAt(0)->getIntegerBitWidth() ==
+                      GetTypeAt(1)->getIntegerBitWidth() &&
+                  GetTypeAt(1)->getIntegerBitWidth() ==
+                      GetTypeAt(2)->getIntegerBitWidth(),
+              "all arguments should have the same bit width", Call);
+      } break;
       case BundleAttr::SeparateStorage:
         Check(OBU.Inputs.size() == 2,
               "separate_storage assumptions should have 2 arguments", Call);

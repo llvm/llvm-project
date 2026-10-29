@@ -111,14 +111,6 @@ ENUM_DEBUGOPT(DebugInfo, DebugInfoKind, 4,
 /// Whether to generate macro debug info.
 DEBUGOPT(MacroDebugInfo, 1, 0, Compatible)
 
-/// Whether to use expansion location for debug info.
-/// TODO: #175249: Remove once testing is complete for sample pgo users.
-DEBUGOPT(DebugInfoMacroExpansionLoc, 1, 0, Compatible)
-
-/// Macro expansion chains deeper than this use the expansion location instead
-/// of the file location for debug info.
-VALUE_DEBUGOPT(DebugInfoMacroMaxDepth, 32, 64, Compatible)
-
 /// Tune the debug info for this debugger.
 ENUM_DEBUGOPT(DebuggerTuning, DebuggerKind, 3,
               DebuggerKind::Default, Compatible)

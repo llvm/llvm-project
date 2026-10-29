@@ -33,10 +33,7 @@ end
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[I_ARG:[^,]+]],
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[X_ARG:[^,]+]],
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[A_ARG:[^,]+]],
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^:]+}} :
+! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[A_ARG:[^:]+]] :
 ! DEVICE-SAME:   {{.*}}) {
 
 ! DEVICE: omp.teams
