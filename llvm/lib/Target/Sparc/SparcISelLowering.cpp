@@ -2532,15 +2532,19 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
@@ -3651,6 +3655,18 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
   if (RegName.empty())
     return std::make_pair(0U, nullptr);
+
+  unsigned CCReg = StringSwitch<unsigned>(RegName)
+                       .Cases({"cc", "icc"}, SP::ICC)
+                       .Case("fcc0", SP::FCC0)
+                       .Case("fcc1", SP::FCC1)
+                       .Case("fcc2", SP::FCC2)
+                       .Case("fcc3", SP::FCC3)
+                       .Default(0);
+  if (CCReg == SP::ICC)
+    return std::make_pair(CCReg, &SP::ICCRegsRegClass);
+  if (CCReg)
+    return std::make_pair(CCReg, &SP::FCCRegsRegClass);
 
   unsigned long long RegNo;
   // Handle numbered register aliases.

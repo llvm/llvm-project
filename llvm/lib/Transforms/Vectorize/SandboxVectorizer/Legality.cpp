@@ -214,7 +214,8 @@ LegalityAnalysis::getHowToCollectValues(BndlRef<Value *> Bndl) const {
   return CollectDescr(std::move(Vec));
 }
 
-bool LegalityAnalysis::isAlignmentSupported(ArrayRef<Value *> Values) const {
+template <typename ValueT>
+bool LegalityAnalysis::isAlignmentSupported(BndlRef<ValueT *> Values) const {
   Value *V0 = Values[0];
   if (!isa<LoadInst>(V0) && !isa<StoreInst>(V0))
     return true;
@@ -232,6 +233,11 @@ bool LegalityAnalysis::isAlignmentSupported(ArrayRef<Value *> Values) const {
       TTI, I0->getContext(), VecSizeBits, AS, Alignment, &Fast);
   return Supported;
 }
+
+template bool
+LegalityAnalysis::isAlignmentSupported(BndlRef<Instruction *> Values) const;
+template bool
+LegalityAnalysis::isAlignmentSupported(BndlRef<Value *> Values) const;
 
 const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
                                                      bool SkipScheduling) {
@@ -286,9 +292,13 @@ LegalityAnalysis::canVectorizeLSV(BndlRef<Instruction *> Bndl) {
   if (!LegalityAnalysis::areUnique(Bndl))
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 
+  // Check if the target supports the alignment of the generated vector.
+  if (!isAlignmentSupported(Bndl))
+    return createLegalityResult<Pack>(ResultReason::AlignmentNotSupported);
+
   // Check scheduling.
   if (!Sched.trySchedule(Bndl))
-    createLegalityResult<Pack>(ResultReason::CantSchedule);
+    return createLegalityResult<Pack>(ResultReason::CantSchedule);
 
   return createLegalityResult<Widen>();
 }

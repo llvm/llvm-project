@@ -283,14 +283,15 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
-// CHECK-NEXT:  13, // BZERO
-// CHECK-NEXT:  17, // CALLOC
-// CHECK-NEXT:  8, // MEMCPY
-// CHECK-NEXT:  3, // MEMSET
-// CHECK-NEXT:  2, // SHL_I32
-// CHECK-NEXT:  2, // SQRT_F80
-// CHECK-NEXT:  0, // SQRT_F128
-// CHECK-NEXT:  2, // SRL_I64
+// CHECK-NEXT:  2, // RTLIB::Unsupported
+// CHECK-NEXT:  8, // RTLIB::impl____memcpy
+// CHECK-NEXT:  3, // RTLIB::impl____memset
+// CHECK-NEXT:  2, // RTLIB::impl___ashlsi3
+// CHECK-NEXT:  2, // RTLIB::impl___lshrdi3
+// CHECK-NEXT:  13, // RTLIB::impl_bzero
+// CHECK-NEXT:  17, // RTLIB::impl_calloc
+// CHECK-NEXT:  0, // RTLIB::impl_sqrtl_f128
+// CHECK-NEXT:  2, // RTLIB::impl_sqrtl_f80
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
