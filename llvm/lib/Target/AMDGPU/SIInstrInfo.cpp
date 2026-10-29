@@ -4302,6 +4302,11 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  // A prefetch does not change memory, so it never needs to be ordered against
+  // another memory access for correctness.
+  if (isPrefetch(MIa) || isPrefetch(MIb))
+    return true;
+
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 

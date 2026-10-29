@@ -770,6 +770,25 @@ public:
   /// \returns true for FLAT instructions that can access LDS.
   bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
+  /// \returns true for VMEM and SMEM prefetches. They are hints and do not
+  /// change memory.
+  static bool isPrefetch(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::FLAT_PREFETCH_B8:
+    case AMDGPU::FLAT_PREFETCH_B8_SADDR:
+    case AMDGPU::GLOBAL_PREFETCH_B8:
+    case AMDGPU::GLOBAL_PREFETCH_B8_SADDR:
+    case AMDGPU::S_PREFETCH_INST:
+    case AMDGPU::S_PREFETCH_INST_PC_REL:
+    case AMDGPU::S_PREFETCH_DATA:
+    case AMDGPU::S_PREFETCH_DATA_PC_REL:
+    case AMDGPU::S_BUFFER_PREFETCH_DATA:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -1272,7 +1291,7 @@ public:
   bool isIGLP(const MachineInstr &MI) const { return isIGLP(MI.getOpcode()); }
 
   // Return true if the instruction is mutually exclusive with all non-IGLP DAG
-  // mutations, requiring all other mutations to be disabled.
+  // mutations except prefetch ordering, requiring them to be disabled.
   bool isIGLPMutationOnly(unsigned Opcode) const {
     return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
   }

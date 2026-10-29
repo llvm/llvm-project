@@ -241,8 +241,9 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   : SM_Pseudo<opName, (outs), !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
                                    (ins SMEMOffset:$offset, SReg_32:$soffset, i8imm:$sdata, CPol_0:$cpol)),
               !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata$cpol"> {
-  // Mark prefetches as both load and store to prevent reordering with loads
-  // and stores. This is also needed for pattern to match prefetch intrinsic.
+  // mayStore keeps a prefetch from being treated as dead and is required by its
+  // patterns. Ordering against loads comes from AMDGPUPrefetchOrdering, not
+  // from side effects.
   let mayLoad = 1;
   let mayStore = 1;
   let has_glc = 0;
@@ -251,7 +252,6 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   let ScalarStore = 0;
   let has_offset = 1;
   let has_soffset = 1;
-  let hasSideEffects = 1;
 }
 
 //===----------------------------------------------------------------------===//
