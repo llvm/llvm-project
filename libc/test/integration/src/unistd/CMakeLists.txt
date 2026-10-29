@@ -1,10 +1,11 @@
-add_custom_target(unistd-integration-tests)
-add_dependencies(libc-integration-tests unistd-integration-tests)
+add_libc_testsuite(libc-unistd-integration-tests PARENT libc-integration-tests)
+
+add_subdirectory(testdata)
 
 add_integration_test(
   getcwd_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     getcwd_test.cpp
   DEPENDS
@@ -17,7 +18,7 @@ add_integration_test(
 add_integration_test(
   fork_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     fork_test.cpp
   DEPENDS
@@ -29,6 +30,7 @@ add_integration_test(
     libc.src.signal.raise
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitid
     libc.src.sys.wait.waitpid
     libc.src.unistd.fork
     libc.src.unistd.gettid
@@ -37,11 +39,34 @@ add_integration_test(
     libc.include.sys_syscall
 )
 
+add_integration_test(
+  lockf_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    lockf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.stdlib.exit
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.lockf
+    libc.src.unistd.unlink
+)
+
 if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86}))
   add_integration_test(
     stack_smashing_test
     SUITE
-      unistd-integration-tests
+      libc-unistd-integration-tests
     SRCS
       stack_smashing_test.cpp
     DEPENDS
@@ -112,7 +137,7 @@ set_target_properties(
 add_integration_test(
   execl_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     execl_test.cpp
   DEPENDS
@@ -132,7 +157,7 @@ add_integration_test(
 add_integration_test(
   execle_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     execle_test.cpp
   DEPENDS
@@ -149,7 +174,7 @@ add_integration_test(
 add_integration_test(
   execv_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     execv_test.cpp
   DEPENDS
@@ -166,7 +191,7 @@ add_integration_test(
 add_integration_test(
   execve_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     execve_test.cpp
   DEPENDS
@@ -175,6 +200,94 @@ add_integration_test(
     libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execve
+    libc.src.unistd.fork
+  ENV
+    EXECV_TEST=PASS
+)
+
+add_integration_test(
+  execvp_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    execvp_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_execvp_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.stdlib.setenv
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.execvp
+    libc.src.unistd.fork
+  ENV
+    EXECV_TEST=PASS
+)
+
+add_integration_test(
+  execvpe_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    execvpe_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_execvp_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.stdlib.setenv
+    libc.src.sys.wait.waitpid
+    libc.src.unistd._exit
+    libc.src.unistd.execvpe
+    libc.src.unistd.fork
+)
+
+add_integration_test(
+  fexecve_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    fexecve_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.fcntl_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fexecve
+    libc.src.unistd.fork
+  ENV
+    EXECV_TEST=PASS
+)
+
+add_integration_test(
+  execlp_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    execlp_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_execvp_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.stdlib.setenv
+    libc.src.sys.wait.waitpid
+    libc.src.unistd._exit
+    libc.src.unistd.execlp
     libc.src.unistd.fork
   ENV
     EXECV_TEST=PASS

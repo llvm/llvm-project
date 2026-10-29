@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -20,6 +21,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -239,7 +241,8 @@ class SPIRVEmitIntrinsicsImpl
                                      bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                      SmallPtrSetImpl<Value *> &Visited,
-                                     bool UnknownElemTypeI8);
+                                     bool UnknownElemTypeI8,
+                                     std::optional<unsigned> AddrSpace = {});
   Type *deduceElementTypeByUsersDeep(Value *Op,
                                      SmallPtrSetImpl<Value *> &Visited,
                                      bool UnknownElemTypeI8);
@@ -331,6 +334,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -471,7 +475,7 @@ static bool isSpvAggrPlaceholder(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -581,6 +585,15 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
   return Ty;
 }
 
+// Return the pointee type of the pointer member of AggrTy selected by Indices.
+// Untyped pointer members are lowered as pointers to i8.
+static Type *getMemberPointeeType(Type *AggrTy, ArrayRef<unsigned> Indices) {
+  Type *MemberTy = ExtractValueInst::getIndexedType(AggrTy, Indices);
+  if (Type *ElemTy = getPointeeType(MemberTy))
+    return ElemTy;
+  return IntegerType::getInt8Ty(AggrTy->getContext());
+}
+
 // Reconstruct type with nested element types according to deduced type info.
 // Return nullptr if no detailed type info is available.
 Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
@@ -614,7 +627,7 @@ Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
 
 CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
                                                    Type *ElemTy) {
-  IRBuilder<> B(Op->getContext());
+  IRBuilder<> B(*F->getParent());
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     // spv_ptrcast's argument Op denotes an instruction that generates
     // a value, and we may use getInsertionPointAfterDef()
@@ -623,7 +636,7 @@ CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
     B.SetInsertPointPastAllocas(OpA->getParent());
     B.SetCurrentDebugLocation(DebugLoc());
   } else {
-    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrAlloca());
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
@@ -711,13 +724,14 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
 
 Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
     Type *ValueTy, Value *Operand, SmallPtrSetImpl<Value *> &Visited,
-    bool UnknownElemTypeI8) {
+    bool UnknownElemTypeI8, std::optional<unsigned> AddrSpace) {
   Type *Ty = ValueTy;
   if (Operand) {
     if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
       if (Type *NestedTy =
               deduceElementTypeHelper(Operand, Visited, UnknownElemTypeI8))
-        Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+        Ty = getTypedPointerWrapper(
+            NestedTy, AddrSpace.value_or(PtrTy->getAddressSpace()));
     } else {
       Ty = deduceNestedTypeHelper(dyn_cast<User>(Operand), Ty, Visited,
                                   UnknownElemTypeI8);
@@ -755,10 +769,14 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByUsersDeep(
 // specification rules
 static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
-  if ((DemangledName.starts_with("__spirv_ocl_printf(") ||
-       DemangledName.starts_with("printf(")) &&
-      OpIdx == 0)
-    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpenCL.std printf takes its format string as a pointer to i8. Match the
+  // bare builtin name, as lowering does, to also cover unmangled `printf`.
+  // OpenCL get_fence only has void* overloads.
+  if (OpIdx == 0) {
+    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
+    if (Name == "printf" || Name == "get_fence")
+      return IntegerType::getInt8Ty(CalledF->getContext());
+  }
   return nullptr;
 }
 
@@ -991,10 +1009,21 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = SPIRV::getOriginalFunctionType(*Fn);
       GR->addDeducedElementType(I, Ty);
     } else {
-      Ty = deduceElementTypeByValueDeep(
-          Ref->getValueType(),
-          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-          UnknownElemTypeI8);
+      Value *Op = Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr;
+      // Code lives in the program address space, not in the address space of
+      // the global. For known SPIR-V targets, program address space 0 maps
+      // to Function/Private, which cannot hold code, so treat it as unset.
+      std::optional<unsigned> ProgramAS;
+      if (isa_and_nonnull<Function>(Op)) {
+        if (unsigned AS = CurrF->getDataLayout().getProgramAddressSpace())
+          ProgramAS = AS;
+        else if (TM.getSubtargetImpl()->canUseExtension(
+                     SPIRV::Extension::SPV_INTEL_function_pointers))
+          ProgramAS =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+      }
+      Ty = deduceElementTypeByValueDeep(Ref->getValueType(), Op, Visited,
+                                        UnknownElemTypeI8, ProgramAS);
     }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
@@ -1007,6 +1036,12 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         isPointerTy(Src) && isPointerTy(Dest))
       Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
                                    UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<ExtractValueInst>(I)) {
+    // An extracted pointer has the type of its aggregate member.
+    if (isPointerTy(I->getType()))
+      Ty = getMemberPointeeType(
+          reconstructType(Ref->getAggregateOperand(), false, false),
+          Ref->getIndices());
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
     Value *Op = Ref->getNewValOperand();
     if (isPointerTy(Op->getType()))
@@ -1050,6 +1085,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         {"to_global", 0},
         {"to_local", 0},
         {"to_private", 0},
+        {"__to_global", 0},
+        {"__to_local", 0},
+        {"__to_private", 0},
         {"__spirv_GenericCastToPtr_ToGlobal", 0},
         {"__spirv_GenericCastToPtr_ToLocal", 0},
         {"__spirv_GenericCastToPtr_ToPrivate", 0},
@@ -1536,8 +1574,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
   if (!KnownElemTy || Ops.size() == 0)
     return;
 
-  LLVMContext &Ctx = CurrF->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CurrF->getParent());
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
     if (AskOps && !AskOps->contains(Op))
@@ -2270,7 +2307,8 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
   // Emit spv_ptrcast
   SmallVector<Type *, 2> Types = {Pointer->getType(), Pointer->getType()};
   SmallVector<Value *, 2> Args = {Pointer, VMD, B.getInt32(AddressSpace)};
-  auto *PtrCastI = B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+  auto *PtrCastI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
   // We need to set up a pointee type for the newly created spv_ptrcast.
   GR->buildAssignPtr(B, ExpectedElementType, PtrCastI);
@@ -2302,6 +2340,12 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Pointer = LI->getPointerOperand();
     Type *OpTy = LI->getType();
+    // If the loaded from pointer carries byref/byval, the dominant type is the
+    // pointee type specified therein, and we should retain it.
+    if (Argument *Arg;
+        (Arg = dyn_cast<Argument>(Pointer)) && hasPointeeTypeAttr(Arg))
+      OpTy = getPointeeTypeByAttr(Arg);
+
     if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
       if (Type *ElemTy = GR->findDeducedElementType(LI)) {
         OpTy = getTypedPointerWrapper(ElemTy, PtrTy->getAddressSpace());
@@ -2334,6 +2378,16 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
     if (isNestedPointer(OpTy))
       insertTodoType(Pointer);
+    return;
+  }
+
+  // An inserted pointer must have the type of its aggregate member.
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    Value *Op = IVI->getInsertedValueOperand();
+    if (isPointerTy(Op->getType()))
+      replacePointerOperandWithPtrCast(
+          I, Op, getMemberPointeeType(IVI->getType(), IVI->getIndices()),
+          InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
 
@@ -2384,6 +2438,12 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
   if (DemangledName.empty() && !HaveTypes)
     return;
 
+  auto Set =
+      TM.getSubtarget<SPIRVSubtarget>(*CalledF).getPreferredInstructionSet();
+  // Do not reparse rejected declaration types with the builtin parser.
+  bool ParseBuiltinTypes =
+      !DemangledName.empty() &&
+      (!CalledF->isDeclaration() || SPIRV::isBuiltin(DemangledName, Set));
   for (unsigned OpIdx = 0; OpIdx < CI->arg_size(); OpIdx++) {
     Value *ArgOperand = CI->getArgOperand(OpIdx);
     if (!isPointerTy(ArgOperand->getType()))
@@ -2401,7 +2461,7 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
 
     Type *ExpectedType =
         OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
-    if (!ExpectedType && !DemangledName.empty())
+    if (!ExpectedType && ParseBuiltinTypes)
       ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
           DemangledName, OpIdx, I->getContext());
     if (!ExpectedType || ExpectedType->isVoidTy())
@@ -2666,11 +2726,11 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
 
   uint32_t Scope = static_cast<uint32_t>(
-      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
+      getMemScope(M->getTargetTriple(), I.getContext(), I.getSyncScopeID()));
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
   uint32_t MemSem = getMemSemanticsWithStorageClass(
-      TM.getTargetTriple(),
+      M->getTargetTriple(),
       static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
 
   SmallString<64> FuncName(Op == AtomicRMWInst::UIncWrap
@@ -2728,11 +2788,7 @@ static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
 // emit an extra OpUnreachable instruction.
 static bool precededByAbortIntrinsic(const UnreachableInst &I,
                                      const SPIRVSubtarget &ST) {
-  // Find a previous non-debug instruction.
   const Instruction *Prev = I.getPrevNode();
-  while (Prev && Prev->isDebugOrPseudoInst())
-    Prev = Prev->getPrevNode();
-
   if (Prev && isAbortCall(*Prev, ST))
     return true;
 
@@ -3106,27 +3162,27 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
-  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+  if (spirvPreserveAuxData(I->getModule()->getTargetTriple()) &&
       isa<AtomicRMWInst>(I)) {
-    // If present, we encode AMDGPU atomic metadata as UserSemantic string
-    // decorations, which will be parsed during reverse translation.
-    auto &Ctx = B.getContext();
-    auto *US = ConstantAsMetadata::get(
-        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+    LLVMContext &Ctx = B.getContext();
+    auto *AuxMD = ConstantAsMetadata::get(ConstantInt::get(
+        B.getInt32Ty(), SPIRV::Decoration::AuxDataInstructionMetadata));
 
     SmallVector<Metadata *> MDs;
     if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
     if (I->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
-    if (!MDs.empty())
+          Ctx, {AuxMD, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
+    if (!MDs.empty()) {
+      setInsertPointAfterDef(B, I);
       B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                         {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
+    }
   }
 }
 
@@ -3553,6 +3609,10 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
       continue;
     if (F.isDeclaration()) {
       for (User *U : F.users()) {
+        // SPIR-V has no personality, so it is not a function pointer use.
+        if (auto *UF = dyn_cast<Function>(U);
+            UF && UF->hasPersonalityFn() && UF->getPersonalityFn() == &F)
+          continue;
         CallInst *CI = dyn_cast<CallInst>(U);
         if (!CI || CI->getCalledFunction() != &F) {
           Worklist.push_back(&F);
@@ -3631,7 +3691,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
           B.SetInsertPoint(CI->getParent()
                                ->getParent()
                                ->getEntryBlock()
-                               .getFirstNonPHIOrDbgOrAlloca());
+                               .getFirstNonPHIOrAlloca());
           GR->buildAssignPtr(B, ElemTy, Param);
         }
         CallInst *Ref = dyn_cast<CallInst>(Param);
@@ -3649,6 +3709,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
       }
     }
   }
+  FDeclPtrTys.clear();
 }
 
 GetElementPtrInst *SPIRVEmitIntrinsicsImpl::simplifyZeroLengthArrayGepInst(
@@ -3710,12 +3771,10 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
   if (LI.empty())
     return;
 
+  SmallPtrSet<BasicBlock *, 8> UsedMergeBlocks;
   for (Loop *L : LI.getLoopsInPreorder()) {
     BasicBlock *Latch = L->getLoopLatch();
     if (!Latch)
-      continue;
-    BasicBlock *MergeBlock = L->getUniqueExitBlock();
-    if (!MergeBlock)
       continue;
 
     // Check for loop unroll metadata on the latch terminator.
@@ -3725,6 +3784,25 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
       continue;
 
     BasicBlock *Header = L->getHeader();
+    // OpLoopMerge must immediately precede an OpBranch or OpBranchConditional.
+    // Switches are already lowered to spv_switch + indirectbr at this point.
+    if (!isa<UncondBrInst, CondBrInst>(Header->getTerminator()))
+      continue;
+
+    BasicBlock *MergeBlock = L->getUniqueExitBlock();
+    // LoopSimplify does not guarantee a unique exit block. Try the normal exit
+    // of a rotated loop (from the latch), then an unrotated loop (from the
+    // header). A merge block cannot be shared by multiple loop headers.
+    for (BasicBlock *BB : {Latch, Header}) {
+      if (MergeBlock || !isa<CondBrInst>(BB->getTerminator()))
+        continue;
+      for (BasicBlock *Succ : successors(BB))
+        if (!L->contains(Succ) && !UsedMergeBlocks.contains(Succ))
+          MergeBlock = Succ;
+    }
+    if (!MergeBlock || !UsedMergeBlocks.insert(MergeBlock).second)
+      continue;
+
     B.SetInsertPoint(Header->getTerminator());
     auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
     auto *ContinueAddress = BlockAddress::get(&F, Latch);
@@ -3740,6 +3818,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     return false;
 
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(Func);
+  // LoopSimplify runs after SPIRVPrepareFunctions sorted the blocks, and the
+  // preheaders/dedicated exits it creates can end up before their dominator,
+  // which SPIR-V forbids.
+  if (!ST.isShader())
+    sortBlocks(Func);
   GR = ST.getSPIRVGlobalRegistry();
 
   if (!CurrF)
@@ -3749,7 +3832,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   CanUseAnyVectorRank =
       ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
   CurrF = &Func;
-  IRBuilder<> B(Func.getContext());
+  IRBuilder<> B(*Func.getParent());
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
@@ -3795,7 +3878,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     I->eraseFromParent();
   }
 
-  B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());
+  B.SetInsertPoint(Func.getEntryBlock().begin());
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 
@@ -3942,45 +4025,98 @@ bool SPIRVEmitIntrinsicsImpl::postprocessTypes(Module &M) {
   return SzTodo > TodoTypeSz;
 }
 
+// Parse unambiguous scalar/vector pointees, e.g. "float vector[4] const*".
+static Type *parseDeclPtrElemType(StringRef TypeStr, LLVMContext &Ctx) {
+  if (!TypeStr.consume_back("*") && !TypeStr.consume_back("&"))
+    return nullptr;
+  StringRef ScalarName = TypeStr;
+  Type *ElemTy = parseBasicTypeName(TypeStr, Ctx);
+  if (!ElemTy || ElemTy->isVoidTy() || ElemTy->isIntegerTy(1))
+    return nullptr;
+  ScalarName = ScalarName.drop_back(TypeStr.size());
+  // OpenCL aliases such as uint can also name C++ classes.
+  if (!StringSwitch<bool>(ScalarName)
+           .Cases({"char", "signed char", "unsigned char", "short",
+                   "unsigned short", "int", "unsigned int", "_Float16", "float",
+                   "double"},
+                  true)
+           .Default(false) ||
+      (!TypeStr.empty() && !TypeStr.starts_with(" ")))
+    return nullptr;
+  if (TypeStr.consume_front(" vector[")) {
+    auto [Count, Rest] = TypeStr.split(']');
+    unsigned NumElts = 0;
+    if (Count.getAsInteger(10, NumElts) || NumElts == 0)
+      return nullptr;
+    ElemTy = FixedVectorType::get(ElemTy, NumElts);
+    TypeStr = Rest;
+  }
+  // Only cv and address space qualifiers may follow.
+  SmallVector<StringRef, 4> Quals;
+  TypeStr.split(Quals, ' ', -1, /*KeepEmpty=*/false);
+  for (StringRef Qual : Quals) {
+    unsigned AS;
+    if (Qual != "const" && Qual != "volatile" && Qual != "restrict" &&
+        !(Qual.consume_front("AS") && !Qual.getAsInteger(10, AS)))
+      return nullptr;
+  }
+  return ElemTy;
+}
+
 // Parse and store argument types of function declarations where needed.
 void SPIRVEmitIntrinsicsImpl::parseFunDeclarations(Module &M) {
   for (auto &F : M) {
     if (!F.isDeclaration() || F.isIntrinsic())
       continue;
-    // get the demangled name
     std::string DemangledName = getOclOrSpirvBuiltinDemangledName(F.getName());
     if (DemangledName.empty())
       continue;
-    // allow only OpGroupAsyncCopy use case at the moment
     const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
-    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
-        DemangledName, ST.getPreferredInstructionSet());
-    if (Opcode != SPIRV::OpGroupAsyncCopy)
+    auto Set = ST.getPreferredInstructionSet();
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(DemangledName, Set);
+    // Some builtins have no opcode mapping.
+    const bool IsBuiltin = Grp >= 0 || SPIRV::isBuiltin(DemangledName, Set);
+    if (IsBuiltin && Opcode != SPIRV::OpGroupAsyncCopy)
       continue;
-    // find pointer arguments
     SmallVector<unsigned> Idxs;
-    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx) {
-      Argument *Arg = F.getArg(OpIdx);
-      if (isPointerTy(Arg->getType()) && !hasPointeeTypeAttr(Arg))
-        Idxs.push_back(OpIdx);
-    }
-    if (!Idxs.size())
+    for (Argument &Arg : F.args())
+      if (isPointerTy(Arg.getType()) && !hasPointeeTypeAttr(&Arg))
+        Idxs.push_back(Arg.getArgNo());
+    if (Idxs.empty())
       continue;
-    // parse function arguments
     LLVMContext &Ctx = F.getContext();
     SmallVector<StringRef, 10> TypeStrs;
     SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledName, Ctx);
-    if (!TypeStrs.size())
+    if (TypeStrs.empty())
       continue;
-    // find type info for pointer arguments
+    // Avoid nested signatures and hidden ABI arguments such as this and sret.
+    if (!IsBuiltin && (!F.getName().starts_with("_Z") || F.hasStructRetAttr() ||
+                       StringRef(DemangledName).count('(') != 1 ||
+                       StringRef(DemangledName).count(')') != 1 ||
+                       StringRef(DemangledName).contains('<') ||
+                       TypeStrs.size() != F.arg_size()))
+      continue;
+    bool AllowLongVectors =
+        ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
     for (unsigned Idx : Idxs) {
       if (Idx >= TypeStrs.size())
         continue;
-      if (Type *ElemTy =
-              SPIRV::parseBuiltinCallArgumentType(TypeStrs[Idx].trim(), Ctx))
-        if (TypedPointerType::isValidElementType(ElemTy) &&
-            !ElemTy->isTargetExtTy())
-          FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
+      StringRef TypeStr = TypeStrs[Idx].trim();
+      Type *ElemTy = IsBuiltin
+                         ? SPIRV::parseBuiltinCallArgumentType(TypeStr, Ctx)
+                         : parseDeclPtrElemType(TypeStr, Ctx);
+      if (!ElemTy || !TypedPointerType::isValidElementType(ElemTy) ||
+          ElemTy->isTargetExtTy())
+        continue;
+      if (!IsBuiltin) {
+        ElemTy = normalizeType(ElemTy, AllowLongVectors);
+        if (!AllowLongVectors && isLongVectorEXT(ElemTy))
+          continue;
+      }
+      FDeclPtrTys[&F].emplace_back(Idx, ElemTy);
+      if (!IsBuiltin)
+        ST.getSPIRVGlobalRegistry()->addDeducedElementType(F.getArg(Idx),
+                                                           ElemTy);
     }
   }
 }
@@ -4084,46 +4220,67 @@ void SPIRVEmitIntrinsicsImpl::preprocessBoolVectorBitcasts(Function &F) {
     IRBuilder<> B(BC);
     Value *Src = BC->getOperand(0);
     unsigned BoolVecN = BoolVecTy->getNumElements();
-    // Use iN as the scalar intermediate type for the bool vector side.
-    Type *IntTy = B.getIntNTy(BoolVecN);
+    // Convert per element of the other side, as iN can exceed the maximum
+    // SPIR-V integer width.
+    Type *OtherTy = SrcIsBoolVec ? BC->getDestTy() : Src->getType();
+    unsigned NumElts = 1;
+    if (auto *VTy = dyn_cast<FixedVectorType>(OtherTy))
+      NumElts = VTy->getNumElements();
+    unsigned EltBits = OtherTy->getScalarSizeInBits();
+    Type *EltTy = B.getIntNTy(EltBits);
+    Type *IntTy = NumElts > 1 ? FixedVectorType::get(EltTy, NumElts) : EltTy;
 
-    // Convert source to scalar integer.
-    Value *IntVal;
-    if (SrcIsBoolVec) {
-      // Extract each bool, zext, shift, and OR.
-      IntVal = ConstantInt::get(IntTy, 0);
-      for (unsigned I = 0; I < BoolVecN; ++I) {
-        Value *Elem = B.CreateExtractElement(Src, B.getInt32(I));
-        Value *Ext = B.CreateZExt(Elem, IntTy);
-        if (I > 0)
-          Ext = B.CreateShl(Ext, ConstantInt::get(IntTy, I));
-        IntVal = B.CreateOr(IntVal, Ext);
-      }
-    } else {
-      // Source is a non-bool type. If it's already a scalar integer, use it
-      // directly, otherwise bitcast to iN first.
-      IntVal = Src;
-      if (!Src->getType()->isIntegerTy())
-        IntVal = B.CreateBitCast(Src, IntTy);
-    }
-
-    // Convert scalar integer to destination type.
     Value *Result;
     if (!SrcIsBoolVec) {
-      // Test each bit with AND + icmp.
-      Result = PoisonValue::get(BoolVecTy);
-      for (unsigned I = 0; I < BoolVecN; ++I) {
-        Value *Mask = ConstantInt::get(IntTy, APInt::getOneBitSet(BoolVecN, I));
-        Value *And = B.CreateAnd(IntVal, Mask);
-        Value *Cmp = B.CreateICmpNE(And, ConstantInt::get(IntTy, 0));
-        Result = B.CreateInsertElement(Result, Cmp, B.getInt32(I));
+      Value *IntVal = B.CreateBitCast(Src, IntTy);
+      // Lane I is bit I % EltBits of element I / EltBits.
+      auto GetLane = [&](unsigned I) {
+        Value *Elt = IntVal;
+        if (NumElts > 1)
+          Elt = B.CreateExtractElement(IntVal, B.getInt32(I / EltBits));
+        Value *Mask =
+            ConstantInt::get(EltTy, APInt::getOneBitSet(EltBits, I % EltBits));
+        Value *And = B.CreateAnd(Elt, Mask);
+        return B.CreateICmpNE(And, ConstantInt::get(EltTy, 0));
+      };
+
+      // Compute constant-index extracts directly, as no later pass removes
+      // the unused lanes.
+      for (User *U : make_early_inc_range(BC->users())) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        auto *Idx = EE ? dyn_cast<ConstantInt>(EE->getIndexOperand()) : nullptr;
+        if (!Idx || Idx->getValue().uge(BoolVecN))
+          continue;
+        B.SetInsertPoint(EE);
+        EE->replaceAllUsesWith(GetLane(Idx->getZExtValue()));
+        EE->eraseFromParent();
       }
+      if (BC->use_empty()) {
+        BC->eraseFromParent();
+        continue;
+      }
+
+      B.SetInsertPoint(BC);
+      Result = PoisonValue::get(BoolVecTy);
+      for (unsigned I = 0; I < BoolVecN; ++I)
+        Result = B.CreateInsertElement(Result, GetLane(I), B.getInt32(I));
     } else {
-      // Destination is a non-bool type. If it's a scalar integer, use IntVal
-      // directly, otherwise bitcast from iN.
-      Result = IntVal;
-      if (!BC->getDestTy()->isIntegerTy())
-        Result = B.CreateBitCast(IntVal, BC->getDestTy());
+      // Build each element from its lanes.
+      Value *IntVal = PoisonValue::get(IntTy);
+      for (unsigned J = 0; J < NumElts; ++J) {
+        Value *Elt = ConstantInt::get(EltTy, 0);
+        for (unsigned Bit = 0; Bit < EltBits; ++Bit) {
+          Value *Lane =
+              B.CreateExtractElement(Src, B.getInt32(J * EltBits + Bit));
+          Value *Ext = B.CreateZExt(Lane, EltTy);
+          if (Bit > 0)
+            Ext = B.CreateShl(Ext, ConstantInt::get(EltTy, Bit));
+          Elt = B.CreateOr(Elt, Ext);
+        }
+        IntVal = NumElts > 1 ? B.CreateInsertElement(IntVal, Elt, B.getInt32(J))
+                             : Elt;
+      }
+      Result = B.CreateBitCast(IntVal, BC->getDestTy());
     }
 
     BC->replaceAllUsesWith(Result);
@@ -4153,9 +4310,37 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
   bool Changed = false;
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // Only entry-block allocations execute once per call, so a single array
+    // object has the same meaning as the counted allocation. Allocations in
+    // other blocks keep their lowering.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
+        continue;
+      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
+      if (Count->isZero() || !Count->getValue().isIntN(32))
+        continue;
+      AI->setAllocatedType(
+          ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
+      AI->setOperand(0, ConstantInt::get(I32Ty, 1));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
 
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  // Fold static allocation counts before pointer type inference.
+  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);
@@ -4171,7 +4356,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
     // check if function parameter types are set
     CurrF = &F;
     if (!F.isDeclaration() && !F.isIntrinsic()) {
-      IRBuilder<> B(F.getContext());
+      IRBuilder<> B(M);
       processParamTypes(&F, B);
     }
   }

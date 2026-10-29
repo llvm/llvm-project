@@ -27,9 +27,43 @@ if(NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
 endif()
 
+# ClangIR links MLIR. How that dependency reaches a find_package(Clang)
+# consumer depends on how MLIR was enabled in this build:
+#
+# - MLIR listed in LLVM_ENABLE_PROJECTS: MLIR installs its own full package and
+#   is the sole owner of its exported targets. ClangTargets.cmake references
+#   them without defining them, so ClangConfig.cmake must load the MLIR package
+#   first. Re-exporting them from Clang would create two owners for the same
+#   targets and break find_package(MLIR) in one import order or the other.
+#
+# - MLIR enabled implicitly as a ClangIR dependency, i.e. listed in
+#   LLVM_DEPENDENCY_ONLY_PROJECTS: no MLIR package is installed.
+#   clang/CMakeLists.txt promotes the reachable MLIR closure into
+#   ClangTargets.cmake instead, so there is nothing to find.
+#
+# The lookup in ClangConfig.cmake is optional: with LLVM_DISTRIBUTION_COMPONENTS
+# or LLVM_DISTRIBUTIONS, an installed package may contain only export sets
+# that do not link MLIR, and the installed targets file itself reports any
+# MLIR target it references but cannot find.
+#
+# Flang loads its Clang and MLIR dependencies the same way, with a REQUIRED
+# lookup; Clang's is optional for the distribution reason above.
+if(CLANG_ENABLE_CIR AND NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  set(CLANG_CONFIG_FIND_MLIR ON)
+  # llvm/tools/CMakeLists.txt configures MLIR before Clang, so MLIR's package
+  # directory variables are already set here.
+  set(clang_config_mlir_cmake_builddir "${llvm_builddir}/cmake/mlir")
+  extend_path(clang_config_mlir_cmake_installdir "\${CLANG_INSTALL_PREFIX}" "${MLIR_INSTALL_PACKAGE_DIR}")
+else()
+  set(CLANG_CONFIG_FIND_MLIR OFF)
+  set(clang_config_mlir_cmake_builddir "")
+  set(clang_config_mlir_cmake_installdir "")
+endif()
+
 # Generate ClangConfig.cmake for the build tree.
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
+set(CLANG_CONFIG_MLIR_CMAKE_DIR "${clang_config_mlir_cmake_builddir}")
 if("clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   # Clang is enabled only to satisfy another project's dependency, so its
   # targets file is not exported above. Leave the include out of the config
@@ -53,6 +87,7 @@ configure_file(
   @ONLY)
 set(CLANG_CONFIG_CMAKE_DIR)
 set(CLANG_CONFIG_LLVM_CMAKE_DIR)
+set(CLANG_CONFIG_MLIR_CMAKE_DIR)
 
 # For compatibility with projects that include(ClangConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
@@ -69,6 +104,7 @@ file(COPY .
 find_prefix_from_config(CLANG_CONFIG_CODE CLANG_INSTALL_PREFIX "${CLANG_INSTALL_PACKAGE_DIR}")
 extend_path(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}" "${CLANG_INSTALL_PACKAGE_DIR}")
 extend_path(CLANG_CONFIG_LLVM_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
+set(CLANG_CONFIG_MLIR_CMAKE_DIR "${clang_config_mlir_cmake_installdir}")
 get_config_exports_includes(Clang CLANG_CONFIG_INCLUDE_EXPORTS)
 extend_path(base_includedir "\${CLANG_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(CLANG_CONFIG_INCLUDE_DIRS

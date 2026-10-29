@@ -69,6 +69,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return FieldEsc->getFieldDecl()->getLocation();
     if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
       return GlobalEsc->getGlobal()->getLocation();
+    if (auto *ThisEsc = dyn_cast<ThisEscapeFact>(OEF))
+      return ThisEsc->getLoc();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -146,22 +148,14 @@ public:
     return Lattice(Joined, Factory.getEmptyMap());
   }
 
-  /// A read operation makes the origin live with definite confidence, as it
-  /// dominates this program point. A write operation kills the liveness of
-  /// the origin since it overwrites the value.
+  /// A use makes the origin live with definite confidence, as it dominates this
+  /// program point.
   Lattice transfer(Lattice In, const UseFact &UF) {
     Lattice Out = In;
     for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
-         Cur = Cur->peelOuterOrigin()) {
-      OriginID OID = Cur->getOuterOriginID();
-      // Write kills liveness.
-      if (UF.isWritten())
-        Out = removeLive(Out, OID);
-      else
-        // Read makes origin live with definite confidence (dominates this
-        // point).
-        Out = addLive(Out, OID, LivenessInfo(&UF, LivenessKind::Must));
-    }
+         Cur = Cur->peelOuterOrigin())
+      Out = addLive(Out, Cur->getOuterOriginID(),
+                    LivenessInfo(&UF, LivenessKind::Must));
     return Out;
   }
 
@@ -251,7 +245,7 @@ private:
 } // namespace
 
 // PImpl wrapper implementation
-class LiveOriginsAnalysis::Impl : public AnalysisImpl {
+class LiveOriginsAnalysis::Impl final : public AnalysisImpl {
   using AnalysisImpl::AnalysisImpl;
 };
 

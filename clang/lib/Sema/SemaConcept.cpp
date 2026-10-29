@@ -25,6 +25,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseMap.h"
@@ -402,6 +403,15 @@ public:
 
   bool VisitTypedefType(TypedefType *TT) {
     return inherited::TraverseType(TT->desugar());
+  }
+
+  bool TraversePackIndexingType(PackIndexingType *T, bool TraverseQualifier) {
+    {
+      Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+      if (!TraverseType(T->getPattern()))
+        return false;
+    }
+    return TraverseStmt(T->getIndexExpr());
   }
 
   bool TraverseDecl(Decl *D) {
@@ -911,8 +921,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   SmallVector<PartialDiagnosticAt, 2> EvaluationDiags;
   Expr::EvalResult EvalResult;
   EvalResult.Diag = &EvaluationDiags;
-  if (!SubstitutedAtomicExpr.get()->EvaluateAsConstantExpr(EvalResult,
-                                                           S.Context) ||
+  EvalProxy SProxy(S);
+  if (!SubstitutedAtomicExpr.get()->EvaluateAsMandatedConstantExpr(
+          EvalResult, S.Context, SProxy) ||
       !EvaluationDiags.empty()) {
     // C++2a [temp.constr.atomic]p1
     //   ...E shall be a constant expression of type bool.
@@ -1295,7 +1306,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -2009,9 +2020,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2530,23 +2539,34 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
   const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
-  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
-  if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
+  // The normal form only depends on the constraint expressions, and the
+  // members of all specializations of a class template share the
+  // (uninstantiated) constraint expressions of the member they were
+  // instantiated from. Cache the normal form of each expression to not
+  // normalize the same expression once per class template specialization.
+  NormalizedConstraint *Normalized = nullptr;
+  for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    std::pair<const Expr *, unsigned> Key(
+        AC.ConstraintExpr, AC.ArgPackSubstIndex.toInternalRepresentation());
+    NormalizedConstraint *Next;
+    if (auto It = NormalizedConstraintExprCache.find(Key);
+        It != NormalizedConstraintExprCache.end()) {
+      Next = It->second;
+    } else {
+      Next = NormalizedConstraint::fromAssociatedConstraints(*this, ND, AC);
+      // substitute() can invalidate iterators of NormalizedConstraintExprCache.
+      if (Next && SubstituteParameterMappings(*this).substitute(*Next))
+        Next = nullptr;
+      NormalizedConstraintExprCache.try_emplace(Key, Next);
     }
-    // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
-    CacheEntry =
-        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
-            .first;
-    if (Failed)
+    if (!Next)
       return nullptr;
+    Normalized =
+        Normalized
+            ? CompoundConstraint::CreateConjunction(Context, Normalized, Next)
+            : Next;
   }
-  return CacheEntry->second;
+  return Normalized;
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
@@ -2585,7 +2605,10 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
     auto IsExpectedEntity = [](const FunctionDecl *FD) {
       FunctionDecl::TemplatedKind Kind = FD->getTemplatedKind();
       return Kind == FunctionDecl::TK_NonTemplate ||
-             Kind == FunctionDecl::TK_FunctionTemplate;
+             Kind == FunctionDecl::TK_FunctionTemplate ||
+             (Kind == FunctionDecl::TK_MemberSpecialization &&
+              FD->getInstantiatedFromMemberFunction()
+                      ->getOverloadedOperator() == OO_Spaceship);
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&

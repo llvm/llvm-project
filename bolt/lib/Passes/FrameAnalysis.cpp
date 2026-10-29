@@ -41,7 +41,7 @@ static cl::opt<bool> TimeFA("time-fa", cl::desc("time frame analysis steps"),
 static cl::opt<bool>
     ExperimentalSW("experimental-shrink-wrapping",
                    cl::desc("process functions with stack pointer arithmetic"),
-                   cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                   cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 bool shouldFrameOptimize(const llvm::bolt::BinaryFunction &Function) {
   if (Function.hasUnknownControlFlow())

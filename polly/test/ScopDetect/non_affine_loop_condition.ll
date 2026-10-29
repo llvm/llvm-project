@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops -polly-process-unprofitable=false '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-loops '-passes=polly-custom<detect>' -plugin-arg=Polly,-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-process-unprofitable=false '-passes=polly-custom<detect>' -plugin-arg=Polly,-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++) {

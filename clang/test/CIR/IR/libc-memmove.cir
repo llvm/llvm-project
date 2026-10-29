@@ -1,0 +1,12 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u64i = !cir.int<u, 64>
+module {
+  cir.func @shouldParseLibcMemmoveOp(%arg0 : !cir.ptr<!cir.void>, %arg1 : !u64i) {
+    // CHECK: cir.libc.memmove %{{.+}} bytes from %{{.+}} to %{{.+}} : !cir.ptr<!void>, !u64i
+    cir.libc.memmove %arg1 bytes from %arg0 to %arg0 : !cir.ptr<!cir.void>, !u64i
+    // CHECK: cir.libc.memmove %{{.+}} bytes from %{{.+}} align(4) to %{{.+}} align(8) : !cir.ptr<!void>, !u64i
+    cir.libc.memmove %arg1 bytes from %arg0 align(4) to %arg0 align(8) : !cir.ptr<!cir.void>, !u64i
+    cir.return
+  }
+}

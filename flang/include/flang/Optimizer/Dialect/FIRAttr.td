@@ -82,7 +82,7 @@ def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 // Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
-// Used inside parent procedure to flag variables host associated in internal procedure.
+// Marks storage accessible to internal procedures through host association.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 // Used by alias analysis
 def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
@@ -188,6 +188,25 @@ def fir_ReduceAttr : fir_Attr<"Reduce"> {
 
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
+def FortranRuntimeResource : Resource<"::fir::FortranRuntimeResource">;
+
+def fir_RuntimeCheckKind : I32EnumAttr<"RuntimeCheckKind",
+    "Fortran runtime check category", [
+      I32EnumAttrCase<"status", 0>,
+      I32EnumAttrCase<"conformance", 1>,
+      I32EnumAttrCase<"argument", 2>,
+      I32EnumAttrCase<"bounds", 3>,
+      I32EnumAttrCase<"pointer", 4>,
+      I32EnumAttrCase<"doLoop", 5, "do">,
+      I32EnumAttrCase<"bits", 6>,
+      I32EnumAttrCase<"divide", 7>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+def fir_RuntimeCheckKindAttr
+    : EnumAttr<FIROpsDialect, fir_RuntimeCheckKind, "runtime_check_kind">;
 
 def fir_LowerBoundModifierAttribute : I32EnumAttr<
     "LowerBoundModifierAttribute",

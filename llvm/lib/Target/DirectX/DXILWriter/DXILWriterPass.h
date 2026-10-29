@@ -17,6 +17,7 @@
 #include "DirectX.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class Module;
@@ -31,6 +32,10 @@ ModulePass *createDXILWriterPass(raw_ostream &Str);
 /// module for later emission in the MCStreamer. Note that this pass is designed
 /// for use with the legacy pass manager because it is run in CodeGen only.
 ModulePass *createDXILEmbedderPass();
+
+namespace dxil {
+extern cl::opt<bool> SourceInDebugModule;
+} // namespace dxil
 
 } // namespace llvm
 

@@ -167,6 +167,13 @@ private:
   NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                        NativeDelegate &delegate, llvm::Error &E);
 
+  /// A breakpoint trap whose debug event was only delivered after the client
+  /// removed that breakpoint: the thread executed the trap before the stop
+  /// that removed it, but its event was held back until it ran again. Moves
+  /// the PC back onto the original instruction. Returns false if \p record is
+  /// not such a trap.
+  bool RewindTrapOfRemovedBreakpoint(const ExceptionRecord &record);
+
   ExceptionResult HandleSingleStepException(const ExceptionRecord &record);
   ExceptionResult HandleBreakpointException(const ExceptionRecord &record);
   ExceptionResult HandleGenericException(bool first_chance,

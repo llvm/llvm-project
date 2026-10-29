@@ -151,9 +151,56 @@ page](https://llvm.org/releases/).
 - Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
   sections. Supported formats are `zlib`, `zstd`, and `none`.
 
+- Added `-finit-local=<val>` to initialize automatic local
+  variables that have no explicit or default initialization. Accepted values
+  are `zero` and `0x<hex-byte>` (e.g. `0xAA`). The gfortran
+  compatibility alias `-finit-local-zero` is equivalent to `-finit-local=zero`.
+  Both modes fill every storage byte including struct padding.
+  PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
+
+- Added `-f[no-]version-loops-for-trip-count`, enabled by default at `-O3` and
+  above. It versions innermost array-section loops whose runtime bound may
+  equal the array's declared leading extent, so that the common case has a
+  constant trip count.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
+- Standard intrinsic functions are now classified as `SIMPLE` (F2023 16.1 p2).
+  A procedure pointer or dummy procedure whose interface is an intrinsic
+  function, such as `procedure(sqrt)`, can no longer be associated with a
+  procedure that is `PURE` but not `SIMPLE` (F2023 10.2.2.4 p3,
+  F2023 15.5.2.10 p1). Declare the target `SIMPLE` if it satisfies the
+  `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
+  interface.
+- Added support for the Fortran 2023 non-interoperable `ENUMERATION TYPE`
+  (F2023 7.6.2). An enumeration type is a distinct type whose values are
+  ordered, named enumerators.
+
+  Supported features:
+
+  - declaration with `ENUMERATION TYPE` / `ENUMERATOR`, including
+    `ENUMERATION TYPE, PUBLIC/PRIVATE` and use through modules (module files
+    record enumeration types);
+  - enumeration constructors and use as named constants;
+  - relational operators (`==`, `/=`, `<`, `<=`, `>`, `>=`) between values of
+    the same enumeration type, and `SELECT CASE` on enumeration values;
+  - the `INT` intrinsic applied to an enumeration value, and the `HUGE`,
+    `NEXT` and `PREVIOUS` intrinsics;
+  - formatted I/O using the `I`, `B`, `O` and `Z` edit descriptors.
+
+  Known Limitations:
+  - unformatted I/O of enumeration types is rejected (issue 231638);
+  - formatted input is not range-checked (231636);
+  - NEXT/PREVIOUS with STAT= inside FORALL is not yet implemented (229873);
+  - WHERE with a derived-type vector-subscript gather fails to verify (230617).
+
+  Side effects:
+  - `-fenumeration-type` and `-fno-enumeration-type` have been removed;
+  - NEXT and PREVIOUS are new intrinsic functions; a reference to an external
+    function with either name now requires an EXTERNAL declaration or an
+    explicit interface.  A CALL to an external subroutine with either name is
+    unaffected.
 
 ## Build System Changes
 

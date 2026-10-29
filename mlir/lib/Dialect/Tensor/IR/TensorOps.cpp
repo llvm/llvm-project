@@ -1409,6 +1409,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return {};
   }
 
+  if (Value result = foldExtractAfterInsert(*this))
+    return result;
+
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : adaptor.getIndices()) {
@@ -1443,9 +1446,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     if (elementsAttr && elementsAttr.isValidIndex(indices))
       return elementsAttr.getValues<Attribute>()[indices];
   }
-
-  if (Value result = foldExtractAfterInsert(*this))
-    return result;
 
   return {};
 }
@@ -2074,12 +2074,15 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 
   // Reshape must preserve the number of elements when statically known.
   if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
-    int64_t expandedNumElements = expandedType.getNumElements();
-    int64_t collapsedNumElements = collapsedType.getNumElements();
-    if (expandedNumElements != collapsedNumElements) {
+    std::optional<int64_t> expandedNumElements =
+        ShapedType::tryGetNumElements(expandedType.getShape());
+    std::optional<int64_t> collapsedNumElements =
+        ShapedType::tryGetNumElements(collapsedType.getShape());
+    if (!expandedNumElements || !collapsedNumElements)
+      return op.emitOpError("number of elements exceeds the int64 range");
+    if (*expandedNumElements != *collapsedNumElements)
       return op.emitOpError("number of elements must be preserved: ")
-             << expandedNumElements << " != " << collapsedNumElements;
-    }
+             << *expandedNumElements << " != " << *collapsedNumElements;
   }
 
   auto maps = op.getReassociationMaps();
@@ -2092,6 +2095,9 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   RankedTensorType srcType = getSrc().getType();
   RankedTensorType resultType = getResult().getType();
 
@@ -2127,10 +2133,9 @@ LogicalResult ExpandShapeOp::verify() {
 
 LogicalResult CollapseShapeOp::verify() {
   CollapseShapeOp op = *this;
-  if (llvm::any_of(op.getReassociationIndices(),
-                   [](ReassociationIndices group) { return group.empty(); })) {
-    return op.emitOpError("reassociation indices must not be empty");
-  }
+  if (failed(verifyReassociationIndicesNotEmpty(op)))
+    return failure();
+
   RankedTensorType srcType = op.getSrc().getType();
   RankedTensorType resultType = op.getResult().getType();
 
@@ -2271,7 +2276,10 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
         APInt cst;
         if (matchPattern(val, m_ConstantInt(&cst))) {
-          newOutputShape[outDim] = cst.getSExtValue();
+          int64_t dim = cst.getSExtValue();
+          if (dim < 0)
+            return failure();
+          newOutputShape[outDim] = dim;
         } else {
           dynamicOutputShape.push_back(val);
         }
@@ -3250,6 +3258,11 @@ void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 }
 
 LogicalResult PadOp::verify() {
+  for (ArrayRef<int64_t> padding : {getStaticLow(), getStaticHigh()})
+    for (int64_t size : padding)
+      if (!ShapedType::isDynamic(size) && size < 0)
+        return emitOpError("padding must be non-negative, got ") << size;
+
   auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
   auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
   auto expectedType =
@@ -3671,12 +3684,15 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     auto outputDims = oldResultType.getShape();
 
-    // Extract the static info from the high and low operands.
+    // Extract the static info from the high and low operands. A negative
+    // constant is not folded, since the attribute must be non-negative.
+    // TODO: we should consider folding to a poison value in this case.
     SmallVector<int64_t> constOperandsLow;
     SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsLow.push_back(ShapedType::kDynamic);
         newLows.push_back(operand);
         continue;
@@ -3687,7 +3703,8 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
     SmallVector<Value> newHighs;
     for (auto operand : padTensorOp.getHigh()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsHigh.push_back(ShapedType::kDynamic);
         newHighs.push_back(operand);
         continue;
@@ -4185,13 +4202,30 @@ struct FoldTensorCastProducerOp
   }
 };
 
+namespace {
+/// A splat of a scalar condition selects the same arm in every element.
+struct SelectSplatCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto splat = select.getCondition().getDefiningOp<SplatOp>();
+    if (!splat)
+      return failure();
+    rewriter.modifyOpInPlace(
+        select, [&] { select.getConditionMutable().assign(splat.getInput()); });
+    return success();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TensorDialect
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<FoldTensorCastProducerOp>(getContext());
+  results.add<FoldTensorCastProducerOp, SelectSplatCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

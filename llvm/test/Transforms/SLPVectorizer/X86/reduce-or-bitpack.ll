@@ -8,11 +8,7 @@ define i32 @shl_and_pack(i32 %x) {
 ; CHECK-LABEL: define i32 @shl_and_pack(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 255, i32 255, i32 255, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP3]] to <4 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[X]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;

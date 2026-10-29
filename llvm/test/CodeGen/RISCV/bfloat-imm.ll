@@ -43,3 +43,19 @@ define bfloat @bfloat_negative_zero() nounwind {
 ; CHECK-NEXT:    ret
   ret bfloat -0.0
 }
+
+define bfloat @poison() nounwind {
+; CHECK-LABEL: poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.h.x fa0, zero
+; CHECK-NEXT:    ret
+  ret bfloat poison
+}
+
+define bfloat @undef() nounwind {
+; CHECK-LABEL: undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.h.x fa0, zero
+; CHECK-NEXT:    ret
+  ret bfloat undef
+}

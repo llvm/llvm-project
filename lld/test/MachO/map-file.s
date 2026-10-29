@@ -25,11 +25,10 @@
 # CHECK-NEXT:  3 __cstring       0000002b [[#%x,CSTR:]]     DATA
 # CHECK-NEXT:  4 __unwind_info   0000103c [[#%x,UNWIND:]]   DATA
 # CHECK-NEXT:  5 __eh_frame      00000038 [[#%x,EH_FRAME:]] DATA
-# CHECK-NEXT:  6 __got           00000010 [[#%x,GOT:]]      DATA
+# CHECK-NEXT:  6 __got           00000018 [[#%x,GOT:]]      DATA
 # CHECK-NEXT:  7 __la_symbol_ptr 00000010 [[#%x,LAZY:]]     DATA
 # CHECK-NEXT:  8 __data          00000008 [[#%x,DATA:]]     DATA
-# CHECK-NEXT:  9 __thread_ptrs   00000008 [[#%x,TLVP:]]     DATA
-# CHECK-NEXT: 10 __common        00000001 [[#%x,BSS:]]      BSS
+# CHECK-NEXT:  9 __common        00000001 [[#%x,BSS:]]      BSS
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-DAG:  [[#%x,DYLD:]]    l     O __DATA,__data __dyld_private
@@ -61,7 +60,6 @@
 # CHECK-NEXT: 0x[[#%X,GOT]]       0x{{[0-9A-F]+}} __DATA_CONST  __got
 # CHECK-NEXT: 0x[[#%X,LAZY]]      0x{{[0-9A-F]+}} __DATA  __la_symbol_ptr
 # CHECK-NEXT: 0x[[#%X,DATA]]      0x{{[0-9A-F]+}} __DATA  __data
-# CHECK-NEXT: 0x[[#%X,TLVP]]      0x{{[0-9A-F]+}} __DATA  __thread_ptrs
 # CHECK-NEXT: 0x[[#%X,BSS]]       0x{{[0-9A-F]+}} __DATA  __common
 
 # CHECK-NEXT: # Symbols:
@@ -80,12 +78,12 @@
 ## Note: ld64 prints "CIE" and "FDE for: <function>" instead of "EH_Frame".
 # CHECK-NEXT: 0x[[#%X,EH_FRAME]]       0x00000018  [  2] EH_Frame
 # CHECK-NEXT: 0x[[#%X,EH_FRAME+0x18]]  0x00000020  [  2] EH_Frame
-# CHECK-NEXT: 0x[[#%X,GOT]]            0x00000008  [  0] non-lazy-pointer-to-local: _baz2
-# CHECK-NEXT: 0x[[#%X,GOT+8]]          0x00000008  [  0] non-lazy-pointer-to-local: dyld_stub_binder
+# CHECK-NEXT: 0x[[#%X,GOT]]            0x00000008  [  0] non-lazy-pointer-to-local: _baz_tlv
+# CHECK-NEXT: 0x[[#%X,GOT+8]]          0x00000008  [  0] non-lazy-pointer-to-local: _baz2
+# CHECK-NEXT: 0x[[#%X,GOT+0x10]]       0x00000008  [  0] non-lazy-pointer-to-local: dyld_stub_binder
 # CHECK-NEXT: 0x[[#%X,LAZY]]           0x00000008  [  5] _baz
 # CHECK-NEXT: 0x[[#%X,LAZY+8]]         0x00000008  [  2] _bar
 # CHECK-NEXT: 0x[[#%X,DYLD]]           0x00000000  [  0] __dyld_private
-# CHECK-NEXT: 0x[[#%X,TLVP]]           0x00000008  [  0] non-lazy-pointer-to-local: _baz_tlv
 # CHECK-NEXT: 0x[[#%X,BSS]]            0x00000001  [  2] _number
 # CHECK-EMPTY:
 

@@ -100,6 +100,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:     return ::llvm::StringLiteral("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
+// CHECK-NEXT:     auto [start, length] = getODSOperandIndexAndLength(index);
+// CHECK-NEXT:     return getOperation()->getOperands().slice(start, length);
 // CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA() {
 // CHECK:   ::mlir::Operation::operand_range getB() {
 // CHECK:   ::mlir::OpOperand &getAMutable() {
@@ -158,6 +160,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: };
 
 // DEFS-LABEL: NS::AOp definitions
+// DEFS: ::llvm::LogicalResult AOp::setPropertiesFromAttr
+// DEFS: ::mlir::detail::setAttributeProperty(
+// DEFS: ::mlir::Attribute AOp::getPropertiesAsAttr
+// DEFS: ::mlir::detail::appendAttributeProperty(attrs, "attr1", prop.attr1);
 // DEFS: void AOp::build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions) {
 // DEFS:   buildPropertiesAndDiscardableAttributes(odsState, attributes);
 // DEFS: void AOp::build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes, unsigned numRegions) {
@@ -165,10 +171,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: void AOp::buildPropertiesAndDiscardableAttributes
 // DEFS:   Properties &properties = odsState.getOrAddProperties<Properties>();
 // DEFS-NEXT:   populateDefaultProperties(odsState.name, properties);
-// DEFS:     if (name == "attr1" || name == "some_attr2")
-// DEFS:       inherentAttributes.push_back(attr);
-// DEFS:       odsState.addAttribute(attr.getName(), attr.getValue());
-// DEFS:   if (::mlir::failed(setPropertiesFromAttr(
+// DEFS:   const ::llvm::StringRef inherentNames[] = {"attr1", "some_attr2"};
+// DEFS:   ::mlir::detail::splitPropertiesAndDiscardableAttributes(
+// DEFS:   return setPropertiesFromAttr(properties, inherentAttrs,
+
 
 // Check that `getAttrDictionary()` is used when not using properties.
 
@@ -195,6 +201,9 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 // CHECK:  RangeT getB() {
 // CHECK:  ValueT getC() {
 // CHECK:  RangeT getD() {
+// DEFS-LABEL: void AttrSizedOperandOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes,
+// DEFS-NEXT:   auto &odsProperties = odsState.getOrAddProperties<Properties>();
+// DEFS:   ::llvm::copy({{.*}}, odsProperties.operandSegmentSizes.begin());
 
 // Check op trait for different number of operands
 // ---
@@ -205,6 +214,8 @@ def NS_BOp : NS_Op<"op_with_no_operand", []> {
 
 // CHECK-LABEL: NS::BOp declarations
 // CHECK: OpTrait::ZeroOperands
+// DEFS-LABEL: void BOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {
+// DEFS-NEXT:   build(odsBuilder, odsState, ::mlir::TypeRange{});
 
 def NS_COp : NS_Op<"op_with_one_operand", []> {
   let arguments = (ins I32:$operand);

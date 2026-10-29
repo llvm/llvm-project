@@ -14,6 +14,7 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   FILES
   geometric/distance.cl
   geometric/length.cl
+  geometric/normalize.cl
   math/acos.cl
   math/acosh.cl
   math/acospi.cl

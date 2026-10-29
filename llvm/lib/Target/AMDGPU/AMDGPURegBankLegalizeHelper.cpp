@@ -269,7 +269,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill);
+      .addReg(CondRegLM)
+      .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 
   B.setInsertPt(*BodyBB, BodyBB->end());
@@ -278,7 +279,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(SavedExec);
+      .addReg(SavedExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -769,9 +771,13 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
-    auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
+    Register Hi = SHRSrcHi;
+    // V_BFE masks its width to 5 bits, so 64 would extract zero bits.
+    if (WidthImm < 64) {
+      auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
+      Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt}).getReg(0);
+    }
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
   }
 
@@ -1701,11 +1707,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     B.setInstrAndDebugLoc(MI);
     if (Ty.getSizeInBits() > 32) {
-      auto UnmergeV2S16 =
-          B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
-      for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
-        auto [Dst0I32, Dst1I32] =
-            unpackAExt(UnmergeV2S16->getOperand(i).getReg());
+      auto UnmergeI32 = B.buildUnmerge(SgprRB_I32, Unmerge->getSourceReg());
+      unsigned NumDefs = UnmergeI32->getNumDefs();
+      for (unsigned i = 0; i < NumDefs; ++i) {
+        auto [Dst0I32, Dst1I32] = unpackAExt(UnmergeI32.getReg(i));
         B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0I32);
         B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1I32);
       }

@@ -743,6 +743,21 @@ func.func @constant_16bit() {
   return
 }
 
+// Without the Int8 capability, 8-bit floats are emulated as i8 and then
+// widened to i32 like any other 8-bit integer.
+// CHECK-LABEL: @constant_8bit_float
+func.func @constant_8bit_float() {
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %0 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : tensor<2xi32> : !spirv.array<2 x i32>
+  %1 = arith.constant dense<[1.0, -0.5]> : tensor<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %2 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3>
+  // CHECK: spirv.Constant dense<[56, -80, 64, -72]> : tensor<4xi32> : !spirv.array<4 x i32>
+  %3 = arith.constant dense<[[1.0, -0.5], [2.0, -1.0]]> : tensor<2x2xf8E4M3FN>
+  return
+}
+
 // CHECK-LABEL: @constant_size1
 func.func @constant_size1() {
   // CHECK: spirv.Constant 4 : i32
@@ -1152,6 +1167,43 @@ func.func @fptosi2(%arg0 : f16) -> i16 {
   // CHECK: spirv.ConvertFToS %{{.*}} : f16 to i16
   %0 = arith.fptosi %arg0 : f16 to i16
   return %0 : i16
+}
+
+} // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Float16, BFloat16TypeKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+  // CHECK: spirv.FConvert %{{.*}} : f16 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+  // CHECK: spirv.FConvert %{{.*}} : bf16 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @convertf_vector_f16_to_bf16
+func.func @convertf_vector_f16_to_bf16(%arg0 : vector<4xf16>) -> vector<4xbf16> {
+  // CHECK: spirv.FConvert %{{.*}} : vector<4xf16> to vector<4xbf16>
+  %0 = arith.convertf %arg0 : vector<4xf16> to vector<4xbf16>
+  return %0 : vector<4xbf16>
+}
+
+// CHECK-LABEL: @convertf_rounding_mode
+func.func @convertf_rounding_mode(%arg0 : f16) -> bf16 {
+  // CHECK: spirv.FConvert %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f16 to bf16
+  %0 = arith.convertf %arg0 to_nearest_even : f16 to bf16
+  return %0 : bf16
 }
 
 } // end module

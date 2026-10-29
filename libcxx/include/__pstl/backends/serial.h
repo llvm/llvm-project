@@ -13,6 +13,7 @@
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
+#include <__algorithm/includes.h>
 #include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
 #include <__algorithm/min_element.h>
@@ -21,7 +22,12 @@
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
+#include <__algorithm/set_difference.h>
+#include <__algorithm/set_intersection.h>
+#include <__algorithm/set_symmetric_difference.h>
+#include <__algorithm/set_union.h>
 #include <__algorithm/stable_sort.h>
+#include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__memory/uninitialized_algorithms.h>
@@ -207,6 +213,15 @@ struct __stable_sort<__serial_backend_tag, _ExecutionPolicy> {
 };
 
 template <class _ExecutionPolicy>
+struct __swap_ranges<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) const noexcept {
+    return std::swap_ranges(std::move(__first1), std::move(__last1), std::move(__first2));
+  }
+};
+
+template <class _ExecutionPolicy>
 struct __transform<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
@@ -300,6 +315,105 @@ struct __uninitialized_move<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
     return std::uninitialized_move(std::move(__first), std::move(__last), std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __includes<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Compare>
+  optional<bool>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Compare __comp) const noexcept {
+    return std::includes(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __set_difference<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+  optional<_ForwardOutIterator> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first1,
+      _ForwardIterator1 __last1,
+      _ForwardIterator2 __first2,
+      _ForwardIterator2 __last2,
+      _ForwardOutIterator __result,
+      _Compare __comp) const noexcept {
+    return std::set_difference(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __set_symmetric_difference<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+  optional<_ForwardOutIterator> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first1,
+      _ForwardIterator1 __last1,
+      _ForwardIterator2 __first2,
+      _ForwardIterator2 __last2,
+      _ForwardOutIterator __result,
+      _Compare __comp) const noexcept {
+    return std::set_symmetric_difference(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __set_union<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+  optional<_ForwardOutIterator> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first1,
+      _ForwardIterator1 __last1,
+      _ForwardIterator2 __first2,
+      _ForwardIterator2 __last2,
+      _ForwardOutIterator __result,
+      _Compare __comp) const noexcept {
+    return std::set_union(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __set_intersection<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+  optional<_ForwardOutIterator> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first1,
+      _ForwardIterator1 __last1,
+      _ForwardIterator2 __first2,
+      _ForwardIterator2 __last2,
+      _ForwardOutIterator __result,
+      _Compare __comp) const noexcept {
+    return std::set_intersection(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        std::move(__comp));
   }
 };
 

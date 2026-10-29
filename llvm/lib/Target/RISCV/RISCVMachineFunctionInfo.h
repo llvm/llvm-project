@@ -163,6 +163,13 @@ public:
     return It->second;
   }
 
+  enum class ShadowStackKind { None = 0, Hardware, Software };
+
+  ShadowStackKind getShadowStackKind(const MachineFunction &MF) const;
+  bool hasShadowStack(const MachineFunction &MF) const {
+    return getShadowStackKind(MF) != ShadowStackKind::None;
+  }
+
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
   PushPopKind getPushPopKind(const MachineFunction &MF) const;

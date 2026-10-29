@@ -95,7 +95,7 @@ L1:
 }
 
 void test_ordered() {
-#pragma omp target teams distribute parallel for simd ordered // OK
+#pragma omp target teams distribute parallel for simd ordered // expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp target teams distribute parallel for simd'}}
   for (int i = 0; i < 16; ++i)
     ;
 }

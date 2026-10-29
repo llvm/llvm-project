@@ -17,18 +17,14 @@ void f2(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @f2(){{.*}} {
-// CIR:         %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
-// CIR:         %[[S:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_S>, !rec_S
-// CIR-NEXT:    cir.store %[[S]], %[[COERCE]] : !rec_S, !cir.ptr<!rec_S>
-// CIR-NEXT:    %[[CAST:.+]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
-// CIR-NEXT:    %[[ARG:.+]] = cir.load %[[CAST]] : !cir.ptr<!u64i>, !u64i
+// CIR:         %[[S:.+]] = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[CAST:.+]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+// CIR-NEXT:    %[[ARG:.+]] = cir.load align(4) %[[CAST]] : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    cir.call @f1(%[[ARG]]) : (!u64i) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f2(){{.*}}
-// LLVM:         %[[COERCE:.+]] = alloca %struct.S, align 8
-// LLVM:         %[[S:.+]] = load %struct.S, ptr %{{.+}}, align 4
-// LLVM-NEXT:    store %struct.S %[[S]], ptr %[[COERCE]], align 4
-// LLVM-NEXT:    %[[ARG:.+]] = load i64, ptr %[[COERCE]], align 8
+// LLVM:         %[[S:.+]] = alloca %struct.S, align 4
+// LLVM-NEXT:    %[[ARG:.+]] = load i64, ptr %[[S]], align 4
 // LLVM-NEXT:    call void @f1(i64 %[[ARG]])
 
 // OGCG-LABEL: define{{.*}} void @f2()
@@ -42,18 +38,18 @@ void f4(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f4(){{.*}} {
 // CIR:         %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
-// CIR:         %[[RET:.+]] = cir.call @f3() : () -> !u64i
+// CIR-NEXT:    %[[S:.+]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[RET:.+]] = cir.call @f3() : () -> !u64i
 // CIR-NEXT:    cir.store %[[RET]], %[[COERCE]] : !u64i, !cir.ptr<!u64i>
 // CIR-NEXT:    %[[CAST:.+]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
-// CIR-NEXT:    %[[S:.+]] = cir.load %[[CAST]] : !cir.ptr<!rec_S>, !rec_S
-// CIR-NEXT:    cir.store align(4) %[[S]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
+// CIR-NEXT:    cir.copy %[[CAST]] align(8) to %[[S]] align(4) : !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @f4(){{.*}} {
 // LLVM:         %[[COERCE:.+]] = alloca i64, align 8
-// LLVM:         %[[RET:.+]] = call i64 @f3()
+// LLVM-NEXT:    %[[S:.+]] = alloca %struct.S, align 4
+// LLVM-NEXT:    %[[RET:.+]] = call i64 @f3()
 // LLVM-NEXT:    store i64 %[[RET]], ptr %[[COERCE]], align 8
-// LLVM-NEXT:    %[[S:.+]] = load %struct.S, ptr %[[COERCE]], align 4
-// LLVM-NEXT:    store %struct.S %[[S]], ptr %{{.+}}, align 4
+// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S]], ptr align 8 %[[COERCE]], i64 8, i1 false)
 
 // OGCG-LABEL: define{{.*}} void @f4() #0 {
 // OGCG:         %[[S:.+]] = call i64 @f3()
@@ -72,15 +68,15 @@ void f7(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @f7(){{.*}} {
-// CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
+// CIR:         %[[B:.+]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.store %[[B]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+// CIR-NEXT:    cir.copy %[[B]] align(4) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
-// LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
+// LLVM:         %[[B:.+]] = alloca %struct.Big, align 4
 // LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, align 8
-// LLVM-NEXT:    store %struct.Big %[[B]], ptr %[[SLOT]], align 4
+// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %[[B]], i64 40, i1 false)
 // LLVM-NEXT:    call void @f5(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 
 // OGCG-LABEL: define{{.*}} void @f7() #0 {
@@ -109,30 +105,22 @@ void f9(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f9(){{.*}} {
 // CIR:         %[[RETSLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
-// CIR-NEXT:    %[[ARGSLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[RET:.+]] = cir.call @f3() : () -> !u64i
 // CIR-NEXT:    cir.store %[[RET]], %[[RETSLOT]] : !u64i, !cir.ptr<!u64i>
 // CIR-NEXT:    %[[RETCAST:.+]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
-// CIR-NEXT:    %[[RETVAL:.+]] = cir.load %[[RETCAST]] : !cir.ptr<!rec_S>, !rec_S
-// CIR-NEXT:    cir.store align(4) %[[RETVAL]], %[[SLOT]] : !rec_S, !cir.ptr<!rec_S>
-// CIR-NEXT:    %[[ARG:.+]] = cir.load align(4) %[[SLOT]] : !cir.ptr<!rec_S>, !rec_S
-// CIR-NEXT:    cir.store %[[ARG]], %[[ARGSLOT]] : !rec_S, !cir.ptr<!rec_S>
-// CIR-NEXT:    %[[ARGCAST:.+]] = cir.cast bitcast %[[ARGSLOT]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
-// CIR-NEXT:    %[[ARGVAL:.+]] = cir.load %[[ARGCAST]] : !cir.ptr<!u64i>, !u64i
+// CIR-NEXT:    cir.copy %[[RETCAST]] align(8) to %[[SLOT]] align(4) : !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[ARGCAST:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
+// CIR-NEXT:    %[[ARGVAL:.+]] = cir.load align(4) %[[ARGCAST]] : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    cir.call @f1(%[[ARGVAL]]) : (!u64i) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f9(){{.*}} {
 // LLVM:         %[[RETSLOT:.+]] = alloca i64, align 8
-// LLVM-NEXT:    %[[ARGSLOT:.+]] = alloca %struct.S, align 8
 // LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.S, align 4
 // LLVM-NEXT:    %[[RET:.+]] = call i64 @f3()
 // LLVM-NEXT:    store i64 %[[RET]], ptr %[[RETSLOT]], align 8
-// LLVM-NEXT:    %[[RETVAL:.+]] = load %struct.S, ptr %[[RETSLOT]], align 4
-// LLVM-NEXT:    store %struct.S %[[RETVAL]], ptr %[[SLOT]], align 4
-// LLVM-NEXT:    %[[ARG:.+]] = load %struct.S, ptr %[[SLOT]], align 4
-// LLVM-NEXT:    store %struct.S %[[ARG]], ptr %[[ARGSLOT]], align 4
-// LLVM-NEXT:    %[[ARGVAL:.+]] = load i64, ptr %[[ARGSLOT]], align 8
+// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[SLOT]], ptr align 8 %[[RETSLOT]], i64 8, i1 false)
+// LLVM-NEXT:    %[[ARGVAL:.+]] = load i64, ptr %[[SLOT]], align 4
 // LLVM-NEXT:    call void @f1(i64 %[[ARGVAL]])
 
 // OGCG-LABEL: define{{.*}} void @f9() #0 {
@@ -150,9 +138,9 @@ int f12(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f12() -> !s32i{{.*}} {
 // CIR:         %[[A:.+]] = cir.const #cir.int<1> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) nounwind willreturn {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : (!s32i {llvm.noundef}) -> !s32i
 // CIR-NEXT:    %[[B:.+]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) nounwind willreturn {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!s32i {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @f12(){{.*}}
 // LLVM:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]

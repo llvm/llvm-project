@@ -52,7 +52,7 @@ define double @fneg_double(double %0) {
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @fneg_quad(fp128 %0) {
 ; CHECK-LABEL: fneg_quad:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s1, (, %s11)
 ; CHECK-NEXT:    st %s0, 8(, %s11)
 ; CHECK-NEXT:    ld1b.zx %s0, 15(, %s11)

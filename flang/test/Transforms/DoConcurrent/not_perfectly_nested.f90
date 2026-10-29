@@ -47,10 +47,10 @@ end
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
 ! COMMON:   fir.do_concurrent {
 
-! COMMON:     %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j"}
+! COMMON:     %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "j"}>
 ! COMMON:     %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
 
-! COMMON:     %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 {bindc_name = "k"}
+! COMMON:     %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! COMMON:     %[[ORIG_K_DECL:.*]]:2 = hlfir.declare %[[ORIG_K_ALLOC]]
 
 ! COMMON:     fir.do_concurrent.loop (%[[J_IV:.*]], %[[K_IV:.*]]) = {{.*}} {

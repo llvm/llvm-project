@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -235,6 +236,11 @@ StackOffset AVRFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   default:
     llvm_unreachable("Unsupported stack!");
   }
+
+  // Frame indices are addressed relative to the frame register (see
+  // AVRRegisterInfo::eliminateFrameIndex); callers such as the DWARF
+  // debug info emitter rely on it being reported back here.
+  FrameReg = MF.getSubtarget().getRegisterInfo()->getFrameRegister(MF);
 
   return StackOffset::getFixed(Offset);
 }

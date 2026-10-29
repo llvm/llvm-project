@@ -1241,7 +1241,44 @@ define void @strided_store() {
   ret void
 }
 
+define void @constant_strided_load() {
+; ARGBASED-LABEL: 'constant_strided_load'
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vp.strided.store.v16i64.p0.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'constant_strided_load'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vp.strided.store.v16i64.p0.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison) ; Make sure cost doesn't go to zero
+  %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+  %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison) ; No overlap
+  %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison) ; Barely overlap
+  %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison) ; Should be limited by MaxCombines
 
+  call void @llvm.experimental.vp.strided.store.v4i8.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+  call void @llvm.experimental.vp.strided.store.v16i64.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison) ; Negative stride
+  call void @llvm.experimental.vp.strided.store.nxv4i64.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+  call void @llvm.experimental.vp.strided.store.nxv16i64.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+
+  ret void
+}
 
 define void @reduce_add() {
 ; CHECK-LABEL: 'reduce_add'
@@ -1535,20 +1572,20 @@ define void @vp_fdiv(){
 
 define void @splice() {
 ; CHECK-LABEL: 'splice'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vp.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vp.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1, <vscale x 32 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vp.splice.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vp.splice.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vp.splice.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vp.splice.nxv16i16(<vscale x 16 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vp.splice.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vp.splice.nxv4i64(<vscale x 4 x i64> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vp.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vp.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1, <vscale x 32 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i16 = call <vscale x 2 x i16> @llvm.experimental.vp.splice.nxv2i16(<vscale x 2 x i16> zeroinitializer, <vscale x 2 x i16> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i16 = call <vscale x 4 x i16> @llvm.experimental.vp.splice.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv8i16 = call <vscale x 8 x i16> @llvm.experimental.vp.splice.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %splice_nxv16i16 = call <vscale x 16 x i16> @llvm.experimental.vp.splice.nxv16i16(<vscale x 16 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv4i32 = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %splice_nxv8i32 = call <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv2i64 = call <vscale x 2 x i64> @llvm.experimental.vp.splice.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %splice_nxv4i64 = call <vscale x 4 x i64> @llvm.experimental.vp.splice.nxv4i64(<vscale x 4 x i64> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1, <vscale x 8 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1, <vscale x 4 x i1> zeroinitializer, i32 poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1, <vscale x 2 x i1> zeroinitializer, i32 poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vp.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1, <vscale x 16 x i1> zeroinitializer, i32 poison, i32 poison)
@@ -1688,31 +1725,31 @@ define void @reverse() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %9 = call <2 x i16> @llvm.experimental.vp.reverse.v2i16(<2 x i16> poison, <2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %10 = call <4 x i16> @llvm.experimental.vp.reverse.v4i16(<4 x i16> poison, <4 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %11 = call <8 x i16> @llvm.experimental.vp.reverse.v8i16(<8 x i16> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %12 = call <16 x i16> @llvm.experimental.vp.reverse.v16i16(<16 x i16> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %12 = call <16 x i16> @llvm.experimental.vp.reverse.v16i16(<16 x i16> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %13 = call <2 x i32> @llvm.experimental.vp.reverse.v2i32(<2 x i32> poison, <2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %14 = call <4 x i32> @llvm.experimental.vp.reverse.v4i32(<4 x i32> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %15 = call <8 x i32> @llvm.experimental.vp.reverse.v8i32(<8 x i32> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %16 = call <16 x i32> @llvm.experimental.vp.reverse.v16i32(<16 x i32> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %15 = call <8 x i32> @llvm.experimental.vp.reverse.v8i32(<8 x i32> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %16 = call <16 x i32> @llvm.experimental.vp.reverse.v16i32(<16 x i32> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %17 = call <2 x i64> @llvm.experimental.vp.reverse.v2i64(<2 x i64> poison, <2 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <4 x i64> @llvm.experimental.vp.reverse.v4i64(<4 x i64> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %19 = call <8 x i64> @llvm.experimental.vp.reverse.v8i64(<8 x i64> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %20 = call <16 x i64> @llvm.experimental.vp.reverse.v16i64(<16 x i64> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %18 = call <4 x i64> @llvm.experimental.vp.reverse.v4i64(<4 x i64> poison, <4 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %19 = call <8 x i64> @llvm.experimental.vp.reverse.v8i64(<8 x i64> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %20 = call <16 x i64> @llvm.experimental.vp.reverse.v16i64(<16 x i64> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %21 = call <2 x bfloat> @llvm.experimental.vp.reverse.v2bf16(<2 x bfloat> poison, <2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %22 = call <4 x bfloat> @llvm.experimental.vp.reverse.v4bf16(<4 x bfloat> poison, <4 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %23 = call <8 x bfloat> @llvm.experimental.vp.reverse.v8bf16(<8 x bfloat> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %24 = call <16 x bfloat> @llvm.experimental.vp.reverse.v16bf16(<16 x bfloat> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %24 = call <16 x bfloat> @llvm.experimental.vp.reverse.v16bf16(<16 x bfloat> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %25 = call <2 x half> @llvm.experimental.vp.reverse.v2f16(<2 x half> poison, <2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %26 = call <4 x half> @llvm.experimental.vp.reverse.v4f16(<4 x half> poison, <4 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %27 = call <8 x half> @llvm.experimental.vp.reverse.v8f16(<8 x half> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %28 = call <16 x half> @llvm.experimental.vp.reverse.v16f16(<16 x half> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %28 = call <16 x half> @llvm.experimental.vp.reverse.v16f16(<16 x half> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %29 = call <2 x float> @llvm.experimental.vp.reverse.v2f32(<2 x float> poison, <2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %30 = call <4 x float> @llvm.experimental.vp.reverse.v4f32(<4 x float> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %31 = call <8 x float> @llvm.experimental.vp.reverse.v8f32(<8 x float> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %32 = call <16 x float> @llvm.experimental.vp.reverse.v16f32(<16 x float> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %31 = call <8 x float> @llvm.experimental.vp.reverse.v8f32(<8 x float> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %32 = call <16 x float> @llvm.experimental.vp.reverse.v16f32(<16 x float> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %33 = call <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> poison, <2 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %34 = call <4 x double> @llvm.experimental.vp.reverse.v4f64(<4 x double> poison, <4 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %35 = call <8 x double> @llvm.experimental.vp.reverse.v8f64(<8 x double> poison, <8 x i1> poison, i32 poison)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %36 = call <16 x double> @llvm.experimental.vp.reverse.v16f64(<16 x double> poison, <16 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %34 = call <4 x double> @llvm.experimental.vp.reverse.v4f64(<4 x double> poison, <4 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %35 = call <8 x double> @llvm.experimental.vp.reverse.v8f64(<8 x double> poison, <8 x i1> poison, i32 poison)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %36 = call <16 x double> @llvm.experimental.vp.reverse.v16f64(<16 x double> poison, <16 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %37 = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> poison, <vscale x 2 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %38 = call <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1> poison, <vscale x 4 x i1> poison, i32 poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %39 = call <vscale x 8 x i1> @llvm.experimental.vp.reverse.nxv8i1(<vscale x 8 x i1> poison, <vscale x 8 x i1> poison, i32 poison)

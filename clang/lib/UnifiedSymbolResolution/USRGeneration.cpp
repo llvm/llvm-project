@@ -806,6 +806,9 @@ void USRGenerator::VisitType(QualType T) {
       case BuiltinType::NullPtr:
         Out << 'n';
         break;
+      case BuiltinType::MetaInfo:
+        Out << "@BT@MetaInfo";
+        break;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Suffix << "_" << #ImgType;                               \
@@ -858,6 +861,11 @@ void USRGenerator::VisitType(QualType T) {
     Out << "@BT@" << #Name;                                                    \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << Name;                                                     \

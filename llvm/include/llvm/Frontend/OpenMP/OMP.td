@@ -169,6 +169,7 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let isImplicit = true;
 }
 def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let clangClass = "OMPDepthClause";
   let flangClass = "ScalarIntConstantExpr";
 }
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
@@ -795,6 +796,24 @@ def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let association = AS_None;
   let category = CA_Executable;
 }
+def OMP_BeginMetadirective : Directive<[Spelling<"begin metadirective">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_When>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_DefaultVariant, 50, 51>,
+    VersionedClause<OMPC_Otherwise, 52>,
+  ];
+  let association = AS_Delimited;
+  let category = CA_Meta;
+  let pureSince = 52;
+}
+def OMP_EndMetadirective : Directive<[Spelling<"end metadirective">]> {
+  let association = AS_Delimited;
+  let category = OMP_BeginMetadirective.category;
+  let languages = OMP_BeginMetadirective.languages;
+  let pureSince = OMP_BeginMetadirective.pureSince;
+}
 def OMP_CancellationPoint : Directive<[Spelling<"cancellation point", 1, 52>,
                                        Spelling<"cancellation_point", 60>]> {
   let allowedOnceClauses = [
@@ -1366,6 +1385,15 @@ def OMP_Task : Directive<[Spelling<"task">]> {
   let association = AS_Block;
   let category = CA_Executable;
 }
+def OMP_TaskIteration : Directive<[Spelling<"task_iteration">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Affinity, 60>,
+    VersionedClause<OMPC_Depend, 60>,
+    VersionedClause<OMPC_If, 60>,
+  ];
+  let association = AS_None;
+  let category = CA_Subsidiary;
+}
 def OMP_Taskgraph : Directive<[Spelling<"taskgraph">]> {
   let allowedClauses = [
     VersionedClause<OMPC_If>,
@@ -1623,7 +1651,6 @@ def OMP_DistributeParallelFor
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -1655,7 +1682,6 @@ def OMP_DistributeParallelForSimd
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -1702,6 +1728,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
   ];
@@ -2689,7 +2716,6 @@ def OMP_TargetTeamsDistributeParallelFor
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2733,7 +2759,6 @@ def OMP_TargetTeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -2989,7 +3014,6 @@ def OMP_TeamsDistributeParallelFor
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -3023,7 +3047,6 @@ def OMP_TeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,

@@ -90,13 +90,12 @@ define i16 @fun1(<16 x i1> %src)
 define void @fun2(<8 x i32> %src, ptr %p)
 ; CHECK-LABEL: fun2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsteb %v26, 30(%r2), 15
 ; CHECK-NEXT:    vlgvf %r0, %v26, 3
-; CHECK-NEXT:    vlvgp %v0, %r0, %r0
-; CHECK-NEXT:    srl %r0, 8
-; CHECK-NEXT:    vsteb %v0, 30(%r2), 15
-; CHECK-NEXT:    vlvgp %v1, %r0, %r0
-; CHECK-NEXT:    vsteh %v1, 28(%r2), 7
+; CHECK-NEXT:    srlk %r1, %r0, 8
+; CHECK-NEXT:    sth %r1, 28(%r2)
 ; CHECK-NEXT:    larl %r1, .LCPI2_0
+; CHECK-NEXT:    vlvgp %v0, %r0, %r0
 ; CHECK-NEXT:    vl %v1, 0(%r1), 3
 ; CHECK-NEXT:    vlgvf %r0, %v26, 2
 ; CHECK-NEXT:    larl %r1, .LCPI2_1
@@ -120,8 +119,8 @@ define void @fun2(<8 x i32> %src, ptr %p)
 ; CHECK-NEXT:    vlvgp %v4, %r0, %r0
 ; CHECK-NEXT:    vn %v4, %v4, %v2
 ; CHECK-NEXT:    vlgvf %r0, %v26, 1
-; CHECK-NEXT:    larl %r1, .LCPI2_2
 ; CHECK-NEXT:    vrepib %v5, 93
+; CHECK-NEXT:    larl %r1, .LCPI2_2
 ; CHECK-NEXT:    vslb %v4, %v4, %v5
 ; CHECK-NEXT:    vsl %v4, %v4, %v5
 ; CHECK-NEXT:    vo %v3, %v3, %v4

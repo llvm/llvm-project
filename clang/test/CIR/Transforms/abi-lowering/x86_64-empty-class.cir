@@ -148,8 +148,10 @@ module attributes {
   // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_HasEmpty>
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HasEmpty> -> !cir.ptr<!s32i>
   // CHECK:   cir.store %arg0, %[[CAST]] : !s32i, !cir.ptr<!s32i>
-  // CHECK:   %{{.*}} = cir.load %[[SLOT]] : !cir.ptr<!rec_HasEmpty>, !rec_HasEmpty
+  // CHECK:   %[[H:.*]] = cir.alloca "h" align(4) : !cir.ptr<!rec_HasEmpty>
+  // CHECK:   cir.copy %[[SLOT]] align(4) to %[[H]] align(4) : !cir.ptr<!rec_HasEmpty>
   // LLVM: define i32 @take_has_empty(i32 %{{.*}})
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{[^,]+}}, ptr align 4 %{{[^,]+}}, i64 8, i1 false)
 
   // The empty member still takes layout space, so the int sits at offset 4 and
   // the eightbyte spanning both coerces to i64.

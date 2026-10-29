@@ -534,6 +534,14 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
+  case LibFunc_posix_memalign:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
+    Changed |= setDoesNotCapture(F, 0);
+    Changed |= setOnlyWritesMemory(F, 0);
+    break;
   case LibFunc_aligned_alloc:
     Changed |= setAlignedAllocParam(F, 0);
     Changed |= setAllocSize(F, 1, std::nullopt);
@@ -1411,6 +1419,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_roundeven:
   case LibFunc_roundevenf:
   case LibFunc_roundevenl:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
   case LibFunc_toascii:
   case LibFunc_trunc:
   case LibFunc_truncf:
@@ -1452,6 +1462,13 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   if (!isLibFreeFunction(&F, TheLibFunc) && !isReallocLikeFn(&F))
     Changed |= setDoesNotFreeMemory(F);
   return Changed;
+}
+
+static void setI8ArgExtAttr(Function &F, unsigned ArgNo,
+                            const TargetLibraryInfo &TLI, bool Signed = true) {
+  Attribute::AttrKind ExtAttr = TLI.getExtAttrForI8Param(Signed);
+  if (ExtAttr != Attribute::None && !F.hasParamAttribute(ArgNo, ExtAttr))
+    F.addParamAttr(ArgNo, ExtAttr);
 }
 
 static void setArgExtAttr(Function &F, unsigned ArgNo,
@@ -1537,6 +1554,25 @@ FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
     break;
   case LibFunc_memccpy:
     setArgExtAttr(*F, 2, TLI);
+    break;
+
+  // The last argument of the hot-cold operator new variants is an i8
+  // __hot_cold_t hint.
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_size_returning_new_hot_cold:
+    setI8ArgExtAttr(*F, 1, TLI, /*Signed=*/false);
+    break;
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    setI8ArgExtAttr(*F, 2, TLI, /*Signed=*/false);
+    break;
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    setI8ArgExtAttr(*F, 3, TLI, /*Signed=*/false);
     break;
 
     // These are functions that are known to not need any argument extension
@@ -1645,7 +1681,7 @@ static IntegerType *getIntTy(IRBuilderBase &B, const TargetLibraryInfo *TLI) {
 }
 
 static IntegerType *getSizeTTy(IRBuilderBase &B, const TargetLibraryInfo *TLI) {
-  const Module *M = B.GetInsertBlock()->getModule();
+  const Module *M = B.getModule();
   return B.getIntNTy(TLI->getSizeTSize(*M));
 }
 
@@ -1654,7 +1690,7 @@ static Value *emitLibCall(LibFunc TheLibFunc, Type *ReturnType,
                           ArrayRef<Value *> Operands, IRBuilderBase &B,
                           const TargetLibraryInfo *TLI,
                           bool IsVaArgs = false) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, TheLibFunc))
     return nullptr;
 
@@ -1743,7 +1779,7 @@ Value *llvm::emitStpNCpy(Value *Dst, Value *Src, Value *Len, IRBuilderBase &B,
 Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                            IRBuilderBase &B, const DataLayout &DL,
                            const TargetLibraryInfo *TLI) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, LibFunc_memcpy_chk))
     return nullptr;
 
@@ -1922,7 +1958,7 @@ static Value *emitUnaryFloatFnCallHelper(Value *Op, LibFunc TheLibFunc,
                                          const TargetLibraryInfo *TLI) {
   assert((Name != "") && "Must specify Name to emitUnaryFloatFnCall");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, Op->getType(),
                                              Op->getType());
   CallInst *CI = B.CreateCall(Callee, Op, Name);
@@ -1954,7 +1990,7 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
                                   LibFunc LongDoubleFn, IRBuilderBase &B,
                                   const AttributeList &Attrs) {
   // Get the name of the function according to TLI.
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   LibFunc TheLibFunc;
   StringRef Name = getFloatFn(M, TLI, Op->getType(), DoubleFn, FloatFn,
                               LongDoubleFn, TheLibFunc);
@@ -1969,7 +2005,7 @@ static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
                                           const TargetLibraryInfo *TLI) {
   assert((Name != "") && "Must specify Name to emitBinaryFloatFnCall");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, Op1->getType(),
                                              Op1->getType(), Op2->getType());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
@@ -2006,7 +2042,7 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
                                    LibFunc LongDoubleFn, IRBuilderBase &B,
                                    const AttributeList &Attrs) {
   // Get the name of the function according to TLI.
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   LibFunc TheLibFunc;
   StringRef Name = getFloatFn(M, TLI, Op1->getType(), DoubleFn, FloatFn,
                               LongDoubleFn, TheLibFunc);
@@ -2066,18 +2102,18 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
-                                         Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+                                         Value *HotCold, Type *RetTy) {
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func =
-      M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
+  FunctionCallee Func = getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy,
+                                           Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
 
@@ -2091,18 +2127,19 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                                                 IRBuilderBase &B,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
-                                                Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+                                                Value *HotCold, Type *RetTy) {
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
-                                               Align->getType(), B.getInt8Ty());
+  FunctionCallee Func =
+      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy, Num->getType(),
+                         Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, "sized_ptr");
 
@@ -2115,13 +2152,13 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
 Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
                             const TargetLibraryInfo *TLI, LibFunc NewFunc,
                             Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func =
-      M->getOrInsertFunction(Name, B.getPtrTy(), Num->getType(), B.getInt8Ty());
+  FunctionCallee Func = getOrInsertLibFunc(M, *TLI, NewFunc, B.getPtrTy(),
+                                           Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, Name);
 
@@ -2135,13 +2172,14 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
 Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
                                    LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func = M->getOrInsertFunction(
-      Name, B.getPtrTy(), Num->getType(), NoThrow->getType(), B.getInt8Ty());
+  FunctionCallee Func =
+      getOrInsertLibFunc(M, *TLI, NewFunc, B.getPtrTy(), Num->getType(),
+                         NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, NoThrow, HotCold}, Name);
 
@@ -2155,13 +2193,14 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
 Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
                                    LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func = M->getOrInsertFunction(
-      Name, B.getPtrTy(), Num->getType(), Align->getType(), B.getInt8Ty());
+  FunctionCallee Func =
+      getOrInsertLibFunc(M, *TLI, NewFunc, B.getPtrTy(), Num->getType(),
+                         Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, Name);
 
@@ -2176,14 +2215,14 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
                                           Value *NoThrow, IRBuilderBase &B,
                                           const TargetLibraryInfo *TLI,
                                           LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func = M->getOrInsertFunction(
-      Name, B.getPtrTy(), Num->getType(), Align->getType(), NoThrow->getType(),
-      B.getInt8Ty());
+  FunctionCallee Func =
+      getOrInsertLibFunc(M, *TLI, NewFunc, B.getPtrTy(), Num->getType(),
+                         Align->getType(), NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, NoThrow, HotCold}, Name);
 

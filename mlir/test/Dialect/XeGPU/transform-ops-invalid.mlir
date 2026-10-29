@@ -72,6 +72,37 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @insert_prefetch_loop_carried_offset
+func.func @insert_prefetch_loop_carried_offset(%a: memref<4096x4096xf16>) {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c128 = arith.constant 128 : index
+  %desc = xegpu.create_nd_tdesc %a
+    : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  %final = scf.for %i = %c0 to %c128 step %c32
+      iter_args(%offset = %c0) -> (index) {
+    %tile = xegpu.load_nd %desc[0, %offset]
+      : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+    %next = arith.addi %offset, %c32 : index
+    scf.yield %next : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{Load offset depends on a value unavailable before the loop.}}
+    %prefetch_desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @insert_prefetch_dpas_c
 func.func @insert_prefetch_dpas_c(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
   %c32 = arith.constant 32 : index

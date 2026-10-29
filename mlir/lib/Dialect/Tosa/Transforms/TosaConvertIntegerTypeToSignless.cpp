@@ -106,7 +106,7 @@ public:
 
 class ConvertTosaConstWithIntegerTensorType
     : public OpConversionPattern<tosa::ConstOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(tosa::ConstOp op, OpAdaptor adaptor,

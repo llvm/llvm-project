@@ -945,7 +945,7 @@ define void @prevent_memsetting_a_undef_store(ptr %result) {
 
 
 
-!0 = !{!0}
+!0 = !{!0, i1 false}
 !1 = !{!1, !0}
 !2 = !{!1}
 !3 = !{!4}

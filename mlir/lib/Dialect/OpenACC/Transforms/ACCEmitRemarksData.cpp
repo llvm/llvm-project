@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,7 +31,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool isStructuredDeclareEnter(acc::DeclareEnterOp op) {
   return !op.getToken().getUsers().empty();
 }
@@ -98,6 +98,11 @@ static StringRef getDataClauseRemarkPrefix(Operation *dataClauseOp) {
 static bool shouldReport(Operation *op, acc::OpenACCSupport &accSupport,
                          std::string &varName) {
   if (!isa_and_nonnull<ACC_DATA_CLAUSE_OPS>(op))
+    return false;
+  // A synthetic operation exists only for the implementation's own
+  // bookkeeping, so it has nothing to tell the user about their code. It can
+  // even duplicate the report of the clause it was created to support.
+  if (acc::getSyntheticFlag(op))
     return false;
   if (getDataClauseRemarkPrefix(op).empty())
     return false;
@@ -224,6 +229,11 @@ class ACCEmitRemarksData
 public:
   using ACCEmitRemarksDataBase<ACCEmitRemarksData>::ACCEmitRemarksDataBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCEmitRemarksDataBase<ACCEmitRemarksData>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
@@ -263,5 +273,4 @@ public:
     });
   }
 };
-
 } // namespace
