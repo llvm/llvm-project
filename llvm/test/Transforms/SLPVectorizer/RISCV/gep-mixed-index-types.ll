@@ -9,15 +9,12 @@ define i32 @copyable_gep_node_mixed_index_types(ptr %b, i32 %S) {
 ; CHECK-LABEL: define i32 @copyable_gep_node_mixed_index_types(
 ; CHECK-SAME: ptr [[B:%.*]], i32 [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MUL_2:%.*]] = shl i32 [[S]], 1
-; CHECK-NEXT:    [[MUL_4:%.*]] = shl i32 [[S]], 2
-; CHECK-NEXT:    [[MUL_6:%.*]] = mul i32 [[S]], 6
-; CHECK-NEXT:    [[MUL_7:%.*]] = mul i32 [[S]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 2, i32 4, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 poison, i32 poison, i32 7, i32 poison, i32 5, i32 poison, i32 poison>, i32 [[S]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[MUL_2]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[MUL_4]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[MUL_6]], i64 6
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[MUL_7]], i64 7
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 8, i32 3, i32 10, i32 5, i32 12, i32 13>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x ptr> poison, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x ptr> [[TMP6]], <8 x ptr> poison, <8 x i32> zeroinitializer

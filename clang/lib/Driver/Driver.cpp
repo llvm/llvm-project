@@ -354,52 +354,51 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
 // option we used to determine the final phase.
-phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
+phases::ID Driver::getFinalPhase(const ArgList &Args,
                                  Arg **FinalPhaseArg) const {
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;
 
   // -{E,EP,P,M,MM} only run the preprocessor.
-  if (CCCIsCPP() || (PhaseArg = DAL.getLastArg(options::OPT_E)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_EP)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT_M, options::OPT_MM)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_P)) ||
-      CCGenDiagnostics) {
+  if (CCCIsCPP() || (PhaseArg = Args.getLastArg(options::OPT_E)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_EP)) ||
+      (PhaseArg = Args.getLastArg(options::OPT_M, options::OPT_MM)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_P)) || CCGenDiagnostics) {
     FinalPhase = phases::Preprocess;
 
     // --precompile only runs up to precompilation.
     // Options that cause the output of C++20 compiled module interfaces or
     // header units have the same effect.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT__precompile)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT__precompile_reduced_bmi)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_extract_api)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
-                                        options::OPT_fmodule_header_EQ))) {
+                  Args.getLastArg(options::OPT__precompile_reduced_bmi)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_extract_api)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_fmodule_header,
+                                         options::OPT_fmodule_header_EQ))) {
     FinalPhase = phases::Precompile;
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_fsyntax_only)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
+                  Args.getLastArg(options::OPT_print_enabled_extensions)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_module_file_info)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_verify_pch)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_legacy_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT__analyze)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_cir)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
   // -S only runs up to the backend.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_S))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_S))) {
     FinalPhase = phases::Backend;
 
   // -c compilation only runs up to the assembler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_c))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_c))) {
     FinalPhase = phases::Assemble;
 
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
     // Otherwise do everything.
@@ -5857,15 +5856,14 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput = C.getArgs().MakeArgString(TempPath.c_str());
   }
 
-  // If we're saving temps and the temp file conflicts with the input file,
-  // then avoid overwriting input file.
-  if (!AtTopLevel && isSaveTempsEnabled() && NamedOutput == BaseName) {
+  // If we're saving temps and the temp file is the input file, then avoid
+  // overwriting the input file. Compare the files, not their names: the output
+  // can name the input by another path (e.g. "sub/t.s" from -save-temps=obj),
+  // or with different case on a case-insensitive file system ("t.s" for an
+  // input "t.S").
+  if (!AtTopLevel && isSaveTempsEnabled()) {
     bool SameFile = false;
-    SmallString<256> Result;
-    llvm::sys::fs::current_path(Result);
-    llvm::sys::path::append(Result, BaseName);
-    llvm::sys::fs::equivalent(BaseInput, Result.c_str(), SameFile);
-    // Must share the same path to conflict.
+    llvm::sys::fs::equivalent(BaseInput, NamedOutput, SameFile);
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');

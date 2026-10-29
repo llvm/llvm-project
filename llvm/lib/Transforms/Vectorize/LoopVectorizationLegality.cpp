@@ -81,18 +81,17 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
       [TTI](ScalableForceKind ForceScalableHint,
             ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
             ElementCount ForceWidthOpt) -> ScalableForceKind {
-    // -scalable-vectorization=(always|off|on) has the highest precedence.
-    if (ForceScalableOpt != SK_Unspecified)
-      return ForceScalableOpt;
-
-    // Then, consider loop hints.
+    // Loop hints have the highest precedence.
     assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
     if (ForceScalableHint == SK_PreferScalable ||
         ForceScalableHint == SK_FixedWidthOnly)
       return ForceScalableHint;
 
+    // Then, consider -scalable-vectorization=(always|off|on).
+    if (ForceScalableOpt != SK_Unspecified)
+      return ForceScalableOpt;
+
     // Then, infer scalability from a preferred VF.
-    assert(ForceScalableOpt == SK_Unspecified);
     if (ForceWidthOpt.isScalable())
       return SK_AlwaysScalable;
     if (ForceWidth)
@@ -725,7 +724,7 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
+      ID.getConstStepValue() && ID.getConstStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -772,7 +771,7 @@ static bool isDisallowedStridedPointerInduction(const InductionDescriptor &ID,
   if (Opts.lv_strided_pointer_ivs)
     return false;
   return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-         ID.getConstIntStepValue() == nullptr;
+         !ID.getConstStepValue();
 }
 
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
@@ -1716,10 +1715,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
+  if (!FixedOrderRecurrences.empty()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
+        "Found fixed-order recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with fixed-order recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1753,7 +1752,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 

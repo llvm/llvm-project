@@ -648,51 +648,84 @@ def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    def SYNC_VAL_COMPARE_AND_SWAP_#MemSize : RuntimeLibcall;
-    def SYNC_LOCK_TEST_AND_SET_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_ADD_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_SUB_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_AND_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_OR_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_XOR_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_NAND_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_MAX_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_UMAX_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_MIN_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_UMIN_#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def SYNC_VAL_COMPARE_AND_SWAP_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type]>;
+    def SYNC_LOCK_TEST_AND_SET_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_ADD_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_SUB_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_AND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_OR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_XOR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_NAND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_MAX_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_UMAX_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_MIN_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_UMIN_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
   }
 }
 
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
-  foreach MemSize = ["", "_1", "_2", "_4", "_8", "_16"] in {
-    def ATOMIC_EXCHANGE#MemSize : RuntimeLibcall;
-    def ATOMIC_COMPARE_EXCHANGE#MemSize : RuntimeLibcall;
+  def ATOMIC_EXCHANGE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int]>;
+  def ATOMIC_COMPARE_EXCHANGE
+      : RuntimeLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int]>;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_EXCHANGE_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_COMPARE_EXCHANGE_#IntTy.Suffix
+        : RuntimeLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int]>;
   }
 
   def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
   def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
-  foreach MemSize = ["_1", "_2", "_4", "_8", "_16"] in {
-    def ATOMIC_LOAD#MemSize : RuntimeLibcall;
-    def ATOMIC_STORE#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_LOAD_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [Ptr, Int]>;
+    def ATOMIC_STORE_#IntTy.Suffix
+        : RuntimeLibcall<Void, [Ptr, IntTy.Type, Int]>;
   }
 
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    def ATOMIC_FETCH_ADD_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_SUB_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_AND_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_OR_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_XOR_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_NAND_#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_FETCH_ADD_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_SUB_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_AND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_OR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_XOR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_NAND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
   }
 }
 
-multiclass AtomicOrderSizeLibcall {
-  def _RELAX : RuntimeLibcall;
-  def _ACQ : RuntimeLibcall;
-  def _REL : RuntimeLibcall;
-  def _ACQ_REL : RuntimeLibcall;
+multiclass AtomicOrderSizeLibcall<FuncArgType RetType,
+                                  list<FuncArgType> ArgTypes> {
+  def _RELAX : RuntimeLibcall<RetType, ArgTypes>;
+  def _ACQ : RuntimeLibcall<RetType, ArgTypes>;
+  def _REL : RuntimeLibcall<RetType, ArgTypes>;
+  def _ACQ_REL : RuntimeLibcall<RetType, ArgTypes>;
 }
 
 multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
@@ -704,13 +737,21 @@ multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
 
 // Out-of-line atomics libcalls
 defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    defm OUTLINE_ATOMIC_CAS#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_SWP#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDADD#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDSET#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDCLR#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDEOR#MemSize : AtomicOrderSizeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    defm OUTLINE_ATOMIC_CAS#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_SWP#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDADD#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDSET#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDCLR#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDEOR#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
   }
 }
 
@@ -1374,34 +1415,44 @@ def __unorddf2 : RuntimeLibcallImpl<UO_F64>;
 def __unordtf2 : RuntimeLibcallImpl<UO_F128>;
 def __gcc_qunord : RuntimeLibcallImpl<UO_PPCF128>;
 
-// Element-wise unordered-atomic memory of different sizes
-foreach MemSize = [ 1, 2, 4, 8, 16 ] in {
-  def __llvm_memcpy_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
-    !cast<RuntimeLibcall>("MEMCPY_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
-
-  def __llvm_memmove_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
-    !cast<RuntimeLibcall>("MEMMOVE_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
-
-  def __llvm_memset_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
-    !cast<RuntimeLibcall>("MEMSET_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
-}
-
 // Atomic '__sync_*' libcalls.
 foreach lc = LibCalls__sync in {
   def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
 }
 
-// Atomic `__atomic_*' libcalls.
-foreach lc = LibCalls__atomic in {
-  def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
-}
-
-// Deoptimization
-def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
-
 // Clear cache
 def __clear_cache : RuntimeLibcallImpl<CLEAR_CACHE>;
 } // End defset CompilerRtLibgccImpls
+
+// libatomic
+//--------------------------------------------------------------------
+
+// Atomic `__atomic_*' libcalls.
+defset list<RuntimeLibcallImpl> LibatomicImpls = {
+  foreach lc = LibCalls__atomic in {
+    def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
+  }
+}
+
+// LLVM client runtime
+//--------------------------------------------------------------------
+
+defset list<RuntimeLibcallImpl> LLVMClientRuntimeImpls = {
+  // Element-wise unordered-atomic memory of different sizes
+  foreach MemSize = [ 1, 2, 4, 8, 16 ] in {
+    def __llvm_memcpy_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
+      !cast<RuntimeLibcall>("MEMCPY_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
+
+    def __llvm_memmove_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
+      !cast<RuntimeLibcall>("MEMMOVE_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
+
+    def __llvm_memset_element_unordered_atomic_#MemSize : RuntimeLibcallImpl<
+      !cast<RuntimeLibcall>("MEMSET_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
+  }
+
+  // Deoptimization
+  def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
+}
 
 //--------------------------------------------------------------------
 // libm
@@ -2215,6 +2266,12 @@ def CompilerRtLibgcc : LibcallLibrary<"compiler-rt",
        LibcallImpls<(add CompilerRtLibgccImpls_ppcf128), isLongDoublePPCF128>,
        LibcallImpls<(add Int128RTLibcalls), isArch64Bit>)>;
 
+// The `__atomic_*' runtime: GCC's libatomic, or compiler-rt's clang_rt.atomic.
+def Libatomic : LibcallLibrary<"libatomic", (add LibatomicImpls)>;
+
+def LLVMClientRuntime : LibcallLibrary<"llvm-client-runtime",
+  (add LLVMClientRuntimeImpls)>;
+
 def Libc : LibcallLibrary<"libc", (add LibcCoreImpls)>;
 
 // PPC and SPARC provide their own stack protector, and XCore has none.
@@ -2356,12 +2413,9 @@ def AArch64OutlineAtomics : LibcallLibrary<"compiler-rt",
   (add AArch64LibcallImpls),
   isAArch64_ExceptArm64EC>;
 
-def AArch64SystemLibrary : SystemRuntimeLibrary<
-  isAArch64_ExceptArm64EC,
-  (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-       AArch64Libm, AArch64OutlineAtomics,
-       AArch64SMERuntime, SafeStackRuntime)
->;
+def AArch64SystemLibrary : SystemRuntimeLibrary<isAArch64_ExceptArm64EC,
+  ["compiler-rt", "libatomic", "llvm-client-runtime", "libm", "libc", "unwind",
+   "sme"]>;
 
 // The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
 defvar Arm64ECCompilerRtImpls =
@@ -2377,6 +2431,18 @@ defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
   }
 
   foreach libcall = AArch64LibcallImpls in {
+    def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
+  }
+}
+
+defset list<RuntimeLibcallImpl> WinArm64ECLibatomicImpls = {
+  foreach libcall = LibatomicImpls in {
+    def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
+  }
+}
+
+defset list<RuntimeLibcallImpl> WinArm64ECLLVMClientRuntimeImpls = {
+  foreach libcall = LLVMClientRuntimeImpls in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 }
@@ -2428,11 +2494,20 @@ def Arm64ECRuntime : LibcallLibrary<"compiler-rt",
   let Isolated = true;
 }
 
+def Arm64ECLibatomic : LibcallLibrary<"libatomic",
+  (add WinArm64ECLibatomicImpls), isWindowsArm64EC> {
+  let Isolated = true;
+}
+
+def Arm64ECLLVMClientRuntime : LibcallLibrary<"llvm-client-runtime",
+  (add WinArm64ECLLVMClientRuntimeImpls), isWindowsArm64EC> {
+  let Isolated = true;
+}
+
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
-                           (add Arm64ECRuntime,
-                                Arm64ECLibc,
-                                Arm64ECExceptionRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
@@ -2448,7 +2523,7 @@ def AMDGPUProfileRt : LibcallLibrary<"compiler-rt-profile",
   (add __llvm_profile_instrument_gpu, __llvm_profile_sampling_gpu), isAMDGPU>;
 
 def AMDGPUSystemLibrary
-    : SystemRuntimeLibrary<isAMDGPU, (add AMDGPUProfileRt)>;
+    : SystemRuntimeLibrary<isAMDGPU, ["compiler-rt-profile"]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
@@ -2917,19 +2992,19 @@ def ARMLibm : LibcallLibrary<"libm",
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      // ARM excludes the Darwin bzero and unlocked stdio functions.
-      (add LibraryRef<CompilerRtLibgcc, ARMDefaultOptOut>, Libm,
-           LibraryRef<Libc, [bzero, getc_unlocked, getchar_unlocked,
-                                putc_unlocked, putchar_unlocked]>,
-           ExceptionRuntime,
-           ARMCompilerRt,
-           SafeStackRuntime)> {
+      ["compiler-rt", "libatomic", "llvm-client-runtime", "libm", "libc",
+       "unwind"]> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
                                     : CallingConv::ARM_AAPCS)
   }]>;
 }
+
+def : LibraryExclusion<"compiler-rt", isARMOrThumb, ARMDefaultOptOut>;
+// ARM excludes the Darwin bzero and unlocked stdio functions.
+def : LibraryExclusion<"libc", isARMOrThumb,
+  [bzero, getc_unlocked, getchar_unlocked, putc_unlocked, putchar_unlocked]>;
 
 //===----------------------------------------------------------------------===//
 // AVR Runtime Libcalls
@@ -2968,12 +3043,12 @@ defvar AVRCompilerRtOptOut = [
 defvar AVRLibmOptOut = [sin, cos, sinf, cosf, sincos, sincosf];
 
 def AVRSystemLibrary
-    : SystemRuntimeLibrary<
-          isAVR,
-          (add LibraryRef<CompilerRtLibgcc, AVRCompilerRtOptOut>,
-              LibraryRef<Libm, AVRLibmOptOut>,
-              Libc,
-              ExceptionRuntime)>;
+    : SystemRuntimeLibrary<isAVR,
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isAVR, AVRCompilerRtOptOut>;
+def : LibraryExclusion<"libm", isAVR, AVRLibmOptOut>;
 
 //===----------------------------------------------------------------------===//
 // DXIL Runtime Libcalls
@@ -2982,7 +3057,7 @@ def AVRSystemLibrary
 def isDXIL : RuntimeLibcallAvailability<(all_of IsDXIL)>;
 
 // No calls
-def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
+def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, []>;
 
 //===----------------------------------------------------------------------===//
 // Hexagon Runtime Libcalls
@@ -3036,8 +3111,8 @@ def HexagonCompilerRt
 
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
-    (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime, HexagonCompilerRt,
-    SafeStackRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -3048,7 +3123,8 @@ def isLanai : RuntimeLibcallAvailability<(all_of IsLanai)>;
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
     : SystemRuntimeLibrary<isLanai,
-      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime)> {
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -3321,10 +3397,11 @@ def MSP430CompilerRt : LibcallLibrary<"compiler-rt", (add
 
 def MSP430SystemLibrary
     : SystemRuntimeLibrary<isMSP430,
-    (add LibraryRef<CompilerRtLibgcc, MSP430DefaultOptOut>,
-      LibraryRef<Libm, [sincos, sincosf]>, Libc, ExceptionRuntime
-  )
->;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isMSP430, MSP430DefaultOptOut>;
+def : LibraryExclusion<"libm", isMSP430, [sincos, sincosf]>;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Runtime Libcalls
@@ -3333,7 +3410,7 @@ def MSP430SystemLibrary
 def isNVPTX : RuntimeLibcallAvailability<(all_of IsNVPTX)>;
 
 // No calls.
-def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, (add)>;
+def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, []>;
 
 //===----------------------------------------------------------------------===//
 // PPC Runtime Libcalls
@@ -3445,9 +3522,11 @@ defvar PPCReplacedCompilerRtF128 = [
 
 def PPCSystemLibrary
     : SystemRuntimeLibrary<isPPC,
-      (add LibraryRef<CompilerRtLibgcc, PPCReplacedCompilerRtF128>,
-           LibraryRef<Libc, [memcpy]>, PPCStackProtectorLibc,
-           Libm, ExceptionRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libc", "libm", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isPPC, PPCReplacedCompilerRtF128>;
+def : LibraryExclusion<"libc", isPPC, [memcpy]>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -3460,8 +3539,8 @@ def RISCVLibc : LibcallLibrary<"libc", (add __riscv_flush_icache), isRISCV>;
 
 def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
-      (add CompilerRtLibgcc, Libm, Libc, RISCVLibc, ExceptionRuntime,
-           SafeStackRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3535,10 +3614,10 @@ def SPARCStackProtectorLibc : LibcallLibrary<"libc",
 
 def SPARCSystemLibrary
     : SystemRuntimeLibrary<isSPARC,
-      (add LibraryRef<CompilerRtLibgcc, SPARC64_MulDivCalls>,
-            Libm, Libc, SPARCStackProtectorLibc, SparcCompilerRt,
-            ExceptionRuntime, SafeStackRuntime)
->;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isSPARC, SPARC64_MulDivCalls>;
 
 //===----------------------------------------------------------------------===//
 // SPIRV Runtime Libcalls
@@ -3554,7 +3633,7 @@ def SPIRVLibc : LibcallLibrary<"libc", (add memset, memcpy), isSPIRV> {
   let Isolated = true;
 }
 
-def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, ["libc"]>;
 
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
@@ -3635,13 +3714,14 @@ def X86Libm : LibcallLibrary<"libm",
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
-      (add LibraryRef<CompilerRtLibgcc,
-                      !listconcat(WindowsDivRemMulLibcallOverrides,
-                                  [__powitf2_f128])>,
-           // x86 has no fp128 sincosl, only the x87 one.
-           LibraryRef<Libm, [sincosl_f128]>,
-           LibraryRef<Libc, !listconcat(MemChkLibcalls, [bzero])>,
-           ExceptionRuntime, SafeStackRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isX86,
+  !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
+// x86 has no fp128 sincosl, only the x87 one.
+def : LibraryExclusion<"libm", isX86, [sincosl_f128]>;
+def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
@@ -3661,10 +3741,10 @@ def XCoreLibm : LibcallLibrary<"libm",
 
 def XCoreSystemLibrary
     : SystemRuntimeLibrary<isXCore,
-    // XCore does not use the stack protector.
-    (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf]>, Libc,
-         ExceptionRuntime,
-         XCoreLibc, XCoreLibm)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"libm", isXCore, [sincos, sincosf]>;
 
 //===----------------------------------------------------------------------===//
 // ZOS Runtime Libcalls
@@ -3783,9 +3863,9 @@ def isSystemZZOS : RuntimeLibcallAvailability<(all_of IsSystemZ, IsOSzOS)>;
 def ZOSLibc : LibcallLibrary<"libc", (add ZOSRuntimeLibcalls), isSystemZZOS>;
 
 def SystemZZOSSystemLibrary
-    : SystemRuntimeLibrary<
-          isSystemZZOS, (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-                            ZOSLibc)>;
+    : SystemRuntimeLibrary<isSystemZZOS,
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls
@@ -3817,9 +3897,10 @@ def WasmExceptionRuntime : LibcallLibrary<"unwind",
 
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
-      (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf, sincosl_f128]>,
-           Libc, WasmLibc, WasmCompilerRt,
-           ExceptionRuntime, WasmExceptionRuntime)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"libm", isWasm, [sincos, sincosf, sincosl_f128]>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
@@ -3833,9 +3914,8 @@ def isDefaultLibcallArch : RuntimeLibcallAvailability<
 
 def LegacyDefaultSystemLibrary
     : SystemRuntimeLibrary<isDefaultLibcallArch,
-      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-         SafeStackRuntime
-)>;
+                           ["compiler-rt", "libatomic", "llvm-client-runtime",
+                            "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // Vector math libraries

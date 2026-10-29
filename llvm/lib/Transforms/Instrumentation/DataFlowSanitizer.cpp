@@ -1575,8 +1575,8 @@ bool DataFlowSanitizer::runImpl(
       // Code will sometimes check if an extern weak function is null.
       // This could look something like:
       //   declare extern_weak i8 @my_func(i8)
-      //   br i1 icmp ne (i8 (i8)* @my_func, i8 (i8)* null), label %use_my_func,
-      //   label %avoid_my_func
+      //   %cmp = icmp ne ptr @my_func, null
+      //   br i1 %cmp, label %use_my_func, label %avoid_my_func
       // The @"dfsw$my_func" wrapper is never null, so if we replace this use
       // in the comparison, the icmp will simplify to false and we have
       // accidentally optimized away a null check that is necessary.
@@ -1590,12 +1590,6 @@ bool DataFlowSanitizer::runImpl(
       // We will default to replacing with wrapper in cases we are unsure.
       auto IsNotCmpUse = [](Use &U) -> bool {
         User *Usr = U.getUser();
-        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-          // This is the most common case for icmp ne null
-          if (CE->getOpcode() == Instruction::ICmp) {
-            return false;
-          }
-        }
         if (Instruction *I = dyn_cast<Instruction>(Usr)) {
           if (I->getOpcode() == Instruction::ICmp) {
             return false;
@@ -3442,8 +3436,7 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!DataFlowSanitizer(Opts, ABIListFiles, FS).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 

@@ -73,6 +73,7 @@ endforeach()
 add_public_tablegen_target(MLIRNVVMOpsShardGen)
 
 add_mlir_dialect_library(MLIRNVVMDialect
+  IR/NVVMAttributes.cpp
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp

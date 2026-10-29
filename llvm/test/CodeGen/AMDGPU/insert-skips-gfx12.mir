@@ -440,7 +440,7 @@ body: |
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   $m0 = S_MOV_B32 -1
   ; CHECK-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc
+  ; CHECK-NEXT:   S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc, implicit $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
