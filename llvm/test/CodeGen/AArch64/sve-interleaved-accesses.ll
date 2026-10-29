@@ -1629,13 +1629,18 @@ define void @deinterleave_nxptr_factor2(ptr %ptr) #2 {
 ;
 ; CHECK-IADISABLED-LABEL: deinterleave_nxptr_factor2:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
+; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x0]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    uzp1 z4.d, z1.d, z0.d
+; CHECK-IADISABLED-NEXT:    uzp2 z0.d, z1.d, z0.d
+; CHECK-IADISABLED-NEXT:    uzp2 z5.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    uzp1 z1.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    // fake_use: $z4
+; CHECK-IADISABLED-NEXT:    // fake_use: $z1
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-IADISABLED-NEXT:    // fake_use: $z5
 ; CHECK-IADISABLED-NEXT:    ret
   %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8
   %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)

@@ -732,18 +732,29 @@ define void @interleave_wide_known_vscale(ptr %output, ptr %input0, ptr %input1)
 ; CHECK-IADISABLED-LABEL: interleave_wide_known_vscale:
 ; CHECK-IADISABLED:       // %bb.0:
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
 ; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x1, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x2, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z5, [x1, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z6, [x2, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z16, [x2]
+; CHECK-IADISABLED-NEXT:    zip1 z4.s, z0.s, z1.s
+; CHECK-IADISABLED-NEXT:    zip2 z0.s, z0.s, z1.s
+; CHECK-IADISABLED-NEXT:    ldr z1, [x1]
+; CHECK-IADISABLED-NEXT:    zip1 z7.s, z2.s, z3.s
+; CHECK-IADISABLED-NEXT:    zip2 z2.s, z2.s, z3.s
+; CHECK-IADISABLED-NEXT:    zip1 z3.s, z5.s, z6.s
+; CHECK-IADISABLED-NEXT:    str z4, [x0, #6, mul vl]
+; CHECK-IADISABLED-NEXT:    zip1 z4.s, z1.s, z16.s
+; CHECK-IADISABLED-NEXT:    zip2 z1.s, z1.s, z16.s
+; CHECK-IADISABLED-NEXT:    str z0, [x0, #7, mul vl]
+; CHECK-IADISABLED-NEXT:    zip2 z0.s, z5.s, z6.s
+; CHECK-IADISABLED-NEXT:    str z7, [x0, #4, mul vl]
+; CHECK-IADISABLED-NEXT:    str z2, [x0, #5, mul vl]
+; CHECK-IADISABLED-NEXT:    str z3, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    str z0, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    str z4, [x0]
+; CHECK-IADISABLED-NEXT:    str z1, [x0, #1, mul vl]
 ; CHECK-IADISABLED-NEXT:    ret
   %v0 = load <vscale x 16 x i32>, ptr %input0, align 1
   %v1 = load <vscale x 16 x i32>, ptr %input1, align 1
