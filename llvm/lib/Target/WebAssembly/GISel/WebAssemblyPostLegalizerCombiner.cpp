@@ -201,5 +201,7 @@ PreservedAnalyses WebAssemblyPostLegalizerCombinerPass::run(
       [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); });
   return Changed ? getMachineFunctionPassPreservedAnalyses()
                        .preserveSet<CFGAnalyses>()
+                       .preserve<GISelValueTrackingAnalysis>()
+                       .preserve<GISelCSEAnalysis>()
                  : PreservedAnalyses::all();
 }

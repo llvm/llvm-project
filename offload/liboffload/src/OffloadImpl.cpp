@@ -269,9 +269,12 @@ struct ol_context_impl_t {
     llvm::Error Result = Plugin::success();
     for (auto &Bucket : OutstandingQueues) {
       auto *Device = Bucket.first;
-      for (auto *AI : Bucket.second)
+      for (auto &AI : Bucket.second) {
         if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
           Result = llvm::joinErrors(std::move(Result), std::move(Err));
+        delete AI;
+        AI = nullptr;
+      }
     }
     OutstandingQueues.clear();
     return Result;
@@ -574,6 +577,18 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
     return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
 
+  case OL_DEVICE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
   default:
     break;
   }
@@ -784,6 +799,12 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -1040,6 +1061,13 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
       return Err;
     return Info.write<bool>(!*Pending);
   }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
@@ -1168,8 +1196,11 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
-  bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  // A null device handle means the pointer belongs to the host.
+  bool IsDstHost =
+      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost =
+      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {
@@ -1390,8 +1421,11 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       if (!KernelImpl)
         return KernelImpl.takeError();
 
-      if (auto Err = KernelImpl->init(Device, *Program->Image))
+      if (auto Err = KernelImpl->init(Device, *Program->Image)) {
+        Device.Plugin.free(&*KernelImpl);
+        Program->KernelSymbols.erase(Name);
         return Err;
+      }
 
       Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
     }
@@ -1603,6 +1637,11 @@ GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
+
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
+  return Device->Device->getRecordReplay();
+}
+
 } // namespace tmp
 
 } // namespace offload

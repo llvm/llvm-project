@@ -221,3 +221,35 @@ TEST(LlvmLibcBitsetTest, SetRangeTest) {
     EXPECT_TRUE(bitset.test(j));
   bitset.reset();
 }
+
+TEST(LlvmLibcBitsetTest, BitwiseOrAssign) {
+  LIBC_NAMESPACE::cpp::bitset<64> b1;
+  LIBC_NAMESPACE::cpp::bitset<64> b2;
+  b1.set(1);
+  b1.set(5);
+  b2.set(5);
+  b2.set(10);
+  b1 |= b2;
+  EXPECT_TRUE(b1.test(1));
+  EXPECT_TRUE(b1.test(5));
+  EXPECT_TRUE(b1.test(10));
+  EXPECT_FALSE(b1.test(0));
+  EXPECT_FALSE(b1.test(2));
+}
+
+TEST(LlvmLibcBitsetTest, BitwiseOrAssignMultiWord) {
+  LIBC_NAMESPACE::cpp::bitset<256> b1;
+  LIBC_NAMESPACE::cpp::bitset<256> b2;
+  b1.set(5);
+  b1.set(70);
+  b2.set(70);
+  b2.set(200);
+  b1 |= b2;
+  EXPECT_TRUE(b1.test(5));
+  EXPECT_TRUE(b1.test(70));
+  EXPECT_TRUE(b1.test(200));
+  EXPECT_FALSE(b1.test(0));
+  EXPECT_FALSE(b1.test(69));
+  EXPECT_FALSE(b1.test(71));
+  EXPECT_FALSE(b1.test(255));
+}

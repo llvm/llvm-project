@@ -520,16 +520,26 @@ static void computeFunctionSummary(
           for (const auto &Op : MD->operands()) {
             Function *Callee = mdconst::extract_or_null<Function>(Op);
             if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
+                  .setHasIndirectCall(true);
           }
         }
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
-        for (const auto &Candidate : CandidateProfileData)
-          CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
-              .updateHotness(getHotness(Candidate.Count, PSI));
+        for (const auto &Candidate : CandidateProfileData) {
+          auto &Edge =
+              CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
+          Edge.updateHotness(getHotness(Candidate.Count, PSI));
+          Edge.setHasIndirectCall(true);
+          // Record that the profiled target was reached via a tail call, so
+          // that MemProf context disambiguation can identify frames missing
+          // from profiled contexts due to indirect tail calls (see
+          // findProfiledCalleeThroughTailCalls).
+          if (CB->isTailCall())
+            Edge.setHasTailCall(true);
+        }
       }
 
       // Summarize memprof related metadata. This is only needed for ThinLTO.

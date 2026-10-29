@@ -1366,3 +1366,39 @@ define i64 @rev16_intrinsic(i64 %x) {
   %r = call i64 @llvm.riscv.rev16.64(i64 %x)
   ret i64 %r
 }
+
+define i64 @test_sati_i64_w1(i64 %a) {
+; CHECK-LABEL: test_sati_i64_w1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sati a0, a0, 1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sati.i64(i64 %a, i32 1)
+  ret i64 %res
+}
+
+define i64 @test_sati_i64_w64(i64 %a) {
+; CHECK-LABEL: test_sati_i64_w64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sati a0, a0, 64
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sati.i64(i64 %a, i32 64)
+  ret i64 %res
+}
+
+define i64 @test_usati_u64_w0(i64 %a) {
+; CHECK-LABEL: test_usati_u64_w0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 0)
+  ret i64 %res
+}
+
+define i64 @test_usati_u64_w63(i64 %a) {
+; CHECK-LABEL: test_usati_u64_w63:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 63
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 63)
+  ret i64 %res
+}

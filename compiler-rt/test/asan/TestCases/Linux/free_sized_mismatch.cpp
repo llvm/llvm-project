@@ -16,6 +16,8 @@
 // RUN: %env_asan_opts=free_size_mismatch=1 %run %t 2 64
 // RUN: %env_asan_opts=free_size_mismatch=1 %run %t 3 64
 
+// UNSUPPORTED: android && !android-37
+
 #include <stdio.h>
 #include <stdlib.h>
 

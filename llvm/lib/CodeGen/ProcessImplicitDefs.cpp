@@ -167,18 +167,16 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // If we have added an undef flag to all uses (i.e. we have found a redefining
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
   if (ImplicitDefIsDead || (SearchedWholeBlock && MBB->succ_empty())) {
-    MI->eraseFromParent();
     LLVM_DEBUG(dbgs() << "Deleting implicit-def: " << *MI);
+    MI->eraseFromParent();
     return;
   }
 
-  // TODO: Can we just erase the instruction instead of marking dead? Is that
-  // safe with !tracksRegLiveness?
-  if (SearchedWholeBlock && !MRI->isReserved(Reg) &&
+  if (SearchedWholeBlock && MRI->tracksLiveness() && !MRI->isReserved(Reg) &&
       none_of(MBB->successors(), [&](MachineBasicBlock *Succ) {
         return Succ->isLiveInOverlappedWith(Reg, *TRI);
       }))
-    MI->getOperand(0).setIsDead();
+    MI->eraseFromParent();
 }
 
 bool ProcessImplicitDefsLegacy::runOnMachineFunction(MachineFunction &MF) {

@@ -185,8 +185,8 @@ extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
 bool llvm::isPGOInstrumentColdFunctionOnly(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<InstrumentationOptions>(LibraryOptions)
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
       .pgo_instrument_cold_function_only;
 }
 
@@ -1892,8 +1892,7 @@ static bool instrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &MAM) {
   createProfileFileNameVar(M, CSInstrName);
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(
@@ -1922,8 +1921,7 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
     return &FAM.getResult<LoopAnalysis>(F);
   };
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!instrumentAllFunctions(Opts, M, LookupTLI, LookupBPI, LookupBFI,
                               LookupLI, InstrumentationType))
     return PreservedAnalyses::all();
@@ -2281,8 +2279,7 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   StringRef ProfileFile = ProfileFileName;
   if (!Opts.pgo_test_profile_file.empty())
     ProfileFile = Opts.pgo_test_profile_file;
@@ -2319,7 +2316,7 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
   const InstrumentationOptions &Opts =
-      TI->getContext().getLibraryOptions().get<InstrumentationOptions>();
+      getInstrumentationOptions(*TI->getFunction());
   if (Opts.pgo_emit_branch_prob) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
@@ -2400,7 +2397,7 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       OS << "Unknown\\l";
 
     const InstrumentationOptions &Opts =
-        Node->getContext().getLibraryOptions().get<InstrumentationOptions>();
+        getInstrumentationOptions(*Node->getParent());
     if (!Opts.pgo_instr_select)
       return Result;
 

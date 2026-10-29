@@ -294,6 +294,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
       .legalFor({i64, v16i8, v8i16, v4i32})
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder(
@@ -1853,13 +1856,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
-    unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
-
     MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MF.getDataLayout();
+    unsigned PtrSize = DL.getPointerSize();
+    unsigned VaListSize = ST->getTargetLowering()->getVaListSizeInBits(DL) / 8;
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
