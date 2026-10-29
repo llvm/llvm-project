@@ -502,7 +502,6 @@ public:
     return storeLinearVars(builder, moduleTranslation);
   }
 };
-
 } // namespace
 
 /// Looks up from the operation from and returns the PrivateClauseOp with
