@@ -1182,8 +1182,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   checkLaunchInvariants(Config, KernelArgs, KernelLaunchInfo);
-  adjustEffectiveGeometry(GeometryProps, Config, KernelArgs,
-                          KernelLaunchInfo);
+  adjustEffectiveGeometry(GeometryProps, Config, KernelArgs, KernelLaunchInfo);
 
   void **DynPtrSlot = resolveArgsAndDynPtrSlot(
       KernelArgs, TgtVarsPtr, TgtOffsets, Args, Ptrs, ArgSizes, Config);
