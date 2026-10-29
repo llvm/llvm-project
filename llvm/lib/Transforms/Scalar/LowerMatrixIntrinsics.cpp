@@ -1718,9 +1718,7 @@ public:
       Result = Builder.CreateAddReduce(Mul);
     else {
       Result = Builder.CreateFAddReduce(
-          ConstantFP::get(
-              cast<FixedVectorType>(LHS->getType())->getElementType(), 0.0),
-          Mul);
+          ConstantFP::getNegativeZero(ElementType), Mul);
       cast<Instruction>(Result)->setFastMathFlags(FMF);
     }
 
