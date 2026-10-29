@@ -281,3 +281,19 @@ entry:
   store i32 %elem, ptr addrspace(1) %gep
   ret void
 }
+
+define amdgpu_kernel void @uniform_fptoui_sgpr_constraint(double %d) {
+; CHECK-LABEL: uniform_fptoui_sgpr_constraint:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_u32_f64_e32 v0, s[0:1]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_mov_b32 s0, v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+  %v = fptoui double %d to i32
+  call void asm sideeffect "s_mov_b32 s0, $0", "s"(i32 %v)
+  ret void
+}
+
