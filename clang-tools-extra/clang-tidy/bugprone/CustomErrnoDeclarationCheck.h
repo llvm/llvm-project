@@ -14,7 +14,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// Warns if you declare an extern int variable named 'errno'.
+/// Finds custom declarations of `extern int`, `extern int32_t`, or
+/// `extern int16_t` variable named `errno`.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/custom-errno-declaration.html
