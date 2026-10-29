@@ -257,7 +257,7 @@ Error NativeRecordReplayTy::recordDescImpl(
     const KernelInfoTy &Kernel, const InstanceTy &Instance,
     const KernelRecordArgsTy &RecordArgs) {
   json::Object JsonKernelInfo;
-  JsonKernelInfo["Name"] = Kernel.getName().str();
+  JsonKernelInfo["Name"] = Instance.KernelName;
   JsonKernelInfo["NumArgs"] = RecordArgs.NumArgs;
   JsonKernelInfo["NumTeams"] = Instance.NumTeams;
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;

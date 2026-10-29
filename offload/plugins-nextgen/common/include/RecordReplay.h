@@ -40,18 +40,24 @@ namespace plugin {
 struct GenericDeviceTy;
 
 /// The subset of kernel information needed to record and replay a launch.
-struct KernelInfoTy {
+class KernelInfoTy {
+public:
+  KernelInfoTy() = default;
+  KernelInfoTy(StringRef Name, MemoryBufferRef Image, MemoryBufferRef IRImage)
+      : Name(Name), Image(Image), IRImage(IRImage) {}
+
+  StringRef getName() const { return Name; }
+  MemoryBufferRef getImage() const { return Image; }
+  MemoryBufferRef getIRImage() const { return IRImage; }
+  bool hasIRImage() const { return IRImage.getBufferSize() != 0; }
+
+private:
   /// The kernel name. Must outlive the call it is passed to.
   StringRef Name;
   /// The image the kernel was loaded from.
   MemoryBufferRef Image;
   /// The IR image associated with the kernel's image, if any.
   MemoryBufferRef IRImage;
-
-  StringRef getName() const { return Name; }
-  MemoryBufferRef getImage() const { return Image; }
-  MemoryBufferRef getIRImage() const { return IRImage; }
-  bool hasIRImage() const { return IRImage.getBufferSize() != 0; }
 };
 
 struct KernelRecordArgsTy {

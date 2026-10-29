@@ -1210,8 +1210,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {
-    Kernel = {KernelLaunchInfo.Name, KernelLaunchInfo.Image,
-              KernelLaunchInfo.IRImage};
+    Kernel = KernelInfoTy(KernelLaunchInfo.Name, KernelLaunchInfo.Image,
+                          KernelLaunchInfo.IRImage);
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
