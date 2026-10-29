@@ -3337,9 +3337,15 @@ void AsmConstraintsInfo::EmitAsmStores(
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
 
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    const bool RequiresCast =
+        i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i];
+
     // If the result type of the LLVM IR asm doesn't match the result type of
-    // the expression, do the conversion.
-    if (ResultRegTypes[i] != TruncTy) {
+    // the expression, do the conversion. An output returned as an integer is
+    // converted where it's stored below.
+    if (ResultRegTypes[i] != TruncTy && !RequiresCast) {
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
       if (TruncTy->isFloatingPointTy())
@@ -3365,9 +3371,7 @@ void AsmConstraintsInfo::EmitAsmStores(
     ApplyAtomGroup Grp(CGF.getDebugInfo());
     LValue Dest = ResultRegDests[i];
 
-    // ResultTypeRequiresCast elements correspond to the first
-    // ResultTypeRequiresCast.size() elements of RegResults.
-    if (i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i]) {
+    if (RequiresCast) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
 
@@ -3386,9 +3390,14 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      // An output tied to a larger input has the input's type, so store only
-      // the destination's bits.
+      // An output tied to a larger input has the input's type, and a mask
+      // register output ("k" on X86) is a vector of i1, so store only the
+      // destination's bits.
       llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
+      if (auto *VT = dyn_cast<llvm::FixedVectorType>(Tmp->getType()))
+        Tmp = Builder.CreateBitCast(
+            Tmp, llvm::IntegerType::get(
+                     CTX, VT->getPrimitiveSizeInBits().getFixedValue()));
       if (Tmp->getType()->isPointerTy())
         Tmp = Builder.CreatePtrToInt(Tmp, IntTy);
       else
