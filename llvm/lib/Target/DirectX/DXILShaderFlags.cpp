@@ -260,6 +260,10 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::dx_start_vertex_location:
+    case Intrinsic::dx_start_instance_location:
+      CSF.ExtendedCommandInfo = true;
+      break;
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
@@ -449,6 +453,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // An unused signature element still contributes to the shader's type
       // requirements even when no instruction uses that component type.
       if (const EntrySignature *Sig = Signatures.get(F)) {
+        CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
+        });
         auto HasLowPrecision = [](const auto &Elements) {
           return llvm::any_of(Elements, [](const auto &E) {
             return E.CompType == ElementType::F16 ||
@@ -463,6 +470,15 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
           else
             CSF.MinimumPrecision = true;
         }
+        // Declaring SV_ShadingRate in either signature requires the feature,
+        // regardless of whether it is accessed.
+        auto HasShadingRate = [](const auto &Elements) {
+          return llvm::any_of(Elements, [](const auto &E) {
+            return E.SemanticKind == dxbc::PSV::SemanticKind::ShadingRate;
+          });
+        };
+        if (HasShadingRate(Sig->Inputs) || HasShadingRate(Sig->Outputs))
+          CSF.ShadingRate = true;
       }
       // Update combined shader flags mask for all functions in this SCC
       SCCSF.merge(CSF);

@@ -188,7 +188,6 @@ class SemaX86;
 class StandardConversionSequence;
 class TemplateArgument;
 class TemplateArgumentLoc;
-class TemplateInstantiationCallback;
 class TemplatePartialOrderingContext;
 class TemplateSpecCandidateSet;
 class Token;
@@ -2475,6 +2474,8 @@ public:
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
 
   ///@}
 
@@ -2601,10 +2602,15 @@ public:
     return RejectedLateParsedBoundsTypes.contains(BATy);
   }
 
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
-  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
-  /// owning declaration. \p FD is the field the type belongs to. Returns false
-  /// if the attribute was rejected.
+  /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
+  /// the owning declaration. \p FD is the field the type belongs to. Returns
+  /// false if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
 
@@ -4826,7 +4832,6 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
-  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -9182,6 +9187,11 @@ public:
       AggregateDeductionCandidates;
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
+
+  /// The initializers of \p ILE with each multi-element EmbedExpr split into
+  /// one EmbedExpr per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
 
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.

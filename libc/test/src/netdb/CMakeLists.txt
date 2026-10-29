@@ -1,4 +1,4 @@
-add_custom_target(libc-netdb-tests)
+add_libc_testsuite(libc-netdb-tests)
 
 add_libc_test(
   gai_strerror_test

@@ -2561,15 +2561,6 @@ LogicalResult tosa::MulOp::verify() {
         return emitOpError(
             "requires the same element type for all operands and results");
     }
-
-    // verify shift has value 0 for non-integer types
-    ElementsAttr shiftElem;
-    if (matchPattern(getShift(), m_Constant(&shiftElem))) {
-      int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
-      if (shift != 0) {
-        return emitOpError() << "require shift to be 0 for float type";
-      }
-    }
   }
 
   // Verify the op has same ranks for all main operands (excludes extra operands
@@ -3720,6 +3711,11 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     return failure();
   }
 
+  // Non-positive scale values are invalid, so the output shape cannot be
+  // inferred here. They are reported by the ERROR_IF check in tosa-validate.
+  if (llvm::any_of(scaleInt, [](int64_t s) { return s <= 0; }))
+    return failure();
+
   // Compute the output shape based on attributes: scale, offset, and border.
   const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
@@ -3746,92 +3742,11 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::ResizeOp::verify() {
-  const Value input = getInput();
-  const Value output = getOutput();
-  const Type inputElementType = getElementTypeOrSelf(input.getType());
+  const Type inputElementType = getElementTypeOrSelf(getInput().getType());
 
   if (isa<BlockScaledType>(inputElementType) &&
       getMode() != ResizeMode::NEAREST_NEIGHBOR)
     return emitOpError("requires NEAREST_NEIGHBOR mode for block scaled input");
-
-  const RankedTensorType inputType =
-      llvm::dyn_cast<RankedTensorType>(input.getType());
-  const RankedTensorType outputType =
-      llvm::dyn_cast<RankedTensorType>(output.getType());
-
-  SmallVector<int64_t> scaleValues;
-  SmallVector<int64_t> offsetValues;
-  SmallVector<int64_t> borderValues;
-  if (!tosa::getConstShapeValues(getScale().getDefiningOp(), scaleValues) ||
-      !tosa::getConstShapeValues(getOffset().getDefiningOp(), offsetValues) ||
-      !tosa::getConstShapeValues(getBorder().getDefiningOp(), borderValues)) {
-    // Skip following checks if shape is not constant
-    return success();
-  }
-
-  if (llvm::any_of(scaleValues, [](int64_t s) { return s <= 0; }))
-    return emitOpError("expect all scale values to be > 0, got ")
-           << scaleValues;
-
-  const int64_t scaleYN = scaleValues[0];
-  const int64_t scaleYD = scaleValues[1];
-  const int64_t scaleXN = scaleValues[2];
-  const int64_t scaleXD = scaleValues[3];
-
-  const int64_t offsetY = offsetValues[0];
-  const int64_t offsetX = offsetValues[1];
-
-  const int64_t borderY = borderValues[0];
-  const int64_t borderX = borderValues[1];
-
-  if (!inputType)
-    return success();
-  if (!outputType)
-    return success();
-
-  const int64_t oh = outputType.getDimSize(1);
-  const int64_t ow = outputType.getDimSize(2);
-  const int64_t ih = inputType.getDimSize(1);
-  const int64_t iw = inputType.getDimSize(2);
-
-  // Don't check with input height that could be broadcast (ih != 1)
-  // since Linalg, a consumer of TOSA, expects broadcasting support
-  // in resize to be available. Taking the cautious approach for now,
-  // we can consider removing support for broadcasting later.
-  if (ih != ShapedType::kDynamic && ih != 1) {
-    const std::optional<int64_t> calculatedOutHeightMinusOne =
-        idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
-    if (!calculatedOutHeightMinusOne.has_value())
-      return emitOpError("expected (input_height - 1) * scale_y_n - offset_y + "
-                         "border_y ")
-             << "to be wholly divisible by scale_y_d, got ((" << ih
-             << " - 1) * " << scaleYN << " - " << offsetY << " + " << borderY
-             << ") / " << scaleYD;
-    const int64_t calculatedOutHeight = calculatedOutHeightMinusOne.value() + 1;
-    if (oh != ShapedType::kDynamic && calculatedOutHeight != oh)
-      return emitOpError("calculated output height did not match expected: ")
-             << "calculated=" << calculatedOutHeight << ", expected=" << oh;
-  }
-
-  // Don't check with input width that could be broadcast (iw != 1)
-  // since Linalg, a consumer of TOSA, expects broadcasting support
-  // in resize to be available. Taking the cautious approach for now,
-  // we can consider removing support for broadcasting later.
-  if (iw != ShapedType::kDynamic && iw != 1) {
-    const int64_t scaledInWidth = (iw - 1) * scaleXN - offsetX + borderX;
-    const std::optional<int64_t> calculatedOutWidthMinusOne =
-        idivCheck(scaledInWidth, scaleXD);
-    if (!calculatedOutWidthMinusOne.has_value())
-      return emitOpError("expected (input_width - 1) * scale_x_n - offset_x + "
-                         "border_x ")
-             << "to be wholly divisible by scale_x_d, got ((" << iw
-             << " - 1) * " << scaleXN << " - " << offsetX << " + " << borderX
-             << ") / " << scaleXD;
-    const int64_t calculatedOutWidth = calculatedOutWidthMinusOne.value() + 1;
-    if (ow != ShapedType::kDynamic && calculatedOutWidth != ow)
-      return emitOpError("calculated output width did not match expected: ")
-             << "calculated=" << calculatedOutWidth << ", expected=" << ow;
-  }
 
   return success();
 }
@@ -5003,14 +4918,6 @@ LogicalResult RescaleOp::verify() {
 
   if (verifyRescaleValueAndZpTypes(*this, getOutput(), getOutputZp(), "output")
           .failed())
-    return failure();
-
-  FailureOr<int64_t> maybeIZp = getInputZeroPoint();
-  if (succeeded(maybeIZp) && verifyInputZeroPoint(*maybeIZp).failed())
-    return failure();
-
-  FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
-  if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
   const auto multiplierType = llvm::cast<ShapedType>(getMultiplier().getType());

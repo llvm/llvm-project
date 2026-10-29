@@ -66,29 +66,25 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
+ProcessStatus invoke_in_subprocess(cpp::function_ref<void(void)> func,
+                                   int timeout_ms) {
   int pipe_fds[2];
-  if (LIBC_IMPL::pipe(pipe_fds) == -1) {
-    delete func;
+  if (LIBC_IMPL::pipe(pipe_fds) == -1)
     return ProcessStatus::error("pipe(2) failed");
-  }
 
   // Don't copy the buffers into the child process and print twice.
   LIBC_IMPL::fflush(stderr);
   LIBC_IMPL::fflush(stdout);
   pid_t pid = LIBC_IMPL::fork();
-  if (pid == -1) {
-    delete func;
+  if (pid == -1)
     return ProcessStatus::error("fork(2) failed");
-  }
 
   if (!pid) {
     LIBC_IMPL::close(pipe_fds[0]);
 #if defined(__linux__) && defined(PR_SET_DUMPABLE)
     LIBC_IMPL::prctl(PR_SET_DUMPABLE, 0);
 #endif
-    (*func)();
-    delete func;
+    func();
     LIBC_IMPL::exit(0);
   }
   LIBC_IMPL::close(pipe_fds[1]);
@@ -97,14 +93,12 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   pollfd poll_fd{pipe_fds[0], POLLIN, 0};
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
-  if (LIBC_IMPL::poll(&poll_fd, 1, timeout_ms) == -1) {
-    delete func;
+  if (LIBC_IMPL::poll(&poll_fd, 1, timeout_ms) == -1)
     return ProcessStatus::error("poll(2) failed");
-  }
+
   // If the pipe wasn't closed by the child yet then timeout has expired.
   if (!(poll_fd.revents & POLLHUP)) {
     LIBC_IMPL::kill(pid, SIGKILL);
-    delete func;
     return ProcessStatus::timed_out_ps();
   }
 
@@ -113,11 +107,9 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   // and doesn't turn into a zombie.
   pid_t status = LIBC_IMPL::waitpid(pid, &wstatus, 0);
   if (status == -1) {
-    delete func;
     return ProcessStatus::error("waitpid(2) failed");
   }
   LIBC_ASSERT(status == pid);
-  delete func;
   return {wstatus};
 }
 

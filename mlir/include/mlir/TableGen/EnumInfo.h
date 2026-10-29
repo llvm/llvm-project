@@ -72,11 +72,21 @@ public:
   // Returns true if this is a bit enum.
   bool isBitEnum() const;
 
+  // Returns true if this is a bit enum whose cases are parsed and printed as
+  // separate, unquoted keywords.
+  bool isNewStyleBitEnum() const;
+
+  // Returns true if a 'FieldParser' and a printer are generated for the enum.
+  bool hasParserPrinter() const;
+
   // Returns the enum class name.
   StringRef getEnumClassName() const;
 
   // Returns the C++ namespaces this enum class should be placed in.
   StringRef getCppNamespace() const;
+
+  // Returns the fully qualified C++ name of the enum class.
+  std::string getQualifiedName() const;
 
   // Returns the summary of the enum.
   StringRef getSummary() const;

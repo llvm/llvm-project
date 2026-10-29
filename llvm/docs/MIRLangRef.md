@@ -175,7 +175,7 @@ of such a YAML document:
  liveins:
    - { reg: '$rdi' }
  callSites:
-   - { bb: 0, offset: 3, fwdArgRegs:
+   - { bb: '%bb.0', offset: 3, fwdArgRegs:
        - { arg: 0, reg: '$edi' } }
  body: |
    bb.0.entry:
@@ -200,6 +200,9 @@ the function's machine basic blocks and their machine instructions.
 
 The attribute `callSites` is a representation of call site information which
 keeps track of call instructions and registers used to transfer call arguments.
+Each entry names the block of its call with a block reference, `bb`, and gives
+the call's position in that block, counting instructions in bundles, as
+`offset`.
 
 ## Machine Instructions Format Reference
 
@@ -307,8 +310,8 @@ one list by the parser.
 #### Miscellaneous Attributes
 
 The attributes `IsAddressTaken`, `IsLandingPad`,
-`IsInlineAsmBrIndirectTarget` and `Alignment` can be specified in parentheses
-after the block's definition:
+`IsInlineAsmBrIndirectTarget`, `LabelMustBeEmitted` and `Alignment` can be
+specified in parentheses after the block's definition:
 
 ```text
 bb.0.entry (address-taken):
@@ -318,6 +321,8 @@ bb.2.else (align 4):
 bb.3(landing-pad, align 4):
   <instructions>
 bb.4 (inlineasm-br-indirect-target):
+  <instructions>
+bb.5 (label-must-be-emitted):
   <instructions>
 ```
 

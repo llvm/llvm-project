@@ -198,7 +198,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
-  bits<12> cpol;
+  bits<10> cpol;
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -481,7 +481,7 @@ class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseud
   opName,
   (outs ),
   !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
-  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+  !if(EnableSaddr, " $saddr$offset", "")#"$cpol"> {
 
   let is_flat_global = 1;
   let has_vdst = 0;
@@ -2536,15 +2536,22 @@ def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
   }];
 }
 
+// A uniform prefetch of constant memory is left to the scalar prefetch where
+// that is safe.
 def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                                (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-                                         (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
-                                          !Subtarget->hasSafeSmemPrefetch()); }]> {
+                               [{ unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
+                                  if (AS == AMDGPUAS::CONSTANT_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+                                    return !Subtarget->hasSafeSmemPrefetch() || N->getOperand(1)->isDivergent();
+                                  return AMDGPU::isExtendedGlobalAddrSpace(AS); }]> {
   let GISelPredicateCode = [{
-    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-            ((*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
-             !Subtarget->hasSafeSmemPrefetch());
+    unsigned AS = (*MI.memoperands_begin())->getAddrSpace();
+    if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+      return !Subtarget->hasSafeSmemPrefetch() ||
+             RBI.getRegBank(MI.getOperand(0).getReg(), MRI, TRI)->getID() !=
+                 AMDGPU::SGPRRegBankID;
+    return AMDGPU::isExtendedGlobalAddrSpace(AS);
   }];
 }
 
@@ -2902,14 +2909,14 @@ let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
   // These instructions are encoded differently on gfx90* and gfx94*.
   defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
-}
 
-defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
-defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
-defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
-defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
-defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
-defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+  defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
+  defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
+  defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
+  defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
+  defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
+  defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+}
 
 multiclass FLAT_Real_AllAddr_gfx940<bits<7> op> {
   def _gfx940       : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
@@ -2920,12 +2927,16 @@ multiclass FLAT_Real_Atomics_gfx940 <bits<7> op> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _gfx940     : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr)>;
   def _RTN_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN")>;
+  def _RTN_agpr_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr")>;
 }
 
 multiclass FLAT_Global_Real_Atomics_gfx940<bits<7> op> :
   FLAT_Real_AllAddr_gfx940<op> {
   def _RTN_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN")>;
   def _SADDR_RTN_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
+
+  def _RTN_agpr_gfx940       : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr")>;
+  def _SADDR_RTN_agpr_gfx940 : FLAT_Real_gfx940 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr")>;
 }
 
 let AssemblerPredicate = isGFX940Plus in {
@@ -3718,6 +3729,7 @@ class VFLAT_Real_Base_gfx13 <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnem
   let AssemblerPredicate = isGFX13Only;
   let DecoderNamespace = "GFX13";
 
+  let Inst{9-8} = cpol{8-7}; // cache fill size
   let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }
 

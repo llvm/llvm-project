@@ -48,10 +48,14 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_PSTL_BACKEND_STD_THREAD=1",
     ]
     if (libcxx_abi_namespace != "") {
-      values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
+      abi_namespace = libcxx_abi_namespace
     } else {
-      values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
+      abi_namespace = "__$libcxx_abi_version"
     }
+    values += [
+      "_LIBCPP_ABI_NAMESPACE=$abi_namespace",
+      "_LIBCPP_ABI_NAMESPACE_LEN=" + len(abi_namespace),
+    ]
     if (libcxx_enable_time_zone_database) {
       values += [ "_LIBCPP_HAS_TIME_ZONE_DATABASE=1" ]
     } else {
@@ -1306,7 +1310,6 @@ if (current_toolchain == default_toolchain) {
       "__mutex/tag_types.h",
       "__mutex/unique_lock.h",
       "__new/align_val_t.h",
-      "__new/allocate.h",
       "__new/destroying_delete_t.h",
       "__new/exceptions.h",
       "__new/global_new_delete.h",

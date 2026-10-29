@@ -627,6 +627,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// True if CodeGen currently emits the argument of
+  /// __builtin_preserve_field_info.
+  bool IsInPreserveFieldInfo = false;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
@@ -650,6 +654,22 @@ public:
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
+
+  /// Records the l-value that ScalarExprEmitter loads from when it emits a
+  /// specific expression. EmitArraySubscriptExpr sets this while emitting the
+  /// base of a 'counted_by' pointer subscript, so that the bounds check can
+  /// locate the count from the pointer field's address without re-emitting
+  /// (and so re-evaluating) the base. Capturing the l-value, instead of
+  /// emitting the load separately, keeps everything else the scalar load path
+  /// does (debug locations, 'align_value' assumptions, pseudo variables for
+  /// -fdebug-info-for-profiling, etc.).
+  struct LoadedLValueCapture {
+    /// The expression whose l-value is recorded.
+    const Expr *E;
+    /// The recorded l-value, set if \c E was loaded by ScalarExprEmitter.
+    std::optional<LValue> LV;
+  };
+  LoadedLValueCapture *CurLoadedLValueCapture = nullptr;
 
   /// Returns true if a function must make progress, which means the
   /// mustprogress attribute can be added.
@@ -4584,7 +4604,7 @@ public:
   std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
                                                   QualType Ty);
   LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                            QualType Ty);
+                            QualType Ty, bool IsImplicitObject = false);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4757,9 +4777,6 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
-  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
-                                        llvm::Value *StorageAddress,
-                                        llvm::ConstantInt *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,

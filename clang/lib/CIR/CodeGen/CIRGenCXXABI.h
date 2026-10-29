@@ -289,6 +289,12 @@ public:
   getVTableAddressPoint(BaseSubobject base,
                         const CXXRecordDecl *vtableClass) = 0;
 
+  /// Get the address point of the vtable for the given base subobject as a
+  /// constant suitable for a global initializer.
+  virtual cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) = 0;
+
   /// Get the address point of the vtable for the given base subobject while
   /// building a constructor or a destructor.
   virtual mlir::Value getVTableAddressPointInStructor(

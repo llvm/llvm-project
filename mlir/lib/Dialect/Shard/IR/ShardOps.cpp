@@ -870,7 +870,9 @@ public:
     for (auto &use : value.getUses()) {
       if (use.getOwner() != op.getOperation()) {
         auto otherOp = dyn_cast<ShardOp>(use.getOwner());
-        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+        // Only fold duplicates in the same block; isBeforeInBlock requires it.
+        if (!otherOp || otherOp->getBlock() != op->getBlock() ||
+            !otherOp->isBeforeInBlock(op)) {
           return failure();
         }
         // Create a Sharding object for the current and the other ShardOp

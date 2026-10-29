@@ -124,8 +124,6 @@ class IRTranslatorImpl {
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
-    using const_offset_iterator =
-        DenseMap<const Value *, OffsetListT *>::const_iterator;
 
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
@@ -3630,7 +3628,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3850,8 +3848,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -4044,8 +4042,8 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     return true;
   }
 
-  // FIXME: support stack probing for Windows.
-  if (MF->getTarget().getTargetTriple().isOSWindows())
+  // FIXME: support stack probing for Windows and UEFI.
+  if (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI())
     return false;
 
   // Now we're in the harder dynamic case.
@@ -5190,10 +5188,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
-  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
-    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();

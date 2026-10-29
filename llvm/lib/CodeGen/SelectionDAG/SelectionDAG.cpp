@@ -5297,6 +5297,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::GET_ACTIVE_LANE_MASK:
+  case ISD::MASK_BEFOREFIRST:
     // Semantically similar to icmp ult.
     if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
@@ -10722,6 +10723,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
           Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -12611,8 +12614,8 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
 /// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
-/// This will make the debugger working better at -O0, were there is a higher
-/// probability having other instructions associated with that line.
+/// This will make the debugger work better at -O0, where there is a higher
+/// probability of having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
 SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {

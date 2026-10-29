@@ -275,10 +275,7 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (Val.Inst->getContext()
-          .getLibraryOptions()
-          .get<ScalarOptions>()
-          .earlycse_debug_hash)
+  if (getScalarOptions(*Val.Inst->getFunction()).earlycse_debug_hash)
     return 0;
 #endif
   return getHashValueImpl(Val);
@@ -1745,8 +1742,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(F.getContext().getLibraryOptions().get<ScalarOptions>(),
-               F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(getScalarOptions(F), F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1800,8 +1796,8 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(F.getContext().getLibraryOptions().get<ScalarOptions>(),
-                 F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(getScalarOptions(F), F.getDataLayout(), TLI, TTI, DT, AC,
+                 MSSA);
 
     return CSE.run();
   }

@@ -38,6 +38,7 @@
 ; CHECK-NEXT:   expand-reductions
 ; CHECK-NEXT:   typepromotion
 ; CHECK-NEXT:   codegenprepare
+; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
@@ -67,7 +68,6 @@
 ; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     process-implicit-defs
 ; CHECK-NEXT:     unreachable-mbb-elimination
-; CHECK-NEXT:     require<live-vars>
 ; CHECK-NEXT:     require<live-intervals>
 ; CHECK-NEXT:     require<machine-loops>
 ; CHECK-NEXT:     phi-node-elimination

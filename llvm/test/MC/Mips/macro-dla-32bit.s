@@ -1,3 +1,5 @@
+# RUN: llvm-mc %s -triple=mips64 -mcpu=mips64r2 -target-abi=n32 -show-encoding | \
+# RUN:   FileCheck %s
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | \
 # RUN:   FileCheck %s
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 | \
@@ -224,5 +226,24 @@ dla $5, extern_sym-8($5)
 # CHECK: addiu $1, $1, %lo(extern_sym-8) # encoding: [0x24,0x21,A,A]
 # CHECK:                                 #   fixup A - offset: 0, value: %lo(extern_sym-8), kind: fixup_Mips_LO16
 # CHECK: addu $5, $1, $5                 # encoding: [0x00,0x25,0x28,0x21]
+
+# Absolute aliases, parenthesized expressions, and symbolic aliases.
+.set absolute, 24
+.set alias, symbol+16
+dla $2, absolute          # CHECK: addiu $2, $zero, 24
+
+dla $2, absolute($4)      # CHECK: addiu $2, $4, 24
+
+dla $2, (8+16)($4)        # CHECK: addiu $2, $4, 24
+
+dla $2, ($4)              # CHECK: addiu $2, $4, 0
+
+dla $2, (symbol+8)($4)    # CHECK: lui $2, %hi(symbol+8)
+                          # CHECK: addiu $2, $2, %lo(symbol+8)
+                          # CHECK: addu $2, $2, $4
+
+dla $2, alias($4)         # CHECK: lui $2, %hi(alias)
+                          # CHECK: addiu $2, $2, %lo(alias)
+                          # CHECK: addu $2, $2, $4
 
 .option pic2

@@ -11,7 +11,8 @@ declare i1 @cond()
 define void @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type_sizes(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type_sizes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -32,7 +33,8 @@ define void @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds float, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds float, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -62,7 +64,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type_sizes(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type_sizes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -82,7 +85,8 @@ define void @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -112,7 +116,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc_type_sizes(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc_type_sizes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i5, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i5, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -132,7 +137,8 @@ define void @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i5, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i5, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -162,7 +168,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc_type_sizes(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc_type_sizes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i31, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i31, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -182,7 +189,8 @@ define void @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i31, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i31, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -212,7 +220,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type_sizes_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type_sizes_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -236,7 +245,8 @@ define void @test_monotonic_ptr_iv_inc_1_element_types_with_different_alloc_type
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds float, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds float, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -270,7 +280,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type_sizes_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type_sizes_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -293,7 +304,8 @@ define void @test_monotonic_ptr_iv_inc_2_element_types_with_different_alloc_type
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -327,7 +339,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc_type_sizes_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc_type_sizes_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i5, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i5, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -350,7 +363,8 @@ define void @test_monotonic_ptr_iv_inc_1_different_element_types_with_same_alloc
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i5, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i5, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -384,7 +398,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc_type_sizes_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc_type_sizes_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i31, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i31, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -407,7 +422,8 @@ define void @test_monotonic_ptr_iv_inc_2_different_element_types_with_same_alloc
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i31, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i31, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 

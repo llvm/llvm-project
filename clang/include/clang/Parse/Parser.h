@@ -237,19 +237,12 @@ public:
 /// is replaced with a concrete type (e.g., CountAttributedType).
 struct LateParsedTypeAttribute : public LateParsedAttribute {
 
-  /// The type built for this attribute during type construction, still missing
-  /// the argument that hasn't been parsed yet. Filled in by
-  /// `Parser::ProcessLateParsedTypeAttrCallback` and completed once the
-  /// enclosing scope makes the argument parseable. Null if type construction
-  /// rejected the attribute.
-  ///
-  /// Held as the base class so the parser stays agnostic about which bounds
-  /// attribute this is; Sema dispatches on the concrete kind when completing.
-  BoundsAttributedType *TypeToComplete = nullptr;
+  /// What Sema reads and fills in during type construction.
+  LateParsedTypeAttrInfo Info;
 
-  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
-                                   SourceLocation Loc)
-      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+  LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name, SourceLocation Loc,
+                          ParsedAttr::Kind AttrKind)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type), Info(AttrKind, Loc) {}
 
   void ParseLexedAttributes() override;
 
@@ -1192,9 +1185,6 @@ private:
   /// \endverbatim
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
-
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
@@ -5069,10 +5059,15 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
+  /// \param AfterInitStmt Whether an init-statement has already been parsed
+  /// for this condition, so a null \p InitStmt means "the init-statement slot
+  /// is used up" rather than "no init-statement is permitted here".
+  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
                                        Sema::ConditionKind CK, bool MissingOK,
-                                       ForRangeInfo *FRI = nullptr);
+                                       ForRangeInfo *FRI = nullptr,
+                                       bool AfterInitStmt = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -7101,10 +7096,22 @@ public:
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
                                   SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
+
+  /// Parses one bound of an OpenMP 6.0 'adjust_args' parameter range, which may
+  /// be 'omp_num_args' with an optional logical offset, or the whole
+  /// parameter-list item when no range colon follows it.
+  bool ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound);
+
+  /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
+  /// parameter names, positions, or ranges with optional bounds.
+  /// Returns true on error.
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<OMPAdjustArgsItem> &Items);
+
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          SemaOpenMP::OpenMPVarListDataTy &Data);
+                          SemaOpenMP::OpenMPVarListDataTy &Data,
+                          SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);

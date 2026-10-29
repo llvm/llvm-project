@@ -41,6 +41,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIRComplexDialect
   MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCUtils
   MLIRFuncDialect
   MLIRGPUDialect

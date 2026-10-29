@@ -309,6 +309,8 @@ void MachineFunction::clear() {
   BasicBlockRecycler.clear(Allocator);
   CodeViewAnnotations.clear();
   VariableDbgInfos.clear();
+  CallSitesInfo.clear();
+  CalledGlobalsInfo.clear();
   if (RegInfo) {
     RegInfo->~MachineRegisterInfo();
     Allocator.Deallocate(RegInfo);
@@ -749,13 +751,12 @@ bool MachineFunction::needsFrameMoves() const {
 }
 
 bool MachineFunction::usesWindowsUnwindInfo() const {
-  const MCAsmInfo &MAI = getTarget().getMCAsmInfo();
-  return MAI.getExceptionHandlingType() == ExceptionHandling::WinEH &&
-         MAI.usesWindowsCFI();
+  return getTarget().getMCAsmInfo().usesWindowsCFI() &&
+         F.getParent()->getExceptionModel() == ExceptionHandling::WinEH;
 }
 
 bool MachineFunction::needsWinCFI() const {
-  return usesWindowsUnwindInfo() && getFunction().needsUnwindTableEntry();
+  return getFunction().needsUnwindTableEntry() && usesWindowsUnwindInfo();
 }
 
 bool MachineFunction::disableFramePointerElim() const {

@@ -158,11 +158,10 @@ private:
                           const SDLoc &DL, bool EmitDiagnostics = true);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
-  // use, and inserts appropriate fence instruction before the memory
-  // instruction, if needed to implement the instructions memory order. Required
-  // fences after the instruction need to be handled elsewhere.
+  // use.
   std::pair<NVPTX::Ordering, NVPTX::Scope>
-  insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
+  getMemInstOrderingScope(MemSDNode *N);
+
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
 
 public:
@@ -747,15 +746,8 @@ NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
 
 namespace {
 
-struct OperationOrderings {
-  NVPTX::Ordering InstructionOrdering, FenceOrdering;
-  OperationOrderings(NVPTX::Ordering IO = NVPTX::Ordering::NotAtomic,
-                     NVPTX::Ordering FO = NVPTX::Ordering::NotAtomic)
-      : InstructionOrdering(IO), FenceOrdering(FO) {}
-};
-
-static OperationOrderings
-getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
+static NVPTX::Ordering getInstructionOrdering(MemSDNode *N,
+                                              const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
@@ -935,18 +927,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
     //
     // This sets the ordering of the fence to SequentiallyConsistent, and
     // sets the corresponding ordering for the instruction.
-    NVPTX::Ordering InstrOrder;
-    if (N->readMem())
-      InstrOrder = NVPTX::Ordering::Acquire;
-    else if (N->writeMem())
-      InstrOrder = NVPTX::Ordering::Release;
-    else
-      report_fatal_error(
-          formatv("NVPTX does not support SequentiallyConsistent Ordering on "
-                  "read-modify-writes yet: {}",
-                  N->getOperationName()));
-    return OperationOrderings(InstrOrder,
-                              NVPTX::Ordering::SequentiallyConsistent);
+    llvm_unreachable("seq_cst ordering should not reach this point, "
+                     "is emulated in AtomicExpandPass");
   }
   }
   report_fatal_error(
@@ -1093,14 +1075,10 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
   llvm_unreachable("unhandled ordering");
 }
 
-// Returns Memory Order and Scope of a memory instruction, and
-// inserts any fence before the instruction that's required to
-// implement its memory ordering.
+// Returns Memory Order and Scope of a memory instruction.
 std::pair<NVPTX::Ordering, NVPTX::Scope>
-NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
-                                                MemSDNode *N) {
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(N, Subtarget);
+NVPTXDAGToDAGISel::getMemInstOrderingScope(MemSDNode *N) {
+  auto InstructionOrdering = getInstructionOrdering(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
 
   // Singlethread scope has no inter-thread synchronization requirements, so
@@ -1112,20 +1090,6 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
       InstructionOrdering != NVPTX::Ordering::Volatile)
     return {NVPTX::Ordering::NotAtomic, Scope};
 
-  // If a fence is required before the operation, insert it:
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    auto Op = getFenceOp(FenceOrdering, Scope, Subtarget);
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(
-        formatv("Unexpected fence ordering: \"{}\".",
-                OrderingToString(NVPTX::Ordering(FenceOrdering))));
-  }
   return {InstructionOrdering, Scope};
 }
 
@@ -1426,7 +1390,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   SDLoc DL(LD);
   SDValue Chain = N->getOperand(0);
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(LD);
 
   const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
@@ -1513,7 +1477,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT EltVT = LD->getSimpleValueType(0);
   SDLoc DL(LD);
   SDValue Chain = LD->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(LD);
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -1711,7 +1675,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(ST);
 
   // Vector Setting
   const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
@@ -1772,7 +1736,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(ST);
 
   const unsigned NumElts = getStoreVectorNumElts(ST);
 
@@ -2142,8 +2106,8 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   // tmp = V2I64toI128 {lo, hi};
   // CopyToReg Dst, tmp;
   SDValue Dst = N->getOperand(1);
-  SDValue Lo = N->getOperand(2);
-  SDValue Hi = N->getOperand(3);
+  SDValue Lo = selectPossiblyImm(N->getOperand(2));
+  SDValue Hi = selectPossiblyImm(N->getOperand(3));
 
   SDLoc DL(N);
   SDNode *Mov =
@@ -2418,7 +2382,8 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   const SDValue Chain = N->getOperand(0);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SmallVector<SDValue, 10> Ops{Base, Offset};
-  Ops.append(N->op_begin() + 2, N->op_end());
+  for (const SDValue &Operand : drop_begin(N->op_values(), 2))
+    Ops.push_back(selectPossiblyImm(Operand));
   Ops.append({getI32Imm(getMemOrder(AN), dl), getI32Imm(getAtomicScope(AN), dl),
               getI32Imm(getAddrSpace(AN), dl)});
 

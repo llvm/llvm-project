@@ -700,7 +700,6 @@ class SPIRVLegalizePointerCastImpl {
       Src =
           B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
       buildAssignType(B, DstType, Src);
-      SrcType = DstType;
 
       StoreInst *SI = B.CreateStore(Src, Dst);
       SI->setAlignment(Alignment);
