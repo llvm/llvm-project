@@ -9980,9 +9980,8 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
   if (Init.isInvalid())
     return StmtError();
   QualType C = FD->getReturnType();
-  IdentifierInfo *TmpName = &S.Context.Idents.get("__tmp");
   VarDecl *Tmp =
-      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, TmpName, C,
+      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, /*Id=*/nullptr, C,
                       S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
   Expr *InitArgs[] = {Init.get()};
   S.AddInitializerToDecl(Tmp,
@@ -10018,11 +10017,8 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
     return StmtError();
 
   // return tmp;
-  ExprResult TmpRef = S.BuildDeclarationNameExpr(
-      CXXScopeSpec(), DeclarationNameInfo(TmpName, Loc), Tmp);
-  if (TmpRef.isInvalid())
-    return StmtError();
-  StmtResult Return = S.BuildReturnStmt(Loc, TmpRef.get());
+  Expr *TmpRef = S.BuildDeclRefExpr(Tmp, C, VK_LValue, Loc);
+  StmtResult Return = S.BuildReturnStmt(Loc, TmpRef);
   if (Return.isInvalid())
     return StmtError();
   // 'tmp' is the only variable returned by this function, so it qualifies for
