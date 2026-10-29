@@ -5336,8 +5336,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
     Known = KnownFPClass::getEmpty();
-    bool SignBitAllZero = true;
-    bool SignBitAllOne = true;
 
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
@@ -5358,22 +5356,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      const APFloat &C = CElt->getValueAPF();
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-      if (C.isNegative())
-        SignBitAllZero = false;
-      else
-        SignBitAllOne = false;
+      Known |= KnownFPClass(CElt->getValueAPF());
     }
-    if (SignBitAllOne != SignBitAllZero)
-      Known.setSignBit(SignBitAllOne);
     return;
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
     Known = KnownFPClass::getEmpty();
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Known |= CDS->getElementAsAPFloat(I).classify();
+      Known |= KnownFPClass(CDS->getElementAsAPFloat(I));
     return;
   }
 
@@ -5387,7 +5378,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      Known |= CFP->getValueAPF().classify();
+      Known |= KnownFPClass(CFP->getValueAPF());
     }
 
     return;
