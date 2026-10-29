@@ -1563,9 +1563,6 @@ public:
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Returns if the plugin can support automatic copy.
-  int32_t use_auto_zero_copy(int32_t DeviceId);
-
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
   interop_spec_t select_interop_preference(int32_t ID, int32_t InteropType,

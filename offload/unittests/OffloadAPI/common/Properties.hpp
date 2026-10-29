@@ -73,9 +73,9 @@ removeIrrelevantProperties(PropertiesContainer<T> Base,
 using DeviceInfoProp = PropertiesContainer<ol_device_info_t>;
 using DeviceInfoProperties = PropertiesWithSizeContainer<ol_device_info_t>;
 
-inline const DeviceInfoProp PropBool{OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_HALF_FP_SUPPORT};
+inline const DeviceInfoProp PropBool{
+    OL_DEVICE_INFO_SINGLE_FP_SUPPORT, OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
+    OL_DEVICE_INFO_HALF_FP_SUPPORT, OL_DEVICE_INFO_PREFERS_ZERO_COPY};
 inline const DeviceInfoProperties BoolProperties =
     createPropertiesWithSizeContainer(sizeof(bool), PropBool);
 
