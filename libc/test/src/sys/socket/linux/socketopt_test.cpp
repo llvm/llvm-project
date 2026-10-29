@@ -93,8 +93,10 @@ TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
   scope_exit close_sock(
       [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
 
+  static constexpr socklen_t INT_OPTLEN = sizeof(int);
+
   int optval = 1;
-  socklen_t optlen = sizeof(optval);
+  socklen_t optlen = INT_OPTLEN;
   ASSERT_THAT(
       LIBC_NAMESPACE::setsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, optlen),
       Succeeds(0));
@@ -104,7 +106,7 @@ TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
       LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_NODELAY, &optval, &optlen),
       Succeeds(0));
   ASSERT_EQ(optval, 1);
-  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
+  ASSERT_EQ(optlen, INT_OPTLEN);
 
   optval = 47;
   ASSERT_THAT(
@@ -116,7 +118,7 @@ TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
       LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, &optlen),
       Succeeds(0));
   ASSERT_EQ(optval, 47);
-  ASSERT_EQ(optlen, static_cast<socklen_t>(sizeof(optval)));
+  ASSERT_EQ(optlen, INT_OPTLEN);
 }
 
 TEST_F(LlvmLibcSocketOptTest, NotASocket) {
