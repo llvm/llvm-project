@@ -696,9 +696,8 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 VPValue *
 vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                           VPlan &Plan, VPBuilder &Builder) {
-  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
-  VPValue *StepV = PtrIV->getOperand(1);
+  VPValue *StepV = PtrIV->getStepValue();
+  VPIRValue *StartV = Plan.getZero(StepV->getScalarType());
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
       StartV->getScalarType(), StartV, StepV, PtrIV->getDebugLoc(), Builder);
