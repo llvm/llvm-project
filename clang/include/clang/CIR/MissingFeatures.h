@@ -189,7 +189,6 @@ struct MissingFeatures {
   static bool asmMemoryEffects() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
-  static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool branchProtection() { return false; }

@@ -1144,12 +1144,10 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   // lowering or optimization phases to keep the memory accesses more
   // explicit. For now, we don't insert memcpy at all, though in some
   // cases the AST contains a call to memcpy.
-  assert(!cir::MissingFeatures::assignMemcpyizer());
-  for (Stmt *s : rootCS->body())
-    if (emitStmt(s, /*useCurrentScope=*/true).failed())
-      cgm.errorNYI(s->getSourceRange(),
-                   std::string("emitImplicitAssignmentOperatorBody: ") +
-                       s->getStmtClassName());
+  AssignmentMemcpyizer AM(*this, assignOp, args);
+  for (auto *i : rootCS->body())
+    AM.emitAssignment(i);
+  AM.finish();
 }
 
 void CIRGenFunction::emitForwardingCallToLambda(
