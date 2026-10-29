@@ -69,7 +69,7 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
   assert(D == Kind && "Directive kind mismatch");
   // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
   // are explicitly allowed.
-  if (static_cast<int>(Version) < VR.Min)
+  if (Version < VR.Min)
     P.Diag(Loc, diag::warn_omp_future_directive_spelling) << Name;
 
   return Kind;
