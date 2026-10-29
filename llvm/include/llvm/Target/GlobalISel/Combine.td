@@ -526,13 +526,14 @@ class binop_right_undef_frag<list<Instruction> ops> : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op, ops, (pattern (op $dst, $x, $y), (G_IMPLICIT_DEF $y)))>;
 
-// Binary op ($dst = op $x, $y) with either operand undef. Both operand
-// positions are enumerated because match patterns are not auto-commuted.
+// Binary op ($dst = op $x, $y) with either operand undef. Only noncommutative
+// opcodes need both operand positions explicitly enumerated.
 class binop_any_undef_frag<list<Instruction> ops> : GICombinePatFrag<
   (outs root:$dst), (ins),
   !listconcat(
     !foreach(op, ops, (pattern (op $dst, $x, $y), (G_IMPLICIT_DEF $x))),
-    !foreach(op, ops, (pattern (op $dst, $x, $y), (G_IMPLICIT_DEF $y))))>;
+    !foreach(op, !filter(op, ops, !not(op.isCommutable)),
+      (pattern (op $dst, $x, $y), (G_IMPLICIT_DEF $y))))>;
 
 // [us]itofp(undef) = 0, because the result value is bounded.
 def undef_to_fp_zero_frags : unary_undef_frag<[G_UITOFP, G_SITOFP]>;

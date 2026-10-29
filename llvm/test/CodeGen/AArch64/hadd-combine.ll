@@ -60,22 +60,13 @@ define <8 x i16> @haddu_const_lhs(<8 x i16> %src1) {
 }
 
 define <8 x i16> @haddu_const_zero(<8 x i16> %src1) {
-; CHECK-SD-LABEL: haddu_const_zero:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll2 v2.4s, v0.8h, #0
-; CHECK-SD-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-SD-NEXT:    shrn2 v0.8h, v2.4s, #1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: haddu_const_zero:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: haddu_const_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    shrn v0.4h, v1.4s, #1
+; CHECK-NEXT:    shrn2 v0.8h, v2.4s, #1
+; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
   %resulti16 = lshr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -297,22 +288,13 @@ define <8 x i16> @hadds_const_lhs(<8 x i16> %src1) {
 }
 
 define <8 x i16> @hadds_const_zero(<8 x i16> %src1) {
-; CHECK-SD-LABEL: hadds_const_zero:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-SD-NEXT:    sshll2 v2.4s, v0.8h, #0
-; CHECK-SD-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-SD-NEXT:    shrn2 v0.8h, v2.4s, #1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: hadds_const_zero:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: hadds_const_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    shrn v0.4h, v1.4s, #1
+; CHECK-NEXT:    shrn2 v0.8h, v2.4s, #1
+; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
   %resulti16 = ashr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -585,14 +567,11 @@ define <8 x i16> @rhaddu_const_zero(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: rhaddu_const_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    movi v2.4s, #1
-; CHECK-GI-NEXT:    uaddw v3.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    add v1.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v2.4s, #1
+; CHECK-GI-NEXT:    movi v1.4s, #1
+; CHECK-GI-NEXT:    uaddw v2.4s, v1.4s, v0.4h
+; CHECK-GI-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
+; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
@@ -833,14 +812,11 @@ define <8 x i16> @rhadds_const_zero(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: rhadds_const_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    movi v2.4s, #1
-; CHECK-GI-NEXT:    saddw v3.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    saddw2 v0.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    add v1.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v2.4s, #1
+; CHECK-GI-NEXT:    movi v1.4s, #1
+; CHECK-GI-NEXT:    saddw v2.4s, v1.4s, v0.4h
+; CHECK-GI-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
+; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1

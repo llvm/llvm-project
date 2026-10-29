@@ -493,11 +493,10 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
 }
 
 bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
-    MachineInstr &MI, MachineInstr &Sel,
+    MachineInstr &MI, MachineInstr &Sel, Register XReg,
     std::function<void(MachineIRBuilder &)> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
-  assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
 
   Register Dst = MI.getOperand(0).getReg();
   LLT DestTy = MRI.getType(Dst);
@@ -545,7 +544,6 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
         Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
         Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
 
-    Register XReg = MI.getOperand(1).getReg();
     if (SelectTrueVal->isNegative()) {
       auto NegX =
           Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());

@@ -73,9 +73,8 @@ define i128 @ptrtoaddr_128(ptr %p) {
 ; CHECK-LABEL: ptrtoaddr_128:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    notq %rdx
+; CHECK-NEXT:    movq $-1, %rdx
 ; CHECK-NEXT:    retq
 entry:
   %addr = ptrtoaddr ptr %p to i64
