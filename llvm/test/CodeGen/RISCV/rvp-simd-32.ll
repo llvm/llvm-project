@@ -1773,6 +1773,29 @@ define <2 x i16> @test_pmulh_h(<2 x i16> %a, <2 x i16> %b) {
 
 ; Test packed multiply high signed for v2i16 built from element-wise smulh
 define <2 x i16> @test_pmulh_h_insert_element(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pmulh_h_insert_element:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h00 a2, a0, a1
+; RV32-NEXT:    mul.h11 a0, a0, a1
+; RV32-NEXT:    srli a2, a2, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulh_h_insert_element:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.h a2, a0
+; RV64-NEXT:    sext.h a3, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    srai a0, a0, 48
+; RV64-NEXT:    srai a1, a1, 48
+; RV64-NEXT:    mul a2, a2, a3
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    srai a2, a2, 16
+; RV64-NEXT:    srai a0, a0, 16
+; RV64-NEXT:    ppaire.h a0, a2, a0
+; RV64-NEXT:    ret
   %a0 = extractelement <2 x i16> %a, i32 0
   %b0 = extractelement <2 x i16> %b, i32 0
   %m0 = call i16 @llvm.smulh.i16(i16 %a0, i16 %b0)
@@ -2621,10 +2644,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB184_2
+; CHECK-NEXT:    bnez a3, .LBB185_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB184_2:
+; CHECK-NEXT:  .LBB185_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2635,10 +2658,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB185_2
+; CHECK-NEXT:    bnez a3, .LBB186_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB185_2:
+; CHECK-NEXT:  .LBB186_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
@@ -4209,7 +4232,6 @@ define <4 x i8> @test_pslidedownx_v4i8(<4 x i8> %rd, <4 x i8> %rs1, i32 %rs2) {
 }
 
 define <2 x i16> @test_pslideupx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
-                                       i32 %rs2) {
 ; RV32-LABEL: test_pslideupx_v2i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a2, a2, 4
@@ -4223,6 +4245,7 @@ define <2 x i16> @test_pslideupx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
 ; RV64-NEXT:    andi a2, a2, 16
 ; RV64-NEXT:    slx a0, a1, a2
 ; RV64-NEXT:    ret
+                                       i32 %rs2) {
   %rd.bits = bitcast <2 x i16> %rd to i32
   %rs1.bits = bitcast <2 x i16> %rs1 to i32
   %shamt = shl i32 %rs2, 4
@@ -4232,7 +4255,6 @@ define <2 x i16> @test_pslideupx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
 }
 
 define <2 x i16> @test_pslidedownx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
-                                         i32 %rs2) {
 ; RV32-LABEL: test_pslidedownx_v2i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a2, a2, 4
@@ -4246,6 +4268,7 @@ define <2 x i16> @test_pslidedownx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
 ; RV64-NEXT:    ori a2, a2, 32
 ; RV64-NEXT:    srx a0, a1, a2
 ; RV64-NEXT:    ret
+                                         i32 %rs2) {
   %rd.bits = bitcast <2 x i16> %rd to i32
   %rs1.bits = bitcast <2 x i16> %rs1 to i32
   %shamt = shl i32 %rs2, 4
