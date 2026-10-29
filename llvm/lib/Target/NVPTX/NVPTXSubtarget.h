@@ -100,6 +100,9 @@ public:
   bool hasLdStB128() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX83);
   }
+  bool hasSysScopeLdStB128() const {
+    return hasLdStB128() && hasFeature(NVPTX::PTX84);
+  }
   bool hasClusters() const { return hasFeature(NVPTX::SM90); }
   bool hasLDG() const { return hasFeature(NVPTX::SM32); }
   bool hasHWROT32() const { return hasFeature(NVPTX::SM32); }

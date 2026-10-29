@@ -1,11 +1,11 @@
 ; Checks are handwritten -- do not regenerate with update_llc_test_checks.py.
 
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70  -mattr=+ptx83 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_75  -mattr=+ptx83 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80  -mattr=+ptx83 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90  -mattr=+ptx83 | FileCheck %s --check-prefixes=CHECK,CLUSTER
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70  -mattr=+ptx84 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_75  -mattr=+ptx84 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80  -mattr=+ptx84 | FileCheck %s --check-prefixes=CHECK,NOCLUSTER
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90  -mattr=+ptx84 | FileCheck %s --check-prefixes=CHECK,CLUSTER
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 -mattr=+ptx86 | FileCheck %s --check-prefixes=CHECK,CLUSTER
-; RUN: %if ptxas-sm_90 && ptxas-isa-8.3 %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx83 | %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-8.4 %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx84 | %ptxas-verify -arch=sm_90 %}
 
 ; RUN: not llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_60 -mattr=+ptx83 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: not llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70 -mattr=+ptx82 2>&1 | FileCheck %s --check-prefix=ERROR

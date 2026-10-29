@@ -1083,6 +1083,16 @@ NVPTXDAGToDAGISel::getMemInstOrderingScope(MemSDNode *N) {
   auto InstructionOrdering = getInstructionOrdering(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
 
+  // b128 loads/stores were introduced in PTX 8.3, but system scope support
+  // requires PTX 8.4. Check the resolved scope, including volatile promotion.
+  if (N->getMemoryVT() == MVT::i128 && Scope == NVPTX::Scope::System &&
+      !Subtarget->hasSysScopeLdStB128())
+    CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+        CurDAG->getMachineFunction().getFunction(),
+        "NVPTX system scope b128 loads and stores require PTX ISA version 8.4 "
+        "or later",
+        N->getDebugLoc()));
+
   // Singlethread scope has no inter-thread synchronization requirements, so
   // the atomic operation is lowered as plain and the fence is skipped.
   // NotAtomic and Volatile operations naturally have Thread scope and must
