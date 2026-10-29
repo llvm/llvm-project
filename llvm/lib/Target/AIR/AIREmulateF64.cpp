@@ -402,6 +402,43 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
     R = B.CreateSelect(Is(3), Call(Intrinsic::floor), R);
     return ST->isBFloatTy() ? f32ToBF16(B, R) : R;
   }
+  // A float to half or bfloat: rounded to nearest, then one unit in the
+  // direction where the result, back as a float (exactly), lies on the wrong
+  // side of the operand. Exact everywhere (an overflow to infinity steps back
+  // to the largest finite value, a zero to the smallest subnormal); a NaN
+  // compares unordered and stays.
+  auto TruncDirected = [&](Value *X, Type *To) -> Value * {
+    Value *H = To->isHalfTy() ? B.CreateFPTrunc(X, To) : f32ToBF16(B, X);
+    Value *Back = To->isHalfTy() ? B.CreateFPExt(H, B.getFloatTy())
+                                 : bf16ToF32(B, H);
+    Value *Bits = B.CreateBitCast(H, I16);
+    Value *Zero = B.CreateICmpEQ(B.CreateAnd(Bits, 0x7fff), B.getInt16(0));
+    Value *Neg = B.CreateICmpSLT(Bits, B.getInt16(0));
+    // the neighbours of H below and above
+    Value *Down = B.CreateSelect(
+        Zero, B.getInt16(0x8001),
+        B.CreateSelect(Neg, B.CreateAdd(Bits, B.getInt16(1)),
+                       B.CreateSub(Bits, B.getInt16(1))));
+    Value *Up = B.CreateSelect(
+        Zero, B.getInt16(0x0001),
+        B.CreateSelect(Neg, B.CreateSub(Bits, B.getInt16(1)),
+                       B.CreateAdd(Bits, B.getInt16(1))));
+    Value *Above = B.CreateFCmpOGT(Back, X), *Below = B.CreateFCmpOLT(Back, X);
+    // toward zero: down from above a positive operand, up from below a
+    // negative one
+    Value *XNeg = B.CreateFCmpOLT(X, ConstantFP::get(B.getFloatTy(), 0.0));
+    Value *RZ = B.CreateSelect(
+        B.CreateAnd(Above, B.CreateNot(XNeg)), Down,
+        B.CreateSelect(B.CreateAnd(Below, XNeg), Up, Bits));
+    Value *RU = B.CreateSelect(Below, Up, Bits);
+    Value *RD = B.CreateSelect(Above, Down, Bits);
+    Value *R = B.CreateSelect(
+        Is(0), RZ, B.CreateSelect(Is(2), RU, B.CreateSelect(Is(3), RD, Bits)));
+    return B.CreateBitCast(R, To);
+  };
+  if (Base == "fptrunc" && A[0]->getType()->isFloatTy() &&
+      (ST->isHalfTy() || ST->isBFloatTy()))
+    return TruncDirected(A[0], ST);
   // A value of the format as the bits of the double.
   auto Ext = [&](Value *X) {
     Type *T = X->getType();
@@ -421,12 +458,12 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
   // 2^-70 in magnitude and the result is finite; the others take the double
   // precision path below. An exact sum of zero is +0, -0 rounding downward,
   // unless both operands are zeros of one sign (that sign).
-  BasicBlock *FastBB = nullptr, *Join = nullptr;
-  Value *Fast = nullptr;
-  if (ST->isFloatTy() && (Base == "fadd" || Base == "fsub" || Base == "fmul")) {
-    Value *X = A[0], *Y = Base == "fsub" ? B.CreateFNeg(A[1]) : A[1];
+  // The fast path's result (and whether it is exact) for floats X and Y.
+  auto TwoFold = [&](Value *X, Value *Y, bool Mul) -> std::pair<Value *, Value *> {
+    Type *ST = B.getFloatTy();
+    Value *Fast;
     Value *S, *Err;
-    if (Base == "fmul") {
+    if (Mul) {
       S = B.CreateFMul(X, Y);
       Err = B.CreateIntrinsic(Intrinsic::fma, {ST}, {X, Y, B.CreateFNeg(S)});
     } else {
@@ -461,7 +498,7 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
                        B.CreateAnd(Below, Neg)));
     Value *Step = B.CreateSub(B.CreateZExt(Inc, I32), B.CreateZExt(Dec, I32));
     Fast = B.CreateBitCast(B.CreateAdd(SBits, Step), ST);
-    if (Base != "fmul") {
+    if (!Mul) {
       Value *Zero = ConstantFP::get(ST, 0.0);
       Value *SameZeros = B.CreateAnd(
           B.CreateAnd(B.CreateFCmpOEQ(X, Zero), B.CreateFCmpOEQ(Y, Zero)),
@@ -472,6 +509,56 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
           B.CreateAnd(B.CreateFCmpOEQ(S, Zero), Is(3)), B.CreateNot(SameZeros));
       Fast = B.CreateSelect(MinusZero, ConstantFP::getNegativeZero(ST), Fast);
     }
+    return {Fast, Ok};
+  };
+  // add, sub and mul of halves: the float fast path, exact for any halves
+  // (their magnitudes and the results' are within its range), rounded in the
+  // same direction to half; twice in one direction rounds once. bfloats the
+  // same way where the fast path is exact, else as below.
+  if ((ST->isHalfTy() || ST->isBFloatTy()) &&
+      (Base == "fadd" || Base == "fsub" || Base == "fmul")) {
+    auto Wide = [&](Value *V) {
+      return ST->isHalfTy() ? B.CreateFPExt(V, B.getFloatTy()) : bf16ToF32(B, V);
+    };
+    Value *X = Wide(A[0]), *Y = Wide(A[1]);
+    if (Base == "fsub")
+      Y = B.CreateFNeg(Y);
+    auto [F, Ok] = TwoFold(X, Y, Base == "fmul");
+    // nearest: the operation in float rounds once more to nearest, which is
+    // not rounding once; it is the plain operation
+    Value *Nearest = Base == "fadd"   ? B.CreateFAdd(A[0], A[1])
+                     : Base == "fsub" ? B.CreateFSub(A[0], A[1])
+                                      : B.CreateFMul(A[0], A[1]);
+    Value *R = B.CreateSelect(Is(1), Nearest, TruncDirected(F, ST));
+    if (ST->isHalfTy())
+      return R;
+    // bfloats outside the fast path's range: the double precision path
+    BasicBlock *Here = B.GetInsertBlock();
+    Function *Fn = Here->getParent();
+    BasicBlock *Slow = BasicBlock::Create(B.getContext(), "directed.slow", Fn);
+    BasicBlock *Done = BasicBlock::Create(B.getContext(), "directed.join", Fn);
+    B.CreateCondBr(B.CreateOr(Ok, Is(1)), Done, Slow);
+    B.SetInsertPoint(Slow);
+    Value *Ext0 = Lib("__air_f64_from_f32", I64, {B.CreateBitCast(X, I32)});
+    Value *Ext1 = Lib("__air_f64_from_f32", I64, {B.CreateBitCast(Y, I32)});
+    Value *D = Lib(Base == "fmul" ? "__air_f64_mul_r" : "__air_f64_add_r", I64,
+                   {Ext0, Ext1, Rounding});
+    Value *SlowR = B.CreateBitCast(
+        B.CreateTrunc(Lib("__air_f64_to_bf16_r", I32, {D, Rounding}), I16), ST);
+    BasicBlock *SlowEnd = B.GetInsertBlock();
+    B.CreateBr(Done);
+    B.SetInsertPoint(Done);
+    PHINode *P = B.CreatePHI(ST, 2);
+    P->addIncoming(R, Here);
+    P->addIncoming(SlowR, SlowEnd);
+    return P;
+  }
+  BasicBlock *FastBB = nullptr, *Join = nullptr;
+  Value *Fast = nullptr;
+  if (ST->isFloatTy() && (Base == "fadd" || Base == "fsub" || Base == "fmul")) {
+    Value *X = A[0], *Y = Base == "fsub" ? B.CreateFNeg(A[1]) : A[1];
+    Value *Ok;
+    std::tie(Fast, Ok) = TwoFold(X, Y, Base == "fmul");
     FastBB = B.GetInsertBlock();
     Function *Fn = FastBB->getParent();
     BasicBlock *Slow = BasicBlock::Create(B.getContext(), "directed.slow", Fn);
