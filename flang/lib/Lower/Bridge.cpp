@@ -675,6 +675,8 @@ public:
              getFoldingContext().languageFeatures().IsEnabled(
                  Fortran::common::LanguageFeature::CUDAInit)),
             getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::OpenMPDefaultAllocator),
+            getFoldingContext().languageFeatures().IsEnabled(
                 Fortran::common::LanguageFeature::Coarray),
             bridge.getLoweringOptions().getFPExceptionTraps());
       });

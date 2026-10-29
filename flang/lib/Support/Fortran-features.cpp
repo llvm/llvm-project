@@ -156,6 +156,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);
   disable_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
+  disable_.set(LanguageFeature::OpenMPDefaultAllocator);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
