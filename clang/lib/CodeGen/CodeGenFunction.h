@@ -35,6 +35,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -301,6 +302,19 @@ public:
   // Stores variables for which we can't generate correct lifetime markers
   // because of jumps.
   VarBypassDetector Bypasses;
+
+  // Addresses of bypassed variables, for re-emitting their
+  // trivial-auto-var-init at a jump that re-enters their scope.
+  llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
+
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
+    llvm::AssertingVH<llvm::BasicBlock> Block;
+    const Stmt *Source;
+  };
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
 
   /// List of recently emitted OMPCanonicalLoops.
   ///
@@ -613,6 +627,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// True if CodeGen currently emits the argument of
+  /// __builtin_preserve_field_info.
+  bool IsInPreserveFieldInfo = false;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
@@ -636,6 +654,22 @@ public:
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
+
+  /// Records the l-value that ScalarExprEmitter loads from when it emits a
+  /// specific expression. EmitArraySubscriptExpr sets this while emitting the
+  /// base of a 'counted_by' pointer subscript, so that the bounds check can
+  /// locate the count from the pointer field's address without re-emitting
+  /// (and so re-evaluating) the base. Capturing the l-value, instead of
+  /// emitting the load separately, keeps everything else the scalar load path
+  /// does (debug locations, 'align_value' assumptions, pseudo variables for
+  /// -fdebug-info-for-profiling, etc.).
+  struct LoadedLValueCapture {
+    /// The expression whose l-value is recorded.
+    const Expr *E;
+    /// The recorded l-value, set if \c E was loaded by ScalarExprEmitter.
+    std::optional<LValue> LV;
+  };
+  LoadedLValueCapture *CurLoadedLValueCapture = nullptr;
 
   /// Returns true if a function must make progress, which means the
   /// mustprogress attribute can be added.
@@ -2020,10 +2054,10 @@ public:
     /// \param IP	Insertion point for generating the finalization code.
     static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
+      llvm::BasicBlock *IPBB = IP.getNodeParent();
+      assert(IPBB->end() != IP &&
              "OpenMP IR Builder should cause terminated block!");
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
       llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
       assert(DestBB && "Finalization block should have one successor!");
 
@@ -2047,10 +2081,10 @@ public:
                                          InsertPointTy CodeGenIP,
                                          Twine RegionName);
 
-    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+    static void EmitCaptureStmt(CodeGenFunction &CGF,
+                                llvm::BasicBlock *CodeGenIPBB,
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
       if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
@@ -2061,7 +2095,7 @@ public:
       else
         CGF.EmitRuntimeCall(Fn, Args);
 
-      if (CGF.Builder.saveIP().isSet())
+      if (CGF.Builder.saveIP().isValid())
         CGF.Builder.CreateBr(&FiniBB);
     }
 
@@ -2090,10 +2124,10 @@ public:
       OutlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
                              llvm::BasicBlock &RetBB)
           : CGF(cgf) {
-        assert(AllocaIP.isSet() &&
+        assert(AllocaIP.isValid() &&
                "Must specify Insertion point for allocas of outlined function");
         OldAllocaIP = CGF.AllocaInsertPt;
-        CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        CGF.AllocaInsertPt = &*AllocaIP;
 
         OldReturnBlock = CGF.ReturnBlock;
         CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
@@ -2119,13 +2153,13 @@ public:
         // function so it expects an empty AllocaIP in which case will reuse the
         // old alloca insertion point, or a new AllocaIP in the same block as
         // the old one
-        assert((!AllocaIP.isSet() ||
-                CGF.AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
+        assert((!AllocaIP.isValid() ||
+                CGF.AllocaInsertPt->getParent() == AllocaIP.getNodeParent()) &&
                "Insertion point should be in the entry block of containing "
                "function!");
         OldAllocaIP = CGF.AllocaInsertPt;
-        if (AllocaIP.isSet())
-          CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        if (AllocaIP.isValid())
+          CGF.AllocaInsertPt = &*AllocaIP;
 
         // TODO: Remove the call, after making sure the counter is not used by
         //       the EHStack.
@@ -3491,9 +3525,6 @@ public:
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
-  /// Get the record field index as represented in debug info.
-  unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
-
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission
   //===--------------------------------------------------------------------===//
@@ -3540,9 +3571,9 @@ public:
     /// escaping block.
     bool IsEscapingByRef;
 
-    /// True if the variable is of aggregate type and has a constant
-    /// initializer.
-    bool IsConstantAggregate;
+    /// If the variable is of aggregate type and has a constant initializer,
+    /// a constant representing that initializer.
+    llvm::Constant *ConstantAggregateInitializer;
 
     /// True if lifetime markers should be used.
     bool UseLifetimeMarkers;
@@ -3558,7 +3589,7 @@ public:
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
-          IsEscapingByRef(false), IsConstantAggregate(false),
+          IsEscapingByRef(false), ConstantAggregateInitializer(nullptr),
           UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
@@ -3591,6 +3622,11 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
+
+  /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
+  void emitBypassedVarInitsForSource(const Stmt *Source);
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
@@ -4575,7 +4611,7 @@ public:
   std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
                                                   QualType Ty);
   LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                            QualType Ty);
+                            QualType Ty, bool IsImplicitObject = false);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4697,7 +4733,8 @@ public:
                                   const Twine &name = "");
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
-                                  const Twine &name = "");
+                                  const Twine &name = "",
+                                  bool IsConvergent = false);
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                     const Twine &Name = "");
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -4747,9 +4784,6 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
-  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
-                                        llvm::Value *StorageAddress,
-                                        llvm::ConstantInt *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,
@@ -5551,9 +5585,14 @@ public:
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
 private:
-  // Adds a convergence_ctrl token with |ParentToken| as parent convergence
-  // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+  // Adds a convergencectrl bundle with the current convergence token to
+  // |Bundles|, if convergence tokens are used.
+  void
+  addConvergenceControlBundle(SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  // Marks |Call| convergent if |IsConvergent| and its callee does not already
+  // imply it.
+  void setConvergentCallSite(llvm::CallBase *Call, bool IsConvergent);
 
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
@@ -5632,16 +5671,11 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
+                                                         const VarDecl &D);
 
 public:
-  enum class EvaluationOrder {
-    ///! No language constraints on evaluation order.
-    Default,
-    ///! Language semantics require left-to-right evaluation.
-    ForceLeftToRight,
-    ///! Language semantics require right-to-left evaluation.
-    ForceRightToLeft
-  };
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.

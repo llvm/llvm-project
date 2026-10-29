@@ -162,28 +162,73 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  /// Classifies whether all bundle elements are integers, halves, floats,
+  /// doubles, or pointers.
+  class BndlTypeClassifier {
+    unsigned NumIntElements = 0;
+    unsigned NumHalfElements = 0;
+    unsigned NumFloatElements = 0;
+    unsigned NumDoubleElements = 0;
+    unsigned NumPtrElements = 0;
+    unsigned NumElements = 0;
+
+  public:
+    template <typename T>
+    BndlTypeClassifier(BndlRef<T *> Bndl) : NumElements(Bndl.size()) {
+      for (T *V : Bndl) {
+        Type *ElmTy = VecUtils::getElementType(Utils::getExpectedType(V));
+        if (ElmTy->isIntegerTy())
+          ++NumIntElements;
+        else if (ElmTy->isHalfTy())
+          ++NumHalfElements;
+        else if (ElmTy->isFloatTy())
+          ++NumFloatElements;
+        else if (ElmTy->isDoubleTy())
+          ++NumDoubleElements;
+        else if (ElmTy->isPointerTy())
+          ++NumPtrElements;
+      }
+    }
+
+    bool areAllIntegers() const { return NumIntElements == NumElements; }
+    bool areAllHalves() const { return NumHalfElements == NumElements; }
+    bool areAllFloats() const { return NumFloatElements == NumElements; }
+    bool areAllDoubles() const { return NumDoubleElements == NumElements; }
+    bool areAllPointers() const { return NumPtrElements == NumElements; }
+  };
+
   /// \Returns the combined vector type for \p Bndl, even when the element types
-  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
-  /// types are of mixed float/integer types.
+  /// differ. For example: i8,i8,i16 will return <4 x i8>. Homogeneous half,
+  /// float, and double bundles keep their element type; other mixed-type
+  /// bundles are combined into an integer vector.
   template <typename T>
   static Type *getCombinedVectorTypeFor(BndlRef<T *> Bndl,
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
-    unsigned MinElmBits = std::numeric_limits<unsigned>::max();
-    Type *MinElmTy = nullptr;
-    for (T *V : Bndl) {
+    unsigned GCDBits = 0;
+    BndlTypeClassifier Classifier(Bndl);
+    for (auto *V : Bndl) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
-
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
-      TotalBits += ElmBits * VecUtils::getNumLanes(V);
-      if (ElmBits < MinElmBits) {
-        MinElmBits = ElmBits;
-        MinElmTy = ElmTy;
-      }
+      TotalBits += ElmBits * getNumLanes(V);
+      GCDBits = std::gcd(GCDBits, ElmBits);
     }
-    unsigned NumElms = TotalBits / MinElmBits;
-    return FixedVectorType::get(MinElmTy, NumElms);
+
+    auto &Ctx = Bndl[0]->getContext();
+    // Keep a half, float, or double lane type when every element has that type.
+    // Otherwise use an integer lane type, so an integer bundle such as
+    // {i32, i16, i16} is not rewritten as a float vector such as <4 x half>.
+    Type *VecElmTy = nullptr;
+    if (Classifier.areAllHalves())
+      VecElmTy = Type::getHalfTy(Ctx);
+    else if (Classifier.areAllFloats())
+      VecElmTy = Type::getFloatTy(Ctx);
+    else if (Classifier.areAllDoubles())
+      VecElmTy = Type::getDoubleTy(Ctx);
+    else
+      VecElmTy = IntegerType::get(Ctx, GCDBits);
+    return FixedVectorType::get(VecElmTy, TotalBits / GCDBits);
   }
 
   static Type *getCombinedVectorTypeFor(std::initializer_list<Value *> Bndl,
@@ -496,12 +541,41 @@ public:
     return make_range(Begin, End);
   }
 
+  /// Given the alignments of the instructions before vectorization, this
+  /// returns the alignment of the vectorized instruction.
+  template <typename AlignRangeT, typename TypeRangeT>
+  static Align getVecAlignment(AlignRangeT AlignRange, TypeRangeT TypeRange) {
+    assert(AlignRange.begin() != AlignRange.end() && "Expected non empty!");
+    assert(TypeRange.begin() != TypeRange.end() && "Expected non empty!");
+    assert(AlignRange.end() - AlignRange.begin() ==
+               TypeRange.end() - TypeRange.begin() &&
+           "Expected same size!");
+    // TODO: Implement smarter aligment deduction based on types.
+    // For now we return the alignment of the first element.
+    return *AlignRange.begin();
+  }
+
+  /// Helper for getVecAlignment(AlignRange, TypeRange).
+  template <typename InstrRangeT>
+  static Align getVecAlignment(InstrRangeT InstrRange) {
+    auto AlignRange = map_range(
+        InstrRange, [](auto *I) -> Align { return getLoadStoreAlignment(I); });
+    auto TypeRange = map_range(InstrRange, [](auto *I) -> Type * {
+      return Utils::getExpectedType(I);
+    });
+    return getVecAlignment(AlignRange, TypeRange);
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
   LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
 #endif // NDEBUG
 };
+
+extern template LLVM_TEMPLATE_ABI void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
+        BndlRef<Instruction *>);
 
 } // namespace sandboxir
 

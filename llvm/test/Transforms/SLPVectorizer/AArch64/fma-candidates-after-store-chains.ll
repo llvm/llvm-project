@@ -26,21 +26,21 @@ define double @test(ptr %a, ptr %h, ptr %out, ptr %q, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[BODY:.*]], label %[[LATCH]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr double, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr double, ptr [[PA0]], i64 2
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[PA2]], align 8
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr double, ptr [[PA0]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[PA0]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = fsub fast double [[A0]], 1.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[PA0]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[PA1]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x double> [[TMP0]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[H]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[X]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP5]])
 ; CHECK-NEXT:    [[ACC_BODY:%.*]] = fadd fast double [[TMP6]], [[ACC]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
-; CHECK-NEXT:    [[FY:%.*]] = fmul fast double [[C]], [[TMP7]]
-; CHECK-NEXT:    [[FZ:%.*]] = fmul fast double [[C]], [[X]]
-; CHECK-NEXT:    [[POUT1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store double [[FY]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store double [[FZ]], ptr [[POUT1]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[ACC_NEXT]] = phi double [ [[ACC_BODY]], %[[BODY]] ], [ [[ACC]], %[[HEADER]] ]

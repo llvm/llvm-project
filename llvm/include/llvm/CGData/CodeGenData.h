@@ -30,6 +30,10 @@
 
 namespace llvm {
 
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 enum CGDataSectKind {
 #define CG_DATA_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
 #include "llvm/CGData/CodeGenData.inc"
@@ -131,7 +135,9 @@ class CodeGenData {
 public:
   ~CodeGenData() = default;
 
-  LLVM_ABI static CodeGenData &getInstance();
+  /// The first call's \p LibraryOptions configure the singleton.
+  LLVM_ABI static CodeGenData &
+  getInstance(const cl::LibraryOptionsContext &LibraryOptions);
 
   /// Returns true if we have a valid outlined hash tree.
   bool hasOutlinedHashTree() {
@@ -169,32 +175,42 @@ public:
 
 namespace cgdata {
 
-inline bool hasOutlinedHashTree() {
-  return CodeGenData::getInstance().hasOutlinedHashTree();
+inline bool
+hasOutlinedHashTree(const cl::LibraryOptionsContext &LibraryOptions) {
+  return CodeGenData::getInstance(LibraryOptions).hasOutlinedHashTree();
 }
 
-inline bool hasStableFunctionMap() {
-  return CodeGenData::getInstance().hasStableFunctionMap();
+inline bool
+hasStableFunctionMap(const cl::LibraryOptionsContext &LibraryOptions) {
+  return CodeGenData::getInstance(LibraryOptions).hasStableFunctionMap();
 }
 
-inline const OutlinedHashTree *getOutlinedHashTree() {
-  return CodeGenData::getInstance().getOutlinedHashTree();
+inline const OutlinedHashTree *
+getOutlinedHashTree(const cl::LibraryOptionsContext &LibraryOptions) {
+  return CodeGenData::getInstance(LibraryOptions).getOutlinedHashTree();
 }
 
-inline const StableFunctionMap *getStableFunctionMap() {
-  return CodeGenData::getInstance().getStableFunctionMap();
+inline const StableFunctionMap *
+getStableFunctionMap(const cl::LibraryOptionsContext &LibraryOptions) {
+  return CodeGenData::getInstance(LibraryOptions).getStableFunctionMap();
 }
 
-inline bool emitCGData() { return CodeGenData::getInstance().emitCGData(); }
+inline bool emitCGData(const cl::LibraryOptionsContext &LibraryOptions) {
+  return CodeGenData::getInstance(LibraryOptions).emitCGData();
+}
 
 inline void
-publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
-  CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
+publishOutlinedHashTree(const cl::LibraryOptionsContext &LibraryOptions,
+                        std::unique_ptr<OutlinedHashTree> HashTree) {
+  CodeGenData::getInstance(LibraryOptions)
+      .publishOutlinedHashTree(std::move(HashTree));
 }
 
 inline void
-publishStableFunctionMap(std::unique_ptr<StableFunctionMap> FunctionMap) {
-  CodeGenData::getInstance().publishStableFunctionMap(std::move(FunctionMap));
+publishStableFunctionMap(const cl::LibraryOptionsContext &LibraryOptions,
+                         std::unique_ptr<StableFunctionMap> FunctionMap) {
+  CodeGenData::getInstance(LibraryOptions)
+      .publishStableFunctionMap(std::move(FunctionMap));
 }
 
 struct StreamCacheData {
@@ -242,6 +258,10 @@ struct StreamCacheData {
   }
 };
 
+/// Returns whether ThinLTO runs two rounds of code generation
+/// (-codegen-data-thinlto-two-rounds).
+LLVM_ABI bool thinLTOTwoRounds(const cl::LibraryOptionsContext &LibraryOptions);
+
 /// Save \p TheModule before the first codegen round.
 /// \p Task represents the partition number in the parallel code generation
 /// process. \p AddStream is the callback used to add the serialized module to
@@ -263,7 +283,8 @@ loadModuleForTwoRounds(BitcodeModule &OrigModule, unsigned Task,
 /// first codegen round.
 /// \return the combined hash of the merged codegen data.
 LLVM_ABI Expected<stable_hash>
-mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
+mergeCodeGenData(const cl::LibraryOptionsContext &LibraryOptions,
+                 ArrayRef<StringRef> ObjectFiles);
 
 LLVM_ABI void warn(Error E, StringRef Whence = "");
 LLVM_ABI void warn(Twine Message, StringRef Whence = "", StringRef Hint = "");

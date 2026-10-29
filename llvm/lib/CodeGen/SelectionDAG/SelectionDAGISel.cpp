@@ -106,6 +106,7 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -1476,7 +1477,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
     MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
 
-  if (Pers == EHPersonality::Wasm_CXX) {
+  if (Pers == EHPersonality::Wasm_CXX || Pers == EHPersonality::Wasm_D) {
     if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHIIt()))
       mapWasmLandingPadIndex(MBB, CPI);
   } else {
@@ -1673,7 +1674,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   CurDAG->setFunctionLoweringInfo(FuncInfo.get());
 
   if (!FastIS) {
-    LowerArguments(Fn);
+    LowerArguments(Fn, /*FastISel=*/false);
   } else {
     // See if fast isel can lower the arguments.
     FastIS->startNewBlock();
@@ -1690,7 +1691,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       reportFastISelFailure(*MF, *ORE, R, EnableFastISelAbort > 1);
 
       // Use SelectionDAG argument lowering
-      LowerArguments(Fn);
+      LowerArguments(Fn, /*FastISel=*/true);
       CurDAG->setRoot(SDB->getControlRoot());
       SDB->clear();
       CodeGenAndEmitDAG();

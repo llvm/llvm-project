@@ -666,7 +666,8 @@ public:
 };
 
 /// Policy that emits only the last remark reported for each identity, see
-/// DenseMapInfo<Remark>. Remarks are stored until finalize().
+/// DenseMapInfo<Remark>. Remarks are stored until finalize(), which emits them
+/// in creation order, so the output does not depend on hash order.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
   /// Remarks reported since the last finalize().

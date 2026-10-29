@@ -30,6 +30,12 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+# split-file is required, like FileCheck and not: it's an LLVM utility, so it
+# is available wherever they are.
+llvm_config.add_tool_substitutions(
+    [ToolSubst("split-file", unresolved="fatal")], [config.llvm_tools_dir]
+)
+
 # %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
@@ -128,6 +134,13 @@ def run_test_tool(name, *args):
     return out
 
 
+def normalise_machine(machine):
+    arch = machine.lower()
+    return {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+    }.get(arch, arch)
+
 # Probe the compiled-in logging configuration from orc-rt-log-check and
 # expose it as lit features, so logging tests can gate on the build's backend
 # and on which levels are actually emitted:
@@ -184,7 +197,7 @@ config.substitutions.append(("%target-arch", config.target_triple.split("-")[0])
 config.substitutions.append(("%host-page-size", str(mmap.PAGESIZE)))
 
 # Add host OS and arch substitutions for host-detection tests.
-config.substitutions.append(("%host-arch", platform.machine()))
+config.substitutions.append(("%host-arch", normalise_machine(platform.machine())))
 if platform.system() == "Darwin":
     config.substitutions.append(("%host-os", "macosx"))
 else:

@@ -88,7 +88,7 @@ set_target_properties(LLVMSupportBlake3 PROPERTIES FOLDER "LLVM/Libraries")
 llvm_update_compile_flags(LLVMSupportBlake3)
 if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
   # Since LLVMSupportBlake3 is not defined using llvm_add_library(), we must
-  # define LLVM_EXPORTS here so its public interface is annotated with
+  # define LLVM_C_EXPORTS here so its public interface is annotated with
   # __declspec(dllexport) when building as a DLL on Windows.
-  target_compile_definitions(LLVMSupportBlake3 PRIVATE LLVM_EXPORTS)
+  target_compile_definitions(LLVMSupportBlake3 PRIVATE LLVM_C_EXPORTS)
 endif()

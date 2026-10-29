@@ -107,6 +107,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeThumb2ITBlockPass(Registry);
   initializeMVETPAndVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
@@ -219,14 +220,7 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   // An explicit "float-abi" module flag always wins, even for AAPCS16.
   if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
     return *FloatABI::parseABIType(Val->getString());
-
-  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
-  // even on triples whose default float ABI is soft (the triple default only
-  // detects AAPCS16 when it is the triple's own default ABI).
-  if (getEffectiveABI(M) == ARM::ARM_ABI_AAPCS16)
-    return FloatABI::Hard;
-  // Otherwise fall back to the ABI implied by the target triple.
-  return M.getTargetTriple().getDefaultFloatABI();
+  return M.getTargetTriple().getDefaultFloatABI(getTargetABIName(M));
 }
 
 ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
@@ -352,6 +346,9 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() == CodeGenOptLevel::Aggressive;
+  }
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -499,9 +496,6 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(&MachinePipelinerID);
-
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
@@ -595,7 +589,7 @@ void ARMPassConfig::addPreEmitPass2() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }

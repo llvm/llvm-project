@@ -51,10 +51,17 @@ struct GetTypes<R(Args...)> {
   };
 };
 
+// RTLD_NEXT misses libc if the runtime is loaded after it.
+void* GetRealFunction(const char* name) {
+  if (void* addr = dlsym(RTLD_NEXT, name))
+    return addr;
+  return dlsym(RTLD_DEFAULT, name);
+}
+
 #define LLVM_SYMBOLIZER_GET_FUNC(Function) \
   ((__interceptor_##Function)              \
        ? (__interceptor_##Function)        \
-       : reinterpret_cast<decltype(&Function)>(dlsym(RTLD_NEXT, #Function)))
+       : reinterpret_cast<decltype(&Function)>(GetRealFunction(#Function)))
 
 #define LLVM_SYMBOLIZER_INTERCEPTOR1(Function, ...)               \
   GetTypes<__VA_ARGS__>::Result __interceptor_##Function(         \

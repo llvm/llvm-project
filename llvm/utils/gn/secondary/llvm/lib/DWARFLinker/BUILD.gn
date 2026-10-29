@@ -4,6 +4,7 @@ static_library("DWARFLinker") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/CodeGen",
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]

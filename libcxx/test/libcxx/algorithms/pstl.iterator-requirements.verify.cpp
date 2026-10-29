@@ -32,7 +32,6 @@
 
 #include "test_iterators.h"
 
-using non_input_iterator         = cpp17_output_iterator<int*>;
 using non_forward_iterator       = cpp17_input_iterator<int*>;
 using non_bidirectional_iterator = forward_iterator<int*>;
 using non_randomaccess_iterator  = bidirectional_iterator<int*>;
@@ -40,8 +39,7 @@ struct non_output_iterator : forward_iterator<int*> {
   constexpr int const& operator*() const; // prevent it from being an output iterator
 };
 
-void f(non_input_iterator non_input,
-       non_forward_iterator non_fwd,
+void f(non_forward_iterator non_fwd,
        non_output_iterator non_output,
        non_bidirectional_iterator non_bidir,
        non_randomaccess_iterator non_random,
@@ -152,6 +150,12 @@ void f(non_input_iterator non_input,
     (void)std::reverse_copy(
         pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
     (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
+  }
+
+  {
+    (void)std::includes(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: includes}}
+    (void)std::includes(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: includes}}
   }
 
   {
@@ -272,6 +276,69 @@ void f(non_input_iterator non_input,
   }
 
   {
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_difference}}
+
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+  }
+
+  {
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, non_fwd, non_fwd, it, it, it);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, non_fwd, non_fwd, it);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, it, it, non_output);
+
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, non_fwd, non_fwd, it, it, it, pred);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, non_fwd, non_fwd, it, pred);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, it, it, non_output, pred);
+  }
+
+  {
+    (void)std::set_intersection(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_intersection}}
+
+    (void)std::set_intersection(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+  }
+
+  {
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_union}}
+
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_union}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }
@@ -348,17 +415,17 @@ void f(non_input_iterator non_input,
 
   {
     std::uninitialized_copy(
-        pol, non_input, non_input, it);            // expected-error@*:* {{static assertion failed: uninitialized_copy}}
+        pol, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: uninitialized_copy}}
     std::uninitialized_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_copy}}
     std::uninitialized_copy_n(
-        pol, non_input, n, it); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
+        pol, non_fwd, n, it); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
     std::uninitialized_copy_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
     std::uninitialized_move(
-        pol, non_input, non_input, it);            // expected-error@*:* {{static assertion failed: uninitialized_move}}
+        pol, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: uninitialized_move}}
     std::uninitialized_move(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move}}
     std::uninitialized_move_n(
-        pol, non_input, n, it); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
+        pol, non_fwd, n, it); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
     std::uninitialized_move_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
   }

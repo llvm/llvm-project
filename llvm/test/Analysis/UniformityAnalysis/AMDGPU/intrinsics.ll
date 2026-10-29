@@ -340,7 +340,7 @@ bb:
   ret void
 }
 
-; CHRCK: DIVERGENT:   %tmp0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 false, <16 x half> %A, i1 false, <32 x half> %B, <8 x float> %C, i16 %Index, i1 false, i1 false)
+; CHECK: DIVERGENT:   %tmp0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 false, <16 x half> %A, i1 false, <32 x half> %B, <8 x float> %C, i16 %Index, i1 false, i1 false)
 define amdgpu_ps void @swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
   %tmp0 = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 0, <16 x half> %A, i1 0, <32 x half> %B, <8 x float> %C, i16 %Index, i1 false, i1 false)
   store <8 x float> %tmp0, ptr addrspace(1) %out

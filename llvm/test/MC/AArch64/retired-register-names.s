@@ -16,3 +16,67 @@ mrs x0, mpamvidsr_el2
 mrs x0, mpamvidsr_el3
 // CHECK:      :[[@LINE-1]]:9: error: expected readable system register
 // CHECK-NEXT: mrs x0, mpamvidsr_el3
+
+mrs x0, tpmin0_el0
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin0_el0
+
+mrs x0, tpmax0_el0
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax0_el0
+
+mrs x0, tpmin1_el0
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin1_el0
+
+mrs x0, tpmax1_el0
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax1_el0
+
+mrs x0, tpmin0_el1
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin0_el1
+
+mrs x0, tpmax0_el1
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax0_el1
+
+mrs x0, tpmin1_el1
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin1_el1
+
+mrs x0, tpmax1_el1
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax1_el1
+
+mrs x0, tpmin0_el2
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin0_el2
+
+mrs x0, tpmax0_el2
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax0_el2
+
+mrs x0, tpmin1_el2
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin1_el2
+
+mrs x0, tpmax1_el2
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax1_el2
+
+mrs x0, tpmin0_el12
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin0_el12
+
+mrs x0, tpmax0_el12
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax0_el12
+
+mrs x0, tpmin1_el12
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmin1_el12
+
+mrs x0, tpmax1_el12
+// CHECK:      :[[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, tpmax1_el12

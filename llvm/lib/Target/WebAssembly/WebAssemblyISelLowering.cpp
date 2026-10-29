@@ -787,14 +787,15 @@ static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
                  const TargetInstrInfo &TII) {
-  MachineInstr &CallParams = *CallResults.getPrevNode();
-  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
+  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() ==
+         (IsRetCall ? WebAssembly::RET_CALL_PARAMS : WebAssembly::CALL_PARAMS));
 
   bool IsIndirect =
       CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
-  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
   if (IsIndirect && CallParams.getOperand(0).isReg()) {
@@ -1355,6 +1356,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+
+    // A byval argument is copied into this function's stack frame below, and
+    // a tail call releases that frame before the callee reads the copy.
+    if (llvm::any_of(CLI.Outs, [](const ISD::OutputArg &Out) {
+          return Out.Flags.isByVal() && Out.Flags.getByValSize() != 0;
+        }))
+      NoTail("WebAssembly does not support tail calling with byval arguments");
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
@@ -3411,8 +3419,8 @@ static SDValue performBitcastCombine(SDNode *N,
     SDValue Concat, SetCCVector;
     ISD::CondCode SetCond;
 
-    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat), m_Value(SetCCVector),
-                                         m_CondCode(SetCond)))))
+    if (!sd_match(N, m_BitCast(m_c_SetCC(SetCond, m_Value(Concat),
+                                         m_Value(SetCCVector)))))
       return SDValue();
     if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
       return SDValue();
@@ -3458,17 +3466,22 @@ static SDValue performBitcastCombine(SDNode *N,
       SDValue ExtendedConcatOperandBitmask =
           DAG.getZExtOrTrunc(ConcatOperandBitmask, DL, ReturnVT);
 
-      // Shift the previously reconstructed bits to make room for this chunk.
+      // Shift each chunk's mask to its original lane position before merging it
+      // into the result:
+      //   Result bit index = I * ConcatOperandNumElts + local lane index
+      //
+      // Example: four chunks, each containing 8 mask bits:
+      //   result = M0 | (M1 << 8) | (M2 << 16) | (M3 << 24)
+      //
+      SDValue PositionedChunkBitmask = ExtendedConcatOperandBitmask;
       if (I != 0) {
-        ReconstructedBitmask = DAG.getNode(
-            ISD::SHL, DL, ReturnVT, ReconstructedBitmask,
-            DAG.getShiftAmountConstant(ConcatOperandNumElts, ReturnVT, DL));
+        PositionedChunkBitmask = DAG.getNode(
+            ISD::SHL, DL, ReturnVT, ExtendedConcatOperandBitmask,
+            DAG.getShiftAmountConstant(I * ConcatOperandNumElts, ReturnVT, DL));
       }
 
-      // Merge disjoint partial bitmasks with OR.
-      ReconstructedBitmask =
-          DAG.getNode(ISD::OR, DL, ReturnVT, ReconstructedBitmask,
-                      ExtendedConcatOperandBitmask);
+      ReconstructedBitmask = DAG.getNode(
+          ISD::OR, DL, ReturnVT, ReconstructedBitmask, PositionedChunkBitmask);
     }
 
     return ReconstructedBitmask;
@@ -3486,8 +3499,8 @@ static SDValue performBitmaskCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue LHS;
-  if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                            m_SpecificCondCode(ISD::SETLT))))
+  if (!sd_match(N->getOperand(1),
+                m_c_SpecificSetCC(ISD::SETLT, m_Value(LHS), m_Zero())))
     return SDValue();
 
   SDLoc DL(N);
@@ -3506,8 +3519,7 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue LHS;
   if (N->getNumOperands() < 2 ||
-      !sd_match(N->getOperand(1),
-                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+      !sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero())))
     return SDValue();
   EVT LT = LHS.getValueType();
   if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
@@ -3520,8 +3532,8 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDValue LHS;
-    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                              m_SpecificCondCode(SetType))))
+    if (!sd_match(N->getOperand(1),
+                  m_c_SpecificSetCC(SetType, m_Value(LHS), m_Zero())))
       return SDValue();
 
     SDLoc DL(N);
@@ -3737,9 +3749,24 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
+                          SelectionDAG &DAG) {
+  SDLoc DL(In);
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT InVT = In.getValueType();
+  unsigned NumElems = InVT.getVectorNumElements() * 2;
+  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
+  if (NumElems < RequiredNumElems) {
+    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
+  }
+  return Concat;
+}
+
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v8i32 && VT != MVT::v16i32)
+  if (VT != MVT::v4i32 && VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
 
   // Mul with extending inputs.
@@ -3779,6 +3806,8 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   //            |             | %low_low = i32x4.ext_low_i16x8_ %low
   //            |             | %low_high = i32x4.ext_high_i16x8_ %low
   //            |             | %res = concat_vector(%low_low, %low_high)
+  // v4i8       | v4i32       | %low = i16x8.extmul_low_i8x16_ %a, %b
+  //                          | %res = i32x4.ext_low_i16x8_ %low
 
   SDLoc DL(N);
   unsigned NumElts = VT.getVectorNumElements();
@@ -3811,14 +3840,21 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
         GetExtendHigh(MVT::v4i32, MulHigh),
     };
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubVectors);
-  } else {
-    assert(NumElts == 8);
+  } else if (NumElts == 8) {
     SDValue LowLHS = DAG.getNode(LHS->getOpcode(), DL, MVT::v8i16, ExtendInLHS);
     SDValue LowRHS = DAG.getNode(RHS->getOpcode(), DL, MVT::v8i16, ExtendInRHS);
     SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
     SDValue Lo = GetExtendLow(MVT::v4i32, MulLow);
     SDValue Hi = GetExtendHigh(MVT::v4i32, MulLow);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  } else {
+    assert(NumElts == 4);
+    SDValue LowLHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInLHS, 16, DAG));
+    SDValue LowRHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInRHS, 16, DAG));
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    return GetExtendLow(MVT::v4i32, MulLow);
   }
   return SDValue();
 }
@@ -3879,21 +3915,6 @@ static SDValue performMulCombine(SDNode *N,
         VT, DL, MulLow, MulHigh,
         {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
   }
-}
-
-SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
-                          SelectionDAG &DAG) {
-  SDLoc DL(In);
-  LLVMContext &Ctx = *DAG.getContext();
-  EVT InVT = In.getValueType();
-  unsigned NumElems = InVT.getVectorNumElements() * 2;
-  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
-  SDValue Concat =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getPOISON(InVT));
-  if (NumElems < RequiredNumElems) {
-    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
-  }
-  return Concat;
 }
 
 SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {

@@ -31,7 +31,7 @@
 ; at P should not be marked divergent.
 
 define amdgpu_kernel void @nested_irreducible(i32 %a, i32 %b, i32 %c) {
-; CHECK=LABEL: UniformityInfo for function 'nested_irreducible':
+; CHECK-LABEL: UniformityInfo for function 'nested_irreducible':
 ; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK-DAG:   depth=2: entries(P T) Q R
@@ -118,7 +118,7 @@ exit:
 ; Thus, any PHI at P should not be marked divergent.
 
 define amdgpu_kernel void @header_label_1(i32 %a, i32 %b, i32 %c) {
-; CHECK=LABEL: UniformityInfo for function 'header_label_1':
+; CHECK-LABEL: UniformityInfo for function 'header_label_1':
 ; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:  depth=1: entries(H) P Q T U R

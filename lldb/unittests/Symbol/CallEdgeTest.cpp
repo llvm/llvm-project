@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -30,7 +31,7 @@ using namespace lldb_private::plugin::dwarf;
 namespace {
 class CallEdgeTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO, SymbolFileDWARF,
-                TypeSystemClang>
+                TypeSystemClang, CPlusPlusLanguage>
       subsystems;
 
 public:

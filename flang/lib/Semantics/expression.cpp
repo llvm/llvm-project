@@ -1472,6 +1472,24 @@ std::vector<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscripts(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
+  // A scalar CHARACTER part with a triplet denotes a substring, even when
+  // its parent is array-valued. Substrings cannot specify a stride.
+  if (const Symbol *symbol{parser::GetLastName(ae.Base()).symbol}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    const auto *type{ultimate.GetType()};
+    if (ultimate.Rank() == 0 && type &&
+        type->category() == semantics::DeclTypeSpec::Character &&
+        !semantics::IsProcedure(ultimate) && ae.Subscripts().size() == 1) {
+      if (const auto *triplet{std::get_if<parser::SubscriptTriplet>(
+              &ae.Subscripts().front().u)}) {
+        if (const auto &stride{std::get<2>(triplet->t)}) {
+          Say(stride->thing.thing.value().source,
+              "A substring cannot have a stride"_err_en_US);
+          return std::nullopt;
+        }
+      }
+    }
+  }
   MaybeExpr baseExpr;
   {
     auto restorer{AllowWholeAssumedSizeArray()};
@@ -2784,6 +2802,13 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             *sym);
         return std::nullopt;
       }
+      const bool isGeneric{sym->has<semantics::GenericDetails>()};
+      auto withGenericName{[&](ProcedureDesignator proc) {
+        if (isGeneric) {
+          proc.set_genericName(sc.Component().source);
+        }
+        return proc;
+      }};
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
           const Symbol &generic{*sym};
@@ -2795,12 +2820,14 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto result{ResolveGeneric(
+          auto result{CheckAndResolveGenericReference(
               generic, arguments, adjustment, isSubroutine, SymbolVector{})};
           sym = result.specific;
           if (!sym) {
-            EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried, adjustment);
+            if (!result.errorReported) {
+              EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
+                  isSubroutine, arguments, result.tried, adjustment);
+            }
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2867,7 +2894,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
           AddPassArg(arguments, std::move(*dtExpr), *sym, false);
           return CalleeAndArguments{
-              ProcedureDesignator{*resolution}, std::move(arguments)};
+              withGenericName(ProcedureDesignator{*resolution}),
+              std::move(arguments)};
         } else if (dataRef.has_value()) {
           if (ExtractCoarrayRef(*dataRef)) {
             if (IsProcedurePointer(*sym)) {
@@ -2884,7 +2912,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               if (auto component{CreateComponent(std::move(*dataRef), *sym,
                       *dtSpec->scope(), /*C919bAlreadyEnforced=*/true)}) {
                 return CalleeAndArguments{
-                    ProcedureDesignator{std::move(*component)},
+                    withGenericName(ProcedureDesignator{std::move(*component)}),
                     std::move(arguments)};
               }
             }
@@ -2896,7 +2924,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 Expr<SomeDerived>{Designator<SomeDerived>{std::move(*dataRef)}},
                 *sym);
             return CalleeAndArguments{
-                ProcedureDesignator{*sym}, std::move(arguments)};
+                withGenericName(ProcedureDesignator{*sym}),
+                std::move(arguments)};
           }
         }
       }
@@ -2992,7 +3021,7 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
-static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
+static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
   std::vector<int> perArg;
@@ -3294,6 +3323,58 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
           *attrs == common::CUDASubprogramAttrs::HostDevice);
 }
 
+// A specific with only the DEVICE attribute cannot be referenced from host
+// code, whatever its dummy arguments' CUDA data attributes score.
+static bool IsCUDADeviceOnly(const Symbol &symbol) {
+  const Symbol *ultimate{&symbol.GetUltimate()};
+  // Type-bound specifics: inspect the bound procedure.
+  if (const auto *binding{
+          ultimate->detailsIf<semantics::ProcBindingDetails>()}) {
+    ultimate = &binding->symbol().GetUltimate();
+  }
+  const auto *subprogram{ultimate->detailsIf<semantics::SubprogramDetails>()};
+  auto attrs{subprogram ? subprogram->cudaSubprogramAttrs() : std::nullopt};
+  return attrs && *attrs == common::CUDASubprogramAttrs::Device;
+}
+
+// True when code in this scope may run on the device. FindCUDADeviceContext
+// reads the scope symbol's own CUDA attributes, which a separate module
+// procedure implementation does not carry: its interface does.
+static bool MayRunOnCUDADevice(const semantics::Scope &scope) {
+  if (semantics::FindCUDADeviceContext(&scope) ||
+      semantics::HasOpenACCRoutineDirective(&scope)) {
+    return true;
+  }
+  for (const semantics::Scope *s{&scope}; !s->IsGlobal(); s = &s->parent()) {
+    // CUF kernel and OpenACC regions share Scope::Kind::OpenACCConstruct and
+    // may hold device code in a host subprogram.
+    if (s->kind() == semantics::Scope::Kind::OpenACCConstruct) {
+      return true;
+    }
+    if (const Symbol *symbol{s->symbol()}) {
+      const auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()};
+      if (subp && subp->moduleInterface()) {
+        // Kernels (GLOBAL, GRID_GLOBAL) run device code too, so any attribute
+        // other than HOST makes this a device context.
+        const auto *interface{subp->moduleInterface()
+                ->GetUltimate()
+                .detailsIf<semantics::SubprogramDetails>()};
+        auto attrs{interface ? interface->cudaSubprogramAttrs() : std::nullopt};
+        if (attrs && *attrs != common::CUDASubprogramAttrs::Host) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Specifics of intrinsic modules such as CUDADEVICE (e.g. ATOMICADD).
+static bool IsFromIntrinsicModule(const Symbol &symbol) {
+  const Symbol *module{symbol.GetUltimate().owner().GetSymbol()};
+  return module && module->attrs().test(semantics::Attr::INTRINSIC);
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
@@ -3332,60 +3413,82 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
-    for (const Symbol &specific0 : genericDetails->specificProcs()) {
-      const Symbol &specific1{BypassGeneric(specific0)};
-      if (isSubroutine != !IsFunction(specific1)) {
-        continue;
-      }
-      const Symbol *specific{ResolveForward(specific1)};
-      if (!specific) {
-        continue;
-      }
-      if (std::optional<characteristics::Procedure> procedure{
-              characteristics::Procedure::Characterize(
-                  ProcedureDesignator{*specific}, context_.foldingContext(),
-                  /*emitError=*/false)}) {
-        ActualArguments localActuals{actuals};
-        if (specific->has<semantics::ProcBindingDetails>()) {
-          if (!adjustActuals.value()(*specific, localActuals)) {
-            continue;
-          }
+    bool inHostCode{
+        context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+        !GetContextualMessages().at().empty() &&
+        !MayRunOnCUDADevice(context_.FindScope(GetContextualMessages().at()))};
+    // Prefer specifics callable from host code at a host call site. If none
+    // matches, still accept device-only specifics of intrinsic modules, which
+    // host code has always been allowed to reference.
+    bool skipDeviceOnly{inHostCode};
+    const auto triedBefore{tried.size()};
+    for (;;) {
+      for (const Symbol &specific0 : genericDetails->specificProcs()) {
+        const Symbol &specific1{BypassGeneric(specific0)};
+        if (isSubroutine != !IsFunction(specific1)) {
+          continue;
         }
-        tried.push_back(*specific);
-        if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-                context_, false /* no integer conversions */) &&
-            CheckCompatibleArguments(
-                *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{
-              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
-          if ((procedure->IsElemental() && elemental) ||
-              (!procedure->IsElemental() && nonElemental)) {
-            if (crtMatchingDistance) {
-              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-              if (cmp > 0) {
-                continue;
-              }
-              if (cmp == 0) {
-                // 16.9.144(6): a bare NULL() is not allowed as an actual
-                // argument to a generic procedure if the specific procedure
-                // cannot be unambiguously distinguished
-                // Underspecified external procedure actual arguments can
-                // also lead to ambiguity.
-                return {nullptr, true /* due to ambiguity */, std::move(tried)};
-              }
-              // Matching distance is smaller than the previously matched
-              // specific. Let it go through so the current procedure is picked.
+        const Symbol *specific{ResolveForward(specific1)};
+        if (!specific) {
+          continue;
+        }
+        if (inHostCode && IsCUDADeviceOnly(*specific) &&
+            (skipDeviceOnly || !IsFromIntrinsicModule(*specific))) {
+          continue;
+        }
+        if (std::optional<characteristics::Procedure> procedure{
+                characteristics::Procedure::Characterize(
+                    ProcedureDesignator{*specific}, context_.foldingContext(),
+                    /*emitError=*/false)}) {
+          ActualArguments localActuals{actuals};
+          if (specific->has<semantics::ProcBindingDetails>()) {
+            if (!adjustActuals.value()(*specific, localActuals)) {
+              continue;
             }
           }
-          if (!procedure->IsElemental()) {
-            // takes priority over elemental match
-            nonElemental = specific;
-          } else {
-            elemental = specific;
+          tried.push_back(*specific);
+          if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+                  context_, false /* no integer conversions */) &&
+              CheckCompatibleArguments(
+                  *procedure, localActuals, foldingContext_)) {
+            CudaMatchingDistance d{ComputeCudaMatchingDistance(
+                context_, *procedure, localActuals)};
+            if ((procedure->IsElemental() && elemental) ||
+                (!procedure->IsElemental() && nonElemental)) {
+              if (crtMatchingDistance) {
+                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+                if (cmp > 0) {
+                  continue;
+                }
+                if (cmp == 0) {
+                  // 16.9.144(6): a bare NULL() is not allowed as an actual
+                  // argument to a generic procedure if the specific procedure
+                  // cannot be unambiguously distinguished
+                  // Underspecified external procedure actual arguments can
+                  // also lead to ambiguity.
+                  return {
+                      nullptr, true /* due to ambiguity */, std::move(tried)};
+                }
+                // Matching distance is smaller than the previously matched
+                // specific. Let it go through so the current procedure is
+                // picked.
+              }
+            }
+            if (!procedure->IsElemental()) {
+              // takes priority over elemental match
+              nonElemental = specific;
+            } else {
+              elemental = specific;
+            }
+            crtMatchingDistance = std::move(d);
           }
-          crtMatchingDistance = std::move(d);
         }
       }
+      if (!skipDeviceOnly || nonElemental || elemental) {
+        break;
+      }
+      skipDeviceOnly = false;
+      tried.erase(tried.begin() + triedBefore, tried.end());
     }
   }
   // Is there a derived type of the same name?
@@ -3438,6 +3541,29 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
   return {nullptr, false, std::move(tried)};
+}
+
+auto ExpressionAnalyzer::CheckAndResolveGenericReference(const Symbol &symbol,
+    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
+    bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
+    -> GenericResolution {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Attr::INTRINSIC is set for specific intrinsic names such as DSIN as well,
+  // and a reference to one of those is not a reference to a generic procedure.
+  if ((ultimate.has<semantics::GenericDetails>() ||
+          (ultimate.attrs().test(semantics::Attr::INTRINSIC) &&
+              context_.intrinsics().IsGenericIntrinsic(
+                  ultimate.name().ToString()))) &&
+      semantics::CheckConditionalArgsInGenericReference(
+          actuals, GetContextualMessages())) {
+    // Not resolving also leaves the parse tree symbol generic, so a second
+    // analysis of the expression reports the violation again.
+    GenericResolution result;
+    result.errorReported = true;
+    return result;
+  }
+  return ResolveGeneric(symbol, actuals, adjustActuals, isSubroutine,
+      std::move(tried), mightBeStructureConstructor);
 }
 
 const Symbol &ExpressionAnalyzer::AccessSpecific(
@@ -3557,8 +3683,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   SymbolVector tried;
   if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto result{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
-        SymbolVector{}, mightBeStructureConstructor)};
+    auto result{
+        CheckAndResolveGenericReference(*symbol, arguments, noAdjustment,
+            isSubroutine, SymbolVector{}, mightBeStructureConstructor)};
+    if (result.errorReported) {
+      return std::nullopt;
+    }
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
@@ -3577,6 +3707,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        // The PowerPC intrinsic checks and PowerPC lowering require constant
+        // values for some arguments; now that the call is committed to this
+        // resolution, fold any named-constant designators that were retained
+        // for storage association.
+        evaluate::FoldNamedConstantActualArguments(
+            GetFoldingContext(), arguments);
         semantics::CheckPPCIntrinsic(
             *symbol, *resolution, arguments, GetFoldingContext());
       }
@@ -3617,8 +3753,11 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           semantics::SymbolRef{*resolution}, std::move(arguments)};
     }
   } else if (IsProcedure(*resolution)) {
-    return CalleeAndArguments{
-        ProcedureDesignator{*resolution}, std::move(arguments)};
+    ProcedureDesignator proc{*resolution};
+    if (isGenericInterface) {
+      proc.set_genericName(name.source);
+    }
+    return CalleeAndArguments{std::move(proc), std::move(arguments)};
   }
   if (!context_.HasError(*resolution)) {
     AttachDeclaration(
@@ -4599,6 +4738,15 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
   if (!name->symbol) {
     return false;
   } else if (name->symbol->Rank() == 0) {
+    // The OpenMP special variables in DECLARE REDUCTION combiners and
+    // initializers are data objects, so a parenthesized reference to one
+    // of them can only be an (invalid) array element reference.
+    if (name->symbol->test(Symbol::Flag::OmpInVar) ||
+        name->symbol->test(Symbol::Flag::OmpOutVar) ||
+        name->symbol->test(Symbol::Flag::OmpPrivVar) ||
+        name->symbol->test(Symbol::Flag::OmpOrigVar)) {
+      return true;
+    }
     if (const Symbol *function{
             semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)}) {
       auto &msg{context.Say(funcRef.source,
@@ -5949,7 +6097,49 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
     }
   }
   auto restorer{context_.AllowNullPointer()};
-  return context_.Analyze(expr);
+  MaybeExpr result{context_.Analyze(expr)};
+  // For actual arguments of procedure references, retain a designator whose
+  // base is a named constant in designator form instead of replacing it by
+  // its folded Constant value, so that lowering associates the dummy argument
+  // with the named constant's storage.  This matters for sequence association
+  // of an array element actual argument (F'2023 15.5.2.12) and whenever the
+  // dummy's address is meaningful (e.g. OpenACC/OpenMP present checks).
+  // The inner Analyze calls below do not apply the outer folding performed
+  // by Analyze(parser::Expr), and folding still sees through the retained
+  // designator wherever a constant value is needed later.
+  if (isProcedureCall_ && result) {
+    // Look only at an expression that is itself a designator: a
+    // parenthesized designator is a primary, i.e. an expression
+    // (F'2023 R1001), and must keep its folded value.  Substring actual
+    // arguments (the F'2023 15.5.2.12 p4 form of character sequence
+    // association) are not retained here and keep their folded values.
+    if (const auto *designator{
+            std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
+      if (const auto *name{parser::Unwrap<parser::Name>(designator->value())}) {
+        // Whole named-constant array.
+        if (name->symbol &&
+            semantics::IsNamedConstant(name->symbol->GetUltimate()) &&
+            name->symbol->Rank() > 0) {
+          return context_.Analyze(*name);
+        }
+      } else {
+        // Named-constant array element or section (or array component of a
+        // scalar named constant of derived type), e.g. a(1), a(1:3), a(2:*),
+        // pt%arr(1).  A section with a vector subscript or a component of a
+        // section is retained too; those are not contiguous, and lowering
+        // copies them like any other actual argument that needs a copy.
+        if (const auto *ae{
+                parser::Unwrap<parser::ArrayElement>(designator->value())}) {
+          const auto &baseName{parser::GetFirstName(ae->Base())};
+          if (baseName.symbol &&
+              semantics::IsNamedConstant(baseName.symbol->GetUltimate())) {
+            return context_.Analyze(*ae);
+          }
+        }
+      }
+    }
+  }
+  return result;
 }
 
 bool ArgumentAnalyzer::AreConformable() const {

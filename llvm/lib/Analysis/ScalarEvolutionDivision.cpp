@@ -139,9 +139,9 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
     return cannotDivide(Numerator);
 
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              SCEV::NoWrapFlags::FlagNone);
+                              SCEVFlags::FlagNone);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               SCEV::NoWrapFlags::FlagNone);
+                               SCEVFlags::FlagNone);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {

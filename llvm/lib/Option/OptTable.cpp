@@ -214,9 +214,10 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
     const Info &In = OptionInfos[I];
     if (In.hasNoPrefix() || (!In.hasHelpText() && !In.GroupID))
       continue;
-    if (!(In.Visibility & VisibilityMask))
+    const InfoExtra &Extra = getExtra(In);
+    if (!(Extra.Visibility & VisibilityMask))
       continue;
-    if (In.Flags & DisableFlags)
+    if (Extra.Flags & DisableFlags)
       continue;
 
     StringRef Name = In.getName(StrTable, PrefixesTable);
@@ -237,8 +238,8 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
                                unsigned MaximumDistance) const {
   return internalFindNearest(
       Option, NearestString, MinimumLength, MaximumDistance,
-      [VisibilityMask](const Info &CandidateInfo) {
-        return (CandidateInfo.Visibility & VisibilityMask) == 0;
+      [this, VisibilityMask](const Info &CandidateInfo) {
+        return (getExtra(CandidateInfo).Visibility & VisibilityMask) == 0;
       });
 }
 
@@ -248,10 +249,11 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
                                unsigned MaximumDistance) const {
   return internalFindNearest(
       Option, NearestString, MinimumLength, MaximumDistance,
-      [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
-        if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
+      [this, FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
+        unsigned Flags = getExtra(CandidateInfo).Flags;
+        if (FlagsToInclude && !(Flags & FlagsToInclude))
           return true;
-        if (CandidateInfo.Flags & FlagsToExclude)
+        if (Flags & FlagsToExclude)
           return true;
         return false;
       });
@@ -297,6 +299,10 @@ unsigned OptTable::internalFindNearest(
       std::tie(NormalizedName, RHS) = Option.split(Last);
       if (Option.find(Last) == NormalizedName.size())
         NormalizedName += Last;
+    } else if (CandidateInfo.Kind == opt::Option::FlagOrEqClass ||
+               CandidateInfo.Kind == opt::Option::SeparateOrEqClass) {
+      NormalizedName = Option.split('=').first;
+      RHS = Option.drop_front(NormalizedName.size());
     } else
       NormalizedName = Option;
 
@@ -627,6 +633,15 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     break;
 
   case Option::FlagClass:
+  case Option::FlagOrEqClass:
+    break;
+
+  case Option::SeparateOrEqClass:
+    Name += '=';
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id); !MetaVarName.empty())
+      Name += MetaVarName;
+    else
+      Name += "<value>";
     break;
 
   case Option::ValuesClass:
@@ -716,8 +731,8 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          StringRef SubCommand) const {
   return internalPrintHelp(
       OS, Usage, Title, SubCommand, ShowHidden, ShowAllAliases,
-      [VisibilityMask](const Info &CandidateInfo) -> bool {
-        return (CandidateInfo.Visibility & VisibilityMask) == 0;
+      [this, VisibilityMask](const Info &CandidateInfo) -> bool {
+        return (getExtra(CandidateInfo).Visibility & VisibilityMask) == 0;
       },
       VisibilityMask);
 }
@@ -729,10 +744,11 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   FlagsToExclude &= ~HelpHidden;
   return internalPrintHelp(
       OS, Usage, Title, /*SubCommand=*/{}, ShowHidden, ShowAllAliases,
-      [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
-        if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
+      [this, FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
+        unsigned Flags = getExtra(CandidateInfo).Flags;
+        if (FlagsToInclude && !(Flags & FlagsToInclude))
           return true;
-        if (CandidateInfo.Flags & FlagsToExclude)
+        if (Flags & FlagsToExclude)
           return true;
         return false;
       },
@@ -799,7 +815,7 @@ void OptTable::internalPrintHelp(
       continue;
 
     const Info &CandidateInfo = getInfo(Id);
-    if (!ShowHidden && (CandidateInfo.Flags & opt::HelpHidden))
+    if (!ShowHidden && (getExtra(CandidateInfo).Flags & opt::HelpHidden))
       continue;
 
     if (ExcludeOption(CandidateInfo))

@@ -349,6 +349,13 @@ namespace Inheritance {
   class __single_inheritance A;
   class __multiple_inheritance B;
   class __virtual_inheritance C;
+
+  // The single underscore variants are the same as the double underscore ones.
+  // Some of these would crash due to typo correction because the spellings
+  // were missing from Attr.td but supported by TokenKinds.def. See GH228003.
+  class _single_inheritance D;
+  class _multiple_inheritance E;
+  class _virtual_inheritance F;
 }
 
 struct StructWithProperty {

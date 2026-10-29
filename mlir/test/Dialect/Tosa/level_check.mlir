@@ -8,6 +8,14 @@ func.func @test_argmax_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tenso
 
 // -----
 
+func.func @test_argmin_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
+  // expected-error@+1 {{'tosa.argmin' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = "tosa.argmin"(%arg0) <{axis = 4 : i32}> : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
+  return %0 : tensor<1x1x1x1x29x4xi32>
+}
+
+// -----
+
 func.func @test_clamp_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
   // expected-error@+1 {{'tosa.clamp' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.clamp %arg0 min_val(-3.40282347E+38 : f32) max_val(3.40282347E+38 : f32) : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
@@ -1020,7 +1028,7 @@ func.func @test_maxpool2d_adaptive_pad_first(%arg0: tensor<1x32x8194x8xf32>) -> 
   %a = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %b = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
-  
+
   %stride = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %pad = tosa.const_shape values(dense<[8193, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
   // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
@@ -1194,6 +1202,19 @@ func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x7970
 
 // -----
 
+// A non-positive scale is invalid and reported by the ERROR_IF check under
+// strict-op-spec-alignment. Here (non-strict), the level check must skip the
+// scale ratio comparison to avoid dividing by scale_x_d = 0.
+func.func @test_resize_nonpositive_scale_skips_level_check(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
+  %scale = tosa.const_shape values(dense<[4, 2, 1, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %1 = tosa.resize %arg0, %scale, %offset, %border mode<BILINEAR> : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
+  return %1 : tensor<1x64x64x8xf32>
+}
+
+// -----
+
 func.func @test_tensor_size_valid(%arg0: tensor<1x536870911xf32>) {
   %0 = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
   %1 = tosa.const_shape values(dense<1> : tensor<2xindex>) : () -> !tosa.shape<2>
@@ -1269,6 +1290,24 @@ func.func @test_rfft2d_tensor_size_invalid(%arg0: tensor<536870912x8x16xf32>) ->
 
 // -----
 
+func.func @test_matmul_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x4x5xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x5x4xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x5x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
 func.func @test_matmul_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %arg1: tensor<23178x19x28xf32>) -> tensor<23178x20000x28xf32> {
   %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
@@ -1283,6 +1322,24 @@ func.func @test_matmul_t_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, 
   // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<23178x20000x19xf32>, tensor<23178x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<23178x20000x28xf32>
   return %0 : tensor<23178x20000x28xf32>
+}
+
+// -----
+
+func.func @test_matmul_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_matmul_t_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
 }
 
 // -----

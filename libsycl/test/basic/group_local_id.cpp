@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
@@ -6,7 +14,7 @@
 
 #include <cassert>
 
-template <int Dims> class group_local_id_kernel;
+template <int Dims> class GroupLocalIdKernel;
 
 template <int Dims>
 bool runGroupLocalIdCase(sycl::queue &Q, sycl::nd_range<Dims> ExecRange,
@@ -15,7 +23,7 @@ bool runGroupLocalIdCase(sycl::queue &Q, sycl::nd_range<Dims> ExecRange,
   for (size_t I = 0; I < Count; ++I)
     Out[I] = -1;
 
-  Q.parallel_for<group_local_id_kernel<Dims>>(
+  Q.parallel_for<GroupLocalIdKernel<Dims>>(
       ExecRange, [=](sycl::nd_item<Dims> Item) {
         Out[Item.get_global_linear_id()] =
             (Item.get_local_id() == Item.get_group().get_local_id());

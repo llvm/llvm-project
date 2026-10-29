@@ -90,31 +90,31 @@ Error unloadLibrary(void *Handle) {
   return Error::success();
 }
 
-std::vector<std::optional<void *>>
-lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names) {
-  std::vector<std::optional<void *>> Result;
-  Result.reserve(Names.size());
+SymbolLookupResult lookupLibrarySymbols(void *Handle,
+                                        const SymbolLookupSet &Symbols) {
+  SymbolLookupResult Result;
+  Result.reserve(Symbols.size());
 
   if (isGlobalLookupHandle(Handle)) {
     std::vector<HMODULE> Modules;
 
     if (!getProcessModules(Modules)) {
-      Result.resize(Names.size(), std::nullopt);
+      Result.resize(Symbols.size());
       return Result;
     }
 
-    for (const auto &Name : Names) {
+    for (const auto &Sym : Symbols) {
       std::optional<void *> Addr;
 
       // Search the executable first.
       if (!Modules.empty())
-        Addr = lookupSymbol(Modules.front(), Name);
+        Addr = lookupSymbol(Modules.front(), Sym.first);
 
       // Match LLVM's existing Windows DynamicLibrary behavior by searching
       // loaded DLLs in reverse order.
       if (!Addr && Modules.size() > 1) {
         for (auto I = Modules.rbegin(), E = Modules.rend() - 1; I != E; ++I) {
-          Addr = lookupSymbol(*I, Name);
+          Addr = lookupSymbol(*I, Sym.first);
           if (Addr)
             break;
         }
@@ -129,8 +129,8 @@ lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names) {
   assert(Handle && "invalid library handle");
 
   HMODULE Library = static_cast<HMODULE>(Handle);
-  for (const auto &Name : Names)
-    Result.push_back(lookupSymbol(Library, Name));
+  for (const auto &Sym : Symbols)
+    Result.push_back(lookupSymbol(Library, Sym.first));
 
   return Result;
 }

@@ -24,13 +24,13 @@ void use() { Ctor c; Dtor d; }
 
 // Static local inside the constructor body.
 
-// CIR-DAG: cir.global linkonce_odr comdat @_ZZN4CtorC1EvE1x = #cir.int<42> : !s32i {alignment = 4 : i64}
+// CIR-DAG: cir.global linkonce_odr comdat @_ZZN4CtorC1EvE1x = #cir.int<42> : !s32i align(4)
 // LLVM-DAG: @_ZZN4CtorC1EvE1x = linkonce_odr global i32 42, comdat, align 4
 
 
 // Static local inside the destructor body.
 
-// CIR-DAG: cir.global linkonce_odr comdat @_ZZN4DtorD1EvE1y = #cir.int<7> : !s32i {alignment = 4 : i64}
+// CIR-DAG: cir.global linkonce_odr comdat @_ZZN4DtorD1EvE1y = #cir.int<7> : !s32i align(4)
 // LLVM-DAG: @_ZZN4DtorD1EvE1y = linkonce_odr global i32 7, comdat, align 4
 
 

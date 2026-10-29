@@ -484,6 +484,7 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       NewInstr->addOperand(Base);
     for (unsigned Idx = 1 + 1; Idx < 1 + X86::AddrNumOperands; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
+    NewInstr->getOperand(7).setIsDead(MBBI->getOperand(11).isDead());
     // Finally, restore the value of RBX.
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
                      /*SrcIsKill*/ true);

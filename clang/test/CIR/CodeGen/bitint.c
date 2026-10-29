@@ -21,8 +21,8 @@ __int128 int128_var;
 signed _BitInt(256) bitint256_var;
 signed _BitInt(254) bitint254_var;
 
-// CIR: cir.global external @bitint128_var = #cir.int<0> : !s128i_bitint {alignment = 8 : i64}
-// CIR: cir.global external @int128_var = #cir.int<0> : !s128i {alignment = 16 : i64}
+// CIR: cir.global external @bitint128_var = #cir.int<0> : !s128i_bitint align(8)
+// CIR: cir.global external @int128_var = #cir.int<0> : !s128i align(16)
 // CIR: cir.global external @bitint256_var = #cir.int<0> : !s256i_bitint
 // CIR: cir.global external @bitint254_var = #cir.int<0> : !cir.int<s, 254, bitint>
 

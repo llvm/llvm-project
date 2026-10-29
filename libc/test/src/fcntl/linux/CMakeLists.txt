@@ -1,7 +1,7 @@
 add_libc_test(
   fallocate_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     fallocate_test.cpp
   DEPENDS

@@ -51,3 +51,44 @@ uint32x2_t test_pusati_u32x2_out_of_range(int32x2_t v) {
   // expected-error@+1 {{argument value 32 is outside the valid range [0, 31]}}
   return __riscv_pusati_u32x2(v, 32);
 }
+
+int32_t test_sati_i32_min_width(int32_t v) { return __riscv_sati_i32(v, 1); }
+
+int32_t test_sati_i32_max_width(int32_t v) { return __riscv_sati_i32(v, 32); }
+
+uint32_t test_usati_u32_max_width(int32_t v) {
+  return __riscv_usati_u32(v, 31);
+}
+
+int32_t test_sati_i32_out_of_range(int32_t v) {
+  // expected-error@+1 {{argument value 33 is outside the valid range [1, 32]}}
+  return __riscv_sati_i32(v, 33);
+}
+
+int32_t test_sati_i32_zero_width(int32_t v) {
+  // expected-error@+1 {{argument value 0 is outside the valid range [1, 32]}}
+  return __riscv_sati_i32(v, 0);
+}
+
+uint32_t test_usati_u32_out_of_range(int32_t v) {
+  // expected-error@+1 {{argument value 32 is outside the valid range [0, 31]}}
+  return __riscv_usati_u32(v, 32);
+}
+
+#if __riscv_xlen == 64
+int64_t test_sati_i64_max_width(int64_t v) { return __riscv_sati_i64(v, 64); }
+
+uint64_t test_usati_u64_max_width(int64_t v) {
+  return __riscv_usati_u64(v, 63);
+}
+
+int64_t test_sati_i64_out_of_range(int64_t v) {
+  // expected-error@+1 {{argument value 65 is outside the valid range [1, 64]}}
+  return __riscv_sati_i64(v, 65);
+}
+
+uint64_t test_usati_u64_out_of_range(int64_t v) {
+  // expected-error@+1 {{argument value 64 is outside the valid range [0, 63]}}
+  return __riscv_usati_u64(v, 64);
+}
+#endif

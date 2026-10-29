@@ -70,7 +70,7 @@ for.end:
 
 ; LV: !0 = !{!1}
 ; LV: !1 = distinct !{!1, !2}
-; LV: !2 = distinct !{!2, !"LVerDomain"}
+; LV: !2 = distinct !{!2, i1 false, !"LVerDomain"}
 ; LV: !3 = !{!4}
 ; LV: !4 = distinct !{!4, !2}
 ; LV: !5 = !{!1, !6}

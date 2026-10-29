@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TargetParser/Triple.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
@@ -22,6 +23,30 @@ static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
 /// the host module, where it cannot share the symbol of the original. The dot
 /// keeps it clear of any Fortran or C identifier.
 static constexpr llvm::StringRef cudaDeviceCopySuffix = ".device";
+/// Section holding the host runtime type information shared with device code
+/// under -gpu=mem:managed. It must be a valid C identifier so the linker
+/// defines the __start_ and __stop_ symbols bounding it.
+static constexpr llvm::StringRef cudaSharedTypeInfoSection = "__nv_type_info";
+/// Name prefix of the page-aligned global emitted last in that section by each
+/// translation unit, so that the section starts on a page boundary and the
+/// pages before the last one hold only type information.
+static constexpr llvm::StringRef cudaSharedTypeInfoEndPrefix =
+    "__nv_type_info_end_";
+/// Alignment of that global: the largest page size of \p triple, so that the
+/// layout holds whatever page size the system uses.
+inline int64_t getCudaSharedTypeInfoAlignment(const llvm::Triple &triple) {
+  if (triple.isAArch64() || triple.isPPC64())
+    return 65536;
+  return 4096;
+}
+/// Attribute on the GPU module mapping the name of each shared type
+/// descriptor to the managed pointer holding its host address.
+static constexpr llvm::StringRef cudaSharedTypeDescsAttrName =
+    "cuf.shared_type_descs";
+/// Attribute on the host copy of such a managed pointer, referencing the type
+/// descriptor whose address it holds.
+static constexpr llvm::StringRef cudaHostTypeDescAttrName =
+    "cuf.host_type_desc";
 
 namespace fir {
 class FirOpBuilder;
@@ -37,8 +62,23 @@ mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
 bool isCUDADeviceContext(mlir::Operation *op);
 bool isCUDADeviceContext(mlir::Region &,
                          bool isDoConcurrentOffloadEnabled = false);
+
+/// True when \p op is compiled for device execution: a CUDA device procedure,
+/// a GPU module or launch, or an OpenACC offload region. Host and host_device
+/// procedures return false. Unlike isCUDADeviceContext, gpu.module and
+/// gpu.launch count even without a CUDA procedure attribute, and host_data
+/// does not.
+bool isExecutingOnDevice(mlir::Operation *op);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
 bool isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr);
+
+/// True when \p op holds runtime type information generated for a derived
+/// type (type descriptor, binding table, component table, names, ...).
+bool isTypeInfoGlobal(fir::GlobalOp op);
+
+/// True when \p op is the type descriptor of a derived type, the type-info
+/// global whose address is stored in descriptors.
+bool isTypeDescriptorGlobal(fir::GlobalOp op);
 
 /// True for procedures that have a device side: attributes(device), (global),
 /// (grid_global) and (host,device). Unlike isCUDADeviceContext, host_device
@@ -77,7 +117,11 @@ void remapProcedureSymbols(
 /// smaller than the host one.
 void setDeviceAllocationPolicy(mlir::Operation *func);
 
-void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
+/// Emit a cuf.sync_descriptor when \p box is the descriptor of a registered
+/// CUDA device global. \p loc is the source location of the statement that
+/// may have modified the descriptor.
+void genPointerSync(mlir::Location loc, const mlir::Value box,
+                    fir::FirOpBuilder &builder);
 
 int computeElementByteSize(mlir::Location loc, mlir::Type type,
                            fir::KindMapping &kindMap,
