@@ -65,12 +65,12 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
   bool ShouldDefer = getLangOpts().CUDA && getLangOpts().GPUDeferDiag &&
                      DiagnosticIDs::isDeferrable(DiagID) &&
                      (SemaRef.DeferDiags || !IsError);
-  // Even without -fgpu-defer-diag, defer device-side errors inside an
-  // implicit-H+D explicit instantiation so end-of-TU classification can
-  // choose between surfacing them or emitting a trap body.
+  // Even without -fgpu-defer-diag, defer device-side errors inside selected
+  // implicit-H+D functions so end-of-TU classification can choose between
+  // surfacing them, discarding them, or emitting a trap body.
   if (!ShouldDefer && getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
       DiagnosticIDs::isDeferrable(DiagID) &&
-      SemaCUDA::isImplicitHDExplicitInstantiation(
+      SemaCUDA::isImplicitHostDeviceFunction(
           SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)))
     ShouldDefer = true;
   auto SetIsLastErrorImmediate = [&](bool Flag) {
