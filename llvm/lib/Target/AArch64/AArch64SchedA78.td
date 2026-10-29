@@ -1135,6 +1135,7 @@ def : InstRW<[A78Write_3c_1V], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
 // FP convert, Javascript from vec to gen reg
 // FP convert, from vec to vec reg
 def : SchedAlias<WriteFCvt, A78Write_2c_1V0>;
+def : InstRW<[A78Write_2c_1V0], (instrs FCVTXNv1i64)>;
 
 // FP move, immed
 def : SchedAlias<WriteFImm, A78Write_2c_1V>;

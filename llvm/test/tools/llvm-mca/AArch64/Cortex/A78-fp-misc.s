@@ -154,7 +154,7 @@ fmov	x0, d1
 # CHECK-NEXT:  1      2     1.00                        fcvt	s0, h1
 # CHECK-NEXT:  1      2     1.00                        fcvt	h0, d1
 # CHECK-NEXT:  1      2     1.00                        fcvt	d0, h1
-# CHECK-NEXT:  1      2     0.50                        fcvtxn	s0, d1
+# CHECK-NEXT:  1      2     1.00                        fcvtxn	s0, d1
 # CHECK-NEXT:  1      3     3.00                        scvtf	h0, w1
 # CHECK-NEXT:  1      3     3.00                        scvtf	h0, x1
 # CHECK-NEXT:  1      3     3.00                        scvtf	s0, w1
@@ -278,7 +278,7 @@ fmov	x0, d1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     40.00   -      -      -     51.00  45.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     40.00   -      -      -     51.50  44.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -288,7 +288,7 @@ fmov	x0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	s0, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	h0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvt	d0, h1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcvtxn	s0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     fcvtxn	s0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h0, w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	h0, x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -      -      -     scvtf	s0, w1
