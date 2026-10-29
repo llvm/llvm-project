@@ -64,9 +64,6 @@ bool LoadStoreVec::acceptOrRevert() {
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
   if (!canVectorize(Loads))
     return nullptr;
 
@@ -74,7 +71,10 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
   Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  auto *VecL =
+      LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  Utils::propagateMetadata(VecL, Loads);
+  return VecL;
 }
 
 Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
@@ -208,9 +208,6 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
 }
 
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!VecUtils::areConsecutive<StoreInst, Instruction>(
-          Stores, A->getScalarEvolution(), *DL))
-    return false;
   if (!canVectorize(Stores))
     return false;
   SmallVector<Value *, 4> Operands;
@@ -269,7 +266,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
-  StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
@@ -281,9 +279,6 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
 LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
   auto VecTy = canVectorize(Loads);
   if (!VecTy)
     return nullptr;

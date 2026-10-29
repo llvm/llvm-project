@@ -758,10 +758,11 @@ class relaxed_load<PatFrags base>
   let IsAtomicOrderingAcquireOrStronger = 0;
 }
 
+// seq_cst too: a seq_cst store is xchg.
 class acquiring_load<PatFrags base>
     : PatFrag<(ops node:$ptr), (base node:$ptr)> {
   let IsAtomic = 1;
-  let IsAtomicOrderingAcquire = 1;
+  let IsAtomicOrderingAcquireOrStronger = 1;
 }
 
 let Predicates = [BPFHasLoadAcqStoreRel] in {

@@ -807,7 +807,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 
 MutableOperandRange
 cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
-  // The eh_token operand is not forwarded to the parent region.
+  // The eh_token operand is not modeled as forwarded to any successor.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
@@ -2069,31 +2069,31 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // Execution always starts in the body region.
+  // The cleanup can also run from the middle of the body, on an unwind out of
+  // a call or on a cir.return, cir.break, cir.continue or cir.goto. None of
+  // these is a branch point, so the cleanup region is a successor of the
+  // parent and of every body exit to stand in for them.
   if (point.isParent()) {
+    regions.reserve(regions.size() + 2);
     regions.emplace_back(&getBodyRegion());
+    regions.emplace_back(&getCleanupRegion());
     return;
   }
 
   mlir::Operation *term = point.getTerminatorPredecessorOrNull();
-  assert(term && "expected a terminator predecessor");
-
-  if (term->getParentRegion() == &getBodyRegion()) {
-    // cir.resume unwinds out of the body. Every other terminator, such as
-    // cir.yield or cir.co_return, is a normal exit.
-    cir::CleanupKindAttr kind = getCleanupKindAttr();
-    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
-      regions.emplace_back(&getCleanupRegion());
-      return;
-    }
+  if (term->getParentRegion() == &getCleanupRegion()) {
+    regions.emplace_back(getOperation());
+    return;
   }
 
-  // Exiting the cleanup region, or a body exit that skips it, leaves the
-  // operation. An unwind out of the middle of the body is not a
-  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
-  // cir.goto, so a cleanup region reached only that way has no predecessor
-  // here.
-  regions.emplace_back(getOperation());
+  regions.emplace_back(&getCleanupRegion());
+
+  // cir.resume unwinds out of the body, and every other terminator is a
+  // normal exit. An exit that the cleanup kind does not cover can also leave
+  // the operation directly.
+  cir::CleanupKindAttr kind = getCleanupKindAttr();
+  if (isa<cir::ResumeOp>(term) ? !kind.isEH() : !kind.isNormal())
+    regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -5147,18 +5147,30 @@ LogicalResult cir::TypeInfoAttr::verify(
 void cir::TryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  // The `try` and the `catchers` region branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
+  if (point.isParent()) {
+    regions.emplace_back(&getTryRegion());
+  } else {
+    // A handler exit leaves the operation.
+    mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+    if (term->getParentRegion() != &getTryRegion()) {
+      regions.emplace_back(getOperation());
+      return;
+    }
+    // A cir.resume ending the try region unwinds into a handler, so it leaves
+    // the operation only when there is none. Every other exit can leave it.
+    if (!isa<cir::ResumeOp>(term) || getHandlerRegions().empty())
+      regions.emplace_back(getOperation());
   }
 
-  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
-
+  // Most handlers are entered by an unwind out of a call in the try region,
+  // which is not a branch point, so the handlers are successors of the parent
+  // and of every exit from the try region to stand in for it.
+  //
   // TODO(CIR): If we know a target function never throws a specific type, we
   // can remove the catch handler.
-  for (mlir::Region &handlerRegion : this->getHandlerRegions())
-    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
+  regions.reserve(regions.size() + getHandlerRegions().size());
+  for (mlir::Region &handlerRegion : getHandlerRegions())
+    regions.emplace_back(&handlerRegion);
 }
 
 /// Verify that each cir.init_catch_param in \p handlerRegion, outside any

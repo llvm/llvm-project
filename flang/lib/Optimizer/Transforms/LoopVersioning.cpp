@@ -9,7 +9,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This pass looks for loops iterating over assumed-shape arrays, that can
-/// be optimized by "guessing" that the stride is element-sized.
+/// be optimized by "guessing" that the stride is element-sized. A local
+/// POINTER that is associated with such an array is treated like the array.
+/// A loop that is versioned anyway also checks the strides of local POINTER
+/// arrays whose pointer assignment is not visible, as this does not add
+/// another copy of the loop.
 ///
 /// This is done by creating two versions of the same loop: one which assumes
 /// that the elements are contiguous (stride == size of element), and one that
@@ -42,6 +46,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -190,6 +195,39 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
 
   LLVM_DEBUG(llvm::dbgs() << "Unsupported rank/type: " << v << '\n');
   return {0, 0};
+}
+
+/// Return true iff \p var is the address of a local POINTER variable.
+static bool isLocalPointer(mlir::Value var) {
+  auto declare = var.getDefiningOp<fir::DeclareOp>();
+  return declare && fir::isPointerType(var.getType()) &&
+         declare.getMemref().getDefiningOp<fir::AllocaOp>();
+}
+
+/// If \p load reads a local POINTER variable, return the descriptor stored by
+/// the pointer assignment that reaches it: the closest preceding store in the
+/// same or an enclosing block, provided that nothing in between may modify the
+/// POINTER, including the rest of any loop that contains the load. Return
+/// nullptr otherwise.
+static mlir::Value getAssignedDescriptor(fir::LoadOp load,
+                                         mlir::AliasAnalysis &aliasAnalysis) {
+  mlir::Value var = load.getMemref();
+  if (!isLocalPointer(var))
+    return nullptr;
+  mlir::Operation *cur = load;
+  while (true) {
+    for (mlir::Operation *op = cur->getPrevNode(); op; op = op->getPrevNode()) {
+      if (auto store = mlir::dyn_cast<fir::StoreOp>(op))
+        if (store.getMemref() == var)
+          return store.getValue();
+      if (aliasAnalysis.getModRef(op, var).isMod())
+        return nullptr;
+    }
+    cur = cur->getParentOp();
+    if (!cur || mlir::isa<mlir::func::FuncOp>(cur) ||
+        aliasAnalysis.getModRef(cur, var).isMod())
+      return nullptr;
+  }
 }
 
 /// Follow descriptor producers to identify a function argument. Traverse a
@@ -447,6 +485,48 @@ void LoopVersioningPass::runOnOperation() {
     return;
   }
 
+  // This pass runs on a function, so FIR alias analysis must not look up
+  // callees or globals. Its recursive effects cache must be cleared when the
+  // IR changes between queries.
+  fir::AliasAnalysisRecursiveEffectsCache recursiveEffectsCache;
+  auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+  fir::AliasAnalysis firAliasAnalysis{recursiveEffectsCache};
+  firAliasAnalysis.disableSymbolLookups();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
+
+  // A local POINTER associated with one of the dummies above, or with a
+  // section of one that keeps the first dimension contiguous, is as likely
+  // contiguous as the dummy. When nothing can change such a POINTER between
+  // its pointer assignment and a load of it inside a loop, use the assigned
+  // descriptor instead of the load, so that the loop is versioned like a loop
+  // over the dummy. All decisions are made before any IR is changed.
+  // TODO: This is not specific to loop versioning. Move it into a separate
+  // optimization pass.
+  {
+    llvm::SmallVector<std::pair<fir::LoadOp, mlir::Value>> forwards;
+    func.walk([&](fir::LoadOp load) {
+      if (!load->getParentOfType<fir::DoLoopOp>() ||
+          !fir::isBoxAddress(load.getMemref().getType()))
+        return;
+      mlir::Value assigned = getAssignedDescriptor(load, aliasAnalysis);
+      if (!assigned)
+        return;
+      mlir::Value source = normaliseVal(assigned);
+      if (llvm::any_of(argsOfInterest,
+                       [&](const ArgInfo &a) { return a.arg == source; }))
+        forwards.emplace_back(load, assigned);
+    });
+    for (auto [load, assigned] : forwards) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Forwarding POINTER assignment to: " << load << '\n');
+      load.getResult().replaceAllUsesWith(assigned);
+      load.erase();
+    }
+    // The cached effects may refer to the erased loads.
+    if (!forwards.empty())
+      recursiveEffectsCache.clear();
+  }
+
   // A list of all loops in the function in post-order.
   mlir::SmallVector<fir::DoLoopOp> originalLoops;
   // Information about the arguments usage by the instructions
@@ -578,6 +658,83 @@ void LoopVersioningPass::runOnOperation() {
     for (auto &arg : argsInLoop.usageInfo)
       info.argsAndDims.push_back(arg.second);
     loopsOfInterest.emplace_back(std::move(info));
+  }
+
+  // A loop that is versioned anyway can also check the stride of a local
+  // POINTER array that it accesses, without another copy of the loop. Do this
+  // when the pointer assignment is not visible, e.g. because a call associated
+  // the POINTER, and the loop does not modify the POINTER. If the pointer
+  // assignment is visible, the POINTER was either forwarded above, or it is
+  // associated with something else, such as a row of a dummy or a local array,
+  // and is left alone. A descriptor loaded inside the loop is loaded before
+  // the loop instead, so that the check can use it. Visit outer loops first,
+  // so that a descriptor checked for a loop is not checked again for its inner
+  // loops.
+  {
+    llvm::DenseMap<mlir::Operation *, llvm::SmallPtrSet<mlir::Value, 4>> added;
+    llvm::SmallVector<std::pair<fir::LoadOp, mlir::Operation *>> hoists;
+    for (OpsWithArgs &info : llvm::reverse(loopsOfInterest)) {
+      auto loop = mlir::cast<fir::DoLoopOp>(info.op);
+      // Accesses in the loop and its inner loops, by descriptor.
+      llvm::MapVector<mlir::Value, llvm::SmallVector<mlir::Operation *>>
+          accesses;
+      loop.getBody()->walk([&](mlir::Operation *op) {
+        if (mlir::isa<fir::ArrayCoorOp, fir::CoordinateOp>(op))
+          accesses[op->getOperand(0)].push_back(op);
+      });
+      for (auto &entry : accesses) {
+        mlir::Value desc = entry.first;
+        auto load = desc.getDefiningOp<fir::LoadOp>();
+        if (!load || !isLocalPointer(load.getMemref()))
+          continue;
+        // Only consider descriptors that the loop itself accesses, and that
+        // are not checked for this loop or an outer loop yet.
+        if (llvm::none_of(entry.second,
+                          [&](mlir::Operation *op) {
+                            return op->getParentOfType<fir::DoLoopOp>() == loop;
+                          }) ||
+            llvm::any_of(info.argsAndDims,
+                         [&](const ArgInfo &a) { return a.arg == desc; }))
+          continue;
+        bool checkedOutside = false;
+        for (auto parent = loop->getParentOfType<fir::DoLoopOp>(); parent;
+             parent = parent->getParentOfType<fir::DoLoopOp>()) {
+          auto it = added.find(parent);
+          if (it != added.end() && it->second.contains(desc))
+            checkedOutside = true;
+        }
+        if (checkedOutside || getAssignedDescriptor(load, aliasAnalysis))
+          continue;
+        bool inLoop = loop->isProperAncestor(load);
+        if (inLoop && (!domInfo.dominates(load.getMemref(), loop) ||
+                       aliasAnalysis.getModRef(loop, load.getMemref()).isMod()))
+          continue;
+        unsigned rank;
+        size_t size;
+        std::tie(rank, size) = getRankAndElementSize(kindMap, *dl, desc);
+        if (rank == 0 || size == 0)
+          continue;
+        if (llvm::any_of(entry.second, [&](mlir::Operation *op) {
+              auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+              return arrayCoor && arrayCoor.getSlice() &&
+                     (!enableSlices ||
+                      !isFoldableSlice(arrayCoor, rank, kindMap));
+            }))
+          continue;
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Adding local POINTER to the check: " << load << '\n');
+        info.argsAndDims.push_back({desc, size, rank, {}});
+        added[loop].insert(desc);
+        if (inLoop)
+          hoists.emplace_back(load, loop);
+      }
+    }
+    for (auto [load, loop] : hoists) {
+      load->moveBefore(loop);
+      // The load no longer belongs to the statement it was written in, so do
+      // not report that statement's line before the loop.
+      load->setLoc(mlir::UnknownLoc::get(load->getContext()));
+    }
   }
 
   if (loopsOfInterest.empty()) {
