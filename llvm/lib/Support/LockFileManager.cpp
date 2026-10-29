@@ -83,6 +83,10 @@ LockFileManager::readLockFile(StringRef LockFileName) {
   return std::nullopt;
 }
 
+/// Get an identifier for this machine. It is recorded in lock files so that the
+/// owner of a lock file is only checked for on the machine that created it, and
+/// a lock file created by another machine, for example on a network drive, is
+/// not mistaken for one created by a process on this machine.
 static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   HostID.clear();
 
@@ -107,12 +111,9 @@ static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   HostID.append(HostNameRef.begin(), HostNameRef.end());
 
 #elif defined(_WIN32)
-  // Use the computer name so that a lock file created by another machine, for
-  // example on a network drive, is not mistaken for one created by a process
-  // on this machine.
   wchar_t HostName[256];
   DWORD Size = static_cast<DWORD>(std::size(HostName));
-  if (!::GetComputerNameExW(ComputerNameDnsHostname, HostName, &Size))
+  if (!::GetComputerNameExW(ComputerNamePhysicalDnsHostname, HostName, &Size))
     return mapWindowsError(::GetLastError());
   std::string HostNameUTF8;
   if (!convertWideToUTF8(std::wstring_view(HostName, Size), HostNameUTF8))
@@ -149,11 +150,10 @@ bool LockFileManager::processStillExecuting(StringRef HostID, int PID) {
   HANDLE Process =
       ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,
                     /*bInheritHandle=*/FALSE, static_cast<DWORD>(PID));
-  if (!Process) {
-    // ERROR_INVALID_PARAMETER means that there is no process with this ID. Any
-    // other error, such as ERROR_ACCESS_DENIED, means that the process exists.
+  // ERROR_INVALID_PARAMETER means that there is no process with this ID. Any
+  // other error, such as ERROR_ACCESS_DENIED, means that the process exists.
+  if (!Process)
     return ::GetLastError() != ERROR_INVALID_PARAMETER;
-  }
   // A process that has exited can still be opened while handles to it remain
   // open, so check whether it is still running. A process that exited with the
   // code STILL_ACTIVE is conservatively considered to be executing.
@@ -161,8 +161,7 @@ bool LockFileManager::processStillExecuting(StringRef HostID, int PID) {
   bool Exited =
       ::GetExitCodeProcess(Process, &ExitCode) && ExitCode != STILL_ACTIVE;
   ::CloseHandle(Process);
-  if (Exited)
-    return false;
+  return !Exited;
 #endif
 
   return true;
