@@ -20,7 +20,7 @@
 func.func @rsqrt32(%float: f32) -> (f32)  {
 // CHECK-NOT:       math.sqrt
 // CHECK:           %[[CONST:.*]] = "emitc.constant"() <{value = 1.000000e+00 : f32}>
-// CHECK:           %[[SQRT:.*]] = emitc.call_opaque "sqrtf"(%[[SRC]])
+// CHECK:           %[[SQRT:.*]] = emitc.call_opaque "std::sqrt"(%[[SRC]])
 // CHECK:           %[[DIV:.*]] = emitc.div %[[CONST]], %[[SQRT]]
   %float_result = math.rsqrt %float : f32
 // CHECK:           return %[[DIV]] : f32
@@ -32,7 +32,7 @@ func.func @rsqrt32(%float: f32) -> (f32)  {
 func.func @rsqrt64(%float: f64) -> (f64)  {
 // CHECK-NOT:       math.sqrt
 // CHECK:           %[[CONST:.*]] = "emitc.constant"() <{value = 1.000000e+00 : f64}>
-// CHECK:           %[[SQRT:.*]] = emitc.call_opaque "sqrt"(%[[SRC]])
+// CHECK:           %[[SQRT:.*]] = emitc.call_opaque "std::sqrt"(%[[SRC]])
 // CHECK:           %[[DIV:.*]] = emitc.div %[[CONST]], %[[SQRT]]
   %float_result = math.rsqrt %float : f64
 // CHECK:           return %[[DIV]] : f64
