@@ -691,19 +691,30 @@ define void @deinterleave_wide_known_vscale(ptr %ptr) #1 {
 ;
 ; CHECK-IADISABLED-LABEL: deinterleave_wide_known_vscale:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
+; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z5, [x0]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #5, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #4, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #7, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z4, [x0, #6, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z6, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z7, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    uzp2 z19.s, z5.s, z0.s
+; CHECK-IADISABLED-NEXT:    uzp1 z0.s, z5.s, z0.s
+; CHECK-IADISABLED-NEXT:    uzp2 z16.s, z4.s, z3.s
+; CHECK-IADISABLED-NEXT:    uzp2 z17.s, z2.s, z1.s
+; CHECK-IADISABLED-NEXT:    uzp1 z3.s, z4.s, z3.s
+; CHECK-IADISABLED-NEXT:    uzp2 z18.s, z7.s, z6.s
+; CHECK-IADISABLED-NEXT:    uzp1 z1.s, z2.s, z1.s
+; CHECK-IADISABLED-NEXT:    uzp1 z2.s, z7.s, z6.s
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-IADISABLED-NEXT:    // fake_use: $z2
+; CHECK-IADISABLED-NEXT:    // fake_use: $z1
+; CHECK-IADISABLED-NEXT:    // fake_use: $z3
+; CHECK-IADISABLED-NEXT:    // fake_use: $z19
+; CHECK-IADISABLED-NEXT:    // fake_use: $z18
+; CHECK-IADISABLED-NEXT:    // fake_use: $z17
+; CHECK-IADISABLED-NEXT:    // fake_use: $z16
 ; CHECK-IADISABLED-NEXT:    ret
   %load = load <vscale x 32 x i32>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave2.nxv32i32(<vscale x 32 x i32> %load)

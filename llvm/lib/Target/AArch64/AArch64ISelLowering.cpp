@@ -28544,13 +28544,10 @@ static SDValue performLegalizedInterleavedStoreCombine(
   EVT SubVecTy = Interleave->getValueType(0);
   bool IsScalable = SubVecTy.isScalableVector();
   bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
-    return SDValue();
-  if (IsScalable) {
-    if (SubVecTy.getSizeInBits().getKnownMinValue() != 128)
+  if (UseSVE) {
+    if (!isPackedVectorType(SubVecTy, DAG))
       return SDValue();
-  } else if (!UseSVE && !SubVecTy.is64BitVector() &&
-             !SubVecTy.is128BitVector()) {
+  } else if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector()) {
     return SDValue();
   }
 
@@ -28558,8 +28555,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
   for (SDUse &Use : Interleave->uses()) {
     unsigned ResNo = Use.getResNo();
     auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
-    if (Stores[ResNo] || !Store || !ISD::isNormalStore(Store) ||
-        Store->getMemoryVT() != SubVecTy)
+    if (Stores[ResNo] || !Store || !ISD::isNormalStore(Store))
       return SDValue();
     Stores[ResNo] = Store;
   }
@@ -28600,11 +28596,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
     for (SDValue V : Interleave->op_values())
       Ops.push_back(IsScalable ? V
                                : convertToScalableVector(DAG, ContainerVT, V));
-    SDValue Pred = IsScalable
-                       ? DAG.getConstant(1, DL,
-                                         SubVecTy.changeVectorElementType(
-                                             *DAG.getContext(), MVT::i1))
-                       : getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
+    SDValue Pred = getPredicateForVector(DAG, DL, SubVecTy);
     Ops.push_back(Pred);
     Ops.push_back(BaseStore->getBasePtr());
   }
@@ -31707,13 +31699,10 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
   EVT SubVecTy = N->getValueType(0);
   bool IsScalable = SubVecTy.isScalableVector();
   bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
-    return SDValue();
-  if (IsScalable) {
-    if (SubVecTy.getSizeInBits().getKnownMinValue() != 128)
+  if (UseSVE) {
+    if (!isPackedVectorType(SubVecTy, DAG))
       return SDValue();
-  } else if (!UseSVE && !SubVecTy.is64BitVector() &&
-             !SubVecTy.is128BitVector()) {
+  } else if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector()) {
     return SDValue();
   }
 
@@ -31766,11 +31755,7 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
         IsScalable ? SubVecTy : getContainerForFixedLengthVector(DAG, SubVecTy);
     SmallVector<EVT, 5> ResVTs(NumParts, ContainerVT);
     ResVTs.push_back(MVT::Other);
-    SDValue Pred = IsScalable
-                       ? DAG.getConstant(1, DL,
-                                         SubVecTy.changeVectorElementType(
-                                             *DAG.getContext(), MVT::i1))
-                       : getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
+    SDValue Pred = getPredicateForVector(DAG, DL, SubVecTy);
     NewLoad = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
         {BaseLoad->getChain(),
