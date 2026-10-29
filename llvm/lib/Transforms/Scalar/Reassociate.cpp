@@ -3029,4 +3029,4 @@ INITIALIZE_PASS_END(ReassociateLegacyPass, "reassociate",
 // Public interface to the Reassociate pass
 FunctionPass *llvm::createReassociatePass() {
   return new ReassociateLegacyPass();
-}
+} 
