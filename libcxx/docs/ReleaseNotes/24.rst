@@ -81,6 +81,10 @@ Potentially breaking changes
 
 - libc++ no longer depends on msvcprt/libcpmt in the MSVC mode.
 
+- The destruction order as well as whether elements are destructed in ``vector`` when appending has changed.
+  Specifically, when an exception is thrown, the appended elements are now destructed from first to last instead of
+  last to first.
+
 Announcements About Future Releases
 -----------------------------------
 

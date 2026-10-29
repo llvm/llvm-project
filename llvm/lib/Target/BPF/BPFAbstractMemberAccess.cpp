@@ -468,6 +468,7 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
   std::vector<CallInst *> PreserveArrayIndexCalls;
   std::vector<CallInst *> PreserveUnionIndexCalls;
   std::vector<CallInst *> PreserveStructIndexCalls;
+  std::vector<CallInst *> PreserveFieldInfoCalls;
   bool Found = false;
 
   for (auto &BB : F)
@@ -482,9 +483,18 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
         PreserveArrayIndexCalls.push_back(Call);
       else if (CInfo.Kind == BPFPreserveUnionAI)
         PreserveUnionIndexCalls.push_back(Call);
+      else if (CInfo.Kind == BPFPreserveFieldInfoAI)
+        PreserveFieldInfoCalls.push_back(Call);
       else
         PreserveStructIndexCalls.push_back(Call);
     }
+
+  // A preserve_field_info(), preserve_type_info() or preserve_enum_value()
+  // call left here has an unused result, so it is not relocated. It has no
+  // side effects, so just remove it.
+  for (CallInst *Call : PreserveFieldInfoCalls)
+    if (Call->use_empty())
+      Call->eraseFromParent();
 
   // do the following transformation:
   // . addr = preserve_array_access_index(base, dimension, index)

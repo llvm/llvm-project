@@ -96,6 +96,12 @@ static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
       return signatureError(
           "SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer");
     break;
+  case dxbc::PSV::SemanticKind::SampleIndex:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::U16 && E.CompType != ElementType::U32))
+      return signatureError(
+          "SV_SampleIndex requires a scalar 16- or 32-bit unsigned integer");
+    break;
   case dxbc::PSV::SemanticKind::Barycentrics:
     if (E.Rows != 1 || E.Cols != 3 ||
         (E.CompType != ElementType::F16 && E.CompType != ElementType::F32))
@@ -122,6 +128,10 @@ static Error diagnoseSemanticIndex(const SemanticSignatureElement &E) {
   case dxbc::PSV::SemanticKind::Barycentrics:
     if (E.SemanticIndices.front() != 0)
       return signatureError("SV_Barycentrics requires semantic index 0");
+    break;
+  case dxbc::PSV::SemanticKind::SampleIndex:
+    if (E.SemanticIndices.front() != 0)
+      return signatureError("SV_SampleIndex requires semantic index 0");
     break;
   default:
     break;
@@ -199,8 +209,8 @@ static Error parseSignature(Metadata *MD,
                             "point");
     if (Interpretation == SemanticInterpretation::NotPacked) {
       if (E.isAllocated())
-        return signatureError(
-            "SV_Barycentrics must not have an allocated location");
+        return signatureError(E.SemanticName +
+                              " must not have an allocated location");
     } else {
       if (!E.isAllocated())
         return signatureError("signature element " + Twine(E.SigId) + " ('" +
@@ -301,6 +311,8 @@ static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
     return signatureError(Category + " signature element " + Twine(E.SigId) +
                           " ('" + E.SemanticName + "'): " + Message);
   };
+  if (E.SemanticKind == dxbc::PSV::SemanticKind::SampleIndex)
+    return AccessError("must not be read with dx.op.load/store");
   Type *Ty = Input ? I.getType() : I.getArgOperand(3)->getType();
   unsigned Width = 1;
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
@@ -532,6 +544,8 @@ static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
     return dxbc::D3DSystemValue::ShadingRate;
   case KindTy::Barycentrics:
     return dxbc::D3DSystemValue::Barycentrics;
+  case KindTy::SampleIndex:
+    return dxbc::D3DSystemValue::SampleIndex;
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
@@ -564,6 +578,8 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
     return "SV_ShadingRate";
   case Kind::Barycentrics:
     return "SV_Barycentrics";
+  case Kind::SampleIndex:
+    return "SV_SampleIndex";
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
@@ -623,8 +639,28 @@ void EntrySignature::buildSignatures(mcdxbc::Signature &Input,
   buildSignature(Output, Outputs, false, UseNative16Bit, Legacy);
 }
 
+SmallVector<uint32_t> EntrySignature::getViewIDOutputMask() const {
+  // Each output vector needs four component bits, so one 32-bit word holds
+  // eight vectors. Conservatively mark every written output component as
+  // dependent on the view ID, matching the conservative input/output map.
+  SmallVector<uint32_t> Mask((OutputVectors + 7) / 8, 0);
+  for (const auto &Output : Outputs) {
+    if (!Output.isAllocated())
+      continue;
+    for (unsigned R = 0; R != Output.Rows; ++R)
+      for (unsigned C = 0; C != 4; ++C) {
+        if (!(Output.UsageMask & (1U << C)))
+          continue;
+        unsigned Bit = (Output.StartRow + R) * 4 + C;
+        Mask[Bit / 32] |= 1U << (Bit % 32);
+      }
+  }
+  return Mask;
+}
+
 void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
-                               VersionTuple ValidatorVersion) const {
+                               VersionTuple ValidatorVersion,
+                               bool UsesViewID) const {
   bool Legacy = !ValidatorVersion.empty() &&
                 ValidatorVersion != VersionTuple(0, 0) &&
                 ValidatorVersion < VersionTuple(1, 5);
@@ -633,6 +669,8 @@ void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
   PSV.BaseData.SigInputVectors = InputVectors;
   PSV.BaseData.SigOutputVectors[0] = OutputVectors;
   PSV.InputOutputMap[0] = InputOutputMap;
+  if (UsesViewID)
+    PSV.OutputVectorMasks[0] = getViewIDOutputMask();
   if (Stage == Triple::Vertex)
     PSV.BaseData.StageInfo.VS.OutputPositionPresent =
         llvm::any_of(Outputs, [](const auto &E) {
@@ -643,12 +681,16 @@ void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
         llvm::any_of(Inputs, [](const auto &E) {
           return E.InterpMode == dxbc::PSV::InterpolationMode::LinearSample ||
                  E.InterpMode ==
-                     dxbc::PSV::InterpolationMode::LinearNoperspectiveSample;
+                     dxbc::PSV::InterpolationMode::LinearNoperspectiveSample ||
+                 E.SemanticKind == dxbc::PSV::SemanticKind::SampleIndex;
         });
 }
 
-SmallVector<uint32_t> EntrySignature::getDependencyState() const {
+SmallVector<uint32_t>
+EntrySignature::getDependencyState(bool UsesViewID) const {
   SmallVector<uint32_t> State = {InputVectors * 4, OutputVectors * 4};
+  if (UsesViewID)
+    llvm::append_range(State, getViewIDOutputMask());
   llvm::append_range(State, InputOutputMap);
   return State;
 }

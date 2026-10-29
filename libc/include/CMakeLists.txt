@@ -1207,6 +1207,7 @@ add_header_macro(
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h
   DEPENDS
+    .llvm-libc-macros.netinet_tcp_macros
     .llvm_libc_common_h
 )
 
