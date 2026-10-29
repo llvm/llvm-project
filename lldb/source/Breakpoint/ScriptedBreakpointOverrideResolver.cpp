@@ -20,7 +20,7 @@ lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
   return {};
 }
 
-llvm::Error ScriptedBreakpointResolverOverride::Validate() {
+llvm::Error ScriptedBreakpointResolverOverride::HasErrors() {
   // FIXME: we should make sure the module and class exist, though that will
   // to happen in a scripting language specific function.
   return llvm::Error::success();
