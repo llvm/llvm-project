@@ -885,10 +885,11 @@ class StorageClass<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
-multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities, bits<32> minVersion = 0> {
   def : StorageClass<NAME, value>;
-  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0,
-                                         reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME,
+                                         minVersion, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm UniformConstant : StorageClassOperand<0, [], []>;
@@ -903,7 +904,7 @@ defm Generic : StorageClassOperand<8, [], [GenericPointer]>;
 defm PushConstant : StorageClassOperand<9, [], [Shader]>;
 defm AtomicCounter : StorageClassOperand<10, [], [AtomicStorage]>;
 defm Image : StorageClassOperand<11, [], []>;
-defm StorageBuffer : StorageClassOperand<12, [], [Shader]>;
+defm StorageBuffer : StorageClassOperand<12, [SPV_KHR_storage_buffer_storage_class], [Shader], 0x10300>;
 defm CallableDataNV : StorageClassOperand<5328, [], [RayTracingNV]>;
 defm IncomingCallableDataNV : StorageClassOperand<5329, [], [RayTracingNV]>;
 defm RayPayloadNV : StorageClassOperand<5338, [], [RayTracingNV]>;
