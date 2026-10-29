@@ -802,6 +802,32 @@ static bool ieeeF32(const Function &F) {
          F.getDenormalMode(APFloat::IEEEsingle()).Output == DenormalMode::IEEE;
 }
 
+/// The module asks for IEEE f32 emulation (air.ieee-fp32), whatever F's own
+/// f32 denormal mode: bfloat arithmetic keeps its denormals (no .ftz form).
+static bool ieeeModule(const Function &F) {
+  auto *Flag = mdconst::extract_or_null<ConstantInt>(
+      F.getParent()->getModuleFlag("air.ieee-fp32"));
+  return Flag && !Flag->isZero();
+}
+
+/// Bfloat arithmetic rounding to nearest (constrainBFloat()).
+static bool isBFloatArith(const Instruction &I) {
+  if (!I.getType()->getScalarType()->isBFloatTy())
+    return false;
+  if (auto *II = dyn_cast<IntrinsicInst>(&I))
+    return II->getIntrinsicID() == Intrinsic::fma ||
+           II->getIntrinsicID() == Intrinsic::fmuladd;
+  switch (I.getOpcode()) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// An f32 operation that ieee32 emulates: add, sub, mul, div, fma, sqrt.
 static StringRef ieeeF32Op(const Instruction &I) {
   if (!I.getType()->isFloatTy())
@@ -857,9 +883,9 @@ static StringRef ieeeF32Op(const Instruction &I) {
 
 bool EmulateF64::hasWork() {
   for (Function &F : M)
-    if (!F.isDeclaration() && ieeeF32(F))
+    if (!F.isDeclaration() && ieeeModule(F))
       for (Instruction &I : instructions(F))
-        if (!ieeeF32Op(I).empty())
+        if ((ieeeF32(F) && !ieeeF32Op(I).empty()) || isBFloatArith(I))
           return true;
   for (GlobalVariable &GV : M.globals())
     if (hasDouble(GV.getValueType()))
@@ -913,9 +939,75 @@ void EmulateF64::replaceWithEmulation(Instruction &I, StringRef Key,
   I.eraseFromParent();
 }
 
+/// Under IEEE f32 emulation (air.ieee-fp32) the bfloat arithmetic rounding to
+/// nearest becomes its constrained form, one call per element: the hardware's
+/// bfloat arithmetic flushes denormals (a bfloat denormal is a float one),
+/// and the constrained bfloat operations have an exact emulation.
+static void constrainBFloat(Instruction &I) {
+  Intrinsic::ID ID;
+  switch (I.getOpcode()) {
+  case Instruction::FAdd:
+    ID = Intrinsic::experimental_constrained_fadd;
+    break;
+  case Instruction::FSub:
+    ID = Intrinsic::experimental_constrained_fsub;
+    break;
+  case Instruction::FMul:
+    ID = Intrinsic::experimental_constrained_fmul;
+    break;
+  case Instruction::FDiv:
+    ID = Intrinsic::experimental_constrained_fdiv;
+    break;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && (II->getIntrinsicID() == Intrinsic::fma ||
+               II->getIntrinsicID() == Intrinsic::fmuladd)) {
+      ID = Intrinsic::experimental_constrained_fma;
+      break;
+    }
+    return;
+  default:
+    return;
+  }
+  Type *Ty = I.getType();
+  SmallVector<Value *, 3> Ops;
+  if (auto *II = dyn_cast<IntrinsicInst>(&I))
+    Ops.append(II->arg_begin(), II->arg_end());
+  else
+    Ops.append(I.op_begin(), I.op_end());
+  IRBuilder<> B(&I);
+  B.setIsFPConstrained(true);
+  B.setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
+  B.setDefaultConstrainedExcept(fp::ebIgnore);
+  Type *E = Ty->getScalarType();
+  auto One = [&](ArrayRef<Value *> Xs) -> Value * {
+    return B.CreateConstrainedFPCall(
+        Intrinsic::getOrInsertDeclaration(I.getModule(), ID, {E}), Xs);
+  };
+  Value *R;
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    R = PoisonValue::get(VT);
+    for (unsigned L = 0; L < VT->getNumElements(); ++L) {
+      SmallVector<Value *, 3> Xs;
+      for (Value *O : Ops)
+        Xs.push_back(B.CreateExtractElement(O, L));
+      R = B.CreateInsertElement(R, One(Xs), L);
+    }
+  } else {
+    R = One(Ops);
+  }
+  R->takeName(&I);
+  I.replaceAllUsesWith(R);
+  I.eraseFromParent();
+}
+
 /// The double precision operations of F and its constrained intrinsics
 /// become calls of emulations.
 void EmulateF64::replaceOperations(Function &F) {
+  if (ieeeModule(F))
+    for (Instruction &I : make_early_inc_range(instructions(F)))
+      if (isBFloatArith(I))
+        constrainBFloat(I);
   for (Instruction &I : make_early_inc_range(instructions(F)))
     scalarizeDoubles(I);
   for (Instruction &I : make_early_inc_range(instructions(F))) {
@@ -971,8 +1063,12 @@ void EmulateF64::replaceOperations(Function &F) {
                   any_of(Tys, [](Type *T) {
                     return T->getScalarType()->isBFloatTy();
                   });
+      // (not where the module asks for IEEE f32 emulation, air.ieee-fp32:
+      // there the hardware flushes float denormals, which a bfloat
+      // computation in float would meet)
       if (Constrained && BF16 &&
-          F.getDenormalMode(APFloat::IEEEsingle()) == DenormalMode::getIEEE())
+          F.getDenormalMode(APFloat::IEEEsingle()) == DenormalMode::getIEEE() &&
+          !ieeeF32(F))
         Key += "|+f32-denormals";
       replaceWithEmulation(*CI, Key, Args);
       continue;
