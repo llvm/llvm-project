@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRAnalysisDataFlow
   MLIRArithCommonConversion
   MLIRArithDialect
+  MLIRArithUtils
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRFuncDialect

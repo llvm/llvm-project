@@ -56,6 +56,16 @@ void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand `arith.truncf` and `arith.extf` on the narrow float
+/// types in `narrowTypes` (at most 8 bits, with a zero and subnormals; others
+/// are ignored) into integer arith ops plus, for some pairs, arith.extf or
+/// arith.truncf bridges. Results are APFloat::convert's in the op's rounding
+/// mode, rounded once; a format without Inf and NaN saturates (NaN gives
+/// +max-finite), and an unsigned destination gets the input rounded with its
+/// sign, the sign then dropped. Dynamic shapes are left alone.
+void populateExpandNarrowFloatPatterns(RewritePatternSet &patterns,
+                                       ArrayRef<TypeID> narrowTypes);
+
 /// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
 void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
 

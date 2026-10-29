@@ -13820,7 +13820,10 @@ cc_library(
     srcs = glob([
         "lib/Dialect/Arith/Utils/*.cpp",
     ]),
-    hdrs = ["include/mlir/Dialect/Arith/Utils/Utils.h"],
+    hdrs = [
+        "include/mlir/Dialect/Arith/Utils/NarrowFloatExpansion.h",
+        "include/mlir/Dialect/Arith/Utils/Utils.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithDialect",

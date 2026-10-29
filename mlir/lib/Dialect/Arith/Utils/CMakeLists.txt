@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRArithUtils
+  NarrowFloatExpansion.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
