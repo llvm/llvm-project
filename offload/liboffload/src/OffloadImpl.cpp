@@ -1388,6 +1388,14 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
       LaunchArgs.Flags.Cooperative =
           *reinterpret_cast<const bool *>(Properties->data);
       break;
+    case OL_KERNEL_LAUNCH_PROP_TYPE_OMP_KERNEL_LAUNCH_INFO:
+      LaunchArgs.KernelLaunchInfo =
+          *reinterpret_cast<const KernelLaunchInfoTy *>(Properties->data);
+      break;
+    case OL_KERNEL_LAUNCH_PROP_TYPE_OMP_TRIPCOUNT:
+      LaunchArgs.Tripcount =
+          *reinterpret_cast<const uint64_t *>(Properties->data);
+      break;
     default:
       return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                                 "olLaunchKernel property enum '%i' is invalid",

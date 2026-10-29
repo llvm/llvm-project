@@ -362,6 +362,8 @@ public:
 };
 
 struct KernelLaunchInfoTy {
+  /// The name of the kernel.
+  const char *Name = nullptr;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -435,7 +437,8 @@ struct KernelLaunchArgsTy {
   /// Size of the argument data in bytes, one entry per \p Args element,
   /// possibly null.
   int64_t *ArgSizes = nullptr;
-  /// Tripcount for the teams / distribute loop, 0 otherwise.
+  /// Downstream: tripcount for the teams / distribute loop, 0 otherwise. Only
+  /// the AMDGPU kernel trace (LIBOMPTARGET_KERNEL_TRACE) uses it.
   uint64_t Tripcount = 0;
   /// Amount of dynamic cgroup memory requested.
   uint32_t DynCGroupMem = 0;
@@ -444,7 +447,8 @@ struct KernelLaunchArgsTy {
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   /// Downstream, the plugin gets the kernel's full launch-geometry properties,
-  /// including the execution mode, which the AMDGPU plugin needs.
+  /// including the execution mode, which the AMDGPU kernel trace needs. They
+  /// are passed through olLaunchKernel's OMP_KERNEL_LAUNCH_INFO property.
   KernelLaunchInfoTy KernelLaunchInfo;
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
@@ -613,7 +617,7 @@ struct AllocationTraceInfoTy {
 struct KernelTraceInfoTy {
 
   /// The launched kernel.
-  GenericKernelTy *Kernel;
+  const GenericKernelTy *Kernel;
 
   /// The stack trace of the launch itself.
   std::string LaunchTrace;
@@ -629,7 +633,7 @@ struct KernelTraceInfoRecordTy {
   auto size() const { return KTIs.size(); }
 
   /// Create a new kernel trace info and add it into the record.
-  void emplace(GenericKernelTy *Kernel, const std::string &&StackTrace,
+  void emplace(const GenericKernelTy *Kernel, const std::string &&StackTrace,
                __tgt_async_info *AsyncInfo) {
     KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
     Idx = (Idx + 1) % size();
@@ -1154,11 +1158,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
     return Plugin::success();
   }
-
-  /// Run the kernel associated with \p EntryPtr
-  Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
-                     __tgt_async_info *AsyncInfo,
-                     GenericProfilerTy *ProfilerPtr = nullptr);
 
   // Switch memory region to coarse grain mode
   Error setCoarseGrainMemory(void *ptr, int64_t size);
@@ -1792,16 +1791,6 @@ public:
   /// Deallocates memory on the given device.
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Begin executing a kernel on the given device.
-  int32_t launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,
-                             KernelLaunchArgsTy &LaunchArgs);
-
-  /// Begin executing a kernel on the given device.
-  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                        KernelLaunchArgsTy &LaunchArgs,
-                        __tgt_async_info *AsyncInfoPtr,
-                        GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
