@@ -697,9 +697,7 @@ void MachOWriter::writeChainedFixups(raw_ostream &OS) {
              Obj.LinkEdit.ChainedFixups.size());
 }
 
-void MachOWriter::writeDyldExportsTrie(raw_ostream &OS) {
-  writeExportTrie(OS);
-}
+void MachOWriter::writeDyldExportsTrie(raw_ostream &OS) { writeExportTrie(OS); }
 
 class UniversalWriter {
 public:
