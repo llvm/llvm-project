@@ -98,8 +98,6 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
-  ImagePtr = &Image;
-
   return initImpl(GenericDevice, Image);
 }
 

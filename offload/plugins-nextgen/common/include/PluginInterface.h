@@ -364,6 +364,10 @@ public:
 struct KernelLaunchInfoTy {
   /// The name of the kernel.
   const char *Name = nullptr;
+  /// The image the kernel was loaded from.
+  MemoryBufferRef Image;
+  /// The IR image associated with the kernel's image, if any.
+  MemoryBufferRef IRImage;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -507,12 +511,6 @@ struct GenericKernelTy {
     return std::numeric_limits<uint32_t>::max();
   }
 
-  /// Get the kernel image.
-  DeviceImageTy &getImage() const {
-    assert(ImagePtr && "Kernel is not initialized!");
-    return *ImagePtr;
-  }
-
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -566,9 +564,6 @@ protected:
 private:
   /// The kernel name.
   std::string Name;
-
-  /// The image that contains this kernel.
-  DeviceImageTy *ImagePtr = nullptr;
 
 protected:
   /// The static memory sized per block.

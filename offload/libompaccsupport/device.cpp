@@ -59,8 +59,6 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::omp::target::plugin::DeviceImageTy *
 __ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-llvm::omp::target::plugin::GenericKernelTy *
-__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -1557,9 +1555,10 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   RecordReplayTy *RecordReplay =
       llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   RecordReplayTy::HandleTy RRHandle;
-  GenericKernelTy *Kernel = nullptr;
+  KernelInfoTy Kernel;
   if (RecordReplay) {
-    Kernel = llvm::offload::tmp::__ol_tgt_GetKernelFromSymbol(KernelHandle);
+    Kernel = KernelInfoTy(KernelLaunchInfo.Name, KernelLaunchInfo.Image,
+                          KernelLaunchInfo.IRImage);
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
@@ -1567,7 +1566,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 
     KernelRecordArgsTy RecordArgs =
         buildRecordArgs(KernelArgs, Config, KernelLaunchInfo, ReplayOutcome);
-    auto RRHandleOrErr = RecordReplay->recordPrologue(*Kernel, RecordArgs);
+    auto RRHandleOrErr = RecordReplay->recordPrologue(Kernel, RecordArgs);
     if (!RRHandleOrErr) {
       REPORT() << "Failure to record prologue for kernel "
                << KernelLaunchInfo.Name << ": "
@@ -1605,7 +1604,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
 
-    if (auto Err = RecordReplay->recordEpilogue(*Kernel, RRHandle)) {
+    if (auto Err = RecordReplay->recordEpilogue(Kernel, RRHandle)) {
       REPORT() << "Failure to record epilogue for kernel "
                << KernelLaunchInfo.Name << ": " << toString(std::move(Err));
       return OFFLOAD_FAIL;

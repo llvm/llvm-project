@@ -41,10 +41,10 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
 using namespace llvm::omp::target::helpers;
 
-using llvm::omp::target::plugin::GenericKernelTy;
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol);
+llvm::omp::target::plugin::DeviceImageTy *
+__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
 } // namespace llvm::offload::tmp
 
 void PluginManager::init() {
@@ -561,15 +561,17 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             REPORT() << "Failed to load kernel " << Entry.SymbolName << ": "
                      << llvm::toString(AddrOrErr.takeError());
           } else {
-            GenericKernelTy *Kernel =
-                llvm::offload::tmp::__ol_tgt_GetKernelFromSymbol(*AddrOrErr);
-            DeviceEntry.Address = *AddrOrErr;
+            ol_symbol_handle_t KernelSym = *AddrOrErr;
+            DeviceEntry.Address = KernelSym;
 
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on
             // the device for use at launch time.
             llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
                 Device.RTL->getDevice(Device.RTLDeviceID);
+            auto &Image =
+                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
+                    Program.getHandle());
 
             // Downstream, these constant globals are read from the ELF image
             // on the host rather than copied back from device memory. That
@@ -580,8 +582,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
               llvm::omp::target::plugin::GlobalTy HostGlobal(
                   std::string(Entry.SymbolName) + Suffix, Size, Dst);
               if (auto Err = GenericDevice.Plugin.getGlobalHandler()
-                                 .readGlobalFromImage(GenericDevice,
-                                                      Kernel->getImage(),
+                                 .readGlobalFromImage(GenericDevice, Image,
                                                       HostGlobal)) {
                 // Not all kernels have all of these globals, e.g., No-Loop
                 // kernels have no kernel environment.
@@ -603,6 +604,19 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                   << "No kernel environment for '" << Entry.SymbolName
                   << "', using default launch configuration";
             }
+            uint32_t StaticBlockMemSize = 0;
+            uint32_t KernelMaxThreads = 0;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE,
+                    sizeof(StaticBlockMemSize), &StaticBlockMemSize))
+              REPORT() << "Failed to query static block memory size of "
+                       << Entry.SymbolName << ": " << Res->Details;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_MAX_THREADS,
+                    sizeof(KernelMaxThreads), &KernelMaxThreads))
+              REPORT() << "Failed to query max threads of " << Entry.SymbolName
+                       << ": " << Res->Details;
+
             const auto &Cfg = KernelEnv.Configuration;
 
             // Downstream, "<name>_exec_mode" is authoritative: the AMD-only
@@ -628,10 +642,12 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                 << " execution mode";
 
             KernelLaunchInfoTy LaunchInfo;
-            LaunchInfo.Name = Kernel->getName();
+            LaunchInfo.Name = Entry.SymbolName;
+            LaunchInfo.Image = Image.getMemoryBuffer();
+            LaunchInfo.IRImage = Image.getIRImageMemoryBuffer();
             LaunchInfo.Mode = ExecMode;
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
-            LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
+            LaunchInfo.StaticBlockMemSize = StaticBlockMemSize;
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
@@ -640,7 +656,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                 std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
                                                        DeviceThreadLimit)
                                             : DeviceThreadLimit,
-                         Kernel->getMaxThreads());
+                         KernelMaxThreads);
             uint32_t DefaultNumThreads = Device.getDefaultNumThreads();
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0
