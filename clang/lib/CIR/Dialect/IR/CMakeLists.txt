@@ -5,7 +5,8 @@ set(LLVM_OPTIONAL_SOURCES
 # Compile the TableGen-generated op definitions in shards to reduce the
 # compile time of the largest CIR translation unit.
 set(LLVM_TARGET_DEFINITIONS CIROpDefinitions.cpp)
-foreach(index RANGE 7)
+math(EXPR CIR_LAST_SHARD_INDEX "${CLANG_CIR_OP_SHARD_COUNT} - 1")
+foreach(index RANGE ${CIR_LAST_SHARD_INDEX})
   set(CIR_SHARDED_SRC CIROpDefinitions.${index}.cpp)
   list(APPEND CIR_SHARDED_SRCS ${CIR_SHARDED_SRC})
   tablegen(MLIR_SRC_SHARDER ${CIR_SHARDED_SRC}
