@@ -3501,7 +3501,8 @@ void MachOChainedFixupEntry::moveNext() {
   SegmentIndex = SegInfo.SegIdx;
   SegmentOffset = SegInfo.Header.page_size * PageIndex + PageOffset;
 
-  // FIXME: Handle other pointer formats.
+  // FIXME: Handle the 32-bit, kernel and firmware pointer formats, and
+  // DYLD_CHAINED_PTR_ARM64E_USERLAND.
   PointerFormat = SegInfo.Header.pointer_format;
   bool IsArm64e = PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E ||
                   PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24;
