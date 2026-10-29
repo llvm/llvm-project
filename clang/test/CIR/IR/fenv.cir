@@ -13,9 +13,14 @@ cir.func @fadd_fenv(%a: !cir.float, %b: !cir.float) {
   // CHECK-NOT: fenv
   %1 = cir.fadd %a, %b : !cir.float
 
-  // Empty fenv attribute.
-  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<>
+  // The empty fenv attribute is the default and is not printed.
+  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float
+  // CHECK-NOT: fenv
   %2 = cir.fadd %a, %b : !cir.float fenv<>
+
+  // Fields set to their default value are kept.
+  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
+  %3 = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
   cir.return
 }
 
@@ -73,8 +78,8 @@ cir.func @unary_fp_to_int_builtin_fenv(%a: !cir.float) -> !s32i {
   %0 = cir.lround %a : !cir.float -> !s32i fenv<dynamic_rounding_mode = tonearest>
   // CHECK: cir.llround %{{.*}} : !cir.float -> !s32i fenv<except_mode = unmasked>
   %1 = cir.llround %a : !cir.float -> !s32i fenv<except_mode = unmasked>
-  // CHECK: cir.lrint %{{.*}} : !cir.float -> !s32i fenv<>
-  %2 = cir.lrint %a : !cir.float -> !s32i fenv<>
+  // CHECK: cir.lrint %{{.*}} : !cir.float -> !s32i fenv<except_mode = unknown>
+  %2 = cir.lrint %a : !cir.float -> !s32i fenv<except_mode = unknown>
   // CHECK: cir.llrint %{{.*}} : !cir.float -> !s32i
   // CHECK-NOT: fenv
   %3 = cir.llrint %a : !cir.float -> !s32i
@@ -110,8 +115,8 @@ cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float
 cir.func @cast_fenv(%a: !cir.float, %b: !cir.double, %i: !s32i) {
   // CHECK: cir.cast floating %{{.*}} : !cir.double -> !cir.float fenv<dynamic_rounding_mode = tonearest>
   %0 = cir.cast floating %b : !cir.double -> !cir.float fenv<dynamic_rounding_mode = tonearest>
-  // CHECK: cir.cast int_to_float %{{.*}} : !s32i -> !cir.float fenv<>
-  %1 = cir.cast int_to_float %i : !s32i -> !cir.float fenv<>
+  // CHECK: cir.cast int_to_float %{{.*}} : !s32i -> !cir.float fenv<except_mode = unknown>
+  %1 = cir.cast int_to_float %i : !s32i -> !cir.float fenv<except_mode = unknown>
   // CHECK: cir.cast float_to_int %{{.*}} : !cir.float -> !s32i fenv<except_mode = unmasked, strict_except = true>
   %2 = cir.cast float_to_int %a : !cir.float -> !s32i fenv<except_mode = unmasked, strict_except = true>
   // CHECK: cir.cast float_to_bool %{{.*}} : !cir.float -> !cir.bool
@@ -126,8 +131,8 @@ cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
                     %vb: !cir.vector<4 x !cir.float>) {
   // CHECK: cir.cmp lt %{{.*}}, %{{.*}} : !cir.float fenv<except_mode = unmasked>
   %0 = cir.cmp lt %a, %b : !cir.float fenv<except_mode = unmasked>
-  // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float fenv<>
-  %1 = cir.cmp eq %a, %b : !cir.float fenv<>
+  // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float fenv<except_mode = unknown>
+  %1 = cir.cmp eq %a, %b : !cir.float fenv<except_mode = unknown>
   // CHECK: cir.vec.cmp(gt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
   %2 = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
        fenv<strict_except = true>

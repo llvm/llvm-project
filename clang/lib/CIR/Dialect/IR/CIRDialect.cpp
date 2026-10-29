@@ -953,7 +953,7 @@ LogicalResult cir::CastOp::verify() {
   mlir::Type srcType = getSrc().getType();
   cir::CastKind kind = getKind();
 
-  if (getFenvAttr() && !isFloatingPointCastKind(kind))
+  if (getConstrainedFenv() && !isFloatingPointCastKind(kind))
     return emitOpError()
            << "'fenv' is only valid for floating-point cast kinds";
 
@@ -4267,7 +4267,7 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CmpOp::verify() {
-  if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
+  if (getConstrainedFenv() && !cir::isAnyFloatingPointType(getLhs().getType()))
     return emitOpError()
            << "'fenv' is only valid for floating-point comparisons";
   return success();
@@ -4278,19 +4278,19 @@ LogicalResult cir::CmpOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::VecCmpOp::verify() {
-  if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
+  if (getConstrainedFenv() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
     return emitOpError()
            << "'fenv' is only valid for floating-point comparisons";
   return success();
 }
 
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
-  // Do not fold when fenv is present.
+  // Do not fold when the floating-point environment is constrained.
   // TODO(cir): This is overly conservative. We could fold comparisons as long
   //            as we can prove that the operation wouldn't raise exceptions or
   //            when the fenv attribute does not require strict exception
   //            semantics.
-  if (getFenvAttr())
+  if (getConstrainedFenv())
     return {};
 
   auto lhsVecAttr =

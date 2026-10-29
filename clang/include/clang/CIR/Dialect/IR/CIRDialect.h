@@ -67,7 +67,7 @@ public:
 
   void getEffects(
       llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
-    if (!getFenvOp().getFenvAttr())
+    if (!getFenvOp().getConstrainedFenv())
       return;
     effects.emplace_back(mlir::MemoryEffects::Read::get(),
                          FloatingPointEnvironmentResource::get());

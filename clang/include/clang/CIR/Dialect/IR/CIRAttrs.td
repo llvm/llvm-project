@@ -908,6 +908,10 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     `except_mode` defaults to `masked`, and an absent `strict_except` defaults
     to `false`.
 
+    The empty `#cir.fenv<>`, with no parameter set, does not constrain the
+    operation that carries it. It is the default value of the `fenv`
+    attribute of floating-point operations, which omit it when printing.
+
     Example:
     ```
     #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown,
@@ -925,7 +929,20 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
   }];
 
+  let builders = [
+    AttrBuilder<(ins), [{
+      return $_get($_ctxt, std::nullopt, std::nullopt, mlir::BoolAttr{});
+    }]>
+  ];
+
   let extraClassDeclaration = [{
+    /// Whether this is the empty attribute, which does not constrain the
+    /// operation that carries it.
+    bool isEmpty() const {
+      return !getDynamicRoundingMode() && !getExceptMode() &&
+             !getStrictExcept();
+    }
+
     static constexpr cir::FPDynamicRoundingMode
     getDefaultDynamicRoundingMode() {
       return cir::FPDynamicRoundingMode::Unknown;
@@ -950,8 +967,16 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     }
   }];
 
+  // Used by `CIR_DefaultValuedFenvAttr`, whose default value is a full builder
+  // expression.
+  let constBuilderCall = "$0";
+
   let canHaveIllegalCXXABIType = 0;
 }
+
+def CIR_DefaultValuedFenvAttr
+    : DefaultValuedAttr<CIR_FenvAttr,
+                        "cir::FenvAttr::get($_builder.getContext())">;
 
 //===----------------------------------------------------------------------===//
 // CIR_FlagParam

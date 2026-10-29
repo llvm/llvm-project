@@ -75,10 +75,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // `llvmOp` field from your CIR operation definition.
 //
 // The `constrainedLLVMIntrinsic` field enables a specialized variant of this
-// generated lowering for floating-point operations that carry an optional
-// `fenv` attribute. When it is set and the operation has an `fenv` attribute
-// the operation is lowering to a call to the corresponding constrained fp
-// intrinsic. If `constrainedLLVMIntrinsic` is set `llvmOp` must be set as well.
+// generated lowering for floating-point operations that carry an `fenv`
+// attribute. When it is set and the operation's `fenv` attribute is not the
+// empty `#cir.fenv<>`, the operation is lowered to a call to the corresponding
+// constrained fp intrinsic. If `constrainedLLVMIntrinsic` is set `llvmOp` must
+// be set as well.
 //
 // `constrainedLLVMIntrinsicHasRoundingMode` indicates whether the constrained
 // intrinsic takes a rounding-mode metadata argument in addition to the
@@ -344,12 +345,13 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ...
     %x = cir.cast array_to_ptrdecay %0 
        : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-    %y = cir.cast floating %f : !cir.double -> !cir.float fenv<>
+    %y = cir.cast floating %f : !cir.double -> !cir.float
+       fenv<except_mode = unknown, strict_except = true>
     ```
   }];
 
   let arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+                       CIR_DefaultValuedFenvAttr:$fenv);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -2677,7 +2679,8 @@ def CIR_CmpOp : CIR_Op<"cmp",
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
-    %2 = cir.cmp lt %x, %y : !cir.float fenv<>
+    %2 = cir.cmp lt %x, %y : !cir.float
+         fenv<except_mode = unknown, strict_except = true>
     ```
   }];
 
@@ -2685,7 +2688,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
     CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
     CIR_ComparableType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_DefaultValuedFenvAttr:$fenv
   );
 
   let results = (outs CIR_BoolType:$result);
@@ -3014,7 +3017,7 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins
-      OptionalAttr<CIR_FenvAttr>:$fenv,
+      CIR_DefaultValuedFenvAttr:$fenv,
       OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
   let assemblyFormat = [{
     $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? prop-dict attr-dict
@@ -3022,12 +3025,6 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
 
   let constrainedLLVMIntrinsic = mnemonic;
 
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -6545,7 +6542,8 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
+    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+        fenv<except_mode = unknown, strict_except = true>
     ```
   }];
 
@@ -6553,7 +6551,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_DefaultValuedFenvAttr:$fenv
   );
 
   let results = (outs CIR_VectorType:$result);
@@ -7446,7 +7444,7 @@ class CIR_ComplexFPBinOp<string mnemonic>
   let arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
     CIR_ComplexOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_DefaultValuedFenvAttr:$fenv
   );
 
   let results = (outs CIR_ComplexOfFloatType:$result);
@@ -8266,16 +8264,10 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
   let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+                       CIR_DefaultValuedFenvAttr:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) (`fenv` `` $fenv^)? attr-dict";
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$src), [{
-      build($_builder, $_state, src, cir::FenvAttr{});
-    }]>
-  ];
 
   let llvmOp = llvmOpName;
   let constrainedLLVMIntrinsic = mnemonic;
@@ -8588,7 +8580,7 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, CIR_FenvOpTraits>
 {
   let arguments = (ins CIR_AnyFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+                       CIR_DefaultValuedFenvAttr:$fenv);
   let results = (outs CIR_IntType:$result);
 
   let summary = [{
@@ -8600,12 +8592,6 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
     $src `:` type($src) `->` type($result)
     (`fenv` `` $fenv^)? attr-dict
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$src), [{
-      build($_builder, $_state, result, src, cir::FenvAttr{});
-    }]>
-  ];
 
   let llvmOp = llvmOpName;
   let constrainedLLVMIntrinsic = mnemonic;
@@ -8658,7 +8644,7 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
     CIR_AnyFloatOrVecOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_DefaultValuedFenvAttr:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -8667,12 +8653,6 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     $lhs `,` $rhs `:` qualified(type($lhs))
     (`fenv` `` $fenv^)? attr-dict
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
-    }]>
-  ];
 
   let llvmOp = llvmOpName;
 }
@@ -8810,7 +8790,7 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_DefaultValuedFenvAttr:$fenv
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
@@ -8818,13 +8798,6 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = [{
     $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
-                   "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
-    }]>
-  ];
 
   let llvmOp = llvmOpName;
   let constrainedLLVMIntrinsic = mnemonic;
