@@ -26,6 +26,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
@@ -668,6 +669,12 @@ private:
 
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
+
+  // Pass-plugins that we load from Conf.PassPluginFilenames.
+  SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
+
+  // Load pass-plugins from file once.
+  Error loadPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted
   // from their libraries. Such functions cannot safely be called, since

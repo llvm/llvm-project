@@ -55,11 +55,12 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  // LTO will register both lists of plugins, but
-  // if an LTO client has already loaded a set of plugins,
-  // they should register them via LoadedPassPlugins.
-  // LoadedPassPlugins is currently used by distributed thin-lto.
+  // Pass-plugins already loaded by the client. LTO does not take ownership, so
+  // they must outlive the lto::LTO object.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  // Plugins that are passed by filename are loaded in lto::LTO::run(). Clients
+  // that call lto::backend() or lto::thinBackend() directly must use
+  // LoadedPassPlugins.
   std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
