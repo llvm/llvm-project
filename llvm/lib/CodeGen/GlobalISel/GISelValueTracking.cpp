@@ -1368,7 +1368,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
       bool SignBitAllZero = true;
       bool SignBitAllOne = true;
 
@@ -2310,7 +2310,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -2349,7 +2349,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {

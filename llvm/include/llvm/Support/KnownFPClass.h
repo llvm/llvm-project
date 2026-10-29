@@ -212,6 +212,8 @@ public:
       : KnownFPMask(toFPClassMask(Known, Sign)) {}
   LLVM_ABI KnownFPClass(const APFloat &C);
 
+  static KnownFPClass getEmpty() { return KnownFPClass(FPClassMask::kfcNone); }
+
   bool operator==(KnownFPClass Other) const {
     return KnownFPMask == Other.KnownFPMask;
   }

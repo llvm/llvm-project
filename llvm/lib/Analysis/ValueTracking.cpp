@@ -5323,13 +5323,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.setKnownFPClasses(fcPosZero);
-    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     return;
   }
 
@@ -5337,7 +5335,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     bool SignBitAllZero = true;
     bool SignBitAllOne = true;
 
@@ -5373,7 +5371,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
       Known |= CDS->getElementAsAPFloat(I).classify();
     return;
@@ -5381,7 +5379,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
     // TODO: Handle complex aggregates
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (const Use &Op : CA->operands()) {
       auto *CFP = dyn_cast<ConstantFP>(Op.get());
       if (!CFP) {
@@ -6418,7 +6416,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -6454,7 +6452,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
