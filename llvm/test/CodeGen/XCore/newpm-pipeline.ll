@@ -29,6 +29,8 @@
 ; CHECK-NEXT:   codegenprepare
 ; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
+; CHECK-NEXT: xcore-lower-thread-local
+; CHECK-NEXT: function
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector

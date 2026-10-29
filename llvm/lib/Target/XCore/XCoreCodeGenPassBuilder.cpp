@@ -47,7 +47,8 @@ void XCoreCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void XCoreCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add XCoreLowerThreadLocalPass
+  flushFPMsToMPM(PMW);
+  addModulePass(XCoreLowerThreadLocalPass(), PMW);
 }
 
 Error XCoreCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {

@@ -13,6 +13,12 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("xcore-lower-thread-local", XCoreLowerThreadLocalPass())
+#undef MODULE_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif

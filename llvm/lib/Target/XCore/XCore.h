@@ -16,6 +16,8 @@
 
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
@@ -27,7 +29,7 @@ class PassRegistry;
 class TargetMachine;
 class XCoreTargetMachine;
 
-void initializeXCoreLowerThreadLocalPass(PassRegistry &p);
+void initializeXCoreLowerThreadLocalLegacyPass(PassRegistry &p);
 
 FunctionPass *createXCoreFrameToArgsOffsetEliminationPass();
 
@@ -38,7 +40,14 @@ public:
 
 FunctionPass *createXCoreISelDagLegacyPass(XCoreTargetMachine &TM,
                                            CodeGenOptLevel OptLevel);
-ModulePass *createXCoreLowerThreadLocalPass();
+
+class XCoreLowerThreadLocalPass
+    : public RequiredPassInfoMixin<XCoreLowerThreadLocalPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createXCoreLowerThreadLocalLegacyPass();
 void initializeXCoreAsmPrinterPass(PassRegistry &);
 void initializeXCoreDAGToDAGISelLegacyPass(PassRegistry &);
 
