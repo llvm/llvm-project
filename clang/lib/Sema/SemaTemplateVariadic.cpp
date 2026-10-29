@@ -384,6 +384,13 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseUnresolvedLookupExpr(E);
     }
 
+    bool TraverseRecoveryExpr(RecoveryExpr *E) override {
+      if (!DynamicRecursiveASTVisitor::TraverseRecoveryExpr(E))
+        return false;
+      TraverseType(E->getType());
+      return true;
+    }
+
     bool TraverseSubstBuiltinTemplatePackType(SubstBuiltinTemplatePackType *T,
                                               bool TraverseQualifier) override {
       addUnexpanded(T);
