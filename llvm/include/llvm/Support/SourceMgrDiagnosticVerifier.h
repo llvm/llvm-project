@@ -32,7 +32,7 @@ class raw_ostream;
 /// Scans SourceMgr source buffers for 'expected-<kind>' comments (e.g.
 /// 'expected-error {{message}}') and verifies that the diagnostics reported
 /// to it via \c process match them, and that every expected diagnostic is
-/// matched at least once.
+/// matched the expected number of times.
 class LLVM_ABI SourceMgrDiagnosticVerifier {
 public:
   /// The result of matching a single actual diagnostic against the expected
@@ -76,8 +76,10 @@ public:
     unsigned lineNo;
     /// The location of the expected diagnostic within the input file.
     SMLoc fileLoc;
-    /// A flag indicating if the expected diagnostic has been matched yet.
-    bool matched = false;
+    /// The number of times this diagnostic is expected.
+    unsigned numExpected = 1;
+    /// The number of matching diagnostics seen so far.
+    unsigned numSeen = 0;
     /// The substring that is expected to be within the diagnostic.
     StringRef substring;
     /// An optional regex matcher, if the expected diagnostic substring was a
@@ -119,6 +121,14 @@ public:
   MatchResult process(raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind,
                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
                       StringRef message, bool reportUnexpected = true);
+
+  /// Like the overload above, but takes the kind, location and message from
+  /// \p diag, and reports an unexpected \p diag as an error prefixed with
+  /// 'unexpected <kind>: '. This is meant to be called from \p mgr's
+  /// diagnostic handler, so the handler is disabled while the verifier prints
+  /// its own errors.
+  MatchResult process(raw_ostream &os, SourceMgr &mgr, const SMDiagnostic &diag,
+                      bool reportUnexpected = true);
 
   /// Reports (through \p mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,
