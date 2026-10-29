@@ -3241,6 +3241,51 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
   return nullptr;
 }
 
+/// Narrow a comparison of an add of a sign extension when the comparison only
+/// constrains values in the range of the narrower type.
+static Value *foldICmpAddOfSExt(ICmpInst &Cmp, BinaryOperator *Add,
+                                const APInt &C2,
+                                InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  const APInt *C1;
+  if (!Add->hasOneUse() ||
+      !match(Add, m_Add(m_OneUse(m_SExt(m_Value(X))), m_APInt(C1))))
+    return nullptr;
+
+  unsigned NarrowBW = X->getType()->getScalarSizeInBits();
+  unsigned WideBW = C2.getBitWidth();
+
+  // Range of values that (sext X) can take, as a wide type range.
+  ConstantRange SExtRange(APInt::getSignedMinValue(NarrowBW).sext(WideBW),
+                          APInt::getSignedMaxValue(NarrowBW).sext(WideBW) + 1);
+
+  // Values V = (sext X) for which (V + C1) Pred C2 holds.
+  ConstantRange Region =
+      ConstantRange::makeExactICmpRegion(Cmp.getCmpPredicate(), C2).subtract(*C1);
+
+  // Bail if the intersection is not a single contiguous range.
+  std::optional<ConstantRange> Inter = Region.exactIntersectWith(SExtRange);
+  if (!Inter)
+    return nullptr;
+
+  ConstantRange NarrowRange = Inter->truncate(NarrowBW);
+
+  // Empty/full ranges mean the compare is constant, so leave that to other
+  // folds.
+  if (NarrowRange.isEmptySet() || NarrowRange.isFullSet())
+    return nullptr;
+
+  CmpInst::Predicate NewPred;
+  APInt NewRHS, Offset;
+  NarrowRange.getEquivalentICmp(NewPred, NewRHS, Offset);
+
+  Type *NarrowTy = X->getType();
+  Value *LHS = X;
+  if (!Offset.isZero())
+    LHS = Builder.CreateAdd(X, ConstantInt::get(NarrowTy, Offset));
+  return Builder.CreateICmp(NewPred, LHS, ConstantInt::get(NarrowTy, NewRHS));
+}
+
 /// Fold icmp (add X, Y), C.
 Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Add,
@@ -3248,6 +3293,10 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   Value *Y = Add->getOperand(1);
   Value *X = Add->getOperand(0);
   const CmpPredicate Pred = Cmp.getCmpPredicate();
+
+  // icmp Pred (add (sext X), C2), C --> icmp Pred' (add X, C2'), C'
+  if (Value *V = foldICmpAddOfSExt(Cmp, Add, C, Builder))
+    return replaceInstUsesWith(Cmp, V);
 
   // icmp ult (add nuw A, (lshr A, ShAmtC)), C --> icmp ult A, C
   // when C <= (1 << ShAmtC).
