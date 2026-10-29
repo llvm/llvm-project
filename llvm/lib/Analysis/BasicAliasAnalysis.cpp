@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -53,7 +54,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -67,19 +67,17 @@
 
 using namespace llvm;
 
-/// Enable analysis of recursive PHI nodes.
-static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
-                                          cl::init(true));
-
-static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(true));
-
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
 STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
+
+BasicAAResult::BasicAAResult(const DataLayout &DL, const Function &F,
+                             const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                             DominatorTree *DT)
+    : Opts(getAnalysisOptions(F)), DL(DL), F(F), TLI(TLI), AC(AC), DT_(DT) {}
 
 bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
@@ -1453,7 +1451,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // know that the recursive phi needs to be based on them in some way.
   bool isRecursive = false;
   auto CheckForRecPhi = [&](Value *PV) {
-    if (!EnableRecPhiAnalysis)
+    if (!Opts.basic_aa_recphi)
       return false;
     if (getUnderlyingObject(PV) == PN) {
       isRecursive = true;
@@ -1613,7 +1611,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
       isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
-  if (EnableSeparateStorageAnalysis) {
+  if (Opts.basic_aa_separate_storage) {
     for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
       if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
@@ -1984,26 +1982,26 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
   return {GCD, OffsetRange, std::move(VarIndexKnownBits)};
 }
 
+/// Check whether V*Scale cannot wrap for any value of V, so that abs(V*Scale)
+/// >= abs(Scale) holds in the presence of potentially wrapping math.
+static bool multiplyByScaleNoWrap(const VariableGEPIndex &Var) {
+  if (Var.IsNSW)
+    return true;
+
+  int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+  // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+  // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+  // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+  int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+  if (MaxScaleValueBW <= 0)
+    return false;
+  return Var.Scale.ule(
+      APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+}
+
 std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const DecomposedGEP &GEP, ArrayRef<KnownBits> VIKnownBits,
     DominatorTree *DT, const AAQueryInfo &AAQI) {
-  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
-  // potentially wrapping math.
-  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
-    if (Var.IsNSW)
-      return true;
-
-    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
-    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
-    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
-    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
-    if (MaxScaleValueBW <= 0)
-      return false;
-    return Var.Scale.ule(
-        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
-  };
-
   const auto &VarIndices = GEP.VarIndices;
   if (VarIndices.size() == 1) {
     // VarIndex = Scale*V.
@@ -2012,7 +2010,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
         isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CtxI))) {
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
-      if (MultiplyByScaleNoWrap(Var)) {
+      if (multiplyByScaleNoWrap(Var)) {
         // If V != 0 then abs(VarIndex) >= abs(Scale).
         return Var.Scale.abs();
       }
@@ -2029,8 +2027,8 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const VariableGEPIndex &Var1 = VarIndices[1];
     bool Preconditions =
         Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
-        !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
-        MultiplyByScaleNoWrap(Var1);
+        !AAQI.MayBeCrossIteration && multiplyByScaleNoWrap(Var0) &&
+        multiplyByScaleNoWrap(Var1);
 
     if (!Preconditions)
       return std::nullopt;
@@ -2094,9 +2092,17 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
+  // After subtracting the two GEP decompositions, we handle variable indices of
+  // the form of Scale*ext(V0) − Scale*ext(V1), where ext() is the same cast.
   if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
       !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
+    return false;
+
+  // MinDiffBytes below is computed as MinDiff * Scale in the index width. This
+  // is correct so long as neither Scale*ext(V0) nor Scale*ext(V1) wraps around
+  // the index space.
+  if (!multiplyByScaleNoWrap(Var0) || !multiplyByScaleNoWrap(Var1))
     return false;
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round
