@@ -22,5 +22,7 @@ MODULE_PASS("xcore-lower-thread-local", XCoreLowerThreadLocalPass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("xcore-frame-to-args-offset-elimination",
+                      XCoreFrameToArgsOffsetEliminationPass())
 MACHINE_FUNCTION_PASS("xcore-isel", XCoreISelDAGToDAGPass(*this, getOptLevel()))
 #undef MACHINE_FUNCTION_PASS
