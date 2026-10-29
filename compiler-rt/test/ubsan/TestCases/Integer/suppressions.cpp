@@ -29,6 +29,10 @@
 // RUN: %clangxx -fsanitize=integer -fno-sanitize-recover=integer %s -o %t-norecover
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.module-supp"' not %run %t-norecover 2>&1 | FileCheck %s
 
+// Test case for max file length suppression file (256MiB).
+// RUN: %python -c "kDefaultFileMaxSize = 1 << 28; [print(f'vptr:{i:022}.cpp') for i in range(int(kDefaultFileMaxSize/32))]" > %t.maxlen-supp
+// RUN: %env_ubsan_opts=suppressions='"%t.maxlen-supp"' %run %t
+
 #include <stdint.h>
 
 extern "C" void do_overflow() {
