@@ -5442,12 +5442,13 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *VD = cast<VarDecl>(D);
-  // extern __shared__ is only allowed on arrays with no length (e.g.
-  // "int x[]").
+  // Accept extern __shared__ on complete types for NVCC compatibility, but
+  // optionally warn. In non-RDC mode nonzero-sized objects have fixed shared
+  // storage; incomplete arrays (e.g. "int x[]") use dynamic shared memory.
+  // AMDGPU also treats zero-sized objects as dynamic LDS.
   if (!S.getLangOpts().GPURelocatableDeviceCode && VD->hasExternalStorage() &&
       !isa<IncompleteArrayType>(VD->getType())) {
-    S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
-    return;
+    S.Diag(AL.getLoc(), diag::warn_cuda_extern_shared) << VD;
   }
   if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_shared))
     return;

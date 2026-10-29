@@ -88,6 +88,15 @@ You can use `--offload-arch=native` to automatically detect the GPU architecture
 clang++ --offload-arch=native -xhip sample.cpp -o sample
 ```
 
+## `extern __shared__` Variables
+
+HIP follows the same rules as CUDA for `extern __shared__` declarations.
+In non-RDC mode, nonzero-sized scalars, structs, and fixed-size arrays use fixed
+shared storage, while unsized arrays use dynamic shared memory. AMDGPU also
+treats zero-sized shared objects as dynamic LDS. See the
+[CUDA guide](https://llvm.org/docs/CompileCudaWithLLVM.html#extern-shared-variables)
+for examples and the optional `-Wcuda-extern-shared` warning.
+
 ## Path Setting for Dependencies
 
 Compiling a HIP program depends on the HIP runtime and device library. The paths to the HIP runtime and device libraries
