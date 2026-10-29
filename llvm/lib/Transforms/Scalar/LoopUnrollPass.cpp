@@ -94,8 +94,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     std::optional<unsigned> UserThreshold, std::optional<bool> UserAllowPartial,
     std::optional<bool> UserRuntime, std::optional<bool> UserUpperBound,
     std::optional<unsigned> UserFullUnrollMaxCount) {
-  const ScalarOptions &Opts =
-      L->getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*L);
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -196,7 +195,6 @@ struct UnrolledInstState {
 
 /// Hashing and equality testing for a set of the instruction states.
 struct UnrolledInstStateKeyInfo {
-  using PtrInfo = DenseMapInfo<Instruction *>;
   using PairInfo = DenseMapInfo<std::pair<Instruction *, int>>;
 
   static inline unsigned getHashValue(const UnrolledInstState &S) {
@@ -415,7 +413,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
       Value *V = PHI->getIncomingValueForBlock(
           Iteration == 0 ? L->getLoopPreheader() : L->getLoopLatch());
-      if (Iteration != 0 && SimplifiedValues.count(V))
+      if (Iteration != 0 && SimplifiedValues.contains(V))
         V = SimplifiedValues.lookup(V);
       SimplifiedInputValues.push_back({PHI, V});
     }
@@ -439,7 +437,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       for (Instruction &I : *BB) {
         // These won't get into the final code - don't even try calculating the
         // cost for them.
-        if (EphValues.count(&I))
+        if (EphValues.contains(&I))
           continue;
 
         // Track this instruction's expected baseline cost when executing the
@@ -490,7 +488,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       Instruction *TI = BB->getTerminator();
 
       auto getSimplifiedConstant = [&](Value *V) -> Constant * {
-        if (SimplifiedValues.count(V))
+        if (SimplifiedValues.contains(V))
           V = SimplifiedValues.lookup(V);
         return dyn_cast<Constant>(V);
       };
@@ -687,11 +685,7 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
 }
 
 UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
-    : UserUnrollCount(L->getHeader()
-                          ->getContext()
-                          .getLibraryOptions()
-                          .get<ScalarOptions>()
-                          .unroll_count.has_value()),
+    : UserUnrollCount(getScalarOptions(*L).unroll_count.has_value()),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
       PragmaCount(unrollCountPragmaValue(L)),
       PragmaEnableUnroll(hasUnrollEnablePragma(L)),
@@ -927,8 +921,7 @@ unsigned llvm::computeUnrollCount(
     const unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
-  const ScalarOptions &Opts =
-      L->getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*L);
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -1552,8 +1545,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   // pass. Function analyses need to be preserved across loop transformations
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
 
   // Keep track of the previous loop structure so we can identify new loops
   // created by unrolling.

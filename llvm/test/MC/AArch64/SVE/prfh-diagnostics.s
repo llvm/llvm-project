@@ -29,12 +29,12 @@ prfh #pldl1keep, p0, [x0]
 // invalid scalar + scalar addressing modes
 
 prfh #0, p0, [x0, #-33, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfh #0, p0, [x0, #-33, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [x0, #32, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfh #0, p0, [x0, #32, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -97,52 +97,52 @@ prfh #0, p0, [x0, z0.d, sxtw #2]
 // Invalid vector + immediate addressing modes
 
 prfh #0, p0, [z0.s, #-2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.s, #-2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.s, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.s, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.s, #63]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.s, #63]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.s, #64]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.s, #64]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.s, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.s, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.d, #-2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.d, #-2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.d, #63]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.d, #63]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.d, #64]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.d, #64]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfh #0, p0, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: prfh #0, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

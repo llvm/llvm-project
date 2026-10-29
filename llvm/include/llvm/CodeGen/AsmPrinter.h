@@ -546,8 +546,8 @@ public:
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
-  /// information for other purposes (debugging, sanitizers, ...) when
-  /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
+  /// information for other purposes (debugging, sanitizers, ...) when the
+  /// module's exception model is `ExceptionHandling::None`.
   bool usesCFIWithoutEH() const;
 
   /// Print to the current output stream assembly representations of the

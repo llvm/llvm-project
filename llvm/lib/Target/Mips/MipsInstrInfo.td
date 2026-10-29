@@ -857,6 +857,8 @@ def MipsJumpTargetAsmOperand : AsmOperandClass {
 // Instruction operand types
 def jmptarget   : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValue";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
   let PrintMethod = "printJumpOperand";
 }
@@ -876,6 +878,8 @@ def brtarget1SImm16 : Operand<OtherVT> {
 }
 def calltarget  : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValue";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
   let PrintMethod = "printJumpOperand";
 }

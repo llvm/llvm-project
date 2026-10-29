@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux -verify -std=c2y -Wall -pedantic %s
 
 /* WG14 N3842: Yes
  * Standard pragmas and headers

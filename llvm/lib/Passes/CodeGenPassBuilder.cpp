@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -632,6 +633,13 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
                   PMW, /*Force=*/true);
     addMachineFunctionPass(RegUsageInfoPropagationPass(), PMW);
   }
+
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      (Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_UNSET
+           ? isMachinePipelinerEnabled()
+           : Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_TRUE))
+    addMachineFunctionPass(MachinePipelinerPass(), PMW);
+
   // Run pre-ra passes.
   addPreRegAlloc(PMW);
 

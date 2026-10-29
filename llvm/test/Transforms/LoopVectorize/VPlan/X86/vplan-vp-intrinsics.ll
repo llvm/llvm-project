@@ -15,12 +15,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; IF-EVL-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; IF-EVL-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; IF-EVL-NEXT:  Live-in ir<%N> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  ir-bb<entry>:
 ; IF-EVL-NEXT:  Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  vector.ph:
+; IF-EVL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
+; IF-EVL-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; IF-EVL-NEXT:  Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:  <x1> vector loop: {
