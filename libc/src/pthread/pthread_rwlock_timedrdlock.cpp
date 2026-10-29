@@ -12,7 +12,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/threads/linux/rwlock.h"
+#include "src/__support/threads/unix_rwlock.h"
 #include "src/__support/time/abs_timeout.h"
 
 #include <pthread.h>

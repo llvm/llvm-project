@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fsub.h"
-#include "src/__support/FPUtil/generic/add_sub.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fsub.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fsub, (double x, double y)) {
-  return fputil::generic::sub<float>(x, y);
+  return math::fsub(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

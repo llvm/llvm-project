@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -163,6 +164,74 @@ TEST(CompilerInvocationTest, CopyOnWriteAssignment) {
   // The new copy reflects the modification, old instance remains unchanged.
   EXPECT_EQ(A.getFrontendOpts().OutputFile, "y.o");
   EXPECT_EQ(B.getFrontendOpts().OutputFile, "x.o");
+}
+
+TEST(CompilerInvocationTest, WithConstCowRef) {
+  CompilerInvocation CI;
+  CI.getHeaderSearchOpts().ModuleCachePath = "mcp";
+
+  HeaderSearchOptions *HSOpts = &CI.getHeaderSearchOpts();
+
+  CI.withCowRef<void>([](const CowCompilerInvocation &CowCI) {
+    // Values stored in the original invocation are reflected in cow.
+    EXPECT_EQ(CowCI.getHeaderSearchOpts().ModuleCachePath, "mcp");
+  });
+
+  // Creating const cow reference does not make a copy.
+  EXPECT_EQ(HSOpts, &CI.getHeaderSearchOpts());
+}
+
+TEST(CompilerInvocationTest, WithMutCowRef) {
+  CompilerInvocation CI;
+  CI.getHeaderSearchOpts().ModuleCachePath = "mcp";
+  CI.getLangOpts().Modules = true;
+
+  HeaderSearchOptions *HSOpts = &CI.getHeaderSearchOpts();
+  LangOptions *LangOpts = &CI.getLangOpts();
+
+  CI.withCowRef<void>([](CowCompilerInvocation &CowCI) {
+    // Values stored in the original invocation are reflected in cow.
+    EXPECT_EQ(CowCI.getHeaderSearchOpts().ModuleCachePath, "mcp");
+    // Values can be mutated.
+    CowCI.getMutLangOpts().Modules = false;
+  });
+
+  // Reading options class on a non-const cow reference does not make a copy.
+  EXPECT_EQ(HSOpts, &CI.getHeaderSearchOpts());
+  // Writing options class on a non-const cow reference does not make a copy.
+  EXPECT_EQ(LangOpts, &CI.getLangOpts());
+  // Writing options class on a non-const cow reference modifies the original.
+  EXPECT_EQ(CI.getLangOpts().Modules, false);
+}
+
+TEST(CompilerInvocationTest, CopyOnWriteVisitPaths) {
+  CowCompilerInvocation A;
+  A.getMutHeaderSearchOpts().ModuleCachePath = "mcp";
+  A.getMutLangOpts().Modules = true;
+
+  CowCompilerInvocation B(A);
+
+  const HeaderSearchOptions *HSOpts = &B.getHeaderSearchOpts();
+  const LangOptions *LangOpts = &B.getLangOpts();
+  B.visitMutPaths([](StringRef Path, std::string &NewPath) {
+    CowCompilerInvocation::VisitMutResult Res;
+    if (Path == "mcp") {
+      NewPath = "pcm";
+      Res.Replace = true;
+      Res.Terminate = true;
+    }
+    return Res;
+  });
+
+  // Modifying a path copies and modifies only one instance of the invocation.
+  EXPECT_NE(HSOpts, &B.getHeaderSearchOpts());
+  EXPECT_EQ(B.getHeaderSearchOpts().ModuleCachePath, "pcm");
+  // And the other instance remains unmodified.
+  EXPECT_EQ(HSOpts, &A.getHeaderSearchOpts());
+  EXPECT_EQ(A.getHeaderSearchOpts().ModuleCachePath, "mcp");
+
+  // Unmodified options are not copied.
+  EXPECT_EQ(LangOpts, &B.getLangOpts());
 }
 
 // Boolean option with a keypath that defaults to true.
@@ -638,7 +707,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfNonsenseSyclStdArg) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg1) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=121"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=121", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -655,7 +724,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg1) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg2) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=1.2.1"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=1.2.1", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -672,7 +741,8 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg2) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg3) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1", "-x",
+                        "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -689,7 +759,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg3) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentHost) {
-  const char *Args[] = {"-fsycl-is-host"};
+  const char *Args[] = {"-fsycl-is-host", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -704,7 +774,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentHost) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentDevice) {
-  const char *Args[] = {"-fsycl-is-device"};
+  const char *Args[] = {"-fsycl-is-device", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -719,7 +789,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentDevice) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagPresent) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=2017"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=2017", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 

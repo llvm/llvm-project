@@ -16,13 +16,13 @@ subroutine openmp_tiles(x)
 !$omp end tile
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE:   OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE:     LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE:     Flags = {}
 !PARSE-TREE:   DoConstruct
 !PARSE-TREE:   EndDoStmt
-!PARSE-TREE: OmpEndLoopDirective
+!PARSE-TREE: OmpEndDirective
 !PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = tile
 
 END subroutine openmp_tiles

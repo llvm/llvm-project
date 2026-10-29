@@ -1,5 +1,6 @@
 ; Test branch weight metadata, estimated trip count metadata, and block
-; frequencies after partial loop unrolling without -unroll-runtime.
+; frequencies after partial loop unrolling without -unroll-runtime and without
+; converting any iteration's latch to an unconditional branch.
 
 ; ------------------------------------------------------------------------------
 ; RUN: opt < %s -S -passes='print<block-freq>' 2>&1 | \

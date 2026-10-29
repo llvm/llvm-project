@@ -473,15 +473,15 @@ define void @foo(ptr nocapture readonly %arg_A, i32 %arg_B, ptr nocapture %array
 ; CHECK-NEXT:    [[J_098:%.*]] = phi i32 [ 0, [[FOR_BODY16_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[W3_097:%.*]] = phi float [ [[TMP7]], [[FOR_BODY16_LR_PH]] ], [ [[W2_096]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[W2_096]] = phi float [ [[TMP5]], [[FOR_BODY16_LR_PH]] ], [ [[SUB28]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    [[MUL17:%.*]] = fmul fast float [[W0_0100]], 0x3FF19999A0000000
-; CHECK-NEXT:    [[MUL18_NEG:%.*]] = fmul fast float [[W1_099]], 0xBFF3333340000000
+; CHECK-NEXT:    [[MUL17:%.*]] = fmul fast float [[W0_0100]], 1.100000e+00
+; CHECK-NEXT:    [[MUL18_NEG:%.*]] = fmul fast float [[W1_099]], -1.200000e+00
 ; CHECK-NEXT:    [[SUB92:%.*]] = fadd fast float [[MUL17]], [[MUL18_NEG]]
 ; CHECK-NEXT:    [[SUB19]] = fadd fast float [[SUB92]], [[TMP8]]
-; CHECK-NEXT:    [[MUL20:%.*]] = fmul fast float [[SUB19]], 0x4000CCCCC0000000
-; CHECK-NEXT:    [[MUL21_NEG:%.*]] = fmul fast float [[W0_0100]], 0xC0019999A0000000
-; CHECK-NEXT:    [[MUL23:%.*]] = fmul fast float [[W1_099]], 0x4002666660000000
-; CHECK-NEXT:    [[MUL25:%.*]] = fmul fast float [[W2_096]], 0x4008CCCCC0000000
-; CHECK-NEXT:    [[MUL27_NEG:%.*]] = fmul fast float [[W3_097]], 0xC0099999A0000000
+; CHECK-NEXT:    [[MUL20:%.*]] = fmul fast float [[SUB19]], 2.100000e+00
+; CHECK-NEXT:    [[MUL21_NEG:%.*]] = fmul fast float [[W0_0100]], -2.200000e+00
+; CHECK-NEXT:    [[MUL23:%.*]] = fmul fast float [[W1_099]], 2.300000e+00
+; CHECK-NEXT:    [[MUL25:%.*]] = fmul fast float [[W2_096]], 3.100000e+00
+; CHECK-NEXT:    [[MUL27_NEG:%.*]] = fmul fast float [[W3_097]], -3.200000e+00
 ; CHECK-NEXT:    [[ADD2293:%.*]] = fadd fast float [[MUL27_NEG]], [[MUL25]]
 ; CHECK-NEXT:    [[ADD24:%.*]] = fadd fast float [[ADD2293]], [[MUL23]]
 ; CHECK-NEXT:    [[SUB2694:%.*]] = fadd fast float [[ADD24]], [[MUL21_NEG]]
@@ -578,8 +578,8 @@ define void @store_red_double(ptr noalias %A, ptr noalias %B, ptr noalias %C, i3
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[I_018]]
 ; CHECK-NEXT:    store double [[ADD8]], ptr [[ARRAYIDX9]], align 8

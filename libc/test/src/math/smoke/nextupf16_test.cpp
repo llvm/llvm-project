@@ -10,4 +10,4 @@
 
 #include "src/math/nextupf16.h"
 
-LIST_NEXTUP_TESTS(float16, LIBC_NAMESPACE::nextupf16)
+LIST_NEXTUP_TESTS(Nextupf16, float16, LIBC_NAMESPACE::nextupf16)

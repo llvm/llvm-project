@@ -12,19 +12,19 @@
 define void @pow_f32_f64(float %a, double %b) {
 ; CHECK-NO-ARMPL-LABEL: 'pow_f32_f64'
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_f32 = call fast float @llvm.pow.f32(float %a, float 2.500000e-01)
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f32 = call fast float @llvm.pow.f32(float %a, float 0x3FD5555560000000)
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f32 = call fast float @llvm.pow.f32(float %a, float f0x3EAAAAAB)
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_f32 = call fast float @llvm.pow.f32(float %a, float 7.500000e-01)
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_f64 = call fast double @llvm.pow.f64(double %b, double 2.500000e-01)
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f64 = call fast double @llvm.pow.f64(double %b, double 0x3FD5555555555555)
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f64 = call fast double @llvm.pow.f64(double %b, double f0x3FD5555555555555)
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_f64 = call fast double @llvm.pow.f64(double %b, double 7.500000e-01)
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-ARMPL-LABEL: 'pow_f32_f64'
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_f32 = call fast float @llvm.pow.f32(float %a, float 2.500000e-01)
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f32 = call fast float @llvm.pow.f32(float %a, float 0x3FD5555560000000)
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f32 = call fast float @llvm.pow.f32(float %a, float f0x3EAAAAAB)
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_f32 = call fast float @llvm.pow.f32(float %a, float 7.500000e-01)
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_f64 = call fast double @llvm.pow.f64(double %b, double 2.500000e-01)
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f64 = call fast double @llvm.pow.f64(double %b, double 0x3FD5555555555555)
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_f64 = call fast double @llvm.pow.f64(double %b, double f0x3FD5555555555555)
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_f64 = call fast double @llvm.pow.f64(double %b, double 7.500000e-01)
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -42,13 +42,13 @@ define void @pow_f32_f64(float %a, double %b) {
 define void @pow_v4f32(<4 x float> %a) {
 ; CHECK-NO-ARMPL-LABEL: 'pow_v4f32'
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 2.500000e-01))
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:46 Lat:52 SizeLat:52 for: %pow_one_third_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 0x3FD5555560000000))
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:46 Lat:52 SizeLat:52 for: %pow_one_third_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float f0x3EAAAAAB))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 7.500000e-01))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-ARMPL-LABEL: 'pow_v4f32'
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 2.500000e-01))
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 0x3FD5555560000000))
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float f0x3EAAAAAB))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_v4f32 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %a, <4 x float> splat (float 7.500000e-01))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -62,13 +62,13 @@ define void @pow_v4f32(<4 x float> %a) {
 define void @pow_v2f64(<2 x double> %a) {
 ; CHECK-NO-ARMPL-LABEL: 'pow_v2f64'
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 2.500000e-01))
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:22 Lat:24 SizeLat:24 for: %pow_one_third_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 0x3FD5555555555555))
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:22 Lat:24 SizeLat:24 for: %pow_one_third_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double f0x3FD5555555555555))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 7.500000e-01))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-ARMPL-LABEL: 'pow_v2f64'
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 2.500000e-01))
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 0x3FD5555555555555))
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double f0x3FD5555555555555))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_v2f64 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %a, <2 x double> splat (double 7.500000e-01))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -82,13 +82,13 @@ define void @pow_v2f64(<2 x double> %a) {
 define void @pow_nxv4f32(<vscale x 4 x float> %a) {
 ; CHECK-NO-ARMPL-LABEL: 'pow_nxv4f32'
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_0p25_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 2.500000e-01))
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_one_third_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 0x3FD5555560000000))
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_one_third_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float f0x3EAAAAAB))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_0p75_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 7.500000e-01))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-ARMPL-LABEL: 'pow_nxv4f32'
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 2.500000e-01))
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 0x3FD5555560000000))
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float f0x3EAAAAAB))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_nxv4f32 = call fast <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> splat (float 7.500000e-01))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -102,13 +102,13 @@ define void @pow_nxv4f32(<vscale x 4 x float> %a) {
 define void @pow_nxv2f64(<vscale x 2 x double> %a) {
 ; CHECK-NO-ARMPL-LABEL: 'pow_nxv2f64'
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_0p25_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 2.500000e-01))
-; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_one_third_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 0x3FD5555555555555))
+; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_one_third_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double f0x3FD5555555555555))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of Invalid for: %pow_0p75_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 7.500000e-01))
 ; CHECK-NO-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-ARMPL-LABEL: 'pow_nxv2f64'
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 2 for: %pow_0p25_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 2.500000e-01))
-; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 0x3FD5555555555555))
+; CHECK-ARMPL-NEXT:  Cost Model: Found costs of 10 for: %pow_one_third_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double f0x3FD5555555555555))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %pow_0p75_nxv2f64 = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> splat (double 7.500000e-01))
 ; CHECK-ARMPL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

@@ -18,7 +18,7 @@ define void @samebd0(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %i.013, ptr %arrayidx12, align 8
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - output [-4 -3] / assuming 2 loop level(s) fused: [-4 -3 -3 -1]!
+; CHECK-NEXT:    da analyze - output [-4 -3] / assuming 1 loop level(s) fused: [-4 -3 -3]!
 ; CHECK-NEXT:  Src: store i64 %l17.04, ptr %arrayidx24, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -148,9 +148,9 @@ define void @non_samebd0(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %i.013, ptr %arrayidx12, align 8
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - output [> *]!
+; CHECK-NEXT:    da analyze - output [* *|<]!
 ; CHECK-NEXT:  Src: store i64 %l17.04, ptr %arrayidx24, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * * *]!
 ;
 entry:
   br label %for.cond1.preheader

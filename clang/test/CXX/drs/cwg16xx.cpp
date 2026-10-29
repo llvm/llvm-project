@@ -269,8 +269,20 @@ namespace cwg1658 { // cwg1658: 5
     struct D : A { virtual void f() = 0; }; // #cwg1658-D
 
     struct X {
-      friend B::B(const B&) throw();
-      friend C::C(C&);
+#if __cplusplus >= 202400L
+      friend constexpr
+#else
+      friend
+#endif
+      B::B(const B&) throw();
+
+#if __cplusplus >= 202400L
+      friend constexpr
+#else
+      friend
+#endif
+      C::C(C&);
+
       friend D::D(D&);
       // since-cxx23-error@-1 {{non-constexpr declaration of 'D' follows constexpr declaration}}
       //   since-cxx23-note@#cwg1658-D {{previous declaration is here}}
@@ -327,6 +339,15 @@ namespace cwg1658 { // cwg1658: 5
 
   // assignment case is superseded by cwg2180
 } // namespace cwg1658
+
+namespace cwg1670 { // cwg1670: no
+#if __cpusplus >= 201103L
+struct S {
+  operator auto() { return 0; }
+  // FIXME-error@-1 {{'auto' not allowed in declaration of conversion function}}
+};
+#endif
+} // namespace cwg1670
 
 namespace cwg1672 { // cwg1672: 7
   struct Empty {};

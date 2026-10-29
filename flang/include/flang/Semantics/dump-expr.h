@@ -149,6 +149,7 @@ private:
     Outdent();
   }
   void Show(const evaluate::DescriptorInquiry &x);
+  void Show(const evaluate::RankOneBoundElement &x);
   void Show(const evaluate::SpecificIntrinsic &);
   void Show(const evaluate::ProcedureDesignator &x);
   void Show(const evaluate::ActualArgument &x);
@@ -199,6 +200,19 @@ private:
     Indent("binary op "s + std::string(TypeOf<D>::name));
     Show(op.left());
     Show(op.right());
+    Outdent();
+  }
+  template <typename T> void Show(const evaluate::ConditionalExpr<T> &x) {
+    Indent("conditional expr "s + std::string(TypeOf<T>::name));
+    Indent("condition");
+    Show(x.condition());
+    Outdent();
+    Indent("then");
+    Show(x.thenValue());
+    Outdent();
+    Indent("else");
+    Show(x.elseValue());
+    Outdent();
     Outdent();
   }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);

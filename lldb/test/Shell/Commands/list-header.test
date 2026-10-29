@@ -24,7 +24,7 @@
 # CHECK-INLINED: 6   	  *ptr = x; // should crash here
 # CHECK-INLINED: 7   	}
 
-# CHECK-NO-INLINED: error: Could not find source file "foo.h".
+# CHECK-NO-INLINED: error: Could not find source file "foo.h"
 
 #--- foo.h
 // foo.h

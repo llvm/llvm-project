@@ -23,9 +23,9 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,26 +45,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class SizeOptTable : public opt::GenericOptTable {
+class SizeOptTable : public opt::OptTable {
 public:
-  SizeOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
-    setGroupedShortOptions(true);
-  }
+  SizeOptTable() : OptTable(optionTables()) { setGroupedShortOptions(true); }
 };
 
 enum OutputFormatTy { berkeley, sysv, darwin };
@@ -608,22 +594,21 @@ static void printFileSectionSizes(StringRef file) {
             ArchFound = true;
             Expected<std::unique_ptr<ObjectFile>> UO = I->getAsObjectFile();
             if (UO) {
-              if (ObjectFile *o = dyn_cast<ObjectFile>(&*UO.get())) {
-                MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
-                if (OutputFormat == sysv)
-                  outs() << o->getFileName() << "  :\n";
-                else if (MachO && OutputFormat == darwin) {
-                  if (MoreThanOneFile || ArchFlags.size() > 1)
-                    outs() << o->getFileName() << " (for architecture "
-                           << I->getArchFlagName() << "): \n";
-                }
-                printObjectSectionSizes(o);
-                if (OutputFormat == berkeley) {
-                  if (!MachO || MoreThanOneFile || ArchFlags.size() > 1)
-                    outs() << o->getFileName() << " (for architecture "
-                           << I->getArchFlagName() << ")";
-                  outs() << "\n";
-                }
+              ObjectFile *o = &*UO.get();
+              MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
+              if (OutputFormat == sysv)
+                outs() << o->getFileName() << "  :\n";
+              else if (MachO && OutputFormat == darwin) {
+                if (MoreThanOneFile || ArchFlags.size() > 1)
+                  outs() << o->getFileName() << " (for architecture "
+                         << I->getArchFlagName() << "): \n";
+              }
+              printObjectSectionSizes(o);
+              if (OutputFormat == berkeley) {
+                if (!MachO || MoreThanOneFile || ArchFlags.size() > 1)
+                  outs() << o->getFileName() << " (for architecture "
+                         << I->getArchFlagName() << ")";
+                outs() << "\n";
               }
             } else if (auto E = isNotObjectErrorInvalidFileType(
                        UO.takeError())) {
@@ -699,22 +684,21 @@ static void printFileSectionSizes(StringRef file) {
         if (HostArchName == I->getArchFlagName()) {
           Expected<std::unique_ptr<ObjectFile>> UO = I->getAsObjectFile();
           if (UO) {
-            if (ObjectFile *o = dyn_cast<ObjectFile>(&*UO.get())) {
-              MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
-              if (OutputFormat == sysv)
-                outs() << o->getFileName() << "  :\n";
-              else if (MachO && OutputFormat == darwin) {
-                if (MoreThanOneFile)
-                  outs() << o->getFileName() << " (for architecture "
-                         << I->getArchFlagName() << "):\n";
-              }
-              printObjectSectionSizes(o);
-              if (OutputFormat == berkeley) {
-                if (!MachO || MoreThanOneFile)
-                  outs() << o->getFileName() << " (for architecture "
-                         << I->getArchFlagName() << ")";
-                outs() << "\n";
-              }
+            ObjectFile *o = &*UO.get();
+            MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
+            if (OutputFormat == sysv)
+              outs() << o->getFileName() << "  :\n";
+            else if (MachO && OutputFormat == darwin) {
+              if (MoreThanOneFile)
+                outs() << o->getFileName() << " (for architecture "
+                       << I->getArchFlagName() << "):\n";
+            }
+            printObjectSectionSizes(o);
+            if (OutputFormat == berkeley) {
+              if (!MachO || MoreThanOneFile)
+                outs() << o->getFileName() << " (for architecture "
+                       << I->getArchFlagName() << ")";
+              outs() << "\n";
             }
           } else if (auto E = isNotObjectErrorInvalidFileType(UO.takeError())) {
             error(std::move(E), file);
@@ -774,23 +758,22 @@ static void printFileSectionSizes(StringRef file) {
          I != E; ++I) {
       Expected<std::unique_ptr<ObjectFile>> UO = I->getAsObjectFile();
       if (UO) {
-        if (ObjectFile *o = dyn_cast<ObjectFile>(&*UO.get())) {
-          MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
-          if (OutputFormat == sysv)
-            outs() << o->getFileName() << "  :\n";
-          else if (MachO && OutputFormat == darwin) {
-            if (MoreThanOneFile || MoreThanOneArch)
-              outs() << o->getFileName() << " (for architecture "
-                     << I->getArchFlagName() << "):";
-            outs() << "\n";
-          }
-          printObjectSectionSizes(o);
-          if (OutputFormat == berkeley) {
-            if (!MachO || MoreThanOneFile || MoreThanOneArch)
-              outs() << o->getFileName() << " (for architecture "
-                     << I->getArchFlagName() << ")";
-            outs() << "\n";
-          }
+        ObjectFile *o = &*UO.get();
+        MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
+        if (OutputFormat == sysv)
+          outs() << o->getFileName() << "  :\n";
+        else if (MachO && OutputFormat == darwin) {
+          if (MoreThanOneFile || MoreThanOneArch)
+            outs() << o->getFileName() << " (for architecture "
+                   << I->getArchFlagName() << "):";
+          outs() << "\n";
+        }
+        printObjectSectionSizes(o);
+        if (OutputFormat == berkeley) {
+          if (!MachO || MoreThanOneFile || MoreThanOneArch)
+            outs() << o->getFileName() << " (for architecture "
+                   << I->getArchFlagName() << ")";
+          outs() << "\n";
         }
       } else if (auto E = isNotObjectErrorInvalidFileType(UO.takeError())) {
         error(std::move(E), file, MoreThanOneArch ?

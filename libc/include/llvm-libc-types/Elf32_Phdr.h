@@ -24,4 +24,4 @@ typedef struct {
   Elf32_Word p_align;
 } Elf32_Phdr;
 
-#endif // LLVM_LIBC_TYPES_ELF32_EHDR_H
+#endif // LLVM_LIBC_TYPES_ELF32_PHDR_H

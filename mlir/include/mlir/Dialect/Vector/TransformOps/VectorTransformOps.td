@@ -14,6 +14,7 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/Transform/IR/TransformTypes.td"
 
 def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
     "apply_conversion_patterns.vector.vector_to_llvm",
@@ -34,6 +35,51 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
       DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
       DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
+  let assemblyFormat = [{
+    oilist (`reassociate_fp_reductions` `=` $reassociate_fp_reductions
+          | `force_32bit_vector_indices` `=` $force_32bit_vector_indices
+          | `use_vector_alignment` `=` $use_vector_alignment)
+    attr-dict
+  }];
+}
+
+def ApplyVectorLinearizeConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.linearize",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["populateConversionTargetRules",
+                                "verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns for ND vector (n >= 2) vector linearization.
+    
+    These patterns require the type converter built by the corresponding
+    linearize type converter op.
+
+    The patterns can be customized as follows:
+    - `shuffle_like_ops`: Linearizes ND vector ops into 1D vector shuffles.
+    - `target_vector_bitwidth`: If set, ops whose inner-most vector dimension
+      is at least this many bits wide are not linearized.
+  }];
+
+  let arguments = (ins
+      DefaultValuedAttr<BoolAttr, "false">:$shuffle_like_ops,
+      OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$target_vector_bitwidth);
+  let assemblyFormat = [{
+    oilist (`shuffle_like_ops` `=` $shuffle_like_ops
+          | `target_vector_bitwidth` `=` $target_vector_bitwidth)
+    attr-dict
+  }];
+}
+
+def VectorLinearizeTypeConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.linearize_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["getTypeConverter",
+                                "getTypeConverterType"]>]> {
+  let description = [{
+    Builds a type converter that controls which ND (n >= 2) vector types are
+    linearized into 1D forms, and materializes conversions.
+  }];
+
   let assemblyFormat = "attr-dict";
 }
 
@@ -324,6 +370,27 @@ def ApplyUnrollFromElementsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyUnrollContractPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_contract",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply unroll patterns for `vector.contract` using the given shapes as the
+    target shape. If no `vector.contract` Op is present in the target block, no
+    unrolling takes place.
+
+    This op assumes that the target `vector.contract` Op models a matrix
+    multiplication. Generalising this Op to other cases is left as a TODO.
+  }];
+
+  let arguments = (ins I64Attr:$m,
+                       I64Attr:$n,
+                       I64Attr:$k);
+
+  let assemblyFormat = [{
+    `[` $m `,` $n `,` $k `]` attr-dict
+  }];
+}
+
 def ApplyUnrollToElementsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.unroll_to_elements",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -358,6 +425,26 @@ def ApplyLowerShapeCastPatternsOp : Op<Transform_Dialect,
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def ApplyLowerStepPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_step",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector.step operations should be lowered to finer-grained
+    vector primitives.
+
+    `index_bitwidth` is the bitwidth used to materialize `index`-typed steps; a
+    bitwidth of 0 leaves them untouched (e.g. to defer to a later, target-aware
+    lowering). It must not exceed the index storage bitwidth. Integer-typed
+    steps are unaffected by this option.
+  }];
+
+  let arguments = (ins I64Attr:$index_bitwidth);
+
+  let assemblyFormat = [{
+    `index_bitwidth` `=` $index_bitwidth attr-dict
+  }];
 }
 
 def ApplyLowerTransferPatternsOp : Op<Transform_Dialect,
@@ -399,8 +486,7 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     oilist (
       `lowering_strategy` `=` $lowering_strategy
       | `avx2_lowering_strategy` `=` $avx2_lowering_strategy
-    )
-    attr-dict
+    ) attr-dict
   }];
 }
 
@@ -418,15 +504,15 @@ def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyInterleaveToShufflePatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.interleave_to_shuffle",
+def ApplyInterleaveAndDeinterleaveToShufflePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.interleave_and_deinterleave_to_shuffle",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that 1D vector interleave operations should be rewritten as
-    vector shuffle operations.
+    Indicates that 1D vector interleave and deinterleave operations should be
+    rewritten as vector shuffle operations.
 
     This is motivated by some current codegen backends not handling vector
-    interleave operations.
+    interleave and deinterleave operations.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -488,8 +574,7 @@ def ApplyTransferToScfPatternsOp : Op<Transform_Dialect,
     oilist (
         `max_transfer_rank` `=` $max_transfer_rank
       | `full_unroll` `=` $full_unroll
-    )
-    attr-dict
+    ) attr-dict
   }];
 }
 

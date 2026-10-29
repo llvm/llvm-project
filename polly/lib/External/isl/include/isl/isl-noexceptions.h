@@ -3299,7 +3299,9 @@ public:
   inline isl::pw_multi_aff flat_range_product(const isl::pw_aff &pma2) const;
   inline stat foreach_piece(const std::function<stat(isl::set, isl::multi_aff)> &fn) const;
   static inline isl::pw_multi_aff from_map(isl::map map);
+  static inline isl::pw_multi_aff from_set(isl::set set);
   inline isl::pw_multi_aff gist(isl::set set) const;
+  inline isl::pw_multi_aff gist_params(isl::set set) const;
   inline isl::union_pw_multi_aff gist(const isl::union_set &context) const;
   inline isl::pw_multi_aff gist(const isl::basic_set &set) const;
   inline isl::pw_multi_aff gist(const isl::point &set) const;
@@ -16378,9 +16380,21 @@ isl::pw_multi_aff pw_multi_aff::from_map(isl::map map)
   return manage(res);
 }
 
+isl::pw_multi_aff pw_multi_aff::from_set(isl::set set)
+{
+  auto res = isl_pw_multi_aff_from_set(set.release());
+  return manage(res);
+}
+
 isl::pw_multi_aff pw_multi_aff::gist(isl::set set) const
 {
   auto res = isl_pw_multi_aff_gist(copy(), set.release());
+  return manage(res);
+}
+
+isl::pw_multi_aff pw_multi_aff::gist_params(isl::set set) const
+{
+  auto res = isl_pw_multi_aff_gist_params(copy(), set.release());
   return manage(res);
 }
 

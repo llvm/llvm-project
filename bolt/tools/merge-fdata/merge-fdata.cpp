@@ -15,6 +15,7 @@
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -66,7 +67,6 @@ static cl::opt<bool>
 SuppressMergedDataOutput("q",
   cl::desc("do not print merged data to stdout"),
   cl::init(false),
-  cl::Optional,
   cl::cat(MergeFdataCategory));
 
 static cl::opt<std::string>
@@ -268,6 +268,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   std::optional<bool> BoltedCollection;
   std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
+  std::set<std::string> EventNames;
   struct CounterTy {
     uint64_t Exec{0};
     uint64_t Mispred{0};
@@ -312,7 +313,20 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       checkMode("boltedcollection", BoltedCollection);
       // Check if the string "no_lbr" is in the first line
       // (or second line if BoltedCollection is true)
+      // The line may also contain space-separated event names following
+      // "no_lbr", e.g. "no_lbr cycles:u". Preserve and propagate them to
+      // the merged output.
+      std::string NoLBRLineCopy = FdataLine;
       checkMode("no_lbr", NoLBRCollection);
+      StringRef NoLBRLine(NoLBRLineCopy);
+      if (NoLBRCollection.value_or(false) &&
+          NoLBRLine.consume_front("no_lbr")) {
+        SmallVector<StringRef> Events;
+        NoLBRLine.trim().split(Events, ' ', /*MaxSplit=*/-1,
+                               /*KeepEmpty=*/false);
+        for (StringRef Event : Events)
+          EventNames.insert(Event.str());
+      }
       Profile = &Profiles[tid];
     }
 
@@ -382,8 +396,12 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
-  if (NoLBRCollection.value_or(false))
-    output() << "no_lbr\n";
+  if (NoLBRCollection.value_or(false)) {
+    output() << "no_lbr";
+    for (StringRef Entry : EventNames)
+      output() << ' ' << Entry;
+    output() << '\n';
+  }
   for (const auto &[Key, Value] : MergedProfile.Branch) {
     output() << Key << " ";
     if (!NoLBRCollection.value_or(false))

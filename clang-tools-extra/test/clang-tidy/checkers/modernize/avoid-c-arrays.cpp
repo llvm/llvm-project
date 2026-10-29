@@ -211,11 +211,12 @@ T some_constant{};
 // explicit instantiations
 template
 int some_constant<int[5]>[5];
-// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-2]]:19: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 template
 int some_constant<decltype(ak)>[4];
-// no diagnostic is expected here since explicit instantiations aren't represented as `TypeLoc` in the AST and we hence cannot match them as such
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 MyArrayType mk;
 // no diagnostic is expected here since no C-style array type got written here

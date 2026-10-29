@@ -78,12 +78,10 @@ public:
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        lldb_private::SaveCoreOptions &options,
@@ -155,6 +153,8 @@ public:
   lldb_private::DataExtractor ReadImageDataByRVA(uint32_t rva, size_t size);
 
   std::unique_ptr<lldb_private::CallFrameInfo> CreateCallFrameInfo() override;
+
+  lldb::addr_t GetTlsIndexAddress() const;
 
 protected:
   bool NeedsEndianSwap() const;

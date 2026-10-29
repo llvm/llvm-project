@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 # Check that the waitcnt pass does *not* insert a redundant waitcnt instr.
 # In this testcase, ensure that pass does not insert redundant S_WAITCNT 3952
@@ -6,7 +6,7 @@
 ...
 # CHECK-LABEL: name: waitcnt-no-redundant
 # CHECK: FLAT_ATOMIC_CMPSWAP
-# CHECK-NEXT: S_WAITCNT 3952
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0
 # CHECK-NEXT: BUFFER_WBINVL1
 
 name: waitcnt-no-redundant
@@ -27,7 +27,7 @@ body: |
 # WAR hazard does not apply here, because S_BUFFER_LOAD accesses invariant memory.
 ...
 # CHECK-LABEL: name: waitcnt-no-war-wait
-# CHECK: S_WAITCNT 0
+# CHECK: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK-NEXT: S_BUFFER_LOAD_DWORD_IMM
 # CHECK-NEXT: TBUFFER_STORE_FORMAT_X_OFFEN_exact
 name: waitcnt-no-war-wait

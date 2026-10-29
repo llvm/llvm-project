@@ -56,6 +56,11 @@ public:
 
   /// Returns true when this represents the '*' case.
   bool isOtherPlatformSpec() const { return Version.empty(); }
+
+  /// Returns true if the anyAppleOS version is valid (empty or >= 26.0).
+  static bool validateAnyAppleOSVersion(const llvm::VersionTuple &Version) {
+    return Version.empty() || Version >= llvm::VersionTuple(26, 0);
+  }
 };
 
 class Decl;

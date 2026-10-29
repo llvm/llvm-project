@@ -11,7 +11,7 @@
 
 #include "sa_family_t.h"
 
-struct sockaddr {
+struct __attribute__((may_alias)) sockaddr {
   sa_family_t sa_family;
   // sa_data is a variable length array. It is provided with a length of one
   // here as a placeholder.

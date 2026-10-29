@@ -11,7 +11,7 @@ define void @rftbsub(ptr %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX6]], align 8
 ; CHECK-NEXT:    [[ADD16:%.*]] = fadd double [[TMP1]], undef
 ; CHECK-NEXT:    [[MUL18:%.*]] = fmul double undef, [[ADD16]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[MUL18]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[MUL18]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> undef, [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> undef, [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP7]], <2 x i32> <i32 0, i32 3>

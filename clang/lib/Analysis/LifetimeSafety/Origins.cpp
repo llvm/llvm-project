@@ -18,6 +18,7 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
@@ -29,10 +30,10 @@ class MissingOriginCollector
 public:
   MissingOriginCollector(
       const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList,
-      LifetimeSafetyStats &LSStats)
-      : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
+      const OriginManager &OM, LifetimeSafetyStats &LSStats)
+      : ExprToOriginList(ExprToOriginList), OM(OM), LSStats(LSStats) {}
   bool VisitExpr(Expr *E) {
-    if (!hasOrigins(E))
+    if (!OM.hasOrigins(E))
       return true;
     // Check if we have an origin for this expression.
     if (!ExprToOriginList.contains(E)) {
@@ -46,22 +47,113 @@ public:
 
 private:
   const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList;
+  const OriginManager &OM;
   LifetimeSafetyStats &LSStats;
 };
+
+class LifetimeAnnotatedOriginTypeCollector
+    : public RecursiveASTVisitor<LifetimeAnnotatedOriginTypeCollector> {
+public:
+  bool VisitCallExpr(const CallExpr *CE) {
+    // Indirect calls (e.g., function pointers) are skipped because lifetime
+    // annotations currently apply to declarations, not types.
+    if (const auto *FD = CE->getDirectCallee()) {
+      collect(FD, FD->getReturnType());
+      collectCaptureBy(FD);
+    }
+    return true;
+  }
+
+  bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
+    collect(CCE->getConstructor(), CCE->getType());
+    collectCaptureBy(CCE->getConstructor());
+    return true;
+  }
+
+  bool shouldVisitLambdaBody() const { return false; }
+  bool shouldVisitTemplateInstantiations() const { return true; }
+
+  const llvm::SmallVector<QualType> &getCollectedTypes() const {
+    return CollectedTypes;
+  }
+
+private:
+  llvm::SmallVector<QualType> CollectedTypes;
+
+  void collect(const FunctionDecl *FD, QualType RetType) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD) &&
+        implicitObjectParamIsLifetimeBound(MD)) {
+      CollectedTypes.push_back(RetType);
+      return;
+    }
+
+    for (const auto *Param : FD->parameters()) {
+      if (Param->hasAttr<LifetimeBoundAttr>()) {
+        CollectedTypes.push_back(RetType);
+        return;
+      }
+    }
+  }
+
+  void collectCaptureBy(const FunctionDecl *FD) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool IsInstance = MD && MD->isInstance();
+    int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
+    for (const auto *Param : FD->parameters()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+        for (int Idx : Attr->params()) {
+          if (Idx == LifetimeCaptureByAttr::Global ||
+              Idx == LifetimeCaptureByAttr::Unknown ||
+              Idx == LifetimeCaptureByAttr::Invalid)
+            continue;
+          if (Idx == LifetimeCaptureByAttr::This) {
+            if (IsInstance)
+              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+          } else if (int LogicalIdx = Idx - Offset;
+                     LogicalIdx >= 0 &&
+                     (unsigned)LogicalIdx < FD->getNumParams()) {
+            CollectedTypes.push_back(
+                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+          }
+        }
+      }
+    }
+  }
+};
+
 } // namespace
 
-bool hasOrigins(QualType QT) {
+bool OriginManager::hasOrigins(QualType QT, bool IntrinsicOnly) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
     return true;
+  if (!IntrinsicOnly &&
+      LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
+    return true;
+  // An `_Atomic(T)` wraps T transparently for lifetime purposes (the atomic
+  // holds the same value); see through it.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return hasOrigins(AT->getValueType(), IntrinsicOnly);
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // Standard library callable wrappers (e.g., std::function) can propagate the
+  // stored lambda's origins.
+  if (isStdCallableWrapperType(RD))
+    return true;
   // TODO: Limit to lambdas for now. This will be extended to user-defined
   // structs with pointer-like fields.
   if (!RD->isLambda())
     return false;
   for (const auto *FD : RD->fields())
-    if (hasOrigins(FD->getType()))
+    if (hasOrigins(FD->getType(), IntrinsicOnly))
       return true;
   return false;
 }
@@ -70,7 +162,9 @@ bool hasOrigins(QualType QT) {
 ///
 /// An expression has origins if:
 /// - It's a glvalue (has addressable storage), OR
-/// - Its type is pointer-like (pointer, reference, or gsl::Pointer)
+/// - Its type is pointer-like (pointer, reference, or gsl::Pointer), OR
+/// - Its type is registered for origin tracking (e.g., return type of a
+/// [[clang::lifetimebound]] function)
 ///
 /// Examples:
 /// - `int x; x` : has origin (glvalue)
@@ -78,7 +172,7 @@ bool hasOrigins(QualType QT) {
 /// - `std::string_view{}` : has 1 origin (prvalue of pointer type)
 /// - `42` : no origin (prvalue of non-pointer type)
 /// - `x + y` : (where x, y are int) → no origin (prvalue of non-pointer type)
-bool hasOrigins(const Expr *E) {
+bool OriginManager::hasOrigins(const Expr *E) const {
   return E->isGLValue() || hasOrigins(E->getType());
 }
 
@@ -99,8 +193,13 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
-  // Create OriginList for 'this' expr.
+OriginManager::OriginManager(const AnalysisDeclContext &AC)
+    : AST(AC.getASTContext()) {
+  collectLifetimeAnnotatedOriginTypes(AC);
+  initializeThisOrigins(AC.getDecl());
+}
+
+void OriginManager::initializeThisOrigins(const Decl *D) {
   const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
   if (!MD || !MD->isInstance())
     return;
@@ -111,22 +210,32 @@ OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
   ThisOrigins = buildListForType(MD->getThisType(), MD);
 }
 
-OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
+OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT,
+                                      bool NamesDeclStorage) {
   OriginID NewID = getNextOriginID();
-  AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull());
+  AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull(), NamesDeclStorage);
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
 }
 
-OriginList *OriginManager::createNode(const Expr *E, QualType QT) {
+OriginList *OriginManager::createNode(const Expr *E, QualType QT,
+                                      bool NamesDeclStorage) {
   OriginID NewID = getNextOriginID();
-  AllOrigins.emplace_back(NewID, E, QT.getTypePtrOrNull());
+  AllOrigins.emplace_back(NewID, E, QT.getTypePtrOrNull(), NamesDeclStorage);
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
+}
+
+OriginList *OriginManager::createSingleOriginList(OriginID OID) {
+  return new (ListAllocator.Allocate<OriginList>()) OriginList(OID);
 }
 
 template <typename T>
-OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
+OriginList *OriginManager::buildListForType(QualType QT, const T *Node,
+                                            bool NamesDeclStorage) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");
-  OriginList *Head = createNode(Node, QT);
+  // `_Atomic(T)` is transparent for lifetime purposes: build the node for T.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return buildListForType(AT->getValueType(), Node, NamesDeclStorage);
+  OriginList *Head = createNode(Node, QT, NamesDeclStorage);
 
   if (QT->isPointerOrReferenceType()) {
     QualType PointeeTy = QT->getPointeeType();
@@ -147,12 +256,43 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
   return DeclToList[D] = buildListForType(D->getType(), D);
 }
 
+/// Returns true if the field named by \p ME denotes a subobject of `*this`,
+/// reached as `this->f` or through anonymous-struct/union subobjects.
+static bool isSubobjectOfThis(const MemberExpr *ME) {
+  const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(Base))
+    return true;
+
+  // An arrow access dereferences a pointer, so the field belongs to another
+  // object, not a subobject of `*this`.
+  if (ME->isArrow())
+    return false;
+
+  // Traverse only *anonymous* subobjects: their members are uniquely named
+  // within the class, so the FieldDecl-keyed origin can't conflate two
+  // subobjects. A named subobject (`this->a.f`) could repeat the same inner
+  // type, so it is rejected.
+  if (const auto *BaseAsME = dyn_cast<MemberExpr>(Base)) {
+    const auto *BaseField = dyn_cast<FieldDecl>(BaseAsME->getMemberDecl());
+    if (BaseField && BaseField->isAnonymousStructOrUnion())
+      return isSubobjectOfThis(BaseAsME);
+  }
+  return false;
+}
+
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
   // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
   if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
     return getOrCreateList(EWC->getSubExpr());
+
+  // An OpaqueValueExpr is a placeholder for an already-evaluated subexpression
+  // (e.g. the common operand of `a ?: b`) and is not itself a CFG statement, so
+  // reuse its source's origins rather than flowing into a fresh node.
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    if (const Expr *Src = OVE->getSourceExpr())
+      return getOrCreateList(Src);
 
   if (!hasOrigins(E))
     return nullptr;
@@ -174,7 +314,7 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     ReferencedDecl = DRE->getDecl();
   else if (auto *ME = dyn_cast<MemberExpr>(E))
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()))
+        Field && isSubobjectOfThis(ME))
       ReferencedDecl = Field;
   if (ReferencedDecl) {
     OriginList *Head = nullptr;
@@ -184,7 +324,9 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     // This models taking the address: `&p` borrows the storage of `p`, not what
     // `p` points to.
     if (doesDeclHaveStorage(ReferencedDecl)) {
-      Head = createNode(E, QualType{});
+      // `this->f` reaches its field through `this` instead of naming it.
+      Head = createNode(E, QualType{},
+                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E));
       // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
       Head->setInnerOriginList(getOrCreateList(ReferencedDecl));
@@ -203,7 +345,14 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   // addressable.
   if (E->isGLValue() && !Type->isReferenceType())
     Type = AST.getLValueReferenceType(Type);
-  return ExprToList[E] = buildListForType(Type, E);
+  // A qualification conversion of a glvalue names what its operand names. It is
+  // not transparent: for class types it is the node alias notes report.
+  bool NamesDeclStorage = false;
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE && CE->getCastKind() == CK_NoOp && E->isGLValue())
+    if (const OriginList *Sub = getOrCreateList(CE->getSubExpr()))
+      NamesDeclStorage = getOrigin(Sub->getOuterOriginID()).NamesDeclStorage;
+  return ExprToList[E] = buildListForType(Type, E, NamesDeclStorage);
 }
 
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
@@ -232,8 +381,27 @@ const Origin &OriginManager::getOrigin(OriginID ID) const {
 
 void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
                                           LifetimeSafetyStats &LSStats) {
-  MissingOriginCollector Collector(this->ExprToList, LSStats);
+  MissingOriginCollector Collector(this->ExprToList, *this, LSStats);
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
+}
+
+void OriginManager::collectLifetimeAnnotatedOriginTypes(
+    const AnalysisDeclContext &AC) {
+  LifetimeAnnotatedOriginTypeCollector Collector;
+  if (Stmt *Body = AC.getBody())
+    Collector.TraverseStmt(Body);
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(AC.getDecl()))
+    for (const auto *Init : CD->inits())
+      Collector.TraverseStmt(Init->getInit());
+  for (QualType QT : Collector.getCollectedTypes())
+    registerLifetimeAnnotatedOriginType(QT);
+}
+
+void OriginManager::registerLifetimeAnnotatedOriginType(QualType QT) {
+  if (!QT->getAsCXXRecordDecl() || hasOrigins(QT))
+    return;
+
+  LifetimeAnnotatedOriginTypes.insert(QT.getCanonicalType().getTypePtr());
 }
 
 } // namespace clang::lifetimes::internal

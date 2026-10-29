@@ -354,7 +354,7 @@ static TypedValue<VectorType> storeTile(PatternRewriter &rewriter,
       rewriter, loc,
       MemRefType::get(tileTy.getShape(), tileTy.getElementType()));
   Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
-  SmallVector<Value> indices(2, zeroIndex);
+  Repeated<Value> indices(2, zeroIndex);
   x86::amx::TileStoreOp::create(rewriter, loc, buf, indices, tile);
 
   auto vecTy = VectorType::get(tileTy.getShape(), tileTy.getElementType());

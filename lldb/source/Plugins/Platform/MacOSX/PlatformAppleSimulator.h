@@ -87,7 +87,7 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModule(const ModuleSpec &module_spec, Target &target,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
@@ -119,8 +119,8 @@ protected:
   llvm::SmallVector<llvm::StringRef, 4> m_supported_triples = {};
   std::string m_sdk_name_primary;
   std::string m_sdk_name_secondary;
-  bool m_have_searched_for_sdk = false;
-  llvm::StringRef m_sdk;
+  std::once_flag m_sdk_once_flag;
+  std::string m_sdk;
   XcodeSDK::Type m_sdk_type;
 
   void LoadCoreSimulator();

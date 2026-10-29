@@ -23,7 +23,7 @@
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||      \
     (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) ||          \
     defined(_AIX) || defined(__wasm__) || defined(__HAIKU__) ||                \
-    defined(COMPILER_RT_PROFILE_BAREMETAL)
+    (defined(COMPILER_RT_PROFILE_BAREMETAL) && !defined(__NVPTX__))
 
 #if !defined(_AIX) && !defined(__wasm__) &&                                    \
     !defined(COMPILER_RT_PROFILE_BAREMETAL)

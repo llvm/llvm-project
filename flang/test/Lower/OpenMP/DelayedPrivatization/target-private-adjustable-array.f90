@@ -1,13 +1,12 @@
 ! Tests delayed privatization for `targets ... private(..)` for adjustable arrays.
 ! Tests different allocation 
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN: -mmlir --enable-gpu-heap-alloc  -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
-! RUN:     -mmlir --enable-delayed-privatization-staging \
 ! RUN:     -mmlir --enable-gpu-heap-alloc \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU-HEAP \
@@ -16,7 +15,6 @@
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
-! RUN:     -mmlir --enable-delayed-privatization-staging \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU-STACK  \
 ! RUN: %}
@@ -39,7 +37,7 @@ end subroutine target_adjustable_array
 ! CPU-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! CPU-NEXT:  %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CPU-NEXT:  %[[PRIVATE_MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1
-! CPU-NEXT:  %4:2 = hlfir.declare %3(%2) {[[NAME_ATTR:.*]]} : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
+! CPU-NEXT:  %4:2 = hlfir.declare %3(%2) uniq_name([[NAME_ATTR:.*]]) : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
 ! CPU:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 ! CPU-NEXT: } dealloc {
 ! CPU-NEXT: ^bb0(%[[PRIV_ARG:.*]]: ![[TYPE]]):
@@ -58,7 +56,7 @@ end subroutine target_adjustable_array
 ! GPU-HEAP-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! GPU-HEAP-NEXT:  %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! GPU-HEAP-NEXT:  %[[PRIVATE_MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1
-! GPU-HEAP-NEXT:  %4:2 = hlfir.declare %3(%2) {[[NAME_ATTR:.*]]} : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
+! GPU-HEAP-NEXT:  %4:2 = hlfir.declare %3(%2) uniq_name([[NAME_ATTR:.*]]) : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
 ! GPU-HEAP:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 ! GPU-HEAP-NEXT: } dealloc {
 ! GPU-HEAP-NEXT: ^bb0(%[[PRIV_ARG:.*]]: ![[TYPE]]):
@@ -76,6 +74,6 @@ end subroutine target_adjustable_array
 ! GPU-STACK-NEXT:  %[[C0:.*]] = arith.constant 0 : index 
 ! GPU-STACK-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! GPU-STACK-NOT:   %[[PRIVATE_MEM:.*]] = fir.allocmem
-! GPU-STACK:       %[[ALLOCA_ADDR:.*]] = fir.alloca !fir.array<?xi32>, %[[BOX_DIMS]]#1 {[[NAME_ATTR:.*]]}
+! GPU-STACK:       %[[ALLOCA_ADDR:.*]] = fir.alloca !fir.array<?xi32>, %[[BOX_DIMS]]#1 <{bindc_name = ".tmp"}>
 ! GPU-STACK:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 

@@ -2084,7 +2084,7 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %va, <1 x bfloat> %vb, <1 x
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vv_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <1 x bfloat> %vb to <1 x float>
@@ -2098,16 +2098,16 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %va, <1 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.s.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.s.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vf_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <1 x bfloat> poison, bfloat %c, i32 0
@@ -2130,7 +2130,7 @@ define <1 x float> @vfwnmaccbf16_vv_v1f32(<1 x float> %va, <1 x bfloat> %vb, <1 
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vv_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <1 x bfloat> %vb to <1 x float>
@@ -2146,16 +2146,16 @@ define <1 x float> @vfwnmaccbf16_vf_v1f32(<1 x float> %va, <1 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.s.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.s.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfnmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vf_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <1 x bfloat> poison, bfloat %c, i32 0
@@ -2180,7 +2180,7 @@ define <1 x float> @vfwmsacbf16_vv_v1f32(<1 x float> %va, <1 x bfloat> %vb, <1 x
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vv_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <1 x bfloat> %vb to <1 x float>
@@ -2195,16 +2195,16 @@ define <1 x float> @vfwmsacbf16_vf_v1f32(<1 x float> %va, <1 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.s.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.s.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vf_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <1 x bfloat> poison, bfloat %c, i32 0
@@ -2228,7 +2228,7 @@ define <1 x float> @vfwnmsacbf16_vv_v1f32(<1 x float> %va, <1 x bfloat> %vb, <1 
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vv_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <1 x bfloat> %vb to <1 x float>
@@ -2243,16 +2243,16 @@ define <1 x float> @vfwnmsacbf16_vf_v1f32(<1 x float> %va, <1 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.s.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.s.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfnmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vf_v1f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <1 x bfloat> poison, bfloat %c, i32 0
@@ -2276,7 +2276,7 @@ define <2 x float> @vfwmaccbf16_vv_v2f32(<2 x float> %va, <2 x bfloat> %vb, <2 x
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vv_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <2 x bfloat> %vb to <2 x float>
@@ -2290,16 +2290,16 @@ define <2 x float> @vfwmaccbf16_vf_v2f32(<2 x float> %va, <2 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vf_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <2 x bfloat> poison, bfloat %c, i32 0
@@ -2322,7 +2322,7 @@ define <2 x float> @vfwnmaccbf16_vv_v2f32(<2 x float> %va, <2 x bfloat> %vb, <2 
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vv_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <2 x bfloat> %vb to <2 x float>
@@ -2338,16 +2338,16 @@ define <2 x float> @vfwnmaccbf16_vf_v2f32(<2 x float> %va, <2 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfnmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vf_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <2 x bfloat> poison, bfloat %c, i32 0
@@ -2372,7 +2372,7 @@ define <2 x float> @vfwmsacbf16_vv_v2f32(<2 x float> %va, <2 x bfloat> %vb, <2 x
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vv_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <2 x bfloat> %vb to <2 x float>
@@ -2387,16 +2387,16 @@ define <2 x float> @vfwmsacbf16_vf_v2f32(<2 x float> %va, <2 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vf_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <2 x bfloat> poison, bfloat %c, i32 0
@@ -2420,7 +2420,7 @@ define <2 x float> @vfwnmsacbf16_vv_v2f32(<2 x float> %va, <2 x bfloat> %vb, <2 
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vv_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <2 x bfloat> %vb to <2 x float>
@@ -2435,16 +2435,16 @@ define <2 x float> @vfwnmsacbf16_vf_v2f32(<2 x float> %va, <2 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfnmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vf_v2f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <2 x bfloat> poison, bfloat %c, i32 0
@@ -2468,7 +2468,7 @@ define <4 x float> @vfwmaccbf16_vv_v4f32(<4 x float> %va, <4 x bfloat> %vb, <4 x
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vv_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <4 x bfloat> %vb to <4 x float>
@@ -2482,16 +2482,16 @@ define <4 x float> @vfwmaccbf16_vf_v4f32(<4 x float> %va, <4 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vf_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <4 x bfloat> poison, bfloat %c, i32 0
@@ -2514,7 +2514,7 @@ define <4 x float> @vfwnmaccbf16_vv_v4f32(<4 x float> %va, <4 x bfloat> %vb, <4 
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vv_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <4 x bfloat> %vb to <4 x float>
@@ -2530,16 +2530,16 @@ define <4 x float> @vfwnmaccbf16_vf_v4f32(<4 x float> %va, <4 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfnmacc.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmacc.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vf_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <4 x bfloat> poison, bfloat %c, i32 0
@@ -2564,7 +2564,7 @@ define <4 x float> @vfwmsacbf16_vv_v4f32(<4 x float> %va, <4 x bfloat> %vb, <4 x
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vv_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <4 x bfloat> %vb to <4 x float>
@@ -2579,16 +2579,16 @@ define <4 x float> @vfwmsacbf16_vf_v4f32(<4 x float> %va, <4 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vf_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <4 x bfloat> poison, bfloat %c, i32 0
@@ -2612,7 +2612,7 @@ define <4 x float> @vfwnmsacbf16_vv_v4f32(<4 x float> %va, <4 x bfloat> %vb, <4 
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vv_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vv v8, v9, v10
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <4 x bfloat> %vb to <4 x float>
@@ -2627,16 +2627,16 @@ define <4 x float> @vfwnmsacbf16_vf_v4f32(<4 x float> %va, <4 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v10, a0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vmv.v.x v9, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfnmsac.vv v8, v11, v9
+; ZVFH-NEXT:    vfnmsac.vv v8, v10, v11
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vf_v4f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <4 x bfloat> poison, bfloat %c, i32 0
@@ -2660,7 +2660,7 @@ define <8 x float> @vfwmaccbf16_vv_v8f32(<8 x float> %va, <8 x bfloat> %vb, <8 x
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vv_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vv v8, v10, v11
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <8 x bfloat> %vb to <8 x float>
@@ -2674,8 +2674,8 @@ define <8 x float> @vfwmaccbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v10
+; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v14
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfmacc.vv v8, v12, v10
@@ -2683,7 +2683,7 @@ define <8 x float> @vfwmaccbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bflo
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vf_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vf v8, fa0, v10
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <8 x bfloat> poison, bfloat %c, i32 0
@@ -2706,7 +2706,7 @@ define <8 x float> @vfwnmaccbf16_vv_v8f32(<8 x float> %va, <8 x bfloat> %vb, <8 
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vv_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vv v8, v10, v11
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <8 x bfloat> %vb to <8 x float>
@@ -2722,8 +2722,8 @@ define <8 x float> @vfwnmaccbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v10
+; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v14
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfnmacc.vv v8, v12, v10
@@ -2731,7 +2731,7 @@ define <8 x float> @vfwnmaccbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bfl
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vf_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vf v8, fa0, v10
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <8 x bfloat> poison, bfloat %c, i32 0
@@ -2756,7 +2756,7 @@ define <8 x float> @vfwmsacbf16_vv_v8f32(<8 x float> %va, <8 x bfloat> %vb, <8 x
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vv_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vv v8, v10, v11
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <8 x bfloat> %vb to <8 x float>
@@ -2771,8 +2771,8 @@ define <8 x float> @vfwmsacbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bflo
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v10
+; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v14
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfmsac.vv v8, v12, v10
@@ -2780,7 +2780,7 @@ define <8 x float> @vfwmsacbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bflo
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vf_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vf v8, fa0, v10
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <8 x bfloat> poison, bfloat %c, i32 0
@@ -2804,7 +2804,7 @@ define <8 x float> @vfwnmsacbf16_vv_v8f32(<8 x float> %va, <8 x bfloat> %vb, <8 
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vv_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vv v8, v10, v11
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <8 x bfloat> %vb to <8 x float>
@@ -2819,8 +2819,8 @@ define <8 x float> @vfwnmsacbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bfl
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v10
+; ZVFH-NEXT:    vmv.v.x v14, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v14
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfnmsac.vv v8, v12, v10
@@ -2828,7 +2828,7 @@ define <8 x float> @vfwnmsacbf16_vf_v8f32(<8 x float> %va, <8 x bfloat> %vb, bfl
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vf_v8f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vf v8, fa0, v10
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <8 x bfloat> poison, bfloat %c, i32 0
@@ -2852,7 +2852,7 @@ define <16 x float> @vfwmaccbf16_vv_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vv_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vv v8, v12, v14
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <16 x bfloat> %vb to <16 x float>
@@ -2866,8 +2866,8 @@ define <16 x float> @vfwmaccbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v20
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfmacc.vv v8, v16, v12
@@ -2875,7 +2875,7 @@ define <16 x float> @vfwmaccbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ;
 ; ZVFBFA-LABEL: vfwmaccbf16_vf_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwmacc.vf v8, fa0, v12
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <16 x bfloat> poison, bfloat %c, i32 0
@@ -2898,7 +2898,7 @@ define <16 x float> @vfwnmaccbf16_vv_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vv_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vv v8, v12, v14
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <16 x bfloat> %vb to <16 x float>
@@ -2914,8 +2914,8 @@ define <16 x float> @vfwnmaccbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v20
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfnmacc.vv v8, v16, v12
@@ -2923,7 +2923,7 @@ define <16 x float> @vfwnmaccbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ;
 ; ZVFBFA-LABEL: vfwnmaccbf16_vf_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmacc.vf v8, fa0, v12
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <16 x bfloat> poison, bfloat %c, i32 0
@@ -2948,7 +2948,7 @@ define <16 x float> @vfwmsacbf16_vv_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vv_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vv v8, v12, v14
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <16 x bfloat> %vb to <16 x float>
@@ -2963,8 +2963,8 @@ define <16 x float> @vfwmsacbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v20
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfmsac.vv v8, v16, v12
@@ -2972,7 +2972,7 @@ define <16 x float> @vfwmsacbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb, 
 ;
 ; ZVFBFA-LABEL: vfwmsacbf16_vf_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwmsac.vf v8, fa0, v12
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <16 x bfloat> poison, bfloat %c, i32 0
@@ -2996,7 +2996,7 @@ define <16 x float> @vfwnmsacbf16_vv_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vv_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vv v8, v12, v14
 ; ZVFBFA-NEXT:    ret
   %vd = fpext <16 x bfloat> %vb to <16 x float>
@@ -3011,8 +3011,8 @@ define <16 x float> @vfwnmsacbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.h a0, fa0
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
+; ZVFH-NEXT:    vmv.v.x v20, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v20
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfnmsac.vv v8, v16, v12
@@ -3020,7 +3020,7 @@ define <16 x float> @vfwnmsacbf16_vf_v16f32(<16 x float> %va, <16 x bfloat> %vb,
 ;
 ; ZVFBFA-LABEL: vfwnmsacbf16_vf_v16f32:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwnmsac.vf v8, fa0, v12
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <16 x bfloat> poison, bfloat %c, i32 0

@@ -30,16 +30,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   return End;
 }
 
-Align MCSection::getAlignmentForObjectFile(uint64_t Size) const {
-  if (Size < getAlign().value())
-    return getAlign();
-
-  if (Size < getPreferredAlignment().value())
-    return Align(NextPowerOf2(Size - 1));
-
-  return getPreferredAlignment();
-}
-
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -80,7 +70,7 @@ void MCFragment::setVarContents(ArrayRef<char> Contents) {
 
 void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
 
-void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::moveFixupsToEnd() {
   auto &S = getParent()->FixupStorage;
   if (LLVM_UNLIKELY(FixupEnd != S.size())) {
     // Move the elements to the end. Reserve space to avoid invalidating
@@ -90,7 +80,26 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
     S.reserve(S.size() + Size);
     S.append(S.begin() + I, S.begin() + I + Size);
   }
+}
+
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  moveFixupsToEnd();
+
+  auto &S = getParent()->FixupStorage;
   S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCFragment::insertRelocFixups(ArrayRef<MCFixup> Fixups) {
+  moveFixupsToEnd();
+
+  // See MCAssembler::layout() for the rule being followed here.
+  auto &S = getParent()->FixupStorage;
+  S.insert(std::upper_bound(S.begin() + FixupStart, S.end(), Fixups[0],
+                            [](MCFixup F1, MCFixup F2) {
+                              return F1.getOffset() < F2.getOffset();
+                            }),
+           Fixups.begin(), Fixups.end());
   FixupEnd = S.size();
 }
 

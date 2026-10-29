@@ -13,4 +13,4 @@ define void @foo() #0 {
   ret void
 }
 
-; CHECK: error: couldn't allocate output register for constraint 'w'
+; CHECK: error: could not allocate output register for constraint 'w'

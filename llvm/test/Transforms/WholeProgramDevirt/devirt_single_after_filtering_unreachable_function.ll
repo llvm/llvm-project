@@ -58,5 +58,7 @@ declare void @llvm.trap()
 !5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !6)
 !6 = !DIFile(filename: "tmp.cc", directory: "")
 !7 = !{i32 2, !"Debug Info Version", i32 3}
-!10= distinct !DISubprogram(name: "func", scope: !6, file: !6, unit: !5)
+!10= distinct !DISubprogram(name: "func", scope: !6, file: !6, unit: !5, type: !12)
 !11 = !DILocation(line: 21, column: 3, scope: !10)
+!12 = !DISubroutineType(types: !13)
+!13 = !{null}

@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmodf16.h"
-#include "src/__support/FPUtil/generic/FMod.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fmodf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, fmodf16, (float16 x, float16 y)) {
-  return fputil::generic::FMod<float16, uint32_t>::eval(x, y);
+  return math::fmodf16(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

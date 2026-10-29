@@ -1,0 +1,16 @@
+!Offload
+Members:
+  - ImageKind:      IMG_Bitcode
+    OffloadKind:    OFK_OpenMP
+    String:
+    - Key:            "triple"
+      Value:          "x-y-z"
+    - Key:            "arch"
+      Value:          "arch1"
+  - ImageKind:      IMG_Bitcode
+    OffloadKind:    OFK_OpenMP
+    String:
+    - Key:            "triple"
+      Value:          "x-y-z"
+    - Key:            "arch"
+      Value:          "arch2"

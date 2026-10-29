@@ -28,13 +28,16 @@ is being used.
 ## GPU address spaces
 
 The GPU dialect exposes the `gpu.address_space` attribute, which currently has
-three values: `global`, `workgroup`, and `private`.
+four values: `global`, `workgroup`, `private`, and `constant`.
 
 These address spaces represent the types of buffer commonly seen in GPU compilation.
 `global` memory is memory that resides in the GPU's global memory. `workgroup`
 memory is a limited, per-workgroup resource: all threads in a workgroup/thread
-block access the same values in `workgroup` memory. Finally, `private` memory is
+block access the same values in `workgroup` memory. `private` memory is
 used to represent `alloca`-like buffers that are private to a single thread/workitem.
+`constant` memory is read-only memory residing in global address space, guaranteed
+not to change during kernel execution, allowing backend-specific optimizations
+(e.g., scalar reads on AMD GPUs).
 
 These address spaces may be used as the `memorySpace` attribute on `memref` values.
 The `gpu.module`/`gpu.func` compilation pipeline will lower such memory space

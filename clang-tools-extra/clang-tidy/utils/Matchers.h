@@ -120,9 +120,9 @@ public:
 
   private:
     MatchMode determineMatchMode(StringRef Regex) {
-      if (Regex.starts_with(":") || Regex.starts_with("^:"))
+      if (Regex.starts_with(':') || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
-      return Regex.contains(":") ? MatchMode::MatchQualified
+      return Regex.contains(':') ? MatchMode::MatchQualified
                                  : MatchMode::MatchUnqualified;
     }
   };
@@ -162,7 +162,7 @@ struct NotIdenticalStatementsPredicate {
 // to ID node.
 AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
   const NotIdenticalStatementsPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+      ID, ::clang::DynTypedNode::create(Node), &Finder->getASTContext()};
   return Builder->removeBindings(Predicate);
 }
 

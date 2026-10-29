@@ -527,3 +527,51 @@ cont:
 unwind:
   ret void
 }
+
+declare ptx_kernel void @callee_ptx_kernel()
+
+; CHECK: calling convention does not permit calls
+; CHECK-NEXT: call ptx_kernel void @callee_ptx_kernel()
+define ptx_kernel void @call_caller_ptx_kernel() {
+entry:
+  call ptx_kernel void @callee_ptx_kernel()
+  ret void
+}
+
+; CHECK: calling convention does not permit calls
+; CHECK-NEXT: call ptx_kernel void %func()
+define ptx_kernel void @indirect_call_caller_ptx_kernel(ptr %func) {
+entry:
+  call ptx_kernel void %func()
+  ret void
+}
+
+; CHECK: calling convention does not permit calls
+; CHECK-NEXT: invoke ptx_kernel void @callee_ptx_kernel()
+; CHECK-NEXT: to label %cont unwind label %unwind
+define ptx_kernel void @invoke_caller_ptx_kernel() {
+entry:
+  invoke ptx_kernel void @callee_ptx_kernel() to label %cont unwind label %unwind
+  ret void
+
+cont:
+  ret void
+
+unwind:
+  ret void
+}
+
+; CHECK: calling convention does not permit calls
+; CHECK: invoke ptx_kernel void %func()
+; CHECK-NEXT: to label %cont unwind label %unwind
+define ptx_kernel void @indirect_invoke_caller_ptx_kernel(ptr %func) {
+entry:
+  invoke ptx_kernel void %func() to label %cont unwind label %unwind
+  ret void
+
+cont:
+  ret void
+
+unwind:
+  ret void
+}

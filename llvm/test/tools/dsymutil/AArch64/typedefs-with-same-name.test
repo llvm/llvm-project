@@ -1,14 +1,25 @@
+#RUN: dsymutil --linker=classic -f -oso-prepend-path=%p/../Inputs/ -y %s -o %t.dwarf
+#RUN: llvm-dwarfdump %t.dwarf | FileCheck %s --check-prefix=CLASSIC
 #RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../Inputs/ -y %s -o %t.dwarf
-#RUN: llvm-dwarfdump %t.dwarf | FileCheck %s
+#RUN: llvm-dwarfdump %t.dwarf | FileCheck %s --check-prefix=PARALLEL
 
 # There should be two typedef DIE named "BarInt" in the resultant .dwarf file.
-# The second should refer to the first, which refer to "Foo<int>".
-# CHECK:      0x[[FIRST_BARINT_ADDR:[0-9a-f]*]]:  DW_TAG_typedef
-# CHECK-NEXT:     DW_AT_type  (0x{{([[:xdigit:]]*)}} "Foo<int>")
-# CHECK-NEXT:     DW_AT_name  ("BarInt")
-# CHECK:      0x{{([[:xdigit:]]*)}}:  DW_TAG_typedef
-# CHECK-NEXT:     DW_AT_type  (0x[[FIRST_BARINT_ADDR]] "BarInt")
-# CHECK-NEXT:     DW_AT_name  ("BarInt")
+# One refers to "Foo<int>", the other refers to the first. The linkers differ
+# in which typedef they emit first, so we split the ordering expectations.
+
+# CLASSIC:      0x{{[0-9a-f]+}}:  DW_TAG_typedef
+# CLASSIC-NEXT:     DW_AT_type  (0x[[#%x,FIRST_BARINT_ADDR:]] "BarInt")
+# CLASSIC-NEXT:     DW_AT_name  ("BarInt")
+# CLASSIC:      0x[[#%.8x,FIRST_BARINT_ADDR]]:  DW_TAG_typedef
+# CLASSIC-NEXT:     DW_AT_type  (0x{{[0-9a-f]+}} "Foo<int>")
+# CLASSIC-NEXT:     DW_AT_name  ("BarInt")
+
+# PARALLEL:      0x[[#%x,FIRST_BARINT_ADDR:]]:  DW_TAG_typedef
+# PARALLEL-NEXT:     DW_AT_type  (0x{{[0-9a-f]+}} "Foo<int>")
+# PARALLEL-NEXT:     DW_AT_name  ("BarInt")
+# PARALLEL:      0x{{[0-9a-f]+}}:  DW_TAG_typedef
+# PARALLEL-NEXT:     DW_AT_type  (0x[[#%.8x,FIRST_BARINT_ADDR]] "BarInt")
+# PARALLEL-NEXT:     DW_AT_name  ("BarInt")
 
 # Source:
 #

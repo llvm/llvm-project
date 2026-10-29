@@ -130,11 +130,13 @@ UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", false)),
-      IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
+      IgnoreVirtual(Options.get("IgnoreVirtual", false)),
+      IgnoreMacroParameters(Options.get("IgnoreMacroParameters", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
   Options.store(Opts, "IgnoreVirtual", IgnoreVirtual);
+  Options.store(Opts, "IgnoreMacroParameters", IgnoreMacroParameters);
 }
 
 void UnusedParametersCheck::warnOnUnusedParameter(
@@ -144,7 +146,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
   // Don't bother to diagnose invalid parameters as being unused.
   if (Param->isInvalidDecl())
     return;
-  auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
+  const auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused")
+                      << Param;
 
   if (!Indexer)
     Indexer = std::make_unique<IndexerVisitor>(*Result.Context);
@@ -198,6 +201,8 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
       // type if we remove the preceding parameter name.
       continue;
     }
+    if (IgnoreMacroParameters && Param->getLocation().isMacroID())
+      continue;
 
     // In non-strict mode ignore function definitions with empty bodies
     // (constructor initializer counts for non-empty body).

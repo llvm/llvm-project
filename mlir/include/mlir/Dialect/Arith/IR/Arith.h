@@ -10,35 +10,15 @@
 #define MLIR_DIALECT_ARITH_IR_ARITH_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "llvm/ADT/StringExtras.h"
-
-//===----------------------------------------------------------------------===//
-// ArithDialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Arith/IR/ArithOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Arith Dialect Enum Attributes
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Arith/IR/ArithOpsEnums.h.inc"
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Arith/IR/ArithOpsAttributes.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Arith Interfaces
-//===----------------------------------------------------------------------===//
-#include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Arith Dialect Operations
@@ -154,15 +134,17 @@ bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
 /// E.g., The identity value for maxf is in theory `-Inf`, but if we want to
 /// stay in the finite range, it would be `BiggestRepresentableNegativeFloat`.
 /// The purpose of this boolean is to offer constants that will play nice
-/// with fast math related optimizations.
+/// with fast math related optimizations. The caller must ensure that using a
+/// finite value preserves the reduction semantics.
 TypedAttr getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                                OpBuilder &builder, Location loc,
                                bool useOnlyFiniteValue = false);
 
 /// Return the identity numeric value associated to the give op. Return
 /// std::nullopt if there is no known neutral element.
-/// If `op` has `FastMathFlags::ninf`, only finite values will be used
-/// as neutral element.
+/// Finite min/max identities require `FastMathFlags::ninf`. NaN-ignoring
+/// min/max operations additionally require `FastMathFlags::nnan`; otherwise,
+/// their neutral element is NaN.
 std::optional<TypedAttr> getNeutralElement(Operation *op);
 
 /// Returns the identity value associated with an AtomicRMWKind op.

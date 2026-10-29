@@ -8,7 +8,7 @@
 ; YAML-NEXT: Function:        test
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-2'
+; YAML-NEXT:   - Cost:            '-38'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '7'
 ; YAML-NEXT: ...
@@ -20,8 +20,8 @@ define double @test(ptr %a, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ; CHECK:       for.body:

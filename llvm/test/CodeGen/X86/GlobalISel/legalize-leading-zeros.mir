@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=i386-linux-gnu -mattr=+lzcnt -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s 2>%t -o - | FileCheck %s --check-prefixes=CHECK,X86
 # RUN: FileCheck -check-prefix=ERR32  %s < %t
 
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %10:_(s64) = G_CTLZ_ZERO_UNDEF %4:_(s32) (in function: test_ctlz64)
+# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %10:_(s64) = G_CTLZ_ZERO_POISON %4:_(s32) (in function: test_ctlz64)
 
 # test count leading zeros for s16, s32, and s64
 
@@ -22,9 +22,8 @@ body:             |
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; X64-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
     ; X64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
-    ; X64-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CTLZ]], [[C1]]
-    ; X64-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C]]
-    ; X64-NEXT: RET 0, implicit [[AND1]](s64)
+    ; X64-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; X64-NEXT: RET 0, implicit [[SUB]](s64)
     ;
     ; X86-LABEL: name: test_ctlz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
@@ -36,10 +35,10 @@ body:             |
     ; X86-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[UV]](s32)
     ; X86-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; X86-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[CTLZ]], [[C1]]
-    ; X86-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_UNDEF [[UV1]](s32)
+    ; X86-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_POISON [[UV1]](s32)
     ; X86-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
-    ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ_ZERO_UNDEF]](s64)
+    ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ_ZERO_POISON]](s64)
     ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT1]](s32), [[UV2]], [[UV4]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT1]](s32), [[UV3]], [[UV5]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
@@ -77,7 +76,7 @@ body:             |
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[DEF]](s8)
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s16) = G_CTLZ [[ZEXT]](s16)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s16) = G_SUB [[CTLZ]], [[C]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s16) = nuw G_SUB [[CTLZ]], [[C]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SUB]](s16)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY [[TRUNC]](s8)
     ; CHECK-NEXT: RET 0, implicit [[COPY]](s8)
@@ -110,10 +109,10 @@ body:             |
     ; X86-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[UV]](s32)
     ; X86-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; X86-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[CTLZ]], [[C1]]
-    ; X86-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_UNDEF [[UV1]](s32)
+    ; X86-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_POISON [[UV1]](s32)
     ; X86-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
-    ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ_ZERO_UNDEF]](s64)
+    ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ_ZERO_POISON]](s64)
     ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT]](s32), [[UV2]], [[UV4]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT]](s32), [[UV3]], [[UV5]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)

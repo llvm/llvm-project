@@ -27,7 +27,7 @@ namespace llvm {
 class Function;
 
 /// This pass performs function-level constant propagation and merging.
-class SCCPPass : public PassInfoMixin<SCCPPass> {
+class SCCPPass : public OptionalPassInfoMixin<SCCPPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

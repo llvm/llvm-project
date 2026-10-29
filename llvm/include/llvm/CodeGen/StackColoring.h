@@ -13,10 +13,10 @@
 
 namespace llvm {
 
-class StackColoringPass : public PassInfoMixin<StackColoringPass> {
+class StackColoringPass : public RequiredPassInfoMixin<StackColoringPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

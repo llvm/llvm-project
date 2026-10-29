@@ -4,7 +4,7 @@
 
 ## Ensure MTE globals doesn't work with REL (only RELA).
 # RUN: yaml2obj %s -o %t.rel.o
-# RUN: not ld.lld -shared --android-memtag-mode=sync %t.rel.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-RELA
+# RUN: not ld.lld -shared -z memtag-mode=sync --android-memtag-note %t.rel.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-RELA
 # CHECK-RELA: non-RELA relocations are not allowed with memtag globals
 --- !ELF
 FileHeader:
@@ -58,7 +58,7 @@ Symbols:
 # RUN:   %t/input_1.s -o %t1.o
 # RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android \
 # RUN:   %t/input_2.s -o %t2.o
-# RUN: ld.lld -shared --android-memtag-mode=sync %t1.o %t2.o -o %t.so
+# RUN: ld.lld -shared -z memtag-mode=sync --android-memtag-note %t1.o %t2.o -o %t.so
 
 ## Normally relocations are printed before the symbol tables, so reorder it a
 ## bit to make it easier on matching addresses of relocations up with the
@@ -69,7 +69,7 @@ Symbols:
 # RUN: llvm-objdump -Dz %t.so | FileCheck %s --check-prefix=CHECK-SPECIAL-RELOCS
 
 ## And ensure that --apply-dynamic-relocs is banned.
-# RUN: not ld.lld --apply-dynamic-relocs -shared --android-memtag-mode=sync \
+# RUN: not ld.lld --apply-dynamic-relocs -shared -z memtag-mode=sync --android-memtag-note \
 # RUN:   %t1.o %t2.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-DYNRELOC
 # CHECK-DYNRELOC: --apply-dynamic-relocs cannot be used with MTE globals
 
@@ -78,7 +78,7 @@ Symbols:
 ## dynamic entries, etc.
 # RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android \
 # RUN:   %t/input_3.s -o %t3.o
-# RUN: ld.lld -static --android-memtag-mode=sync %t1.o %t2.o %t3.o -o %t.static.so
+# RUN: ld.lld -static -z memtag-mode=sync --android-memtag-note %t1.o %t2.o %t3.o -o %t.static.so
 # RUN: llvm-readelf -s --section-headers --relocs --memtag %t.static.so | \
 # RUN:   FileCheck %s --check-prefix=CHECK-STATIC
 # CHECK-STATIC-NOT: .memtag.globals.static

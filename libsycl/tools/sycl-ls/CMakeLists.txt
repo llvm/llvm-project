@@ -3,7 +3,7 @@ add_executable(sycl-ls sycl-ls.cpp)
 target_include_directories(sycl-ls SYSTEM PRIVATE ${LLVM_MAIN_INCLUDE_DIR})
 target_link_libraries(sycl-ls PRIVATE LLVMSupport LLVMObject)
 
-add_dependencies(sycl-ls sycl)
+add_dependencies(sycl-ls ${LIBSYCL_LIB_NAME})
 target_include_directories(sycl-ls PRIVATE ${LIBSYCL_BUILD_INCLUDE_DIR})
 
 target_link_libraries(sycl-ls
@@ -24,6 +24,9 @@ if (WIN32)
   # - LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR (0x100)
   # - LOAD_LIBRARY_SEARCH_SYSTEM32     (0x800)
   target_link_options(sycl-ls PRIVATE LINKER:/DEPENDENTLOADFLAG:0x900)
+  # We need exceptions, but they are disabled by default for clang-cl, so
+  # enable them.
+  target_compile_options(sycl-ls PRIVATE /EHsc)
 endif()
 install(TARGETS sycl-ls
   RUNTIME DESTINATION "bin" COMPONENT sycl-ls)

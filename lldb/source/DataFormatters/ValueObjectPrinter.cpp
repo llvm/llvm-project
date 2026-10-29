@@ -186,7 +186,7 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
   const char *root_valobj_name =
       m_options.m_root_valobj_name.empty()
-          ? GetMostSpecializedValue().GetName().AsCString()
+          ? GetMostSpecializedValue().GetName().AsCString(nullptr)
           : m_options.m_root_valobj_name.c_str();
   return root_valobj_name ? root_valobj_name : "";
 }
@@ -346,7 +346,7 @@ void ValueObjectPrinter::PrintDecl() {
     if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
     else if (ShouldShowName())
-      m_stream->Printf(" =");
+      m_stream->PutCString(" =");
   }
 }
 
@@ -447,12 +447,12 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       // combination means "could not resolve a type" and the default failure
       // mode is quite ugly
       if (!m_compiler_type.IsValid()) {
-        m_stream->Printf(" <could not resolve type>");
+        m_stream->PutCString(" <could not resolve type>");
         return false;
       }
 
       error_printed = true;
-      m_stream->Printf(" <%s>\n", m_error.c_str());
+      m_stream->Printf(" <%s>", m_error.c_str());
     } else {
       // Make sure we have a value and make sure the summary didn't specify
       // that the value should not be printed - and do not print the value if
@@ -796,8 +796,8 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
           m_stream->PutCString(", ");
         did_print_children = true;
         if (!hide_names) {
-          const char *name = child_sp.get()->GetName().AsCString();
-          if (name && *name) {
+          llvm::StringRef name = child_sp.get()->GetName().GetStringRef();
+          if (!name.empty()) {
             m_stream->PutCString(name);
             m_stream->PutCString(" = ");
           }

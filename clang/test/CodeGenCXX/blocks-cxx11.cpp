@@ -26,7 +26,7 @@ namespace test_float {
   void test() {
     const float x = 1;
     takeABlock(^{ takeItByValue(x); });
-    // CHECK: call void @_Z13takeItByValueIfEvT_(float noundef 1.0
+    // CHECK: call void @_Z13takeItByValueIfEvT_(float noundef 1.000000e+00
   }
 }
 

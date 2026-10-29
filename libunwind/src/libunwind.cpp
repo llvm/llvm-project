@@ -16,6 +16,12 @@
 
 #include <stdlib.h>
 
+#if defined(__FreeBSD__) && defined(__x86_64__) &&                             \
+    !defined(_LIBUNWIND_IS_BAREMETAL)
+#include <signal.h>
+#include <ucontext.h>
+#endif
+
 // Define the __has_feature extension for compilers that do not support it so
 // that we can later check for the presence of ASan in a compiler-neutral way.
 #if !defined(__has_feature)
@@ -31,6 +37,52 @@
 #include "UnwindCursor.hpp"
 
 using namespace libunwind;
+
+#if defined(__FreeBSD__) && defined(__x86_64__) &&                             \
+    !defined(_LIBUNWIND_IS_BAREMETAL)
+// Changing FS/GS selectors can clear their bases, while sysarch base setters
+// replace the selectors. Let sigreturn restore the complete state atomically.
+// use sigreturn() over setcontext() as setcontext() intentionally leaves CS
+// unchanged.
+extern "C" _LIBUNWIND_HIDDEN void
+__libunwind_Registers_x86_64_jumpto(Registers_x86_64 *registers) {
+  ucontext_t context;
+  if (getcontext(&context) != 0)
+    _LIBUNWIND_ABORT("getcontext failed");
+  mcontext_t &mc = context.uc_mcontext;
+#define RESTORE(reg, field) mc.field = registers->getRegister(UNW_X86_64_##reg)
+  RESTORE(RAX, mc_rax);
+  RESTORE(RBX, mc_rbx);
+  RESTORE(RCX, mc_rcx);
+  RESTORE(RDX, mc_rdx);
+  RESTORE(RDI, mc_rdi);
+  RESTORE(RSI, mc_rsi);
+  RESTORE(RBP, mc_rbp);
+  RESTORE(RSP, mc_rsp);
+  RESTORE(R8, mc_r8);
+  RESTORE(R9, mc_r9);
+  RESTORE(R10, mc_r10);
+  RESTORE(R11, mc_r11);
+  RESTORE(R12, mc_r12);
+  RESTORE(R13, mc_r13);
+  RESTORE(R14, mc_r14);
+  RESTORE(R15, mc_r15);
+  RESTORE(RIP, mc_rip);
+  RESTORE(RFLAGS, mc_rflags);
+  RESTORE(CS, mc_cs);
+  RESTORE(SS, mc_ss);
+  RESTORE(DS, mc_ds);
+  RESTORE(ES, mc_es);
+  RESTORE(FS, mc_fs);
+  RESTORE(GS, mc_gs);
+  RESTORE(FS_BASE, mc_fsbase);
+  RESTORE(GS_BASE, mc_gsbase);
+#undef RESTORE
+  mc.mc_flags |= _MC_HASSEGS | _MC_HASBASES;
+  sigreturn(&context);
+  _LIBUNWIND_ABORT("sigreturn failed");
+}
+#endif
 
 /// internal object to represent this process's address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;
@@ -131,23 +183,19 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       {
         // It is only valid to set the IP within the current function. This is
         // important for ptrauth, otherwise the IP cannot be correctly signed.
-        // The current signature of `value` is via the schema:
-        //   __ptrauth(ptrauth_key_return_address, <<sp>>, 0)
-        // For this to be generally usable we manually re-sign it to the
-        // directly supported schema:
-        //   __ptrauth(ptrauth_key_return_address, 1, 0)
-        unw_word_t
-              __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1,
-                                                 0) authenticated_value;
-        unw_word_t opaque_value = (uint64_t)ptrauth_auth_and_resign(
-            (void *)value, ptrauth_key_return_address, sp,
-            ptrauth_key_return_address, &authenticated_value);
-        memmove(reinterpret_cast<void *>(&authenticated_value),
-                reinterpret_cast<void *>(&opaque_value),
-                sizeof(authenticated_value));
-        if (authenticated_value < info.start_ip ||
-            authenticated_value > info.end_ip)
-          _LIBUNWIND_ABORT("PC vs frame info mismatch");
+        //
+        // However many JITs do not configure CFI frames, so we cannot actually
+        // enforce this - at least not without an extremely expensive syscall.
+        //
+        // For the forseeable future this will need to be a debug only assertion
+        // so we just strip and assert to avoid the unnecessary auths in release
+        // builds.
+        unw_word_t stripped_value = (unw_word_t)ptrauth_strip(
+            (void *)value, ptrauth_key_return_address);
+        if (stripped_value < info.start_ip && stripped_value > info.end_ip)
+          _LIBUNWIND_LOG("Badly behaved use of unw_set_reg: moving IP(0x%zX) "
+                         "outside of CFI bounds function (0x%zX, 0x%zX)",
+                         stripped_value, info.start_ip, info.end_ip);
 
         // PC should have been signed with the sp, so we verify that
         // roundtripping does not fail. The `ptrauth_auth_and_resign` is

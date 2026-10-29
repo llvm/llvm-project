@@ -200,6 +200,16 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BIvsnprintf:
   case Builtin::ID::BIvsprintf:
 
+  // Fortified printf family, used by _FORTIFY_SOURCE wrappers
+  case Builtin::ID::BI__builtin___fprintf_chk:
+  case Builtin::ID::BI__builtin___printf_chk:
+  case Builtin::ID::BI__builtin___snprintf_chk:
+  case Builtin::ID::BI__builtin___sprintf_chk:
+  case Builtin::ID::BI__builtin___vfprintf_chk:
+  case Builtin::ID::BI__builtin___vprintf_chk:
+  case Builtin::ID::BI__builtin___vsnprintf_chk:
+  case Builtin::ID::BI__builtin___vsprintf_chk:
+
   // stdio.h: scanf family.
   case Builtin::ID::BIscanf:
   case Builtin::ID::BIfscanf:
@@ -987,7 +997,7 @@ private:
       // The target function may have implicit code paths beyond the
       // body: member and base destructors. Visit these first.
       if (auto *Dtor = dyn_cast<CXXDestructorDecl>(CurrentCaller.CDecl))
-        followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
+        followDestructor(Dtor->getParent(), Dtor);
 
       if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
         TrailingRequiresClause = FD->getTrailingRequiresClause().ConstraintExpr;
@@ -1095,9 +1105,8 @@ private:
       for (const FieldDecl *Field : Rec->fields())
         followTypeDtor(Field->getType(), DtorLoc);
 
-      if (const auto *Class = dyn_cast<CXXRecordDecl>(Rec))
-        for (const CXXBaseSpecifier &Base : Class->bases())
-          followTypeDtor(Base.getType(), DtorLoc);
+      for (const CXXBaseSpecifier &Base : Rec->bases())
+        followTypeDtor(Base.getType(), DtorLoc);
     }
 
     void followTypeDtor(QualType QT, SourceLocation CallSite) {
@@ -1256,14 +1265,22 @@ private:
     }
 
     bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) override {
-      // RecursiveASTVisitor does not visit the implicit call to operator
-      // delete.
-      if (FunctionDecl *FD = Delete->getOperatorDelete()) {
-        CallableInfo CI(*FD, SpecialFuncType::OperatorDelete);
-        followCall(CI, Delete->getBeginLoc());
+      FunctionDecl *OpDelete = Delete->getOperatorDelete();
+
+      // RecursiveASTVisitor does not visit the called destructor.
+      // But a destroying operator delete means that no destructor is called.
+      if (OpDelete == nullptr || !OpDelete->isDestroyingOperatorDelete()) {
+        if (QualType QT = Delete->getDestroyedType(); !QT.isNull()) {
+          followTypeDtor(QT, Delete->getBeginLoc());
+        }
       }
 
-      // It DOES however visit the called destructor
+      // RecursiveASTVisitor does not visit the implicit call to operator
+      // delete.
+      if (OpDelete != nullptr) {
+        CallableInfo CI(*OpDelete, SpecialFuncType::OperatorDelete);
+        followCall(CI, Delete->getBeginLoc());
+      }
 
       return true;
     }

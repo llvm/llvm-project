@@ -17,6 +17,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CLONING_H
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -86,6 +88,10 @@ struct ClonedCodeInfo {
   /// may be dangling, it is only intended to be used via isSimplified(), to
   /// check whether the main VMap mapping involves simplification or not.
   DenseMap<const Value *, const Value *> OrigVMap;
+
+  // Cloned calls that were originally an indirect call. They may be direct or
+  // indirect after cloning.
+  SmallSetVector<const Value *, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 
@@ -224,11 +230,12 @@ LLVM_ABI void CloneFunctionBodyInto(
     ValueMaterializer *Materializer = nullptr,
     const MetadataPredicate *IdentityMD = nullptr);
 
-LLVM_ABI void CloneAndPruneIntoFromInst(
-    Function *NewFunc, const Function *OldFunc, const Instruction *StartingInst,
-    ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-    SmallVectorImpl<ReturnInst *> &Returns, const char *NameSuffix = "",
-    ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+                          const Instruction *StartingInst,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -241,10 +248,11 @@ LLVM_ABI void CloneAndPruneIntoFromInst(
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-LLVM_ABI void CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
@@ -310,6 +318,7 @@ LLVM_ABI void InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
                                  bool MergeAttributes = false,
                                  AAResults *CalleeAAR = nullptr,
                                  bool InsertLifetime = true,
+                                 bool TrackInlineHistory = false,
                                  Function *ForwardVarArgsTo = nullptr,
                                  OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -339,6 +348,7 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
+                                     bool TrackInlineHistory = false,
                                      Function *ForwardVarArgsTo = nullptr,
                                      OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -351,6 +361,7 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
+                                     bool TrackInlineHistory = false,
                                      Function *ForwardVarArgsTo = nullptr,
                                      OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -359,6 +370,8 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 /// Note: Only innermost loops are supported.
 LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                       Loop *OrigLoop, ValueToValueMapTy &VMap,
@@ -406,7 +419,9 @@ identifyNoAliasScopesToClone(BasicBlock::iterator Start,
 /// The 'Ext' string is added as an extension to the name.
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
 /// MDNode onto the cloned scope.
-/// Be aware that the cloned scopes are still part of the original scope domain.
+/// Be aware that the cloned scopes are still part of the original scope domain,
+/// unless that domain has disjoint scopes, in which case they are placed in a
+/// clone of the domain.
 LLVM_ABI void cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                  DenseMap<MDNode *, MDNode *> &ClonedScopes,
                                  StringRef Ext, LLVMContext &Context);

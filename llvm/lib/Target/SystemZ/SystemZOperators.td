@@ -21,6 +21,11 @@ def SDT_ZICmp               : SDTypeProfile<1, 3,
                                             [SDTCisVT<0, i32>,
                                              SDTCisSameAs<1, 2>,
                                              SDTCisVT<3, i32>]>;
+def SDT_ZICmpSG             : SDTypeProfile<1, 1,
+                                            [SDTCisVT<0, i32>,
+                                             SDTCisPtrTy<1>]>;
+def SDT_ZMovSG              : SDTypeProfile<0, 1,
+                                            [SDTCisPtrTy<0>]>;
 def SDT_ZBRCCMask           : SDTypeProfile<0, 4,
                                             [SDTCisVT<0, i32>,
                                              SDTCisVT<1, i32>,
@@ -45,7 +50,7 @@ def SDT_ZProbedAlloca       : SDTypeProfile<1, 2,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisPtrTy<0>]>;
 def SDT_ZGR128Binary        : SDTypeProfile<1, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisInt<1>,
                                              SDTCisInt<2>]>;
 def SDT_ZBinaryWithFlags    : SDTypeProfile<2, 2,
@@ -91,17 +96,17 @@ def SDT_ZAtomicCmpSwap      : SDTypeProfile<2, 3,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisSameAs<0, 4>]>;
 def SDT_ZAtomicLoad128      : SDTypeProfile<1, 1,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicStore128     : SDTypeProfile<0, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicCmpSwap128   : SDTypeProfile<2, 3,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisVT<1, i32>,
                                              SDTCisPtrTy<2>,
-                                             SDTCisVT<3, untyped>,
-                                             SDTCisVT<4, untyped>]>;
+                                             SDTCisVT<3, v2i64>,
+                                             SDTCisVT<4, v2i64>]>;
 def SDT_ZMemMemLength       : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -303,6 +308,15 @@ def z_pcrel_offset      : SDNode<"SystemZISD::PCREL_OFFSET",
 // to compare, and an integer of type SystemZICMP.
 def z_icmp              : SDNode<"SystemZISD::ICMP", SDT_ZICmp>;
 
+// A special form of icmp dedicated to comparing a stack protector value
+// to a stack slot. Kept separate to enable custom lowering.
+def z_cmp_stackguard    : SDNode<"SystemZISD::CMP_STACKGUARD", SDT_ZICmpSG>;
+
+// A special ISD node intended to mirror z_cmp_stackguard, but modeling
+// the moving of the stackguard to the stack instead of the (later) compare.
+def z_mov_stackguard    : SDNode<"SystemZISD::MOV_STACKGUARD", SDT_ZMovSG,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
 // Floating-point comparisons.  The two operands are the values to compare.
 def z_fcmp              : SDNode<"SystemZISD::FCMP", SDT_ZCmp>;
 
@@ -357,6 +371,9 @@ def z_smul_lohi         : SDNode<"SystemZISD::SMUL_LOHI", SDT_ZGR128Binary>;
 def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;
 def z_sdivrem           : SDNode<"SystemZISD::SDIVREM", SDT_ZGR128Binary>;
 def z_udivrem           : SDNode<"SystemZISD::UDIVREM", SDT_ZGR128Binary>;
+
+// Create a GR128 from two i64 GPRs. The first operand is the high part.
+def z_pair128           : SDNode<"SystemZISD::PAIR128", SDT_ZJoinDwords>;
 
 // Add/subtract with overflow/carry.  These have the same operands as
 // the corresponding standard operations, except with the carry flag
@@ -663,6 +680,8 @@ def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
 // This isn't a memory opcode because we'd need to attach two
 // MachineMemOperands rather than one.
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+def z_memmove           : SDNode<"SystemZISD::MEMMOVE", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
 // Similar to MVC, but for logic operations (AND, OR, XOR).
@@ -987,6 +1006,7 @@ class NonvolatileLoad<SDPatternOperator load>
 def nonvolatile_anyextloadi8  : NonvolatileLoad<anyextloadi8>;
 def nonvolatile_anyextloadi16 : NonvolatileLoad<anyextloadi16>;
 def nonvolatile_anyextloadi32 : NonvolatileLoad<anyextloadi32>;
+def nonvolatile_load : NonvolatileLoad<load>;
 
 // Non-volatile stores.
 class NonvolatileStore<SDPatternOperator store>
@@ -997,6 +1017,7 @@ class NonvolatileStore<SDPatternOperator store>
 def nonvolatile_truncstorei8  : NonvolatileStore<truncstorei8>;
 def nonvolatile_truncstorei16 : NonvolatileStore<truncstorei16>;
 def nonvolatile_truncstorei32 : NonvolatileStore<truncstorei32>;
+def nonvolatile_store : NonvolatileStore<store>;
 
 // A store of a load that can be implemented using MVC.
 def mvc_store : PatFrag<(ops node:$value, node:$addr),
@@ -1158,8 +1179,8 @@ class storei<SDPatternOperator operator, SDPatternOperator store = store>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 6 bits are all set.
-def imm32bottom6set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x3f) == 0x3f;
+def imm32bottom6set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x3f) == 0x3f;
 }]>;
 class shiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
@@ -1168,23 +1189,23 @@ class shiftop<SDPatternOperator operator>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 7 bits are all set.
-def imm32bottom7set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x7f) == 0x7f;
+def imm32bottom7set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x7f) == 0x7f;
 }]>;
 class vshiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom7set))]>;
 
-def imm32mod64  : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() % 64 == 0);
+def imm32mod64  : IntImmLeaf<i32, [{
+  return Imm.getZExtValue() % 64 == 0;
 }]>;
 
-def imm32nobits : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x07) == 0;
+def imm32nobits : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x07) == 0;
 }]>;
-def imm32nobytes : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x78) == 0;
+def imm32nobytes : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x78) == 0;
 }]>;
 
 // Load a scalar and replicate it in all elements of a vector.

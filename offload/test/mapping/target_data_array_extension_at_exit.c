@@ -15,7 +15,6 @@
 // RUN:   -DEXTENDS=AFTER
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
-// XFAIL: intelgpu
 
 // END.
 

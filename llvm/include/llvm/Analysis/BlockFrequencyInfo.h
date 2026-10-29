@@ -26,7 +26,7 @@ namespace llvm {
 
 class BasicBlock;
 class BranchProbabilityInfo;
-class LoopInfo;
+class CycleInfo;
 class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
@@ -44,7 +44,7 @@ public:
   LLVM_ABI BlockFrequencyInfo();
   LLVM_ABI BlockFrequencyInfo(const Function &F,
                               const BranchProbabilityInfo &BPI,
-                              const LoopInfo &LI);
+                              const CycleInfo &CI);
   BlockFrequencyInfo(const BlockFrequencyInfo &) = delete;
   BlockFrequencyInfo &operator=(const BlockFrequencyInfo &) = delete;
   LLVM_ABI BlockFrequencyInfo(BlockFrequencyInfo &&Arg);
@@ -70,7 +70,7 @@ public:
   /// This computes the relative block frequency of \p BB and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
   LLVM_ABI std::optional<uint64_t>
-  getBlockProfileCount(const BasicBlock *BB, bool AllowSynthetic = false) const;
+  getBlockProfileCount(const BasicBlock *BB) const;
 
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by
@@ -94,7 +94,7 @@ public:
 
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const Function &F, const BranchProbabilityInfo &BPI,
-                          const LoopInfo &LI);
+                          const CycleInfo &CI);
 
   LLVM_ABI BlockFrequency getEntryFreq() const;
   LLVM_ABI void releaseMemory();
@@ -132,15 +132,13 @@ public:
 
 /// Printer pass for the \c BlockFrequencyInfo results.
 class BlockFrequencyPrinterPass
-    : public PassInfoMixin<BlockFrequencyPrinterPass> {
+    : public RequiredPassInfoMixin<BlockFrequencyPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BlockFrequencyInfo.

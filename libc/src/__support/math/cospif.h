@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float cospif(float x) {
+LIBC_INLINE float cospif(float x) {
   using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
 
@@ -107,4 +107,4 @@ LIBC_INLINE constexpr float cospif(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSHF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSPIF_H

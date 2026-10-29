@@ -7,6 +7,7 @@
 ; RUN: not llvm-as < %t/missing-colon.ll 2>&1 | FileCheck %s --check-prefix=MISSING-COLON
 ; RUN: not llvm-as < %t/invalid-access-kind.ll 2>&1 | FileCheck %s --check-prefix=INVALID-ACCESS-KIND
 ; RUN: not llvm-as < %t/default-after-loc.ll 2>&1 | FileCheck %s --check-prefix=DEFAULT-AFTER-LOC
+; RUN: not llvm-as < %t/default-after-target-loc.ll 2>&1 | FileCheck %s --check-prefix=DEFAULT-AFTER-TARGET-LOC
 
 ;--- missing-args.ll
 ; MISSING-ARGS: error: expected '('
@@ -32,3 +33,6 @@ declare void @fn() memory(argmem: foo)
 ;--- default-after-loc.ll
 ; DEFAULT-AFTER-LOC: error: default access kind must be specified first
 declare void @fn() memory(argmem: read, write)
+;--- default-after-target-loc.ll
+; DEFAULT-AFTER-TARGET-LOC: error: target memory default access kind must be specified first
+declare void @fn() memory(target_mem0: read, target_mem:write)

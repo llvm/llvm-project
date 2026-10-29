@@ -127,27 +127,10 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ;
 ; CHECK-GI-LABEL: v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    ldr w9, [x1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov v3.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b4, v1.b[1]
-; CHECK-GI-NEXT:    mov v5.b[0], v1.b[0]
-; CHECK-GI-NEXT:    mov v3.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v5.b[1], v4.b[0]
-; CHECK-GI-NEXT:    mov b4, v1.b[2]
-; CHECK-GI-NEXT:    mov b1, v1.b[3]
-; CHECK-GI-NEXT:    mov v3.b[2], v2.b[0]
-; CHECK-GI-NEXT:    mov v5.b[2], v4.b[0]
-; CHECK-GI-NEXT:    mov v3.b[3], v0.b[0]
-; CHECK-GI-NEXT:    mov v5.b[3], v1.b[0]
-; CHECK-GI-NEXT:    sqsub v0.8b, v3.8b, v5.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x2]
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ldr s1, [x1]
+; CHECK-GI-NEXT:    sqsub v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    str s0, [x2]
 ; CHECK-GI-NEXT:    ret
   %x = load <4 x i8>, ptr %px
   %y = load <4 x i8>, ptr %py
@@ -220,9 +203,8 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-SD-NEXT:    sqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #16
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x2]
-; CHECK-SD-NEXT:    str h1, [x2, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:

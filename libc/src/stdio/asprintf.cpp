@@ -11,9 +11,9 @@
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
-#include "src/stdio/printf_core/vasprintf_internal.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/vasprintf_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -26,7 +26,12 @@ LLVM_LIBC_FUNCTION(int, asprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  auto ret_val = printf_core::vasprintf_internal<true>(buffer, format, args);
+#else
   auto ret_val = printf_core::vasprintf_internal(buffer, format, args);
+#endif
   if (!ret_val.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;

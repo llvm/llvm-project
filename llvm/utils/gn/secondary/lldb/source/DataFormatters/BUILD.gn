@@ -4,9 +4,11 @@ static_library("DataFormatters") {
   deps = [
     "//lldb/source/Core",
 
-    #"//lldb/source/Interpreter", # FIXME: Dependency cycle.
-    #"//lldb/source/Symbol", # FIXME: 3-hop Dependency cycle (DataFormatters->Symbol->Expression->Interpreter->DataFormatters)
-    #"//lldb/source/Target",  # FIXME: 3-hop Dependency cycle (DataFormatters->Target->Expression->Interpreter->DataFormatters)
+    # #"//lldb/source/Interpreter", FIXME: Dependency cycle.
+    # #"//lldb/source/Symbol", FIXME: 3-hop Dependency cycle
+    # (DataFormatters->Symbol->Expression->Interpreter->DataFormatters)
+    # #"//lldb/source/Target", FIXME: 3-hop Dependency cycle
+    # (DataFormatters->Target->Expression->Interpreter->DataFormatters)
     "//lldb/source/Utility",
     "//lldb/source/ValueObject",
     "//llvm/lib/Support",

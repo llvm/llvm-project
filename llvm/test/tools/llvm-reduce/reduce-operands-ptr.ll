@@ -16,7 +16,7 @@
 
 ; ZERO: load i32, ptr null
 ; ZERO: load i32, ptr null
-; ZERO: extractelement <4 x ptr> zeroinitializer, i32 11
+; ZERO: extractelement <4 x ptr> splat (ptr null), i32 11
 
 @g = global i32 0
 

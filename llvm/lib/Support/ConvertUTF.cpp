@@ -445,9 +445,8 @@ unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd) {
 
 /* --------------------------------------------------------------------- */
 
-static unsigned
-findMaximalSubpartOfIllFormedUTF8Sequence(const UTF8 *source,
-                                          const UTF8 *sourceEnd) {
+unsigned findMaximalSubpartOfIllFormedUTF8Sequence(const UTF8 *source,
+                                                   const UTF8 *sourceEnd) {
   UTF8 b1, b2, b3;
 
   assert(!isLegalUTF8Sequence(source, sourceEnd));

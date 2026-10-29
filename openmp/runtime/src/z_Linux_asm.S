@@ -121,7 +121,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -2512,7 +2512,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
-# elif !KMP_ARCH_WASM
+# elif !KMP_ARCH_WASM32 && !KMP_ARCH_WASM64 
 .section .note.GNU-stack,"",@progbits
 # endif
 #endif

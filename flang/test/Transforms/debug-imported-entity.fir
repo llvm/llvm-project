@@ -13,9 +13,9 @@ module {
   func.func @test() attributes {fir.bindc_name = "test"} {
     fir.use_stmt "foo"
     %0 = fir.address_of(@_QMfooEv1) : !fir.ref<i32>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QMfooEv1"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
+    %1 = fircg.ext_declare %0 uniq_name("_QMfooEv1") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
     %4 = fir.address_of(@_QFtestExyz) : !fir.ref<i32>
-    %5 = fircg.ext_declare %4 {uniq_name = "_QFtestExyz"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
+    %5 = fircg.ext_declare %4 uniq_name("_QFtestExyz") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
     return
   } loc(#loc3)
 }
@@ -27,5 +27,5 @@ module {
 // CHECK: #[[MOD:.+]] = #llvm.di_module<{{.*}}name = "foo"{{.*}}>
 // CHECK: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID:[0-9]+]]]<>, isRecSelf = true{{.*}}>
 // CHECK: #[[IMP_ENTITY:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[MOD]]{{.*}}>
-// CHECK: #[[SP:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID]]]<>{{.*}}retainedNodes = #[[IMP_ENTITY]]>
+// CHECK: #[[SP:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID]]]<>{{.*}}retainedNodes = [#[[IMP_ENTITY]]]>
 // CHECK: #llvm.di_global_variable<scope = #[[SP]], name = "xyz"{{.*}}>

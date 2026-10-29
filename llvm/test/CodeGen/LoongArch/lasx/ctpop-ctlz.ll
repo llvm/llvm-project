@@ -110,8 +110,7 @@ define void @not_ctlz_v32i8(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: not_ctlz_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
-; CHECK-NEXT:    xvclz.b $xr0, $xr0
+; CHECK-NEXT:    xvclo.b $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <32 x i8>, ptr %src
@@ -125,9 +124,7 @@ define void @not_ctlz_v16i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: not_ctlz_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvclz.h $xr0, $xr0
+; CHECK-NEXT:    xvclo.h $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <16 x i16>, ptr %src
@@ -141,9 +138,7 @@ define void @not_ctlz_v8i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: not_ctlz_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvclz.w $xr0, $xr0
+; CHECK-NEXT:    xvclo.w $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %src
@@ -157,9 +152,7 @@ define void @not_ctlz_v4i64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: not_ctlz_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvclz.d $xr0, $xr0
+; CHECK-NEXT:    xvclo.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i64>, ptr %src

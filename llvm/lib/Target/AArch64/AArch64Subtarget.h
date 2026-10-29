@@ -27,6 +27,25 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
+
+namespace llvm::AArch64 {
+// Mode for selecting how to insert frame record info into the stack ring
+// buffer.
+enum class StackTaggingRecordStackHistoryMode {
+  // Do not record frame record info.
+  None,
+
+  // Insert instructions into the prologue for storing into the stack ring
+  // buffer directly.
+  Instr,
+};
+
+enum class UncheckedLdStMode { Never, Safe, Always };
+} // namespace llvm::AArch64
+
+#define OPTIONS_STRUCT_DECL
+#include "AArch64Options.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -36,6 +55,8 @@ class GlobalValue;
 class StringRef;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
+  const AArch64Options &CLOpts;
+
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Generic,
@@ -59,7 +80,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -71,6 +92,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  unsigned FixedLoadLatency = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -85,7 +107,6 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   bool EnableSRLTSubregToRegMitigation;
@@ -131,6 +152,8 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false,
                    bool EnableSRLTSubregToRegMitigation = false);
+
+  const AArch64Options &getCLOpts() const { return CLOpts; }
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -198,7 +221,7 @@ public:
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
   unsigned getStreamingHazardSize() const {
-    return StreamingHazardSize.value_or(
+    return CLOpts.streaming_hazard_size.value_or(
         !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
   }
 
@@ -235,6 +258,14 @@ public:
     return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
   }
 
+  /// Returns true if SVE bit-permute instructions (bext/bdep/bgrp) can be
+  /// emitted.
+  bool isSVEBitPermAvailable() const {
+    return hasSVEBitPerm() &&
+           (isSVEAvailable() ||
+            (isSVEorStreamingSVEAvailable() && hasSSVE_BitPerm()));
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -264,8 +295,19 @@ public:
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
            hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
-           hasFuseLiterals();
+           hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
   }
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions.
+  bool fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                       unsigned SecondOpc, unsigned SecondShift) const;
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  bool fusesMOVImmPair(const MachineInstr *FirstMI,
+                       const MachineInstr &SecondMI) const;
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
@@ -299,6 +341,8 @@ public:
     return MinimumJumpTableEntries;
   }
 
+  unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
+
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
   bool supportsAddressTopByteIgnored() const;
@@ -309,6 +353,13 @@ public:
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetUEFI() const { return TargetTriple.isUEFI(); }
+  /// UEFI follows the Windows ARM64 ABI and produces PE/COFF images, so most
+  /// of the Windows specific ABI handling (calling convention, callee saved
+  /// registers, frame chain, stack probing and unwind info) applies to it.
+  bool isTargetWindowsOrUEFI() const {
+    return TargetTriple.isOSWindowsOrUEFI();
+  }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
@@ -384,9 +435,9 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
-      return isTargetWindows();
+      return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
-      return IsVarArg && isTargetWindows();
+      return IsVarArg && isTargetWindowsOrUEFI();
     case CallingConv::Win64:
       return true;
     default:
@@ -443,6 +494,12 @@ public:
     if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
       return MaxSVEVectorSizeInBits;
     return 0;
+  }
+
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
   }
 
   bool useSVEForFixedLengthVectors() const {

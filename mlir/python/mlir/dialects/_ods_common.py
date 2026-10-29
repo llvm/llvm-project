@@ -240,6 +240,8 @@ def _dispatch_mixed_values(
         for size in values or []:
             if isinstance(size, int):
                 static_values.append(size)
+            elif isinstance(size, IntegerAttr):
+                static_values.append(size.value)
             else:
                 static_values.append(ShapedType.get_dynamic_size())
                 dynamic_values.append(size)

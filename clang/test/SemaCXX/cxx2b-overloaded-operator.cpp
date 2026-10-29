@@ -98,7 +98,7 @@ int cxx_subscript_unexpanded() {
 template<int... Is>
 constexpr int c_array() {
   int arr[] = {1, 2, 3};
-  return arr[Is...]; // expected-error 2{{type 'int[3]' does not provide a subscript operator}}
+  return arr[Is...]; // expected-error 2{{built-in subscript operator for type 'int[3]' expects exactly one argument}}
 }
 
 template<int... Is>

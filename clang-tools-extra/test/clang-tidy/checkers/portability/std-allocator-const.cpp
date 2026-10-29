@@ -1,38 +1,12 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s portability-std-allocator-const %t -- -- -fno-delayed-template-parsing
 
-namespace std {
-typedef unsigned size_t;
-
-template <class T>
-class allocator {};
-template <class T>
-class hash {};
-template <class T>
-class equal_to {};
-template <class T>
-class less {};
-
-template <class T, class A = std::allocator<T>>
-class deque {};
-template <class T, class A = std::allocator<T>>
-class forward_list {};
-template <class T, class A = std::allocator<T>>
-class list {};
-template <class T, class A = std::allocator<T>>
-class vector {};
-
-template <class K, class C = std::less<K>, class A = std::allocator<K>>
-class multiset {};
-template <class K, class C = std::less<K>, class A = std::allocator<K>>
-class set {};
-template <class K, class H = std::hash<K>, class Eq = std::equal_to<K>, class A = std::allocator<K>>
-class unordered_multiset {};
-template <class K, class H = std::hash<K>, class Eq = std::equal_to<K>, class A = std::allocator<K>>
-class unordered_set {};
-
-template <class T, class C = std::deque<T>>
-class stack {};
-} // namespace std
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <set>
+#include <stack>
+#include <unordered_set>
+#include <vector>
 
 namespace absl {
 template <class K, class H = std::hash<K>, class Eq = std::equal_to<K>, class A = std::allocator<K>>

@@ -147,12 +147,12 @@ while.end:                                        ; preds = %while.cond
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !{!1, !2}
-!2 = !{!"llvm.loop.distribute.enable", i1 true}
+!2 = !{!"llvm.loop.distribute.enable"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.mustprogress"}
 !5 = distinct !{!5, !4, !6}
 !6 = !{!"llvm.loop.unroll.enable"}
-!7 = distinct !DISubprogram(name: "test3", scope: !8, file: !8, spFlags: DISPFlagDefinition, unit: !9)
+!7 = distinct !DISubprogram(name: "test3", scope: !8, file: !8, spFlags: DISPFlagDefinition, unit: !9, type: !15)
 !8 = !DIFile(filename: "preserve-llvm-loop-metadata.ll", directory: "/")
 !9 = distinct !DICompileUnit(language: DW_LANG_C99, file: !8, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !10 = distinct !{!10, !11, !13}
@@ -161,9 +161,11 @@ while.end:                                        ; preds = %while.cond
 !13 = !DILocation(line: 9, column: 23, scope: !12)
 
 ; CHECK: !1 = distinct !{!1, !2}
-; CHECK: !2 = !{!"llvm.loop.distribute.enable", i1 true}
+; CHECK: !2 = !{!"llvm.loop.distribute.enable"}
 ; CHECK: !3 = distinct !{!3, !4}
 ; CHECK: !4 = !{!"llvm.loop.mustprogress"}
 ; CHECK: !5 = distinct !{!5, !4, !6}
 ; CHECK: !6 = !{!"llvm.loop.unroll.enable"}
 ; CHECK-NOT: !10 = distinct !{!10, !11, !13}
+!14 = !{null}
+!15 = !DISubroutineType(types: !14)

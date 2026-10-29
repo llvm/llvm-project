@@ -50,6 +50,9 @@ unsigned NumberOfCpuCores();
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions& Options);
 
+// Platform-specific one-time initialization, called early in FuzzerDriver.
+void PlatformInit();
+
 void SleepSeconds(int Seconds);
 
 unsigned long GetPid();

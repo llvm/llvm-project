@@ -16,39 +16,43 @@
 ; CHECK-NEXT: !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "has-uuid",{{.*}}, identifier: "uuid")
 ; CHECK-NEXT: !4 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !3, file: !1
 ; CHECK-NEXT: !5 = !DIDerivedType(tag: DW_TAG_member, name: "field2", scope: !3, file: !1
-; CHECK-NEXT: !6 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !1
-; CHECK-NEXT: !7 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !3, file: !1
+; CHECK-NEXT: !6 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !1, type: !7, spFlags: 0)
+; CHECK-NEXT: !7 = !DISubroutineType(types: !8)
+; CHECK-NEXT: !8 = !{null}
+; CHECK-NEXT: !9 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !3, file: !1, type: !7, spFlags: 0)
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "has-uuid", file: !1, line: 2, size: 64, align: 32, identifier: "uuid")
 !4 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !3, file: !1, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "field2", scope: !3, file: !1, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
-!6 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !1, isDefinition: false)
-!7 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !3, file: !1, isDefinition: false)
+!6 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !1, isDefinition: false, type: !18)
+!7 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !3, file: !1, isDefinition: false, type: !18)
+!18 = !DISubroutineType(types: !19)
+!19 = !{null}
 
 ; Define an un-identified type with fields and functions.
-; CHECK-NEXT: !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "no-uuid", file: !1
-; CHECK-NEXT: !9 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !8, file: !1
-; CHECK-NEXT: !10 = !DIDerivedType(tag: DW_TAG_member, name: "field2", scope: !8, file: !1
-; CHECK-NEXT: !11 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !1
-; CHECK-NEXT: !12 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !8, file: !1
+; CHECK-NEXT: !10 = !DICompositeType(tag: DW_TAG_structure_type, name: "no-uuid", file: !1
+; CHECK-NEXT: !11 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !10, file: !1
+; CHECK-NEXT: !12 = !DIDerivedType(tag: DW_TAG_member, name: "field2", scope: !10, file: !1
+; CHECK-NEXT: !13 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !10, file: !1, type: !7, spFlags: 0)
+; CHECK-NEXT: !14 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !10, file: !1, type: !7, spFlags: 0)
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "no-uuid", file: !1, line: 2, size: 64, align: 32)
 !9 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !8, file: !1, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "field2", scope: !8, file: !1, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
-!11 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !1, isDefinition: false)
-!12 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !8, file: !1, isDefinition: false)
+!11 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !1, isDefinition: false, type: !18)
+!12 = !DISubprogram(name: "foo", linkageName: "foo2", scope: !8, file: !1, isDefinition: false, type: !18)
 
 ; Add duplicate fields and members of "no-uuid" in a different file.  These
 ; should stick around, since "no-uuid" does not have an "identifier:" field.
-; CHECK-NEXT: !13 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !8, file: !2,
-; CHECK-NEXT: !14 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !2,
+; CHECK-NEXT: !15 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !10, file: !2,
+; CHECK-NEXT: !16 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !10, file: !2, type: !7, spFlags: 0)
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !8, file: !2, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
-!14 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !2, isDefinition: false)
+!14 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !8, file: !2, isDefinition: false, type: !18)
 
 ; Add duplicate fields and members of "has-uuid" in a different file.  These
 ; should be merged.
 !15 = !DIDerivedType(tag: DW_TAG_member, name: "field1", scope: !3, file: !2, line: 4, baseType: !0, size: 32, align: 32, offset: 32)
-!16 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !2, isDefinition: false)
+!16 = !DISubprogram(name: "foo", linkageName: "foo1", scope: !3, file: !2, isDefinition: false, type: !18)
 
-; CHECK-NEXT: !15 = !{!4, !6}
+; CHECK-NEXT: !17 = !{!4, !6}
 ; CHECK-NOT: !DIDerivedType
 ; CHECK-NOT: !DISubprogram
 !17 = !{!15, !16}

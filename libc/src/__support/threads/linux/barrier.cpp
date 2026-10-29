@@ -8,6 +8,7 @@
 
 #include "src/__support/threads/linux/barrier.h"
 #include "hdr/errno_macros.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/threads/mutex.h"
 
@@ -24,18 +25,12 @@ int Barrier::init(Barrier *b,
   b->waiting = 0;
   b->blocking = true;
 
-  int err;
-  err = CndVar::init(&b->entering);
-  if (err != 0)
-    return err;
+  new (&b->entering) CndVar(attr ? attr->pshared : false);
+  new (&b->exiting) CndVar(attr ? attr->pshared : false);
 
-  err = CndVar::init(&b->exiting);
-  if (err != 0)
-    return err;
-
-  auto mutex_err = Mutex::init(&b->m, false, false, false, false);
-  if (mutex_err != MutexError::NONE)
-    return EAGAIN;
+  new (&b->m) Mutex(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+                    /*is_robust=*/false,
+                    /*is_pshared=*/attr ? attr->pshared : false);
 
   return 0;
 }
@@ -76,8 +71,8 @@ int Barrier::wait() {
 }
 
 int Barrier::destroy(Barrier *b) {
-  CndVar::destroy(&b->entering);
-  CndVar::destroy(&b->exiting);
+  b->entering.reset();
+  b->exiting.reset();
   Mutex::destroy(&b->m);
   return 0;
 }

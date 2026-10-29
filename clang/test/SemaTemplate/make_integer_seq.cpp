@@ -8,7 +8,7 @@ using test1 = __make_integer_seq<A, int, 1>;
 // CHECK-NEXT:     |-name: '__make_integer_seq' qualified
 // CHECK-NEXT:     | `-BuiltinTemplateDecl {{.+}} __make_integer_seq
 // CHECK-NEXT:     |-TemplateArgument template 'A'
-// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 A
+// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 referenced A
 // CHECK-NEXT:     |-TemplateArgument type 'int'
 // CHECK-NEXT:     | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
 // CHECK-NEXT:     |-TemplateArgument expr '1'
@@ -43,7 +43,7 @@ using test2 = B<int, 1>;
 // CHECK-NEXT:       |-name: '__make_integer_seq' qualified
 // CHECK-NEXT:       | `-BuiltinTemplateDecl {{.+}} __make_integer_seq
 // CHECK-NEXT:       |-TemplateArgument template 'A'
-// CHECK-NEXT:       | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 A
+// CHECK-NEXT:       | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 referenced A
 // CHECK-NEXT:       |-TemplateArgument type 'int'
 // CHECK-NEXT:       | `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar class depth 0 index 0 B1 final
 // CHECK-NEXT:       |   |-TypeAliasTemplate 0x{{[0-9A-Fa-f]+}} 'B'
@@ -89,7 +89,7 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:     |-name: '__make_integer_seq'
 // CHECK-NEXT:     | `-BuiltinTemplateDecl {{.+}} __make_integer_seq
 // CHECK-NEXT:     |-TemplateArgument template 'A'
-// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 A
+// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:1, col:41> col:38 referenced A
 // CHECK-NEXT:     |-TemplateArgument type 'T'
 // CHECK-NEXT:     | `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'T' dependent depth 0 index 1
 // CHECK-NEXT:     |   `-TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'T'
@@ -103,7 +103,7 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:     |-name: '__make_integer_seq'
 // CHECK-NEXT:     | `-BuiltinTemplateDecl {{.+}} __make_integer_seq
 // CHECK-NEXT:     |-TemplateArgument template 'A'
-// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:1, col:41> col:38 A
+// CHECK-NEXT:     | `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:1, col:41> col:38 referenced A
 // CHECK-NEXT:     |-TemplateArgument type 'int'
 // CHECK-NEXT:     | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
 // CHECK-NEXT:     `-TemplateArgument expr 'N'

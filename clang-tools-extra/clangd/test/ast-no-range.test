@@ -10,7 +10,7 @@
 # CHECK-NEXT:    "arcana": "{{TranslationUnitDecl.*}}"
 # CHECK-NEXT:    "children": [
 # CHECK-NEXT:      {
-#      CHECK:        "arcana": "VarDecl {{.*}} x 'int'",
+#      CHECK:        "arcana": "VarDecl {{.*}} x 'int' external-linkage",
 # CHECK-NEXT:        "children": [
 # CHECK-NEXT:          {
 # CHECK-NEXT:            "arcana": "QualType {{.*}} 'int' ",

@@ -33,8 +33,8 @@ llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
 struct alignas(8) Z {};
 llvm::PointerUnion<Z *, int *> PointerUnion(IntPtr);
 
-// No members which instantiate PointerUnionUIntTraits<Z *> (e.g. get<T *>())
-// are called, and this instance will therefore be raw-printed.
+// The PunnedPointer-based formatter can decode all PointerUnion instances
+// from type alignments, regardless of member template instantiation.
 llvm::PointerUnion<Z *, float *> RawPrintingPointerUnion(nullptr);
 
 using IlistTag = llvm::ilist_tag<struct A>;

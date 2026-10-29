@@ -138,13 +138,13 @@ public:
 
   constexpr uint32_t bitWidth() const { return BitWidth; }
   constexpr unsigned numWords() const { return APInt::getNumWords(BitWidth); }
-  constexpr bool singleWord() const { return numWords() == 1; }
+  constexpr bool singleWord() const { return numWords() <= 1; }
+  constexpr static bool isNumber() { return true; }
 
   APSInt toAPSInt(unsigned Bits = 0) const {
     if (Bits == 0)
       Bits = bitWidth();
 
-    APInt V = getValue();
     if constexpr (Signed)
       return APSInt(getValue().sext(Bits), !Signed);
     else

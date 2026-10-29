@@ -11,6 +11,8 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 
+#include <cerrno>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -72,7 +74,7 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
   if (pos == m_cache.end()) {
     error = Status::FromErrorStringWithFormat(
         "invalid host file descriptor %" PRIu64, fd);
-    return false;
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {
@@ -80,8 +82,13 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
     return UINT64_MAX;
   }
   if (static_cast<uint64_t>(file_up->SeekFromStart(offset, &error)) != offset ||
-      error.Fail())
-    return UINT64_MAX;
+      error.Fail()) {
+    // A pipe cannot seek, so the seek fails on it with ESPIPE. The offset
+    // means nothing there, so write at the pipe's end instead.
+    if (error.GetError() != ESPIPE)
+      return UINT64_MAX;
+    error.Clear();
+  }
   size_t bytes_written = src_len;
   error = file_up->Write(src, bytes_written);
   if (error.Fail())
@@ -99,7 +106,7 @@ uint64_t FileCache::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
   if (pos == m_cache.end()) {
     error = Status::FromErrorStringWithFormat(
         "invalid host file descriptor %" PRIu64, fd);
-    return false;
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {

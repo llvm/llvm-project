@@ -8,9 +8,9 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
@@ -24,22 +24,16 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/CommandLine.h"
 #include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ctx-instr-lower"
 
-static cl::list<std::string> ContextRoots(
-    "profile-context-root", cl::Hidden,
-    cl::desc(
-        "A function name, assumed to be global, which will be treated as the "
-        "root of an interesting graph, which will be profiled independently "
-        "from other similar graphs."));
-
-bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
-  return !ContextRoots.empty();
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return !LibraryOptions.get<InstrumentationOptions>()
+              .profile_context_root.empty();
 }
 
 // the names of symbols we expect in compiler-rt. Using a namespace for
@@ -161,9 +155,10 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Define a global for each entrypoint. We'll reuse the entrypoint's name
   // as prefix. We assume the entrypoint names to be unique.
-  for (const auto &Fname : ContextRoots) {
+  for (StringRef Fname : Opts.profile_context_root) {
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
         continue;
@@ -280,8 +275,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-      Guid = Builder.getInt64(
-          AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
+      Guid = Builder.getInt64(cast<Function>(*Mark->getNameValue()).getGUID());
       // The type of the context of this function is now knowable since we have
       // NumCallsites and NumCounters. We declare it here because it's more
       // convenient - we have the Builder.

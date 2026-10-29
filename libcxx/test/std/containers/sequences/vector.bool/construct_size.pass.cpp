@@ -10,6 +10,7 @@
 // vector<bool>
 
 // explicit vector(size_type n);
+// explicit vector(size_type n, const Allocator& alloc = Allocator());
 
 #include <vector>
 #include <cassert>
@@ -21,7 +22,7 @@
 template <class C>
 TEST_CONSTEXPR_CXX20 void
 test2(typename C::size_type n, typename C::allocator_type const& a = typename C::allocator_type()) {
-#if TEST_STD_VER >= 14
+#if TEST_STD_VER >= 11
   C c(n, a);
   LIBCPP_ASSERT(c.__invariants());
   assert(c.size() == n);

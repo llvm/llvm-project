@@ -404,13 +404,6 @@ def dunder_isoc99_scanf : TargetLibCall<"__isoc99_scanf", Int, [Ptr, Ellip]>;
 def dunder_isoc99_sscanf
     : TargetLibCall<"__isoc99_sscanf", Int, [Ptr, Ptr, Ellip]>;
 
-/// void* __kmpc_alloc_shared(size_t nbyte);
-def __kmpc_alloc_shared : TargetLibCall<"__kmpc_alloc_shared", Ptr, [SizeT]>;
-
-/// void __kmpc_free_shared(void *ptr, size_t nbyte);
-def __kmpc_free_shared
-    : TargetLibCall<"__kmpc_free_shared", Void, [Ptr, SizeT]>;
-
 /// double __log10_finite(double x);
 def log10_finite : TargetLibCall<"__log10_finite", Dbl, [Dbl]>;
 
@@ -467,11 +460,19 @@ def powf_finite : TargetLibCall<"__powf_finite", Flt, [Flt, Flt]>;
 /// long double __powl_finite(long double x, long double y);
 def powl_finite : TargetLibCall<"__powl_finite", LDbl, [LDbl, LDbl]>;
 
-/// double __sincospi_stret(double x);
+/// { double, double } __sincos_stret(double x);
+def sincos_stret
+    : TargetLibCall<"__sincos_stret", ? /* Checked manually. */>;
+
+/// { float, float } __sincosf_stret(float x);
+def sincosf_stret
+    : TargetLibCall<"__sincosf_stret", ? /* Checked manually. */>;
+
+/// { double, double } __sincospi_stret(double x);
 def sincospi_stret
     : TargetLibCall<"__sincospi_stret", ? /* Checked manually. */>;
 
-/// float __sincospif_stret(float x);
+/// { float, float } __sincospif_stret(float x);
 def sincospif_stret
     : TargetLibCall<"__sincospif_stret", ? /* Checked manually. */>;
 

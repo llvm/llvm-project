@@ -108,23 +108,25 @@ declare void @llvm.assume(i1)
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{!"clang version 4.0.0 (trunk 278098)"}
-!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, type: !19, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !6 = !DILocation(line: 30, column: 32, scope: !5)
-!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEv", scope: !1, file: !1, line: 13, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEv", scope: !1, file: !1, line: 13, type: !19, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !8 = !{i32 0, !"typeid"}
 
-!9 = distinct !DISubprogram(name: "call1", linkageName: "_Z5call1Pv", scope: !1, file: !1, line: 31, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!9 = distinct !DISubprogram(name: "call1", linkageName: "_Z5call1Pv", scope: !1, file: !1, line: 31, type: !19, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !10 = !DILocation(line: 35, column: 32, scope: !9)
-!11 = distinct !DISubprogram(name: "vf_empty", linkageName: "_ZN3vt18vf_emptyEv", scope: !1, file: !1, line: 23, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!11 = distinct !DISubprogram(name: "vf_empty", linkageName: "_ZN3vt18vf_emptyEv", scope: !1, file: !1, line: 23, type: !19, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !12 = !{i32 0, !"typeid1"}
 
-!13 = distinct !DISubprogram(name: "call2", linkageName: "_Z5call2Pv", scope: !1, file: !1, line: 40, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!13 = distinct !DISubprogram(name: "call2", linkageName: "_Z5call2Pv", scope: !1, file: !1, line: 40, type: !19, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !14 = !DILocation(line: 41, column: 32, scope: !13)
 !15 = !{i32 0, !"typeid2"}
 
-!16 = distinct !DISubprogram(name: "call3", linkageName: "_Z5call3Pv", scope: !1, file: !1, line: 50, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!16 = distinct !DISubprogram(name: "call3", linkageName: "_Z5call3Pv", scope: !1, file: !1, line: 50, type: !19, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !17 = !DILocation(line: 51, column: 32, scope: !16)
 !18 = !{i32 0, !"typeid3"}
+!19 = !DISubroutineType(types: !20)
+!20 = !{null}
 
 
 

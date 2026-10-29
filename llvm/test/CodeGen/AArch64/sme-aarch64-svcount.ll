@@ -148,10 +148,7 @@ define target("aarch64.svcount") @test_sel_cc(target("aarch64.svcount") %x, targ
 ; CHECK-O0-NEXT:    mov p2.b, p1.b
 ; CHECK-O0-NEXT:    mov p1.b, p0.b
 ; CHECK-O0-NEXT:    subs w8, w0, #42
-; CHECK-O0-NEXT:    cset w9, gt
-; CHECK-O0-NEXT:    // implicit-def: $x8
-; CHECK-O0-NEXT:    mov w8, w9
-; CHECK-O0-NEXT:    sbfx x9, x8, #0, #1
+; CHECK-O0-NEXT:    csetm x9, gt
 ; CHECK-O0-NEXT:    mov x8, xzr
 ; CHECK-O0-NEXT:    whilelo p0.b, x8, x9
 ; CHECK-O0-NEXT:    sel p0.b, p0, p1.b, p2.b
@@ -160,8 +157,7 @@ define target("aarch64.svcount") @test_sel_cc(target("aarch64.svcount") %x, targ
 ; CHECK-O3-LABEL: test_sel_cc:
 ; CHECK-O3:       // %bb.0:
 ; CHECK-O3-NEXT:    cmp w0, #42
-; CHECK-O3-NEXT:    cset w8, gt
-; CHECK-O3-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-O3-NEXT:    csetm x8, gt
 ; CHECK-O3-NEXT:    whilelo p2.b, xzr, x8
 ; CHECK-O3-NEXT:    sel p0.b, p2, p0.b, p1.b
 ; CHECK-O3-NEXT:    ret

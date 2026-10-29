@@ -49,3 +49,37 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPstream_destroy()
 ! CHECK: %{{.*}} = fir.call @_FortranACUFStreamDestroy(%{{.*}}) fastmath<contract> : (i64) -> i32
+
+! A default-kind (i32) actual argument must be widened to i64 before
+! reaching the runtime stream call.
+subroutine default_stream_i32_literal
+  use cuda_runtime_api
+  integer :: istat
+  istat = cudaforSetDefaultStream(0)
+  istat = cudaStreamDestroy(0)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdefault_stream_i32_literal()
+! CHECK: %[[ZERO1:.*]] = arith.constant 0 : i32
+! CHECK: %[[STRM1:.*]] = fir.convert %[[ZERO1]] : (i32) -> i64
+! CHECK: %{{.*}} = fir.call @_FortranACUFSetDefaultStream(%[[STRM1]]) fastmath<contract> : (i64) -> i32
+! CHECK: %[[ZERO2:.*]] = arith.constant 0 : i32
+! CHECK: %[[STRM2:.*]] = fir.convert %[[ZERO2]] : (i32) -> i64
+! CHECK: %{{.*}} = fir.call @_FortranACUFStreamDestroy(%[[STRM2]]) fastmath<contract> : (i64) -> i32
+
+subroutine default_stream_i32_var
+  use cuda_runtime_api
+  integer :: istat
+  integer(4) :: s
+  s = 0
+  istat = cudaforSetDefaultStream(s)
+  istat = cudaStreamDestroy(s)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdefault_stream_i32_var()
+! CHECK: %[[L1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK: %[[V1:.*]] = fir.convert %[[L1]] : (i32) -> i64
+! CHECK: %{{.*}} = fir.call @_FortranACUFSetDefaultStream(%[[V1]]) fastmath<contract> : (i64) -> i32
+! CHECK: %[[L2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK: %[[V2:.*]] = fir.convert %[[L2]] : (i32) -> i64
+! CHECK: %{{.*}} = fir.call @_FortranACUFStreamDestroy(%[[V2]]) fastmath<contract> : (i64) -> i32

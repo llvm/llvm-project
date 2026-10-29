@@ -239,6 +239,7 @@ enum class Option : u8 {
   MaxCacheEntriesCount, // Maximum number of blocks that can be cached.
   MaxCacheEntrySize,    // Maximum size of a block that can be cached.
   MaxTSDsCount,         // Number of usable TSDs for the shared registry.
+  MaxCacheResidentBytes, // Maximum resident bytes that can be cached.
 };
 
 enum class ReleaseToOS : u8 {
@@ -248,6 +249,7 @@ enum class ReleaseToOS : u8 {
              // take.
   ForceFast, // Force release pages to the OS, but do it quickly and skip any
              // cases where a lock is held by another thread.
+  Last = ForceFast, // Must be set to the last entry in the enum.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 %s -triple=spirv64-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 
 // This is the sample from the C++ Itanium ABI, p2.6.2.

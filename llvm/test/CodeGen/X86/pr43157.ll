@@ -1,7 +1,7 @@
 ; RUN: not llc < %s -mtriple=i686-pc-linux -o - -mattr=+sse2 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -o - -mattr=+mmx | FileCheck %s
 
-; ERR: error: couldn't allocate input reg for constraint 'x'
+; ERR: error: could not allocate input reg for constraint 'x'
 define void @foo(fp128 %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry

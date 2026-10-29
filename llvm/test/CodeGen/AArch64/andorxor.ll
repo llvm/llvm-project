@@ -435,46 +435,16 @@ entry:
 }
 
 define void @and_v4i8(ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: and_v4i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    str s0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and_v4i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    ldr w9, [x1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov b3, v1.b[1]
-; CHECK-GI-NEXT:    mov b4, v0.b[2]
-; CHECK-GI-NEXT:    mov b5, v0.b[3]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov b2, v1.b[2]
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov b3, v1.b[3]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    mov v1.h[3], w9
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and_v4i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
   %e = load <4 x i8>, ptr %p2
@@ -484,46 +454,16 @@ entry:
 }
 
 define void @or_v4i8(ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: or_v4i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    str s0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: or_v4i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    ldr w9, [x1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov b3, v1.b[1]
-; CHECK-GI-NEXT:    mov b4, v0.b[2]
-; CHECK-GI-NEXT:    mov b5, v0.b[3]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov b2, v1.b[2]
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov b3, v1.b[3]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    mov v1.h[3], w9
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: or_v4i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
   %e = load <4 x i8>, ptr %p2
@@ -533,46 +473,16 @@ entry:
 }
 
 define void @xor_v4i8(ptr %p1, ptr %p2) {
-; CHECK-SD-LABEL: xor_v4i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    str s0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: xor_v4i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    ldr w9, [x1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov b3, v1.b[1]
-; CHECK-GI-NEXT:    mov b4, v0.b[2]
-; CHECK-GI-NEXT:    mov b5, v0.b[3]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov b2, v1.b[2]
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov b3, v1.b[3]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    mov v1.h[2], w9
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    mov v1.h[3], w9
-; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    str w8, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: xor_v4i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %d = load <4 x i8>, ptr %p1
   %e = load <4 x i8>, ptr %p2
@@ -698,11 +608,10 @@ define void @and_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    str h1, [x0, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_v2i16:
@@ -731,12 +640,11 @@ define void @or_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    str h1, [x0, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_v2i16:
@@ -765,12 +673,11 @@ define void @xor_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    str h1, [x0, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_v2i16:
@@ -1566,4 +1473,80 @@ define <4 x i128> @xor_v4i128(<4 x i128> %d, <4 x i128> %e) {
 entry:
   %s = xor <4 x i128> %d, %e
   ret <4 x i128> %s
+}
+
+; Propagate demanded bits from the LHS to simplify the RHS.
+
+define i32 @and_hidden_bits_rhs(i32 %x, i32 %y) {
+; CHECK-SD-LABEL: and_hidden_bits_rhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    and w0, w0, w1, lsr #24
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_hidden_bits_rhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and w0, w0, w1, lsr #24
+; CHECK-GI-NEXT:    ret
+  %bounded = lshr i32 %y, 24
+  %inner = or i32 %x, 65280
+  %result = and i32 %bounded, %inner
+  ret i32 %result
+}
+
+define i32 @or_hidden_bits_rhs(i32 %x, i32 %y) {
+; CHECK-SD-LABEL: or_hidden_bits_rhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    orn w0, w0, w1, lsr #24
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_hidden_bits_rhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    orn w0, w0, w1, lsr #24
+; CHECK-GI-NEXT:    ret
+  %shift = lshr i32 %y, 24
+  %bounded = xor i32 %shift, -1
+  %inner = and i32 %x, 255
+  %result = or i32 %bounded, %inner
+  ret i32 %result
+}
+
+define <4 x i32> @and_hidden_bits_rhs_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-SD-LABEL: and_hidden_bits_rhs_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_hidden_bits_rhs_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0x00ff000000ff00
+; CHECK-GI-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
+  %bounded = lshr <4 x i32> %y, <i32 24, i32 24, i32 24, i32 24>
+  %inner = or <4 x i32> %x, <i32 65280, i32 65280, i32 65280, i32 65280>
+  %result = and <4 x i32> %bounded, %inner
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @or_hidden_bits_rhs_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-SD-LABEL: or_hidden_bits_rhs_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_hidden_bits_rhs_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %shift = lshr <4 x i32> %y, <i32 24, i32 24, i32 24, i32 24>
+  %bounded = xor <4 x i32> %shift, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %inner = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
+  %result = or <4 x i32> %bounded, %inner
+  ret <4 x i32> %result
 }

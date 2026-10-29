@@ -46,7 +46,7 @@ body:             |
 
   bb.1:
 
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $ctr8
     %1:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
     BC killed %1:crbitrc, %bb.1
     B %bb.2
@@ -222,7 +222,7 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $ctr8
     %0:g8rc = LI8 2048
     ; CHECK-NOT: MTCTR8loop
     ; CHECK-NOT: BDNZ8
@@ -307,7 +307,7 @@ body:             |
     ; CHECK: CMPLDI
     ; CHECK: BC
     MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $ctr8
 
   bb.1:
 
@@ -341,7 +341,7 @@ body:             |
     B %bb.2
 
   bb.2:
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr8
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $ctr8
 
     BLR8 implicit $lr8, implicit $rm
 ...

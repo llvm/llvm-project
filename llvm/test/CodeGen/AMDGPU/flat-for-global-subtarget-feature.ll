@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-DEFAULT -check-prefix=ALL %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-NODEFAULT -check-prefix=ALL %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=HSA-NOADDR64 -check-prefix=ALL %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=NOHSA-DEFAULT -check-prefix=ALL %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=NOHSA-NODEFAULT -check-prefix=ALL %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=NOHSA-NOADDR64 -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa -mattr=+flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-DEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa -mattr=-flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-NODEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu8.02-- | FileCheck -check-prefix=HSA-NOADDR64 -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu7.00-- -mattr=-flat-for-global | FileCheck -check-prefix=NOHSA-DEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu7.00-- -mattr=+flat-for-global | FileCheck -check-prefix=NOHSA-NODEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgpu8.02-- | FileCheck -check-prefix=NOHSA-NOADDR64 -check-prefix=ALL %s
 
 
 ; There are no stack objects even though flat is used by default, so

@@ -17,9 +17,9 @@
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -136,12 +136,10 @@ generateReproducerForInvocationArguments(
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Argv));
   if (C && !C->containsError()) {
     for (const auto &J : C->getJobs()) {
-      if (const Command *Cmd = dyn_cast<Command>(&J)) {
-        Driver::CompilationDiagnosticReport Report;
-        TheDriver.generateCompilationDiagnostics(
-            *C, *Cmd, generateReproducerMetaInfo(Info), &Report);
-        return Report;
-      }
+      Driver::CompilationDiagnosticReport Report;
+      TheDriver.generateCompilationDiagnostics(
+          *C, J, generateReproducerMetaInfo(Info), &Report);
+      return Report;
     }
   }
 

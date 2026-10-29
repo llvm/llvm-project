@@ -280,7 +280,8 @@ MlirAttribute PyArrayAttribute::getItem(intptr_t i) const {
 void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](const nb::list &attributes, DefaultingPyMlirContext context) {
+      [](nb::typed<nb::sequence, PyAttribute> attributes,
+         DefaultingPyMlirContext context) {
         std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
@@ -306,7 +307,8 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
       .def("__iter__", [](const PyArrayAttribute &arr) {
         return PyArrayAttributeIterator(arr);
       });
-  c.def("__add__", [](PyArrayAttribute arr, const nb::list &extras) {
+  c.def("__add__", [](PyArrayAttribute arr,
+                      nb::typed<nb::sequence, PyAttribute> extras) {
     std::vector<MlirAttribute> attributes;
     intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
     attributes.reserve(numOldElements + nb::len(extras));
@@ -421,12 +423,14 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro("value", toPyInt, "Returns the value of the integer attribute");
   c.def("__int__", toPyInt,
         "Converts the value of the integer attribute to a Python int");
+  c.def("__index__", toPyInt,
+        "Converts the value of the integer attribute to a Python int");
   c.def_prop_ro_static("static_typeid", [](nb::object & /*class*/) {
     return PyTypeID(mlirIntegerAttrGetTypeID());
   });
 }
 
-nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
+nb::int_ PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
   MlirType type = mlirAttributeGetType(self);
   unsigned bitWidth = mlirIntegerAttrGetValueBitWidth(self);
 
@@ -463,7 +467,7 @@ nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
     }
   }
 
-  return result;
+  return nb::cast<nb::int_>(result);
 }
 
 void PyBoolAttribute::bindDerived(ClassTy &c) {
@@ -577,10 +581,10 @@ void PyOpaqueAttribute::bindDerived(ClassTy &c) {
       "Returns the data for the Opaqued attributes as `bytes`");
 }
 
-PyDenseElementsAttribute
-PyDenseElementsAttribute::getFromList(const nb::list &attributes,
-                                      std::optional<PyType> explicitType,
-                                      DefaultingPyMlirContext contextWrapper) {
+PyDenseElementsAttribute PyDenseElementsAttribute::getFromList(
+    const nb::typed<nb::sequence, PyAttribute> &attributes,
+    std::optional<PyType> explicitType,
+    DefaultingPyMlirContext contextWrapper) {
   const size_t numAttributes = nb::len(attributes);
   if (numAttributes == 0)
     throw nb::value_error("Attributes list must be non-empty.");
@@ -1173,7 +1177,8 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
   c.def("__len__", &PyDictAttribute::dunderLen);
   c.def_static(
       "get",
-      [](const nb::dict &attributes, DefaultingPyMlirContext context) {
+      [](const nb::typed<nb::dict, nb::str, PyAttribute> &attributes,
+         DefaultingPyMlirContext context) {
         std::vector<MlirNamedAttribute> mlirNamedAttributes;
         mlirNamedAttributes.reserve(attributes.size());
         for (std::pair<nb::handle, nb::handle> it : attributes) {

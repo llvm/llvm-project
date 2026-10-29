@@ -60,9 +60,9 @@ class SSPLayoutInfo {
 
 public:
   // Return true if StackProtector is supposed to be handled by SelectionDAG.
-  bool shouldEmitSDCheck(const BasicBlock &BB) const;
+  LLVM_ABI bool shouldEmitSDCheck(const BasicBlock &BB) const;
 
-  void copyToMachineFrameInfo(MachineFrameInfo &MFI) const;
+  LLVM_ABI void copyToMachineFrameInfo(MachineFrameInfo &MFI) const;
 };
 
 class SSPLayoutAnalysis : public AnalysisInfoMixin<SSPLayoutAnalysis> {
@@ -74,23 +74,23 @@ class SSPLayoutAnalysis : public AnalysisInfoMixin<SSPLayoutAnalysis> {
 public:
   using Result = SSPLayoutInfo;
 
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 
   /// Check whether or not \p F needs a stack protector based upon the stack
   /// protector level.
-  static bool requiresStackProtector(Function *F,
-                                     SSPLayoutMap *Layout = nullptr);
+  LLVM_ABI static bool requiresStackProtector(Function *F,
+                                              SSPLayoutMap *Layout = nullptr);
 };
 
-class StackProtectorPass : public PassInfoMixin<StackProtectorPass> {
+class StackProtectorPass : public RequiredPassInfoMixin<StackProtectorPass> {
   const TargetMachine *TM;
 
 public:
   explicit StackProtectorPass(const TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class StackProtector : public FunctionPass {
+class LLVM_ABI StackProtector : public FunctionPass {
 private:
   /// A mapping of AllocaInsts to their required SSP layout.
   using SSPLayoutMap = SSPLayoutInfo::SSPLayoutMap;

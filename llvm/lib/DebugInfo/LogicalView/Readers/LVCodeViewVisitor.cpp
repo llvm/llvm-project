@@ -22,7 +22,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/Demangle.h"
@@ -70,11 +69,6 @@ static TypeIndex getTrueType(TypeIndex &TI) {
   return TI;
 }
 
-static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-};
-
 // Return the type name pointed by the type index. It uses the kind to query
 // the associated name for the record type.
 static StringRef getRecordName(LazyRandomTypeCollection &Types, TypeIndex TI) {
@@ -92,9 +86,10 @@ static StringRef getRecordName(LazyRandomTypeCollection &Types, TypeIndex TI) {
   };
 
   TypeRecordKind RK = static_cast<TypeRecordKind>(CVReference.kind());
-  if (RK == TypeRecordKind::Class || RK == TypeRecordKind::Struct)
+  if (RK == TypeRecordKind::Class || RK == TypeRecordKind::Class2 ||
+      RK == TypeRecordKind::Struct || RK == TypeRecordKind::Struct2)
     GetName(ClassRecord(RK));
-  else if (RK == TypeRecordKind::Union)
+  else if (RK == TypeRecordKind::Union || RK == TypeRecordKind::Union2)
     GetName(UnionRecord(RK));
   else if (RK == TypeRecordKind::Enum)
     GetName(EnumRecord(RK));
@@ -410,7 +405,7 @@ void LVNamespaceDeduction::init() {
       };
       Header();
       for (const StringRef &Item : Container)
-        dbgs() << formatv("'{0}'\n", Item.str().c_str());
+        dbgs() << formatv("'{0}'\n", Item);
     };
 
     Print(DeducedScopes, "Deducted Scopes");
@@ -422,7 +417,7 @@ void LVNamespaceDeduction::init() {
 LVScope *LVNamespaceDeduction::get(LVStringRefs Components) {
   LLVM_DEBUG({
     for (const StringRef &Component : Components)
-      dbgs() << formatv("'{0}'\n", Component.str().c_str());
+      dbgs() << formatv("'{0}'\n", Component);
   });
 
   if (Components.empty())
@@ -457,8 +452,7 @@ LVScope *LVNamespaceDeduction::get(StringRef ScopedName, bool CheckScope) {
       return Iter == IdentifiedNamespaces.end();
     });
 
-  LLVM_DEBUG(
-      { dbgs() << formatv("ScopedName: '{0}'\n", ScopedName.str().c_str()); });
+  LLVM_DEBUG({ dbgs() << formatv("ScopedName: '{0}'\n", ScopedName); });
 
   return get(Components);
 }
@@ -1141,6 +1135,47 @@ Error LVSymbolVisitor::visitKnownRecord(
   return Error::success();
 }
 
+// S_DEFRANGE_REGISTER_REL_INDIR
+Error LVSymbolVisitor::visitKnownRecord(
+    CVSymbol &Record, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+  // DefRanges don't have types, just registers and code offsets.
+  LLVM_DEBUG({
+    if (LocalSymbol)
+      W.getOStream() << formatv("Symbol: {0}, ", LocalSymbol->getName());
+
+    W.printBoolean("HasSpilledUDTMember",
+                   DefRangeRegisterRelIndir.hasSpilledUDTMember());
+    W.printNumber("OffsetInParent", DefRangeRegisterRelIndir.offsetInParent());
+    W.printNumber("BasePointerOffset",
+                  DefRangeRegisterRelIndir.Hdr.BasePointerOffset);
+    W.printNumber("OffsetInUdt", DefRangeRegisterRelIndir.Hdr.OffsetInUdt);
+    printLocalVariableAddrRange(DefRangeRegisterRelIndir.Range,
+                                DefRangeRegisterRelIndir.getRelocationOffset());
+    printLocalVariableAddrGap(DefRangeRegisterRelIndir.Gaps);
+  });
+
+  if (LVSymbol *Symbol = LocalSymbol) {
+    Symbol->setHasCodeViewLocation();
+    LocalSymbol = nullptr;
+
+    // Add location debug location. Operands: [Register, Offset, OffsetInUdt].
+    dwarf::Attribute Attr =
+        dwarf::Attribute(SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR);
+    const uint64_t Operand1 = DefRangeRegisterRelIndir.Hdr.Register;
+    const uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
+    const uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
+
+    const LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
+    const LVAddress Address =
+        Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
+
+    Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, Operand2, Operand3});
+  }
+
+  return Error::success();
+}
+
 // S_DEFRANGE_REGISTER
 Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
                                         DefRangeRegisterSym &DefRangeRegister) {
@@ -1760,7 +1795,7 @@ void LVLogicalVisitor::printTypeBegin(CVType &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.kind()), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.kind()), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";
@@ -1779,7 +1814,7 @@ void LVLogicalVisitor::printMemberBegin(CVMemberRecord &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.Kind), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.Kind), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";
@@ -3039,6 +3074,7 @@ LVElement *LVLogicalVisitor::createElement(TypeLeafKind Kind) {
     CurrentScope->setTag(dwarf::DW_TAG_array_type);
     return CurrentScope;
   case TypeLeafKind::LF_CLASS:
+  case TypeLeafKind::LF_CLASS2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setTag(dwarf::DW_TAG_class_type);
     CurrentScope->setIsClass();
@@ -3055,11 +3091,13 @@ LVElement *LVLogicalVisitor::createElement(TypeLeafKind Kind) {
     CurrentScope->setTag(dwarf::DW_TAG_subprogram);
     return CurrentScope;
   case TypeLeafKind::LF_STRUCTURE:
+  case TypeLeafKind::LF_STRUCTURE2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setIsStructure();
     CurrentScope->setTag(dwarf::DW_TAG_structure_type);
     return CurrentScope;
   case TypeLeafKind::LF_UNION:
+  case TypeLeafKind::LF_UNION2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setIsUnion();
     CurrentScope->setTag(dwarf::DW_TAG_union_type);
@@ -3415,7 +3453,7 @@ void LVLogicalVisitor::printRecords(raw_ostream &OS) const {
         OS << "\n";
       }
     };
-    OS << format("%20s", Name.str().c_str());
+    OS << formatv("{0,20}", Name);
     NewLine();
   };
 

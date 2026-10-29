@@ -31,27 +31,26 @@ class CheckerContext {
   bool Changed;
   /// The tagged location, which is used to generate all new nodes.
   const ProgramPoint Location;
-  NodeBuilder &NB;
+  /// At the end of the checker evaluation, the analysis will continue from the
+  /// nodes in this set. When the checker adds a transition, freshly created
+  /// non-sink nodes are added to the `Frontier` and the node that was the
+  /// source of the transition is unconditionally removed from the `Frontier`
+  /// (it is superseded, even if the node creation fails or produces a sink).
+  /// At the beginning, the `Frontier` usually contains `Pred`.
+  ExplodedNodeSet &Frontier;
 
 public:
   /// If we are post visiting a call, this flag will be set if the
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &builder,
-                 ExprEngine &eng,
-                 ExplodedNode *pred,
-                 const ProgramPoint &loc,
-                 bool wasInlined = false)
-    : Eng(eng),
-      Pred(pred),
-      Changed(false),
-      Location(loc),
-      NB(builder),
-      wasInlined(wasInlined) {
+  CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                 const ProgramPoint &Loc, bool WasInlined = false)
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), Frontier(Dst),
+        wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
-    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+    assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
                            "must be tagged with the active checker.");
   }
 
@@ -77,14 +76,12 @@ public:
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
-  ExplodedNode *getPredecessor() { return Pred; }
-  const ExplodedNode *getPredecessor() const { return Pred; }
+  ExplodedNode *getPredecessor() const { return Pred; }
   const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
-  bool isDifferent() { return Changed; }
   bool isDifferent() const { return Changed; }
 
   /// Returns the number of times the current block has been visited
@@ -101,16 +98,15 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
+
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
   }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
-
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
@@ -149,7 +145,7 @@ public:
   }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.
@@ -168,9 +164,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
@@ -181,110 +175,128 @@ public:
   /// Returns true if the value of \p E is negative.
   bool isNegative(const Expr *E);
 
-  /// Generates a new transition in the program state graph
-  /// (ExplodedGraph). Uses the default CheckerContext predecessor node.
+  /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
+  /// 'getPredecessor()', the node that was passed to the constructor of
+  /// CheckerContext.
+  /// Can return nullptr if the node creation fails (when it would recreate
+  /// an existing node or when the state is posteriorly overconstrained).
+  /// Can return 'getPredecessor()' instead of creating a node when the state
+  /// would remain unchanged and there is no explicitly specified tag.
   ///
-  /// @param State The state of the generated node. If not specified, the state
-  ///        will not be changed, but the new node will have the checker's tag.
-  /// @param Tag The tag is used to uniquely identify the creation site. If no
-  ///        tag is specified, a default tag, unique to the given checker,
-  ///        will be used. Tags are used to prevent states generated at
-  ///        different sites from caching out.
-  /// NOTE: If the State is unchanged and the Tag is nullptr, this may return a
-  /// node which is not tagged (instead of using the default tag corresponding
-  /// to the active checker). This is arguably a bug and should be fixed.
+  /// @param State The state of the generated node. Passing nullptr is handled
+  ///        as passing 'getState()' (the state of 'getPredecessor()').
+  /// @param Tag A ProgramPointTag that will be attached to the node. This is
+  ///        primarily useful for attaching a NoteTag; but another tag could be
+  ///        used as a workaround when the node wouldn't be unique otherwise.
+  ///        When \p Tag is nullptr, node creation will default to using the
+  ///        active checker as the tag -- but if there is no state change,
+  ///        the predecessor node may be returned even if it isn't tagged so.
   ExplodedNode *addTransition(ProgramStateRef State = nullptr,
                               const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), false, nullptr, Tag);
+    if ((!State || State == getState()) && !Tag)
+      return getPredecessor();
+    return addTransitionImpl(State, false, nullptr, Tag);
   }
 
-  /// Generates a new transition with the given predecessor.
-  /// Allows checkers to generate a chain of nodes.
+  /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
+  /// the parameter \p Pred. Allows checkers to make a chain of nodes.
+  /// Can return nullptr if the node creation fails (when it would recreate
+  /// an existing node or when the state is posteriorly overconstrained).
+  ///
+  /// Can return getPredecessor(), the node that was passed to the constructor
+  /// of CheckerContext (often the ancestor of \p Pred) in some corner cases.
+  /// FIXME: This is bad logic and should be fixed in the next non-NFC change.
   ///
   /// @param State The state of the generated node.
-  /// @param Pred The transition will be generated from the specified Pred node
-  ///             to the newly generated node.
-  /// @param Tag The tag to uniquely identify the creation site.
-  /// NOTE: If the State is unchanged and the Tag is nullptr, this may return a
-  /// node which is not tagged (instead of using the default tag corresponding
-  /// to the active checker). This is arguably a bug and should be fixed.
+  /// @param Pred The node that will become the predecessor of the new node.
+  /// @param Tag A ProgramPointTag that will be attached to the node. This is
+  ///        primarily useful for attaching a NoteTag; but another tag could be
+  ///        used as a workaround when the node wouldn't be unique otherwise.
+  ///        When \p Tag is nullptr, node creation will default to using the
+  ///        active checker as the tag.
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
+    // FIXME: In these two early return statements we should use 'Pred' and
+    // 'Pred->getState()' (the node received as an argument and its state)
+    // instead of 'getPredecessor()' and 'getState()' (the older node received
+    // by the constructor of CheckerContext, and its state).
+    // Alternatively, we should perhaps return null if the state is null.
+    if (!State)
+      return getPredecessor();
+    if (State == getState() && !Tag)
+      return getPredecessor();
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
-  /// Generate a sink node. Generating a sink stops exploration of the
-  /// given path. To create a sink node for the purpose of reporting an error,
-  /// checkers should use generateErrorNode() instead.
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), true, Pred, Tag);
-  }
-
-  /// Add a sink node to the current path of execution, halting analysis.
-  void addSink(ProgramStateRef State = nullptr,
-               const ProgramPointTag *Tag = nullptr) {
-    if (!State)
-      State = getState();
-    addTransition(State, generateSink(State, getPredecessor()));
-  }
-
-  /// Generate a transition to a node that will be used to report
-  /// an error. This node will be a sink. That is, it will stop exploration of
-  /// the given path.
+  /// Creates a new ExplodedNode which is marked as a sink and adds it to the
+  /// ExplodedGraph.
+  /// A sink node terminates the execution path: it cannot have children and
+  /// prevents the default behavior that the path "passes through" the checker
+  /// callback without changes if the checker doesn't create any node.
+  /// Can return nullptr if the node creation fails (when it would recreate
+  /// an existing node or when the state is posteriorly overconstrained).
   ///
-  /// @param State The state of the generated node.
-  /// @param Tag The tag to uniquely identify the creation site. If null,
-  ///        the default tag for the checker will be used.
-  ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
+  /// @param State The state of the generated sink node; nullptr (the default)
+  ///        means keeping the state of the parent node.
+  /// @param Pred The node that will become the predecessor of the new node;
+  ///        nullptr (the default) means the node that was passed to the
+  ///        constructor of CheckerContext.
+  /// @param Tag A ProgramPointTag that will be attached to the node; nullptr
+  ///        (the default) means using the active checker as the tag. Using
+  ///        another tag has no compelling use case (apart from debugging).
+  ExplodedNode *addSink(ProgramStateRef State = nullptr,
+                        ExplodedNode *Pred = nullptr,
+                        const ProgramPointTag *Tag = nullptr) {
+    return addTransitionImpl(State, true, Pred, Tag);
   }
 
-  /// Generate a transition to a node that will be used to report
-  /// an error. This node will be a sink. That is, it will stop exploration of
-  /// the given path.
+  /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
+  /// 'getPredecessor()', the node that was passed to the constructor of
+  /// CheckerContext. The difference between this and 'addTransition' is that
+  /// this always attempts to create a new node, even if there is no state
+  /// change and no explicitly speficified tag.
+  /// Can return nullptr if the node creation fails (when it would recreate
+  /// an existing node or when the state is posteriorly overconstrained).
   ///
-  /// @param State The state of the generated node.
-  /// @param Pred The transition will be generated from the specified Pred node
-  ///             to the newly generated node.
-  /// @param Tag The tag to uniquely identify the creation site. If null,
-  ///        the default tag for the checker will be used.
-  ExplodedNode *generateErrorNode(ProgramStateRef State,
-                                  ExplodedNode *Pred,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
-  }
-
-  /// Generate a transition to a node that will be used to report
-  /// an error. This node will not be a sink. That is, exploration will
-  /// continue along this path.
-  ///
-  /// @param State The state of the generated node.
-  /// @param Tag The tag to uniquely identify the creation site. If null,
-  ///        the default tag for the checker will be used.
+  /// @param State The state of the generated node. Passing nullptr is handled
+  ///        as passing 'getState()' (the state of 'getPredecessor()').
+  /// @param Tag A ProgramPointTag that will be attached to the node. This is
+  ///        primarily useful for attaching a NoteTag; but another tag could be
+  ///        used as a workaround when the node wouldn't be unique otherwise.
+  ///        When \p Tag is nullptr, node creation will default to using the
+  ///        active checker as the tag.
   ExplodedNode *
   generateNonFatalErrorNode(ProgramStateRef State = nullptr,
                             const ProgramPointTag *Tag = nullptr) {
-    return addTransition(State, (Tag ? Tag : Location.getTag()));
+    return addTransitionImpl(State, false, nullptr, Tag);
   }
 
-  /// Generate a transition to a node that will be used to report
-  /// an error. This node will not be a sink. That is, exploration will
-  /// continue along this path.
+  /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
+  /// the parameter \p Pred. Allows checkers to make a chain of nodes.
+  /// The difference between this and 'addTransition()' should be that this
+  /// always attempts to create a new node (even if there is no state change
+  /// and no explicitly specified tag). Currently this logic is incorrect in
+  /// addTransition and the difference is that this function lacks one of the
+  /// two problematic early return statements.
+  /// Can return nullptr if the node creation fails (when it would recreate
+  /// an existing node or when the state is posteriorly overconstrained).
   ///
   /// @param State The state of the generated node.
-  /// @param Pred The transition will be generated from the specified Pred node
-  ///             to the newly generated node.
-  /// @param Tag The tag to uniquely identify the creation site. If null,
-  ///        the default tag for the checker will be used.
+  /// @param Pred The node that will become the predecessor of the new node.
+  /// @param Tag A ProgramPointTag that will be attached to the node. This is
+  ///        primarily useful for attaching a NoteTag; but another tag could be
+  ///        used as a workaround when the node wouldn't be unique otherwise.
+  ///        When \p Tag is nullptr, node creation will default to using the
+  ///        active checker as the tag.
   ExplodedNode *
   generateNonFatalErrorNode(ProgramStateRef State,
                             ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
-    return addTransition(State, Pred, (Tag ? Tag : Location.getTag()));
+    // FIXME: This can "jump back" to an ancestor of 'Pred'. We should return
+    // either Pred or nullptr in this case.
+    if (!State)
+      return getPredecessor();
+    return addTransitionImpl(State, false, Pred, Tag);
   }
 
   /// Emit the diagnostics report.
@@ -430,39 +442,25 @@ public:
   /// If AF_INET is a macro, the result should be treated as a source of taint.
   ///
   /// \sa clang::Lexer::getSpelling(), clang::Lexer::getImmediateMacroName().
-  StringRef getMacroNameOrSpelling(SourceLocation &Loc);
+  std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
-  ExplodedNode *addTransitionImpl(ProgramStateRef State,
-                                 bool MarkAsSink,
-                                 ExplodedNode *P = nullptr,
-                                 const ProgramPointTag *Tag = nullptr) {
-    // The analyzer may stop exploring if it sees a state it has previously
-    // visited ("cache out"). The early return here is a defensive check to
-    // prevent accidental caching out by checker API clients. Unless there is a
-    // tag or the client checker has requested that the generated node be
-    // marked as a sink, we assume that a client requesting a transition to a
-    // state that is the same as the predecessor state has made a mistake. We
-    // return the predecessor rather than cache out.
-    //
-    // TODO: We could potentially change the return to an assertion to alert
-    // clients to their mistake, but several checkers (including
-    // DereferenceChecker, CallAndMessageChecker, and DynamicTypePropagation)
-    // rely upon the defensive behavior and would need to be updated.
-    if (!State || (State == Pred->getState() && !Tag && !MarkAsSink))
-      return Pred;
-
+  ExplodedNode *addTransitionImpl(ProgramStateRef State, bool MarkAsSink,
+                                  ExplodedNode *P, const ProgramPointTag *Tag) {
     Changed = true;
     const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    if (!P)
-      P = Pred;
 
-    ExplodedNode *node;
-    if (MarkAsSink)
-      node = NB.generateSink(LocalLoc, State, P);
-    else
-      node = NB.generateNode(LocalLoc, State, P);
-    return node;
+    if (!P)
+      P = getPredecessor();
+    if (!State)
+      State = P->getState();
+
+    Frontier.erase(P);
+    ExplodedNode *N =
+        Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+
+    Frontier.insert(N);
+    return N;
   }
 };
 

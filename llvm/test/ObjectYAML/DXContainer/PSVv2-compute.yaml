@@ -71,6 +71,7 @@ Parts:
 # CHECK-NEXT: NumThreadsY:     1024
 # CHECK-NEXT: NumThreadsZ:     2048
 # CHECK-NEXT: ResourceStride: 24
+# CHECK-NEXT: RuntimeInfoSize: 48
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            Sampler
 # CHECK-NEXT: Space:           2

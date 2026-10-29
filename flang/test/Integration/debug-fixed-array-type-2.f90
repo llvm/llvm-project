@@ -21,8 +21,8 @@ contains
 
 end program
 
-! CHECK-DAG: ![[INT:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
-! CHECK-DAG: ![[REAL:.*]] = !DIBasicType(name: "real", size: 32, encoding: DW_ATE_float)
+! CHECK-DAG: ![[INT:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
+! CHECK-DAG: ![[REAL:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 ! CHECK-DAG: ![[R1:.*]] = !DISubrange(count: 3)
 ! CHECK-DAG: ![[SUB1:.*]] = !{![[R1]]}
 ! CHECK-DAG: ![[D1TY:.*]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[INT]], elements: ![[SUB1]])

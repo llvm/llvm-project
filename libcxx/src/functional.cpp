@@ -9,6 +9,7 @@
 #include <functional>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 bad_function_call::~bad_function_call() noexcept {}
 
@@ -18,4 +19,5 @@ size_t __hash_memory(_LIBCPP_NOESCAPE const void* ptr, size_t size) noexcept {
   return __murmur2_or_cityhash<size_t>()(ptr, size);
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

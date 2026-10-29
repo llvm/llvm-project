@@ -1810,10 +1810,9 @@ _mm256_or_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sad_epu8(__m256i __a, __m256i __b)
-{
-  return __builtin_ia32_psadbw256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sad_epu8(__m256i __a, __m256i __b) {
+  return __builtin_ia32_psadbw256((__v32qu)__a, (__v32qu)__b);
 }
 
 /// Shuffles 8-bit integers in the 256-bit integer vector \a __a according
@@ -3058,7 +3057,7 @@ _mm256_broadcastsi128_si256(__m128i __X) {
 ///    An immediate 8-bit integer operand, with bits [7:0] specifying the
 ///    source for each element of the result. The position of the mask bit
 ///    corresponds to the index of a copied value. When a mask bit is 0, the
-///    element is copied from \a V1; otherwise, it is is copied from \a V2.
+///    element is copied from \a V1; otherwise, it is copied from \a V2.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 #define _mm256_blend_epi32(V1, V2, M) \
   ((__m256i)__builtin_ia32_pblendd256((__v8si)(__m256i)(V1), \

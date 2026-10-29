@@ -63,13 +63,7 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
     ExpressionOp usedExpression;
     SetVector<Value> foldedOperands;
 
-    auto takesItsOperandsAddress = [](Operation *user) {
-      auto applyOp = dyn_cast<emitc::ApplyOp>(user);
-      return applyOp && applyOp.getApplicableOperator() == "&";
-    };
-
     // Select as expression to fold the first operand expression that
-    // - doesn't have its result value's address taken,
     // - has a single user: assume any re-materialization was done separately,
     // - has no side effects,
     // and save all other operands to be used later as operands in the folded
@@ -78,7 +72,6 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
                                          expressionBody->getArguments())) {
       ExpressionOp operandExpression = operand.getDefiningOp<ExpressionOp>();
       if (usedExpression || !operandExpression ||
-          llvm::any_of(arg.getUsers(), takesItsOperandsAddress) ||
           !operandExpression.getResult().hasOneUse() ||
           operandExpression.hasSideEffects())
         foldedOperands.insert(operand);

@@ -223,7 +223,7 @@ define i128 @test_copysign_const(ppc_fp128 %x) nounwind  {
 ; PPC32-NEXT:    li 6, 0
 ; PPC32-NEXT:    lwz 3, 24(1)
 ; PPC32-NEXT:    rlwinm 4, 3, 0, 0, 0
-; PPC32-NEXT:    oris 3, 4, 16399
+; PPC32-NEXT:    addis 3, 4, 16399
 ; PPC32-NEXT:    xoris 5, 4, 48304
 ; PPC32-NEXT:    li 4, 0
 ; PPC32-NEXT:    addi 1, 1, 32

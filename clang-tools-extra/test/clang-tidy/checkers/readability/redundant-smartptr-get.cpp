@@ -2,7 +2,7 @@
 #include <vector>
 #include <memory>
 
-#define NULL __null
+#include <cstddef>
 
 struct Bar {
   void Do();

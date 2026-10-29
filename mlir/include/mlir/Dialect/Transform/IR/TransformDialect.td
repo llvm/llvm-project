@@ -19,7 +19,6 @@ def Transform_Dialect : Dialect {
   let cppNamespace = "::mlir::transform";
 
   let hasOperationAttrVerify = 1;
-  let useDefaultAttributePrinterParser = 1;
   let extraClassDeclaration = [{
     /// Symbol name for the default entry point "named sequence".
     constexpr const static ::llvm::StringLiteral
@@ -57,11 +56,29 @@ def Transform_Dialect : Dialect {
           extraData.at(::mlir::TypeID::get<DataTy>()).get());
     }
 
+    /// Parses an attribute registered by this dialect or one of its extensions.
+    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
+        ::mlir::Type type) const override;
+
+    /// Prints an attribute registered by this dialect or one of its extensions.
+    void printAttribute(::mlir::Attribute attribute,
+        ::mlir::DialectAsmPrinter &printer) const override;
+
+    /// Parser callback for an individual attribute registered by this dialect or
+    /// its extensions.
+    using ExtensionAttributeParsingHook =
+        ::mlir::Attribute (*)(::mlir::AsmParser &, ::mlir::Type);
+
+    /// Printer callback for an individual attribute registered by this dialect or
+    /// its extensions.
+    using ExtensionAttributePrintingHook =
+        std::function<void(::mlir::Attribute, ::mlir::AsmPrinter &)>;
+
     /// Parses a type registered by this dialect or one of its extensions.
-    ::mlir::Type parseType(::mlir::DialectAsmParser & parser) const override;
+    ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
 
     /// Prints a type registered by this dialect or one of its extensions.
-    void printType(::mlir::Type type, ::mlir::DialectAsmPrinter & printer)
+    void printType(::mlir::Type type, ::mlir::DialectAsmPrinter &printer)
         const override;
 
     /// Parser callback for an individual type registered by this dialect or
@@ -101,6 +118,21 @@ def Transform_Dialect : Dialect {
 
     /// Reports a repeated registration error of an op with the given name.
     [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
+
+    /// Registers attributes specified as template parameters with the Transform
+    /// dialect. Checks that they meet the requirements for Transform IR attributes.
+    template <typename... AttrTys>
+    void addAttributesChecked() {
+      (addAttributeIfNotRegistered<AttrTys>(), ...);
+    }
+    template <typename AttrTy>
+    void addAttributeIfNotRegistered();
+
+    /// Reports a repeated registration error of an attribute with the given name.
+    [[noreturn]] void reportDuplicateAttributeRegistration(StringRef attrName);
+
+    /// Registers dialect attributes with the context.
+    void initializeAttributes();
 
     /// Registers types specified as template parameters with the Transform
     /// dialect. Checks that they meet the requirements for Transform IR types.
@@ -147,6 +179,17 @@ def Transform_Dialect : Dialect {
     /// lookups when the type is fully constructed.
     ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
         typePrintingHooks;
+
+    /// A map from attribute TypeID to its parsing function for the remainder of
+    /// the syntax. The parser has access to the TypeID, so it is used for
+    /// further dispatch.
+    ::llvm::StringMap<ExtensionAttributeParsingHook>
+        attributeParsingHooks;
+
+    /// A map from attribute TypeID to its printing function. No need to do string
+    /// lookups when the attribute is fully constructed.
+    ::llvm::DenseMap<::mlir::TypeID, ExtensionAttributePrintingHook>
+        attributePrintingHooks;
 
     /// Module containing symbols, e.g. named sequences, that will be resolved
     /// by the interpreter when used.

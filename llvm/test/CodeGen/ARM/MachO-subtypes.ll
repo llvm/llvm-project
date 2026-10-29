@@ -53,6 +53,13 @@
 ; RUN: llc -mtriple=thumbv7s-apple-darwin -filetype=obj -o - < %s \
 ; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7S
 
+; RUN: llc -mtriple=armv8m.main-apple-darwin -mcpu=cortex-m55 -filetype=obj -o - < %s \
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V8M-MAIN
+; RUN: llc -mtriple=armv8m.base-apple-darwin -mcpu=cortex-m33 -filetype=obj -o - < %s \
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V8M-BASE
+; RUN: llc -mtriple=armv8.1m.main-apple-darwin -mcpu=cortex-m55 -filetype=obj -o - < %s \
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V8_1M-MAIN
+
 define void @_test() {
   ret void
 }
@@ -66,3 +73,6 @@ define void @_test() {
 ; CHECK-V7K:   CpuSubType: CPU_SUBTYPE_ARM_V7K (0xC)
 ; CHECK-V7M:   CpuSubType: CPU_SUBTYPE_ARM_V7M (0xF)
 ; CHECK-V7S:   CpuSubType: CPU_SUBTYPE_ARM_V7S (0xB)
+; CHECK-V8M-MAIN:   CpuSubType: CPU_SUBTYPE_ARM_V8M_MAIN (0x11)
+; CHECK-V8M-BASE:   CpuSubType: CPU_SUBTYPE_ARM_V8M_BASE (0x12)
+; CHECK-V8_1M-MAIN:   CpuSubType: CPU_SUBTYPE_ARM_V8_1M_MAIN (0x13)

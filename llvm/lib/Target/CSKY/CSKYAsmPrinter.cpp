@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -38,7 +39,9 @@ STATISTIC(CSKYNumInstrsCompressed,
 
 CSKYAsmPrinter::CSKYAsmPrinter(llvm::TargetMachine &TM,
                                std::unique_ptr<llvm::MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this) {}
+    : AsmPrinter(TM, std::move(Streamer)),
+      CLOpts(CSKY_MC::getCLOpts(TM.Options.MCOptions)),
+      MCInstLowering(OutContext, *this) {}
 
 bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCP = MF.getConstantPool();
@@ -47,7 +50,7 @@ bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Set the current MCSubtargetInfo to a copy which has the correct
   // feature bits for the current MachineFunction
   MCSubtargetInfo &NewSTI =
-      OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
+      OutStreamer->getContext().getSubtargetCopy(TM.getMCSubtargetInfo());
   NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
   Subtarget = &NewSTI;
 
@@ -72,8 +75,8 @@ void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
 
   MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-      Twine(MAI->getInternalSymbolPrefix()) + "PC" +
-      Twine(getFunctionNumber()) + "_" + Twine(MI->getOperand(3).getImm()));
+      Twine(MAI.getInternalSymbolPrefix()) + "PC" + Twine(getFunctionNumber()) +
+      "_" + Twine(MI->getOperand(3).getImm()));
 
   OutStreamer->emitLabel(PCLabel);
 
@@ -128,15 +131,15 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
+  if (M.getTargetTriple().isOSBinFormatELF())
+    emitAttributes(M);
 }
 
 void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     CTS.finishAttributeSection();
 }
 
@@ -223,7 +226,7 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   if (CCPV->getPCAdjustment()) {
 
     MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-        Twine(MAI->getInternalSymbolPrefix()) + "PC" +
+        Twine(MAI.getInternalSymbolPrefix()) + "PC" +
         Twine(getFunctionNumber()) + "_" + Twine(CCPV->getLabelID()));
 
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
@@ -245,19 +248,12 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-void CSKYAsmPrinter::emitAttributes() {
+void CSKYAsmPrinter::emitAttributes(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = TM.getTargetCPU();
-  StringRef FS = TM.getTargetFeatureString();
-  const CSKYTargetMachine &CTM = static_cast<const CSKYTargetMachine &>(TM);
-  /* TuneCPU doesn't impact emission of ELF attributes, ELF attributes only
-     care about arch related features, so we can set TuneCPU as CPU.  */
-  const CSKYSubtarget STI(TT, CPU, /*TuneCPU=*/CPU, FS, CTM);
-
-  CTS.emitTargetAttributes(STI);
+  CTS.emitTargetAttributes(TM.getMCSubtargetInfo(),
+                           M.getFloatABI() == FloatABI::Hard);
 }
 
 bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -276,7 +272,7 @@ bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return true; // Unknown modifier.
     case 'R':
       if (MO.getType() == MachineOperand::MO_Register) {
-        OS << CSKYInstPrinter::getRegisterName(MO.getReg() + 1);
+        OS << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg() + 1);
         return false;
       }
     }
@@ -289,7 +285,7 @@ bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   case MachineOperand::MO_Register:
     if (MO.getReg() == CSKY::C)
       return false;
-    OS << CSKYInstPrinter::getRegisterName(MO.getReg());
+    OS << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg());
     return false;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
@@ -316,7 +312,8 @@ bool CSKYAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     if (!MO.isReg())
       return true;
 
-    OS << "(" << CSKYInstPrinter::getRegisterName(MO.getReg()) << ", 0)";
+    OS << "(" << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg())
+       << ", 0)";
     return false;
   }
 

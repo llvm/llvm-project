@@ -18,6 +18,6 @@
 
 #include "hdr/wchar_overlay.h"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_WINT_T_H

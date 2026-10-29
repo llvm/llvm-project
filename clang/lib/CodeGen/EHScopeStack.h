@@ -92,6 +92,11 @@ enum CleanupKind : unsigned {
   // markers chiefly to be ignored in most contexts.
   FakeUse = 0x10,
   NormalFakeUse = FakeUse | NormalCleanup,
+
+  SEHFinallyCleanup = 0x20,
+  NormalAndEHSEHFinallyCleanup = SEHFinallyCleanup | NormalAndEHCleanup,
+
+  StackRestore = 0x40,
 };
 
 /// A stack of scopes which respond to exceptions, including cleanups
@@ -160,8 +165,6 @@ public:
     Cleanup &operator=(Cleanup &&) = delete;
 
     Cleanup() = default;
-
-    virtual bool isRedundantBeforeReturn() { return false; }
 
     /// Generation flags.
     class Flags {

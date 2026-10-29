@@ -1,9 +1,14 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-runner -e entry -entry-point-result=void \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func.func @maskedload16(%base: memref<?xf32>, %mask: vector<16xi1>,
+//===----------------------------------------------------------------------===//
+// @maskedload_16
+//
+// Load 16 elements. Insertion index is hard-coded to 0
+//===----------------------------------------------------------------------===//
+func.func @maskedload_16(%base: memref<?xf32>, %mask: vector<16xi1>,
                    %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c0 = arith.constant 0: index
   %ld = vector.maskedload %base[%c0], %mask, %pass_thru
@@ -11,7 +16,13 @@ func.func @maskedload16(%base: memref<?xf32>, %mask: vector<16xi1>,
   return %ld : vector<16xf32>
 }
 
-func.func @maskedload16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
+//===----------------------------------------------------------------------===//
+// @maskedload_16_at_8
+//
+// Same as @maskedload_16, but the insertion index is hard-coded to 8 instead
+// of 0
+//===----------------------------------------------------------------------===//
+func.func @maskedload_16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
                        %pass_thru: vector<16xf32>) -> vector<16xf32> {
   %c8 = arith.constant 8: index
   %ld = vector.maskedload %base[%c8], %mask, %pass_thru
@@ -19,7 +30,12 @@ func.func @maskedload16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
   return %ld : vector<16xf32>
 }
 
-func.func @entry() {
+//===----------------------------------------------------------------------===//
+// @main
+//
+// The main entry point.
+//===----------------------------------------------------------------------===//
+func.func @main() {
   // Set up memory.
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
@@ -38,39 +54,43 @@ func.func @entry() {
   // Set up masks.
   %f = arith.constant 0: i1
   %t = arith.constant 1: i1
+  // %none = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   %none = vector.constant_mask [0] : vector<16xi1>
+  // %all = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   %all = vector.constant_mask [16] : vector<16xi1>
+  // %some = [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
   %some = vector.constant_mask [8] : vector<16xi1>
   %0 = vector.insert %f, %some[0] : i1 into vector<16xi1>
   %1 = vector.insert %t, %0[13] : i1 into vector<16xi1>
   %2 = vector.insert %t, %1[14] : i1 into vector<16xi1>
+  // %other = [0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1]
   %other = vector.insert %t, %2[14] : i1 into vector<16xi1>
 
   //
   // Masked load tests.
   //
 
-  %l1 = call @maskedload16(%A, %none, %pass)
+  %l1 = call @maskedload_16(%A, %none, %pass)
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l1 : vector<16xf32>
   // CHECK: ( -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7 )
 
-  %l2 = call @maskedload16(%A, %all, %pass)
+  %l2 = call @maskedload_16(%A, %all, %pass)
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l2 : vector<16xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 )
 
-  %l3 = call @maskedload16(%A, %some, %pass)
+  %l3 = call @maskedload_16(%A, %some, %pass)
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l3 : vector<16xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, -7, -7, -7, -7, -7, -7, -7, -7 )
 
-  %l4 = call @maskedload16(%A, %other, %pass)
+  %l4 = call @maskedload_16(%A, %other, %pass)
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l4 : vector<16xf32>
   // CHECK: ( -7, 1, 2, 3, 4, 5, 6, 7, -7, -7, -7, -7, -7, 13, 14, -7 )
 
-  %l5 = call @maskedload16_at8(%A, %some, %pass)
+  %l5 = call @maskedload_16_at8(%A, %some, %pass)
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l5 : vector<16xf32>
   // CHECK: ( 8, 9, 10, 11, 12, 13, 14, 15, -7, -7, -7, -7, -7, -7, -7, -7 )

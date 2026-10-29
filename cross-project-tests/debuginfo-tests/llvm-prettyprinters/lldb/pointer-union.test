@@ -18,6 +18,7 @@ p &derived
 p &dv
 v -T z_float
 v -T raw_z_float
+v -T null_float
 v -T long_int_float
 v -T z_only
 v -T union_int_pair
@@ -33,6 +34,18 @@ continue
 
 v -T virtual_float
 p virtual_float.Pointer
+
+continue
+
+p &local
+v -T local_float
+
+continue
+
+p &a4_0
+p &a8_0
+v -T varwidth
+v -T varwidth_tier1
 
 #--- checks
 # CHECK:      (lldb) p &f
@@ -58,6 +71,13 @@ p virtual_float.Pointer
 # CHECK:      (lldb) v -T raw_z_float
 # CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) raw_z_float = {
 # CHECK-NEXT:   (Z *) Pointer = nullptr
+# CHECK-NEXT: }
+
+# null float* has non-zero raw_value (tag=1), pointer component=0.
+# LLDB renders this as an address literal rather than nullptr.
+# CHECK:      (lldb) v -T null_float
+# CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) null_float = {
+# CHECK-NEXT:   (float *) Pointer = 0x{{0+}}
 # CHECK-NEXT: }
 
 # CHECK:      (lldb) v -T long_int_float
@@ -101,3 +121,29 @@ p virtual_float.Pointer
 
 # CHECK:      (lldb) p virtual_float.Pointer
 # CHECK-NEXT: (DerivedWithVirtual *) [[PTR_DV]]
+
+# CHECK:      (lldb) p &local
+# CHECK-NEXT: (Local *) [[PTR_LOCAL:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) v -T local_float
+# CHECK-NEXT: (llvm::PointerUnion<Local *, float *>) local_float = {
+# CHECK-NEXT:   (Local *) Pointer = [[PTR_LOCAL]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p &a4_0
+# CHECK-NEXT: (Align4<0> *) [[PTR_A4:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &a8_0
+# CHECK-NEXT: (Align8<0> *) [[PTR_A8:0x[0-9a-zA-Z]+]]
+
+# Variable-width tag encoding: formatter falls back to void* with
+# tag bits stripped, since fixed-width decoding doesn't apply.
+# CHECK:      (lldb) v -T varwidth
+# CHECK-NEXT: (llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *, Align8<1> *>) varwidth = {
+# CHECK-NEXT:   (void *) Pointer = [[PTR_A4]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T varwidth_tier1
+# CHECK-NEXT: (llvm::PointerUnion<Align4<0> *, Align4<1> *, Align4<2> *, Align8<0> *, Align8<1> *>) varwidth_tier1 = {
+# CHECK-NEXT:   (void *) Pointer = [[PTR_A8]]
+# CHECK-NEXT: }

@@ -236,7 +236,9 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
 
 void LoongArchMCAsmInfo::anchor() {}
 
-LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
+LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   AlignmentIsInBytes = false;
   Data8bitsDirective = "\t.byte\t";
@@ -247,7 +249,6 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
   CommentString = "#";
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 }
 
 void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

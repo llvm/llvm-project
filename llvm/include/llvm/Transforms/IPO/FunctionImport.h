@@ -331,7 +331,7 @@ private:
 };
 
 /// The function importing pass
-class FunctionImportPass : public PassInfoMixin<FunctionImportPass> {
+class FunctionImportPass : public OptionalPassInfoMixin<FunctionImportPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

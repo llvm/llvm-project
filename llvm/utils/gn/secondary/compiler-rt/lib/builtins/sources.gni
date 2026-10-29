@@ -317,11 +317,13 @@ if (current_cpu == "arm") {
       "divsi3.c",
       "fp_mode.c",
       "modsi3.c",
+      "subdf3.c",
       "udivmodsi4.c",
       "udivsi3.c",
       "umodsi3.c",
     ]
     builtins_sources += [
+      "arm/adddf3.S",
       "arm/aeabi_cdcmp.S",
       "arm/aeabi_cdcmpeq_check_nan.c",
       "arm/aeabi_cfcmp.S",

@@ -2,7 +2,7 @@
 ; separate storage hints. This lets alias analysis users (such as the alias set
 ; tracker) who can't be context-sensitive still get the benefits of hints.
 
-; RUN: opt < %s -basic-aa-separate-storage -S -passes=print-alias-sets 2>&1 | FileCheck %s
+; RUN: opt < %s -basic-aa-separate-storage -S -passes='print<alias-sets>' 2>&1 | FileCheck %s
 
 declare void @llvm.assume(i1)
 

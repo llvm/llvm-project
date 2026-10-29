@@ -22,7 +22,8 @@ namespace llvm {
 
 class Function;
 
-struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
+struct LowerExpectIntrinsicPass
+    : OptionalPassInfoMixin<LowerExpectIntrinsicPass> {
   /// Run the pass over the function.
   ///
   /// This will lower all of the expect intrinsic calls in this function into
@@ -32,7 +33,6 @@ struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// ignore them.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
-
 }
 
 #endif

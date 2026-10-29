@@ -19,20 +19,23 @@
 #include "Shared/Debug.h"
 
 #include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Connector.h"
 #include "OpenMP/OMPT/Interface.h"
-
-#include "llvm/Support/DynamicLibrary.h"
 
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
+/// Registers this library's initialize and finalize functions with libomp,
+/// which always defines this entry point (a stub if built without OMPT).
+extern "C" void ompt_libomp_connect(ompt_start_tool_result_t *);
+
 // Define OMPT callback functions (bound to actual callbacks later on)
 #define defineOmptCallback(Name, Type, Code)                                   \
   Name##_t llvm::omp::target::ompt::Name##_fn = nullptr;
-FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
-FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
+FOREACH_OMPT_TARGET_CALLBACK(defineOmptCallback)
 #undef defineOmptCallback
+
+// See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
+#define omp_initial_device -1
 
 using namespace llvm::omp::target::ompt;
 using namespace llvm::omp::target::debug;
@@ -84,7 +87,7 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     // HostOpId is set by the runtime
@@ -92,7 +95,7 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     // Invoke the tool supplied data op callback
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   }
 }
@@ -107,7 +110,7 @@ void Interface::endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /*SrcDeviceNum=*/omp_get_initial_device(), *TgtPtrBegin,
+        /*SrcDeviceNum=*/omp_initial_device, *TgtPtrBegin,
         /*TgtDeviceNum=*/DeviceId, Size, Code);
   }
   endTargetDataOperation();
@@ -163,10 +166,10 @@ void Interface::beginTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
     // HostOpId is set by the runtime
     HostOpId = createOpId();
     // Invoke the tool supplied data op callback
-    ompt_callback_target_data_op_fn(TargetData.value, HostOpId,
-                                    ompt_target_data_delete, TgtPtrBegin,
-                                    DeviceId, /*TgtPtrBegin=*/nullptr,
-                                    /*TgtDeviceNum=*/-1, /*Bytes=*/0, Code);
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_delete, TgtPtrBegin,
+        DeviceId, /*TgtPtrBegin=*/nullptr,
+        /*TgtDeviceNum=*/omp_initial_device, /*Bytes=*/0, Code);
   }
 }
 
@@ -179,7 +182,8 @@ void Interface::endTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
         ompt_target_data_delete, TgtPtrBegin, DeviceId,
-        /*TgtPtrBegin=*/nullptr, /*TgtDeviceNum=*/-1, /*Bytes=*/0, Code);
+        /*TgtPtrBegin=*/nullptr, /*TgtDeviceNum=*/omp_initial_device,
+        /*Bytes=*/0, Code);
   }
   endTargetDataOperation();
 }
@@ -333,13 +337,13 @@ void Interface::beginTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_associate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_associate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     HostOpId = createOpId();
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_associate, HstPtrBegin,
-        omp_get_initial_device(), TgtPtrBegin, DeviceId, Size, Code);
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
   }
 }
 
@@ -349,7 +353,7 @@ void Interface::endTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_associate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_associate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   }
 }
@@ -362,13 +366,13 @@ void Interface::beginTargetDisassociatePointer(int64_t DeviceId,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_disassociate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_disassociate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     HostOpId = createOpId();
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_disassociate, HstPtrBegin,
-        omp_get_initial_device(), TgtPtrBegin, DeviceId, Size, Code);
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
   }
 }
 void Interface::endTargetDisassociatePointer(int64_t DeviceId,
@@ -378,9 +382,36 @@ void Interface::endTargetDisassociatePointer(int64_t DeviceId,
   if (ompt_callback_target_data_op_emi_fn) {
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
-        ompt_target_data_disassociate, HstPtrBegin, omp_get_initial_device(),
+        ompt_target_data_disassociate, HstPtrBegin, omp_initial_device,
         TgtPtrBegin, DeviceId, Size, Code);
   }
+}
+
+void Interface::beginTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                  void *TgtPtrBegin, size_t Size, void *Code) {
+  beginTargetDataOperation();
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  } else if (ompt_callback_target_data_op_fn) {
+    HostOpId = createOpId();
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_memset, HostPtrBegin,
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
+  }
+}
+
+void Interface::endTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                void *TgtPtrBegin, size_t Size, void *Code) {
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  }
+  endTargetDataOperation();
 }
 
 void Interface::beginTarget(int64_t DeviceId, void *Code) {
@@ -506,26 +537,21 @@ void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
 
 void llvm::omp::target::ompt::connectLibrary() {
   ODBG(ODT_Tool) << "Entering connectLibrary";
-  // Connect with libomp
-  static OmptLibraryConnectorTy LibompConnector("libomp");
+  // libomp retains this pointer to run the finalizer
   static ompt_start_tool_result_t OmptResult;
-
-  // Initialize OmptResult with the init and fini functions that will be
-  // called by the connector
   OmptResult.initialize = ompt::initializeLibrary;
   OmptResult.finalize = ompt::finalizeLibrary;
   OmptResult.tool_data.value = 0;
 
-  // Now call connect that causes the above init/fini functions to be called
-  LibompConnector.connect(&OmptResult);
+  // Calls initializeLibrary if a tool enabled OMPT
+  ompt_libomp_connect(&OmptResult);
 
 #define bindOmptCallback(Name, Type, Code)                                     \
   if (lookupCallbackByCode)                                                    \
     lookupCallbackByCode(                                                      \
         (ompt_callbacks_t)(Code),                                              \
         (ompt_callback_t *)&(llvm::omp::target::ompt::Name##_fn));
-  FOREACH_OMPT_NOEMI_EVENT(bindOmptCallback)
-  FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
+  FOREACH_OMPT_TARGET_CALLBACK(bindOmptCallback)
 #undef bindOmptCallback
 
   ODBG(ODT_Tool) << "Exiting connectLibrary";

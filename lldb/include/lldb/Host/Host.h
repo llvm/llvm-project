@@ -192,7 +192,12 @@ public:
   /// environment variable replacement, and whatever other
   /// argument magic the platform defines as part of its typical
   /// user experience
-  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
+  ///
+  /// \param[in] timeout
+  ///            The maximum time to wait for the shell expansion to
+  ///            complete. A value of std::nullopt means wait forever.
+  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                     const Timeout<std::micro> &timeout);
 
   /// Run a shell command.
   /// \param[in] command
@@ -309,9 +314,17 @@ public:
 
   static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
                                               const FileSpec &file_spec,
-                                              uint32_t line_no);
+                                              uint32_t line_no,
+                                              bool foreground = false);
 
+  /// Open a URL with the host's default handler (Launch Services on macOS,
+  /// xdg-open on other Unix). Returns an error if opening fails or the platform
+  /// has no implementation (e.g. Windows).
   static llvm::Error OpenURL(llvm::StringRef url);
+
+  /// Percent-encode a string for use in a URL query component, per RFC 3986
+  /// (alphanumerics and "-_.~" are kept literal; everything else becomes %HH).
+  static std::string URLEncode(llvm::StringRef str);
 
   /// Check if we're running in an interactive graphical session.
   ///

@@ -385,6 +385,8 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let options = [
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
+    Option<"useExpensiveMath", "use-expensive-math", "bool", /*default=*/"false",
+           "Use Presburger arithmetic to constantize loop upper bounds (higher analysis cost)">
   ];
 }
 
@@ -430,14 +432,28 @@ def SimplifyAffineMinMaxPass : InterfacePass<"affine-simplify-min-max", "Functio
   }];
 }
 
+def SimplifyAffineWithBounds : Pass<"affine-simplify-with-bounds"> {
+  let summary = "Simplify affine index operations using value bounds analysis";
+  let description = [{
+    This pass simplifies `affine.delinearize_index` / `affine.linearize_index`
+    pairs and `affine.for` by using value bounds analysis to match basis products.
+    Unlike the built-in canonicalization patterns which only use exact `OpFoldResult`
+    comparisons, this pass can prove equality of dynamic basis products through
+    `ValueBoundsConstraintSet`.
+  }];
+  let dependentDialects = ["arith::ArithDialect"];
+}
+
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
+  let dependentDialects = ["vector::VectorDialect"];
 }
 
 def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
   let summary = "Lower affine operations operating on indices into affine.apply operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
+  let dependentDialects = ["vector::VectorDialect", "ub::UBDialect"];
 }
 
 def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {

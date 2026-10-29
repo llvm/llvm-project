@@ -7,17 +7,17 @@
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define dso_local void @caller(
-// CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] !type [[META16:![0-9]+]] !type [[META17:![0-9]+]] !type [[META18:![0-9]+]] {
+// CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG11:![0-9]+]] !type [[META20:![0-9]+]] !type [[META21:![0-9]+]] !type [[META22:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META15:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG20:![0-9]+]], !nosanitize [[META24:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG20]], !prof [[PROF25:![0-9]+]], !nosanitize [[META24]]
+// CHECK-NEXT:      #dbg_value(ptr [[F]], [[META19:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG24:![0-9]+]], !nosanitize [[META29:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG24]], !prof [[PROF30:![0-9]+]], !nosanitize [[META29]]
 // CHECK:       [[CFI_SLOWPATH]]:
-// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG20]], !nosanitize [[META24]]
-// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG20]], !nosanitize [[META24]]
+// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG24]], !nosanitize [[META29]]
+// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG24]], !nosanitize [[META29]]
 // CHECK:       [[CFI_CONT]]:
-// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG23:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
+// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG28:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
 //
 void caller(void (*f)(void)) {
   f();
@@ -25,24 +25,25 @@ void caller(void (*f)(void)) {
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
-// CHECK: [[DBG7]] = distinct !DISubprogram(name: "caller", scope: [[META8:![0-9]+]], file: [[META8]], line: 22, type: [[META9:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
-// CHECK: [[META8]] = !DIFile(filename: "{{.*}}cfi-check-fail-debuginfo.c", directory: {{.*}})
-// CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
-// CHECK: [[META10]] = !{null, [[META11:![0-9]+]]}
-// CHECK: [[META11]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META12:![0-9]+]], size: 64)
-// CHECK: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
-// CHECK: [[META13]] = !{null}
-// CHECK: [[META14]] = !{[[META15]]}
-// CHECK: [[META15]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG7]], file: [[META8]], line: 22, type: [[META11]])
-// CHECK: [[META16]] = !{i64 0, !"_ZTSFvPFvvEE"}
-// CHECK: [[META17]] = !{i64 0, !"_ZTSFvPvE.generalized"}
-// CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
-// CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
-// CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG23]])
-// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// CHECK: [[META22]] = !DISubroutineType(types: null)
-// CHECK: [[DBG23]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
-// CHECK: [[META24]] = !{}
-// CHECK: [[PROF25]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG26]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
+// CHECK: [[DBG11]] = distinct !DISubprogram(name: "caller", scope: [[META12:![0-9]+]], file: [[META12]], line: 22, type: [[META13:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META18:![0-9]+]])
+// CHECK: [[META12]] = !DIFile(filename: "cfi-check-fail-debuginfo.c", directory: "")
+// CHECK: [[META13]] = !DISubroutineType(types: [[META14:![0-9]+]])
+// CHECK: [[META14]] = !{null, [[META15:![0-9]+]]}
+// CHECK: [[META15]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META16:![0-9]+]], size: 64)
+// CHECK: [[META16]] = !DISubroutineType(types: [[META17:![0-9]+]])
+// CHECK: [[META17]] = !{null}
+// CHECK: [[META18]] = !{[[META19]]}
+// CHECK: [[META19]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG11]], file: [[META12]], line: 22, type: [[META15]])
+// CHECK: [[META20]] = !{i64 0, !"_ZTSFvPFvvEE"}
+// CHECK: [[META21]] = !{i64 0, !"_ZTSFvPvE.generalized"}
+// CHECK: [[META22]] = !{i64 0, i64 2451761621477796417}
+// CHECK: [[META23]] = !DILocation(line: 0, scope: [[DBG11]])
+// CHECK: [[DBG24]] = !DILocation(line: 0, scope: [[META25:![0-9]+]], inlinedAt: [[DBG28]])
+// CHECK: [[META25]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META26:![0-9]+]], file: [[META26]], type: [[META27:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META26]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// CHECK: [[META27]] = !DISubroutineType(types: null)
+// CHECK: [[DBG28]] = !DILocation(line: 23, column: 3, scope: [[DBG11]])
+// CHECK: [[META29]] = !{}
+// CHECK: [[PROF30]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[DBG31]] = !DILocation(line: 24, column: 1, scope: [[DBG11]])
 //.

@@ -33,10 +33,10 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
-    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
-    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
-    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+static constexpr std::array<StringRef, 16> QtPropertyKeywords = {
+    "BINDABLE", "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",   "NOTIFY",
+    "OVERRIDE", "READ",     "REQUIRED",   "RESET", "REVISION", "SCRIPTABLE",
+    "STORED",   "USER",     "VIRTUAL",    "WRITE",
 };
 
 bool FormatToken::isQtProperty() const {
@@ -77,6 +77,17 @@ bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   if (LBrace->Previous && LBrace->Previous->is(tok::equal))
     return true;
   return false;
+}
+
+bool FormatToken::mustBreakAfterAttributes(const FormatStyle &Style) const {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Never:
+    return false;
+  default: // ABS_Leave and ABS_LeaveAll
+    return NewlinesBefore > 0;
+  }
 }
 
 bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
@@ -186,7 +197,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
-      !Style.BinPackArguments &&
+      Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine &&
       (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }

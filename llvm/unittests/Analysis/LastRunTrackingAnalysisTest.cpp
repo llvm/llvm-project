@@ -28,7 +28,7 @@ protected:
   ModulePassManager MPM;
   ModuleAnalysisManager MAM;
 
-  LastRunTrackingAnalysisTest() : M("LastRunTrackingAnalysisTest", C) {
+  LastRunTrackingAnalysisTest() : M("LastRunTrackingAnalysisTest", C), PB(C) {
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);
@@ -47,7 +47,7 @@ struct PassOption final {
   }
 };
 
-class ModuleNoopPass : public PassInfoMixin<ModuleNoopPass> {
+class ModuleNoopPass : public OptionalPassInfoMixin<ModuleNoopPass> {
   uint32_t &ExecutedBitMap;
   uint32_t RunID;
   void *PassID;

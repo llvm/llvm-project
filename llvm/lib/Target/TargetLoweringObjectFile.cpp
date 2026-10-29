@@ -13,6 +13,7 @@
 
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -35,12 +36,13 @@ using namespace llvm;
 //                              Generic Code
 //===----------------------------------------------------------------------===//
 
-/// Initialize - this method must be called before any actual lowering is
+/// initialize - this method must be called before any actual lowering is
 /// done.  This specifies the current context for codegen, and gives the
 /// lowering implementations a chance to set up their default sections.
-void TargetLoweringObjectFile::Initialize(MCContext &ctx,
-                                          const TargetMachine &TM) {
-  // `Initialize` can be called more than once.
+void TargetLoweringObjectFile::initialize(MCContext &ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  // `initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
   initMCObjectFileInfo(ctx, TM.isPositionIndependent(),
@@ -61,7 +63,7 @@ unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
   // If target does not have LEB128 directives, we would need the
   // call site encoding to be udata4 so that the alternative path
   // for not having LEB128 directives could work.
-  if (!getContext().getAsmInfo()->hasLEB128Directives())
+  if (!getContext().getAsmInfo().hasLEB128Directives())
     return dwarf::DW_EH_PE_udata4;
   return CallSiteEncoding;
 }
@@ -147,7 +149,7 @@ void TargetLoweringObjectFile::emitPersonalityValue(
     const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
-                                                     Module &M) const {
+                                                     const Module &M) const {
   MCContext &C = getContext();
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
@@ -193,7 +195,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
 }
 
 void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
-    MCStreamer &Streamer, Module &M,
+    MCStreamer &Streamer, const Module &M,
     std::function<void(MCStreamer &Streamer)> COMDATSymEmitter) const {
   NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
   if (!FuncInfo)
@@ -212,7 +214,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-        TM->getFunctionSections() ? Name->getString() : StringRef());
+        TM->getFunctionSections() ? Name->getString() : StringRef(),
+        Hash->getZExtValue());
 
     Streamer.switchSection(S);
 
@@ -289,11 +292,16 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   }
 
   // Global variables with '!exclude' should get the exclude section kind if
-  // they have an explicit section and no other metadata.
-  if (GVar->hasSection())
+  // they have an explicit section and no other metadata. Similarly,
+  // '!metadata_section_kind' forces the section kind to be 'metadata'.
+  if (GVar->hasSection()) {
     if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_exclude))
       if (!MD->getNumOperands())
         return SectionKind::getExclude();
+    if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_metadata_section_kind))
+      if (!MD->getNumOperands())
+        return SectionKind::getMetadata();
+  }
 
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.
@@ -346,6 +354,14 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       if (containsConstantPtrAuth(C))
         return SectionKind::getReadOnlyWithRel();
 
+      // GOFF: data in the code section is shared by all instances of the
+      // program, while function descriptors and other data live in the WSA
+      // of each instance. The binder rejects a relocation in the code section
+      // that refers to the WSA, even a local one, so every initializer that
+      // needs a relocation goes to the WSA.
+      if (TM.getTargetTriple().isOSBinFormatGOFF())
+        return SectionKind::getReadOnlyWithRel();
+
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
       // the time the app starts up.  However, we can't put this into a
@@ -365,6 +381,29 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
   // Okay, this isn't a constant.
   return SectionKind::getData();
+}
+
+StringRef
+TargetLoweringObjectFile::getCustomSectionName(const GlobalObject *GO,
+                                               const TargetMachine &TM) {
+  // Check if '#pragma clang section' name is applicable.
+  // Note that pragma directive overrides -ffunction-section, -fdata-section
+  // and so section name is exactly as user specified and not uniqued.
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
+  if (GV && GV->hasImplicitSection()) {
+    SectionKind Kind = getKindForGlobal(GO, TM);
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
+      return Attrs.getAttribute("bss-section").getValueAsString();
+    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
+      return Attrs.getAttribute("rodata-section").getValueAsString();
+    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
+      return Attrs.getAttribute("relro-section").getValueAsString();
+    else if (Attrs.hasAttribute("data-section") && Kind.isData())
+      return Attrs.getAttribute("data-section").getValueAsString();
+  }
+
+  return GO->getSection();
 }
 
 /// This method computes the appropriate section to emit the specified global

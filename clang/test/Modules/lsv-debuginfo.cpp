@@ -1,4 +1,5 @@
 // Test C++ -gmodules debug info in the PCMs with local submodule visibility.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 \

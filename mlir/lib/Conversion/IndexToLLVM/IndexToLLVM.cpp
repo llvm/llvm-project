@@ -375,7 +375,9 @@ void ConvertIndexToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert Index to LLVM.
 struct IndexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  IndexToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

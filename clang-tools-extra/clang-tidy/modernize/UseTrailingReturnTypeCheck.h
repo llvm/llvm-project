@@ -14,12 +14,6 @@
 
 namespace clang::tidy::modernize {
 
-struct ClassifiedToken {
-  Token T;
-  bool IsQualifier;
-  bool IsSpecifier;
-};
-
 /// Rewrites function signatures to use a trailing return type.
 ///
 /// For the user-facing documentation see:

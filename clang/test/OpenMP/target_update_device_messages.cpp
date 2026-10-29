@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -25,7 +25,9 @@ int tmain(T argc, S **argv) {
 #pragma omp target update from(i) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target update' cannot contain more than one 'device' clause}}
 #pragma omp target update from(i) device (S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp target update from(i) device (3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
-#pragma omp target update from(i) device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+#pragma omp target update from(i) device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+#pragma omp target update from(i) device (-2) // OK: omp_invalid_device
+#pragma omp target update from(i) device (-1) // OK: omp_initial_device
 }
 
 int main(int argc, char **argv) {
@@ -39,7 +41,9 @@ int main(int argc, char **argv) {
 #pragma omp target update to(j) device (z + argc)
 #pragma omp target update from(j) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target update' cannot contain more than one 'device' clause}}
 #pragma omp target update to(j) device (S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target update from(j) device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+#pragma omp target update from(j) device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+#pragma omp target update from(j) device (-2) // OK: omp_invalid_device
+#pragma omp target update from(j) device (-1) // OK: omp_initial_device
 #pragma omp target update to(j) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
 
   return tmain(argc, argv); // expected-note {{in instantiation of function template specialization 'tmain<int, char>' requested here}}

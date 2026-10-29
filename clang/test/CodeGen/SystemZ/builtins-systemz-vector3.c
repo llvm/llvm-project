@@ -18,8 +18,12 @@ volatile vec_sshort vss;
 volatile vec_sint vsi;
 volatile vec_slong vsl;
 volatile vec_uchar vuc;
+volatile vec_uchar vuc1;
+volatile vec_uchar vuc2;
 volatile vec_ushort vus;
+volatile vec_ushort vus1;
 volatile vec_uint vui;
+volatile vec_uint vui1;
 volatile vec_ulong vul;
 volatile vec_double vd;
 volatile vec_float vf;
@@ -30,30 +34,30 @@ void * volatile ptr;
 int cc;
 
 void test_integer(void) {
-  vuc = __builtin_s390_vsld(vuc, vuc, 0);
+  vuc = __builtin_s390_vsld(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vsld(vuc, vuc, 7);
+  vuc = __builtin_s390_vsld(vuc, vuc1, 7);
   // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
 
-  vuc = __builtin_s390_vsrd(vuc, vuc, 0);
+  vuc = __builtin_s390_vsrd(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vsrd(vuc, vuc, 7);
+  vuc = __builtin_s390_vsrd(vuc, vuc1, 7);
   // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
 }
 
 void test_string(void) {
-  vuc = __builtin_s390_vstrsb(vuc, vuc, vuc, &cc);
+  vuc = __builtin_s390_vstrsb(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrsb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vstrsh(vus, vus, vuc, &cc);
+  vuc = __builtin_s390_vstrsh(vus, vus1, vuc, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrsh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vstrsf(vui, vui, vuc, &cc);
+  vuc = __builtin_s390_vstrsf(vui, vui1, vuc, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrsf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <16 x i8> %{{.*}})
 
-  vuc = __builtin_s390_vstrszb(vuc, vuc, vuc, &cc);
+  vuc = __builtin_s390_vstrszb(vuc, vuc1, vuc2, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrszb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vstrszh(vus, vus, vuc, &cc);
+  vuc = __builtin_s390_vstrszh(vus, vus1, vuc, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrszh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vstrszf(vui, vui, vuc, &cc);
+  vuc = __builtin_s390_vstrszf(vui, vui1, vuc, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrszf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <16 x i8> %{{.*}})
 }
 

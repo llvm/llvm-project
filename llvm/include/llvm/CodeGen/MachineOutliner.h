@@ -89,7 +89,8 @@ private:
     // outlining candidate.
     for (auto &MI : make_range(MBB->rbegin(),
                                (MachineBasicBlock::reverse_iterator)begin()))
-      FromEndOfBlockToStartOfSeq.stepBackward(MI);
+      if (!MI.isDebugInstr())
+        FromEndOfBlockToStartOfSeq.stepBackward(MI);
   }
 
   /// Populate InSeq with liveness information.
@@ -102,14 +103,11 @@ private:
     InSeqWasSet = true;
     InSeq.init(TRI);
     for (auto &MI : *this)
-      InSeq.accumulate(MI);
+      if (!MI.isDebugInstr())
+        InSeq.accumulate(MI);
   }
 
 public:
-  /// The index of this \p Candidate's \p OutlinedFunction in the list of
-  /// \p OutlinedFunctions.
-  unsigned FunctionIdx = 0;
-
   /// Identifier denoting the instructions to emit to call an outlined function
   /// from this point. Defined by the target.
   unsigned CallConstructionID = 0;
@@ -200,9 +198,9 @@ public:
   Candidate(unsigned StartIdx, unsigned Len,
             MachineBasicBlock::iterator &FirstInst,
             MachineBasicBlock::iterator &LastInst, MachineBasicBlock *MBB,
-            unsigned FunctionIdx, unsigned Flags)
+            unsigned Flags)
       : StartIdx(StartIdx), Len(Len), FirstInst(FirstInst), LastInst(LastInst),
-        MBB(MBB), FunctionIdx(FunctionIdx), Flags(Flags) {}
+        MBB(MBB), Flags(Flags) {}
   Candidate() = delete;
 
   /// Used to ensure that \p Candidates are outlined in an order that

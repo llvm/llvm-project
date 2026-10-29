@@ -222,9 +222,6 @@ template<> struct std::tuple_size<constant::Q> { static const int value = 3; };
 template<int N> struct std::tuple_element<N, constant::Q> { typedef int type; };
 namespace constant {
   Q q;
-  // This creates and lifetime-extends a temporary to hold the result of each get() call.
-  auto [a, b, c] = q;    // expected-note {{temporary}}
-  static_assert(a == 0); // expected-error {{constant expression}} expected-note {{temporary}}
 
   constexpr bool f() {
     auto [a, b, c] = q;
@@ -235,7 +232,7 @@ namespace constant {
   constexpr int g() {
     int *p = nullptr;
     {
-      auto [a, b, c] = q;
+      auto [a, b, c] = q; // expected-note {{declared here}}
       p = &c;
     }
     return *p; // expected-note {{read of object outside its lifetime}}

@@ -14,7 +14,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Support/Fortran.h"
 #include <algorithm>
-#include <iosfwd>
 #include <map>
 #include <optional>
 #include <string>
@@ -250,8 +249,28 @@ struct ArraySpec : public std::vector<ShapeSpec> {
   inline bool CanBeImpliedShape() const;
   inline bool CanBeAssumedSize() const;
   inline bool IsAssumedRank() const;
+  // Which bounds of this shape were declared with a rank-1 integer array
+  // (F2023 R818 explicit-shape-bounds-spec)?  A constant bounds array is
+  // folded into ordinary per-dimension bounds, so the spec itself no longer
+  // shows it; the module file writer uses this to write the declared
+  // whole-array form back out.
+  bool isFromRankOneBounds() const {
+    return lboundIsRankOne_ || uboundIsRankOne_;
+  }
+  bool lboundIsRankOne() const { return lboundIsRankOne_; }
+  bool uboundIsRankOne() const { return uboundIsRankOne_; }
+  void set_rankOneBounds(bool lower, bool upper) {
+    lboundIsRankOne_ = lower;
+    uboundIsRankOne_ = upper;
+  }
+  void clear() {
+    std::vector<ShapeSpec>::clear();
+    lboundIsRankOne_ = uboundIsRankOne_ = false;
+  }
 
 private:
+  bool lboundIsRankOne_{false};
+  bool uboundIsRankOne_{false};
   // Check non-empty and predicate is true for each element.
   template <typename P> bool CheckAll(P predicate) const {
     return !empty() && std::all_of(begin(), end(), predicate);
@@ -263,7 +282,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 // The name may not match the symbol's name in case of a USE rename.
 class DerivedTypeSpec {
 public:
-  enum class Category { DerivedType, IntrinsicVector, PairVector, QuadVector };
+  enum class Category {
+    DerivedType,
+    IntrinsicVector,
+    PairVector,
+    QuadVector,
+    EnumerationType
+  };
 
   using RawParameter = std::pair<const parser::Keyword *, ParamValue>;
   using RawParameters = std::vector<RawParameter>;
@@ -307,6 +332,9 @@ public:
   // instantiations that have been specialized with actual type parameter
   // values, which are cooked &/or evaluated if necessary.
   void Instantiate(Scope &containingScope);
+  // Reset instantiation state so a copy can receive a fresh component scope
+  // (e.g. OpenACC use_device with CUDA Fortran component paths).
+  void PrepareForScopeClone();
 
   ParamValue *FindParameter(SourceName);
   const ParamValue *FindParameter(SourceName target) const {
@@ -334,6 +362,9 @@ public:
   bool IsVectorType() const {
     return category_ == Category::IntrinsicVector ||
         category_ == Category::PairVector || category_ == Category::QuadVector;
+  }
+  bool IsEnumerationType() const {
+    return category_ == Category::EnumerationType;
   }
 
 private:

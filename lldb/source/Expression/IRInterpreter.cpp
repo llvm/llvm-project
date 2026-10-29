@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -82,6 +83,9 @@ static bool CanIgnoreCall(const CallInst *call) {
       break;
     case llvm::Intrinsic::dbg_declare:
     case llvm::Intrinsic::dbg_value:
+    case llvm::Intrinsic::ptrauth_auth:
+    case llvm::Intrinsic::ptrauth_blend:
+    case llvm::Intrinsic::ptrauth_strip:
       return true;
     }
   }
@@ -134,7 +138,7 @@ public:
   std::string SummarizeValue(const Value *value) {
     lldb_private::StreamString ss;
 
-    ss.Printf("%s", PrintValue(value).c_str());
+    ss.PutCString(PrintValue(value).c_str());
 
     ValueMap::iterator i = m_values.find(value);
 
@@ -266,7 +270,12 @@ public:
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)
           return false;
-        value = APInt(m_target_data.getPointerSizeInBits(), addr);
+        // A resolved symbol address may be wider than a target pointer when we
+        // store extra information in the high bits, such as an address-space
+        // tag. Truncate to the pointer width rather than asserting. When the
+        // address already fits this is a no-op.
+        value = APInt(m_target_data.getPointerSizeInBits(), addr,
+                      /*isSigned=*/false, /*implicitTrunc=*/true);
         return true;
       }
       break;
@@ -356,13 +365,10 @@ public:
 
     lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
-    if (log) {
-      LLDB_LOGF(log, "Made an allocation for argument %s",
-                PrintValue(value).c_str());
-      LLDB_LOGF(log, "  Data region    : %llx", (unsigned long long)address);
-      LLDB_LOGF(log, "  Ref region     : %llx",
-                (unsigned long long)data_address);
-    }
+    LLDB_LOGF(log, "Made an allocation for argument %s",
+              PrintValue(value).c_str());
+    LLDB_LOGF(log, "  Data region    : %llx", (unsigned long long)address);
+    LLDB_LOGF(log, "  Ref region     : %llx", (unsigned long long)data_address);
 
     return true;
   }
@@ -889,12 +895,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, result, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
-        LLDB_LOGF(log, "  L : %s", frame.SummarizeValue(lhs).c_str());
-        LLDB_LOGF(log, "  R : %s", frame.SummarizeValue(rhs).c_str());
-        LLDB_LOGF(log, "  = : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
+      LLDB_LOGF(log, "  L : %s", frame.SummarizeValue(lhs).c_str());
+      LLDB_LOGF(log, "  R : %s", frame.SummarizeValue(rhs).c_str());
+      LLDB_LOGF(log, "  = : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::Alloca: {
       const AllocaInst *alloca_inst = cast<AllocaInst>(inst);
@@ -949,11 +953,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.m_values[alloca_inst] = P;
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted an AllocaInst");
-        LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
-        LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
-      }
+      LLDB_LOGF(log, "Interpreted an AllocaInst");
+      LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
+      LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
     } break;
     case Instruction::BitCast:
     case Instruction::ZExt: {
@@ -992,9 +994,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     } break;
     case Instruction::UncondBr:
       frame.Jump(cast<UncondBrInst>(inst)->getSuccessor());
-      if (log) {
-        LLDB_LOGF(log, "Interpreted an UncondBrInst");
-      }
+      LLDB_LOGF(log, "Interpreted an UncondBrInst");
       continue;
     case Instruction::CondBr: {
       const CondBrInst *br_inst = cast<CondBrInst>(inst);
@@ -1014,10 +1014,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       else
         frame.Jump(br_inst->getSuccessor(1));
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a CondBrInst");
-        LLDB_LOGF(log, "  cond : %s", frame.SummarizeValue(condition).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a CondBrInst");
+      LLDB_LOGF(log, "  cond : %s", frame.SummarizeValue(condition).c_str());
     }
       continue;
     case Instruction::PHI: {
@@ -1040,11 +1038,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
       frame.AssignValue(inst, result, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
-        LLDB_LOGF(log, "  Incoming value : %s",
-                  frame.SummarizeValue(value).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
+      LLDB_LOGF(log, "  Incoming value : %s",
+                frame.SummarizeValue(value).c_str());
     } break;
     case Instruction::GetElementPtr: {
       const GetElementPtrInst *gep_inst = cast<GetElementPtrInst>(inst);
@@ -1099,12 +1095,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, Poffset, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a GetElementPtrInst");
-        LLDB_LOGF(log, "  P       : %s",
-                  frame.SummarizeValue(pointer_operand).c_str());
-        LLDB_LOGF(log, "  Poffset : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a GetElementPtrInst");
+      LLDB_LOGF(log, "  P       : %s",
+                frame.SummarizeValue(pointer_operand).c_str());
+      LLDB_LOGF(log, "  Poffset : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::FCmp:
     case Instruction::ICmp: {
@@ -1199,12 +1193,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, result, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted an ICmpInst");
-        LLDB_LOGF(log, "  L : %s", frame.SummarizeValue(lhs).c_str());
-        LLDB_LOGF(log, "  R : %s", frame.SummarizeValue(rhs).c_str());
-        LLDB_LOGF(log, "  = : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted an ICmpInst");
+      LLDB_LOGF(log, "  L : %s", frame.SummarizeValue(lhs).c_str());
+      LLDB_LOGF(log, "  R : %s", frame.SummarizeValue(rhs).c_str());
+      LLDB_LOGF(log, "  = : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::IntToPtr: {
       const IntToPtrInst *int_to_ptr_inst = cast<IntToPtrInst>(inst);
@@ -1221,11 +1213,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, I, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted an IntToPtr");
-        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
-        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted an IntToPtr");
+      LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+      LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::PtrToInt: {
       const PtrToIntInst *ptr_to_int_inst = cast<PtrToIntInst>(inst);
@@ -1242,11 +1232,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, I, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a PtrToInt");
-        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
-        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a PtrToInt");
+      LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+      LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::Trunc: {
       const TruncInst *trunc_inst = cast<TruncInst>(inst);
@@ -1263,11 +1251,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, I, module);
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a Trunc");
-        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
-        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a Trunc");
+      LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+      LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
@@ -1305,11 +1291,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::Scalar R(result);
 
       frame.AssignValue(inst, R, module);
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
-        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
-        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
+      LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+      LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::UIToFP:
     case Instruction::SIToFP:
@@ -1335,11 +1319,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         R = S.Double();
 
       frame.AssignValue(inst, R, module);
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
-        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
-        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
-      }
+      LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
+      LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+      LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
     } break;
     case Instruction::Load: {
       const LoadInst *load_inst = cast<LoadInst>(inst);
@@ -1399,12 +1381,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a LoadInst");
-        LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
-        LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
-        LLDB_LOGF(log, "  D : 0x%" PRIx64, D);
-      }
+      LLDB_LOGF(log, "Interpreted a LoadInst");
+      LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
+      LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
+      LLDB_LOGF(log, "  D : 0x%" PRIx64, D);
     } break;
     case Instruction::Ret: {
       return true;
@@ -1468,15 +1448,62 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      if (log) {
-        LLDB_LOGF(log, "Interpreted a StoreInst");
-        LLDB_LOGF(log, "  D : 0x%" PRIx64, D);
-        LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
-        LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
-      }
+      LLDB_LOGF(log, "Interpreted a StoreInst");
+      LLDB_LOGF(log, "  D : 0x%" PRIx64, D);
+      LLDB_LOGF(log, "  P : 0x%" PRIx64, P);
+      LLDB_LOGF(log, "  R : 0x%" PRIx64, R);
     } break;
     case Instruction::Call: {
       const CallInst *call_inst = cast<CallInst>(inst);
+
+      if (auto *fn = call_inst->getCalledFunction()) {
+        if (fn->isIntrinsic() &&
+            ((fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_auth &&
+              call_inst->arg_size() == 3) ||
+             (fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_strip &&
+              call_inst->arg_size() == 2)) &&
+            exe_ctx.GetProcessPtr()) {
+          llvm::Value *auth_ptr = call_inst->getArgOperand(0);
+          // Extract the argument's value.
+          lldb_private::Scalar auth_ptr_val;
+          if (!frame.EvaluateValue(auth_ptr_val, auth_ptr, module)) {
+            error = lldb_private::Status::FromErrorString(
+                "unable to evaluate argument 0");
+            return false;
+          }
+
+          if (lldb::ABISP abi_sp = exe_ctx.GetProcessPtr()->GetABI()) {
+            auto stripped_ptr = lldb_private::Scalar(
+                abi_sp->FixCodeAddress(auth_ptr_val.ULongLong()));
+            frame.AssignValue(call_inst, stripped_ptr, module);
+          }
+        }
+
+        if (fn->isIntrinsic() &&
+            fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_blend) {
+          llvm::Value *addr = call_inst->getArgOperand(0);
+          llvm::Value *lobits = call_inst->getArgOperand(1);
+
+          // Extract the address.
+          lldb_private::Scalar addr_val;
+          if (!frame.EvaluateValue(addr_val, addr, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 0);
+            return false;
+          }
+
+          // Extract the low bits to blend in.
+          lldb_private::Scalar lobits_val;
+          if (!frame.EvaluateValue(lobits_val, lobits, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 1);
+            return false;
+          }
+
+          lldb_private::Scalar blend_val = addr_val | (lobits_val << 48);
+          frame.AssignValue(call_inst, blend_val, module);
+        }
+      }
 
       if (CanIgnoreCall(call_inst))
         break;
@@ -1611,6 +1638,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       process->SetRunningUserExpression(true);
+
+      lldb_private::PolicyStack::Guard expr_policy_guard =
+          lldb_private::PolicyStack::Get().PushPublicStateRunningExpression();
 
       // Execute the actual function call thread plan
       lldb::ExpressionResults res =

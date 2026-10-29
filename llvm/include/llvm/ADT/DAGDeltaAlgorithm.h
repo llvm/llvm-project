@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-/// DAGDeltaAlgorithm - Implements a "delta debugging" algorithm for minimizing
+/// Implements a "delta debugging" algorithm for minimizing
 /// directed acyclic graphs using a predicate function.
 ///
 /// The result of the algorithm is a subset of the input change set which is
@@ -50,7 +50,7 @@ public:
 public:
   virtual ~DAGDeltaAlgorithm() = default;
 
-  /// Run - Minimize the DAG formed by the \p Changes vertices and the
+  /// Minimize the DAG formed by the \p Changes vertices and the
   /// \p Dependencies edges by executing \see ExecuteOneTest() on subsets of
   /// changes and returning the smallest set which still satisfies the test
   /// predicate and the input \p Dependencies.
@@ -65,12 +65,12 @@ public:
   changeset_ty Run(const changeset_ty &Changes,
                    const std::vector<edge_ty> &Dependencies);
 
-  /// UpdatedSearchState - Callback used when the search state changes.
+  /// Callback used when the search state changes.
   virtual void UpdatedSearchState(const changeset_ty &Changes,
                                   const changesetlist_ty &Sets,
                                   const changeset_ty &Required) {}
 
-  /// ExecuteOneTest - Execute a single test predicate on the change set \p S.
+  /// Execute a single test predicate on the change set \p S.
   virtual bool ExecuteOneTest(const changeset_ty &S) = 0;
 };
 

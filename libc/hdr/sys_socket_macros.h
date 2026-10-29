@@ -15,8 +15,8 @@
 
 #else // Overlay mode
 
-#include <sys/socket.h>
+#include "hdr/sys_socket_overlay.h"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_SYS_SOCKET_MACROS_H

@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/BinaryStream.h"
-#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -33,10 +32,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-
-namespace {
-typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
-} // end anonymous namespace
 
 PDBFile::PDBFile(StringRef Path, std::unique_ptr<BinaryStream> PdbFileBuffer,
                  BumpPtrAllocator &Allocator)
@@ -398,6 +393,28 @@ Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
   return *InjectedSources;
 }
 
+llvm::Expected<object::DXContainer &> PDBFile::getDXContainerStream() {
+  if (!Dxc) {
+    auto MBS = safelyCreateIndexedStream(StreamDXContainer);
+    if (!MBS)
+      return MBS.takeError();
+    auto StreamSize = getStreamByteSize(StreamDXContainer);
+    ArrayRef<uint8_t> StreamData;
+    auto Error = MBS->get()->readBytes(0, StreamSize, StreamData);
+    if (Error)
+      return Error;
+
+    StringRef Ref(reinterpret_cast<const char *>(StreamData.data()),
+                  StreamSize);
+    MemoryBufferRef MemBuf(Ref, "DXContainerStream");
+    auto DXC = object::DXContainer::create(MemBuf);
+    if (!DXC)
+      return DXC.takeError();
+    Dxc = std::make_unique<object::DXContainer>(std::move(*DXC));
+  }
+  return *Dxc;
+}
+
 uint32_t PDBFile::getPointerSize() {
   auto DbiS = getPDBDbiStream();
   if (!DbiS)
@@ -451,7 +468,9 @@ bool PDBFile::hasPDBSymbolStream() {
   return DbiS->getSymRecordStreamIndex() < getNumStreams();
 }
 
-bool PDBFile::hasPDBTpiStream() const { return StreamTPI < getNumStreams(); }
+bool PDBFile::hasPDBTpiStream() const {
+  return StreamTPI < getNumStreams() && getStreamByteSize(StreamTPI) != 0;
+}
 
 bool PDBFile::hasPDBStringTable() {
   auto IS = getPDBInfoStream();

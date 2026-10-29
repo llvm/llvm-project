@@ -17,6 +17,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -29,6 +30,78 @@ using namespace mlir::tblgen;
 using llvm::formatv;
 using llvm::Record;
 using llvm::RecordKeeper;
+
+/// Built-in C++ type to Python type mappings.
+static constexpr std::pair<StringRef, StringRef> builtinTypeMappings[] = {
+    {"::mlir::MemRefType", "_ods_ir.MemRefType"},
+    {"::mlir::UnrankedMemRefType", "_ods_ir.UnrankedMemRefType"},
+    {"::mlir::RankedTensorType", "_ods_ir.RankedTensorType"},
+    {"::mlir::UnrankedTensorType", "_ods_ir.UnrankedTensorType"},
+    {"::mlir::VectorType", "_ods_ir.VectorType"},
+    {"::mlir::IntegerType", "_ods_ir.IntegerType"},
+    {"::mlir::FloatType", "_ods_ir.FloatType"},
+    {"::mlir::IndexType", "_ods_ir.IndexType"},
+    {"::mlir::ComplexType", "_ods_ir.ComplexType"},
+    {"::mlir::TupleType", "_ods_ir.TupleType"},
+    {"::mlir::NoneType", "_ods_ir.NoneType"},
+};
+
+/// Built-in TableGen attribute def name to Python type mappings.
+static constexpr std::pair<StringRef, StringRef> builtinAttrTypeMappings[] = {
+    {"BoolAttr", "bool"},
+    {"I1Attr", "bool"},
+    {"I8Attr", "int"},
+    {"I16Attr", "int"},
+    {"I32Attr", "int"},
+    {"I64Attr", "int"},
+    {"SI1Attr", "int"},
+    {"SI8Attr", "int"},
+    {"SI16Attr", "int"},
+    {"SI32Attr", "int"},
+    {"SI64Attr", "int"},
+    {"UI1Attr", "int"},
+    {"UI8Attr", "int"},
+    {"UI16Attr", "int"},
+    {"UI32Attr", "int"},
+    {"UI64Attr", "int"},
+    {"IndexAttr", "int"},
+    {"F32Attr", "float"},
+    {"F64Attr", "float"},
+    {"StrAttr", "str"},
+    {"SymbolNameAttr", "str"},
+    {"FlatSymbolRefAttr", "str"},
+    {"SymbolRefAttr", "str"},
+    {"TypeAttr", "_ods_ir.Type"},
+    {"AffineMapAttr", "_ods_ir.AffineMap"},
+    {"IntegerSetAttr", "_ods_ir.IntegerSet"},
+    {"DictionaryAttr", "dict"},
+    {"ArrayAttr", "_Sequence[_ods_ir.Attribute]"},
+    {"I32ArrayAttr", "_Sequence[int]"},
+    {"I64ArrayAttr", "_Sequence[int]"},
+    {"I64SmallVectorArrayAttr", "_Sequence[int]"},
+    {"F32ArrayAttr", "_Sequence[float]"},
+    {"F64ArrayAttr", "_Sequence[float]"},
+    {"BoolArrayAttr", "_Sequence[bool]"},
+    {"DenseBoolArrayAttr", "_Sequence[bool]"},
+    {"StrArrayAttr", "_Sequence[str]"},
+    {"FlatSymbolRefArrayAttr", "_Sequence[str]"},
+    {"DenseI8ArrayAttr", "_Sequence[int]"},
+    {"DenseI16ArrayAttr", "_Sequence[int]"},
+    {"DenseI32ArrayAttr", "_Sequence[int]"},
+    {"DenseI64ArrayAttr", "_Sequence[int]"},
+    {"DenseF32ArrayAttr", "_Sequence[float]"},
+    {"DenseF64ArrayAttr", "_Sequence[float]"},
+    {"I32ElementsAttr", "_Union[_Sequence[int], _Buffer]"},
+    {"I64ElementsAttr", "_Union[_Sequence[int], _Buffer]"},
+    {"IndexElementsAttr", "_Union[_Sequence[int], _Buffer]"},
+    {"F64ElementsAttr", "_Union[_Sequence[float], _Buffer]"},
+};
+
+/// Maps from C++ type names to Python type annotations.
+static llvm::StringMap<std::string> pythonTypeMap;
+
+/// Maps from TableGen attribute def names to Python types.
+static llvm::StringMap<std::string> pythonAttrTypeMap;
 
 /// File header and includes.
 ///   {0} is the dialect namespace.
@@ -46,7 +119,15 @@ _ods_ir = _ods_cext.ir
 _ods_cext.globals.register_traceback_file_exclusion(__file__)
 
 import builtins
-from typing import Sequence as _Sequence, Union as _Union, Optional as _Optional
+from typing import Any as _Any, Sequence as _Sequence, Union as _Union, Optional as _Optional
+import sys as _sys
+if _sys.version_info >= (3, 12):
+  from collections.abc import Buffer as _Buffer  # pytype: disable=not-supported-yet
+else:
+  try:
+    from typing_extensions import Buffer as _Buffer
+  except ImportError:
+    _Buffer = _Any
 
 )Py";
 
@@ -341,10 +422,13 @@ def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
 static llvm::cl::OptionCategory
     clOpPythonBindingCat("Options for -gen-python-op-bindings");
 
-static llvm::cl::opt<std::string>
+std::string dialectNameStorage;
+
+llvm::cl::opt<std::string, /*ExternalStorage=*/true>
     clDialectName("bind-dialect",
                   llvm::cl::desc("The dialect to run the generator for"),
-                  llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
+                  llvm::cl::location(dialectNameStorage),
+                  llvm::cl::cat(clOpPythonBindingCat));
 
 static llvm::cl::opt<std::string> clDialectExtensionName(
     "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
@@ -386,20 +470,13 @@ static std::string attrSizedTraitForKind(const char *kind) {
                  StringRef(kind).drop_front());
 }
 
-static StringRef getPythonType(StringRef cppType) {
-  return llvm::StringSwitch<StringRef>(cppType)
-      .Case("::mlir::MemRefType", "_ods_ir.MemRefType")
-      .Case("::mlir::UnrankedMemRefType", "_ods_ir.UnrankedMemRefType")
-      .Case("::mlir::RankedTensorType", "_ods_ir.RankedTensorType")
-      .Case("::mlir::UnrankedTensorType", "_ods_ir.UnrankedTensorType")
-      .Case("::mlir::VectorType", "_ods_ir.VectorType")
-      .Case("::mlir::IntegerType", "_ods_ir.IntegerType")
-      .Case("::mlir::FloatType", "_ods_ir.FloatType")
-      .Case("::mlir::IndexType", "_ods_ir.IndexType")
-      .Case("::mlir::ComplexType", "_ods_ir.ComplexType")
-      .Case("::mlir::TupleType", "_ods_ir.TupleType")
-      .Case("::mlir::NoneType", "_ods_ir.NoneType")
-      .Default(StringRef());
+/// Returns the Python type annotation for a given type constraint.
+/// Returns empty StringRef if no mapping is known.
+static StringRef getPythonType(const tblgen::TypeConstraint &constraint) {
+  auto it = pythonTypeMap.find(constraint.getCppType());
+  if (it != pythonTypeMap.end())
+    return it->second;
+  return StringRef();
 }
 
 /// Emits accessors to "elements" of an Op definition. Currently, the supported
@@ -436,7 +513,7 @@ static void emitElementAccessors(
         continue;
       std::string type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                            : "_ods_ir.OpResult";
-      if (StringRef pythonType = getPythonType(element.constraint.getCppType());
+      if (StringRef pythonType = getPythonType(element.constraint);
           !pythonType.empty())
         type = llvm::formatv("{0}[{1}]", type, pythonType);
       if (element.isVariableLength()) {
@@ -446,6 +523,9 @@ static void emitElementAccessors(
         } else {
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.OpOperandList"
                                                    : "_ods_ir.OpResultList";
+          if (StringRef pythonType = getPythonType(element.constraint);
+              !pythonType.empty())
+            type = llvm::formatv("{0}[{1}]", type, pythonType);
           os << formatv(opOneVariadicTemplate, sanitizeName(element.name),
                         pyAttrName, numElements, i, type);
         }
@@ -485,11 +565,9 @@ static void emitElementAccessors(
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                    : "_ods_ir.OpResult";
         }
-        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
-            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
-          StringRef pythonType = getPythonType(element.constraint.getCppType());
-          if (!pythonType.empty())
-            type += "[" + pythonType.str() + "]";
+        if (StringRef pythonType = getPythonType(element.constraint);
+            !pythonType.empty()) {
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
         }
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
                       pyAttrName, numSimpleLength, numVariadicGroups,
@@ -522,11 +600,9 @@ static void emitElementAccessors(
       if (!element.isVariableLength() || element.isOptional()) {
         type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                  : "_ods_ir.OpResult";
-        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
-            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
-          StringRef pythonType = getPythonType(element.constraint.getCppType());
-          if (!pythonType.empty())
-            type += "[" + pythonType.str() + "]";
+        if (StringRef pythonType = getPythonType(element.constraint);
+            !pythonType.empty()) {
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
         }
         if (!element.isVariableLength()) {
           trailing = "[0]";
@@ -534,6 +610,11 @@ static void emitElementAccessors(
           type = "_Optional[" + type + "]";
           trailing = std::string(
               formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
+        }
+      } else {
+        if (StringRef pythonType = getPythonType(element.constraint);
+            !pythonType.empty()) {
+          type = llvm::formatv("{0}[{1}]", type, pythonType);
         }
       }
 
@@ -633,6 +714,15 @@ static std::string getPythonAttrName(mlir::tblgen::Attribute attr) {
   if (storageTypeStr == "::mlir::UnitAttr")
     return "UnitAttr";
   return "Attribute";
+}
+
+/// Returns the Python value type accepted by the AttrBuilder for the given
+/// attribute. Returns empty StringRef if no mapping is known.
+static StringRef getPythonAttrType(mlir::tblgen::Attribute attr) {
+  auto it = pythonAttrTypeMap.find(attr.getAttrDefName());
+  if (it != pythonAttrTypeMap.end())
+    return it->second;
+  return StringRef();
 }
 
 /// Emits accessors to Op attributes.
@@ -887,11 +977,27 @@ populateBuilderLinesAttr(const Operator &op, ArrayRef<std::string> argNames,
       continue;
     }
 
+    // For EnumAttr-style attributes (those defined as EnumAttr<Dialect, ...>
+    // in tablegen), use a dialect-qualified key ("dialect.AttrName") so the
+    // lookup matches the registration emitted by EnumPythonBindingGen with
+    // -bind-dialect. For all other attributes (plain attrs like I32Attr,
+    // custom AttrDef, etc.), keep the unqualified name to match their
+    // registrations in ir.py or dialect-specific Python files.
+    Attribute baseAttr = attribute->attr.getBaseAttr();
+    Dialect attrDialect = baseAttr.isSubClassOf("EnumAttr")
+                              ? baseAttr.getDialect()
+                              : Dialect(nullptr);
+    std::string attrBuilderKey = attrDialect
+                                     ? formatv("{0}.{1}", attrDialect.getName(),
+                                               attribute->attr.getAttrDefName())
+                                           .str()
+                                     : attribute->attr.getAttrDefName().str();
+
     builderLines.push_back(formatv(
         attribute->attr.isOptional() || attribute->attr.hasDefaultValue()
             ? initOptionalAttributeWithBuilderTemplate
             : initAttributeWithBuilderTemplate,
-        argNames[i], attribute->name, attribute->attr.getAttrDefName()));
+        argNames[i], attribute->name, attrBuilderKey));
   }
 }
 
@@ -1080,6 +1186,7 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   populateBuilderArgs(op, builderArgs, operandArgNames);
   size_t numOperandAttrArgs = builderArgs.size() - numResultArgs;
   populateBuilderArgsSuccessors(op, builderArgs, successorArgNames);
+  size_t numSuccessorArgs = successorArgNames.size();
 
   populateBuilderLinesOperand(op, operandArgNames, builderLines);
   populateBuilderLinesAttr(op, ArrayRef(builderArgs).drop_front(numResultArgs),
@@ -1089,15 +1196,69 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
   populateBuilderRegions(op, builderArgs, builderLines);
 
-  // Layout of builderArgs vector elements:
-  // [ result_args  operand_attr_args successor_args regions ]
+  // Compute type annotations for each builder arg.
+  SmallVector<std::string> argTypes(builderArgs.size());
+
+  // Result args: user passes Type objects.
+  for (size_t i = 0; i < numResultArgs; ++i) {
+    const NamedTypeConstraint &result = op.getResult(i);
+    if (result.isVariadic())
+      argTypes[i] = "_Sequence[_ods_ir.Type]";
+    else if (result.isOptional())
+      argTypes[i] = "_Optional[_ods_ir.Type]";
+    else
+      argTypes[i] = "_ods_ir.Type";
+  }
+
+  // Operand and attribute args.
+  for (size_t i = 0; i < numOperandAttrArgs; ++i) {
+    size_t idx = numResultArgs + i;
+    Argument arg = op.getArg(i);
+    if (auto *nattr = llvm::dyn_cast_if_present<NamedAttribute *>(arg)) {
+      if (nattr->attr.getStorageType().trim() == "::mlir::UnitAttr") {
+        argTypes[idx] = "bool";
+      } else {
+        std::string attrType = "_ods_ir." + getPythonAttrName(nattr->attr);
+        StringRef rawType = getPythonAttrType(nattr->attr);
+        argTypes[idx] =
+            llvm::formatv("_Union[{0}, {1}]",
+                          rawType.empty() ? "_Any" : rawType, attrType)
+                .str();
+      }
+    } else if (auto *ntype =
+                   llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
+      std::string type = "_ods_ir.Value";
+      if (StringRef pythonType = getPythonType(ntype->constraint);
+          !pythonType.empty()) {
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
+      }
+      if (ntype->isVariadic())
+        type = llvm::formatv("_Sequence[{0}]", type);
+      argTypes[idx] = type;
+    }
+    // NamedProperty args are skipped (no type hint).
+  }
+
+  // Successor args.
+  for (size_t i = 0; i < numSuccessorArgs; ++i) {
+    size_t idx = numResultArgs + numOperandAttrArgs + i;
+    const NamedSuccessor &successor = op.getSuccessor(i);
+    argTypes[idx] =
+        successor.isVariadic() ? "_Sequence[_ods_ir.Block]" : "_ods_ir.Block";
+  }
+
+  // Region args (variadic region count).
+  for (size_t i = numResultArgs + numOperandAttrArgs + numSuccessorArgs;
+       i < builderArgs.size(); ++i) {
+    argTypes[i] = "int";
+  }
 
   // Determine whether the argument corresponding to a given index into the
   // builderArgs vector is a python keyword argument or not.
   auto isKeywordArgFn = [&](size_t builderArgIndex) -> bool {
     // All result, successor, and region arguments are positional arguments.
-    if ((builderArgIndex < numResultArgs) ||
-        (builderArgIndex >= (numResultArgs + numOperandAttrArgs)))
+    if (builderArgIndex < numResultArgs ||
+        builderArgIndex >= numResultArgs + numOperandAttrArgs)
       return false;
     // Keyword arguments:
     // - optional named attributes (including unit attributes)
@@ -1111,32 +1272,38 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
     return false;
   };
 
-  // StringRefs in functionArgs refer to strings allocated by builderArgs.
-  SmallVector<StringRef> functionArgs;
+  // Format a single function argument with optional type hint and default.
+  auto formatArg = [](StringRef name, StringRef typeHint,
+                      bool isKeyword) -> std::string {
+    std::string result = name.str();
+    if (isKeyword && !typeHint.empty())
+      result += ": _Optional[" + typeHint.str() + "] = None";
+    else if (isKeyword)
+      result += "=None";
+    else if (!typeHint.empty())
+      result += ": " + typeHint.str();
+    return result;
+  };
 
-  // Add positional arguments.
-  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i) {
+  // Build the function argument list: positional args, *, keyword args.
+  SmallVector<std::string> functionArgs;
+  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i)
     if (!isKeywordArgFn(i))
-      functionArgs.push_back(builderArgs[i]);
-  }
+      functionArgs.push_back(formatArg(builderArgs[i], argTypes[i], false));
 
   // Add a bare '*' to indicate that all following arguments must be keyword
   // arguments.
   functionArgs.push_back("*");
 
-  // Add a default 'None' value to each keyword arg string, and then add to the
-  // function args list.
-  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i) {
-    if (isKeywordArgFn(i)) {
-      builderArgs[i].append("=None");
-      functionArgs.push_back(builderArgs[i]);
-    }
-  }
-  if (canInferType(op)) {
-    functionArgs.push_back("results=None");
-  }
-  functionArgs.push_back("loc=None");
-  functionArgs.push_back("ip=None");
+  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i)
+    if (isKeywordArgFn(i))
+      functionArgs.push_back(formatArg(builderArgs[i], argTypes[i], true));
+
+  if (canInferType(op))
+    functionArgs.push_back(
+        "results: _Optional[_Sequence[_ods_ir.Type]] = None");
+  functionArgs.push_back("loc: _Optional[_ods_ir.Location] = None");
+  functionArgs.push_back("ip: _Optional[_ods_ir.InsertionPoint] = None");
 
   SmallVector<std::string> initArgs;
   initArgs.push_back("self.OPERATION_NAME");
@@ -1153,8 +1320,7 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
 
   os << formatv(initTemplate, llvm::join(functionArgs, ", "),
                 llvm::join(builderLines, "\n    "), llvm::join(initArgs, ", "));
-  return llvm::map_to_vector<8>(functionArgs,
-                                [](StringRef s) { return s.str(); });
+  return functionArgs;
 }
 
 static void emitSegmentSpec(
@@ -1207,23 +1373,33 @@ static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
 static void emitValueBuilder(const Operator &op,
                              SmallVector<std::string> functionArgs,
                              raw_ostream &os) {
+  // Parse a formatted function arg "name[: type][ = default]" into
+  // (name, type, defaultVal) with whitespace trimmed.
+  auto parseFunctionArg =
+      [](StringRef arg) -> std::tuple<StringRef, StringRef, StringRef> {
+    auto [nameAndType, defaultVal] = arg.split('=');
+    auto [name, type] = nameAndType.split(':');
+    return {name.trim(), type.trim(), defaultVal.trim()};
+  };
+
   // Params with (possibly) default args.
   auto valueBuilderParams =
-      llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
-        SmallVector<StringRef> argMaybeDefault =
-            llvm::to_vector<2>(llvm::split(argAndMaybeDefault, "="));
-        auto arg = llvm::convertToSnakeFromCamelCase(argMaybeDefault[0]);
-        if (argMaybeDefault.size() == 2)
-          return arg + "=" + argMaybeDefault[1].str();
-        return arg;
+      llvm::map_range(functionArgs, [&](const std::string &arg) {
+        auto [name, type, defaultVal] = parseFunctionArg(arg);
+        std::string result = llvm::convertToSnakeFromCamelCase(name);
+        if (!type.empty())
+          result += ": " + type.str();
+        if (!defaultVal.empty())
+          result += " = " + defaultVal.str();
+        return result;
       });
   // Actual args passed to op builder (e.g., opParam=op_param).
   auto opBuilderArgs = llvm::map_range(
       llvm::make_filter_range(functionArgs,
                               [](const std::string &s) { return s != "*"; }),
-      [](const std::string &arg) {
-        auto lhs = *llvm::split(arg, "=").begin();
-        return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
+      [&](const std::string &arg) {
+        auto [name, type, defaultVal] = parseFunctionArg(arg);
+        return (name + "=" + llvm::convertToSnakeFromCamelCase(name)).str();
       });
   std::string nameWithoutDialect = sanitizeName(
       op.getOperationName().substr(op.getOperationName().find('.') + 1));
@@ -1242,6 +1418,9 @@ static void emitValueBuilder(const Operator &op,
       results = ".results";
     } else if (op.getNumResults() == 1) {
       type = "_ods_ir.OpResult";
+      if (StringRef pythonType = getPythonType(op.getResult(0).constraint);
+          !pythonType.empty())
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,
@@ -1303,22 +1482,46 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
   emitValueBuilder(op, functionArgs, os);
 }
 
+static void populateTypeMap(llvm::StringMap<std::string> &map,
+                            ArrayRef<std::pair<StringRef, StringRef>> builtins,
+                            const RecordKeeper &records, StringRef recordClass,
+                            StringRef keyField, StringRef valueField) {
+  map.clear();
+  for (auto [key, value] : builtins)
+    map[key] = value.str();
+  for (const Record *rec :
+       records.getAllDerivedDefinitionsIfDefined(recordClass)) {
+    StringRef key = rec->getValueAsString(keyField);
+    std::string value = rec->getValueAsString(valueField).str();
+    auto [it, inserted] = map.try_emplace(key, std::move(value));
+    if (!inserted && it->second != value)
+      llvm::PrintFatalError(rec->getLoc(),
+                            "conflicting " + recordClass + " for '" + key +
+                                "': '" + it->second + "' vs '" + value + "'");
+  }
+}
+
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
 static bool emitAllOps(const RecordKeeper &records, raw_ostream &os) {
-  if (clDialectName.empty())
+  if (dialectNameStorage.empty())
     llvm::PrintFatalError("dialect name not provided");
+
+  populateTypeMap(pythonTypeMap, builtinTypeMappings, records, "PythonTypeName",
+                  "cppName", "pyName");
+  populateTypeMap(pythonAttrTypeMap, builtinAttrTypeMappings, records,
+                  "PythonAttrType", "defName", "pyType");
 
   os << fileHeader;
   if (!clDialectExtensionName.empty())
-    os << formatv(dialectExtensionTemplate, clDialectName.getValue());
+    os << formatv(dialectExtensionTemplate, dialectNameStorage);
   else
-    os << formatv(dialectClassTemplate, clDialectName.getValue());
+    os << formatv(dialectClassTemplate, dialectNameStorage);
 
   for (const Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
-    if (op.getDialectName() == clDialectName.getValue())
+    if (op.getDialectName() == dialectNameStorage)
       emitOpBindings(op, os);
   }
   return false;

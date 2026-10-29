@@ -11,45 +11,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCOptions.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-enum AsmWriterVariantTy {
-  Default = -1,
-  Generic = 0,
-  Apple = 1
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> COFFAtSpecifierDefs[] = {
+    {{"IMGREL"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
+    {{"PAGEOFF"}, AArch64::S_MACHO_PAGEOFF},
 };
+constexpr auto COFFAtSpecifiers = BUILD_ENUM_STRINGS(COFFAtSpecifierDefs);
 
-static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
-    "aarch64-neon-syntax", cl::init(Default),
-    cl::desc("Choose style of NEON code to emit from AArch64 backend:"),
-    cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
-               clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
-
-const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
-    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
-    {AArch64::S_MACHO_PAGEOFF, "PAGEOFF"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> ELFAtSpecifierDefs[] = {
+    {{"GOT"}, AArch64::S_GOT},
 };
+constexpr auto ELFAtSpecifiers = BUILD_ENUM_STRINGS(ELFAtSpecifierDefs);
 
-const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
-    {AArch64::S_GOT, "GOT"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> MachOAtSpecifierDefs[] = {
+    {{"GOT"}, AArch64::S_MACHO_GOT},
+    {{"GOTPAGE"}, AArch64::S_MACHO_GOTPAGE},
+    {{"GOTPAGEOFF"}, AArch64::S_MACHO_GOTPAGEOFF},
+    {{"PAGE"}, AArch64::S_MACHO_PAGE},
+    {{"PAGEOFF"}, AArch64::S_MACHO_PAGEOFF},
+    {{"TLVP"}, AArch64::S_MACHO_TLVP},
+    {{"TLVPPAGE"}, AArch64::S_MACHO_TLVPPAGE},
+    {{"TLVPPAGEOFF"}, AArch64::S_MACHO_TLVPPAGEOFF},
 };
-
-const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
-    {AArch64::S_MACHO_GOT, "GOT"},
-    {AArch64::S_MACHO_GOTPAGE, "GOTPAGE"},
-    {AArch64::S_MACHO_GOTPAGEOFF, "GOTPAGEOFF"},
-    {AArch64::S_MACHO_PAGE, "PAGE"},
-    {AArch64::S_MACHO_PAGEOFF, "PAGEOFF"},
-    {AArch64::S_MACHO_TLVP, "TLVP"},
-    {AArch64::S_MACHO_TLVPPAGE, "TLVPPAGE"},
-    {AArch64::S_MACHO_TLVPPAGEOFF, "TLVPPAGEOFF"},
-};
+constexpr auto MachOAtSpecifiers = BUILD_ENUM_STRINGS(MachOAtSpecifierDefs);
 
 StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   // clang-format off
@@ -139,13 +131,15 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   return !Res.getSubSym();
 }
 
-AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
+AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
+                                               const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
-  AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
+  AssemblerDialect =
+      AArch64_MC::getCLOpts(Options).neon_syntax.value_or(AArch64::Apple);
 
   InternalSymbolPrefix = "L";
-  PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";
   CalleeSaveStackSlotSize = 8;
@@ -155,7 +149,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(MachOAtSpecifiers);
   UseAtForSpecifier = false;
@@ -203,13 +196,16 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
+AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 
   // We prefer NEON instructions to be printed in the generic form when
   // targeting ELF.
-  AssemblerDialect = AsmWriterVariant == Default ? Generic : AsmWriterVariant;
+  AssemblerDialect =
+      AArch64_MC::getCLOpts(Options).neon_syntax.value_or(AArch64::Generic);
 
   CodePointerSize = T.getEnvironment() == Triple::GNUILP32 ? 4 : 8;
 
@@ -218,7 +214,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 
   CommentString = "//";
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";
@@ -229,9 +224,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   WeakRefDirective = "\t.weak\t";
 
   SupportsDebugInformation = true;
-
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   HasIdentDirective = true;
 
@@ -257,9 +249,10 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
+AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";
@@ -270,7 +263,6 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);
@@ -287,9 +279,9 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
+AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";
@@ -300,7 +292,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);

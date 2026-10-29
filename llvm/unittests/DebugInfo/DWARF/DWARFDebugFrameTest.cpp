@@ -176,6 +176,7 @@ TEST(DWARFDebugFrame, InvalidCFIOpcodesTest) {
       dwarf::DW_CFA_GNU_window_save,
       dwarf::DW_CFA_AARCH64_negate_ra_state,
       dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc,
+      dwarf::DW_CFA_AARCH64_set_ra_state,
       dwarf::DW_CFA_GNU_args_size};
 
   dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
@@ -1407,7 +1408,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_expression) {
   dwarf::RegisterLocations VerifyLocs;
 
   std::vector<uint8_t> ExprBytes = {dwarf::DW_OP_reg12};
-  DataExtractor ExprData(ExprBytes, true, AddrSize);
+  DataExtractor ExprData(ExprBytes, true);
   DWARFExpression Expr(ExprData, AddrSize);
   VerifyLocs.setRegisterLocation(
       Reg, dwarf::UnwindLocation::createAtDWARFExpression(Expr));
@@ -1459,7 +1460,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_expression) {
   dwarf::RegisterLocations VerifyLocs;
 
   std::vector<uint8_t> ExprBytes = {dwarf::DW_OP_reg12};
-  DataExtractor ExprData(ExprBytes, true, AddrSize);
+  DataExtractor ExprData(ExprBytes, true);
   DWARFExpression Expr(ExprData, AddrSize);
   VerifyLocs.setRegisterLocation(
       Reg, dwarf::UnwindLocation::createIsDWARFExpression(Expr));

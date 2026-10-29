@@ -87,12 +87,17 @@ void Value::replaceAllUsesExcept(Value newValue, Operation *exceptedUser) {
 }
 
 /// Replace all uses of 'this' value with 'newValue' if the given callback
-/// returns true.
-void Value::replaceUsesWithIf(Value newValue,
+/// returns true. Returns whether any uses were replaced.
+bool Value::replaceUsesWithIf(Value newValue,
                               function_ref<bool(OpOperand &)> shouldReplace) {
-  for (OpOperand &use : llvm::make_early_inc_range(getUses()))
-    if (shouldReplace(use))
+  bool replaced = false;
+  for (OpOperand &use : llvm::make_early_inc_range(getUses())) {
+    if (shouldReplace(use)) {
       use.set(newValue);
+      replaced = true;
+    }
+  }
+  return replaced;
 }
 
 /// Returns true if the value is used outside of the given block.
@@ -214,7 +219,7 @@ IRObjectWithUseList<BlockOperand> *BlockOperand::getUseList(Block *value) {
 }
 
 /// Return which operand this is in the operand list.
-unsigned BlockOperand::getOperandNumber() {
+unsigned BlockOperand::getOperandNumber() const {
   return this - &getOwner()->getBlockOperands()[0];
 }
 
@@ -223,6 +228,6 @@ unsigned BlockOperand::getOperandNumber() {
 //===----------------------------------------------------------------------===//
 
 /// Return which operand this is in the operand list.
-unsigned OpOperand::getOperandNumber() {
+unsigned OpOperand::getOperandNumber() const {
   return this - &getOwner()->getOpOperands()[0];
 }

@@ -14,6 +14,7 @@ import recognizer
 class FrameRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # the recognizer reads the arguments from $argN, and Wasm has no argument registers
     def test_frame_recognizer_1(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -73,12 +74,12 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer delete 2",
             error=True,
-            substrs=["error: '2' is not a valid recognizer id."],
+            substrs=["error: '2' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete 0",
             error=True,
-            substrs=["error: '0' is not a valid recognizer id."],
+            substrs=["error: '0' is not a valid recognizer id"],
         )
         # Recognizers should have the same state as above.
         self.expect(
@@ -162,6 +163,28 @@ class FrameRecognizerTestCase(TestBase):
                     substrs=['*a = 78'])
         """
 
+    @skipIfWasm  # the recognizer reads the arguments from $argN, and Wasm has no argument registers
+    def test_recognized_args_filtered_by_name(self):
+        """Test that 'frame variable <name>' only prints matching recognized args."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "foo")
+
+        self.runCmd("frame recognizer clear")
+        self.runCmd("command script import recognizer.py")
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo"
+        )
+
+        # With no args, both recognized args are printed.
+        self.expect("frame variable", substrs=["(int) a = 42", "(int) b = 56"])
+
+        # With a specific name, only the matching recognized arg is printed.
+        self.expect("frame variable a", substrs=["(int) a = 42"])
+        self.expect("frame variable a", matching=False, substrs=["b = 56"])
+
+        self.expect("frame variable b", substrs=["(int) b = 56"])
+        self.expect("frame variable b", matching=False, substrs=["a = 42"])
+
     def test_frame_recognizer_hiding(self):
         self.build()
 
@@ -200,6 +223,46 @@ class FrameRecognizerTestCase(TestBase):
         thread.StepOut()
         frame = thread.GetSelectedFrame()
         self.assertIn("main", frame.name)
+
+    def test_frame_recognizer_optional_hooks(self):
+        """Exercise select_most_relevant_frame, get_exception, and
+        get_stop_description via a recognizer that implements all three.
+        Each hook records the frame name it saw in a class-level list so
+        the test can assert the hook actually fired."""
+        self.build()
+
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "nested")
+
+        self.expect("frame recognizer clear")
+        self.expect(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "recognizer.py")
+        )
+
+        # Reset the call trackers to isolate this test's activity from
+        # anything the recognizer might have observed earlier.
+        import recognizer
+
+        recognizer.NestedFrameRecognizer.select_most_relevant_frame_calls.clear()
+        recognizer.NestedFrameRecognizer.get_exception_calls.clear()
+        recognizer.NestedFrameRecognizer.get_stop_description_calls.clear()
+
+        self.expect(
+            "frame recognizer add -l recognizer.NestedFrameRecognizer "
+            "-f false -s a.out -n nested"
+        )
+
+        # Backtracing triggers recognition on each frame lldb walks.
+        self.runCmd("thread backtrace")
+
+        self.assertIn(
+            "nested", recognizer.NestedFrameRecognizer.select_most_relevant_frame_calls
+        )
+        self.assertIn("nested", recognizer.NestedFrameRecognizer.get_exception_calls)
+        self.assertIn(
+            "nested",
+            recognizer.NestedFrameRecognizer.get_stop_description_calls,
+        )
 
     def test_frame_recognizer_multi_symbol(self):
         self.build()
@@ -311,6 +374,7 @@ class FrameRecognizerTestCase(TestBase):
             substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
         )
 
+    @requireNotWasm("$arg1/$arg2 need argument registers, unsupported on WebAssembly.")
     def test_frame_recognizer_not_only_first_instruction(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -448,22 +512,22 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer delete a",
             error=True,
-            substrs=["error: 'a' is not a valid recognizer id."],
+            substrs=["error: 'a' is not a valid recognizer id"],
         )
         self.expect(
             'frame recognizer delete ""',
             error=True,
-            substrs=["error: '' is not a valid recognizer id."],
+            substrs=["error: '' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete -1",
             error=True,
-            substrs=["error: '-1' is not a valid recognizer id."],
+            substrs=["error: '-1' is not a valid recognizer id"],
         )
         self.expect(
             "frame recognizer delete 4294967297",
             error=True,
-            substrs=["error: '4294967297' is not a valid recognizer id."],
+            substrs=["error: '4294967297' is not a valid recognizer id"],
         )
 
     @no_debug_info_test
@@ -471,22 +535,22 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer info a",
             error=True,
-            substrs=["error: 'a' is not a valid frame index."],
+            substrs=["error: 'a' is not a valid frame index"],
         )
         self.expect(
             'frame recognizer info ""',
             error=True,
-            substrs=["error: '' is not a valid frame index."],
+            substrs=["error: '' is not a valid frame index"],
         )
         self.expect(
             "frame recognizer info -1",
             error=True,
-            substrs=["error: '-1' is not a valid frame index."],
+            substrs=["error: '-1' is not a valid frame index"],
         )
         self.expect(
             "frame recognizer info 4294967297",
             error=True,
-            substrs=["error: '4294967297' is not a valid frame index."],
+            substrs=["error: '4294967297' is not a valid frame index"],
         )
 
     @no_debug_info_test

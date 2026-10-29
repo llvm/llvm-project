@@ -17,6 +17,8 @@
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
+#include "hdr/sys_mman_macros.h" // For MREMAP_FIXED, MAP_FAILED.
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, mremap,

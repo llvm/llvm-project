@@ -172,8 +172,7 @@ define <8 x i32> @shuffle_v8i32_u5u7cdef(<8 x i32> %a, <8 x i32> %b) nounwind uw
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v8i32_u5u7cdef:
@@ -609,15 +608,15 @@ define <4 x i64> @ld0_hi0_lo1_4i64(ptr %pa, <4 x i64> %b) nounwind uwtable readn
 ; AVX1-LABEL: ld0_hi0_lo1_4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,2]
+; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [3,4]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld0_hi0_lo1_4i64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vperm2i128 $3, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3],ymm0[0,1]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,3,4]
 ; AVX2-NEXT:    retq
 entry:
   %a = load <4 x i64>, ptr %pa
@@ -630,16 +629,16 @@ define <4 x i64> @ld1_hi0_hi1_4i64(<4 x i64> %a, ptr %pb) nounwind uwtable readn
 ; AVX1-LABEL: ld1_hi0_hi1_4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2]
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [3,4]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ld1_hi0_hi1_4i64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vperm2i128 $49, (%rdi), %ymm0, %ymm0 # ymm0 = ymm0[2,3],mem[2,3]
-; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,3,4]
 ; AVX2-NEXT:    retq
 entry:
   %b = load <4 x i64>, ptr %pb
@@ -660,7 +659,7 @@ define <8 x i32> @ld0_hi0_lo1_8i32(ptr %pa, <8 x i32> %b) nounwind uwtable readn
 ; AVX2-LABEL: ld0_hi0_lo1_8i32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vperm2i128 $3, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3],ymm0[0,1]
-; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,3,4,1,2,3,4]
 ; AVX2-NEXT:    retq
 entry:
   %a = load <8 x i32>, ptr %pa
@@ -682,7 +681,7 @@ define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, ptr %pb) nounwind uwtable readn
 ; AVX2-LABEL: ld1_hi0_hi1_8i32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vperm2i128 $49, (%rdi), %ymm0, %ymm0 # ymm0 = ymm0[2,3],mem[2,3]
-; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,3,4,1,2,3,4]
 ; AVX2-NEXT:    retq
 entry:
   %b = load <8 x i32>, ptr %pb

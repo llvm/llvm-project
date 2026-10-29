@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass renames everything with metasyntatic names. The intent is to use
-// this pass after bugpoint reduction to conceal the nature of the original
+// this pass after llvm-reduce reduction to conceal the nature of the original
 // program.
 //
 //===----------------------------------------------------------------------===//
@@ -18,8 +18,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct MetaRenamerPass : PassInfoMixin<MetaRenamerPass> {
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &);
+struct MetaRenamerPass : OptionalPassInfoMixin<MetaRenamerPass> {
+  LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);
 };
 } // namespace llvm
 

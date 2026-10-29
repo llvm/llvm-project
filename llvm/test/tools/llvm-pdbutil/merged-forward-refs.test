@@ -1,0 +1,35 @@
+# RUN: llvm-pdbutil yaml2pdb %p/Inputs/forward-refs1.yaml --pdb=%t.1.pdb
+# RUN: llvm-pdbutil yaml2pdb %p/Inputs/forward-refs2.yaml --pdb=%t.2.pdb
+# RUN: llvm-pdbutil merge %t.1.pdb %t.2.pdb --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --types %t.1.pdb | FileCheck %s --check-prefix=ONE
+# RUN: llvm-pdbutil dump --types %t.2.pdb | FileCheck %s --check-prefix=TWO
+# RUN: llvm-pdbutil dump --types %t.pdb | FileCheck %s --check-prefix=MERGED
+
+# Test that forward references can be found after merging (requires type hashes).
+
+# ONE:       0x1002 | LF_STRUCTURE [size = 36] `Foo`
+# ONE-NEXT:           unique name: `.?AUFoo@@`
+# ONE-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# ONE-NEXT:           options: forward ref (-> 0x1006) | has unique name, sizeof 0
+# ONE:       0x1006 | LF_STRUCTURE [size = 36] `Foo`
+# ONE-NEXT:           unique name: `.?AUFoo@@`
+
+# TWO:       0x1002 | LF_STRUCTURE [size = 36] `Bar`
+# TWO-NEXT:           unique name: `.?AUBar@@`
+# TWO-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# TWO-NEXT:           options: forward ref (-> 0x1006) | has unique name, sizeof 0
+# TWO:       0x1006 | LF_STRUCTURE [size = 36] `Bar`
+# TWO-NEXT:           unique name: `.?AUBar@@`
+
+# MERGED:       0x1002 | LF_STRUCTURE [size = 36] `Foo`
+# MERGED-NEXT:           unique name: `.?AUFoo@@`
+# MERGED-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# MERGED-NEXT:           options: forward ref (-> 0x1006) | has unique name, sizeof 0
+# MERGED:       0x1006 | LF_STRUCTURE [size = 36] `Foo`
+# MERGED-NEXT:           unique name: `.?AUFoo@@`
+# MERGED:       0x1007 | LF_STRUCTURE [size = 36] `Bar`
+# MERGED-NEXT:           unique name: `.?AUBar@@`
+# MERGED-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# MERGED-NEXT:           options: forward ref (-> 0x100B) | has unique name, sizeof 0
+# MERGED:       0x100B | LF_STRUCTURE [size = 36] `Bar`
+# MERGED-NEXT:           unique name: `.?AUBar@@`

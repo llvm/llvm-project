@@ -173,3 +173,31 @@ define <4 x i32> @neon_cls_v4i32_knownbits(<4 x i32> %a) nounwind {
 }
 
 declare <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32>) nounwind readnone
+
+; Test ensures that the compiler generates no extra instructions
+; for __builtin_clzg output type conversion
+define i32 @foo8(i8 %0) {
+; CHECK-LABEL: foo8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    clz w8, w8
+; CHECK-NEXT:    sub w0, w8, #24
+; CHECK-NEXT:    ret
+  %2 = tail call i8 @llvm.ctlz.i8(i8 %0, i1 false)
+  %3 = zext nneg i8 %2 to i32
+  ret i32 %3
+}
+
+; Test ensures that the compiler generates no extra instructions
+; for __builtin_clzg output type conversion
+define i32 @foo16(i16 %0) {
+; CHECK-LABEL: foo16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    clz w8, w8
+; CHECK-NEXT:    sub w0, w8, #16
+; CHECK-NEXT:    ret
+  %2 = tail call i16 @llvm.ctlz.i16(i16 %0, i1 false)
+  %3 = zext nneg i16 %2 to i32
+  ret i32 %3
+}

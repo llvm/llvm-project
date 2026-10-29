@@ -17,9 +17,9 @@ export int32_t3 case2(int32_t3 b) {
 }
 
 // CHECK-LABEL: case3
-// CHECK: [[ToBool:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une half {{.*}}, 0xH0000
+// CHECK: [[ToBool:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une half {{.*}}, 0.000000e+00
 // CHECK-NEXT: [[BoolCmp:%.*]] = xor i1 [[ToBool]], true
-// CHECK-NEXT: {{.*}} = uitofp i1 [[BoolCmp]] to half
+// CHECK-NEXT: {{.*}} = uitofp reassoc nnan ninf nsz arcp afn i1 [[BoolCmp]] to half
 export float16_t case3(float16_t b) {
     return !b;
 }
@@ -27,7 +27,7 @@ export float16_t case3(float16_t b) {
 // CHECK-LABEL: case4
 // CHECK: [[ToBool:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x float> {{.*}}, zeroinitializer
 // CHECK-NEXT: [[BoolCmp:%.*]] = icmp eq <4 x i1> [[ToBool]], zeroinitializer
-// CHECK-NEXT: {{.*}} = uitofp <4 x i1> [[BoolCmp]] to <4 x float>
+// CHECK-NEXT: {{.*}} = uitofp reassoc nnan ninf nsz arcp afn <4 x i1> [[BoolCmp]] to <4 x float>
 export float4 case4(float4 b) {
     return !b;
 }

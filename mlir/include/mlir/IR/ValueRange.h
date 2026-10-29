@@ -17,6 +17,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
@@ -297,22 +298,25 @@ public:
 
   /// Replace uses of results of this range with the provided 'values' if the
   /// given callback returns true. The size of `values` must match the size of
-  /// this range.
+  /// this range. Returns whether any uses were replaced.
   template <typename ValuesT>
-  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value>
+  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value, bool>
   replaceUsesWithIf(ValuesT &&values,
                     function_ref<bool(OpOperand &)> shouldReplace) {
     assert(static_cast<size_t>(std::distance(values.begin(), values.end())) ==
                size() &&
            "expected 'values' to correspond 1-1 with the number of results");
 
+    bool replaced = false;
     for (auto it : llvm::zip(*this, values))
-      std::get<0>(it).replaceUsesWithIf(std::get<1>(it), shouldReplace);
+      replaced |=
+          std::get<0>(it).replaceUsesWithIf(std::get<1>(it), shouldReplace);
+    return replaced;
   }
 
   /// Replace uses of results of this range with results of `op` if the given
-  /// callback returns true.
-  void replaceUsesWithIf(Operation *op,
+  /// callback returns true. Returns whether any uses were replaced.
+  bool replaceUsesWithIf(Operation *op,
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   //===--------------------------------------------------------------------===//
@@ -383,13 +387,14 @@ private:
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
           ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
+          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *,
+                       const Repeated<Value> *>,
           Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
-  using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+  /// values, operands, results, or a repeated single value.
+  using OwnerT = PointerUnion<const Value *, OpOperand *,
+                              detail::OpResultImpl *, const Repeated<Value> *>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -412,6 +417,10 @@ public:
   ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
+  /// Constructs a range from a repeated value. The Repeated object must outlive
+  /// this range.
+  ValueRange(const Repeated<Value> &repeatedValue LLVM_LIFETIME_BOUND)
+      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;

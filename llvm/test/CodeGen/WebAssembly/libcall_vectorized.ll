@@ -9,24 +9,27 @@ declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
 define <4 x float> @exp10_f32v4(<4 x float> %v) {
 ; CHECK-LABEL: exp10_f32v4:
 ; CHECK:         .functype exp10_f32v4 (v128) -> (v128)
+; CHECK-NEXT:    .local f32
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get $push12=, 0
-; CHECK-NEXT:    f32x4.extract_lane $push0=, $pop12, 0
-; CHECK-NEXT:    call $push1=, exp10f, $pop0
-; CHECK-NEXT:    f32x4.splat $push2=, $pop1
+; CHECK-NEXT:    local.get $push11=, 0
+; CHECK-NEXT:    f32x4.extract_lane $push0=, $pop11, 1
+; CHECK-NEXT:    call $push12=, exp10f, $pop0
+; CHECK-NEXT:    local.set 1, $pop12
 ; CHECK-NEXT:    local.get $push13=, 0
-; CHECK-NEXT:    f32x4.extract_lane $push3=, $pop13, 1
-; CHECK-NEXT:    call $push4=, exp10f, $pop3
-; CHECK-NEXT:    f32x4.replace_lane $push5=, $pop2, 1, $pop4
-; CHECK-NEXT:    local.get $push14=, 0
-; CHECK-NEXT:    f32x4.extract_lane $push6=, $pop14, 2
-; CHECK-NEXT:    call $push7=, exp10f, $pop6
-; CHECK-NEXT:    f32x4.replace_lane $push8=, $pop5, 2, $pop7
+; CHECK-NEXT:    f32x4.extract_lane $push1=, $pop13, 0
+; CHECK-NEXT:    call $push2=, exp10f, $pop1
+; CHECK-NEXT:    f32x4.splat $push3=, $pop2
+; CHECK-NEXT:    local.get $push14=, 1
+; CHECK-NEXT:    f32x4.replace_lane $push4=, $pop3, 1, $pop14
 ; CHECK-NEXT:    local.get $push15=, 0
-; CHECK-NEXT:    f32x4.extract_lane $push9=, $pop15, 3
-; CHECK-NEXT:    call $push10=, exp10f, $pop9
-; CHECK-NEXT:    f32x4.replace_lane $push11=, $pop8, 3, $pop10
-; CHECK-NEXT:    return $pop11
+; CHECK-NEXT:    f32x4.extract_lane $push5=, $pop15, 2
+; CHECK-NEXT:    call $push6=, exp10f, $pop5
+; CHECK-NEXT:    f32x4.replace_lane $push7=, $pop4, 2, $pop6
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    f32x4.extract_lane $push8=, $pop16, 3
+; CHECK-NEXT:    call $push9=, exp10f, $pop8
+; CHECK-NEXT:    f32x4.replace_lane $push10=, $pop7, 3, $pop9
+; CHECK-NEXT:    return $pop10
 entry:
   %r = call <4 x float> @llvm.exp10.v4f32(<4 x float> %v)
   ret <4 x float> %r

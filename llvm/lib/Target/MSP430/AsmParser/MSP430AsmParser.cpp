@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MSP430MCAsmInfo.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MSP430.h"
-#include "MSP430RegisterInfo.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
@@ -20,6 +18,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -77,8 +76,8 @@ class MSP430AsmParser : public MCTargetAsmParser {
 
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -113,14 +112,13 @@ class MSP430Operand : public MCParsedAsmOperand {
   SMLoc Start, End;
 
 public:
-  MSP430Operand(StringRef Tok, SMLoc const &S)
+  MSP430Operand(StringRef Tok, SMLoc S)
       : Kind(k_Tok), Tok(Tok), Start(S), End(S) {}
-  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc S, SMLoc E)
       : Kind(Kind), Reg(Reg), Start(S), End(E) {}
-  MSP430Operand(MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(MCExpr const *Imm, SMLoc S, SMLoc E)
       : Kind(k_Imm), Imm(Imm), Start(S), End(E) {}
-  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc const &S,
-                SMLoc const &E)
+  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc S, SMLoc E)
       : Kind(k_Mem), Mem({Reg, Expr}), Start(S), End(E) {}
 
   void addRegOperands(MCInst &Inst, unsigned N) const {
@@ -576,8 +574,7 @@ unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_InvalidOperand;
 
   MCRegister Reg = Op.getReg();
-  bool isGR16 =
-      MSP430MCRegisterClasses[MSP430::GR16RegClassID].contains(Reg);
+  bool isGR16 = getMSP430MCRegisterClass(MSP430::GR16RegClassID).contains(Reg);
 
   if (isGR16 && (Kind == MCK_GR8)) {
     Op.setReg(convertGR16ToGR8(Reg));

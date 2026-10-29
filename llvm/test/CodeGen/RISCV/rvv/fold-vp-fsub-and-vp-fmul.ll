@@ -5,9 +5,8 @@
 define <vscale x 1 x double> @test1(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmsub.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmsub.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fsub.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 %vl)
@@ -18,9 +17,8 @@ define <vscale x 1 x double> @test1(<vscale x 1 x double> %x, <vscale x 1 x doub
 define <vscale x 1 x double> @test2(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfnmsub.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfnmsub.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fsub.nxv1f64(<vscale x 1 x double> %z, <vscale x 1 x double> %1, <vscale x 1 x i1> %m, i32 %vl)
@@ -31,9 +29,8 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %x, <vscale x 1 x doub
 define <vscale x 1 x double> @test3(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmsub.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmsub.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x i1> %m, i32 %vl)

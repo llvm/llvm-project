@@ -37,7 +37,7 @@ entry:
 define zeroext i16 @and_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: and_sext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -56,7 +56,7 @@ entry:
 define zeroext i16 @and_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: and_zext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -106,7 +106,7 @@ entry:
 define i32 @and_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: and_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -124,7 +124,7 @@ entry:
 define i32 @and_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: and_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -174,7 +174,7 @@ entry:
 define i64 @and_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: and_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -192,7 +192,7 @@ entry:
 define i64 @and_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: and_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -239,7 +239,7 @@ entry:
 define i32 @and_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: and_sext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -256,7 +256,7 @@ entry:
 define i32 @and_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: and_zext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -301,7 +301,7 @@ entry:
 define i64 @and_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: and_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -318,7 +318,7 @@ entry:
 define i64 @and_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: and_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -361,7 +361,7 @@ entry:
 define i64 @and_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: and_sext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -377,7 +377,7 @@ entry:
 define i64 @and_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: and_zext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -425,7 +425,7 @@ entry:
 define zeroext i16 @or_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: or_sext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -444,7 +444,7 @@ entry:
 define zeroext i16 @or_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: or_zext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -494,7 +494,7 @@ entry:
 define i32 @or_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: or_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -512,7 +512,7 @@ entry:
 define i32 @or_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: or_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -562,7 +562,7 @@ entry:
 define i64 @or_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: or_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -580,7 +580,7 @@ entry:
 define i64 @or_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: or_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    orr x8, x8, x8, lsr #32
@@ -628,7 +628,7 @@ entry:
 define i32 @or_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: or_sext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -645,7 +645,7 @@ entry:
 define i32 @or_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: or_zext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -692,7 +692,7 @@ entry:
 define i64 @or_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: or_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -709,7 +709,7 @@ entry:
 define i64 @or_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: or_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -753,7 +753,7 @@ entry:
 define i64 @or_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: or_sext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -769,7 +769,7 @@ entry:
 define i64 @or_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: or_zext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -817,7 +817,7 @@ entry:
 define zeroext i16 @xor_sext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -836,7 +836,7 @@ entry:
 define zeroext i16 @xor_zext_v16i8_i16(<16 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v16i8_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -886,7 +886,7 @@ entry:
 define i32 @xor_sext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -904,7 +904,7 @@ entry:
 define i32 @xor_zext_v16i8_i32(<16 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v16i8_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -954,7 +954,7 @@ entry:
 define i64 @xor_sext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: xor_sext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -972,7 +972,7 @@ entry:
 define i64 @xor_zext_v16i8_i64(<16 x i8> %x) {
 ; CHECK-LABEL: xor_zext_v16i8_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    eor x8, x8, x8, lsr #32
@@ -1020,7 +1020,7 @@ entry:
 define i32 @xor_sext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: xor_sext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -1037,7 +1037,7 @@ entry:
 define i32 @xor_zext_v8i16_i32(<8 x i16> %x) {
 ; CHECK-LABEL: xor_zext_v8i16_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -1084,7 +1084,7 @@ entry:
 define i64 @xor_sext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: xor_sext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -1101,7 +1101,7 @@ entry:
 define i64 @xor_zext_v8i16_i64(<8 x i16> %x) {
 ; CHECK-LABEL: xor_zext_v8i16_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -1145,7 +1145,7 @@ entry:
 define i64 @xor_sext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: xor_sext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -1161,7 +1161,7 @@ entry:
 define i64 @xor_zext_v4i32_i64(<4 x i32> %x) {
 ; CHECK-LABEL: xor_zext_v4i32_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32

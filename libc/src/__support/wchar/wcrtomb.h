@@ -24,9 +24,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
+LIBC_INLINE ErrorOr<size_t> wcrtomb(char *__restrict dest_ptr, wchar_t wc,
                                     mbstate *__restrict ps) {
-  LIBC_CRASH_ON_NULLPTR(s);
+  LIBC_CRASH_ON_NULLPTR(dest_ptr);
   LIBC_CRASH_ON_NULLPTR(ps);
   static_assert(sizeof(wchar_t) == 4);
 
@@ -44,8 +44,8 @@ LIBC_INLINE ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
     auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
     LIBC_ASSERT(utf8.has_value());
 
-    *s = utf8.value();
-    s++;
+    *dest_ptr = utf8.value();
+    dest_ptr++;
     count++;
   }
   return count;

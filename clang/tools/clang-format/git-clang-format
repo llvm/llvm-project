@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 usage = "git clang-format [OPTIONS] [<commit>] [<commit>|--staged] [--] [<file>...]"
 
@@ -57,6 +58,11 @@ The following git-config settings set the default of the corresponding option:
   clangFormat.commit
   clangFormat.extensions
   clangFormat.style
+
+When running inside a pre-commit CI environment (i.e., no commits are given
+on the command line and the PRE_COMMIT_FROM_REF and PRE_COMMIT_TO_REF
+environment variables are set), the diff range is taken from those variables
+and --diff is implied.
 """
 
 # Name of the temporary index file in which save the output of clang-format.
@@ -197,6 +203,11 @@ def main():
         help="print extra information",
     )
     p.add_argument(
+        "--whole-file",
+        action="store_true",
+        help="format whole file instead of only modified lines",
+    )
+    p.add_argument(
         "--diff_from_common_commit",
         action="store_true",
         help=(
@@ -222,6 +233,16 @@ def main():
     )
     opts = p.parse_args(argv)
 
+    # When no commits are given explicitly and the pre-commit CI framework's
+    # environment variables are set, use them to define the diff range.
+    if not opts.args and not dash_dash:
+        from_ref = os.environ.get("PRE_COMMIT_FROM_REF")
+        to_ref = os.environ.get("PRE_COMMIT_TO_REF")
+        if from_ref and to_ref:
+            opts.args = [from_ref, to_ref]
+            if not opts.diff and not opts.diffstat:
+                opts.diff = True
+
     opts.verbose -= opts.quiet
     del opts.quiet
 
@@ -240,7 +261,7 @@ def main():
         opts.binary = os.path.abspath(opts.binary)
 
     changed_lines = compute_diff_and_extract_lines(
-        commits, files, opts.staged, opts.diff_from_common_commit
+        commits, files, opts.staged, opts.whole_file, opts.diff_from_common_commit
     )
     if opts.verbose >= 1:
         ignored_files = set(changed_lines)
@@ -394,10 +415,12 @@ def get_object_type(value):
     return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
+def compute_diff_and_extract_lines(
+    commits, files, staged, whole_file, diff_common_commit
+):
     """Calls compute_diff() followed by extract_lines()."""
     diff_process = compute_diff(commits, files, staged, diff_common_commit)
-    changed_lines = extract_lines(diff_process.stdout)
+    changed_lines = extract_lines(diff_process.stdout, whole_file)
     diff_process.stdout.close()
     diff_process.wait()
     if diff_process.returncode != 0:
@@ -430,7 +453,7 @@ def compute_diff(commits, files, staged, diff_common_commit):
     return p
 
 
-def extract_lines(patch_file):
+def extract_lines(patch_file, whole_file):
     """Extract the changed lines in `patch_file`.
 
     The return value is a dictionary mapping filename to a list of (start_line,
@@ -445,17 +468,24 @@ def extract_lines(patch_file):
         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
         if match:
             filename = match.group(1).rstrip("\r\n\t")
-        match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
-        if match:
-            start_line = int(match.group(1))
-            line_count = 1
-            if match.group(3):
-                line_count = int(match.group(3))
-            if line_count == 0:
-                line_count = 1
-            if start_line == 0:
+            if whole_file:
+                # Initialize the key for filename but ensure ranges is an empty
+                # list. This will prevent any filtering in clang_format_to_blob().
+                matches[filename] = []
                 continue
-            matches.setdefault(filename, []).append(Range(start_line, line_count))
+        if not whole_file:
+            match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
+            if match:
+                start_line = int(match.group(1))
+                line_count = 1
+                if match.group(3):
+                    line_count = int(match.group(3))
+                # A hunk that adds no lines is a pure deletion. start_line
+                # refers to the preceding line (0 when the deletion is at the
+                # start of a file), which the deletion left alone.
+                if line_count == 0:
+                    continue
+                matches.setdefault(filename, []).append(Range(start_line, line_count))
     return matches
 
 
@@ -707,7 +737,10 @@ def create_temporary_index(tree=None):
     If `tree` is not None, use that as the tree to read in.  Otherwise, an
     empty index is created."""
     gitdir = run("git", "rev-parse", "--git-dir")
-    path = os.path.join(gitdir, temp_index_basename)
+    # Use a unique filename to avoid stale .lock files when concurrent git
+    # operations (e.g. pre-commit hooks) race with this process.
+    fd, path = tempfile.mkstemp(prefix=temp_index_basename + "-", dir=gitdir)
+    os.close(fd)
     if tree is None:
         tree = "--empty"
     run("git", "read-tree", "--index-output=" + path, tree)

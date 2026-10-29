@@ -20,9 +20,10 @@ public:
     Update();
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_list_sp)
-      return llvm::createStringError("Missing _List");
+      return llvm::createStringError("missing _List");
     return m_list_sp->GetIndexOfChildWithName(name);
   }
 
@@ -30,7 +31,7 @@ public:
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
     if (!m_list_sp)
-      return llvm::createStringError("Missing _List");
+      return llvm::createStringError("missing _List");
     return m_list_sp->GetNumChildren();
   }
 

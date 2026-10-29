@@ -50,11 +50,11 @@ define void @t3(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: t3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    slli a4, a0, 2
-; CHECK-NEXT:    addi a5, a4, 45
-; CHECK-NEXT:    add a4, a5, a1
-; CHECK-NEXT:    add a1, a5, a2
-; CHECK-NEXT:    sh2add a2, a0, a3
-; CHECK-NEXT:    mv a0, a4
+; CHECK-NEXT:    addi a4, a4, 45
+; CHECK-NEXT:    sh2add a3, a0, a3
+; CHECK-NEXT:    add a0, a4, a1
+; CHECK-NEXT:    add a1, a4, a2
+; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    tail callee3
 entry:
   %shl = shl i32 %a, 2

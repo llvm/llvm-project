@@ -58,7 +58,8 @@ template <typename T> class SmallVectorImpl;
 class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 //===----------------------------------------------------------------------===//
@@ -74,14 +75,15 @@ class MachineInstr
 public:
   using mmo_iterator = ArrayRef<MachineMemOperand *>::iterator;
 
+  using AsmPrinterFlagTy = uint8_t;
+
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
   /// otherwise easily derivable from the IR text.
-  ///
-  enum CommentFlag {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+  enum CommentFlag : AsmPrinterFlagTy {
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
@@ -126,8 +128,15 @@ public:
     SameSign = 1 << 21,      // Both operands have the same sign.
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    LRSplit = 1 << 23,       // Instruction for live range split.
+    NonNull = 1 << 24        // Address space cast source is not the null
+                             // value of the source address space.
   };
+
+  static constexpr uint32_t getPoisonGeneratingFlags() {
+    return NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
+           FmNoNans | FmNoInfs | SameSign | InBounds;
+  }
 
 private:
   const MCInstrDesc *MCID;              // Instruction descriptor.
@@ -154,7 +163,7 @@ private:
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint8_t AsmPrinterFlags;
+  AsmPrinterFlagTy AsmPrinterFlags;
 
   /// Cached opcode from MCID.
   uint32_t Opcode;
@@ -387,28 +396,28 @@ public:
   }
 
   /// Return the asm printer flags bitvector.
-  uint8_t getAsmPrinterFlags() const { return AsmPrinterFlags; }
+  AsmPrinterFlagTy getAsmPrinterFlags() const { return AsmPrinterFlags; }
 
   /// Clear the AsmPrinter bitvector.
   void clearAsmPrinterFlags() { AsmPrinterFlags = 0; }
 
   /// Return whether an AsmPrinter flag is set.
-  bool getAsmPrinterFlag(CommentFlag Flag) const {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  bool getAsmPrinterFlag(AsmPrinterFlagTy Flag) const {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     return AsmPrinterFlags & Flag;
   }
 
   /// Set a flag for the AsmPrinter.
-  void setAsmPrinterFlag(uint8_t Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void setAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags |= Flag;
   }
 
   /// Clear specific AsmPrinter flags.
-  void clearAsmPrinterFlag(CommentFlag Flag) {
-    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
+  void clearAsmPrinterFlag(AsmPrinterFlagTy Flag) {
+    assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(Flag) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags &= ~Flag;
   }
@@ -1366,6 +1375,7 @@ public:
   }
 
   // True if the instruction represents a position in the function.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isNonListDebugValue() const {
@@ -1516,6 +1526,11 @@ public:
   bool readsRegister(Register Reg, const TargetRegisterInfo *TRI) const {
     return findRegisterUseOperandIdx(Reg, TRI, false) != -1;
   }
+
+  /// Return true if two operands read (Reg, SubReg) and one is tied to a def of
+  /// another register.  Such reads may not be marked undef: rewriting the tie
+  /// would separate them.
+  LLVM_ABI bool hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const;
 
   /// Return true if the MachineInstr reads the specified virtual register.
   /// Take into account that a partial define is a
@@ -1761,6 +1776,14 @@ public:
   LLVM_ABI void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
                                       const TargetRegisterInfo &TRI);
 
+  /// Mark the implicit physreg defs named by the instruction description as
+  /// dead.
+  void setImplicitPhysRegDefsDead() {
+    unsigned Idx = getNumExplicitOperands();
+    for (unsigned E = Idx + MCID->implicit_defs().size(); Idx != E; ++Idx)
+      getOperand(Idx).setIsDead();
+  }
+
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.
@@ -1920,10 +1943,7 @@ public:
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
-  void setDebugLoc(DebugLoc DL) {
-    DbgLoc = std::move(DL);
-    assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-  }
+  void setDebugLoc(DebugLoc DL) { DbgLoc = std::move(DL); }
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
@@ -2127,22 +2147,11 @@ private:
 /// instruction rather than by pointer value.
 /// The hashing and equality testing functions ignore definitions so this is
 /// useful for CSE, etc.
-struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
-  static inline MachineInstr *getEmptyKey() {
-    return nullptr;
-  }
-
-  static inline MachineInstr *getTombstoneKey() {
-    return reinterpret_cast<MachineInstr*>(-1);
-  }
-
+struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr *> {
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
-  static bool isEqual(const MachineInstr* const &LHS,
-                      const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
-      return LHS == RHS;
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };

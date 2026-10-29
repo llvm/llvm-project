@@ -65,8 +65,8 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
   Style.ColumnLimit = 80;
 
   Style.BreakAfterOpenBracketFunction = true;
-  Style.BinPackArguments = false;
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa,\n"
                "    aaaaaaaaa aaaaaaa,\n"
@@ -118,8 +118,8 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
   Style.BreakAfterOpenBracketFunction = true;
   Style.BreakBeforeCloseBracketFunction = true;
   Style.BreakBeforeCloseBracketBracedList = true;
-  Style.BinPackArguments = false;
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa,\n"
                "    aaaaaaaaa aaaaaaa,\n"
@@ -286,8 +286,8 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndent) {
       ");",
       Medium, Style);
 
-  Style.BinPackArguments = false;
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
 
   verifyFormat(Short, Style);
 
@@ -608,6 +608,53 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentInitializers) {
                "    {baz},\n"
                "};",
                Style);
+  // The closing brace should be at the start of the line.
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct::SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s = SomeStruct{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("SomeArrayT //\n"
+               "    a[3] = {\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        SomeArrayT{},\n"
+               "};");
 }
 
 TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
@@ -676,7 +723,7 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
 
 TEST_F(AlignBracketsTest, FormatsDeclarationBreakAlways) {
   FormatStyle BreakAlways = getGoogleStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  BreakAlways.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("void f(int a,\n"
                "       int b);",
                BreakAlways);
@@ -685,8 +732,8 @@ TEST_F(AlignBracketsTest, FormatsDeclarationBreakAlways) {
                "       int cccccccccccccccccccccccc);",
                BreakAlways);
 
-  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
-  // to BPPS_AlwaysOnePerLine.
+  // Ensure AlignAfterOpenBracket interacts correctly with
+  // PackParameters.BinPack set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
@@ -705,15 +752,15 @@ TEST_F(AlignBracketsTest, FormatsDeclarationBreakAlways) {
 
 TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
   FormatStyle BreakAlways = getGoogleStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  BreakAlways.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("void f(int a,\n"
                "       int b) {\n"
                "  f(a, b);\n"
                "}",
                BreakAlways);
 
-  // Ensure BinPackArguments interact correctly when BinPackParameters is set to
-  // BPPS_AlwaysOnePerLine.
+  // Ensure BinPackArguments interact correctly when PackParameters.BinPack is
+  // set to BPPS_AlwaysOnePerLine.
   verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
                "       int cccccccccccccccccccccccc) {\n"
@@ -721,7 +768,7 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                "    cccccccccccccccccccccccc);\n"
                "}",
                BreakAlways);
-  BreakAlways.BinPackArguments = false;
+  BreakAlways.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
   verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
                "       int cccccccccccccccccccccccc) {\n"
@@ -731,8 +778,17 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                "}",
                BreakAlways);
 
+  // Ensure BreakFunctionDeclarationParameters interacts correctly when
+  // PackParameters.BinPack is set to BPPS_AlwaysOnePerLine.
+  BreakAlways.BreakFunctionDeclarationParameters = true;
+  verifyFormat("void f(\n"
+               "    int a,\n"
+               "    int b);",
+               BreakAlways);
+  BreakAlways.BreakFunctionDeclarationParameters = false;
+
   // Ensure BreakFunctionDefinitionParameters interacts correctly when
-  // BinPackParameters is set to BPPS_AlwaysOnePerLine.
+  // PackParameters.BinPack is set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakFunctionDefinitionParameters = true;
   verifyFormat("void f(\n"
                "    int a,\n"
@@ -742,8 +798,8 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
                BreakAlways);
   BreakAlways.BreakFunctionDefinitionParameters = false;
 
-  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
-  // to BPPS_AlwaysOnePerLine.
+  // Ensure AlignAfterOpenBracket interacts correctly with
+  // PackParameters.BinPack set to BPPS_AlwaysOnePerLine.
   BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"

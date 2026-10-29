@@ -84,21 +84,22 @@ use omp_lib
   end do
   !$omp end target
 
-  !ERROR: ALLOCATE clause is not allowed on the TARGET DATA directive
+  !ERROR: ALLOCATE clause is not allowed on TARGET DATA directive in OpenMP v5.2, try -fopenmp-version=60 [-Wopenmp-future]
+  !ERROR: The ALLOCATE clause requires that 'b' must be listed in a private data-sharing attribute clause on the same directive
   !$omp target data map(from: b) allocate(b)
   do i = 1, N
      z = 2
   enddo
   !$omp end target data
 
-  !ERROR: SCHEDULE clause is not allowed on the PARALLEL directive
+  !ERROR: SCHEDULE clause is not allowed on PARALLEL directive
   !$omp parallel schedule(static)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
 
-  !ERROR: COLLAPSE clause is not allowed on the PARALLEL directive
+  !ERROR: COLLAPSE clause is not allowed on PARALLEL directive
   !$omp parallel collapse(2)
   do i = 1, N
      do j = 1, N
@@ -121,19 +122,19 @@ use omp_lib
   do i = 1, N
      a = 3.14
   enddo
-  !ERROR: NUM_THREADS clause is not allowed on the END PARALLEL directive
+  !ERROR: NUM_THREADS clause is not allowed on an end-directive
   !$omp end parallel num_threads(4)
 
-  !ERROR: LASTPRIVATE clause is not allowed on the PARALLEL directive
-  !ERROR: NUM_TASKS clause is not allowed on the PARALLEL directive
-  !ERROR: INBRANCH clause is not allowed on the PARALLEL directive
+  !ERROR: LASTPRIVATE clause is not allowed on PARALLEL directive
+  !ERROR: NUM_TASKS clause is not allowed on PARALLEL directive
+  !ERROR: INBRANCH clause is not allowed on PARALLEL directive
   !$omp parallel lastprivate(a) NUM_TASKS(4) inbranch
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
 
-  !ERROR: At most one NUM_THREADS clause can appear on the PARALLEL directive
+  !ERROR: At most one NUM_THREADS clause can appear on PARALLEL directive
   !$omp parallel num_threads(2) num_threads(4)
   do i = 1, N
      a = 3.14
@@ -145,7 +146,7 @@ use omp_lib
   do i = 1, N
      a = 3.14
   enddo
-  !ERROR: NOWAIT clause is not allowed on the END PARALLEL directive
+  !ERROR: NOWAIT clause is not allowed on PARALLEL directive
   !$omp end parallel nowait
 
   !$omp parallel num_threads(num-10)
@@ -193,7 +194,7 @@ use omp_lib
 !                     ordered-clause
 
   !ERROR: When SCHEDULE clause has AUTO specified, it must not have chunk size specified
-  !ERROR: At most one SCHEDULE clause can appear on the DO directive
+  !ERROR: At most one SCHEDULE clause can appear on DO directive
   !ERROR: When SCHEDULE clause has RUNTIME specified, it must not have chunk size specified
   !$omp do schedule(auto, 2) schedule(runtime, 2)
   do i = 1, N
@@ -217,7 +218,8 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
@@ -226,7 +228,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
   !$omp do ordered(1-1) linear(a)
@@ -285,7 +287,8 @@ use omp_lib
   !$omp section
   c = 1
   d = 2
-  !ERROR: NUM_THREADS clause is not allowed on the END SECTIONS directive
+  !ERROR: NUM_THREADS clause is not allowed on SECTIONS directive
+  !ERROR: NUM_THREADS clause is not allowed on an end-directive
   !$omp end sections num_threads(4)
 
   !$omp parallel
@@ -294,11 +297,15 @@ use omp_lib
   !$omp section
     c = 1
     d = 2
-  !ERROR: At most one NOWAIT clause can appear on the END SECTIONS directive
+  !ERROR: At most one NOWAIT clause can appear on SECTIONS directive
   !$omp end sections nowait nowait
   !$omp end parallel
 
   !$omp end parallel
+
+  !$omp sections nowait
+  !ERROR: At most one NOWAIT clause can appear on SECTIONS directive
+  !$omp end sections nowait
 
 ! 2.11.2 parallel-sections-clause -> parallel-clause |
 !                                    sections-clause
@@ -312,15 +319,21 @@ use omp_lib
   d = 3
   !$omp end parallel sections
 
-  !ERROR: At most one NUM_THREADS clause can appear on the PARALLEL SECTIONS directive
+  !ERROR: At most one NUM_THREADS clause can appear on PARALLEL SECTIONS directive
   !$omp parallel sections num_threads(1) num_threads(4)
   a = 0.0
   !ERROR: Unmatched END SECTIONS directive
   !$omp end sections
 
+  !ERROR: This compound directive does not allow NOWAIT clause
   !$omp parallel sections
-  !ERROR: NOWAIT clause is not allowed on the END PARALLEL SECTIONS directive
   !$omp end parallel sections nowait
+
+  !ERROR: This compound directive does not allow NOWAIT clause
+  !$omp teams distribute parallel do
+  do i = 1, N
+  end do
+  !$omp end teams distribute parallel do nowait
 
 ! 2.7.3 single-clause -> private-clause |
 !                        firstprivate-clause
@@ -329,14 +342,12 @@ use omp_lib
 
   !$omp parallel
   b = 1
-  !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
+  !ERROR: LASTPRIVATE clause is not allowed on SINGLE directive
+  !ERROR: NOWAIT and COPYPRIVATE clauses are mutually exclusive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
-  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
-  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
-  !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
+  !ERROR: At most one NOWAIT clause can appear on SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
   !$omp end parallel
@@ -347,10 +358,10 @@ use omp_lib
   !$omp workshare
   a = 1.0
   !$omp end workshare nowait
-  !ERROR: NUM_THREADS clause is not allowed on the WORKSHARE directive
+  !ERROR: NUM_THREADS clause is not allowed on WORKSHARE directive
   !$omp workshare num_threads(4)
   a = 1.0
-  !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
+  !ERROR: COPYPRIVATE clause is not allowed on WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
   !$omp workshare nowait
   !$omp end workshare
@@ -366,13 +377,13 @@ use omp_lib
 !                      collapse-clause
 
   a = 0.0
-  !ERROR: TASK_REDUCTION clause is not allowed on the SIMD directive
+  !ERROR: TASK_REDUCTION clause is not allowed on SIMD directive
   !$omp simd private(b) reduction(+:a) task_reduction(+:a)
   do i = 1, N
      a = a + b + 3.14
   enddo
 
-  !ERROR: At most one SAFELEN clause can appear on the SIMD directive
+  !ERROR: At most one SAFELEN clause can appear on SIMD directive
   !$omp simd safelen(1) safelen(2)
   do i = 1, N
      a = 3.14
@@ -407,7 +418,7 @@ use omp_lib
 ! 2.11.1 parallel-do-clause -> parallel-clause |
 !                              do-clause
 
-  !ERROR: At most one PROC_BIND clause can appear on the PARALLEL DO directive
+  !ERROR: At most one PROC_BIND clause can appear on PARALLEL DO directive
   !ERROR: A REF or UVAL 'linear-modifier' may not be specified in a LINEAR clause on the PARALLEL DO directive
   !$omp parallel do proc_bind(master) proc_bind(close) linear(b: uval)
   do i = 1, N
@@ -418,8 +429,8 @@ use omp_lib
 !                         simd-clause
 
   !$omp parallel
-  !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
-  !ERROR: NOGROUP clause is not allowed on the DO SIMD directive
+  !ERROR: ORDERED clause with an argument is not allowed on a compound directive with SIMD as a constituent
+  !ERROR: NOGROUP clause is not allowed on DO SIMD directive
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
      do j = 1, N
@@ -461,20 +472,20 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: SCHEDULE clause is not allowed on the TASKLOOP directive
+  !ERROR: SCHEDULE clause is not allowed on TASKLOOP directive
   !$omp taskloop schedule(static)
   do i = 1, N
      a = 3.14
   enddo
 
-  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP directive
+  !ERROR: NUM_TASKS and GRAINSIZE clauses are mutually exclusive
   !$omp taskloop num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
   enddo
 
-  !ERROR: At most one NUM_TASKS clause can appear on the TASKLOOP directive
-  !ERROR: TASK_REDUCTION clause is not allowed on the TASKLOOP directive
+  !ERROR: At most one NUM_TASKS clause can appear on TASKLOOP directive
+  !ERROR: TASK_REDUCTION clause is not allowed on TASKLOOP directive
   !$omp taskloop num_tasks(3) num_tasks(2) task_reduction(*:a)
   do i = 1,N
     a = 3.14
@@ -483,15 +494,15 @@ use omp_lib
 ! 2.13.1 master
 
   !$omp parallel
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead [-Wopenmp-usage]
   !$omp master
   a=3.14
   !$omp end master
   !$omp end parallel
 
   !$omp parallel
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
-  !ERROR: NUM_THREADS clause is not allowed on the MASTER directive
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead [-Wopenmp-usage]
+  !ERROR: NUM_THREADS clause is not allowed on MASTER directive
   !$omp master num_threads(4)
   a=3.14
   !$omp end master
@@ -502,8 +513,11 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
-  !WARNING: SOURCE dependence type is deprecated in OpenMP v5.2
+  !ERROR: A DEPEND clause on a TASKWAIT construct must not have MUTEXINOUTSET as dependence type
+  !$omp taskwait depend(mutexinoutset: x)
+  !ERROR: 'task-dependence-type' modifier is required
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
+  !WARNING: 'dependence-type' modifier is no longer allowed on DEPEND clause since OpenMP v5.2 [-Wopenmp-deprecated]
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
@@ -517,12 +531,12 @@ use omp_lib
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush acquire
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
-  !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+  !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush seq_cst
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
-  !ERROR: RELAXED clause is not allowed on the FLUSH directive
+  !ERROR: 'memory-order' cannot be RELAXED on FLUSH directive
   !$omp flush relaxed
 
 ! 2.13.2 critical Construct
@@ -551,8 +565,8 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: LASTPRIVATE clause is not allowed on the TASK directive
-  !ERROR: At most one FINAL clause can appear on the TASK directive
+  !ERROR: LASTPRIVATE clause is not allowed on TASK directive
+  !ERROR: At most one FINAL clause can appear on TASK directive
   !$omp task lastprivate(b) final(a.GE.1) final(.false.)
   b = 1
   !$omp end task
@@ -578,7 +592,7 @@ use omp_lib
   !ERROR: Misplaced OpenMP end-directive
   !$omp end taskloop
 
-  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP SIMD directive
+  !ERROR: NUM_TASKS and GRAINSIZE clauses are mutually exclusive
   !$omp taskloop simd num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
@@ -594,5 +608,22 @@ use omp_lib
 
   !$omp target enter data map(alloc:A) device(0)
   !$omp target exit data map(delete:A) device(0)
+
+! parallel-masked-taskloop
+  z = 0
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
+  !$omp parallel masked taskloop reduction(+: z) in_reduction(+: z)
+  do i = 1, 10
+    z = z + 1
+  end do
+  !$omp end parallel masked taskloop
+
+  a = 0.0
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
+  !$omp parallel masked taskloop simd reduction(+: a) in_reduction(+: a)
+  do i = 1, N
+    a = a + 3.0
+  end do
+  !$omp end parallel masked taskloop simd
 
 end program

@@ -48,18 +48,18 @@ static void EncodeDecode(const Symbol &object, const SectionList *sect_list) {
 
 TEST(SymbolTest, EncodeDecodeSymbol) {
 
-  SectionSP sect_sp(new Section(
+  SectionSP sect_sp = std::make_shared<Section>(
       /*module_sp=*/ModuleSP(),
       /*obj_file=*/nullptr,
       /*sect_id=*/1,
-      /*name=*/ConstString(".text"),
+      /*name=*/".text",
       /*sect_type=*/eSectionTypeCode,
       /*file_vm_addr=*/0x1000,
       /*vm_size=*/0x1000,
       /*file_offset=*/0,
       /*file_size=*/0,
       /*log2align=*/5,
-      /*flags=*/0x10203040));
+      /*flags=*/0x10203040);
 
   SectionList sect_list;
   sect_list.AddSection(sect_sp);
@@ -131,6 +131,6 @@ TEST(SymbolTest, EncodeDecodeSymbol) {
   symbol.SetIsWeak(false);
 
   // Test encoding a symbol with no address.
-  symbol.GetAddressRef().SetSection(SectionSP());
+  symbol.GetAddressRef() = Address(SectionSP(), /*offset=*/0);
   EncodeDecode(symbol, &sect_list);
 }

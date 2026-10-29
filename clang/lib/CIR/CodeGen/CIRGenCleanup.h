@@ -19,6 +19,7 @@
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/CodeGenUtils/EHPersonality.h"
 
 namespace clang::CIRGen {
 
@@ -108,6 +109,10 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// created if needed before the cleanup is popped.
   mlir::Block *normalBlock = nullptr;
 
+  /// An optional boolean variable indicating whether this cleanup has been
+  /// activated yet.
+  Address activeFlag = Address::invalid();
+
   /// Cleanup scope op that represent the current scope in CIR
   cir::CleanupScopeOp cleanupScopeOp;
 
@@ -153,6 +158,25 @@ public:
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
   bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
+  void setLifetimeMarker() { cleanupBits.isLifetimeMarker = true; }
+
+  bool hasActiveFlag() const { return activeFlag.isValid(); }
+  Address getActiveFlag() const { return activeFlag; }
+  void setActiveFlag(Address var) { activeFlag = var; }
+
+  void setTestFlagInNormalCleanup(bool value) {
+    cleanupBits.testFlagInNormalCleanup = value;
+  }
+  bool shouldTestFlagInNormalCleanup() const {
+    return cleanupBits.testFlagInNormalCleanup;
+  }
+
+  void setTestFlagInEHCleanup(bool value) {
+    cleanupBits.testFlagInEHCleanup = value;
+  }
+  bool shouldTestFlagInEHCleanup() const {
+    return cleanupBits.testFlagInEHCleanup;
+  }
 
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
     return enclosingNormal;
@@ -228,53 +252,16 @@ EHScopeStack::find(stable_iterator savePoint) const {
   return iterator(endOfBuffer - savePoint.size);
 }
 
-/// The exceptions personality for a function.
-struct EHPersonality {
-  const char *personalityFn = nullptr;
+using CodeGenUtils::EHPersonality;
 
-  // If this is non-null, this personality requires a non-standard
-  // function for rethrowing an exception after a catchall cleanup.
-  // This function must have prototype void(void*).
-  const char *catchallRethrowFn = nullptr;
+/// Selects the personality function to use for \p fd, or for the translation
+/// unit as a whole when \p fd is null.
+const EHPersonality &getEHPersonality(CIRGenModule &cgm,
+                                      const clang::FunctionDecl *fd);
 
-  static const EHPersonality &get(CIRGenModule &cgm,
-                                  const clang::FunctionDecl *fd);
-  static const EHPersonality &get(CIRGenFunction &cgf);
-
-  static const EHPersonality GNU_C;
-  static const EHPersonality GNU_C_SJLJ;
-  static const EHPersonality GNU_C_SEH;
-  static const EHPersonality GNU_ObjC;
-  static const EHPersonality GNU_ObjC_SJLJ;
-  static const EHPersonality GNU_ObjC_SEH;
-  static const EHPersonality GNUstep_ObjC;
-  static const EHPersonality GNU_ObjCXX;
-  static const EHPersonality NeXT_ObjC;
-  static const EHPersonality GNU_CPlusPlus;
-  static const EHPersonality GNU_CPlusPlus_SJLJ;
-  static const EHPersonality GNU_CPlusPlus_SEH;
-  static const EHPersonality MSVC_except_handler;
-  static const EHPersonality MSVC_C_specific_handler;
-  static const EHPersonality MSVC_CxxFrameHandler3;
-  static const EHPersonality GNU_Wasm_CPlusPlus;
-  static const EHPersonality XL_CPlusPlus;
-  static const EHPersonality ZOS_CPlusPlus;
-
-  /// Does this personality use landingpads or the family of pad instructions
-  /// designed to form funclets?
-  bool usesFuncletPads() const {
-    return isMSVCPersonality() || isWasmPersonality();
-  }
-
-  bool isMSVCPersonality() const {
-    return this == &MSVC_except_handler || this == &MSVC_C_specific_handler ||
-           this == &MSVC_CxxFrameHandler3;
-  }
-
-  bool isWasmPersonality() const { return this == &GNU_Wasm_CPlusPlus; }
-
-  bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
-};
+/// Selects the personality function to use for the function currently being
+/// emitted.
+const EHPersonality &getEHPersonality(CIRGenFunction &cgf);
 
 } // namespace clang::CIRGen
 #endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H

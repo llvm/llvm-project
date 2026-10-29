@@ -252,6 +252,27 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   return false;
 }
 
+bool StopInfoMachException::DetermineCPA2Failure() {
+  const bool is_bad_access = (m_value == 1);
+  const bool is_cpa2_fault = (m_exc_code == 0x108);
+
+  // Check if subcode has address.
+  const bool has_fault_addr = (m_exc_data_count >= 2);
+
+  if (!is_bad_access || !is_cpa2_fault || !has_fault_addr)
+    return false;
+
+  const addr_t fault_address = m_exc_subcode;
+
+  StreamString strm;
+  strm.Printf("EXC_ARM_CPA_FAIL (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
+              m_exc_code, fault_address);
+  strm.Printf("Note: Checked Pointer Arithmetic failure detected.\n");
+
+  m_description = std::string(strm.GetString());
+  return true;
+}
+
 const char *StopInfoMachException::GetDescription() {
   if (!m_description.empty())
     return m_description.c_str();
@@ -305,6 +326,8 @@ const char *StopInfoMachException::GetDescription() {
       if (DeterminePtrauthFailure(exe_ctx))
         return m_description.c_str();
       if (DetermineTagMismatch())
+        return m_description.c_str();
+      if (DetermineCPA2Failure())
         return m_description.c_str();
       break;
 
@@ -636,7 +659,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   addr_t pc = reg_ctx_sp->GetPC();
   BreakpointSiteSP bp_site_sp =
       process_sp->GetBreakpointSiteList().FindByAddress(pc);
-  if (bp_site_sp && bp_site_sp->IsEnabled())
+  if (bp_site_sp && process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
     thread.SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (exc_type) {
@@ -771,7 +794,8 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       if (!bp_site_sp && reg_ctx_sp) {
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
       }
-      if (bp_site_sp && bp_site_sp->IsEnabled()) {
+      if (bp_site_sp &&
+          process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp)) {
         // We've hit this breakpoint, whether it was intended for this thread
         // or not.  Clear this in the Tread object so we step past it on resume.
         thread.SetThreadHitBreakpointSite();
@@ -827,6 +851,16 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       not_stepping_but_got_singlestep_exception);
 }
 
+void StopInfoMachException::PerformAction([[maybe_unused]] Event *event_ptr) {
+  // This action currently only fires if the exception is an ARM breakpoint
+  // and if the PC is still at the instruction that caused the exception.
+  if (!(m_value == 6 /*EXC_BREAKPOINT*/ &&
+        m_exc_code == 1 /*EXC_ARM_BREAKPOINT*/) ||
+      m_exc_subcode != m_thread_wp.lock()->GetRegisterContext()->GetPC())
+    return;
+  SkipOverTrapInstruction();
+}
+
 // Detect an unusual situation on Darwin where:
 //
 //   0. We did an instruction-step before this.
@@ -865,7 +899,8 @@ bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
   // We have a hardware breakpoint -- this is the kernel bug.
   auto &bp_site_list = process_sp->GetBreakpointSiteList();
   for (auto &site : bp_site_list.Sites()) {
-    if (site->IsHardware() && site->IsEnabled()) {
+    if (site->IsHardware() &&
+        process_sp->IsBreakpointSitePhysicallyEnabled(*site)) {
       LLDB_LOGF(log,
                 "Thread stopped with insn-step completed mach exception but "
                 "thread was not stepping; there is a hardware breakpoint set.");

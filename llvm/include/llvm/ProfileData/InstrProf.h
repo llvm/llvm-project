@@ -119,6 +119,14 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
   return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
+/// Return the prefix of the name of the variables to function as a filter.
+inline StringRef getInstrProfVarPrefix() { return "__prof"; }
+
+/// Return the name of the GPU wave-cooperative counter increment helper.
+inline StringRef getInstrProfInstrumentGPUFuncName() {
+  return INSTR_PROF_INSTRUMENT_GPU_FUNC_STR;
+}
+
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
@@ -143,6 +151,10 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 /// Return the name of the variable holding the strings (possibly compressed)
 /// of all function's PGO names.
 inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
+
+inline StringRef getInstrProfNamesVarPostfixVarName() {
+  return "__llvm_prf_nm_postfix";
+}
 
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
@@ -216,7 +228,7 @@ inline StringRef getInstrProfNameSeparator() { return "\01"; }
 /// instrumentation
 LLVM_ABI bool isGPUProfTarget(const Module &M);
 
-/// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+/// Please use getIRPGOObjectName for LLVM IR instrumentation. This function is
 /// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup. Variable \c InLTO indicates if this
@@ -233,33 +245,34 @@ LLVM_ABI std::string
 getPGOFuncName(StringRef RawFuncName, GlobalValue::LinkageTypes Linkage,
                StringRef FileName, uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
-/// \return the modified name for function \c F suitable to be
+/// \return the modified name for global object \c GO suitable to be
 /// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
 /// called from LTO optimization passes.
-LLVM_ABI std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
+LLVM_ABI std::string getIRPGOObjectName(const GlobalObject &GO,
+                                        bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
-/// \c getIRPGOFuncName()
+/// \c getIRPGOObjectName()
 LLVM_ABI std::pair<StringRef, StringRef>
 getParsedIRPGOName(StringRef IRPGOName);
 
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the IRPGO function name
-/// (returned by \c getIRPGOFuncName) for LLVM IR instrumentation and PGO
+/// (returned by \c getIRPGOObjectName) for LLVM IR instrumentation and PGO
 /// function name (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI std::string getPGOFuncNameVarName(StringRef FuncName,
                                            GlobalValue::LinkageTypes Linkage);
 
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the IRPGO function name (returned by
-/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// \c getIRPGOObjectName) for LLVM IR instrumentation and PGO function name
 /// (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI GlobalVariable *createPGOFuncNameVar(Function &F,
                                               StringRef PGOFuncName);
 
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the IRPGO function name (returned by
-/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// \c getIRPGOObjectName) for LLVM IR instrumentation and PGO function name
 /// (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI GlobalVariable *createPGOFuncNameVar(Module &M,
                                               GlobalValue::LinkageTypes Linkage,
@@ -338,26 +351,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,
                          bool GetNoICPValue = false);
 
-inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
-
-inline StringRef getPGONameMetadataName() { return "PGOName"; }
-
-/// Return the PGOFuncName meta data associated with a function.
-LLVM_ABI MDNode *getPGOFuncNameMetadata(const Function &F);
-
-LLVM_ABI std::string getPGOName(const GlobalVariable &V, bool InLTO = false);
-
-/// Create the PGOFuncName meta data if PGOFuncName is different from
-/// function's raw name. This should only apply to internal linkage functions
-/// declared by users only.
-/// TODO: Update all callers to 'createPGONameMetadata' and deprecate this
-/// function.
-LLVM_ABI void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
-
-/// Create the PGOName metadata if a global object's PGO name is different from
-/// its mangled name. This should apply to local-linkage global objects only.
-LLVM_ABI void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
-
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
 LLVM_ABI bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
@@ -401,6 +394,7 @@ enum class instrprof_error {
   unrecognized_format,
   bad_magic,
   bad_header,
+  header_size_mismatch,
   unsupported_version,
   unsupported_hash_type,
   too_large,
@@ -422,6 +416,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  coverage_count_mismatch,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -500,7 +495,7 @@ uint64_t ComputeHash(StringRef K);
 /// A symbol table used for function [IR]PGO name look-up with keys
 /// (such as pointers, md5hash values) to the function. A function's
 /// [IR]PGO name or name's md5hash are used in retrieving the profile
-/// data of the function. See \c getIRPGOFuncName() and \c getPGOFuncName
+/// data of the function. See \c getIRPGOObjectName() and \c getPGOFuncName
 /// methods for details how [IR]PGO name is formed.
 class InstrProfSymtab {
 public:
@@ -553,7 +548,9 @@ private:
   // map entries:
   // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
-  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set, and
+  //   <GUID, &F> if \c F has a GUID that differs from MD5Hash(PGOFuncName),
+  //   e.g. because LTO renamed \c F.
   // The canonical name is only added if \c AddCanonical is true.
   Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
 
@@ -561,7 +558,9 @@ private:
   // map entries:
   // name-set = {PGOName} union {getCanonicalName(PGOName)}
   // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
-  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), &V> for name in name-set, and
+  //   <GUID, &V> if \c V has been assigned a GUID that differs from
+  //   MD5Hash(PGOVTableName).
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
@@ -894,6 +893,14 @@ struct InstrProfValueSiteRecord {
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
+  /// For AMDGPU offload profiling: raw or merged uniform counters. One uint64_t
+  /// per instrumented block, tracking entries where all lanes were active.
+  std::vector<uint64_t> UniformCounts;
+  /// For AMDGPU offload profiling: 1 bit per basic block indicating whether
+  /// the block is usually entered with all lanes active. Raw uniform counters
+  /// are reduced to these bits when profiles are written or merged.
+  std::vector<uint8_t> UniformityBits;
+  uint16_t OffloadDeviceWaveSize = 0;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
@@ -903,6 +910,8 @@ struct InstrProfRecord {
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
       : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
+        UniformCounts(RHS.UniformCounts), UniformityBits(RHS.UniformityBits),
+        OffloadDeviceWaveSize(RHS.OffloadDeviceWaveSize),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
@@ -910,6 +919,9 @@ struct InstrProfRecord {
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
     BitmapBytes = RHS.BitmapBytes;
+    UniformCounts = RHS.UniformCounts;
+    UniformityBits = RHS.UniformityBits;
+    OffloadDeviceWaveSize = RHS.OffloadDeviceWaveSize;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -920,6 +932,20 @@ struct InstrProfRecord {
       *ValueData = *RHS.ValueData;
     return *this;
   }
+
+  /// Check if a basic block is entered via a wave-uniform branch.
+  /// Returns true if uniform (safe for PGO spill optimization) or if no
+  /// uniformity data is available (conservative default).
+  bool isBlockUniform(unsigned BlockIdx) const {
+    if (UniformityBits.empty())
+      return true; // No uniformity data, assume uniform (conservative)
+    if (BlockIdx / 8 >= UniformityBits.size())
+      return true; // Out of range, assume uniform
+    return (UniformityBits[BlockIdx / 8] >> (BlockIdx % 8)) & 1;
+  }
+
+  /// Recompute uniformity metadata from raw uniform counters, when present.
+  LLVM_ABI void computeBlockUniformity();
 
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
@@ -960,9 +986,12 @@ struct InstrProfRecord {
         SR.sortByCount();
   }
 
-  /// Clear value data entries and edge counters.
+  /// Clear value data entries, edge counters, and uniformity data.
   void Clear() {
     Counts.clear();
+    UniformCounts.clear();
+    UniformityBits.clear();
+    OffloadDeviceWaveSize = 0;
     clearValueData();
   }
 
@@ -1071,6 +1100,14 @@ struct NamedInstrProfRecord : InstrProfRecord {
                        std::vector<uint8_t> BitmapBytes)
       : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
         Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes,
+                       std::vector<uint8_t> UniformityBits)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {
+    this->UniformityBits = std::move(UniformityBits);
+  }
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -1177,7 +1214,9 @@ enum ProfVersion {
   Version12 = 12,
   // In this version, the frontend PGO stable hash algorithm defaults to V4.
   Version13 = 13,
-  // The current version is 13.
+  // UniformityBits added for AMDGPU offload profiling divergence detection.
+  Version14 = 14,
+  // The current version is 14.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1187,7 +1226,7 @@ const HashT HashType = HashT::MD5;
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
 // This structure defines the file header of the LLVM profile
-// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
+// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.md
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic = IndexedInstrProf::Magic;

@@ -20,3 +20,9 @@
 // RUN: not %clang_cc1 -ivfsoverlay %S/Inputs/redirect-and-fallthrough.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-EXCLUSIVE-KEYS %s
 // CHECK-EXCLUSIVE-KEYS: 'fallthrough' and 'redirecting-with' are mutually exclusive
 // CHECK-EXCLUSIVE-KEYS: invalid virtual filesystem overlay file
+
+// RUN: not %clang_cc1 -ivfsoverlay %S/Inputs/invalid-key.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-KEY %s
+// CHECK-INVALID-KEY: invalid virtual filesystem overlay file
+
+// RUN: not %clang_cc1 -ivfsoverlay %S/Inputs/invalid-top-level-key.yaml -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-TOP %s
+// CHECK-INVALID-TOP: invalid virtual filesystem overlay file

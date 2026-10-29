@@ -30,8 +30,8 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vid.v v9
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 3
 ; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
 ; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
@@ -52,8 +52,8 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vid.v v9
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 7
 ; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
 ; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
@@ -73,8 +73,8 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vid.v v9
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 15
 ; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
 ; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
@@ -93,19 +93,18 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v32i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    li a0, 32
-; NO-ZVBB-NEXT:    csrr a1, vlenb
-; NO-ZVBB-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; NO-ZVBB-NEXT:    vid.v v8
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; NO-ZVBB-NEXT:    vmv.v.i v10, 0
+; NO-ZVBB-NEXT:    vmv.v.i v8, 0
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
+; NO-ZVBB-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; NO-ZVBB-NEXT:    vid.v v10
+; NO-ZVBB-NEXT:    csrr a1, vlenb
 ; NO-ZVBB-NEXT:    addi a2, a1, -1
-; NO-ZVBB-NEXT:    slli a1, a1, 1
-; NO-ZVBB-NEXT:    vmerge.vim v10, v10, 1, v0
-; NO-ZVBB-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
-; NO-ZVBB-NEXT:    vrsub.vx v8, v8, a2
+; NO-ZVBB-NEXT:    vrsub.vx v10, v10, a2
 ; NO-ZVBB-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; NO-ZVBB-NEXT:    vrgatherei16.vv v13, v10, v8
-; NO-ZVBB-NEXT:    vrgatherei16.vv v12, v11, v8
+; NO-ZVBB-NEXT:    vrgatherei16.vv v13, v8, v10
+; NO-ZVBB-NEXT:    vrgatherei16.vv v12, v9, v10
+; NO-ZVBB-NEXT:    slli a1, a1, 1
 ; NO-ZVBB-NEXT:    addi a1, a1, -32
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; NO-ZVBB-NEXT:    vslidedown.vx v8, v12, a1
@@ -125,24 +124,23 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v64i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    li a0, 64
-; NO-ZVBB-NEXT:    csrr a1, vlenb
-; NO-ZVBB-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; NO-ZVBB-NEXT:    vid.v v12
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; NO-ZVBB-NEXT:    vmv.v.i v8, 0
+; NO-ZVBB-NEXT:    vmerge.vim v12, v8, 1, v0
+; NO-ZVBB-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; NO-ZVBB-NEXT:    vid.v v8
+; NO-ZVBB-NEXT:    csrr a1, vlenb
 ; NO-ZVBB-NEXT:    addi a2, a1, -1
-; NO-ZVBB-NEXT:    slli a1, a1, 2
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
-; NO-ZVBB-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
-; NO-ZVBB-NEXT:    vrsub.vx v16, v12, a2
+; NO-ZVBB-NEXT:    vrsub.vx v16, v8, a2
 ; NO-ZVBB-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; NO-ZVBB-NEXT:    vrgatherei16.vv v15, v8, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v14, v9, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v13, v10, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v12, v11, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v11, v12, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v10, v13, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v9, v14, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v8, v15, v16
+; NO-ZVBB-NEXT:    slli a1, a1, 2
 ; NO-ZVBB-NEXT:    addi a1, a1, -64
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vx v8, v12, a1
+; NO-ZVBB-NEXT:    vslidedown.vx v8, v8, a1
 ; NO-ZVBB-NEXT:    vmsne.vi v0, v8, 0
 ; NO-ZVBB-NEXT:    ret
 ;
@@ -159,16 +157,14 @@ define <128 x i1> @reverse_v128i1(<128 x i1> %a) {
 ; CHECK-LABEL: reverse_v128i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v24
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vx v24, v24, a2
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    addi a2, a1, -1
+; CHECK-NEXT:    vrsub.vx v24, v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v16, v24
 ; CHECK-NEXT:    vrgatherei16.vv v14, v17, v24
@@ -178,6 +174,7 @@ define <128 x i1> @reverse_v128i1(<128 x i1> %a) {
 ; CHECK-NEXT:    vrgatherei16.vv v10, v21, v24
 ; CHECK-NEXT:    vrgatherei16.vv v9, v22, v24
 ; CHECK-NEXT:    vrgatherei16.vv v8, v23, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    addi a1, a1, -128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
@@ -255,16 +252,16 @@ define <16 x i8> @reverse_v16i8(<16 x i8> %a) {
 define <32 x i8> @reverse_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: reverse_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    addi a1, a0, -1
-; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a1
-; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v13, v8, v10
 ; CHECK-NEXT:    vrgatherei16.vv v12, v9, v10
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -276,18 +273,18 @@ define <32 x i8> @reverse_v32i8(<32 x i8> %a) {
 define <64 x i8> @reverse_v64i8(<64 x i8> %a) {
 ; CHECK-LABEL: reverse_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    addi a1, a0, -1
-; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    addi a0, a0, -64
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v8, v16
 ; CHECK-NEXT:    vrgatherei16.vv v14, v9, v16
 ; CHECK-NEXT:    vrgatherei16.vv v13, v10, v16
 ; CHECK-NEXT:    vrgatherei16.vv v12, v11, v16
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    addi a0, a0, -64
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -351,9 +348,9 @@ define <8 x i16> @reverse_v8i16(<8 x i16> %a) {
 define <16 x i16> @reverse_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: reverse_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
@@ -370,18 +367,18 @@ define <16 x i16> @reverse_v16i16(<16 x i16> %a) {
 define <32 x i16> @reverse_v32i16(<32 x i16> %a) {
 ; CHECK-LABEL: reverse_v32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
 ; CHECK-NEXT:    vrgather.vv v15, v8, v16
 ; CHECK-NEXT:    vrgather.vv v14, v9, v16
 ; CHECK-NEXT:    vrgather.vv v13, v10, v16
 ; CHECK-NEXT:    vrgather.vv v12, v11, v16
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -432,15 +429,15 @@ define <4 x i32> @reverse_v4i32(<4 x i32> %a) {
 define <8 x i32> @reverse_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: reverse_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
@@ -452,9 +449,9 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) {
 define <16 x i32> @reverse_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: reverse_v16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
@@ -493,15 +490,15 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) {
 define <4 x i64> @reverse_v4i64(<4 x i64> %a) {
 ; CHECK-LABEL: reverse_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
@@ -513,17 +510,17 @@ define <4 x i64> @reverse_v4i64(<4 x i64> %a) {
 define <8 x i64> @reverse_v8i64(<8 x i64> %a) {
 ; CHECK-LABEL: reverse_v8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
 ; CHECK-NEXT:    vrgather.vv v15, v8, v16
 ; CHECK-NEXT:    vrgather.vv v14, v9, v16
 ; CHECK-NEXT:    vrgather.vv v13, v10, v16
 ; CHECK-NEXT:    vrgather.vv v12, v11, v16
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -588,9 +585,9 @@ define <8 x half> @reverse_v8f16(<8 x half> %a) {
 define <16 x half> @reverse_v16f16(<16 x half> %a) {
 ; CHECK-LABEL: reverse_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
@@ -607,18 +604,18 @@ define <16 x half> @reverse_v16f16(<16 x half> %a) {
 define <32 x half> @reverse_v32f16(<32 x half> %a) {
 ; CHECK-LABEL: reverse_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
 ; CHECK-NEXT:    vrgather.vv v15, v8, v16
 ; CHECK-NEXT:    vrgather.vv v14, v9, v16
 ; CHECK-NEXT:    vrgather.vv v13, v10, v16
 ; CHECK-NEXT:    vrgather.vv v12, v11, v16
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -669,15 +666,15 @@ define <4 x float> @reverse_v4f32(<4 x float> %a) {
 define <8 x float> @reverse_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: reverse_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
@@ -689,9 +686,9 @@ define <8 x float> @reverse_v8f32(<8 x float> %a) {
 define <16 x float> @reverse_v16f32(<16 x float> %a) {
 ; CHECK-LABEL: reverse_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
@@ -730,15 +727,15 @@ define <2 x double> @reverse_v2f64(<2 x double> %a) {
 define <4 x double> @reverse_v4f64(<4 x double> %a) {
 ; CHECK-LABEL: reverse_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
@@ -750,17 +747,17 @@ define <4 x double> @reverse_v4f64(<4 x double> %a) {
 define <8 x double> @reverse_v8f64(<8 x double> %a) {
 ; CHECK-LABEL: reverse_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v16, v12, a1
 ; CHECK-NEXT:    vrgather.vv v15, v8, v16
 ; CHECK-NEXT:    vrgather.vv v14, v9, v16
 ; CHECK-NEXT:    vrgather.vv v13, v10, v16
 ; CHECK-NEXT:    vrgather.vv v12, v11, v16
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a0
@@ -816,12 +813,13 @@ define <4 x i8> @reverse_v4i8_2(<2 x i8> %a, <2 x i8> %b) {
 ; NO-ZVBB-LABEL: reverse_v4i8_2:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslidedown.vi v8, v9, 1
-; NO-ZVBB-NEXT:    vslideup.vi v8, v9, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v10, v9, 1
+; NO-ZVBB-NEXT:    vslideup.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v10, v9, 1
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; NO-ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; NO-ZVBB-NEXT:    vslideup.vi v10, v11, 2
+; NO-ZVBB-NEXT:    vmv1r.v v8, v10
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4i8_2:
@@ -886,12 +884,13 @@ define <4 x i16> @reverse_v4i16_2(<2 x i16> %a, <2 x i16> %b) {
 ; NO-ZVBB-LABEL: reverse_v4i16_2:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslidedown.vi v8, v9, 1
-; NO-ZVBB-NEXT:    vslideup.vi v8, v9, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v10, v9, 1
+; NO-ZVBB-NEXT:    vslideup.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v10, v9, 1
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; NO-ZVBB-NEXT:    vslideup.vi v10, v11, 2
+; NO-ZVBB-NEXT:    vmv1r.v v8, v10
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4i16_2:
@@ -939,20 +938,22 @@ define <16 x i16> @reverse_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 define <32 x i16> @reverse_v32i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: reverse_v32i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    addi a0, a0, -16
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    vrgather.vv v13, v8, v16
-; CHECK-NEXT:    vrgather.vv v15, v10, v16
-; CHECK-NEXT:    vrgather.vv v12, v9, v16
-; CHECK-NEXT:    vrgather.vv v14, v11, v16
+; CHECK-NEXT:    vrsub.vx v14, v12, a1
+; CHECK-NEXT:    vrgather.vv v13, v8, v14
+; CHECK-NEXT:    vrgather.vv v12, v9, v14
+; CHECK-NEXT:    addi a0, a0, -16
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v12, a0
-; CHECK-NEXT:    vslidedown.vx v8, v14, a0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v14
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 16
@@ -965,12 +966,13 @@ define <4 x i32> @reverse_v4i32_2(<2 x i32> %a, < 2 x i32> %b) {
 ; NO-ZVBB-LABEL: reverse_v4i32_2:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslidedown.vi v8, v9, 1
-; NO-ZVBB-NEXT:    vslideup.vi v8, v9, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v10, v9, 1
+; NO-ZVBB-NEXT:    vslideup.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v10, v9, 1
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; NO-ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; NO-ZVBB-NEXT:    vslideup.vi v10, v11, 2
+; NO-ZVBB-NEXT:    vmv.v.v v8, v10
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4i32_2:
@@ -1003,21 +1005,23 @@ define <8 x i32> @reverse_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 define <16 x i32> @reverse_v16i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: reverse_v16i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vrsub.vx v14, v12, a1
+; CHECK-NEXT:    vrgather.vv v13, v8, v14
+; CHECK-NEXT:    vrgather.vv v12, v9, v14
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
-; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    vrgather.vv v13, v8, v16
-; CHECK-NEXT:    vrgather.vv v15, v10, v16
-; CHECK-NEXT:    vrgather.vv v12, v9, v16
-; CHECK-NEXT:    vrgather.vv v14, v11, v16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v12, a0
-; CHECK-NEXT:    vslidedown.vx v8, v14, a0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v14
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 8
 ; CHECK-NEXT:    ret
@@ -1028,24 +1032,26 @@ define <16 x i32> @reverse_v16i32_2(<8 x i32> %a, <8 x i32> %b) {
 define <32 x i32> @reverse_v32i32_2(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: reverse_v32i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    addi a0, a0, -16
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vrsub.vx v24, v16, a1
-; CHECK-NEXT:    vrgather.vv v19, v8, v24
-; CHECK-NEXT:    vrgather.vv v23, v12, v24
-; CHECK-NEXT:    vrgather.vv v18, v9, v24
-; CHECK-NEXT:    vrgather.vv v22, v13, v24
-; CHECK-NEXT:    vrgather.vv v17, v10, v24
-; CHECK-NEXT:    vrgather.vv v21, v14, v24
-; CHECK-NEXT:    vrgather.vv v16, v11, v24
-; CHECK-NEXT:    vrgather.vv v20, v15, v24
+; CHECK-NEXT:    vrsub.vx v20, v16, a1
+; CHECK-NEXT:    vrgather.vv v19, v8, v20
+; CHECK-NEXT:    vrgather.vv v18, v9, v20
+; CHECK-NEXT:    vrgather.vv v17, v10, v20
+; CHECK-NEXT:    vrgather.vv v16, v11, v20
+; CHECK-NEXT:    addi a0, a0, -16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v16, a0
-; CHECK-NEXT:    vslidedown.vx v8, v20, a0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v11, v12, v20
+; CHECK-NEXT:    vrgather.vv v10, v13, v20
+; CHECK-NEXT:    vrgather.vv v9, v14, v20
+; CHECK-NEXT:    vrgather.vv v8, v15, v20
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v16, 16
@@ -1058,12 +1064,13 @@ define <4 x i64> @reverse_v4i64_2(<2 x i64> %a, < 2 x i64> %b) {
 ; CHECK-LABEL: reverse_v4i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vslideup.vi v10, v8, 1
+; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
+; CHECK-NEXT:    vslidedown.vi v12, v10, 1
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vslideup.vi v12, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x i64> %a, <2 x i64> %b, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i64> %res
@@ -1072,21 +1079,23 @@ define <4 x i64> @reverse_v4i64_2(<2 x i64> %a, < 2 x i64> %b) {
 define <8 x i64> @reverse_v8i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: reverse_v8i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vrsub.vx v14, v12, a1
+; CHECK-NEXT:    vrgather.vv v13, v8, v14
+; CHECK-NEXT:    vrgather.vv v12, v9, v14
+; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, -4
-; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    vrgather.vv v13, v8, v16
-; CHECK-NEXT:    vrgather.vv v15, v10, v16
-; CHECK-NEXT:    vrgather.vv v12, v9, v16
-; CHECK-NEXT:    vrgather.vv v14, v11, v16
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v12, a0
-; CHECK-NEXT:    vslidedown.vx v8, v14, a0
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v14
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    ret
@@ -1098,12 +1107,13 @@ define <4 x half> @reverse_v4f16_2(<2 x half> %a, <2 x half> %b) {
 ; NO-ZVBB-LABEL: reverse_v4f16_2:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslidedown.vi v8, v9, 1
-; NO-ZVBB-NEXT:    vslideup.vi v8, v9, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v10, v9, 1
+; NO-ZVBB-NEXT:    vslideup.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v10, v9, 1
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; NO-ZVBB-NEXT:    vslideup.vi v10, v11, 2
+; NO-ZVBB-NEXT:    vmv1r.v v8, v10
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4f16_2:
@@ -1151,19 +1161,19 @@ define <16 x half> @reverse_v16f16_2(<8 x half> %a, <8 x half> %b) {
 define <32 x half> @reverse_v32f16_2(<16 x half> %a) {
 ; CHECK-LABEL: reverse_v32f16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    vrgather.vv v8, v9, v12
-; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vmv.v.v v9, v8
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, -32
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -1175,12 +1185,13 @@ define <4 x float> @reverse_v4f32_2(<2 x float> %a, <2 x float> %b) {
 ; NO-ZVBB-LABEL: reverse_v4f32_2:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v10, v8, 1
-; NO-ZVBB-NEXT:    vslidedown.vi v8, v9, 1
-; NO-ZVBB-NEXT:    vslideup.vi v8, v9, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslidedown.vi v10, v9, 1
+; NO-ZVBB-NEXT:    vslideup.vi v11, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v10, v9, 1
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; NO-ZVBB-NEXT:    vslideup.vi v8, v10, 2
+; NO-ZVBB-NEXT:    vslideup.vi v10, v11, 2
+; NO-ZVBB-NEXT:    vmv.v.v v8, v10
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4f32_2:
@@ -1213,21 +1224,23 @@ define <8 x float> @reverse_v8f32_2(<4 x float> %a, <4 x float> %b) {
 define <16 x float> @reverse_v16f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: reverse_v16f32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vrsub.vx v14, v12, a1
+; CHECK-NEXT:    vrgather.vv v13, v8, v14
+; CHECK-NEXT:    vrgather.vv v12, v9, v14
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
-; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    vrgather.vv v13, v8, v16
-; CHECK-NEXT:    vrgather.vv v15, v10, v16
-; CHECK-NEXT:    vrgather.vv v12, v9, v16
-; CHECK-NEXT:    vrgather.vv v14, v11, v16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v12, a0
-; CHECK-NEXT:    vslidedown.vx v8, v14, a0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v14
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 8
 ; CHECK-NEXT:    ret
@@ -1239,12 +1252,13 @@ define <4 x double> @reverse_v4f64_2(<2 x double> %a, < 2 x double> %b) {
 ; CHECK-LABEL: reverse_v4f64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vslideup.vi v10, v8, 1
+; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
+; CHECK-NEXT:    vslidedown.vi v12, v10, 1
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vslideup.vi v12, v10, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x double> %a, <2 x double> %b, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x double> %res
@@ -1253,21 +1267,23 @@ define <4 x double> @reverse_v4f64_2(<2 x double> %a, < 2 x double> %b) {
 define <8 x double> @reverse_v8f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: reverse_v8f64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vrsub.vx v14, v12, a1
+; CHECK-NEXT:    vrgather.vv v13, v8, v14
+; CHECK-NEXT:    vrgather.vv v12, v9, v14
+; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, -4
-; CHECK-NEXT:    vrsub.vx v16, v12, a1
-; CHECK-NEXT:    vrgather.vv v13, v8, v16
-; CHECK-NEXT:    vrgather.vv v15, v10, v16
-; CHECK-NEXT:    vrgather.vv v12, v9, v16
-; CHECK-NEXT:    vrgather.vv v14, v11, v16
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v12, a0
-; CHECK-NEXT:    vslidedown.vx v8, v14, a0
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v14
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v12, 4
 ; CHECK-NEXT:    ret
@@ -1281,19 +1297,18 @@ define <256 x i1> @reverse_v256i1(<256 x i1> %a) vscale_range(16, 1024) {
 ; CHECK-LABEL: reverse_v256i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 256
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a2
+; CHECK-NEXT:    vrsub.vx v10, v10, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v10, v8
-; CHECK-NEXT:    vrgatherei16.vv v12, v11, v8
+; CHECK-NEXT:    vrgatherei16.vv v13, v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v12, v9, v10
+; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    addi a1, a1, -256
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v12, a1
@@ -1334,15 +1349,15 @@ define <16 x i32> @reverse_v16i32_exact_vlen_256(<16 x i32> %a) vscale_range(4, 
 define <8 x i32> @reverse_v8i32_undef_suffix(<8 x i32> %a) {
 ; CHECK-LABEL: reverse_v8i32_undef_suffix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
@@ -1354,15 +1369,15 @@ define <8 x i32> @reverse_v8i32_undef_suffix(<8 x i32> %a) {
 define <8 x i32> @reverse_v8i32_undef_prefix(<8 x i32> %a) {
 ; CHECK-LABEL: reverse_v8i32_undef_prefix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
-; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v12, v10, a1
 ; CHECK-NEXT:    vrgather.vv v11, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0

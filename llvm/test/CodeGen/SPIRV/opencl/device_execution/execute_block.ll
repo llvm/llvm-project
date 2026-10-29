@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-
-; REQUIRES: asserts
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#bool:]] = OpTypeBool
 ; CHECK: %[[#true:]] = OpConstantTrue %[[#bool]]

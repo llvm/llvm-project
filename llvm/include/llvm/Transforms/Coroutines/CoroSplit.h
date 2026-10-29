@@ -28,7 +28,7 @@ class BaseABI;
 struct Shape;
 } // namespace coro
 
-struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
+struct CoroSplitPass : RequiredPassInfoMixin<CoroSplitPass> {
   using BaseABITy =
       std::function<std::unique_ptr<coro::BaseABI>(Function &, coro::Shape &)>;
 
@@ -49,8 +49,6 @@ struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
   LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                  CGSCCUpdateResult &UR);
-
-  static bool isRequired() { return true; }
 
   // Generator for an ABI transformer
   BaseABITy CreateAndInitABI;

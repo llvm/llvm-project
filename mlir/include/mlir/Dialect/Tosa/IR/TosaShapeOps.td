@@ -30,10 +30,6 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator])> {
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>,
-  ];
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -106,7 +102,7 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
     ```mlir
     // Generic form
-    %out = "tosa.const_shape"() {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %out = "tosa.const_shape"() <{values = dense<0> : tensor<4xindex>}> : () -> !tosa.shape<4>
     ```
   }];
 
@@ -114,13 +110,12 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
   let results = (outs Tosa_Shape:$output);
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
-  ];
-
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `values` `(` $values `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,14 +135,13 @@ def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
 
   let results = (outs Tosa_Shape:$output);
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
-  ];
-
   let hasVerifier = 1;
 
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -346,6 +340,8 @@ def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,6 +380,11 @@ def Tosa_AssertEqualShapeOp
       BoolAttr:$allow_broadcast);
 
   let results = (outs);
+
+  let assemblyFormat =
+      "operands `allow_broadcast` `(` $allow_broadcast "
+      "`)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 #endif // TOSA_SHAPE_OPS

@@ -41,8 +41,7 @@ Error GNUPropertyRewriter::sectionInitializer() {
   uint32_t FeaturesAcc = 0;
 
   StringRef Buf = Sec->getContents();
-  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(Buf, BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor Cursor(0);
   while (Cursor && !DE.eof(Cursor)) {
     const uint32_t NameSz = DE.getU32(Cursor);
@@ -93,10 +92,9 @@ Error GNUPropertyRewriter::sectionInitializer() {
 /// As there is no guarantee that the features are encoded in which element of
 /// the array, we have to read all, and OR together the result.
 Expected<uint32_t> GNUPropertyRewriter::decodeGNUPropertyNote(StringRef Desc) {
-  DataExtractor DE(Desc, BC.AsmInfo->isLittleEndian(),
-                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE(Desc, BC.AsmInfo->isLittleEndian());
   DataExtractor::Cursor Cursor(0);
-  const uint32_t Align = DE.getAddressSize();
+  const uint32_t Align = BC.AsmInfo->getCodePointerSize();
 
   std::optional<uint32_t> Features = 0;
   while (Cursor && !DE.eof(Cursor)) {

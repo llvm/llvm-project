@@ -122,8 +122,10 @@ struct FoldConcatsOfEmpty : public OpRewritePattern<ConcatOp> {
       return rewriter.notifyMatchFailure(concatOp,
                                          "failed to get result shape");
     }
-    rewriter.replaceOpWithNewOp<tensor::EmptyOp>(
-        concatOp, resultShape[0], concatOp.getResultType().getElementType());
+    auto resultType = concatOp.getResultType();
+    rewriter.replaceOpWithNewOp<tensor::EmptyOp>(concatOp, resultShape[0],
+                                                 resultType.getElementType(),
+                                                 resultType.getEncoding());
     return success();
   }
 };

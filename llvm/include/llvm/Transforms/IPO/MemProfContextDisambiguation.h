@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 #define LLVM_TRANSFORMS_IPO_MEMPROF_CONTEXT_DISAMBIGUATION_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -29,7 +30,7 @@ class Module;
 class OptimizationRemarkEmitter;
 
 class MemProfContextDisambiguation
-    : public PassInfoMixin<MemProfContextDisambiguation> {
+    : public OptionalPassInfoMixin<MemProfContextDisambiguation> {
   /// Run the context disambiguator on \p M, returns true if any changes made.
   bool processModule(
       Module &M,
@@ -49,24 +50,31 @@ class MemProfContextDisambiguation
     std::vector<InstrProfValueData> CandidateProfileData;
     uint32_t NumCandidates;
     uint64_t TotalCount;
-    size_t CallsiteInfoStartIndex;
+    // The number of clones recorded for the call.
+    unsigned NumClones;
+    // The CallsiteInfo summary record for each profiled target in
+    // CandidateProfileData (in the same order), or null if there is none, in
+    // which case all clones of the call should call the original target.
+    SmallVector<const CallsiteInfo *> Callsites;
   };
 
   // Record information needed for ICP of an indirect call, depending on its
-  // profile information and the clone information recorded in the corresponding
-  // CallsiteInfo records. The SI iterator point to the current iteration point
-  // through AllCallsites in this function, and will be updated in this method
-  // as we iterate through profiled targets. The number of clones recorded for
-  // this indirect call is returned. The necessary information is recorded in
-  // the ICallAnalysisInfo list for later ICP.
-  unsigned recordICPInfo(CallBase *CB, ArrayRef<CallsiteInfo> AllCallsites,
-                         ArrayRef<CallsiteInfo>::iterator &SI,
-                         SmallVector<ICallAnalysisData> &ICallAnalysisInfo);
+  // profile information and the clone information recorded in the
+  // CallsiteInfo records for its profiled targets. GetCallsite is invoked once
+  // for each profiled target, in order, and returns the corresponding record
+  // (or null if there is none). The number of clones recorded for this
+  // indirect call is returned (0 if there are no records). The necessary
+  // information is recorded in the ICallAnalysisInfo list for later ICP if any
+  // clone of the call should call a cloned target.
+  unsigned
+  recordICPInfo(CallBase *CB,
+                function_ref<const CallsiteInfo *(const InstrProfValueData &)>
+                    GetCallsite,
+                SmallVector<ICallAnalysisData> &ICallAnalysisInfo);
 
   // Actually performs any needed ICP in the function, using the information
   // recorded in the ICallAnalysisInfo list.
-  void performICP(Module &M, ArrayRef<CallsiteInfo> AllCallsites,
-                  ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
+  void performICP(Module &M, ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
                   ArrayRef<ICallAnalysisData> ICallAnalysisInfo,
                   OptimizationRemarkEmitter &ORE);
 
@@ -87,26 +95,28 @@ class MemProfContextDisambiguation
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
 
 public:
+  LLVM_ABI
   MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
                                bool isSamplePGO = false);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  void run(ModuleSummaryIndex &Index,
-           function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-               isPrevailing,
-           LLVMContext &Ctx,
-           function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
-               nullptr);
+  LLVM_ABI void
+  run(ModuleSummaryIndex &Index,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          isPrevailing,
+      LLVMContext &Ctx,
+      function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
+          nullptr);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
 /// when we don't have an index that has recorded that we are linking with
 /// allocation libraries containing the necessary APIs for downstream
 /// transformations.
-class MemProfRemoveInfo : public PassInfoMixin<MemProfRemoveInfo> {
+class MemProfRemoveInfo : public OptionalPassInfoMixin<MemProfRemoveInfo> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

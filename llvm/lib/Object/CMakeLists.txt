@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
+  BBAddrMap.cpp
   Binary.cpp
   BuildID.cpp
   COFFImportFile.cpp
@@ -20,6 +21,7 @@ add_llvm_component_library(LLVMObject
   Minidump.cpp
   ModuleSymbolTable.cpp
   Object.cpp
+  ObjectFactory.cpp
   ObjectFile.cpp
   OffloadBinary.cpp
   OffloadBundle.cpp

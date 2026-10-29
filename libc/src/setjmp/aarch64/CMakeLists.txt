@@ -1,8 +1,5 @@
 if(LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER)
-  list(APPEND setjmp_config_options "-DLIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER")
-endif()
-if(setjmp_config_options)
-  list(PREPEND setjmp_config_options "COMPILE_OPTIONS")
+  libc_set_definition(setjmp_config_options "LIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER")
 endif()
 
 add_entrypoint_object(
@@ -11,9 +8,10 @@ add_entrypoint_object(
     setjmp.cpp
   HDRS
     ../setjmp_impl.h
+  COMPILE_OPTIONS
+    "${setjmp_config_options}"
   DEPENDS
     libc.hdr.types.jmp_buf
-  ${setjmp_config_options}
 )
 
 add_entrypoint_object(
@@ -22,9 +20,10 @@ add_entrypoint_object(
     longjmp.cpp
   HDRS
     ../longjmp.h
+  COMPILE_OPTIONS
+    "${setjmp_config_options}"
   DEPENDS
     libc.hdr.types.jmp_buf
-  ${setjmp_config_options}
 )
 
 add_entrypoint_object(

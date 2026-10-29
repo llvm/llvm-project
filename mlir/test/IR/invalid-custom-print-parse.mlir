@@ -25,4 +25,10 @@ test.optional_custom_attr foo
 // expected-error @below {{unknown key '"foo"' when parsing properties dictionary}}
 test.op_with_enum_prop_attr_form <{value = 0 : i32, foo}>
 
+// -----
 
+// Test that an integer literal cannot be used where an APFloat is expected.
+// parseOptionalAttribute(FloatAttr &) should reject a non-float attribute.
+// expected-error@+2 {{invalid kind of attribute specified: expected builtin.float, but found 5 : i64}}
+// expected-error@+1 {{failed to parse TestTypeAPFloat parameter}}
+func.func private @test_ap_float_wrong_attr_type() -> !test.ap_float<5U0>

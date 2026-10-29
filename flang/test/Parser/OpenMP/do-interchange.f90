@@ -23,10 +23,10 @@ subroutine openmp_do_interchange(x)
 !$omp end do
 
 !PARSE-TREE:| | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE:| | | OmpBeginLoopDirective
+!PARSE-TREE:| | | OmpBeginDirective
 !PARSE-TREE:| | | Block
 !PARSE-TREE:| | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE:| | | | | OmpBeginLoopDirective
+!PARSE-TREE:| | | | | OmpBeginDirective
 !PARSE-TREE:| | | | | | OmpDirectiveName -> llvm::omp::Directive = interchange
 !PARSE-TREE:| | | | | Block
 !PARSE-TREE:| | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct

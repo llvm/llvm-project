@@ -58,7 +58,8 @@ protected:
   template <typename AnalysisT>
   llvm::Expected<std::vector<
       std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-  runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
+  runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &),
+              int32_t MaxBlockVisits = MaxBlockVisitsInAnalysis) {
     AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
 
     auto *Func = selectFirst<FunctionDecl>(
@@ -75,7 +76,7 @@ protected:
         std::make_unique<WatchedLiteralsSolver>());
     Environment Env(*DACtx, *Func);
 
-    return runDataflowAnalysis(*ACFG, Analysis, Env);
+    return runDataflowAnalysis(*ACFG, Analysis, Env, {}, MaxBlockVisits);
   }
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
@@ -448,6 +449,34 @@ TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
       Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
   EXPECT_EQ(llvm::toString(Res.takeError()),
             "maximum number of blocks processed");
+}
+
+TEST_F(DataflowAnalysisTest, MaxBlockVisitsWithUnreachableBlocks) {
+  std::string Code = R"(
+    void target() {
+      if (false) {
+        (void)0;
+      }
+    }
+  )";
+
+  // There are 4 blocks in the CFG:
+  //   entry, if-header, then-body, and exit.
+  // But, only 2 of them are reachable, if we do not count the entry block,
+  // which is how we count BlockVisits. So:
+  // - MaxBlockVisits = 2 should still succeed (being less than CFG.size() = 4,
+  //   shouldn't prevent the analysis from succeeding)
+  // - MaxBlockVisits = 1 should fail, as it is not enough to cover all of the
+  //   reachable blocks.
+  EXPECT_THAT_EXPECTED(
+      runAnalysis<NoopAnalysis>(
+          Code, [](ASTContext &C) { return NoopAnalysis(C); }, 2),
+      llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(
+      runAnalysis<NoopAnalysis>(
+          Code, [](ASTContext &C) { return NoopAnalysis(C); }, 1),
+      llvm::FailedWithMessage("number of blocks in cfg will lead to exceeding "
+                              "maximum number of block visits"));
 }
 
 // Regression test for joins of bool-typed lvalue expressions. The first loop

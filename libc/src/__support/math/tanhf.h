@@ -12,6 +12,7 @@
 #include "exp10f_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/config.h"
@@ -29,8 +30,6 @@ LIBC_INLINE float tanhf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_abs = xbits.abs().uintval();
-
-  const int sign_index = xbits.is_neg() ? 1 : 0;
 
   // When |x| >= 15, or x is inf or nan, or |x| <= 0.078125
   if (LIBC_UNLIKELY((x_abs >= 0x4170'0000U) || (x_abs <= 0x3da0'0000U))) {
@@ -62,12 +61,13 @@ LIBC_INLINE float tanhf(float x) {
     if (LIBC_UNLIKELY(xbits.is_nan()))
       return x + 1.0f; // sNaN to qNaN + signal
 
-    constexpr float SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
-
     if (LIBC_UNLIKELY(xbits.is_inf()))
-      return SIGNS[sign_index][0];
+      return xbits.is_neg() ? -1.0f : 1.0f;
 
-    return SIGNS[sign_index][0] + SIGNS[sign_index][1];
+    if (xbits.is_pos())
+      return fputil::round_result_slightly_down(1.0f);
+
+    return fputil::round_result_slightly_up(-1.0f);
   }
 
   // Range reduction: e^(2x) = 2^(hi + mid) * e^lo
@@ -84,10 +84,9 @@ LIBC_INLINE float tanhf(float x) {
   k = fputil::nearest_integer(xd * LOG2_E_EXP2_6);
   mk = -static_cast<int>(k);
 #else
-  constexpr double HALF_WAY[2] = {-0.5, 0.5};
+  const double half_way = xbits.is_neg() ? 0.5 : -0.5;
 
-  mk = static_cast<int>(
-      fputil::multiply_add(xd, -LOG2_E_EXP2_6, HALF_WAY[sign_index]));
+  mk = static_cast<int>(fputil::multiply_add(xd, -LOG2_E_EXP2_6, half_way));
   k = static_cast<double>(-mk);
 #endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
   // -hi = floor(-k * 2^(-MID_BITS))

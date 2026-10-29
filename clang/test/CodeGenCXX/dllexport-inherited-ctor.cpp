@@ -225,21 +225,19 @@ struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}}CalleeCleanupChild{{.*}}NontrivialDtor
 
 //===----------------------------------------------------------------------===//
-// -fno-dllexport-inlines should still export inherited constructors.
-// Inherited constructors are marked inline internally but must be exported.
+// -fno-dllexport-inlines should not export inherited constructors.
+// Inherited constructors are marked inline internally.
 //===----------------------------------------------------------------------===//
 
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@H@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@N@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@H@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@M@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MLChild@@QEAA@H@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0TplChild@@QEAA@H@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0DefArgChild@@QEAA@HHH@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MixedDefChild@@QEAA@HN@Z"
-// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QEAA@HH@Z"
-// The implicit default ctor is a regular inline method, NOT an inherited
-// constructor, so -fno-dllexport-inlines correctly suppresses it.
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@H@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@N@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@H@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@M@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0MLChild@@QEAA@H@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0TplChild@@QEAA@H@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0DefArgChild@@QEAA@HHH@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0MixedDefChild@@QEAA@HN@Z"
+// NOINLINE-NOT: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QEAA@HH@Z"
 // NOINLINE-NOT: define {{.*}}dllexport{{.*}} @"??0AllDefChild@@QEAA@XZ"
 
 //===----------------------------------------------------------------------===//

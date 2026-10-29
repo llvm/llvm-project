@@ -64,7 +64,7 @@ TEST(FdrLogWriterTest, WriteSomeRecords) {
   // flat buffer that we would see if they were laid out in a file. This also
   // means we need to write out the header manually.
   std::string Serialized = serialize(Buffers, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr,
@@ -117,7 +117,7 @@ TEST(FdrLogWriterTest, ReuseBuffers) {
 
   // Then we validate that we only see the single enter record.
   std::string Serialized = serialize(Buffers, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(
       TraceOrErr, HasValue(ElementsAre(AllOf(
@@ -152,7 +152,7 @@ TEST(FdrLogWriterTest, UnwriteRecords) {
   // We've un-done the two function records we've written, and now we expect
   // that we don't have any function records in the trace.
   std::string Serialized = serialize(Buffers, 3);
-  llvm::DataExtractor DE(Serialized, true, 8);
+  llvm::DataExtractor DE(Serialized, true);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
   EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(IsEmpty()));
 }

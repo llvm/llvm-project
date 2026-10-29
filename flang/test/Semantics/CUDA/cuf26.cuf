@@ -1,0 +1,15 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o /dev/null
+
+! Test that host module variables are definable in device subprograms
+! when -gpu=unified is enabled (unified memory).
+
+module mtests
+  integer :: mx
+contains
+  attributes(global) subroutine g1(a, m)
+    integer :: a(*), m, i
+    i = threadIdx%x
+    a(i) = m + i
+    if (i .eq. 1) mx = a(i)
+  end subroutine
+end module mtests

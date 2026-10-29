@@ -685,7 +685,7 @@ bool R600MachineCFGStructurizer::prepare() {
     MBBVector ExitingMBBs;
     LoopRep->getExitingBlocks(ExitingMBBs);
 
-    if (ExitingMBBs.size() == 0) {
+    if (ExitingMBBs.empty()) {
       MachineBasicBlock* DummyExitBlk = normalizeInfiniteLoopExit(LoopRep);
       if (DummyExitBlk)
         RetBlks.push_back(DummyExitBlk);

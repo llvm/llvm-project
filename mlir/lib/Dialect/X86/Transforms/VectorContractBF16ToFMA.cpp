@@ -415,25 +415,21 @@ struct VectorContractBF16ToFMA
       Operation *accReadOp1 =
           traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-      // Iterate down to find the users of contact operations until it is store
-      // or transfer_write.
-      Operation *resultWriteOp0 =
-          traceToVectorWriteLikeUserOperation(contractOp.getResult());
-      Operation *resultWriteOp1 =
-          traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+      if (!isa<arith::ConstantOp>(accReadOp0)) {
+        // Shuffle the accumulators of the contract operations.
+        LogicalResult readShuffle =
+            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                   pairContractOp, nonUnitDim, accTy);
 
-      // Shuffle the accumulators of the contract operations.
-      LogicalResult readShuffle =
-          shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                 pairContractOp, nonUnitDim, accTy);
-
-      if (failed(readShuffle))
-        return rewriter.notifyMatchFailure(
-            contractOp, "Accumulator read is not by transfer_read or load");
+        if (failed(readShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp, "Accumulator read is not by transfer_read or load");
+      }
 
       // Shuffle the output of contract operations before its use.
       LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
+          rewriter, contractOp.getResult(), pairContractOp.getResult(),
+          nonUnitDim, accTy);
 
       if (failed(writeShuffle))
         return rewriter.notifyMatchFailure(
@@ -446,10 +442,11 @@ struct VectorContractBF16ToFMA
           VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
           contractOp.getAcc());
 
-      auto loadBcstBF16ElementToF32 = x86::BcstToPackedF32Op::create(
+      auto loadBcstBF16ElementToF32 = x86::avx::BcstToPackedF32Op::create(
           rewriter, loc, dstType, unitDimSubview[0]);
-      auto loadEvenIdxElementF32 = x86::CvtPackedEvenIndexedToF32Op::create(
-          rewriter, loc, dstType, nonUnitDimSubview[0]);
+      auto loadEvenIdxElementF32 =
+          x86::avx::CvtPackedEvenIndexedToF32Op::create(rewriter, loc, dstType,
+                                                        nonUnitDimSubview[0]);
       auto evenIdxFMA =
           vector::FMAOp::create(rewriter, loc, loadBcstBF16ElementToF32,
                                 loadEvenIdxElementF32, castAcc);
@@ -467,7 +464,7 @@ struct VectorContractBF16ToFMA
                           accTyPairCont.getElementType()),
           pairContractOp.getAcc());
 
-      auto loadOddIdxElementF32 = x86::CvtPackedOddIndexedToF32Op::create(
+      auto loadOddIdxElementF32 = x86::avx::CvtPackedOddIndexedToF32Op::create(
           rewriter, pairContOpLoc, dstType, nonUnitDimSubview[0]);
       auto oddIdxFMA = vector::FMAOp::create(
           rewriter, pairContOpLoc, loadBcstBF16ElementToF32,
@@ -480,18 +477,18 @@ struct VectorContractBF16ToFMA
     }
 
     // Load, broadcast, and do FMA for odd indexed BF16 elements.
-    auto loadBcstOddIdxElementToF32 = x86::BcstToPackedF32Op::create(
+    auto loadBcstOddIdxElementToF32 = x86::avx::BcstToPackedF32Op::create(
         rewriter, loc, dstType, unitDimSubview[0]);
-    auto loadOddIdxElementF32 = x86::CvtPackedOddIndexedToF32Op::create(
+    auto loadOddIdxElementF32 = x86::avx::CvtPackedOddIndexedToF32Op::create(
         rewriter, loc, dstType, nonUnitDimSubview[0]);
     auto oddIdxFMA =
         vector::FMAOp::create(rewriter, loc, loadBcstOddIdxElementToF32,
                               loadOddIdxElementF32, castAcc);
 
     // Load, broadcast, and do FMA for even indexed BF16 elements.
-    auto loadBcstEvenIdxElementToF32 = x86::BcstToPackedF32Op::create(
+    auto loadBcstEvenIdxElementToF32 = x86::avx::BcstToPackedF32Op::create(
         rewriter, loc, dstType, unitDimSubview[1]);
-    auto loadEvenIdxElementF32 = x86::CvtPackedEvenIndexedToF32Op::create(
+    auto loadEvenIdxElementF32 = x86::avx::CvtPackedEvenIndexedToF32Op::create(
         rewriter, loc, dstType, nonUnitDimSubview[0]);
     vector::FMAOp fma =
         vector::FMAOp::create(rewriter, loc, loadBcstEvenIdxElementToF32,

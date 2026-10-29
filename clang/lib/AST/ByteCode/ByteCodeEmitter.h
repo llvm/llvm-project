@@ -31,7 +31,7 @@ protected:
 public:
   using LabelTy = uint32_t;
   /// Compiles the function into the module.
-  void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
+  void compileFunc(const FunctionDecl *FuncDecl, Function *Func);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}
@@ -46,15 +46,21 @@ protected:
   /// Methods implemented by the compiler.
   virtual bool visitFunc(const FunctionDecl *E) = 0;
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
+  virtual bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
+  virtual bool visitDtorCall(const VarDecl *VD, const APValue &) = 0;
+  virtual bool visitWithSubstitutions(const FunctionDecl *Callee,
+                                      ArrayRef<const Expr *> Args,
+                                      const Expr *This,
+                                      const Expr *Condition) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
-  bool jumpTrue(const LabelTy &Label);
-  bool jumpFalse(const LabelTy &Label);
-  bool jump(const LabelTy &Label);
+  bool jumpTrue(const LabelTy &Label, SourceInfo SI);
+  bool jumpFalse(const LabelTy &Label, SourceInfo SI);
+  bool jump(const LabelTy &Label, SourceInfo SI);
   bool fallthrough(const LabelTy &Label);
   /// Speculative execution.
   bool speculate(const CallExpr *E, const LabelTy &EndLabel);
@@ -62,9 +68,10 @@ protected:
   /// We're always emitting bytecode.
   bool isActive() const { return true; }
   bool checkingForUndefinedBehavior() const { return false; }
+  bool constantFolding() const { return false; }
 
   /// Callback for local registration.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

@@ -282,7 +282,9 @@ class DynamicValueTestCase(TestBase):
 
     @no_debug_info_test
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
-    @expectedFailureAll(archs=["arm$"]) # Minidump saving not implemented
+    @expectedFailureAll(archs=["arm$"])  # Minidump saving not implemented
+    @skipIf(archs=["arm64e"])  # arm64e incompatible with minidump
+    @skipIfWasm  # No core file format for Wasm
     def test_from_core_file(self):
         """Test fetching C++ dynamic values from core files. Specifically, test
         that we can determine the dynamic type of the value if the core file

@@ -167,12 +167,13 @@ define void @cse_volatile_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_4:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[SRC_12:%.*]] = getelementptr i8, ptr [[SRC]], i64 12
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP2]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP2]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
@@ -460,9 +461,157 @@ exit:
   ret void
 }
 
+define i64 @cse_drop_nonnull_from_surviving_load(ptr %src) {
+; CHECK-LABEL: define i64 @cse_drop_nonnull_from_surviving_load(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[L_1]] to i64
+; CHECK-NEXT:    [[ACC_NEXT:%.*]] = add i64 [[ACC]], [[INT]]
+; CHECK-NEXT:    [[INT_1:%.*]] = ptrtoint ptr [[L_1]] to i64
+; CHECK-NEXT:    [[ACC_NEXT_1]] = add i64 [[ACC_NEXT]], [[INT_1]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i32 [[IV]], 2
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV_NEXT_1]], 4
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %loop ]
+  %l.1 = load ptr, ptr %src, align 8, !nonnull !3
+  %l.2 = load ptr, ptr %src, align 8
+  %int = ptrtoint ptr %l.2 to i64
+  %acc.next = add i64 %acc, %int
+  %iv.next = add i32 %iv, 1
+  %c = icmp eq i32 %iv.next, 4
+  br i1 %c, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret i64 %acc.next
+}
+
+define i64 @cse_keep_nonnull_noundef_on_surviving_load(ptr %src) {
+; CHECK-LABEL: define i64 @cse_keep_nonnull_noundef_on_surviving_load(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[SRC]], align 8, !nonnull [[META9:![0-9]+]], !noundef [[META9]]
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[L_1]] to i64
+; CHECK-NEXT:    [[ACC_NEXT:%.*]] = add i64 [[ACC]], [[INT]]
+; CHECK-NEXT:    [[INT_1:%.*]] = ptrtoint ptr [[L_1]] to i64
+; CHECK-NEXT:    [[ACC_NEXT_1]] = add i64 [[ACC_NEXT]], [[INT_1]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i32 [[IV]], 2
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV_NEXT_1]], 4
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %loop ]
+  %l.1 = load ptr, ptr %src, align 8, !nonnull !3, !noundef !3
+  %l.2 = load ptr, ptr %src, align 8
+  %int = ptrtoint ptr %l.2 to i64
+  %acc.next = add i64 %acc, %int
+  %iv.next = add i32 %iv, 1
+  %c = icmp eq i32 %iv.next, 4
+  br i1 %c, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret i64 %acc.next
+}
+
+define i64 @cse_drop_range_from_surviving_load(ptr %src) {
+; CHECK-LABEL: define i64 @cse_drop_range_from_surviving_load(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i64, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[ACC_NEXT:%.*]] = add i64 [[ACC]], [[L_1]]
+; CHECK-NEXT:    [[ACC_NEXT_1]] = add i64 [[ACC_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i32 [[IV]], 2
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV_NEXT_1]], 4
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %loop ]
+  %l.1 = load i64, ptr %src, align 8, !range !4
+  %l.2 = load i64, ptr %src, align 8
+  %acc.next = add i64 %acc, %l.2
+  %iv.next = add i32 %iv, 1
+  %c = icmp eq i32 %iv.next, 4
+  br i1 %c, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret i64 %acc.next
+}
+
+define i64 @cse_keep_range_noundef_on_surviving_load(ptr %src) {
+; CHECK-LABEL: define i64 @cse_keep_range_noundef_on_surviving_load(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ACC_NEXT_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i64, ptr [[SRC]], align 8, !range [[RNG12:![0-9]+]], !noundef [[META9]]
+; CHECK-NEXT:    [[ACC_NEXT:%.*]] = add i64 [[ACC]], [[L_1]]
+; CHECK-NEXT:    [[ACC_NEXT_1]] = add i64 [[ACC_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i32 [[IV]], 2
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV_NEXT_1]], 4
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT_1]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %loop ]
+  %l.1 = load i64, ptr %src, align 8, !range !4, !noundef !3
+  %l.2 = load i64, ptr %src, align 8
+  %acc.next = add i64 %acc, %l.2
+  %iv.next = add i32 %iv, 1
+  %c = icmp eq i32 %iv.next, 4
+  br i1 %c, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret i64 %acc.next
+}
+
 !0 = !{!"llvm.loop.mustprogress"}
 !1 = distinct !{!1, !0, !2}
 !2 = !{!"llvm.loop.unroll.count", i32 2}
+!3 = !{}
+!4 = !{i64 1, i64 100}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
@@ -472,4 +621,10 @@ exit:
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[META9]] = !{}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
+; CHECK: [[RNG12]] = !{i64 1, i64 100}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
 ;.

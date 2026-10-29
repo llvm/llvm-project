@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # Skip looking for results on AArch64 for now because the premerge advisor
     # service is not available on AWS currently.
     if platform.machine() == "arm64" or platform.machine() == "aarch64":
-        sys.exit(0)
+        sys.exit(args.return_code)
 
     failures_explained = main(
         args.commit_sha,

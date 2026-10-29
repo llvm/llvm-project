@@ -8,9 +8,8 @@
 define <vscale x 1 x double> @test1(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %nega = call <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x i1> %m, i32 %evl)
   %negb = call <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %evl)
@@ -22,27 +21,19 @@ define <vscale x 1 x double> @test1(<vscale x 1 x double> %a, <vscale x 1 x doub
 define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: test2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV32-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
-; RV32-NEXT:    lui a1, %hi(.LCPI1_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI1_1)(a1)
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vfmv.v.f v9, fa5
-; RV32-NEXT:    vfadd.vf v9, v9, fa4, v0.t
-; RV32-NEXT:    vfmul.vv v8, v8, v9, v0.t
+; RV32-NEXT:    lui a0, %hi(.LCPI1_0)
+; RV32-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV32-NEXT:    vfmul.vf v8, v8, fa5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1025
-; RV64-NEXT:    slli a1, a1, 52
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a1
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 62
+; RV64-NEXT:    lui a0, 2051
+; RV64-NEXT:    slli a0, a0, 39
 ; RV64-NEXT:    fmv.d.x fa5, a0
-; RV64-NEXT:    vfadd.vf v9, v9, fa5, v0.t
-; RV64-NEXT:    vfmul.vv v8, v8, v9, v0.t
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64-NEXT:    vfmul.vf v8, v8, fa5
 ; RV64-NEXT:    ret
   %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 2.0), <vscale x 1 x i1> %m, i32 %evl)
   %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 4.0), <vscale x 1 x double> %t, <vscale x 1 x i1> %m, i32 %evl)
@@ -53,29 +44,19 @@ define <vscale x 1 x double> @test2(<vscale x 1 x double> %a, <vscale x 1 x i1> 
 define <vscale x 1 x double> @test3(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV32-NEXT:    fld fa5, %lo(.LCPI2_0)(a1)
-; RV32-NEXT:    lui a1, %hi(.LCPI2_1)
-; RV32-NEXT:    fld fa4, %lo(.LCPI2_1)(a1)
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vfmv.v.f v10, fa5
-; RV32-NEXT:    vfmul.vf v10, v10, fa4, v0.t
-; RV32-NEXT:    vfmadd.vv v10, v8, v9, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
+; RV32-NEXT:    lui a0, %hi(.LCPI2_0)
+; RV32-NEXT:    fld fa5, %lo(.LCPI2_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV32-NEXT:    vfmadd.vf v8, fa5, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1025
-; RV64-NEXT:    slli a1, a1, 52
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 62
+; RV64-NEXT:    li a0, 513
+; RV64-NEXT:    slli a0, a0, 53
 ; RV64-NEXT:    fmv.d.x fa5, a0
-; RV64-NEXT:    vfmul.vf v10, v10, fa5, v0.t
-; RV64-NEXT:    vfmadd.vv v10, v8, v9, v0.t
-; RV64-NEXT:    vmv.v.v v8, v10
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64-NEXT:    vfmadd.vf v8, fa5, v9
 ; RV64-NEXT:    ret
   %t = call <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> splat (double 2.0), <vscale x 1 x i1> %m, i32 %evl)
   %v = call fast <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %t, <vscale x 1 x double> splat (double 4.0), <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %evl)

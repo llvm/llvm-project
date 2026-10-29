@@ -1,0 +1,62 @@
+# Verify the .debug_names verifier does not treat a non-skeleton
+# DW_TAG_compile_unit as a skeleton just because it carries a
+# DW_AT_GNU_dwo_id. -gmodules emits inline module DIE trees with a
+# DW_AT_GNU_dwo_id attribute on a regular DW_TAG_compile_unit (not a
+# DW_TAG_skeleton_unit), and there is no .dwo to load.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump --verify %t.o | FileCheck %s
+
+# CHECK: Verifying .debug_names...
+# CHECK-NOT: error
+# CHECK: No errors.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+DWARF:
+  debug_str:
+    - ''
+    - 'int'
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_GNU_dwo_id
+              Form:      DW_FORM_data8
+        - Code:     2
+          Tag:      DW_TAG_base_type
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_byte_size
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_encoding
+              Form:      DW_FORM_data1
+  debug_info:
+    - Version:    5
+      UnitType:   DW_UT_compile
+      AddrSize:   8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1122334455667788 ## DW_AT_GNU_dwo_id
+        - AbbrCode: 2
+          Values:
+            - Value: 0x00000001         ## DW_AT_name -> "int"
+            - Value: 0x04               ## DW_AT_byte_size
+            - Value: 0x05               ## DW_AT_encoding (DW_ATE_signed)
+        - AbbrCode: 0
+Sections:
+  ## .debug_names with a single name "int" -> DW_TAG_base_type DIE at offset
+  ## 0x15 in the CU above (CU header 0xC + 9 bytes of CU DIE).
+  - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x4
+    Content:         '4B00000005000000010000000000000000000000010000000100000009000000080000004C4C564D3037303000000000010000003080880B0100000000000000012403130419000000011500000000'

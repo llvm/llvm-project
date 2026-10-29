@@ -18,15 +18,15 @@ define i32 @non-ordered-stores(ptr noalias nocapture %in, ptr noalias nocapture 
 ; CHECK-NEXT:    [[LOAD_7:%.*]] = load i32, ptr [[GEP_5]], align 4
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i32, ptr [[INN]], i64 3
 ; CHECK-NEXT:    [[LOAD_8:%.*]] = load i32, ptr [[GEP_6]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LOAD_3]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_5]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[LOAD_7]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LOAD_3]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_5]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[LOAD_7]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i32> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_2]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[LOAD_4]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[LOAD_8]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_2]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[LOAD_4]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[LOAD_8]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    br label [[BLOCK1:%.*]]
 ; CHECK:       block1:

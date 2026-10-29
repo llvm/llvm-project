@@ -1,4 +1,4 @@
-add_custom_target(libc-string-tests)
+add_libc_testsuite(libc-string-tests)
 
 add_subdirectory(memory_utils)
 
@@ -272,6 +272,16 @@ add_libc_test(
     strnlen_test.cpp
   DEPENDS
     libc.src.string.strnlen
+)
+
+add_libc_test(
+  strnlen_s_test
+  SUITE
+    libc-string-tests
+  SRCS
+    strnlen_s_test.cpp
+  DEPENDS
+    libc.src.string.strnlen_s
 )
 
 add_libc_test(

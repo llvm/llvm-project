@@ -102,7 +102,7 @@ public:
     return enum_seq_inclusive(Location::First, Location::Last,
                               force_iteration_on_noniterable_enum);
   }
-
+  /// Returns iterator over all target location kinds
   static auto targetMemLocations() {
     return enum_seq_inclusive(Location::TargetMem0, Location::TargetMem1,
                               force_iteration_on_noniterable_enum);
@@ -273,6 +273,26 @@ public:
     for (auto Loc : MemoryEffectsBase::targetMemLocations())
       ME &= ME.getWithoutLoc(Loc);
     return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether location is target memory location.
+  bool isTargetMemLoc(IRMemLocation Loc) const {
+    for (auto L : targetMemLocations())
+      if (Loc == L)
+        return true;
+    return false;
+  }
+
+  /// Whether the target memory locations are all the same.
+  /// So it behaves as the default read/write, but for Target
+  /// locations only.
+  bool isTargetMemLocSameForAll() const {
+    ModRefInfo Expected = getModRef(IRMemLocation::TargetMem0);
+    for (auto Loc : targetMemLocations()) {
+      if (Expected != getModRef(Loc))
+        return false;
+    }
+    return true;
   }
 
   /// Whether this function only (at most) accesses errno memory.

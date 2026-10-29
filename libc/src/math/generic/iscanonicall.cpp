@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/iscanonicall.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/iscanonicall.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, iscanonicall, (long double x)) {
-  long double temp;
-  return fputil::canonicalize(temp, x) == 0;
+  return math::iscanonicall(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

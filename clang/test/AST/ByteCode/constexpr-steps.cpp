@@ -2,9 +2,32 @@
 
 
 constexpr int foo() { // expected-error {{never produces a constant expression}}
-  while (1) {} // expected-note 2{{constexpr evaluation hit maximum step limit}}
+  while (1) {} // expected-note 2{{constexpr evaluation hit maximum step limit}} \
+               // expected-note 2{{use -fconstexpr-steps}}
   return 0;
 }
 static_assert (foo() == 0, ""); // expected-error {{not an integral constant expression}} \
                                 // expected-note {{in call to}}
 
+constexpr void addr() { // expected-error {{never produces a constant expression}}
+  for (;;) // expected-note 2{{constexpr evaluation hit maximum step limit}} \
+           // expected-note 2{{use -fconstexpr-steps}}
+    ;
+}
+static_assert((addr(), 1) == 1); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{in call to}}
+
+/// No error here, even if the array has > 100 elements, an even if they are not coming from an array filler.
+
+constexpr int f[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0
+                    };

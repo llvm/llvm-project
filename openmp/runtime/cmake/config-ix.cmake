@@ -100,6 +100,7 @@ endif()
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
 check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_PTHREAD_SETNAME_NP)
 check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
+check_symbol_exists(pthread_cancel "pthread.h" LIBOMP_HAVE_PTHREAD_CANCEL)
 
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
@@ -150,20 +151,15 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking threading requirements. Note that compiling to WebAssembly threads
-# with either the Emscripten or wasi-threads flavor ends up using the pthreads
-# interface in a WebAssembly-compiled libc; CMake does not yet know how to
-# detect this.
-if (NOT WASM)
-  find_package(Threads REQUIRED)
-  if(WIN32)
-    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-      libomp_error_say("Need Win32 thread interface on Windows.")
-    endif()
-  else()
-    if(NOT CMAKE_USE_PTHREADS_INIT)
-      libomp_error_say("Need pthread interface on Unix-like systems.")
-    endif()
+# Checking threading requirements
+find_package(Threads REQUIRED)
+if(WIN32)
+  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+    libomp_error_say("Need Win32 thread interface on Windows.")
+  endif()
+else()
+  if(NOT CMAKE_USE_PTHREADS_INIT)
+    libomp_error_say("Need pthread interface on Unix-like systems.")
   endif()
 endif()
 

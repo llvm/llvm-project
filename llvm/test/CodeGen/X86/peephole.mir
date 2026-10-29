@@ -1,6 +1,7 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt %s -o - | FileCheck %s
 --- |
   define void @func() { ret void }
+  define void @fold_imm_copy_kill_bug() { ret void }
 ...
 ---
 # Check that instructions with MI.isBitcast() are only replaced by COPY if there
@@ -37,4 +38,30 @@ body: |
     %5 = MOVSS2DIrr %4
     %6 = SUBREG_TO_REG %5, %subreg.sub_32bit
     NOOP implicit %6
+...
+
+---
+# Test that foldImmediate correctly handles kill flags when eliminating
+# redundant instructions. Without the fix, kill flags are not cleared when
+# replacing the COPY's destination with the original immediate-defining register.
+name: fold_imm_copy_kill_bug
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: fold_imm_copy_kill_bug
+    ; CHECK: %0:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: %3:gr32 = ADD32ri %0, 42, implicit-def dead $eflags
+    ; CHECK-NEXT: %4:gr32 = ADD32ri %0, 42, implicit-def dead $eflags
+    ; CHECK-NEXT: RET 0
+
+    %0:gr32 = MOV32r0 implicit-def dead $eflags
+    %1:gr32 = MOV32ri 42
+
+    %2:gr32 = COPY %0:gr32
+
+    %3:gr32 = ADD32rr %1:gr32, killed %2:gr32, implicit-def dead $eflags
+    %4:gr32 = ADD32ri %0:gr32, 42, implicit-def dead $eflags
+
+    RET 0
+
 ...

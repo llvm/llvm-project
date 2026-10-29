@@ -23,6 +23,7 @@ volatile vec_uint vui;
 volatile vec_ulong vul;
 volatile vec_double vd;
 volatile vec_float vf;
+volatile vec_float vf1;
 
 void test_nnp_assist(void) {
   vf = __builtin_s390_vclfnhs(vus, 0);
@@ -35,9 +36,9 @@ void test_nnp_assist(void) {
   vf = __builtin_s390_vclfnls(vus, 15);
   // CHECK: call <4 x float> @llvm.s390.vclfnls(<8 x i16> %{{.*}}, i32 15)
 
-  vus = __builtin_s390_vcrnfs(vf, vf, 0);
+  vus = __builtin_s390_vcrnfs(vf, vf1, 0);
   // CHECK: call <8 x i16> @llvm.s390.vcrnfs(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 0)
-  vus = __builtin_s390_vcrnfs(vf, vf, 15);
+  vus = __builtin_s390_vcrnfs(vf, vf1, 15);
   // CHECK: call <8 x i16> @llvm.s390.vcrnfs(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 15)
 
   vus = __builtin_s390_vcfn(vus, 0);

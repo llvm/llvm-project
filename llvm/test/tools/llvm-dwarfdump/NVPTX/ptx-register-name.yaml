@@ -1,0 +1,110 @@
+# Test that llvm-dwarfdump decodes NVPTX virtual register names encoded as
+# packed ASCII uint64_t values in DW_OP_regx and DW_OP_bregx location
+# expressions.
+#
+# NVPTX encodes register names by treating each ASCII character as one byte
+# and packing them MSB-first into a uint64_t (NVPTXRegisterInfo::
+# encodeRegisterForDwarf).  When no MCRegisterInfo mapping exists for the
+# large resulting number, DWARFExpressionPrinter falls back to
+# decodeVirtualRegisterName to recover the original string.
+#
+# %r1 encodes as:
+#   ('%' << 16) | ('r' << 8) | '1'  = 0x257231
+#   ULEB128: B1 E4 95 01  (4 bytes)
+#
+# %rd2 encodes as:
+#   ('%' << 24) | ('r' << 16) | ('d' << 8) | '2'  = 0x25726432
+#   ULEB128: B2 C8 C9 AB 02  (5 bytes, only first byte differs from %rd1)
+#
+# %rd25 encodes as:
+#   ('%' << 32) | ('r' << 24) | ('d' << 16) | ('2' << 8) | '5'  = 0x2572643235
+#   ULEB128: B5 E4 90 93 D7 04  (6 bytes)
+#
+# DW_OP_regx  %r1   expression (5 bytes):  90 B1 E4 95 01
+# DW_OP_regx  %rd2  expression (6 bytes):  90 B2 C8 C9 AB 02
+# DW_OP_bregx %rd25 expression (8 bytes):  92 B5 E4 90 93 D7 04 08
+#   (last byte 08 = SLEB128(+8), the stack slot offset)
+#
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+
+# CHECK-NOT:  DW_OP_regx 0x{{.*}}
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_name ("x")
+# CHECK-NEXT:   DW_AT_location (DW_OP_regx %r1)
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_name ("y")
+# CHECK-NEXT:   DW_AT_location (DW_OP_regx %rd2)
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_name ("z")
+# CHECK-NEXT:   DW_AT_location (DW_OP_bregx %rd25
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_NONE
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_language
+              Form:      DW_FORM_data2
+        - Code:     2
+          Tag:      DW_TAG_variable
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_location
+              Form:      DW_FORM_exprloc
+  debug_info:
+    - Version:  4
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x04  # DW_LANG_C_plus_plus
+        - AbbrCode: 2
+          Values:
+            - CStr: x
+            - Value: 0x5  # exprloc length = 5 bytes
+              BlockData:
+                - 0x90 # DW_OP_regx
+                - 0xB1 # ULEB128(0x257231) '%r1', byte 0 (bits  6:0 = 0x31, cont.)
+                - 0xE4 # byte 1 (bits 13:7  = 0x64, cont.)
+                - 0x95 # byte 2 (bits 20:14 = 0x15, cont.)
+                - 0x01 # byte 3 (bits 23:21 = 0x01, end)
+        - AbbrCode: 2
+          Values:
+            - CStr: y
+            - Value: 0x6  # exprloc length = 6 bytes
+              BlockData:
+                - 0x90 # DW_OP_regx
+                - 0xB2 # ULEB128(0x25726432) '%rd2', byte 0 (bits  6:0 = 0x32, cont.)
+                - 0xC8 # byte 1 (bits 13:7  = 0x48, cont.)
+                - 0xC9 # byte 2 (bits 20:14 = 0x49, cont.)
+                - 0xAB # byte 3 (bits 27:21 = 0x2B, cont.)
+                - 0x02 # byte 4 (bits 31:28 = 0x02, end)
+        - AbbrCode: 2
+          Values:
+            - CStr: z
+            - Value: 0x8  # exprloc length = 8 bytes
+              BlockData:
+                - 0x92 # DW_OP_bregx
+                - 0xB5 # ULEB128(0x2572643235) '%rd25', byte 0 (bits  6:0 = 0x35, cont.)
+                - 0xE4 # byte 1 (bits 13:7  = 0x64, cont.)
+                - 0x90 # byte 2 (bits 20:14 = 0x10, cont.)
+                - 0x93 # byte 3 (bits 27:21 = 0x13, cont.)
+                - 0xD7 # byte 4 (bits 34:28 = 0x57, cont.)
+                - 0x04 # byte 5 (bits 39:35 = 0x04, end)
+                - 0x08 # SLEB128(+8)
+        - AbbrCode: 0
+...

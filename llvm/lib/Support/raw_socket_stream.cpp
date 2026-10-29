@@ -61,22 +61,38 @@ static std::error_code getLastSocketErrorCode() {
 #endif
 }
 
-static sockaddr_un setSocketAddr(StringRef SocketPath) {
+#ifdef _WIN32
+using NativeSocket = SOCKET;
+#else
+using NativeSocket = int;
+#define INVALID_SOCKET -1
+#endif
+
+static int closeSocket(NativeSocket Socket) {
+#ifdef _WIN32
+  return ::closesocket(Socket);
+#else
+  return ::close(Socket);
+#endif
+}
+
+static Expected<sockaddr_un> setSocketAddr(StringRef SocketPath) {
   struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
   Addr.sun_family = AF_UNIX;
+
+  if (sizeof(sockaddr_un::sun_path) <= SocketPath.size())
+    return make_error<StringError>(
+        std::make_error_code(std::errc::filename_too_long),
+        "Socket path exceeds sockaddr_un::sun_path size limit");
+
   strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
   return Addr;
 }
 
 static Expected<int> getSocketFD(StringRef SocketPath) {
-#ifdef _WIN32
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET) {
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1) {
-#endif // _WIN32
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Create socket failed");
   }
@@ -90,10 +106,18 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
   // off the handshake (and SO_PEERCRED/getpeereid support).
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
-  struct sockaddr_un Addr = setSocketAddr(SocketPath);
-  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1)
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "Connect socket failed");
+  Expected<struct sockaddr_un> Addr = setSocketAddr(SocketPath);
+  if (!Addr) {
+    closeSocket(Socket);
+    return Addr.takeError();
+  }
+
+  if (::connect(Socket, (struct sockaddr *)&*Addr, sizeof(*Addr)) == -1) {
+    // Grab the error code before closing, which may overwrite it.
+    std::error_code EC = getLastSocketErrorCode();
+    closeSocket(Socket);
+    return llvm::make_error<StringError>(EC, "Connect socket failed");
+  }
 
 #ifdef _WIN32
   return _open_osfhandle(Socket, 0);
@@ -147,12 +171,9 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 
 #ifdef _WIN32
   WSABalancer _;
-  SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == INVALID_SOCKET)
-#else
-  int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (Socket == -1)
 #endif
+  NativeSocket Socket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (Socket == INVALID_SOCKET)
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
 
@@ -165,11 +186,16 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
   // off the handshake (and SO_PEERCRED/getpeereid support).
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
-  struct sockaddr_un Addr = setSocketAddr(SocketPath);
-  if (::bind(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
-    // Grab error code from call to ::bind before calling ::close
+  Expected<struct sockaddr_un> Addr = setSocketAddr(SocketPath);
+  if (!Addr) {
+    closeSocket(Socket);
+    return Addr.takeError();
+  }
+
+  if (::bind(Socket, (struct sockaddr *)&*Addr, sizeof(*Addr)) == -1) {
+    // Grab error code from call to ::bind before closing the socket
     std::error_code EC = getLastSocketErrorCode();
-    ::close(Socket);
+    closeSocket(Socket);
     return llvm::make_error<StringError>(EC, "Bind error");
   }
 

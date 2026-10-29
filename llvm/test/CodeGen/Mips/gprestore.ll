@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=mips-mti-linux-gnu < %s -relocation-model=pic -O3 -mips-jalr-reloc=false | FileCheck %s --check-prefix=O3O32
 ; RUN: llc -mtriple=mips64-mti-linux-gnu < %s -relocation-model=pic -O3 -mips-jalr-reloc=false | FileCheck %s --check-prefix=O3N64
 ; RUN: llc -mtriple=mips64-mti-linux-gnu < %s -relocation-model=pic -target-abi n32 -O3 -mips-jalr-reloc=false | FileCheck %s --check-prefix=O3N32
+; RUN: llc -mtriple=mipsel-sony-psx -mcpu=mips1 < %s -relocation-model=pic | FileCheck %s -check-prefixes=MIPS1-PSX
 
 ; Test that PIC calls use the $25 register. This is an ABI requirement.
 
@@ -208,6 +209,55 @@ define void @f0() nounwind {
 ; O3N32-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
 ; O3N32-NEXT:    jr $ra
 ; O3N32-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS1-PSX-LABEL: f0:
+; MIPS1-PSX:       # %bb.0: # %entry
+; MIPS1-PSX-NEXT:    lui $2, %hi(_gp_disp)
+; MIPS1-PSX-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPS1-PSX-NEXT:    addiu $sp, $sp, -32
+; MIPS1-PSX-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS1-PSX-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
+; MIPS1-PSX-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
+; MIPS1-PSX-NEXT:    addu $16, $2, $25
+; MIPS1-PSX-NEXT:    lw $25, %call16(f1)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    .reloc $tmp0, R_MIPS_JALR, f1
+; MIPS1-PSX-NEXT:  $tmp0:
+; MIPS1-PSX-NEXT:    jalr $25
+; MIPS1-PSX-NEXT:    move $gp, $16
+; MIPS1-PSX-NEXT:    lw $1, %got(p)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    lw $4, 0($1)
+; MIPS1-PSX-NEXT:    lw $25, %call16(f2)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    .reloc $tmp1, R_MIPS_JALR, f2
+; MIPS1-PSX-NEXT:  $tmp1:
+; MIPS1-PSX-NEXT:    jalr $25
+; MIPS1-PSX-NEXT:    move $gp, $16
+; MIPS1-PSX-NEXT:    lw $1, %got(q)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    lw $17, 0($1)
+; MIPS1-PSX-NEXT:    lw $25, %call16(f2)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    .reloc $tmp2, R_MIPS_JALR, f2
+; MIPS1-PSX-NEXT:  $tmp2:
+; MIPS1-PSX-NEXT:    jalr $25
+; MIPS1-PSX-NEXT:    move $4, $17
+; MIPS1-PSX-NEXT:    lw $1, %got(r)($16)
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    lw $5, 0($1)
+; MIPS1-PSX-NEXT:    lw $25, %call16(f3)($16)
+; MIPS1-PSX-NEXT:    move $4, $17
+; MIPS1-PSX-NEXT:    .reloc $tmp3, R_MIPS_JALR, f3
+; MIPS1-PSX-NEXT:  $tmp3:
+; MIPS1-PSX-NEXT:    jalr $25
+; MIPS1-PSX-NEXT:    move $gp, $16
+; MIPS1-PSX-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
+; MIPS1-PSX-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
+; MIPS1-PSX-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; MIPS1-PSX-NEXT:    nop
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    addiu $sp, $sp, 32
 entry:
   tail call void @f1() nounwind
   %tmp = load i32, ptr @p, align 4

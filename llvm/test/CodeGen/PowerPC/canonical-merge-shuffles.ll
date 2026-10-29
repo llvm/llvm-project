@@ -15,7 +15,7 @@
 ; RUN:     -mcpu=pwr7 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-P7
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
-; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff < %s | \
+; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck %s --check-prefixes=P8-AIX,P8-AIX-64
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
 ; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff < %s | \

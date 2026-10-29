@@ -37,7 +37,7 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[ADDR_B]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[B_J_I:%.*]] = load double, ptr [[ADDR_B_J_I]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[B_J_I]], [[A_J_I]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL]], [[NEW_VAR]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nnan nsz arcp contract afn double [[MUL]], [[NEW_VAR]]
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[DEAD_J_NEXT:%.*]] = add nuw nsw i64 [[INDEX_J]], 1
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[DEAD_J_NEXT]], 100

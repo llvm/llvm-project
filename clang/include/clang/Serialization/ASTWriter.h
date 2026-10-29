@@ -85,6 +85,7 @@ enum class DeclUpdateKind;
 
 namespace SrcMgr {
 class FileInfo;
+class SLocEntry;
 } // namespace SrcMgr
 
 /// Writes an AST file containing the contents of a translation unit.
@@ -428,10 +429,15 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
-  /// DeclUpdates added during parsing the GMF. We split these from
-  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// DeclUpdates added during parsing the module unit. We split
+  /// these from DeclUpdates since we want to add these updates on need.
   /// Only meaningful for reduced BMI.
-  DeclUpdateMap DeclUpdatesFromGMF;
+  DeclUpdateMap DeclUpdatesLazy;
+
+  /// Convert non-lazy updates into lazy updates if we're in reduced BMI.
+  void prepareLazyUpdates();
+  /// Apply lazy update if the update is touched during the writing process.
+  void getLazyUpdates(const Decl *D);
 
   /// Mapping from decl templates and its new specialization in the
   /// current TU.
@@ -468,6 +474,11 @@ private:
   /// primary to this set, so that we can write out lexical content updates for
   /// it.
   llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContexts;
+
+  /// Same as UpdatedDeclContexts except that we only apply these updates
+  /// lazily. e.g., if these decl context are touched during the writing
+  /// process. Only meaningful in reduced BMI.
+  llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContextsLazy;
 
   /// Keeps track of declarations that we must emit, even though we're
   /// not guaranteed to be able to find them by walking the AST starting at the
@@ -638,6 +649,7 @@ private:
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
+  void WriteOpenMPRequiresDecls(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
   void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
@@ -702,7 +714,7 @@ public:
   /// Get a timestamp for output into the AST file. The actual timestamp
   /// of the specified file may be ignored if we have been instructed to not
   /// include timestamps in the output file.
-  time_t getTimestampForOutput(const FileEntry *E) const;
+  time_t getTimestampForOutput(time_t ModTime) const;
 
   /// Write a precompiled header or a module with the AST produced by the
   /// \c Sema object, or a dependency scanner module with the preprocessor state
@@ -723,8 +735,7 @@ public:
   /// the module but currently is merely a random 32-bit number.
   ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                             StringRef OutputFile, Module *WritingModule,
-                            StringRef isysroot,
-                            bool ShouldCacheASTInMemory = false);
+                            StringRef isysroot);
 
   /// Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
@@ -736,8 +747,28 @@ public:
   /// Emit a FileID.
   void AddFileID(FileID FID, RecordDataImpl &Record);
 
+  /// The starting offset of \p SLoc's entry within this module, with the dummy
+  /// entry skipped. This is what an SLocEntry record stores as its first field.
+  SourceLocation::UIntTy getEntryOffset(const SrcMgr::SLocEntry &SLoc) const;
+
+  /// Emit \p Offset as the next record field and return a chain anchored at
+  /// \p Offset + \p InitialDelta, for delta encoding the locations that follow.
+  static SourceLocationEncoding::Chain
+  EmitSourceLocationOffset(SourceLocation::UIntTy Offset,
+                           SourceLocation::UIntTy InitialDelta,
+                           RecordDataImpl &Record);
+
+  /// Emit \p SLoc's entry offset as the record's first field and return a chain
+  /// anchored at that entry, for delta encoding the locations that follow.
+  SourceLocationEncoding::Chain EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
+                                                RecordDataImpl &Record);
+
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
+
+  /// Emit a source location, delta encoded against \p Chain.
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                         SourceLocationEncoding::Chain &Chain);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
@@ -982,7 +1013,6 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
@@ -1002,7 +1032,6 @@ class PCHGenerator : public SemaConsumer {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
   bool AllowASTWithErrors;
-  bool ShouldCacheASTInMemory;
 
 protected:
   ASTWriter &getWriter() { return Writer; }
@@ -1024,7 +1053,6 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false,
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 

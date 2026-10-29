@@ -60,3 +60,25 @@ template <class T>
 [[clang::no_specializations]] void func(); // expected-note {{marked 'clang::no_specializations' here}}
 
 template <> void func<int>(); // expected-error {{'func' cannot be specialized}}
+
+namespace DeclBetween {
+template <class T>
+[[clang::no_specializations]] void func(); // expected-note {{marked 'clang::no_specializations' here}}
+template<class t> void func(){}
+template <> void func<int>(); // expected-error {{'func' cannot be specialized}}
+
+template<typename T>
+struct HasVarDecl {
+template<typename U> static int var_decl[[clang::no_specializations]];// expected-note {{marked 'clang::no_specializations' here}}
+};
+
+template<typename T>
+template<typename U> int HasVarDecl<T>::var_decl = 5;
+template<>
+template<>
+int HasVarDecl<int>::var_decl<int>; // expected-error{{'var_decl' cannot be specialized}}
+
+template<typename> struct [[clang::no_specializations]] ClassTempl; // expected-note {{marked 'clang::no_specializations' here}}
+template<typename> struct ClassTempl { };
+template<> struct ClassTempl<int> { }; // expected-error{{'ClassTempl' cannot be specialized}}
+};

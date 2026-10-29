@@ -10,18 +10,17 @@
 // REQUIRES: target={{aarch64-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
+// TODO: investigate this failure.
+// XFAIL: target={{.*-apple-.*}} && stdlib=system
+
 // Basic test for float registers number are accepted.
 
+#include "support/func_bounds.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unwind.h>
 
-// Using __attribute__((section("main_func"))) is ELF specific, but then
-// this entire test is marked as requiring Linux, so we should be good.
-//
-// We don't use dladdr() because on musl it's a no-op when statically linked.
-extern char __start_main_func;
-extern char __stop_main_func;
+FUNC_BOUNDS_DECL(main_func);
 
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   (void)arg;
@@ -29,8 +28,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   uintptr_t ip = _Unwind_GetIP(ctx);
-  if (ip >= (uintptr_t)&__start_main_func &&
-      ip < (uintptr_t)&__stop_main_func) {
+  if (ip >= (uintptr_t)FUNC_START(main_func) &&
+      ip < (uintptr_t)FUNC_END(main_func)) {
     _Exit(0);
   }
 
@@ -53,7 +52,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_Backtrace(frame_handler, NULL);
 }
 
-__attribute__((section("main_func"))) int main(int, char **) {
+FUNC_ATTR(main_func) int main(int, char **) {
   foo();
   return -2;
 }

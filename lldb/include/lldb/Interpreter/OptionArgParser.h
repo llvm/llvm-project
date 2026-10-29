@@ -10,7 +10,7 @@
 #define LLDB_INTERPRETER_OPTIONARGPARSER_H
 
 #include "lldb/lldb-private-types.h"
-
+#include "llvm/Support/Error.h"
 #include <optional>
 
 namespace lldb_private {

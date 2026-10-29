@@ -1,11 +1,23 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -passes=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -passes=si-late-branch-lowering %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 
 --- |
   define amdgpu_ps void @early_term_scc0_end_block() {
+    ret void
+  }
+
+  define amdgpu_ps void @early_term_scc0_trailing_debug() !dbg !5 {
+    ret void
+  }
+
+  define amdgpu_ps void @early_term_scc0_debug_before_instruction() !dbg !10 {
+    ret void
+  }
+
+  define amdgpu_ps void @early_term_scc0_debug_before_terminator() !dbg !14 {
     ret void
   }
 
@@ -35,6 +47,28 @@
 
   attributes #0 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="0" }
   attributes #1 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="1" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "early-term.mir", directory: "/")
+  !2 = !{}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !DISubroutineType(types: !2)
+  !5 = distinct !DISubprogram(name: "early_term_scc0_trailing_debug", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !6)
+  !6 = !{!7}
+  !7 = !DILocalVariable(name: "value", scope: !5, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, column: 1, scope: !5)
+  !10 = distinct !DISubprogram(name: "early_term_scc0_debug_before_instruction", scope: !1, file: !1, line: 2, type: !4, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+  !11 = !{!12}
+  !12 = !DILocalVariable(name: "value", scope: !10, file: !1, line: 2, type: !8)
+  !13 = !DILocation(line: 2, column: 1, scope: !10)
+  !14 = distinct !DISubprogram(name: "early_term_scc0_debug_before_terminator", scope: !1, file: !1, line: 3, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "value", scope: !14, file: !1, line: 3, type: !8)
+  !17 = !DILocation(line: 3, column: 1, scope: !14)
 ...
 
 ---
@@ -70,6 +104,123 @@ body: |
     SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
 
   bb.1:
+    liveins: $vgpr0
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: early_term_scc0_trailing_debug
+tracksRegLiveness: true
+body: |
+  ; GCN-LABEL: name: early_term_scc0_trailing_debug
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; GCN:   liveins: $sgpr0, $sgpr1
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN:   dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+  ; GCN:   DBG_VALUE $vgpr0, $noreg, !{{[0-9]+}}, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !{{[0-9]+}})
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN:   liveins: $vgpr0
+  ; GCN:   EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  ; GCN: bb.2:
+  ; GCN:   $exec = S_MOV_B64 0
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    successors: %bb.1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+    SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
+    DBG_VALUE $vgpr0, $noreg, !7, !DIExpression(), debug-location !9
+
+  bb.1:
+    liveins: $vgpr0
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: early_term_scc0_debug_before_instruction
+tracksRegLiveness: true
+body: |
+  ; GCN-LABEL: name: early_term_scc0_debug_before_instruction
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; GCN:   S_CBRANCH_SCC0
+  ; GCN: bb.3:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   DBG_VALUE $vgpr0, $noreg, !{{[0-9]+}}, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !{{[0-9]+}})
+  ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+  ; GCN: bb.1:
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    successors: %bb.1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+    SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
+    DBG_VALUE $vgpr0, $noreg, !12, !DIExpression(), debug-location !13
+    $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+
+  bb.1:
+    liveins: $vgpr0, $vgpr1
+    EXP 1, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: early_term_scc0_debug_before_terminator
+tracksRegLiveness: true
+body: |
+  ; GCN-LABEL: name: early_term_scc0_debug_before_terminator
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.2(0x80000000), %bb.3(0x00000000)
+  ; GCN:   liveins: $sgpr0, $sgpr1
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN:   dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+  ; GCN-NEXT:   DBG_VALUE $vgpr0, $noreg, !{{[0-9]+}}, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !{{[0-9]+}})
+  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.3, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN: bb.1:
+  ; GCN:   successors: %bb.2(0x80000000)
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+  ; GCN: bb.2:
+  ; GCN:   liveins: $vgpr0
+  ; GCN:   EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  ; GCN: bb.3:
+  ; GCN:   $exec = S_MOV_B64 0
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    successors: %bb.2
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+    SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
+    DBG_VALUE $vgpr0, $noreg, !16, !DIExpression(), debug-location !17
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
     liveins: $vgpr0
     EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     S_ENDPGM 0

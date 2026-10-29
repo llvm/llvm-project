@@ -35,7 +35,7 @@ struct EmbedBitcodeOptions {
 
 /// Pass embeds a copy of the module optimized with the provided pass pipeline
 /// into a global variable.
-class EmbedBitcodePass : public PassInfoMixin<EmbedBitcodePass> {
+class EmbedBitcodePass : public RequiredPassInfoMixin<EmbedBitcodePass> {
   bool IsThinLTO;
   bool EmitLTOSummary;
 
@@ -46,8 +46,6 @@ public:
       : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm.

@@ -64,25 +64,25 @@ public:
   IndexError(index_error_code C) : Code(C), LineNo(0) {}
   IndexError(index_error_code C, std::string FileName, int LineNo = 0)
       : Code(C), FileName(std::move(FileName)), LineNo(LineNo) {}
-  IndexError(index_error_code C, std::string FileName, std::string TripleToName,
-             std::string TripleFromName)
+  IndexError(index_error_code C, std::string FileName, std::string ConfigToName,
+             std::string ConfigFromName)
       : Code(C), FileName(std::move(FileName)),
-        TripleToName(std::move(TripleToName)),
-        TripleFromName(std::move(TripleFromName)) {}
+        ConfigToName(std::move(ConfigToName)),
+        ConfigFromName(std::move(ConfigFromName)) {}
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
   index_error_code getCode() const { return Code; }
   int getLineNum() const { return LineNo; }
   std::string getFileName() const { return FileName; }
-  std::string getTripleToName() const { return TripleToName; }
-  std::string getTripleFromName() const { return TripleFromName; }
+  std::string getConfigToName() const { return ConfigToName; }
+  std::string getConfigFromName() const { return ConfigFromName; }
 
 private:
   index_error_code Code;
   std::string FileName;
   int LineNo;
-  std::string TripleToName;
-  std::string TripleFromName;
+  std::string ConfigToName;
+  std::string ConfigFromName;
 };
 
 /// This function parses an index file that determines which
@@ -107,7 +107,8 @@ using InvocationListTy = llvm::StringMap<llvm::SmallVector<std::string, 32>>;
 /// will be used to produce the AST of the TU.
 llvm::Expected<InvocationListTy> parseInvocationList(
     StringRef FileContent,
-    llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix);
+    llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix,
+    StringRef FilePath = "");
 
 /// Returns true if it makes sense to import a foreign variable definition.
 /// For instance, we don't want to import variables that have non-trivial types
@@ -184,7 +185,7 @@ public:
   static std::optional<std::string> getLookupName(const Decl *D);
 
   /// Emit diagnostics for the user for potential configuration errors.
-  void emitCrossTUDiagnostics(const IndexError &IE);
+  void emitCrossTUDiagnostics(const IndexError &IE, SourceLocation Loc);
 
   /// Returns the MacroExpansionContext for the imported TU to which the given
   /// source-location corresponds.
@@ -264,7 +265,7 @@ private:
     /// In case of on-demand parsing, the invocations for parsing the source
     /// files is stored.
     std::optional<InvocationListTy> InvocationList;
-    index_error_code PreviousParsingResult = index_error_code::success;
+    std::optional<IndexError> PreviousError;
   };
 
   /// Maintain number of AST loads and check for reaching the load limit.
@@ -346,6 +347,8 @@ private:
   };
 
   ASTUnitStorage ASTStorage;
+
+  bool HasEmittedLoadThresholdRemark = false;
 };
 
 } // namespace cross_tu

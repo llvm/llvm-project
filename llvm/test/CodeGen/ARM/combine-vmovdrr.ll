@@ -39,20 +39,21 @@ define void @dynamicIndex(ptr %addr, ptr %addr2, i32 %index) {
 ; CHECK-NEXT:    mov r4, sp
 ; CHECK-NEXT:    bfc r4, #0, #4
 ; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    movs r3, #2
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    adds r0, r2, r2
-; CHECK-NEXT:    and r2, r0, #3
-; CHECK-NEXT:    adds r0, #1
+; CHECK-NEXT:    and.w r0, r3, r2, lsl #1
 ; CHECK-NEXT:    mov r12, sp
-; CHECK-NEXT:    and r0, r0, #3
-; CHECK-NEXT:    lsls r2, r2, #2
 ; CHECK-NEXT:    mov r3, r12
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r3:128], r2
-; CHECK-NEXT:    orr.w r0, r12, r0, lsl #2
 ; CHECK-NEXT:    sub.w r4, r7, #8
+; CHECK-NEXT:    lsls r0, r0, #2
+; CHECK-NEXT:    vst1.64 {d16, d17}, [r3:128], r0
+; CHECK-NEXT:    lsls r0, r2, #1
+; CHECK-NEXT:    adds r0, #1
+; CHECK-NEXT:    and r0, r0, #3
 ; CHECK-NEXT:    ldr r2, [r3]
-; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    vldr d18, [r1]
+; CHECK-NEXT:    orr.w r0, r12, r0, lsl #2
+; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    vmov d16, r2, r0
 ; CHECK-NEXT:    vtbl.8 d16, {d16, d17}, d18
 ; CHECK-NEXT:    vstr d16, [r1]

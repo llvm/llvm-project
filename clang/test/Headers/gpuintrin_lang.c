@@ -8,18 +8,18 @@
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -fcuda-is-device -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -fcuda-is-device -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=HIP
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -cl-std=CL3.0 -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -cl-std=CL3.0 -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENCL
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ -cl-std=CL3.0 \
-// RUN:   -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-is-target-device -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
+// RUN:   -fopenmp-is-target-device -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENMP
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include -DSYCL \
@@ -29,7 +29,7 @@
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -std=c89 -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN:   -triple amdgpu-amd-amdhsa -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=C89
 
 #define _DEFAULT_FN_ATTRS __attribute__((always_inline))

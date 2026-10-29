@@ -15,7 +15,10 @@
 
 #include <stddef.h> // size_t
 
-#if defined(LIBC_TARGET_ARCH_IS_X86)
+#if defined(LIBC_COPT_USE_MEM_BUILTINS)
+#include "src/string/memory_utils/generic/builtin.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_builtin
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP inline_memcmp_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
@@ -31,8 +34,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::flatten]] LIBC_INLINE int inline_memcmp(const void *p1, const void *p2,
-                                               size_t count) {
+LIBC_FLATTEN LIBC_INLINE int inline_memcmp(const void *p1, const void *p2,
+                                           size_t count) {
   return static_cast<int>(LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP(
       reinterpret_cast<CPtr>(p1), reinterpret_cast<CPtr>(p2), count));
 }

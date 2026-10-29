@@ -116,19 +116,6 @@ static SmallVector<OpFoldResult> getGenericOpLoopRange(OpBuilder &b,
                                                           allShapesSizes);
 }
 
-/// Helper method to permute the list of `values` based on the `map`.
-SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
-                                        AffineMap map) {
-  assert(map.isPermutation());
-  SmallVector<OpFoldResult> permutedValues(values.size());
-  for (const auto &position :
-       llvm::enumerate(llvm::map_range(map.getResults(), [](AffineExpr expr) {
-         return cast<AffineDimExpr>(expr).getPosition();
-       })))
-    permutedValues[position.value()] = values[position.index()];
-  return permutedValues;
-}
-
 /// Get zero value for an element type.
 static Value getZero(OpBuilder &b, Location loc, Type elementType) {
   assert(elementType.isIntOrIndexOrFloat() &&
@@ -277,6 +264,13 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   if (body->getOperations().size() <= 2) {
     return rewriter.notifyMatchFailure(genericOp,
                                        "operation has less than 3 statements");
+  }
+
+  /// The peeled statement is expected to produce at least one result.
+  if (body->getOperations().begin()->getNumResults() == 0) {
+    return rewriter.notifyMatchFailure(
+        &(*body->getOperations().begin()),
+        "peeled statement is expected to have at least one result");
   }
 
   /// Check that the peeled statement has a scalar element type.

@@ -109,7 +109,7 @@ void X86WinCOFFAsmTargetStreamer::emitCode64() { OS << "\t.code64\n"; }
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getContext().getAsmInfo());
+  ProcSym->print(OS, &getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }
@@ -127,7 +127,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOEndProc(SMLoc L) {
 bool X86WinCOFFAsmTargetStreamer::emitFPOData(const MCSymbol *ProcSym,
                                               SMLoc L) {
   OS << "\t.cv_fpo_data\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, &getStreamer().getContext().getAsmInfo());
   OS << '\n';
   return false;
 }

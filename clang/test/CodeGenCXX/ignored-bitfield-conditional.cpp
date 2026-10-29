@@ -17,7 +17,7 @@ void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
   cond ? s1.field1 = val1 : s1.field2 = val2;
   // Condition setup, branch.
   // CHECK: %[[CONDLD:.+]] = load i8, ptr %[[COND]]
-  // CHECK: %[[TO_BOOL:.+]] = trunc i8 %[[CONDLD]] to i1
+  // CHECK: %[[TO_BOOL:.+]] = icmp ne i8 %[[CONDLD]], 0
   // CHECK: br i1 %[[TO_BOOL]], label %[[TRUE:.+]], label %[[FALSE:.+]]
 
   // 'True', branch set the BF, branch to 'end'.
@@ -51,7 +51,7 @@ void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
   (void)(cond ? s2.field1 = val1 : s2.field2 = val2);
   // Condition setup, branch.
   // CHECK: %[[CONDLD:.+]] = load i8, ptr %[[COND]]
-  // CHECK: %[[TO_BOOL:.+]] = trunc i8 %[[CONDLD]] to i1
+  // CHECK: %[[TO_BOOL:.+]] = icmp ne i8 %[[CONDLD]], 0
   // CHECK: br i1 %[[TO_BOOL]], label %[[TRUE:.+]], label %[[FALSE:.+]]
 
   // 'True', branch set the BF, branch to 'end'.
@@ -97,7 +97,7 @@ void use2(bool cond1, bool cond2, struct S s1, int val1, int val2, int val3) {
   cond1 ? s1.field1 = val1 : cond2 ? s1.field2 = val2 : s1.field3 = val3;
   // First Condition setup, branch.
   // CHECK: %[[CONDLD:.+]] = load i8, ptr %[[COND1]]
-  // CHECK: %[[TO_BOOL:.+]] = trunc i8 %[[CONDLD]] to i1
+  // CHECK: %[[TO_BOOL:.+]] = icmp ne i8 %[[CONDLD]], 0
   // CHECK: br i1 %[[TO_BOOL]], label %[[TRUE:.+]], label %[[FALSE:.+]]
 
   // First 'True' branch, sets field1 to val1.
@@ -114,7 +114,7 @@ void use2(bool cond1, bool cond2, struct S s1, int val1, int val2, int val3) {
   // First 'False' branch, starts second ignored expression.
   // CHECK: [[FALSE]]:
   // CHECK: %[[CONDLD:.+]] = load i8, ptr %[[COND2]]
-  // CHECK: %[[TO_BOOL:.+]] = trunc i8 %[[CONDLD]] to i1
+  // CHECK: %[[TO_BOOL:.+]] = icmp ne i8 %[[CONDLD]], 0
   // CHECK: br i1 %[[TO_BOOL]], label %[[TRUE2:.+]], label %[[FALSE2:.+]]
 
   // Second 'True' branch, sets field2 to val2.

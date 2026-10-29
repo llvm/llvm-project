@@ -89,17 +89,19 @@ define i32 @dont_fold_urem_i32_umax(i32 %x) {
 define i64 @dont_fold_urem_i64(i64 %x) {
 ; CHECK-LABEL: dont_fold_urem_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stwu 1, -16(1)
-; CHECK-NEXT:    stw 0, 20(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset lr, 4
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 6, 98
-; CHECK-NEXT:    bl __umoddi3
-; CHECK-NEXT:    lwz 0, 20(1)
-; CHECK-NEXT:    addi 1, 1, 16
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    srwi 6, 4, 22
+; CHECK-NEXT:    rlwinm 7, 4, 31, 11, 31
+; CHECK-NEXT:    rlwimi 6, 3, 10, 11, 21
+; CHECK-NEXT:    lis 5, 1337
+; CHECK-NEXT:    add 6, 7, 6
+; CHECK-NEXT:    srwi 3, 3, 11
+; CHECK-NEXT:    ori 5, 5, 30762
+; CHECK-NEXT:    add 3, 6, 3
+; CHECK-NEXT:    mulhwu 5, 3, 5
+; CHECK-NEXT:    mulli 5, 5, 49
+; CHECK-NEXT:    sub 3, 3, 5
+; CHECK-NEXT:    rlwimi 4, 3, 1, 0, 30
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   %1 = urem i64 %x, 98
   ret i64 %1

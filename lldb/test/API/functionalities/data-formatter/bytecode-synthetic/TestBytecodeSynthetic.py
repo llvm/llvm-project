@@ -5,8 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
-    def test(self):
+    def test_synthetic(self):
         self.build()
         if self.TraceOn():
             self.expect("log enable -v lldb formatters")
@@ -21,3 +20,20 @@ class TestCase(TestBase):
         self.assertEqual(account.child[0].name, "username")
 
         self.expect("v acc", matching=False, substrs=["password"])
+
+    def test_update_reuse(self):
+        self.build()
+
+        log = self.getBuildArtifact("formatter.log")
+        self.runCmd(f"log enable lldb formatters -f {log}")
+
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        frame = thread.selected_frame
+        account = frame.var("acc")
+        self.assertEqual(account.num_children, 1)
+
+        self.filecheck_log(log, __file__)
+        # CHECK: Bytecode formatter can reuse @update: true (type: `Account`, name: `acc`)

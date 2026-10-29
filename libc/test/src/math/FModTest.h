@@ -1,9 +1,14 @@
-//===-- Utility class to test fmod special numbers ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test fmod special numbers.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
@@ -19,6 +24,8 @@
 
 #ifdef FE_DENORM
 #define DENORM_EXCEPT FE_DENORM
+#elif defined(FE_DENORMAL)
+#define DENORM_EXCEPT FE_DENORMAL
 #elif defined(__FE_DENORM)
 #define DENORM_EXCEPT __FE_DENORM
 #else
@@ -251,9 +258,9 @@ public:
   }
 };
 
-#define LIST_FMOD_TESTS(T, func)                                               \
-  using LlvmLibcFmodTest = FmodTest<T>;                                        \
-  TEST_F(LlvmLibcFmodTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcFmodTest, RegularExtreme) { testRegularExtreme(&func); }
+#define LIST_FMOD_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FmodTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RegularExtreme) { testRegularExtreme(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H

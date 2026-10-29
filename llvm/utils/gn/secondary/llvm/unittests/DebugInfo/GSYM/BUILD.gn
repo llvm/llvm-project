@@ -11,5 +11,9 @@ unittest("DebugInfoGSYMTests") {
     "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [ "GSYMTest.cpp" ]
+  sources = [
+    "GSYMTest.cpp",
+    "GSYMV2Test.cpp",
+    "GsymDataExtractorTest.cpp",
+  ]
 }

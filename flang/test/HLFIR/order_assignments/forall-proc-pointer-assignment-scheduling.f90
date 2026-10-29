@@ -1,6 +1,6 @@
 ! Test analysis of procedure pointer assignments inside FORALL.
 
-! RUN: bbc -hlfir -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
+! RUN: bbc -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
 ! RUN: --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only -I nw %s 2>&1 | FileCheck %s
 ! REQUIRES: asserts
 

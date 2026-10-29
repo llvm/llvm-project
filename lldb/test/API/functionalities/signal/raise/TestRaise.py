@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWindows  # signals do not exist on Windows
+@requireSignals
 class RaiseTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -20,7 +20,7 @@ class RaiseTestCase(TestBase):
         # passing of SIGSTOP is not correctly handled, so not testing that
         # scenario: https://llvm.org/bugs/show_bug.cgi?id=23574
 
-    @skipIfDarwin  # darwin does not support real time signals
+    @requireNotDarwin("darwin does not support real time signals")
     @skipIfTargetAndroid()
     def test_sigsigrtmin(self):
         self.build()

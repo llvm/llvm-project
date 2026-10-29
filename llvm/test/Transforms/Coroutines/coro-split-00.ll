@@ -1,9 +1,9 @@
 ; Tests that coro-split pass splits the coroutine into f, f.resume and f.destroy
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define ptr @f() presplitcoroutine !func_sanitize !0 {
+define ptr @f() presplitcoroutine !func_sanitize !0 !prof !1 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 
@@ -39,38 +39,46 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @f() !func_sanitize !0 {
+; CHECK-LABEL: define ptr @f()
+; CHECK-SAME: !prof [[PROF1:![0-9]+]] !func_sanitize !{{[0-9]+}} {
 ; CHECK: call ptr @malloc
 ; CHECK: @llvm.coro.begin(token %id, ptr %phi)
 ; CHECK: store ptr @f.resume, ptr %hdl
-; CHECK: %[[SEL:.+]] = select i1 %need.alloc, ptr @f.destroy, ptr @f.cleanup
+; CHECK: %[[SEL:.+]] = select i1 %need.alloc, ptr @f.destroy, ptr @f.cleanup, !prof [[PROF2:![0-9]+]]
 ; CHECK: store ptr %[[SEL]], ptr %destroy.addr
 ; CHECK: call void @print(i32 0)
 ; CHECK-NOT: call void @print(i32 1)
 ; CHECK-NOT: call void @free(
 ; CHECK: ret ptr %hdl
 
-; CHECK-LABEL: @f.resume({{.*}}) {
+; CHECK-LABEL: @f.resume(
+; CHECK-SAME: !prof [[PROF1]] {
+; CHECK: %[[DESTROY_ADDR:.+]] = getelementptr inbounds i8, ptr %hdl, i64 8
+; CHECK-NEXT: %[[DESTROY:.+]] = load ptr, ptr %[[DESTROY_ADDR]]
+; CHECK-NEXT: %[[IS_ELIDED:.+]] = icmp eq ptr %[[DESTROY]], @f.cleanup
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(i32 0)
 ; CHECK: call void @print(i32 1)
 ; CHECK-NOT: call void @print(i32 0)
-; CHECK: call void @free(
+; CHECK: %[[CORO_FREE:.+]] = select i1 %[[IS_ELIDED]], ptr null, ptr %hdl, !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT: call void @free(ptr %[[CORO_FREE]])
 ; CHECK: ret void
 
-; CHECK-LABEL: @f.destroy({{.*}}) {
+; CHECK-LABEL: @f.destroy(
+; CHECK-SAME: !prof [[PROF1]] {
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(
 ; CHECK: call void @free(
 ; CHECK: ret void
 
-; CHECK-LABEL: @f.cleanup({{.*}}) {
+; CHECK-LABEL: @f.cleanup( 
+; CHECK-SAME: !prof [[PROF1]] {
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(
 ; CHECK-NOT: call void @free(
 ; CHECK: ret void
 
-; CHECK-LABEL: @f.noalloc(ptr noundef nonnull align 8 dereferenceable(24) %{{.*}})
+; CHECK-LABEL: @f.noalloc(
 ; CHECK-NOT: call ptr @malloc
 ; CHECK: call void @print(i32 0)
 ; CHECK-NOT: call void @print(i32 1)
@@ -93,4 +101,8 @@ declare void @print(i32)
 declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 
 !0 = !{i32 846595819, ptr null}
+!1 = !{!"function_entry_count", i64 1000}
 attributes #1 = { coro_elide_safe }
+; CHECK: [[PROF1]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF2]] = !{!"unknown", !"coro-split"}
+;

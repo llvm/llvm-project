@@ -15,13 +15,15 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 attributes #0 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
 !1 = !DIFile(filename: "fast-isel-dbg.ll", directory: "/")
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "func", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+!4 = distinct !DISubprogram(name: "func", scope: null, isLocal: false, isDefinition: true, isOptimized: false, type: !9, unit: !0)
 !5 = !DILocalVariable(name: "a", arg: 1, scope: !4, file: !1, line: 17, type: !6)
 !6 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !7 = !DILocation(line: 17, scope: !4)

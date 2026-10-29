@@ -20,6 +20,10 @@
 #include <termios.h>
 #endif
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 using namespace lldb_private;
 
 struct Terminal::Data {
@@ -402,7 +406,7 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
 
 bool Terminal::SupportsUnicode() {
 #ifdef _WIN32
-  return true;
+  return ::GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_CHAR;
 #else
   static std::optional<bool> g_result;
   if (g_result)

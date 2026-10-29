@@ -11,14 +11,14 @@
 ;     A[-i + (1 << 62)] = 1;
 ; }
 ;
-; FIXME: There is a dependency between the two stores in all directions.
+; There is a dependency between the two stores in all directions.
 ;
 define void @weak_zero_src_siv_large_btc(ptr %A) {
 ; CHECK-ALL-LABEL: 'weak_zero_src_siv_large_btc'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [S]!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
@@ -26,7 +26,7 @@ define void @weak_zero_src_siv_large_btc(ptr %A) {
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [S]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*]!
 ;
@@ -63,14 +63,14 @@ exit:
 ;   A[-(1 << 62)] = 1;
 ; }
 ;
-; FIXME: There is a dependency between the two stores in all directions.
+; There is a dependency between the two stores in all directions.
 ;
 define void @weak_zero_dst_siv_large_btc(ptr %A) {
 ; CHECK-ALL-LABEL: 'weak_zero_dst_siv_large_btc'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
@@ -78,7 +78,7 @@ define void @weak_zero_dst_siv_large_btc(ptr %A) {
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [S]!
 ;

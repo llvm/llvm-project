@@ -31,7 +31,7 @@ void reportBug(const CheckerBase *Checker, const CallEvent &Call,
   C.getBugReporter().EmitBasicReport(
       nullptr, Checker, "", categories::LogicError, WarningMsg,
       PathDiagnosticLocation(Call.getOriginExpr(), C.getSourceManager(),
-                             C.getLocationContext()),
+                             C.getStackFrame()),
       {});
 }
 

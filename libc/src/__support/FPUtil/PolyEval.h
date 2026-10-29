@@ -1,9 +1,14 @@
-//===-- Common header for PolyEval implementations --------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Common header for PolyEval implementations.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H
@@ -25,14 +30,14 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
 polyeval(const T &, const T &a0) {
   return a0;
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T> polyeval(T,
-                                                                        T a0) {
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+polyeval(T, T a0) {
   return a0;
 }
 
@@ -43,7 +48,7 @@ polyeval(const T &x, const T &a0, const Ts &...a) {
 }
 
 template <typename T, typename... Ts>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+LIBC_INLINE LIBC_CONSTEXPR cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
 polyeval(T x, T a0, Ts... a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }
@@ -67,13 +72,15 @@ altpolyeval(T, T a0) {
 template <typename T, typename... Ts>
 LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
 altpolyeval(const T &x, const T &a0, const Ts &...a) {
-  return a0 - x * altpolyeval(x, a...);
+  T prod = x * altpolyeval(x, a...);
+  return a0 - prod;
 }
 
 template <typename T, typename... Ts>
 LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
 altpolyeval(T x, T a0, Ts... a) {
-  return a0 - x * altpolyeval(x, a...);
+  T prod = x * altpolyeval(x, a...);
+  return a0 - prod;
 }
 
 } // namespace fputil

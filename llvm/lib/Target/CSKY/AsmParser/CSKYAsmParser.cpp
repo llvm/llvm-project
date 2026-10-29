@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/CSKYInstPrinter.h"
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
+#include "MCTargetDesc/CSKYMCOptions.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -31,7 +32,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CSKYAttributes.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/CSKYTargetParser.h"
 
@@ -46,16 +46,11 @@ using namespace llvm;
 STATISTIC(CSKYNumInstrsCompressed,
           "Number of C-SKY Compressed instructions emitted");
 
-static cl::opt<bool>
-    EnableCompressedInst("enable-csky-asm-compressed-inst", cl::Hidden,
-                         cl::init(false),
-                         cl::desc("Enable C-SKY asm compressed instruction"));
-
 namespace {
 struct CSKYOperand;
 
 class CSKYAsmParser : public MCTargetAsmParser {
-
+  const CSKYMCOptions &CLOpts;
   const MCRegisterInfo *MRI;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
@@ -128,8 +123,9 @@ public:
   };
 
   CSKYAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(CSKY_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
 
     MCAsmParserExtension::Initialize(Parser);
 
@@ -137,7 +133,8 @@ public:
     MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-    getTargetStreamer().emitTargetAttributes(STI);
+    if (CLOpts.add_build_attributes)
+      getTargetStreamer().emitTargetAttributes(STI, /*HardFloatABI=*/false);
   }
 };
 
@@ -431,9 +428,10 @@ public:
   }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
-    auto RegName = [](MCRegister Reg) {
+    const CSKYMCOptions &CLOpts = CSKY_MC::getCLOpts(MAI.getTargetOptions());
+    auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return CSKYInstPrinter::getRegisterName(Reg);
+        return CSKYInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
@@ -675,11 +673,9 @@ bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     ListSeparator LS;
     std::string Msg = "instruction requires the following: ";
-    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-      if (MissingFeatures[i]) {
-        Msg += LS;
-        Msg += getSubtargetFeatureName(i);
-      }
+    for (unsigned Feature : MissingFeatures) {
+      Msg += LS;
+      Msg += getSubtargetFeatureName(Feature);
     }
     return Error(IDLoc, Msg);
   }
@@ -1622,7 +1618,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   MCRegister Reg = Op.getReg();
 
-  if (CSKYMCRegisterClasses[CSKY::FPR32RegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::FPR32RegClassID).contains(Reg)) {
     // As the parser couldn't differentiate an FPR64 from an FPR32, coerce the
     // register from FPR32 to FPR64 if necessary.
     if (Kind == MCK_FPR64 || Kind == MCK_sFPR64) {
@@ -1637,7 +1633,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     }
   }
 
-  if (CSKYMCRegisterClasses[CSKY::GPRRegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::GPRRegClassID).contains(Reg)) {
     if (Kind == MCK_GPRPair) {
       Op.Reg.RegNum = MRI->getEncodingValue(Reg) + CSKY::R0_R1;
       return Match_Success;
@@ -1650,7 +1646,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 void CSKYAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
-  if (EnableCompressedInst)
+  if (CLOpts.asm_compressed_inst)
     Res = compressInst(CInst, Inst, getSTI());
   if (Res)
     ++CSKYNumInstrsCompressed;

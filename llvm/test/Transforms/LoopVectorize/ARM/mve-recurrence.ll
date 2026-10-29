@@ -36,15 +36,15 @@ entry:
   %cmp18 = icmp sgt i32 %n, 1
   br i1 %cmp18, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   %.pre = load i8, ptr %x, align 1
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %0 = phi i8 [ %.pre, %for.body.preheader ], [ %1, %for.body ]
   %indvars.iv = phi i64 [ 1, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx4 = getelementptr inbounds i8, ptr %x, i64 %indvars.iv
@@ -94,7 +94,7 @@ entry:
   %cmp38 = icmp sgt i32 %n, 3
   br i1 %cmp38, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %n to i64
   %.pre = load i8, ptr %x, align 1
   %arrayidx5.phi.trans.insert = getelementptr inbounds i8, ptr %x, i64 1
@@ -103,10 +103,10 @@ for.body.preheader:                               ; preds = %entry
   %.pre45 = load i8, ptr %arrayidx12.phi.trans.insert, align 1
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %0 = phi i8 [ %.pre45, %for.body.preheader ], [ %3, %for.body ]
   %1 = phi i8 [ %.pre44, %for.body.preheader ], [ %0, %for.body ]
   %2 = phi i8 [ %.pre, %for.body.preheader ], [ %1, %for.body ]

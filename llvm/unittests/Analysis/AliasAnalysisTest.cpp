@@ -185,7 +185,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
       SyncScope::System, BB);
   auto *AtomicRMW = new AtomicRMWInst(
       AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
-      AtomicOrdering::Monotonic, SyncScope::System, BB);
+      AtomicOrdering::Monotonic, SyncScope::System, /*Elementwise=*/false, BB);
 
   FunctionType *FooBarTy = FunctionType::get(Type::getVoidTy(C), {}, false);
   Function::Create(FooBarTy, Function::ExternalLinkage, "foo", &M);
@@ -423,6 +423,34 @@ TEST_F(AAPassInfraTest, injectExternalAA) {
 
   // Finally, ensure that our custom AA was indeed queried.
   EXPECT_TRUE(IsCustomAAQueried);
+}
+
+TEST_F(AAPassInfraTest, injectExternalAABeforeBasicAA) {
+  legacy::PassManager PM;
+
+  bool CallbackRan = false;
+  bool RanBeforeBasicAA = false;
+
+  PM.add(createExternalAAWrapperPass(
+      [&](Pass &, Function &F, AAResults &AAR) {
+        CallbackRan = true;
+
+        Value *Ptr = F.getArg(0);
+        LocationSize Size = LocationSize::beforeOrAfterPointer();
+
+        // Before BasicAA is registered, the empty AAResults must return
+        // MayAlias even when the same pointer is queried against itself.
+        RanBeforeBasicAA =
+            AAR.alias(Ptr, Size, Ptr, Size) == AliasResult::MayAlias;
+      },
+      /*RunEarly=*/true));
+
+  // Force AAResultsWrapperPass to run and construct the AA pipeline.
+  PM.add(new AATestPass());
+  PM.run(*M);
+
+  EXPECT_TRUE(CallbackRan);
+  EXPECT_TRUE(RanBeforeBasicAA);
 }
 
 } // end anonymous namspace

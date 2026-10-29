@@ -666,8 +666,19 @@ public:
   bool TraverseAttr(Attr *X) {
     return traverseNode(X, [&] { return Base::TraverseAttr(X); });
   }
+  bool TraverseAttributedStmt(AttributedStmt *S) {
+    return traverseNode(S, [&] {
+      for (const Attr *A : S->getAttrs())
+        if (!TraverseAttr(const_cast<Attr *>(A)))
+          return false;
+      return TraverseStmt(S->getSubStmt());
+    });
+  }
   bool TraverseConceptReference(ConceptReference *X) {
     return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
+  }
+  bool TraverseOffsetOfNode(const OffsetOfNode *N) {
+    return traverseNode(N, [&] { return Base::TraverseOffsetOfNode(N); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
@@ -720,15 +731,6 @@ public:
   // We only want to traverse the *syntactic form* to understand the selection.
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
-  }
-  bool TraverseTypeConstraint(const TypeConstraint *C) {
-    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
-      // Technically this expression is 'implicit' and not traversed by the RAV.
-      // However, the range is correct, so we visit expression to avoid adding
-      // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.
-      return TraverseStmt(E);
-    }
-    return Base::TraverseTypeConstraint(C);
   }
 
   // Override child traversal for certain node types.
@@ -919,6 +921,15 @@ private:
     // Prevent it claiming 's' in the case above.
     if (N.get<ExprWithCleanups>())
       return;
+
+    if (const auto *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Array) {
+        // Leave the array index expression to its own child nodes.
+        claimRange(OON->getBeginLoc(), Result);
+        claimRange(OON->getEndLoc(), Result);
+        return;
+      }
+    }
 
     // Declarators nest "inside out", with parent types inside child ones.
     // Instead of claiming the whole range (clobbering parent tokens), carefully

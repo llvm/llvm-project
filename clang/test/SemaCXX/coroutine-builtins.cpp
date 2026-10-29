@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -DERRORS %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-coroutines-unsupported-target -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-coroutines-unsupported-target -DERRORS %s
 
 // Check that we don't crash when using __builtin_coro_* without the fcoroutine-ts or -std=c++20 option
 

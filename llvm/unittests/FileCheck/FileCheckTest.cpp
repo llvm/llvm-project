@@ -914,11 +914,25 @@ public:
     return Res.TheMatch->Pos;
   }
 
-  void printVariableDefs(FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> &Diags) {
-    P.printVariableDefs(SM, MatchTy, &Diags);
+  void printVariableDefs(FileCheckDiagList &Diags) {
+    P.printVariableDefs(SM, &Diags);
   }
+
+  SourceMgr &getSourceMgr() { return SM; }
 };
+
+#define EXPECT_SM_RANGE(SM, RangeOpt, StartLineExpected, StartColExpected,     \
+                        EndLineExpected, EndColExpected)                       \
+  do {                                                                         \
+    EXPECT_TRUE(RangeOpt->isValid());                                          \
+    SMRange Range = *RangeOpt;                                                 \
+    auto StartActual = SM.getLineAndColumn(Range.Start);                       \
+    auto EndActual = SM.getLineAndColumn(Range.End);                           \
+    EXPECT_EQ(StartActual.first, StartLineExpected);                           \
+    EXPECT_EQ(StartActual.second, StartColExpected);                           \
+    EXPECT_EQ(EndActual.first, EndLineExpected);                               \
+    EXPECT_EQ(EndActual.second, EndColExpected);                               \
+  } while (0)
 
 TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   PatternTester Tester;
@@ -1471,69 +1485,69 @@ TEST_F(FileCheckTest, Substitution) {
 }
 
 TEST_F(FileCheckTest, FileCheckContext) {
-  FileCheckPatternContext Cxt;
+  FileCheckPatternContext Ctx;
   SourceMgr SM;
 
   // No definition.
-  EXPECT_THAT_ERROR(Cxt.defineCmdlineVariables({}, SM), Succeeded());
+  EXPECT_THAT_ERROR(Ctx.defineCmdlineVariables({}, SM), Succeeded());
 
   // Missing equal sign.
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables({"LocalVar"}, SM));
+                        Ctx.defineCmdlineVariables({"LocalVar"}, SM));
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables({"#LocalNumVar"}, SM));
+                        Ctx.defineCmdlineVariables({"#LocalNumVar"}, SM));
 
   // Empty variable name.
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables({"=18"}, SM));
+                        Ctx.defineCmdlineVariables({"=18"}, SM));
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables({"#=18"}, SM));
+                        Ctx.defineCmdlineVariables({"#=18"}, SM));
 
   // Invalid variable name.
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables({"18LocalVar=18"}, SM));
+                        Ctx.defineCmdlineVariables({"18LocalVar=18"}, SM));
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables({"#18LocalNumVar=18"}, SM));
+                        Ctx.defineCmdlineVariables({"#18LocalNumVar=18"}, SM));
 
   // Name conflict between pattern and numeric variable.
   expectDiagnosticError(
       "string variable with name 'LocalVar' already exists",
-      Cxt.defineCmdlineVariables({"LocalVar=18", "#LocalVar=36"}, SM));
-  Cxt = FileCheckPatternContext();
+      Ctx.defineCmdlineVariables({"LocalVar=18", "#LocalVar=36"}, SM));
+  Ctx = FileCheckPatternContext();
   expectDiagnosticError(
       "numeric variable with name 'LocalNumVar' already exists",
-      Cxt.defineCmdlineVariables({"#LocalNumVar=18", "LocalNumVar=36"}, SM));
-  Cxt = FileCheckPatternContext();
+      Ctx.defineCmdlineVariables({"#LocalNumVar=18", "LocalNumVar=36"}, SM));
+  Ctx = FileCheckPatternContext();
 
   // Invalid numeric value for numeric variable.
-  expectUndefErrors({"x"}, Cxt.defineCmdlineVariables({"#LocalNumVar=x"}, SM));
+  expectUndefErrors({"x"}, Ctx.defineCmdlineVariables({"#LocalNumVar=x"}, SM));
 
   // Define local variables from command-line.
   std::vector<StringRef> GlobalDefines;
   // Clear local variables to remove dummy numeric variable x that
   // parseNumericSubstitutionBlock would have created and stored in
   // GlobalNumericVariableTable.
-  Cxt.clearLocalVars();
+  Ctx.clearLocalVars();
   GlobalDefines.emplace_back("LocalVar=FOO");
   GlobalDefines.emplace_back("EmptyVar=");
   GlobalDefines.emplace_back("#LocalNumVar1=18");
   GlobalDefines.emplace_back("#%x,LocalNumVar2=LocalNumVar1+2");
   GlobalDefines.emplace_back("#LocalNumVar3=0xc");
-  ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
+  ASSERT_THAT_ERROR(Ctx.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
 
   // Create @LINE pseudo numeric variable and check it is present by matching
   // it.
   size_t LineNumber = 1;
-  Pattern P(Check::CheckPlain, &Cxt, LineNumber);
+  Pattern P(Check::CheckPlain, &Ctx, LineNumber);
   FileCheckRequest Req;
-  Cxt.createLineVariable();
+  Ctx.createLineVariable();
   ASSERT_FALSE(P.parsePattern("[[@LINE]]", "CHECK", SM, Req));
   Pattern::MatchResult Res = P.match("1", SM);
   ASSERT_THAT_ERROR(std::move(Res.TheError), Succeeded());
 
 #ifndef NDEBUG
   // Recreating @LINE pseudo numeric variable fails.
-  EXPECT_DEATH(Cxt.createLineVariable(),
+  EXPECT_DEATH(Ctx.createLineVariable(),
                "@LINE pseudo numeric variable already created");
 #endif
 
@@ -1544,31 +1558,31 @@ TEST_F(FileCheckTest, FileCheckContext) {
   StringRef LocalNumVar3Ref = bufferize(SM, "LocalNumVar3");
   StringRef EmptyVarStr = "EmptyVar";
   StringRef UnknownVarStr = "UnknownVar";
-  Expected<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  Expected<StringRef> LocalVar = Ctx.getPatternVarValue(LocalVarStr);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   std::optional<NumericVariable *> DefinedNumericVariable;
   Expected<std::unique_ptr<Expression>> ExpressionPointer =
       P.parseNumericSubstitutionBlock(LocalNumVar1Ref, DefinedNumericVariable,
                                       /*IsLegacyLineExpr=*/false, LineNumber,
-                                      &Cxt, SM);
+                                      &Ctx, SM);
   ASSERT_THAT_EXPECTED(LocalVar, Succeeded());
   EXPECT_EQ(*LocalVar, "FOO");
-  Expected<StringRef> EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
-  Expected<StringRef> UnknownVar = Cxt.getPatternVarValue(UnknownVarStr);
+  Expected<StringRef> EmptyVar = Ctx.getPatternVarValue(EmptyVarStr);
+  Expected<StringRef> UnknownVar = Ctx.getPatternVarValue(UnknownVarStr);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   Expected<APInt> ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 18);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable,
-      /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
+      /*IsLegacyLineExpr=*/false, LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 20);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar3Ref, DefinedNumericVariable,
-      /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
+      /*IsLegacyLineExpr=*/false, LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
@@ -1578,8 +1592,8 @@ TEST_F(FileCheckTest, FileCheckContext) {
   expectUndefErrors({std::string(UnknownVarStr)}, UnknownVar.takeError());
 
   // Clear local variables and check they become absent.
-  Cxt.clearLocalVars();
-  LocalVar = Cxt.getPatternVarValue(LocalVarStr);
+  Ctx.clearLocalVars();
+  LocalVar = Ctx.getPatternVarValue(LocalVarStr);
   expectUndefErrors({std::string(LocalVarStr)}, LocalVar.takeError());
   // Check a numeric expression's evaluation fails if called after clearing of
   // local variables, if it was created before. This is important because local
@@ -1587,50 +1601,50 @@ TEST_F(FileCheckTest, FileCheckContext) {
   // expressions are linked to the numeric variables they use.
   expectUndefErrors({"LocalNumVar3"},
                     (*ExpressionPointer)->getAST()->eval().takeError());
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar1Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   expectUndefErrors({"LocalNumVar1"}, ExpressionVal.takeError());
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   expectUndefErrors({"LocalNumVar2"}, ExpressionVal.takeError());
-  EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
+  EmptyVar = Ctx.getPatternVarValue(EmptyVarStr);
   expectUndefErrors({"EmptyVar"}, EmptyVar.takeError());
   // Clear again because parseNumericSubstitutionBlock would have created a
   // dummy variable and stored it in GlobalNumericVariableTable.
-  Cxt.clearLocalVars();
+  Ctx.clearLocalVars();
 
   // Redefine global variables and check variables are defined again.
   GlobalDefines.emplace_back("$GlobalVar=BAR");
   GlobalDefines.emplace_back("#$GlobalNumVar=36");
-  ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
+  ASSERT_THAT_ERROR(Ctx.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
   StringRef GlobalVarStr = "$GlobalVar";
   StringRef GlobalNumVarRef = bufferize(SM, "$GlobalNumVar");
-  Expected<StringRef> GlobalVar = Cxt.getPatternVarValue(GlobalVarStr);
+  Expected<StringRef> GlobalVar = Ctx.getPatternVarValue(GlobalVarStr);
   ASSERT_THAT_EXPECTED(GlobalVar, Succeeded());
   EXPECT_EQ(*GlobalVar, "BAR");
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 36);
 
   // Clear local variables and check global variables remain defined.
-  Cxt.clearLocalVars();
-  EXPECT_THAT_EXPECTED(Cxt.getPatternVarValue(GlobalVarStr), Succeeded());
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  Ctx.clearLocalVars();
+  EXPECT_THAT_EXPECTED(Ctx.getPatternVarValue(GlobalVarStr), Succeeded());
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
@@ -1639,22 +1653,21 @@ TEST_F(FileCheckTest, FileCheckContext) {
 
 TEST_F(FileCheckTest, CapturedVarDiags) {
   PatternTester Tester;
+  SourceMgr &SM = Tester.getSourceMgr();
   ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
-  std::vector<FileCheckDiag> Diags;
-  Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
+  FileCheckDiagList Diags;
+  Tester.printVariableDefs(Diags);
   EXPECT_EQ(Diags.size(), 2ul);
+  SmallVector<MatchCustomNoteDiag, 2> Notes;
   for (const FileCheckDiag &Diag : Diags) {
-    EXPECT_EQ(Diag.CheckTy, Check::CheckPlain);
-    EXPECT_EQ(Diag.MatchTy, FileCheckDiag::MatchFoundAndExpected);
-    EXPECT_EQ(Diag.InputStartLine, 1u);
-    EXPECT_EQ(Diag.InputEndLine, 1u);
+    EXPECT_EQ(Diag.getKind(), FileCheckDiag::MatchCustomNoteDiag);
+    EXPECT_FALSE(Diag.isError());
+    Notes.push_back(cast<MatchCustomNoteDiag>(Diag));
   }
-  EXPECT_EQ(Diags[0].InputStartCol, 1u);
-  EXPECT_EQ(Diags[0].InputEndCol, 7u);
-  EXPECT_EQ(Diags[1].InputStartCol, 8u);
-  EXPECT_EQ(Diags[1].InputEndCol, 9u);
-  EXPECT_EQ(Diags[0].Note, "captured var \"STRVAR\"");
-  EXPECT_EQ(Diags[1].Note, "captured var \"NUMVAR\"");
+  EXPECT_SM_RANGE(SM, Notes[0].getMatchRange(), 1u, 1u, 1u, 7u);
+  EXPECT_SM_RANGE(SM, Notes[1].getMatchRange(), 1u, 8u, 1u, 9u);
+  EXPECT_EQ(Notes[0].getNote(), "captured var \"STRVAR\"");
+  EXPECT_EQ(Notes[1].getNote(), "captured var \"NUMVAR\"");
 }
 } // namespace

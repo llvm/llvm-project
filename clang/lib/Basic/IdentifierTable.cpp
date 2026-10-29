@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -159,7 +160,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
   case KEYNOOPENCL:
   case KEYNOMS18:
-  case KEYNOZOS:
+  case KEYNOHLSL:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
   case KEYFIXEDPOINT:
@@ -178,10 +179,10 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
   // These are tests that need to 'always win', as they are special in that they
   // disable based on certain conditions.
   if (LangOpts.OpenCL && (Flags & KEYNOOPENCL)) return KS_Disabled;
+  if (LangOpts.HLSL && (Flags & KEYNOHLSL))
+    return KS_Disabled;
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
-    return KS_Disabled;
-  if (LangOpts.ZOSExt && (Flags & KEYNOZOS))
     return KS_Disabled;
   KeywordStatus CurStatus = KS_Unknown;
 
@@ -705,7 +706,7 @@ ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
 namespace {
 
 struct SelectorTableImpl {
-  llvm::FoldingSet<MultiKeywordSelector> Table;
+  llvm::UniquingSet<MultiKeywordSelector> Table;
   llvm::BumpPtrAllocator Allocator;
 };
 
@@ -750,13 +751,9 @@ Selector SelectorTable::getSelector(unsigned nKeys,
 
   SelectorTableImpl &SelTabImpl = getSelectorTableImpl(Impl);
 
-  // Unique selector, to guarantee there is one per name.
-  llvm::FoldingSetNodeID ID;
-  MultiKeywordSelector::Profile(ID, IIV, nKeys);
-
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   if (MultiKeywordSelector *SI =
-        SelTabImpl.Table.FindNodeOrInsertPos(ID, InsertPos))
+          SelTabImpl.Table.lookup(ArrayRef(IIV, nKeys), InsertToken))
     return Selector(SI);
 
   // MultiKeywordSelector objects are not allocated with new because they have a
@@ -766,7 +763,7 @@ Selector SelectorTable::getSelector(unsigned nKeys,
       (MultiKeywordSelector *)SelTabImpl.Allocator.Allocate(
           Size, alignof(MultiKeywordSelector));
   new (SI) MultiKeywordSelector(nKeys, IIV);
-  SelTabImpl.Table.InsertNode(SI, InsertPos);
+  SelTabImpl.Table.insert(SI, InsertToken);
   return Selector(SI);
 }
 
@@ -832,11 +829,15 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
                                          const LangOptions &LangOpts) {
   assert(II.isFutureCompatKeyword() && "diagnostic should not be needed");
 
-  unsigned Flags = llvm::StringSwitch<unsigned>(II.getName())
-#define KEYWORD(NAME, FLAGS) .Case(#NAME, FLAGS)
+  constexpr llvm::EnumStringDef<uint32_t> FlagsDefs[] = {
+#define KEYWORD(NAME, FLAGS) {{#NAME}, FLAGS},
 #include "clang/Basic/TokenKinds.def"
 #undef KEYWORD
-      ;
+  };
+  static constexpr auto FlagsData = BUILD_ENUM_STRINGS(FlagsDefs);
+  const auto *Entry = llvm::EnumStrings(FlagsData).fromString(II.getName());
+  assert(Entry && "future compat keyword should be in keyword list");
+  uint32_t Flags = Entry->value();
 
   if (LangOpts.CPlusPlus) {
     if ((Flags & KEYCXX11) == KEYCXX11)

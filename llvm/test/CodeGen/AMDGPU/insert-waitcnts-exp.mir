@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 --- |
   define amdgpu_ps <4 x float> @exp_done_waitcnt(<4 x i32> inreg, <4 x
   i32> inreg, i32 inreg %w, float %v) #0 {
@@ -19,7 +19,7 @@
 
 # CHECK-LABEL: name: exp_done_waitcnt{{$}}
 # CHECK: EXP_DONE
-# CHECK-NEXT: S_WAITCNT 3855
+# CHECK-NEXT: S_WAITCNT .Expcnt_0
 # CHECK: $vgpr0 = V_MOV_B32
 # CHECK: $vgpr1 = V_MOV_B32
 # CHECK: $vgpr2 = V_MOV_B32

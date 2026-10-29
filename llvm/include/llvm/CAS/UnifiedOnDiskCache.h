@@ -64,43 +64,57 @@ public:
   /// \param FaultInPolicy Controls how nodes are copied to primary store. This
   /// is recorded at creation time and subsequent opens need to pass the same
   /// policy otherwise the \p open will fail.
-  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<UnifiedOnDiskCache>>
+  LLVM_ABI static Expected<std::unique_ptr<UnifiedOnDiskCache>>
   open(StringRef Path, std::optional<uint64_t> SizeLimit, StringRef HashName,
        unsigned HashByteSize,
        OnDiskGraphDB::FaultInPolicy FaultInPolicy =
            OnDiskGraphDB::FaultInPolicy::FullTree);
 
-  /// Validate the data in \p Path, if needed to ensure correctness.
+  /// Validate the data in \p Path in-process, if it has not been validated
+  /// since the last system boot. A successful validation is recorded so that
+  /// subsequent calls can skip it; a failed or crashed one is recorded as
+  /// pending for \c recover, and is not skipped by subsequent calls. Where the
+  /// boot time is not known validation is never skipped.
   ///
-  /// Note: if invalid data is detected and \p AllowRecovery is true, then
-  /// recovery requires exclusive access to the CAS and it is an error to
-  /// attempt recovery if there is concurrent use of the CAS.
+  /// Clients that want to be resilient to unexpected crashes during validation
+  /// may call this from a separate process (e.g. via
+  /// \c llvm-cas -validate-if-needed) and call \c recover if it fails.
   ///
   /// \param Path directory for the on-disk database.
   /// \param HashName Identifier name for the hashing algorithm that is going to
   /// be used.
   /// \param HashByteSize Size for the object digest hash bytes.
   /// \param CheckHash Whether to validate hashes match the data.
-  /// \param AllowRecovery Whether to automatically recover from invalid data by
-  /// marking the files for garbage collection.
   /// \param ForceValidation Whether to force validation to occur even if it
   /// should not be necessary.
-  /// \param LLVMCasBinary If provided, validation is performed out-of-process
-  /// using the given \c llvm-cas executable which protects against crashes
-  /// during validation. Otherwise validation is performed in-process.
   ///
-  /// \returns \c Valid if the data is already valid, \c Recovered if data
-  /// was invalid but has been cleared, \c Skipped if validation is not needed,
-  /// or an \c Error if validation cannot be performed or if the data is left
-  /// in an invalid state because \p AllowRecovery is false.
-  static Expected<ValidationResult>
+  /// \returns \c Valid if the data is valid, \c Skipped if validation is not
+  /// needed, or an \c Error if validation cannot be performed or the data is
+  /// invalid.
+  LLVM_ABI static Expected<ValidationResult>
   validateIfNeeded(StringRef Path, StringRef HashName, unsigned HashByteSize,
                    bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn,
-                   bool AllowRecovery, bool ForceValidation,
-                   std::optional<StringRef> LLVMCasBinary);
+                   bool ForceValidation);
+
+  /// Recover from invalid data in \p Path after a failed \c validateIfNeeded,
+  /// by marking all the data for garbage collection.
+  ///
+  /// Recovery requires exclusive access to the CAS and it is an error to
+  /// attempt recovery if there is concurrent use of the CAS.
+  ///
+  /// Recovery is serialized with \c validateIfNeeded, and only happens if the
+  /// last validation failed or crashed. If the data has been recovered or
+  /// validated successfully since, e.g. by a concurrent process, recovery is
+  /// skipped.
+  ///
+  /// \param Path directory for the on-disk database.
+  ///
+  /// \returns \c Recovered if the data has been cleared, \c Skipped if
+  /// recovery is not needed, or an \c Error if recovery cannot be performed.
+  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path);
 
   /// Validate the action cache only.
-  LLVM_ABI_FOR_TEST Error validateActionCache() const;
+  LLVM_ABI Error validateActionCache() const;
 
   /// This is called implicitly at destruction time, so it is not required for a
   /// client to call this. After calling \p close the only method that is valid
@@ -109,20 +123,20 @@ public:
   /// \param CheckSizeLimit if true it will check whether the primary store has
   /// exceeded its intended size limit. If false the check is skipped even if a
   /// \p SizeLimit was passed to the \p open call.
-  LLVM_ABI_FOR_TEST Error close(bool CheckSizeLimit = true);
+  LLVM_ABI Error close(bool CheckSizeLimit = true);
 
   /// Set the size for limiting growth. This has an effect for when the instance
   /// is closed.
-  LLVM_ABI_FOR_TEST void setSizeLimit(std::optional<uint64_t> SizeLimit);
+  LLVM_ABI void setSizeLimit(std::optional<uint64_t> SizeLimit);
 
   /// \returns the storage size of the cache data.
-  LLVM_ABI_FOR_TEST uint64_t getStorageSize() const;
+  LLVM_ABI uint64_t getStorageSize() const;
 
   /// \returns whether the primary store has exceeded the intended size limit.
   /// This can return false even if the overall size of the opened directory is
   /// over the \p SizeLimit passed to \p open. To know whether garbage
   /// collection needs to be triggered or not, call \p needsGarbaseCollection.
-  LLVM_ABI_FOR_TEST bool hasExceededSizeLimit() const;
+  LLVM_ABI bool hasExceededSizeLimit() const;
 
   /// \returns whether there are unused data that can be deleted using a
   /// \p collectGarbage call.
@@ -137,19 +151,19 @@ public:
   ///
   /// It is recommended that garbage-collection is triggered concurrently in the
   /// background, so that it has minimal effect on the workload of the process.
-  LLVM_ABI_FOR_TEST static Error
+  LLVM_ABI static Error
   collectGarbage(StringRef Path, ondisk::OnDiskCASLogger *Logger = nullptr);
 
   /// Remove unused data from the current UnifiedOnDiskCache.
-  Error collectGarbage();
+  LLVM_ABI Error collectGarbage();
 
   /// Helper function to convert the value stored in KeyValueDB and ObjectID.
-  LLVM_ABI_FOR_TEST static ObjectID getObjectIDFromValue(ArrayRef<char> Value);
+  LLVM_ABI static ObjectID getObjectIDFromValue(ArrayRef<char> Value);
 
   using ValueBytes = std::array<char, sizeof(uint64_t)>;
-  LLVM_ABI_FOR_TEST static ValueBytes getValueFromObjectID(ObjectID ID);
+  LLVM_ABI static ValueBytes getValueFromObjectID(ObjectID ID);
 
-  LLVM_ABI_FOR_TEST ~UnifiedOnDiskCache();
+  LLVM_ABI ~UnifiedOnDiskCache();
 
 private:
   friend class OnDiskGraphDB;

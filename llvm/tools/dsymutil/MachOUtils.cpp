@@ -12,6 +12,7 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -421,10 +422,13 @@ bool generateDsymCompanion(
 
   bool HasSymtab = false;
 
-  // Check LC_SYMTAB and get LC_UUID and LC_BUILD_VERSION.
+  // Check LC_SYMTAB and get LC_UUID, LC_BUILD_VERSION, LC_TARGET_TRIPLE.
   MachO::uuid_command UUIDCmd;
   SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
+  MachO::target_triple_command TargetTripleCmd;
+  const char *TargetTriple = nullptr;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  memset(&TargetTripleCmd, 0, sizeof(TargetTripleCmd));
   for (auto &LCI : InputBinary.load_commands()) {
     switch (LCI.C.cmd) {
     case MachO::LC_UUID:
@@ -439,12 +443,21 @@ bool generateDsymCompanion(
       memset(&Cmd, 0, sizeof(Cmd));
       Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
       ++NumLoadCommands;
-      LoadCommandSize += sizeof(Cmd);
-      // LLDB doesn't care about the build tools for now.
-      Cmd.ntools = 0;
+      // Replace the input's build tools with dsymutil, the dSYM's producer.
+      Cmd.ntools = 1;
+      Cmd.cmdsize = sizeof(Cmd) + sizeof(MachO::build_tool_version);
+      LoadCommandSize += Cmd.cmdsize;
       BuildVersionCmd.push_back(Cmd);
       break;
     }
+    case MachO::LC_TARGET_TRIPLE:
+      if (TargetTripleCmd.cmd)
+        return error("Binary contains more than one Target Triple");
+      TargetTripleCmd = InputBinary.getTargetTripleLoadCommand(LCI);
+      TargetTriple = LCI.Ptr + TargetTripleCmd.triple;
+      ++NumLoadCommands;
+      LoadCommandSize += TargetTripleCmd.cmdsize;
+      break;
     case MachO::LC_SYMTAB:
       HasSymtab = true;
       break;
@@ -545,11 +558,21 @@ bool generateDsymCompanion(
   }
   for (auto Cmd : BuildVersionCmd) {
     Writer.W.write<uint32_t>(Cmd.cmd);
-    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.cmdsize);
     Writer.W.write<uint32_t>(Cmd.platform);
     Writer.W.write<uint32_t>(Cmd.minos);
     Writer.W.write<uint32_t>(Cmd.sdk);
     Writer.W.write<uint32_t>(Cmd.ntools);
+    Writer.W.write<uint32_t>(MachO::TOOL_DSYMUTIL);
+    Writer.W.write<uint32_t>((LLVM_VERSION_MAJOR << 16) |
+                             (LLVM_VERSION_MINOR << 8) | LLVM_VERSION_PATCH);
+  }
+  if (TargetTripleCmd.cmd != 0) {
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmd);
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmdsize);
+    Writer.W.write<uint32_t>(TargetTripleCmd.triple);
+    OutFile.write(TargetTriple,
+                  TargetTripleCmd.cmdsize - TargetTripleCmd.triple);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");

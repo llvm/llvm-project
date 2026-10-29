@@ -1,13 +1,10 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t --
 // RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
 // RUN:     }}'
 
-// We need NULL macro, but some buildbots don't like including <cstddef> header
-// This is a portable way of getting it to work
-#undef NULL
-#define NULL 0L
+#include <cstddef>
 
 template<typename T>
 void functionTaking(T);
@@ -548,7 +545,7 @@ namespace PR71848 {
   }
 }
 
-namespace PR161318 {  
+namespace PR161318 {
   int AddParenOutsideOfCompoundAssignOp() {
     int val = -1;
     while(val >>= 7) {
