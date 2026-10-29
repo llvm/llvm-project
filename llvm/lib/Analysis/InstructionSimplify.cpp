@@ -5792,14 +5792,18 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
 
-  // Fold a value-preserving zext/sext of a trunc back to the original value.
+  // Fold a value-preserving zext/sext of one or more truncs back to the
+  // original value. Every trunc in the chain must carry the corresponding
+  // no-wrap flag.
   if (CastOpc == Instruction::ZExt || CastOpc == Instruction::SExt) {
-    if (auto *Trunc = dyn_cast<TruncInst>(Op)) {
-      Value *Src = Trunc->getOperand(0);
-      bool NoWrap = CastOpc == Instruction::ZExt ? Trunc->hasNoUnsignedWrap()
-                                                 : Trunc->hasNoSignedWrap();
-      if (Src->getType() == Ty && NoWrap)
-        return Src;
+    bool NoWrap = true;
+    Value *Src = Op;
+    while (auto *Trunc = dyn_cast<TruncInst>(Src)) {
+      NoWrap &= CastOpc == Instruction::ZExt ? Trunc->hasNoUnsignedWrap()
+                                             : Trunc->hasNoSignedWrap();
+      Src = Trunc->getOperand(0);
+      if (Src->getType() == Ty)
+        return NoWrap ? Src : nullptr;
     }
   }
 
