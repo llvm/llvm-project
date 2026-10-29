@@ -176,8 +176,8 @@ Symbols:
 # SYM-LLVM-NEXT: ]
 
 ## Check that we correctly report the stack sizes in an executable (non-relocatable)
-## object file. This also shows that the sh_link field is ignored in this situation
-## without warning.
+## object file, with the address of each function in the LLVM and JSON output. This
+## also shows that the sh_link field is ignored in this situation without warning.
 
 # RUN: yaml2obj --docnum=2 %s -o %t02
 # RUN: llvm-readelf --stack-sizes %t02 2>&1 \
@@ -185,6 +185,8 @@ Symbols:
 # RUN:                  --match-full-lines --implicit-check-not=warning:
 # RUN: llvm-readobj --stack-sizes %t02 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=EXEC-LLVM --implicit-check-not=warning:
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --stack-sizes %t02 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EXEC-JSON --implicit-check-not=warning:
 
 #      EXEC-GNU:         Size     Functions
 # EXEC-GNU-NEXT:           16     other
@@ -195,17 +197,31 @@ Symbols:
 # EXEC-LLVM:      StackSizes [
 # EXEC-LLVM-NEXT:   Entry {
 # EXEC-LLVM-NEXT:     Functions: [other]
+# EXEC-LLVM-NEXT:     Address: 0x0{{$}}
 # EXEC-LLVM-NEXT:     Size: 0x10
 # EXEC-LLVM-NEXT:   }
 # EXEC-LLVM-NEXT:   Entry {
 # EXEC-LLVM-NEXT:     Functions: [other_end]
+# EXEC-LLVM-NEXT:     Address: 0x10{{$}}
 # EXEC-LLVM-NEXT:     Size: 0x20
 # EXEC-LLVM-NEXT:   }
 # EXEC-LLVM-NEXT:   Entry {
 # EXEC-LLVM-NEXT:     Functions: [bar]
+# EXEC-LLVM-NEXT:     Address: 0x20{{$}}
 # EXEC-LLVM-NEXT:     Size: 0x30
 # EXEC-LLVM-NEXT:   }
 # EXEC-LLVM-NEXT: ]
+
+# EXEC-JSON:      "StackSizes": [
+# EXEC-JSON-NEXT:   {
+# EXEC-JSON-NEXT:     "Entry": {
+# EXEC-JSON-NEXT:       "Functions": [
+# EXEC-JSON-NEXT:         "other"
+# EXEC-JSON-NEXT:       ],
+# EXEC-JSON-NEXT:       "Address": 0,
+# EXEC-JSON-NEXT:       "Size": 16
+# EXEC-JSON-NEXT:     }
+# EXEC-JSON-NEXT:   },
 
 --- !ELF
 FileHeader:
@@ -392,11 +408,13 @@ Symbols:
 # SUDDENEND-LLVM:      StackSizes [
 # SUDDENEND-LLVM-NEXT:   Entry {
 # SUDDENEND-LLVM-NEXT:     Functions: [foo]
+# SUDDENEND-LLVM-NEXT:     Address: 0x0{{$}}
 # SUDDENEND-LLVM-NEXT:     Size: 0x8
 # SUDDENEND-LLVM-NEXT:   }
 # SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 2 ended while trying to extract a stack size entry
 # SUDDENEND-LLVM-NEXT:   Entry {
 # SUDDENEND-LLVM-NEXT:     Functions: [foo]
+# SUDDENEND-LLVM-NEXT:     Address: 0x0{{$}}
 # SUDDENEND-LLVM-NEXT:     Size: 0x8
 # SUDDENEND-LLVM-NEXT:   }
 # SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 3 ended while trying to extract a stack size entry
@@ -638,14 +656,17 @@ Sections:
 # MULTIPLE-LLVM:      StackSizes [
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [other]
+# MULTIPLE-LLVM-NEXT:     Address: 0x0{{$}}
 # MULTIPLE-LLVM-NEXT:     Size: 0x10
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [other_end]
+# MULTIPLE-LLVM-NEXT:     Address: 0x10{{$}}
 # MULTIPLE-LLVM-NEXT:     Size: 0x20
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT:   Entry {
 # MULTIPLE-LLVM-NEXT:     Functions: [bar]
+# MULTIPLE-LLVM-NEXT:     Address: 0x20{{$}}
 # MULTIPLE-LLVM-NEXT:     Size: 0x30
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT: ]
@@ -907,6 +928,7 @@ Sections:
 # MULTIPLE-SYMBOLS-LLVM:      StackSizes [
 # MULTIPLE-SYMBOLS-LLVM-NEXT:   Entry {
 # MULTIPLE-SYMBOLS-LLVM-NEXT:     Functions: [foo, bar]
+# MULTIPLE-SYMBOLS-LLVM-NEXT:     Address: 0x0{{$}}
 # MULTIPLE-SYMBOLS-LLVM-NEXT:     Size: 0x10
 # MULTIPLE-SYMBOLS-LLVM-NEXT:   }
 # MULTIPLE-SYMBOLS-LLVM-NEXT: ]
@@ -939,3 +961,118 @@ Symbols:
     Value:   0x0
     Type:    STT_FUNC
     Binding: STB_GLOBAL
+
+## Check that on ARM the Thumb bit is cleared from function addresses, so that
+## Thumb functions are found.
+
+# RUN: yaml2obj --docnum=15 %s -o %t20
+# RUN: llvm-readelf --stack-sizes %t20 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t20 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-LLVM --implicit-check-not=warning:
+
+# THUMB-GNU:      Size     Functions
+# THUMB-GNU-NEXT:   16     foo
+
+# THUMB-LLVM:      StackSizes [
+# THUMB-LLVM-NEXT:   Entry {
+# THUMB-LLVM-NEXT:     Functions: [foo]
+# THUMB-LLVM-NEXT:     Address: 0x1000{{$}}
+# THUMB-LLVM-NEXT:     Size: 0x10
+# THUMB-LLVM-NEXT:   }
+# THUMB-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      ## The address of the Thumb function foo, with the Thumb bit set.
+      - Address: 0x1001
+        Size:    0x10
+    Link:    .text
+Symbols:
+  - Name:    foo
+    Section: .text
+    Value:   0x1001
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that on ARM the Thumb bit is also cleared from the address that a
+## relocation resolves to, so that Thumb functions are found in relocatable
+## object files too.
+
+# RUN: yaml2obj --docnum=16 %s -o %t21
+# RUN: llvm-readelf --stack-sizes %t21 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-REL-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t21 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-REL-LLVM --implicit-check-not=warning:
+
+# THUMB-REL-GNU:      Size     Functions
+# THUMB-REL-GNU-NEXT:   16     foo
+# THUMB-REL-GNU-NEXT:   32     bar
+
+# THUMB-REL-LLVM:      StackSizes [
+# THUMB-REL-LLVM-NEXT:   Entry {
+# THUMB-REL-LLVM-NEXT:     Functions: [foo]
+# THUMB-REL-LLVM-NEXT:     Size: 0x10
+# THUMB-REL-LLVM-NEXT:   }
+# THUMB-REL-LLVM-NEXT:   Entry {
+# THUMB-REL-LLVM-NEXT:     Functions: [bar]
+# THUMB-REL-LLVM-NEXT:     Size: 0x20
+# THUMB-REL-LLVM-NEXT:   }
+# THUMB-REL-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    32
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Link:    .text
+    Entries:
+      ## The implicit addend of the relocation against foo.
+      - Address: 0x0
+        Size:    0x10
+      ## The implicit addend of the relocation against the section symbol: the
+      ## offset of bar, with the Thumb bit set.
+      - Address: 0x11
+        Size:    0x20
+  - Name:    .rel.stack_sizes
+    Type:    SHT_REL
+    Info:    .stack_sizes
+    Relocations:
+      - Offset: 0x0
+        Symbol: foo
+        Type:   R_ARM_ABS32
+      - Offset: 0x5
+        Symbol: 1 ## The STT_SECTION symbol of .text
+        Type:   R_ARM_ABS32
+Symbols:
+  - Type:    STT_SECTION
+    Section: .text
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1
+  - Name:    bar
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x11

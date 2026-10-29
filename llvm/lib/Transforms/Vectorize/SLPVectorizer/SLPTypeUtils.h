@@ -17,6 +17,7 @@
 #include <limits>
 
 namespace llvm {
+class DataLayout;
 class FixedVectorType;
 class TargetTransformInfo;
 class Type;
@@ -84,6 +85,10 @@ unsigned
 getNumberOfPartsOrRegs(bool QueryNumParts, const TargetTransformInfo &TTI,
                        Type *VecTy, Type *ScalarTy, bool ReVec,
                        unsigned Limit = std::numeric_limits<unsigned>::max());
+
+/// Returns true if the type limit of the smax (\p IsMax) or smin lane \p V
+/// stays neutral after narrowing.
+bool isTypeLimitNeutral(const Value *V, bool IsMax, const DataLayout &DL);
 
 } // namespace llvm::slpvectorizer
 

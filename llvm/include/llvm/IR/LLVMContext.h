@@ -15,6 +15,7 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
@@ -32,6 +33,9 @@ class Instruction;
 class LLVMContextImpl;
 class Module;
 class OptPassGate;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 template <typename T> class SmallVectorImpl;
 template <typename T> class StringMapEntry;
 class StringRef;
@@ -40,6 +44,10 @@ class LLVMRemarkStreamer;
 
 namespace remarks {
 class RemarkStreamer;
+}
+
+namespace vfs {
+class FileSystem;
 }
 
 namespace SyncScope {
@@ -267,6 +275,12 @@ public:
   LLVM_ABI void
   setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer);
 
+  /// The virtual filesystem used for inputs.
+  /// Clients that enable the IO sandbox must set one to prevent violations.
+  LLVM_ABI vfs::FileSystem &getVirtualFileSystem() const;
+  LLVM_ABI IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity
   LLVM_ABI static const char *
@@ -328,6 +342,10 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   LLVM_ABI void setOptPassGate(OptPassGate &);
+
+  /// The library options this context reads in place of their process-wide
+  /// values.
+  LLVM_ABI cl::LibraryOptionsContext &getLibraryOptions() const;
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value

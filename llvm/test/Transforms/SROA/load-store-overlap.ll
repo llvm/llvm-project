@@ -472,3 +472,201 @@ define void @memmove_down(i8 %arg, ptr %dest) {
   store i8 %val.4, ptr %dest.4, align 1
   ret void
 }
+
+; The move destination overlaps an unsplittable float store
+; FIXME: splitting the move here doesn't let us eliminate it, so the end result
+; is worse.
+define i64 @move_dest_overlap_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @move_dest_overlap_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0:%.*]] = alloca [10 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_6_SROA_IDX15:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0_6_ARR_6_SROA_IDX15]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE1:%.*]] = load i16, ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_IDX11:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE2:%.*]] = load i16, ptr [[ARR_SROA_0_2_ARR_SROA_IDX11]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_IDX13:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE4:%.*]] = load i16, ptr [[ARR_SROA_0_4_ARR_SROA_IDX13]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_SROA_IDX16:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_SROA_0_6_MOVE6:%.*]] = load i16, ptr [[ARR_SROA_0_6_ARR_SROA_IDX16]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX12:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE1]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX12]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_2_SROA_IDX14:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE2]], ptr [[ARR_SROA_0_4_ARR_2_SROA_IDX14]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_2_SROA_IDX17:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE4]], ptr [[ARR_SROA_0_6_ARR_2_SROA_IDX17]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_8_ARR_2_SROA_IDX18:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 8
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_6_ARR_SROA_0_6_MOVE6]], ptr [[ARR_SROA_0_8_ARR_2_SROA_IDX18]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX10:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_RET:%.*]] = load i64, ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX10]], align 2
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_2_ARR_SROA_0_2_RET]]
+;
+%arr = alloca [16 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  store i64 %x, ptr %arr, align 8
+  store float %f, ptr %arr.6, align 2
+  %move = load i64, ptr %arr, align 8
+  store i64 %move, ptr %arr.2, align 2
+  %ret = load i64, ptr %arr.2, align 2
+  ret i64 %ret
+}
+
+; The move source overlaps an unsplittable float store
+define i64 @move_src_overlap_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @move_src_overlap_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0:%.*]] = alloca [12 x i8], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX3]], align 2
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE:%.*]] = load i64, ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX4]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_4_SROA_IDX5:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    store i64 [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE]], ptr [[ARR_SROA_0_4_ARR_4_SROA_IDX5]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_4_SROA_IDX6:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_0_4_RET:%.*]] = load i64, ptr [[ARR_SROA_0_4_ARR_4_SROA_IDX6]], align 4
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_4_ARR_SROA_0_4_RET]]
+;
+  %arr = alloca [16 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.4 = getelementptr i8, ptr %arr, i64 4
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  store i64 %x, ptr %arr.2, align 8
+  store float %f, ptr %arr, align 2
+  %move = load i64, ptr %arr.2, align 2
+  store i64 %move, ptr %arr.4, align 4
+  %ret = load i64, ptr %arr.4, align 4
+  ret i64 %ret
+}
+
+; The load and store is to the same location, so this isn't a move
+define i64 @no_move_overlap_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @no_move_overlap_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0:%.*]] = alloca [10 x i8], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX8:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX8]], align 2
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX10:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE1:%.*]] = load i16, ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX10]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_2_SROA_IDX12:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE2:%.*]] = load i48, ptr [[ARR_SROA_0_4_ARR_2_SROA_IDX12]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX11:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE1]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX11]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_2_SROA_IDX13:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    store i48 [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE2]], ptr [[ARR_SROA_0_4_ARR_2_SROA_IDX13]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX9:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_RET:%.*]] = load i64, ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX9]], align 2
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_2_ARR_SROA_0_2_RET]]
+;
+  %arr = alloca [16 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.4 = getelementptr i8, ptr %arr, i64 4
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  store i64 %x, ptr %arr.2, align 8
+  store float %f, ptr %arr, align 2
+  %move = load i64, ptr %arr.2, align 2
+  store i64 %move, ptr %arr.2, align 2
+  %ret = load i64, ptr %arr.2, align 2
+  ret i64 %ret
+}
+
+; The following three are as the above but we have an unsplittable float store
+; that's fully enclosed in an i128 load/store, i.e. there's part of the i128
+; both before and after the float store.
+define i64 @move_dest_enclosed_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @move_dest_enclosed_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0:%.*]] = alloca [10 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_6_SROA_IDX27:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0_6_ARR_6_SROA_IDX27]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE1:%.*]] = load i16, ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_IDX23:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE2:%.*]] = load i16, ptr [[ARR_SROA_0_2_ARR_SROA_IDX23]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_IDX25:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE4:%.*]] = load i16, ptr [[ARR_SROA_0_4_ARR_SROA_IDX25]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_SROA_IDX28:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_SROA_0_6_MOVE6:%.*]] = load i16, ptr [[ARR_SROA_0_6_ARR_SROA_IDX28]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_8_ARR_SROA_IDX30:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 8
+; CHECK-NEXT:    [[ARR_SROA_0_8_ARR_SROA_0_8_MOVE8:%.*]] = load i16, ptr [[ARR_SROA_0_8_ARR_SROA_IDX30]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX24:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE1]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX24]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_4_ARR_2_SROA_IDX26:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 4
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_2_ARR_SROA_0_2_MOVE2]], ptr [[ARR_SROA_0_4_ARR_2_SROA_IDX26]], align 4
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_2_SROA_IDX29:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_4_ARR_SROA_0_4_MOVE4]], ptr [[ARR_SROA_0_6_ARR_2_SROA_IDX29]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_8_ARR_2_SROA_IDX31:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 8
+; CHECK-NEXT:    store i16 [[ARR_SROA_0_6_ARR_SROA_0_6_MOVE6]], ptr [[ARR_SROA_0_8_ARR_2_SROA_IDX31]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX22:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_SROA_0_2_RET:%.*]] = load i64, ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX22]], align 2
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_2_ARR_SROA_0_2_RET]]
+;
+  %arr = alloca [32 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  %arr.16 = getelementptr i8, ptr %arr, i64 16
+  store i64 %x, ptr %arr, align 8
+  store float %f, ptr %arr.6, align 2
+  %move = load i128, ptr %arr, align 8
+  store i128 %move, ptr %arr.2, align 8
+  %ret = load i64, ptr %arr.2, align 2
+  ret i64 %ret
+}
+
+define i64 @move_src_enclosed_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @move_src_enclosed_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0:%.*]] = alloca [22 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_2_ARR_2_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 2
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0_2_ARR_2_SROA_IDX2]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE:%.*]] = load i128, ptr [[ARR_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_6_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    store i128 [[ARR_SROA_0_0_ARR_SROA_0_0_MOVE]], ptr [[ARR_SROA_0_6_ARR_6_SROA_IDX3]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_6_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0]], i64 6
+; CHECK-NEXT:    [[ARR_SROA_0_6_ARR_SROA_0_6_RET:%.*]] = load i64, ptr [[ARR_SROA_0_6_ARR_6_SROA_IDX4]], align 2
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_6_ARR_SROA_0_6_RET]]
+;
+  %arr = alloca [32 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.4 = getelementptr i8, ptr %arr, i64 4
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  store i64 %x, ptr %arr, align 8
+  store float %f, ptr %arr.2, align 2
+  %move = load i128, ptr %arr, align 2
+  store i128 %move, ptr %arr.6, align 4
+  %ret = load i64, ptr %arr.6, align 4
+  ret i64 %ret
+}
+
+define i64 @no_move_enclosed_unsplittable_store(i64 %x, float %f) {
+; CHECK-LABEL: define i64 @no_move_enclosed_unsplittable_store(
+; CHECK-SAME: i64 [[X:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0:%.*]] = alloca [10 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[ARR_SROA_0_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_6_ARR_6_SROA_IDX9:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0_SROA_0]], i64 6
+; CHECK-NEXT:    store float [[F]], ptr [[ARR_SROA_0_SROA_0_6_ARR_6_SROA_IDX9]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_0_ARR_SROA_0_SROA_0_0_ARR_SROA_0_0_MOVE1:%.*]] = load i48, ptr [[ARR_SROA_0_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_6_ARR_SROA_IDX10:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0_SROA_0]], i64 6
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_6_ARR_SROA_0_SROA_0_6_ARR_SROA_0_6_MOVE25:%.*]] = load i32, ptr [[ARR_SROA_0_SROA_0_6_ARR_SROA_IDX10]], align 2
+; CHECK-NEXT:    store i48 [[ARR_SROA_0_SROA_0_0_ARR_SROA_0_SROA_0_0_ARR_SROA_0_0_MOVE1]], ptr [[ARR_SROA_0_SROA_0]], align 8
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_6_ARR_SROA_IDX11:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0_SROA_0]], i64 6
+; CHECK-NEXT:    store i32 [[ARR_SROA_0_SROA_0_6_ARR_SROA_0_SROA_0_6_ARR_SROA_0_6_MOVE25]], ptr [[ARR_SROA_0_SROA_0_6_ARR_SROA_IDX11]], align 2
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_2_ARR_2_SROA_IDX8:%.*]] = getelementptr inbounds i8, ptr [[ARR_SROA_0_SROA_0]], i64 2
+; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_2_ARR_SROA_0_SROA_0_2_ARR_SROA_0_2_RET:%.*]] = load i64, ptr [[ARR_SROA_0_SROA_0_2_ARR_2_SROA_IDX8]], align 2
+; CHECK-NEXT:    ret i64 [[ARR_SROA_0_SROA_0_2_ARR_SROA_0_SROA_0_2_ARR_SROA_0_2_RET]]
+;
+  %arr = alloca [32 x i8], align 8
+  %arr.2 = getelementptr i8, ptr %arr, i64 2
+  %arr.6 = getelementptr i8, ptr %arr, i64 6
+  %arr.16 = getelementptr i8, ptr %arr, i64 16
+  store i64 %x, ptr %arr, align 8
+  store float %f, ptr %arr.6, align 2
+  %move = load i128, ptr %arr, align 8
+  store i128 %move, ptr %arr, align 8
+  %ret = load i64, ptr %arr.2, align 2
+  ret i64 %ret
+}

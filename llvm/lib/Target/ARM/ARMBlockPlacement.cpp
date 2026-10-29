@@ -278,7 +278,7 @@ void ARMBlockPlacement::moveBasicBlock(MachineBasicBlock *BB,
         BuildMI(From, Terminator.getDebugLoc(), TII->get(ARM::t2B));
     MIB.addMBB(To);
     MIB.addImm(ARMCC::CondCodes::AL);
-    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(Register());
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Adding unconditional branch from "
                       << From->getName() << " to " << To->getName() << ": "
                       << *MIB.getInstr());

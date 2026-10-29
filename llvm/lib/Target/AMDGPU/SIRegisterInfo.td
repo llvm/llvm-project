@@ -178,7 +178,8 @@ multiclass SIRegLo16 <string n, bits<10> regIdx,
 // Special Registers
 defm VCC_LO : SIRegLo16<"vcc_lo", 106, /*isVGPR=*/0, /*isAGPR=*/0,
                         /*DwarfEncodings=*/[512, 512]>;
-defm VCC_HI : SIRegLo16<"vcc_hi", 107>;
+defm VCC_HI : SIRegLo16<"vcc_hi", 107, /*isVGPR=*/0, /*isAGPR=*/0,
+                        /*DwarfEncodings=*/[513, 513]>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
 // replaced, never seeing the verifier.
@@ -654,6 +655,13 @@ def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
   let BaseClassOrder = 16;
 }
 
+def VGPR_16_LO16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
+                             (add (sequence "VGPR%u_LO16", 0, 255))> {
+  let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
+  let Size = 16;
+  let GeneratePressureSet = 0;
+}
+
 // VGPR 32-bit registers
 // i16/f16 only on VI+
 def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
@@ -1117,6 +1125,13 @@ def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let Size = 16;
 }
 
+def VS_16_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
+                           (add VGPR_16_LO16, SReg_32, LDS_DIRECT)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let Size = 16;
+}
+
 def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
                           (add VGPR_32, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
@@ -1470,6 +1485,8 @@ def VSrcT_b16  : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_INT16">;
 def VSrcT_bf16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_BF16">;
 def VSrcT_f16  : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_FP16">;
 
+def VSrcT_f16_LO16 : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_FP16", VS_16_LO16>;
+
 // True16 VOP1/2/C operands.
 let DecoderMethodName = "decodeOperand_VSrcT16_Lo128", EncoderMethod = "getMachineOpValueT16Lo128" in {
   def VSrcT_b16_Lo128  : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_INT16", VS_16_Lo128>;
@@ -1543,6 +1560,11 @@ class VGPROp_Align2<RegisterClass regClass> : RegisterOperand<!cast<RegisterClas
 
 // TODO: These cases should use default target alignment
 def VGPROp_16 : VGPROp<VGPR_16> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+def VGPROp_16_LO16 : VGPROp<VGPR_16_LO16> {
+  let DecoderMethod = "DecodeVGPR_16RegisterClass";
   let EncoderMethod = "getMachineOpValueT16";
 }
 

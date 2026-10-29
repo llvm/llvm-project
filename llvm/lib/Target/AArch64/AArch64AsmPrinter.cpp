@@ -63,7 +63,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +75,7 @@
 #include <memory>
 
 using namespace llvm;
+using AArch64PAuth::PtrauthCheckMode;
 
 #define DEBUG_TYPE "AArch64AsmPrinter"
 
@@ -84,14 +84,6 @@ using namespace llvm;
 STATISTIC(NumZCZeroingInstrsFPR,
           "Number of zero-cycle FPR zeroing instructions expanded from "
           "canonical pseudo instructions");
-
-enum PtrauthCheckMode { Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"));
 
 namespace {
 
@@ -295,6 +287,9 @@ public:
   void emitAtomicHintPseudoExpansionRO(const MachineInstr *MI);
   void emitAtomicHintPseudoExpansionImm(const MachineInstr *MI);
 
+  // Emit expansion of atomic fetch with hint pseudo instructions
+  void emitAtomicFetchHintPseudoExpansion(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -363,6 +358,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
@@ -423,7 +419,7 @@ static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
 }
 
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
@@ -638,7 +634,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   auto &O = *OutStreamer;
   MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
   O.emitLabel(CurSled);
-  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  bool MachO = MMI->getModule()->getTargetTriple().isOSBinFormatMachO();
   auto *Sym = MCSymbolRefExpr::create(
       OutContext.getOrCreateSymbol(
           Twine(MachO ? "_" : "") +
@@ -831,7 +827,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
   // space.
@@ -1045,7 +1041,7 @@ static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // Output authenticated pointers as indirect symbols, if we have any.
     MachineModuleInfoMachO &MMIMacho =
@@ -1158,6 +1154,29 @@ void AArch64AsmPrinter::emitLOHs() {
     OutStreamer->emitLOHDirective(D.getKind(), MCArgs);
     MCArgs.clear();
   }
+}
+
+// Unwinding can get confused if the last instruction in an exception-handling
+// region (function, funclet, try block, etc.) is a call, because the return
+// address then points to the *next* region (see
+// X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH for the X86 equivalent).
+// Trap after a noreturn call that would end a function or funclet, and elide
+// the trap when the next instruction is in the same function.
+void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (MBB.succ_empty() && MF->usesWindowsUnwindInfo()) {
+    auto Next = std::next(MBB.getIterator());
+    if (Next == MF->end() || Next->isEHFuncletEntry()) {
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isMetaInstruction() || AArch64InstrInfo::isSEHInstruction(MI))
+          continue;
+        if (MI.isCall() && !MI.isReturn())
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(1));
+        break;
+      }
+    }
+  }
+
+  AsmPrinter::emitBasicBlockEnd(MBB);
 }
 
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
@@ -2372,8 +2391,9 @@ static PtrauthCheckMode getCheckMode(const MachineFunction *MF) {
   const AArch64Subtarget &STI = MF->getSubtarget<AArch64Subtarget>();
 
   // If an override is passed via command line argument, just use that value.
-  if (PtrauthAuthChecks.getNumOccurrences())
-    return PtrauthAuthChecks;
+  if (std::optional<PtrauthCheckMode> Mode =
+          STI.getCLOpts().ptrauth_auth_checks)
+    return *Mode;
 
   // Otherwise, on an FPAC CPU, you get traps whether you want them or not:
   // there's no point in emitting checks or traps.
@@ -2491,14 +2511,14 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   switch (CheckMode) {
-  case Unchecked:
+  case PtrauthCheckMode::Unchecked:
     EmitResignOnSuccess();
     break;
-  case Trap:
+  case PtrauthCheckMode::Trap:
     EmitCheck();
     EmitResignOnSuccess();
     break;
-  case Poison:
+  case PtrauthCheckMode::Poison:
     MCSymbol *OnFailure = createTempSymbol("resign_end_");
     EmitCheck(OnFailure);
     EmitResignOnSuccess();
@@ -3409,6 +3429,20 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   EmitToStreamer(*OutStreamer, Store);
 }
 
+void AArch64AsmPrinter::emitAtomicFetchHintPseudoExpansion(
+    const MachineInstr *MI) {
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(4).getImm()));
+
+  MCInst Fetch;
+  Fetch.setOpcode(MI->getOperand(3).getImm());
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(2).getReg()));
+  Fetch.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Fetch);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3554,8 +3588,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
 
-  case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+  case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED: {
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3563,12 +3598,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (getFunctionCFISectionType(*MF) == CFISection::None)
       return;
 
-    OutStreamer->emitCFIBKeyFrame();
+    if (MI->getOpcode() == AArch64::EMITBKEY)
+      OutStreamer->emitCFIBKeyFrame();
+    else
+      OutStreamer->emitCFINonHintPAuthFrame();
+
     return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3940,6 +3979,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
 
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
+    return;
+
   case AArch64::SEH_StackAlloc:
     TS->emitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
     return;
@@ -4131,6 +4174,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_W:
   case AArch64::ATOMIC_STORE_HINT_X:
     emitAtomicHintPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_FETCH_HINT_W:
+  case AArch64::ATOMIC_FETCH_HINT_X:
+    emitAtomicFetchHintPseudoExpansion(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_BroW:
   case AArch64::ATOMIC_STORE_HINT_HroW:

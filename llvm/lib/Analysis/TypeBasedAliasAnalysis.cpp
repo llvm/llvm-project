@@ -114,7 +114,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 
@@ -141,85 +140,64 @@ static bool isNewFormatTypeNode(const MDNode *N) {
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded
 /// in its operands.
-template<typename MDNodeTy>
-class TBAANodeImpl {
-  MDNodeTy *Node = nullptr;
+class TBAANode {
+  const MDNode *Node = nullptr;
 
 public:
-  TBAANodeImpl() = default;
-  explicit TBAANodeImpl(MDNodeTy *N) : Node(N) {}
+  TBAANode() = default;
+  explicit TBAANode(const MDNode *N) : Node(N) {}
 
   /// getNode - Get the MDNode for this TBAANode.
-  MDNodeTy *getNode() const { return Node; }
+  const MDNode *getNode() const { return Node; }
 
   /// isNewFormat - Return true iff the wrapped type node is in the new
   /// size-aware format.
   bool isNewFormat() const { return isNewFormatTypeNode(Node); }
 
   /// getParent - Get this TBAANode's Alias tree parent.
-  TBAANodeImpl<MDNodeTy> getParent() const {
+  TBAANode getParent() const {
     if (isNewFormat())
-      return TBAANodeImpl(cast<MDNodeTy>(Node->getOperand(0)));
+      return TBAANode(cast<MDNode>(Node->getOperand(0)));
 
     if (Node->getNumOperands() < 2)
-      return TBAANodeImpl<MDNodeTy>();
-    MDNodeTy *P = dyn_cast_or_null<MDNodeTy>(Node->getOperand(1));
+      return TBAANode();
+    const MDNode *P = dyn_cast_or_null<MDNode>(Node->getOperand(1));
     if (!P)
-      return TBAANodeImpl<MDNodeTy>();
+      return TBAANode();
     // Ok, this node has a valid parent. Return it.
-    return TBAANodeImpl<MDNodeTy>(P);
-  }
-
-  /// Test if this TBAANode represents a type for objects which are
-  /// not modified (by any means) in the context where this
-  /// AliasAnalysis is relevant.
-  bool isTypeImmutable() const {
-    if (Node->getNumOperands() < 3)
-      return false;
-    ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(2));
-    if (!CI)
-      return false;
-    return CI->getValue()[0];
+    return TBAANode(P);
   }
 };
-
-/// \name Specializations of \c TBAANodeImpl for const and non const qualified
-/// \c MDNode.
-/// @{
-using TBAANode = TBAANodeImpl<const MDNode>;
-using MutableTBAANode = TBAANodeImpl<MDNode>;
-/// @}
 
 /// This is a simple wrapper around an MDNode which provides a
 /// higher-level interface by hiding the details of how alias analysis
 /// information is encoded in its operands.
-template<typename MDNodeTy>
-class TBAAStructTagNodeImpl {
+class TBAAStructTagNode {
   /// This node should be created with createTBAAAccessTag().
-  MDNodeTy *Node;
+  const MDNode *Node;
 
 public:
-  explicit TBAAStructTagNodeImpl(MDNodeTy *N) : Node(N) {}
+  explicit TBAAStructTagNode(const MDNode *N) : Node(N) {}
 
   /// Get the MDNode for this TBAAStructTagNode.
-  MDNodeTy *getNode() const { return Node; }
+  const MDNode *getNode() const { return Node; }
 
   /// isNewFormat - Return true iff the wrapped access tag is in the new
   /// size-aware format.
   bool isNewFormat() const {
     if (Node->getNumOperands() < 4)
       return false;
-    if (MDNodeTy *AccessType = getAccessType())
-      if (!TBAANodeImpl<MDNodeTy>(AccessType).isNewFormat())
+    if (const MDNode *AccessType = getAccessType())
+      if (!TBAANode(AccessType).isNewFormat())
         return false;
     return true;
   }
 
-  MDNodeTy *getBaseType() const {
+  const MDNode *getBaseType() const {
     return dyn_cast_or_null<MDNode>(Node->getOperand(0));
   }
 
-  MDNodeTy *getAccessType() const {
+  const MDNode *getAccessType() const {
     return dyn_cast_or_null<MDNode>(Node->getOperand(1));
   }
 
@@ -246,13 +224,6 @@ public:
     return CI->getValue()[0];
   }
 };
-
-/// \name Specializations of \c TBAAStructTagNodeImpl for const and non const
-/// qualified \c MDNods.
-/// @{
-using TBAAStructTagNode = TBAAStructTagNodeImpl<const MDNode>;
-using MutableTBAAStructTagNode = TBAAStructTagNodeImpl<MDNode>;
-/// @}
 
 /// This is a simple wrapper around an MDNode which provides a
 /// higher-level interface by hiding the details of how alias analysis
@@ -484,16 +455,16 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    if (!PathA.insert(TA.getNode()))
-      report_fatal_error("Cycle found in TBAA metadata.");
+    [[maybe_unused]] bool Inserted = PathA.insert(TA.getNode());
+    assert(Inserted && "Cycle found in TBAA metadata.");
     TA = TA.getParent();
   }
 
   SmallSetVector<const MDNode *, 4> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    if (!PathB.insert(TB.getNode()))
-      report_fatal_error("Cycle found in TBAA metadata.");
+    [[maybe_unused]] bool Inserted = PathB.insert(TB.getNode());
+    assert(Inserted && "Cycle found in TBAA metadata.");
     TB = TB.getParent();
   }
 
@@ -760,17 +731,14 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
 }
 
 // Read a !tbaa.struct field entry (an offset or a size) as a 64-bit value.
-// Returns std::nullopt if it is not a constant integer that fits in 64 bits.
+// Returns std::nullopt if it does not fit in 64 bits.
 static std::optional<uint64_t> getTBAAStructFieldAsInt64(const MDOperand &Op) {
-  auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
-  return CI ? CI->getValue().tryZExtValue() : std::nullopt;
+  return mdconst::extract<ConstantInt>(Op)->getValue().tryZExtValue();
 }
 
 static bool isScalarAccessTag(const MDNode *Tag) {
   TBAAStructTagNode T(Tag);
-  const MDNode *AccessType;
-  return Tag->getNumOperands() >= 3 && (AccessType = T.getAccessType()) &&
-         AccessType == T.getBaseType();
+  return T.getAccessType() == T.getBaseType();
 }
 
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {

@@ -89,6 +89,7 @@ define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GCN-NEXT:    v_interp_p1ll_f16 v0, v1, attr0.x
 ; GCN-NEXT:    v_interp_p1ll_f16 v1, v1, attr0.y
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
@@ -109,6 +110,7 @@ define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) #0 {
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GCN-NEXT:    v_interp_p2_f16 v0, v1, attr0.x, v2
 ; GCN-NEXT:    v_interp_p2_f16 v1, v1, attr0.y, v2
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul

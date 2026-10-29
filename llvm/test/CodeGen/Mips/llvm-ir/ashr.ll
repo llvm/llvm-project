@@ -53,21 +53,25 @@ define signext i1 @ashr_i1(i1 signext %a, i1 signext %b) {
 ;
 ; MIPS3-LABEL: ashr_i1:
 ; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS3-NEXT:    jr $ra
 ; MIPS3-NEXT:    move $2, $4
 ;
 ; MIPS64-LABEL: ashr_i1:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: ashr_i1:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: ashr_i1:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;

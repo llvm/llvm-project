@@ -88,7 +88,7 @@ ReportAccMoves("ppc-report-acc-moves",
                cl::Hidden, cl::init(false));
 #endif
 
-extern cl::opt<bool> DisableAutoPairedVecSt;
+extern cl::opt<bool> EnableAutoPairedVecSt;
 
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
@@ -534,12 +534,10 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
   return false;
 }
 
-bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool PPCRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   // Call the base implementation first to set any hints based on the usual
@@ -580,11 +578,11 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
           // Ensure that the hint is a VSRp register.
           if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         } else if (RegClass->contains(PPC::ACC0)) {
           HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
           if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         }
       }
       break;
@@ -598,7 +596,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         assert((ACCPhys >= PPC::ACC0 && ACCPhys <= PPC::ACC7) &&
                "Expecting an ACC register for BUILD_UACC.");
         Register HintReg = PPC::UACC0 + (ACCPhys - PPC::ACC0);
-        Hints.push_back(HintReg);
+        Hints.insert(HintReg);
       }
       break;
     }
@@ -1250,11 +1248,10 @@ void PPCRegisterInfo::spillRegPair(MachineBasicBlock &MBB,
 }
 
 /// Remove any STXVP[X] instructions and split them out into a pair of
-/// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
-/// the command line.
+/// STXV[X] instructions when paired vector stores are disabled.
 void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                                            unsigned FrameIndex) const {
-  assert(DisableAutoPairedVecSt &&
+  assert(!EnableAutoPairedVecSt &&
          "Expecting to do this only if paired vector stores are disabled.");
   MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1312,7 +1309,7 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  if (DisableAutoPairedVecSt) {
+  if (!EnableAutoPairedVecSt) {
     spillRegPair(MBB, II, DL, TII, FrameIndex, IsLittleEndian, IsKilled,
                  TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
                  IsLittleEndian ? 48 : 0);
@@ -1732,7 +1729,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     lowerACCRestore(II, FrameIndex);
     return true;
   case PPC::STXVP: {
-    if (DisableAutoPairedVecSt) {
+    if (!EnableAutoPairedVecSt) {
       lowerOctWordSpilling(II, FrameIndex);
       return true;
     }

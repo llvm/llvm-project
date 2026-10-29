@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -53,6 +54,52 @@ static llvm::cl::opt<bool> clUseStrictVolatileVerification(
 
 bool fir::useStrictVolatileVerification() {
   return clUseStrictVolatileVerification;
+}
+
+//===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::AssertOp::verify() {
+  llvm::StringRef message = getMessage();
+  if (message.contains('\0'))
+    return emitOpError("message must not contain an embedded null character");
+  unsigned directives = 0;
+  while (!message.empty()) {
+    size_t percent = message.find('%');
+    if (percent == llvm::StringRef::npos)
+      break;
+    message = message.drop_front(percent + 1);
+    if (message.consume_front("%"))
+      continue;
+    if (!message.consume_front("lld"))
+      return emitOpError("message supports only %lld and %% format directives");
+    ++directives;
+  }
+  if (directives != getValues().size())
+    return emitOpError(
+        "number of %lld directives must match diagnostic values");
+  return mlir::success();
+}
+
+namespace {
+struct RemoveTrueAssert : mlir::OpRewritePattern<fir::AssertOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssertOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (!mlir::matchPattern(op.getCondition(), mlir::m_One()))
+      return mlir::failure();
+    rewriter.replaceOp(op, op.getGuarded());
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::AssertOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<RemoveTrueAssert>(context);
 }
 
 static void propagateAttributes(mlir::Operation *fromOp,
@@ -246,6 +293,13 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
     if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
       return varIface.isOptional();
 
+    if (auto assertOp = mlir::dyn_cast<fir::AssertOp>(defOp)) {
+      val =
+          assertOp
+              .getGuarded()[mlir::cast<mlir::OpResult>(val).getResultNumber()];
+      continue;
+    }
+
     // Check for fir.embox and fir.rebox before checking for
     // FortranObjectViewOpInterface, which they support.
     // A box created by fir.embox/fir.rebox/fir.rebox_assumed_rank is only
@@ -297,7 +351,7 @@ llvm::SmallVector<mlir::MemorySlot> fir::AllocaOp::getPromotableSlots() {
 
 mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
                                            mlir::OpBuilder &builder) {
-  return fir::UndefOp::create(builder, getLoc(), slot.elemType);
+  return fir::UndefOp::create(builder, getLoc(), slot.valueType);
 }
 
 void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
@@ -354,7 +408,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
-        /*pinned=*/false, typeparams, shape);
+        /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -365,7 +419,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
-        pinned, typeparams, shape);
+        pinned, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -379,7 +433,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
   auto bindcAttr =
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
-        bindcAttr, /*pinned=*/false, typeparams, shape);
+        bindcAttr, /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -394,7 +448,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
   auto bindcAttr =
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
-        bindcAttr, pinned, typeparams, shape);
+        bindcAttr, pinned, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -403,7 +457,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           mlir::ValueRange typeparams, mlir::ValueRange shape,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocaResultType(inType), inType, {}, {},
-        /*pinned=*/false, typeparams, shape);
+        /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -413,7 +467,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           mlir::ValueRange shape,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocaResultType(inType), inType, {}, {}, pinned,
-        typeparams, shape);
+        typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -438,6 +492,10 @@ llvm::LogicalResult fir::AllocaOp::verify() {
   mlir::Type outType = getType();
   if (!mlir::isa<fir::ReferenceType>(outType))
     return emitOpError("must be a !fir.ref type");
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
   return mlir::success();
 }
 
@@ -5451,7 +5509,7 @@ mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
       result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
     } else
       return parser.emitError(parser.getCurrentLocation(),
-                              "Expected either intruction or data keyword");
+                              "Expected either instruction or data keyword");
 
     if (parser.parseComma())
       return mlir::failure();
@@ -6000,45 +6058,64 @@ fir::parseSelector(mlir::OpAsmParser &parser, mlir::OperationState &result,
   return mlir::success();
 }
 
+void fir::registerSymbol(mlir::SymbolTable *symbolTable,
+                         mlir::Operation *symbol) {
+  if (!symbolTable)
+    return;
+  mlir::StringAttr name = mlir::SymbolTable::getSymbolName(symbol);
+  if (symbolTable->lookup(name)) {
+    // Semantics does not diagnose every pair of entities that share a global
+    // identifier, so lowering can create a second symbol with this name.
+    // SymbolTable::insert would rename it; leave the duplicate definition in
+    // place for the verifier to report instead.
+    return;
+  }
+  symbolTable->insert(symbol);
+}
+
 mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
                                      llvm::StringRef name,
                                      mlir::FunctionType type,
                                      llvm::ArrayRef<mlir::NamedAttribute> attrs,
-                                     const mlir::SymbolTable *symbolTable) {
-  if (symbolTable)
-    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+                                     mlir::SymbolTable *symbolTable) {
+  if (symbolTable) {
+    auto f = symbolTable->lookup<mlir::func::FuncOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
+    if (f)
       return f;
-    }
-  if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name))
+  } else if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name)) {
     return f;
+  }
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   modBuilder.setInsertionPointToEnd(module.getBody());
   auto result = mlir::func::FuncOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(symbolTable, result);
   return result;
 }
 
 fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::Type type,
                                   llvm::ArrayRef<mlir::NamedAttribute> attrs,
-                                  const mlir::SymbolTable *symbolTable) {
-  if (symbolTable)
-    if (auto g = symbolTable->lookup<fir::GlobalOp>(name)) {
+                                  mlir::SymbolTable *symbolTable) {
+  if (symbolTable) {
+    auto g = symbolTable->lookup<fir::GlobalOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
+    if (g)
       return g;
-    }
-  if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
+  } else if (auto g = module.lookupSymbol<fir::GlobalOp>(name)) {
     return g;
+  }
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   auto result = fir::GlobalOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(symbolTable, result);
   return result;
 }
 
@@ -6103,10 +6180,21 @@ valueCheckFirAttributes(mlir::Value value,
   };
   // If this is a fir.box that was loaded, the fir attributes will be on the
   // related fir.ref<fir.box> creation.
-  if (mlir::isa<fir::BoxType>(value.getType()))
-    if (auto definingOp = value.getDefiningOp())
-      if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(definingOp))
+  // This is an attribute query only. Do not make rewriting helpers transparent
+  // to guards: replacing a guarded use with its origin loses the check.
+  while (true) {
+    if (auto assertOp = value.getDefiningOp<fir::AssertOp>()) {
+      value = assertOp.getGuarded()[mlir::cast<mlir::OpResult>(value)
+                                        .getResultNumber()];
+      continue;
+    }
+    if (mlir::isa<fir::BoxType>(value.getType()))
+      if (auto loadOp = value.getDefiningOp<fir::LoadOp>()) {
         value = loadOp.getMemref();
+        continue;
+      }
+    break;
+  }
   // If this is a function argument, look in the argument attributes.
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
     if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())
@@ -7048,3 +7136,15 @@ void fir::FIROpsDialect::registerOpExternalInterfaces() {
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
+
+bool fir::isInOffloadRegion(mlir::Operation *op) {
+  for (mlir::Operation *cur = op ? op->getParentOp() : nullptr; cur;
+       cur = cur->getParentOp()) {
+    if (mlir::isa<mlir::acc::OffloadRegionOpInterface,
+                  fir::CUDAKernelOpInterface, mlir::gpu::LaunchOp,
+                  mlir::gpu::GPUFuncOp, mlir::gpu::GPUModuleOp>(cur) ||
+        mlir::acc::isSpecializedAccRoutine(cur))
+      return true;
+  }
+  return false;
+}

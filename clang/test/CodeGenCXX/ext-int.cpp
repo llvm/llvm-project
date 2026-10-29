@@ -111,14 +111,14 @@ void BitfieldAssignment() {
 }
 
 unsigned _BitInt(33) ManglingTestRetParam(unsigned _BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDU33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_UBitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
 }
 
 _BitInt(33) ManglingTestRetParam(_BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDB33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_BitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
@@ -150,9 +150,9 @@ void ManglingInstantiator() {
   // LIN: call void @_Z16ManglingTestNTTPILDB99_993EEvv()
   // WIN: call void @"??$ManglingTestNTTP@$0DOB@@@YAXXZ"()
   ManglingDependent<4>();
-  // LIN: call signext i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
+  // LIN: call i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
   // WIN64: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
-  // WIN32: call signext i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
+  // WIN32: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
   uint16_t4 V;
   ManglingTestTemplateParam(V);
   // LIN: call void @_Z25ManglingTestTemplateParamIDv4_DU16_EvRT_(ptr

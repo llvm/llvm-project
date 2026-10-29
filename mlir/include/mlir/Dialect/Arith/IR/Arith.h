@@ -134,15 +134,17 @@ bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
 /// E.g., The identity value for maxf is in theory `-Inf`, but if we want to
 /// stay in the finite range, it would be `BiggestRepresentableNegativeFloat`.
 /// The purpose of this boolean is to offer constants that will play nice
-/// with fast math related optimizations.
+/// with fast math related optimizations. The caller must ensure that using a
+/// finite value preserves the reduction semantics.
 TypedAttr getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                                OpBuilder &builder, Location loc,
                                bool useOnlyFiniteValue = false);
 
 /// Return the identity numeric value associated to the give op. Return
 /// std::nullopt if there is no known neutral element.
-/// If `op` has `FastMathFlags::ninf`, only finite values will be used
-/// as neutral element.
+/// Finite min/max identities require `FastMathFlags::ninf`. NaN-ignoring
+/// min/max operations additionally require `FastMathFlags::nnan`; otherwise,
+/// their neutral element is NaN.
 std::optional<TypedAttr> getNeutralElement(Operation *op);
 
 /// Returns the identity value associated with an AtomicRMWKind op.

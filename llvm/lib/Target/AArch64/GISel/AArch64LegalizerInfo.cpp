@@ -294,6 +294,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
       .legalFor({i64, v16i8, v8i16, v4i32})
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder(
@@ -596,7 +599,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
                    Query.Types[0].getSizeInBits() > 32;
           },
-          changeTo(0, s32))
+          changeTo(0, i32))
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
@@ -1129,6 +1132,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isVector() != Query.Types[1].isVector();
       })
+      // moreElementsToNextPow2 cannot pad the source to match, so lower
+      .lowerIf([=](const LegalityQuery &Query) {
+        LLT DstTy = Query.Types[0];
+        LLT SrcTy = Query.Types[1];
+        if (!DstTy.isFixedVector() || !SrcTy.isFixedVector())
+          return false;
+        unsigned MoreElts = 1u << Log2_32_Ceil(DstTy.getNumElements());
+        return SrcTy.getNumElements() * MoreElts % DstTy.getNumElements() != 0;
+      })
       .moreElementsToNextPow2(0)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
@@ -1181,6 +1193,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
     getActionDefinitionsBuilder(Op)
         .widenScalarToNextPow2(LitTyIdx, 8)
+        // Above s64 lowered shifts narrow back to a merge and never terminate
+        .lowerIf([=](const LegalityQuery &Q) {
+          const LLT BigTy = Q.Types[BigTyIdx];
+          return BigTy.isScalar() && !isPowerOf2_32(BigTy.getSizeInBits()) &&
+                 BigTy.getSizeInBits() < 64;
+        })
         .widenScalarToNextPow2(BigTyIdx, 32)
         .clampScalar(LitTyIdx, s8, s64)
         .clampScalar(BigTyIdx, s32, s128)
@@ -1292,6 +1310,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
+
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor({{v8s8, s8},
+                 {v8s8, s32},
+                 {v16s8, s8},
+                 {v16s8, s32},
+                 {v4s16, s16},
+                 {v4s16, s32},
+                 {v8s16, s16},
+                 {v8s16, s32},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64},
+                 {v2p0, p0}});
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
@@ -1824,13 +1856,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
-    unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
-
     MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MF.getDataLayout();
+    unsigned PtrSize = DL.getPointerSize();
+    unsigned VaListSize = ST->getTargetLowering()->getVaListSizeInBits(DL) / 8;
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),

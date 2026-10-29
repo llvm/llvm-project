@@ -8,7 +8,7 @@ define i1 @latch_counted_header_check_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[POS]], label %[[PH:.*]], label %[[EXIT_0:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[NM1:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[NM1:%.*]] = add nsw i64 [[N]], -1
 ; CHECK-NEXT:    [[G4:%.*]] = shl nuw nsw i64 [[NM1]], 2
 ; CHECK-NEXT:    [[G:%.*]] = icmp ult i64 [[G4]], [[LIM]]
 ; CHECK-NEXT:    br i1 [[G]], label %[[LOOP_HEADER:.*]], label %[[EXIT_1:.*]]
@@ -58,9 +58,9 @@ exit.1:
 }
 
 ; The latch compares the phi (%iv == %n), not the post-increment. The header
-; check is not removable.
-define i1 @latch_counted_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
-; CHECK-LABEL: define i1 @latch_counted_phi_not_removable(
+; check is removable, as %iv u<= %n holds in the header.
+define i1 @latch_counted_phi(ptr %p, i64 %n, i64 %lim) {
+; CHECK-LABEL: define i1 @latch_counted_phi(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[LIM:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
@@ -72,8 +72,7 @@ define i1 @latch_counted_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[RC:%.*]] = icmp ult i64 [[OFF]], [[LIM]]
-; CHECK-NEXT:    br i1 [[RC]], label %[[LOOP_LATCH]], label %[[EXIT_1]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_1]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1

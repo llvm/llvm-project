@@ -21,7 +21,6 @@ define void @sext_inreg_i1_to_i16(i1 %val, ptr %ptr) {
 ; CHECK-LABEL: sext_inreg_i1_to_i16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d0
 ; CHECK-NEXT:    and.w #1, %d0
 ; CHECK-NEXT:    neg.w %d0
@@ -38,7 +37,6 @@ define void @sext_inreg_i1_to_i32(i1 %val, ptr %ptr) {
 ; CHECK-LABEL: sext_inreg_i1_to_i32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    neg.l %d0

@@ -22,7 +22,7 @@ contains
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
+! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) uniq_name(".tmp.arrayctor") : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
 ! CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_8]]) : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>
 ! CHECK:  fir.store %[[VAL_10]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>>
 ! CHECK:  %[[VAL_11:.*]] = arith.constant false
@@ -50,7 +50,7 @@ contains
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
 ! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
+! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) uniq_name(".tmp.arrayctor") : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
 ! CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_8]]) : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>
 ! CHECK:  fir.store %[[VAL_10]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>>
 ! CHECK:  %[[VAL_11:.*]] = arith.constant false

@@ -14,7 +14,6 @@
 #include "Function.h"
 #include "InitMap.h"
 #include "Integral.h"
-#include "InterpBlock.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -346,9 +345,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     Base = VD;
   else if (const auto *E = Desc->asExpr()) {
     if (block()->isDynamic()) {
-      QualType AllocatedType = getDeclPtr().getFieldDesc()->getDataType(ASTCtx);
-      DynamicAllocLValue DA(*block()->DynAllocId);
-      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+      DynamicAllocLValue DA(*block()->DynAllocId, Desc->getDynAllocKind());
+      Base =
+          APValue::LValueBase::getDynamicAlloc(DA, Desc->getDataType(ASTCtx));
     } else {
       Base = E;
     }
@@ -727,28 +726,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   return toAPValue(Ctx).getAsString(Ctx, Ty);
 }
 
-bool Pointer::isInitialized() const {
-  if (!isBlockPointer())
-    return true;
-
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
-    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
-  assert(BS.Pointee && "Cannot check if null pointer was initialized");
-  const Descriptor *Desc = getFieldDesc();
-  assert(Desc);
-  if (Desc->isPrimitiveArray())
-    return isElementInitialized(getIndex());
-
-  if (asBlockPointer().Base == 0)
-    return true;
-  // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
-}
-
 bool PtrView::isElementInitialized(unsigned Index) const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
@@ -791,7 +768,7 @@ Lifetime PtrView::getLifetime() const {
   if (Base < sizeof(InlineDescriptor))
     return Lifetime::Started;
 
-  if (inArray() && !isArrayRoot()) {
+  if (inPrimitiveArray() && !isArrayRoot()) {
     InitMapPtr &IM = getInitMap();
 
     if (!IM.hasInitMap()) {
@@ -1425,19 +1402,21 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const RecordDecl *RD = CurType->getAsRecordDecl();
+      const CXXRecordDecl *RD = CurType->getAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
+        return std::nullopt;
+
+      const CXXRecordDecl *BaseDecl = Entry.RD.getPointer();
+      if (!RD->isDerivedFrom(BaseDecl))
         return std::nullopt;
 
       const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
       if (Entry.RD.getInt())
-        Offset +=
-            Layout.getVBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getVBaseClassOffset(BaseDecl).getQuantity();
       else
-        Offset +=
-            Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getBaseClassOffset(BaseDecl).getQuantity();
 
-      CurType = ASTCtx.getCanonicalTagType(Entry.RD.getPointer());
+      CurType = ASTCtx.getCanonicalTagType(BaseDecl);
     } break;
 
     case PointerPathEntry::Field: {

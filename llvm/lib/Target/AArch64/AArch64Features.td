@@ -618,6 +618,23 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
 
 //===----------------------------------------------------------------------===//
+//  Armv9.8 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
+  "Enable Armv9.8-A Conditional Fault instructions">;
+
+def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
+  "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
+
+def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRCPC",
+  "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
+   [FeatureSVE2, FeatureRCPC3]>;
+
+def FeatureSVE_PERM256: ExtensionWithMArch<"sve-perm256", "SVE_PERM256", "FEAT_SVE_PERM256",
+  "Enable Armv9.8-A SVE 128-bit element permute instructions">;
+
+//===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
 
@@ -632,6 +649,14 @@ def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
 
 def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
   "Enable TIndex Exception-like Vector instructions">;
+
+def FeatureFPv2 : ExtensionWithMArch<"fpv2", "FPv2", "FEAT_FPv2",
+  "Enable IEEE 754-2019 floating-point standard alignment instructions",
+  [FeatureFullFP16]>;
+
+def FeatureSMEF16F8F16 : ExtensionWithMArch<"sme-f16f8f16", "SME_F16F8F16", "FEAT_SME_F16F8F16",
+  "Enable SME half-precision and FP8 sum-of-products accumulating to half-precision instructions",
+  [FeatureSME2, FeatureFP8]>;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -914,6 +939,11 @@ def FeatureALULSLFast : SubtargetFeature<
     "Add/Sub operations with lsl shift <= 4 are cheap",
     [], InlineIgnore>;
 
+def FeatureShiftMaddSlow : SubtargetFeature<
+    "shift-madd-slow", "HasShiftMaddSlow", "true",
+    "Madd with a shifted addend is slower than mul of a shifted add",
+    [], InlineIgnore>;
+
 def FeatureFastLD1Single : SubtargetFeature<
     "fast-ld1-single", "HasFastLD1Single", "true",
     "Single-element LD1 to vector lane has same performance as regular load",
@@ -1121,6 +1151,9 @@ def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
+def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
+  [HasV9_7aOps, FeatureSVE_PERM256],
+  !listconcat(HasV9_7aOps.DefaultExts, [FeatureSVE_PERM256])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

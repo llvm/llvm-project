@@ -10,8 +10,8 @@ subroutine simple(x, y)
   read(*,*) x(y)
 ! CHECK-DAG: %[[VAL_C10:.*]] = arith.constant 10 : index
 ! CHECK-DAG: %[[VAL_C3:.*]] = arith.constant 3 : index
-! CHECK-DAG: %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFsimpleEx"}
-! CHECK-DAG: %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFsimpleEy"}
+! CHECK-DAG: %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}uniq_name("_QFsimpleEx")
+! CHECK-DAG: %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFsimpleEy")
 ! CHECK-DAG: %[[VAL_5:.*]] = arith.constant 5 : i32
 ! CHECK:   %[[VAL_7:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:   %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
@@ -45,11 +45,11 @@ subroutine only_once(x)
   ! Test subscripts are only evaluated once.
   read(*,*) x(get_substcript(), get_vector())
 ! CHECK:   %[[VAL_RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}{uniq_name = "_QFonly_onceEx"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}uniq_name("_QFonly_onceEx")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SUB:.*]] = fir.call @_QPget_substcript() {{.*}}: () -> i32
 ! CHECK:   %[[VAL_SUB_I64:.*]] = fir.convert %[[VAL_SUB]] : (i32) -> i64
-! CHECK:   %[[VAL_RES_DECL:.*]]:2 = hlfir.declare %[[VAL_RES]] {uniq_name = ".tmp.func_result"}
+! CHECK:   %[[VAL_RES_DECL:.*]]:2 = hlfir.declare %[[VAL_RES]] uniq_name(".tmp.func_result")
 ! CHECK:   %[[VAL_GETVEC:.*]] = fir.call @_QPget_vector() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:   fir.save_result %[[VAL_GETVEC]] to %[[VAL_RES_DECL]]#0
 ! CHECK:   %[[VAL_LOAD:.*]] = fir.load %[[VAL_RES_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -78,8 +78,8 @@ subroutine with_assumed_shapes(x, y)
   integer :: y(:)
   integer :: x(:)
   read(*,*) x(y)
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}{uniq_name = "_QFwith_assumed_shapesEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}{uniq_name = "_QFwith_assumed_shapesEy"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}uniq_name("_QFwith_assumed_shapesEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}uniq_name("_QFwith_assumed_shapesEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_Y]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:   %[[VAL_C1:.*]] = arith.constant 1 : index
@@ -103,8 +103,8 @@ subroutine lower_bounds(x, y)
   integer :: x(2:5,3:8)
   read(*,*) x(3, y)
 ! CHECK:   %[[VAL_SS:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%[[VAL_SS]]){{.*}}{uniq_name = "_QFlower_boundsEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFlower_boundsEy"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%[[VAL_SS]]){{.*}}uniq_name("_QFlower_boundsEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFlower_boundsEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_C3I64:.*]] = arith.constant 3 : i64
 ! CHECK:   %[[VAL_SS2:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
@@ -129,9 +129,9 @@ subroutine two_vectors(x, y1, y2)
   integer :: y1(3), y2(3)
   real :: x(4, 4)
   read(*,*) x(y1, y2)
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFtwo_vectorsEx"}
-! CHECK:   %[[VAL_Y1:.*]]:2 = hlfir.declare %[[VAL_Y1_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFtwo_vectorsEy1"}
-! CHECK:   %[[VAL_Y2:.*]]:2 = hlfir.declare %[[VAL_Y2_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFtwo_vectorsEy2"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}uniq_name("_QFtwo_vectorsEx")
+! CHECK:   %[[VAL_Y1:.*]]:2 = hlfir.declare %[[VAL_Y1_ARG]](%{{.*}}){{.*}}uniq_name("_QFtwo_vectorsEy1")
+! CHECK:   %[[VAL_Y2:.*]]:2 = hlfir.declare %[[VAL_Y2_ARG]](%{{.*}}){{.*}}uniq_name("_QFtwo_vectorsEy2")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
 ! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index, index, index) -> !fir.slice<2>
@@ -157,8 +157,8 @@ subroutine triplets_and_vector(x, y)
   integer :: y(3)
   complex :: x(4, 4)
   read(*,*) x(1:4:2, y)
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFtriplets_and_vectorEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFtriplets_and_vectorEy"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%{{.*}}){{.*}}uniq_name("_QFtriplets_and_vectorEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFtriplets_and_vectorEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
 ! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index, index, index) -> !fir.slice<2>
@@ -184,8 +184,8 @@ subroutine simple_char(x, y)
   read(*,*) x(y)
 ! CHECK:   %[[VAL_UNBOX:.*]]:2 = fir.unboxchar %[[VAL_X_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:   %[[VAL_X_CAST:.*]] = fir.convert %[[VAL_UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<6x!fir.char<1,?>>>
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_CAST]](%{{.*}}) typeparams %[[VAL_UNBOX]]#1{{.*}}{uniq_name = "_QFsimple_charEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFsimple_charEy"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_CAST]](%{{.*}}) typeparams %[[VAL_UNBOX]]#1{{.*}}uniq_name("_QFsimple_charEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFsimple_charEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SS:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 ! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.slice<1>
@@ -208,10 +208,10 @@ subroutine substring(x, y, i, j)
   integer :: y(3), i, j
   character(*) :: x(:)
   read(*,*) x(y)(i:j)
-! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ARG]]{{.*}}{uniq_name = "_QFsubstringEi"}
-! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]]{{.*}}{uniq_name = "_QFsubstringEj"}
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}{uniq_name = "_QFsubstringEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFsubstringEy"}
+! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ARG]]{{.*}}uniq_name("_QFsubstringEi")
+! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]]{{.*}}uniq_name("_QFsubstringEj")
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}uniq_name("_QFsubstringEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFsubstringEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_I_LD:.*]] = fir.load %[[VAL_I]]#0 : !fir.ref<i32>
 ! CHECK:   %[[VAL_I_I64:.*]] = fir.convert %[[VAL_I_LD]] : (i32) -> i64
@@ -247,8 +247,8 @@ subroutine complex_part(z, y)
   integer :: y(:)
   complex :: z(:)
   read(*,*) z(y)%IM
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}{uniq_name = "_QFcomplex_partEy"}
-! CHECK:   %[[VAL_Z:.*]]:2 = hlfir.declare %[[VAL_Z_ARG]]{{.*}}{uniq_name = "_QFcomplex_partEz"}
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}uniq_name("_QFcomplex_partEy")
+! CHECK:   %[[VAL_Z:.*]]:2 = hlfir.declare %[[VAL_Z_ARG]]{{.*}}uniq_name("_QFcomplex_partEz")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_Y]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:   %[[VAL_C1I32:.*]] = arith.constant 1 : i32
@@ -282,8 +282,8 @@ subroutine simple_derived(x, y)
   type(t) :: x(3:8)
   read(*,*) x(y)
 ! CHECK:   %[[VAL_SS:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%[[VAL_SS]]){{.*}}{uniq_name = "_QFsimple_derivedEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFsimple_derivedEy"}
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]](%[[VAL_SS]]){{.*}}uniq_name("_QFsimple_derivedEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]](%{{.*}}){{.*}}uniq_name("_QFsimple_derivedEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_SS2:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 ! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.slice<1>
@@ -308,8 +308,8 @@ subroutine with_path(b, i)
   integer :: i(:)
   read (*, *) b(5, i, 8:9:1)%a(4,5)%i
 ! CHECK:   %[[VAL_SHIFT:.*]] = fir.shift %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shift<3>
-! CHECK:   %[[VAL_B:.*]]:2 = hlfir.declare %[[VAL_B_ARG]](%[[VAL_SHIFT]]){{.*}}{uniq_name = "_QFwith_pathEb"}
-! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ARG]]{{.*}}{uniq_name = "_QFwith_pathEi"}
+! CHECK:   %[[VAL_B:.*]]:2 = hlfir.declare %[[VAL_B_ARG]](%[[VAL_SHIFT]]){{.*}}uniq_name("_QFwith_pathEb")
+! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ARG]]{{.*}}uniq_name("_QFwith_pathEi")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_I]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:   %[[VAL_FIELD_A:.*]] = fir.field_index a, !fir.type<_QMderived_typesTt2{a:!fir.array<5x5x!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>}>
@@ -338,10 +338,10 @@ subroutine simple_iostat(x, y, j, stat)
   integer :: j, y(:), stat
   real :: x(:)
   read(*, *, iostat=stat) x(y), j
-! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]]{{.*}}{uniq_name = "_QFsimple_iostatEj"}
-! CHECK:   %[[VAL_STAT:.*]]:2 = hlfir.declare %[[VAL_STAT_ARG]]{{.*}}{uniq_name = "_QFsimple_iostatEstat"}
-! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}{uniq_name = "_QFsimple_iostatEx"}
-! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}{uniq_name = "_QFsimple_iostatEy"}
+! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]]{{.*}}uniq_name("_QFsimple_iostatEj")
+! CHECK:   %[[VAL_STAT:.*]]:2 = hlfir.declare %[[VAL_STAT_ARG]]{{.*}}uniq_name("_QFsimple_iostatEstat")
+! CHECK:   %[[VAL_X:.*]]:2 = hlfir.declare %[[VAL_X_ARG]]{{.*}}uniq_name("_QFsimple_iostatEx")
+! CHECK:   %[[VAL_Y:.*]]:2 = hlfir.declare %[[VAL_Y_ARG]]{{.*}}uniq_name("_QFsimple_iostatEy")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   fir.call @_FortranAioEnableHandlers(%[[VAL_BEGIN]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_Y]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -373,10 +373,10 @@ subroutine iostat_in_io_loop(k, j, stat)
   integer  :: stat
   read(*, *, iostat=stat) (k(i, j), i=1,3,1)
 ! CHECK:   %[[VAL_I_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFiostat_in_io_loopEi"}>
-! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ALLOC]] {uniq_name = "_QFiostat_in_io_loopEi"}
-! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFiostat_in_io_loopEj"}
-! CHECK:   %[[VAL_K:.*]]:2 = hlfir.declare %[[VAL_K_ARG]](%{{.*}}){{.*}}{uniq_name = "_QFiostat_in_io_loopEk"}
-! CHECK:   %[[VAL_STAT:.*]]:2 = hlfir.declare %[[VAL_STAT_ARG]]{{.*}}{uniq_name = "_QFiostat_in_io_loopEstat"}
+! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ALLOC]] uniq_name("_QFiostat_in_io_loopEi")
+! CHECK:   %[[VAL_J:.*]]:2 = hlfir.declare %[[VAL_J_ARG]](%{{.*}}){{.*}}uniq_name("_QFiostat_in_io_loopEj")
+! CHECK:   %[[VAL_K:.*]]:2 = hlfir.declare %[[VAL_K_ARG]](%{{.*}}){{.*}}uniq_name("_QFiostat_in_io_loopEk")
+! CHECK:   %[[VAL_STAT:.*]]:2 = hlfir.declare %[[VAL_STAT_ARG]]{{.*}}uniq_name("_QFiostat_in_io_loopEstat")
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   fir.call @_FortranAioEnableHandlers(%[[VAL_BEGIN]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:   %[[VAL_TRUE:.*]] = arith.constant true

@@ -59,7 +59,7 @@
 // CHECK:   }
 // CHECK: } else {
 // CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
-// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     hlfir.designate
 // CHECK:     fir.load
@@ -77,26 +77,26 @@
 
 func.func @_QPassign_pointers(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "arr"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "lo1"}, %arg3: !fir.ref<i32> {fir.bindc_name = "hi1"}, %arg4: !fir.ref<i32> {fir.bindc_name = "lo2"}, %arg5: !fir.ref<i32> {fir.bindc_name = "hi2"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout, pointer>, uniq_name = "_QFassign_pointersEarr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-  %2:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFassign_pointersEhi1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFassign_pointersEhi2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFassign_pointersElo1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFassign_pointersElo2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %6:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFassign_pointersEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFassign_pointersEarr") fortran_attrs<intent_inout, pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %2:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 uniq_name("_QFassign_pointersEhi1") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 uniq_name("_QFassign_pointersEhi2") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 uniq_name("_QFassign_pointersElo1") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 uniq_name("_QFassign_pointersElo2") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFassign_pointersEn") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %7 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p1", uniq_name = "_QFassign_pointersEp1"}
   %8 = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
   %c0 = arith.constant 0 : index
   %9 = fir.shape %c0 : (index) -> !fir.shape<1>
   %10 = fir.embox %8(%9) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
   fir.store %10 to %7 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  %11:2 = hlfir.declare %7 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassign_pointersEp1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %11:2 = hlfir.declare %7 uniq_name("_QFassign_pointersEp1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %12 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p2", uniq_name = "_QFassign_pointersEp2"}
   %13 = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
   %c0_0 = arith.constant 0 : index
   %14 = fir.shape %c0_0 : (index) -> !fir.shape<1>
   %15 = fir.embox %13(%14) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
   fir.store %15 to %12 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  %16:2 = hlfir.declare %12 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassign_pointersEp2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %16:2 = hlfir.declare %12 uniq_name("_QFassign_pointersEp2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
   %17 = fir.load %1#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %18 = fir.load %4#0 : !fir.ref<i32>
   %19 = fir.convert %18 : (i32) -> i64

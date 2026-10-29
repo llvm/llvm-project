@@ -27,6 +27,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRBufferizationEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRCallInterfaces

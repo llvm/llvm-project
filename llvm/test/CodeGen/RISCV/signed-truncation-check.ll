@@ -462,7 +462,7 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    sltiu a1, a2, -256
 ; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    xori a1, a1, 1
+; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;

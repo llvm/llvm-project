@@ -21,6 +21,7 @@
 
 namespace llvm {
 class RISCVTargetMachine : public CodeGenTargetMachineImpl {
+  const RISCVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
 
@@ -31,6 +32,7 @@ public:
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
 
+  const RISCVOptions &getCLOpts() const { return CLOpts; }
   const RISCVSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
@@ -49,7 +51,8 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DstAS) const override;
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *

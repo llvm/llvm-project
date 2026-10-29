@@ -4,7 +4,7 @@
 
 func.func @bad_declare(%arg0: !fir.ref<f32>) {
   // expected-error@+1 {{'hlfir.declare' op first result type is inconsistent with variable properties: expected '!fir.ref<f32>'}}
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.ref<f32>) -> (!fir.box<f32>, !fir.ref<f32>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.ref<f32>) -> (!fir.box<f32>, !fir.ref<f32>)
   return
 }
 
@@ -16,14 +16,14 @@ func.func @bad_declare_lower_bounds(%arg0: !fir.ref<!fir.array<2x4xf32>>) {
   %c4 = arith.constant 4 : index
   %shape = fir.shape_shift %c1, %c2, %c3, %c4 : (index, index, index, index) -> !fir.shapeshift<2>
   // expected-error@+1 {{'hlfir.declare' op first result type is inconsistent with variable properties: expected '!fir.box<!fir.array<2x4xf32>>'}}
-  %0:2 = hlfir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.array<2x4xf32>>, !fir.shapeshift<2>) -> (!fir.ref<!fir.array<2x4xf32>>, !fir.ref<!fir.array<2x4xf32>>)
+  %0:2 = hlfir.declare %arg0(%shape) uniq_name("x") : (!fir.ref<!fir.array<2x4xf32>>, !fir.shapeshift<2>) -> (!fir.ref<!fir.array<2x4xf32>>, !fir.ref<!fir.array<2x4xf32>>)
   return
 }
 
 // -----
 func.func @bad_declare(%arg0: !fir.ref<f32>) {
   // expected-error@+1 {{'hlfir.declare' op second result type must match input memref type}}
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.ref<f32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.ref<f32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   return
 }
 
@@ -32,14 +32,14 @@ func.func @bad_declare(%arg0: !fir.ref<f32>) {
 // Test that FortranVariableInterface verifier is kicking in. This verifier itself is already tested with fir.declare.
 func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
   // expected-error@+1 {{'hlfir.declare' op of array entity with a raw address base must have a shape operand that is a shape or shapeshift}}
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.ref<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
   return
 }
 
 // -----
 func.func @bad_declare_skip_rebox(%arg0: !fir.ref<f32>) {
   // expected-error@+1 {{'hlfir.declare' op skip_rebox attribute must only be set when the input is a box}}
-  %0:2 = hlfir.declare %arg0 skip_rebox {uniq_name = "x"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %0:2 = hlfir.declare %arg0 skip_rebox uniq_name("x") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -1022,7 +1022,7 @@ func.func @bad_shapeof2(%arg0: !hlfir.expr<10xi32>) {
 // -----
 func.func @bad_getextent(%arg0: !fir.shape<1>) {
   // expected-error@+1 {{'hlfir.get_extent' op dimension index out of bounds}}
-  %0 = hlfir.get_extent %arg0 {dim = 1 : index} : (!fir.shape<1>) -> index
+  %0 = hlfir.get_extent %arg0 dim(1) : (!fir.shape<1>) -> index
 }
 
 // -----
@@ -1358,7 +1358,7 @@ func.func @destroy_with_finalize(%expr: !hlfir.expr<?xi32>) {
 // -----
 
 func.func @end_associate_with_alloc_comp(%var: !hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, %shape: !fir.shape<1>) {
-  %4:3 = hlfir.associate %var(%shape) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+  %4:3 = hlfir.associate %var(%shape) uniq_name("adapt.valuebyref") : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
 // expected-error@+1 {{'hlfir.end_associate' op that requires components deallocation must have var operand that is a Fortran entity}}
   hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
   return
@@ -1706,7 +1706,7 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
   %2 = fir.convert %addr : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
   %var = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
   // expected-error@+1 {{negative integer literal not valid for unsigned integer type}}
-  %decl:2 = hlfir.declare %var storage (%addr[-1]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  %decl:2 = hlfir.declare %var storage (%addr[-1]) uniq_name("a") : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i8>, !fir.ref<i8>)
   return
 }
 
@@ -1719,6 +1719,6 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
   %2 = "fir.convert"(%1) : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
   %3 = "fir.coordinate_of"(%2, %0) <{baseType = !fir.ref<!fir.array<?xi8>>}> : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 // expected-error@+1 {{storage offset specified without the storage reference}}
-  %4:2 = "hlfir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  %4:2 = "hlfir.declare"(%3) <{uniq_name = "a", operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
   "func.return"() : () -> ()
 }) : () -> ()

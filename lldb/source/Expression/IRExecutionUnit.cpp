@@ -60,53 +60,6 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
                       : false),
       m_reported_allocations(false), m_preferred_modules() {}
 
-lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
-                                       Status &error) {
-  const bool zero_memory = false;
-  auto address_or_error =
-      Malloc(size, 8, lldb::ePermissionsWritable | lldb::ePermissionsReadable,
-             eAllocationPolicyMirror, zero_memory);
-  if (!address_or_error) {
-    error = Status::FromError(address_or_error.takeError());
-    return LLDB_INVALID_ADDRESS;
-  }
-  lldb::addr_t allocation_process_addr = *address_or_error;
-
-  WriteMemory(allocation_process_addr, bytes, size, error);
-
-  if (!error.Success()) {
-    Status err;
-    Free(allocation_process_addr, err);
-
-    return LLDB_INVALID_ADDRESS;
-  }
-
-  if (Log *log = GetLog(LLDBLog::Expressions)) {
-    DataBufferHeap my_buffer(size, 0);
-    Status err;
-    ReadMemory(my_buffer.GetBytes(), allocation_process_addr, size, err);
-
-    if (err.Success()) {
-      DataExtractor my_extractor(my_buffer.GetBytes(), my_buffer.GetByteSize(),
-                                 lldb::eByteOrderBig, 8);
-      my_extractor.PutToLog(log, 0, my_buffer.GetByteSize(),
-                            allocation_process_addr, 16,
-                            DataExtractor::TypeUInt8);
-    }
-  }
-
-  return allocation_process_addr;
-}
-
-void IRExecutionUnit::FreeNow(lldb::addr_t allocation) {
-  if (allocation == LLDB_INVALID_ADDRESS)
-    return;
-
-  Status err;
-
-  Free(allocation, err);
-}
-
 Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                                             lldb::ProcessSP &process_wp) {
   Log *log = GetLog(LLDBLog::Expressions);

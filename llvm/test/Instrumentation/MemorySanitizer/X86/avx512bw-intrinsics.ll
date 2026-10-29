@@ -1631,7 +1631,7 @@ define <32 x i16> @test_int_x86_avx512_pmulhu_w_512(<32 x i16> %x0, <32 x i16> %
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
 ; CHECK-NEXT:    store <32 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i16> [[TMP3]]
 ;
@@ -1647,7 +1647,7 @@ define <32 x i16> @test_int_x86_avx512_mask_pmulhu_w_512(<32 x i16> %x0, <32 x i
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulhu.w.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[X3:%.*]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP7]], <32 x i16> [[_MSPROP]], <32 x i16> [[TMP4]]
@@ -1673,7 +1673,7 @@ define <32 x i16> @test_int_x86_avx512_pmulh_w_512(<32 x i16> %x0, <32 x i16> %x
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulh.w.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
 ; CHECK-NEXT:    store <32 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i16> [[TMP3]]
 ;
@@ -1689,7 +1689,7 @@ define <32 x i16> @test_int_x86_avx512_mask_pmulh_w_512(<32 x i16> %x0, <32 x i1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i16> @llvm.x86.avx512.pmulh.w.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[X3:%.*]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP7]], <32 x i16> [[_MSPROP]], <32 x i16> [[TMP4]]

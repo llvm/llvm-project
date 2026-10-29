@@ -90,7 +90,7 @@ inline_memset_aarch64_with_fp(Ptr dst, uint8_t value, size_t count) {
 }
 #endif
 
-[[gnu::flatten]] [[maybe_unused]] LIBC_INLINE static void
+LIBC_UNUSED LIBC_FLATTEN LIBC_INLINE static void
 inline_memset_aarch64_dispatch(Ptr dst, uint8_t value, size_t count) {
 #if defined(__ARM_NEON)
   return inline_memset_aarch64_with_fp(dst, value, count);
