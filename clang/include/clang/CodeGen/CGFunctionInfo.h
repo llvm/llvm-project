@@ -350,20 +350,24 @@ public:
 
   // Direct/Extend accessors
   unsigned getDirectOffset() const {
-    assert((isDirect() || isExtend() || isTargetSpecific()) && "Invalid kind!");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     return DirectAttr.Offset;
   }
   void setDirectOffset(unsigned Offset) {
-    assert((isDirect() || isExtend() || isTargetSpecific()) && "Invalid kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     DirectAttr.Offset = Offset;
   }
 
   unsigned getDirectAlign() const {
-    assert((isDirect() || isExtend() || isTargetSpecific()) && "Invalid kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     return DirectAttr.Align;
   }
   void setDirectAlign(unsigned Align) {
-    assert((isDirect() || isExtend() || isTargetSpecific()) && "Invalid kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     DirectAttr.Align = Align;
   }
 

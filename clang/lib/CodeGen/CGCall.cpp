@@ -1053,7 +1053,6 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     // useFirstFieldIfTransparentUnion.  Passing the union type to
     // ABIArgInfo::getSignExtend would trip its integral-type assert.
     QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
-    // TODO
     ABIArgInfo Res;
     if (AbiInfo.isSignExt())
       Res = ABIArgInfo::getSignExtend(ExtendType, CoercedType);
