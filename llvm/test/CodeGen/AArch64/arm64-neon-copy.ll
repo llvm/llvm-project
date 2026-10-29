@@ -1635,7 +1635,8 @@ define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-GI-NEXT:    fmov s1, w1
 ; CHECK-GI-NEXT:    sqabs s0, s0
 ; CHECK-GI-NEXT:    sqabs s1, s1
-; CHECK-GI-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = tail call i32 @llvm.aarch64.neon.sqabs.i32(i32 %a)
@@ -1973,19 +1974,10 @@ entry:
 }
 
 define <4 x i32> @test_concat_v4i32_v4i32_v4i32(<4 x i32> %x, <4 x i32> %y) #0 {
-; CHECK-SD-LABEL: test_concat_v4i32_v4i32_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_concat_v4i32_v4i32_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI134_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI134_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_concat_v4i32_v4i32_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 entry:
   %vecinit6 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i32> %vecinit6
@@ -2000,13 +1992,11 @@ define <4 x i32> @test_concat_v4i32_v2i32_v4i32(<2 x i32> %x, <4 x i32> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v4i32_v2i32_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI135_0
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI135_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
+; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecext = extractelement <2 x i32> %x, i32 0

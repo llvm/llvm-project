@@ -1174,7 +1174,7 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Vector: {
     mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
-    return cir::VectorType::get(elementType, numElements);
+    return cir::VectorType::getFixed(elementType, numElements);
   }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);

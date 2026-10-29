@@ -168,10 +168,24 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
          SemanticInterpretation::NotAllocated},
         {Triple::Geometry, IOType::In, SemanticInterpretation::NotAllocated},
         {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
-        {Triple::Mesh, InOrPatchConstant, SemanticInterpretation::NotAllocated},
-        {Triple::Amplification, IOType::In,
-         SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, IOType::In, SemanticInterpretation::NotAllocated},
     };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::StartVertexLocation:
+  case dxbc::PSV::SemanticKind::StartInstanceLocation: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::SampleIndex: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Barycentrics: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Target: {
@@ -189,6 +203,17 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
         {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ShadingRate: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+        {Triple::Mesh, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::SV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Position: {

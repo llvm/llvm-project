@@ -172,7 +172,13 @@ DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
 
 std::unique_ptr<UnwindPlan>
 DWARFCallFrameInfo::GetUnwindPlan(const Address &addr) {
-  return GetUnwindPlan({AddressRange(addr, 1)}, addr);
+  return GetUnwindPlan(addr, addr);
+}
+
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(const Address &pc,
+                                  const Address &func_start) {
+  return GetUnwindPlan({AddressRange(pc, 1)}, func_start);
 }
 
 std::unique_ptr<UnwindPlan>

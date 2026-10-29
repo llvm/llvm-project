@@ -466,3 +466,51 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Args, CxtI);
 }
+
+// Returns true if Ty is a fixed vector type held in a single LSX/LASX register.
+static bool isSingleVRegType(const LoongArchSubtarget *ST, Type *Ty) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy)
+    return false;
+  unsigned Bits = VTy->getPrimitiveSizeInBits().getFixedValue();
+  return (Bits == 128 && ST->hasExtLSX()) || (Bits == 256 && ST->hasExtLASX());
+}
+
+InstructionCost LoongArchTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
+  // Element 0 of a floating-point vector is the aliased FPR, so extracting it
+  // is free.
+  if (Opcode == Instruction::ExtractElement && Index == 0 &&
+      Val->getScalarType()->isFloatingPointTy() && isSingleVRegType(ST, Val))
+    return 0;
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
+}
+
+InstructionCost LoongArchTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  if (isSingleVRegType(ST, SrcTy) && DstTy == SrcTy) {
+    Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+    unsigned EltBits = SrcTy->getScalarSizeInBits();
+    bool Is128 = SrcTy->getPrimitiveSizeInBits().getFixedValue() == 128;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+      // [x]vreplvei.{b/h/w/d}, xvreplve0.{b/h/w/d}, [x]vreplgr2vr.{b/h/w/d}.
+      return 1;
+    case TTI::SK_Reverse:
+    case TTI::SK_PermuteSingleSrc:
+      // vshuf4i.{w/d} handles any single-source permutation of 32/64-bit
+      // elements within a 128-bit register.
+      if (Is128 && EltBits >= 32)
+        return 1;
+      break;
+    default:
+      break;
+    }
+  }
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CxtI, VIC);
+}

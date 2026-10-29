@@ -172,7 +172,8 @@ static SmallVector<BasicBlock *, 2> getTwoPredecessors(BasicBlock *BB) {
   return Preds;
 }
 
-static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
+static bool canSplitCallSite(const ScalarOptions &Opts, CallBase &CB,
+                             TargetTransformInfo &TTI) {
   if (CB.isConvergent() || CB.cannotDuplicate())
     return false;
 
@@ -202,7 +203,7 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
        llvm::make_range(CallSiteBB->begin(), CB.getIterator())) {
     Cost += TTI.getInstructionCost(&InstBeforeCall,
                                    TargetTransformInfo::TCK_CodeSize);
-    if (Cost >= ScalarOptions::Global.callsite_splitting_duplication_threshold)
+    if (Cost >= Opts.callsite_splitting_duplication_threshold)
       return false;
   }
 
@@ -475,10 +476,10 @@ static PredsWithCondsTy shouldSplitOnPredicatedArgument(CallBase &CB,
   return PredsCS;
 }
 
-static bool tryToSplitCallSite(CallBase &CB, TargetTransformInfo &TTI,
-                               DomTreeUpdater &DTU) {
+static bool tryToSplitCallSite(const ScalarOptions &Opts, CallBase &CB,
+                               TargetTransformInfo &TTI, DomTreeUpdater &DTU) {
   // Check if we can split the call site.
-  if (!CB.arg_size() || !canSplitCallSite(CB, TTI))
+  if (!CB.arg_size() || !canSplitCallSite(Opts, CB, TTI))
     return false;
 
   auto PredsWithConds = shouldSplitOnPredicatedArgument(CB, DTU);
@@ -494,6 +495,7 @@ static bool tryToSplitCallSite(CallBase &CB, TargetTransformInfo &TTI,
 static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
                                 TargetTransformInfo &TTI, DominatorTree &DT) {
 
+  const ScalarOptions &Opts = getScalarOptions(F);
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
   for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
@@ -516,7 +518,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
       // Check if such path is possible before attempting the splitting.
       bool IsMustTail = CB->isMustTailCall();
 
-      Changed |= tryToSplitCallSite(*CB, TTI, DTU);
+      Changed |= tryToSplitCallSite(Opts, *CB, TTI, DTU);
 
       // There're no interesting instructions after this. The call site
       // itself might have been erased on splitting.

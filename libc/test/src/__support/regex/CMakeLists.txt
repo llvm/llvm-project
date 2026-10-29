@@ -21,4 +21,5 @@ add_libc_test(
     libc.src.__support.error_or
     libc.src.__support.regex.regex_expr_pool
     libc.src.__support.regex.regex_matcher
+    libc.src.__support.regex.regex_parser
 )

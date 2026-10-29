@@ -36,7 +36,9 @@ extern int indextest_perform_shell_execution(const char *command_line);
 /* Utility functions.                                                         */
 /******************************************************************************/
 
-#ifdef _MSC_VER
+#ifdef __MVS__
+#include <libgen.h>
+#elif _MSC_VER
 char *basename(const char* path)
 {
     char* base1 = (char*)strrchr(path, '/');
@@ -1240,7 +1242,15 @@ static CXString GetCursorSource(CXCursor Cursor) {
     clang_disposeString(source);
     return createCXString("<invalid loc>");
   }
+#ifdef __MVS__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored                                               \
+    "-Wincompatible-pointer-types-discards-qualifiers"
+#endif
   b = basename(clang_getCString(source));
+#ifdef __MVS__
+#pragma clang diagnostic pop
+#endif
   result = duplicateCXString(b);
   clang_disposeString(source);
   return result;

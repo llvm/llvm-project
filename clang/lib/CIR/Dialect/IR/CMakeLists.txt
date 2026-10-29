@@ -25,13 +25,13 @@ add_clang_library(MLIRCIR
   ${CIR_SHARDED_SRCS}
 
   DEPENDS
-  MLIRCIROpsIncGen
   MLIRCIROpsShardGen
   MLIRCIRDialectBytecodeIncGen
-  MLIRCIRTypeConstraintsIncGen
   MLIRCIREnumsGen
-  MLIRCIROpInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
+  mlir-headers
+
+  LINK_COMPONENTS
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR

@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -175,18 +176,22 @@ bool DXContainerPDB::runOnModule(Module &M) {
   write(OS, M.getTargetTriple());
 
   // Write PDB file.
-  // FIXME(sandboxing): Remove this by routing PDB output through the VFS.
-  auto BypassSandbox = sys::sandbox::scopedDisable();
   codeview::GUID IgnoredOutGuid;
-  if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
-    reportFatalUsageError("Couldn't write to PDB file: " +
-                          Twine(toString(std::move(Err))));
+  {
+    // FIXME(sandboxing): Remove this by routing output through OutputBackend.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
+      reportFatalUsageError("Couldn't write to PDB file: " +
+                            Twine(toString(std::move(Err))));
+  }
 
   if (!dxil::PdbInPrivate)
     return false;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
-      DebugFileName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      M.getContext().getVirtualFileSystem().getBufferForFile(
+          DebugFileName, /*FileSize=*/-1, /*RequiresNullTerminator=*/false,
+          /*IsVolatile=*/false, /*IsText=*/false);
   if (!Buf)
     reportFatalInternalError("Failed to read PDB for PRIV embedding");
 

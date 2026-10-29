@@ -50,14 +50,16 @@ static cl::opt<unsigned>
 namespace {
 
 enum HardClauseType {
-  // For GFX10 and GFX1250:
+  // For targets where loads, stores and atomics share one clause type per
+  // memory class (see hasMixedLoadStoreClauses):
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
 
-  // For GFX11:
+  // For targets where each memory class is typed separately for loads,
+  // stores and atomics:
 
   // Texture memory instructions.
   HARDCLAUSE_MIMG_LOAD,
@@ -101,8 +103,7 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1250Insts()) {
+      if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {

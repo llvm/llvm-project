@@ -3,7 +3,6 @@
 ;; Additional runlines to exercise lsr code which AArch64 normally wouldn't.
 ; RUN: llc %s -o - -aarch64-enable-subreg-liveness-tracking -lsr-preferred-addressing-mode=preindexed | FileCheck %s --check-prefixes=COMMON
 ; RUN: llc %s -o - -aarch64-enable-subreg-liveness-tracking -lsr-preferred-addressing-mode=postindexed | FileCheck %s --check-prefixes=COMMON
-
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @mulvl123_addressing(ptr %src, ptr %dst, i64 %count) #0 {
@@ -769,6 +768,50 @@ vector.body:
 
 middle.block:
   br label %exit
+
+exit:
+  ret void
+}
+
+define void @extending_load(ptr %src, ptr %dst) #0 {
+; COMMON-LABEL: extending_load:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    mov w8, #128 // =0x80
+; COMMON-NEXT:  .LBB13_1: // %loop
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    ld1b { z0.s }, p0/z, [x0, #2, mul vl]
+; COMMON-NEXT:    ld1b { z1.s }, p0/z, [x0, #3, mul vl]
+; COMMON-NEXT:    subs x8, x8, #16
+; COMMON-NEXT:    ld1b { z2.s }, p0/z, [x0]
+; COMMON-NEXT:    ld1b { z3.s }, p0/z, [x0, #1, mul vl]
+; COMMON-NEXT:    add x0, x0, #16
+; COMMON-NEXT:    add z0.s, z0.s, z0.s
+; COMMON-NEXT:    add z1.s, z1.s, z1.s
+; COMMON-NEXT:    add z2.s, z2.s, z2.s
+; COMMON-NEXT:    add z3.s, z3.s, z3.s
+; COMMON-NEXT:    str z0, [x1, #2, mul vl]
+; COMMON-NEXT:    str z1, [x1, #3, mul vl]
+; COMMON-NEXT:    str z2, [x1]
+; COMMON-NEXT:    str z3, [x1, #1, mul vl]
+; COMMON-NEXT:    add x1, x1, #64
+; COMMON-NEXT:    b.ne .LBB13_1
+; COMMON-NEXT:  // %bb.2: // %exit
+; COMMON-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <vscale x 16 x i8>, ptr %src.gep
+  %ext = zext <vscale x 16 x i8> %load to <vscale x 16 x i32>
+  %add = add <vscale x 16 x i32> %ext, %ext
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <vscale x 16 x i32> %add, ptr %dst.gep
+  %iv.next = add nuw i64 %iv, 16
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

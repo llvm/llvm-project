@@ -265,7 +265,7 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
     return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   ModuleSanitizerCoverage ModuleSancov(Opts, M, DTCallback, PDTCallback,
                                        overrideFromCL(Opts, Options),
                                        Allowlist.get(), Blocklist.get());

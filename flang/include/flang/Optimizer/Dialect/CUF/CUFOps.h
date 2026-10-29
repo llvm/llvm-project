@@ -16,6 +16,16 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+
+namespace cuf {
+/// The state of the CUDA device context, read by cuf.device_is_active.
+struct DeviceContextResource
+    : public mlir::SideEffects::Resource::Base<DeviceContextResource> {
+  mlir::StringRef getName() const final { return "DeviceContextResource"; }
+  bool isAddressable() const override { return false; }
+};
+} // namespace cuf
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h.inc"

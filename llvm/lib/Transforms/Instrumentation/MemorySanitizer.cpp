@@ -592,13 +592,17 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
-                                               bool EC) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  Kernel = valueOr(Opts.msan_kernel, K);
-  TrackOrigins = Opts.msan_track_origins.value_or(Kernel ? 2 : TO);
-  Recover = valueOr(Opts.msan_keep_going, Kernel || R);
-  EagerChecks = valueOr(Opts.msan_eager_checks, EC);
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
+    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
+
+static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
+                                             MemorySanitizerOptions O) {
+  O.Kernel = valueOr(Opts.msan_kernel, O.Kernel);
+  O.TrackOrigins =
+      Opts.msan_track_origins.value_or(O.Kernel ? 2 : O.TrackOrigins);
+  O.Recover = valueOr(Opts.msan_keep_going, O.Kernel || O.Recover);
+  O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
+  return O;
 }
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
@@ -606,9 +610,10 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   // Return early if nosanitize_memory module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
     return PreservedAnalyses::all();
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  MemorySanitizerOptions MSanOpts = resolveOptions(Opts, Options);
   bool Modified = false;
-  if (!Options.Kernel) {
+  if (!MSanOpts.Kernel) {
     insertModuleCtor(Opts, M);
     Modified = true;
   }
@@ -617,7 +622,7 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   for (Function &F : M) {
     if (F.empty())
       continue;
-    MemorySanitizer Msan(Opts, *F.getParent(), Options);
+    MemorySanitizer Msan(Opts, *F.getParent(), MSanOpts);
     Modified |=
         Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
   }

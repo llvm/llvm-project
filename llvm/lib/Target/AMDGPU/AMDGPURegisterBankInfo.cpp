@@ -4095,10 +4095,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FFLOOR:
   case AMDGPU::G_FCEIL:
   case AMDGPU::G_INTRINSIC_ROUNDEVEN:
-  case AMDGPU::G_FMINNUM:
-  case AMDGPU::G_FMAXNUM:
-  case AMDGPU::G_FMINIMUMNUM:
-  case AMDGPU::G_FMAXIMUMNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_STRICT_FADD:
   case AMDGPU::G_STRICT_FSUB:
@@ -4108,6 +4104,29 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = Ty.getSizeInBits();
     if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
         (Size == 32 || Size == 16) && isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    // This case is for GFX11.7, which has the following features:
+    //    1. `hasIEEEMinimumMaximumInsts()` returns true
+    //    2. `hasSALUMinimumMaximumInsts()` returns false
+    // This indicates that GFX11.7 is using:
+    //    1. `s_max/min_f32/f16` for scalar
+    //    2. `v_max/min_num_f32/f16` for vector
+    // By testing on real card, `s_max/min_f32/f16` has the same behavior
+    // as `v_max/min_num_f32/f16`. So for GFX11.7, even if
+    // `hasSALUMinimumMaximumInsts()` returns false, we can still choose SGPR
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    bool ScalarNumIsSafe =
+        !MFI->getMode().IEEE || Subtarget.hasIEEEMinimumMaximumInsts();
+    if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
+        (Size == 32 || Size == 16) && isSALUMapping(MI) && ScalarNumIsSafe)
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
   }

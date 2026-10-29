@@ -211,8 +211,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_vp_no_regs(%arg0: !cir.ptr<!rec_VPNoRegs> {llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
-  // LLVM: define void @take_vp_no_regs(ptr nofreeobj noundef align 8 dereferenceable(16) %{{[^,)]+}})
+  // CHECK: cir.func{{.*}} @take_vp_no_regs(%arg0: !cir.ptr<!rec_VPNoRegs> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // LLVM: define void @take_vp_no_regs(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(16) %{{[^,)]+}})
 
   // The same record returned takes sret rather than the non-byval form.
   cir.func @ret_vp_no_regs() -> !rec_VPNoRegs {
