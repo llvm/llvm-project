@@ -16,12 +16,15 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("xcore-asm-printer-begin", XCoreAsmPrinterBeginPass())
+MODULE_PASS("xcore-asm-printer-end", XCoreAsmPrinterEndPass())
 MODULE_PASS("xcore-lower-thread-local", XCoreLowerThreadLocalPass())
 #undef MODULE_PASS
 
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("xcore-asm-printer", XCoreAsmPrinterPass())
 MACHINE_FUNCTION_PASS("xcore-frame-to-args-offset-elimination",
                       XCoreFrameToArgsOffsetEliminationPass())
 MACHINE_FUNCTION_PASS("xcore-isel", XCoreISelDAGToDAGPass(*this, getOptLevel()))
