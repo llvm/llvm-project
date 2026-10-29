@@ -260,7 +260,7 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
 
 struct ConvertMemRefAssumeAlignment final
     : OpConversionPattern<memref::AssumeAlignmentOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AssumeAlignmentOp op, OpAdaptor adaptor,
@@ -283,7 +283,7 @@ struct ConvertMemRefAssumeAlignment final
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefCopy final : OpConversionPattern<memref::CopyOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::CopyOp op, OpAdaptor adaptor,
@@ -308,7 +308,7 @@ struct ConvertMemRefCopy final : OpConversionPattern<memref::CopyOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefDealloc final : OpConversionPattern<memref::DeallocOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
@@ -323,7 +323,7 @@ struct ConvertMemRefDealloc final : OpConversionPattern<memref::DeallocOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
@@ -400,7 +400,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 /// `memref.cast` between two narrow-typed memrefs forwards through the type
 /// converter to a cast between the converted byte-typed memrefs.
 struct ConvertMemRefCast final : OpConversionPattern<memref::CastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::CastOp op, OpAdaptor adaptor,
@@ -425,7 +425,7 @@ struct ConvertMemRefCast final : OpConversionPattern<memref::CastOp> {
 
 struct ConvertMemRefMemorySpaceCast final
     : OpConversionPattern<memref::MemorySpaceCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::MemorySpaceCastOp op, OpAdaptor adaptor,
@@ -484,7 +484,7 @@ private:
 /// a normal read-modify-write sequence instead of using
 /// `memref.generic_atomic_rmw` to perform subbyte storing.
 struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   ConvertMemrefStore(const TypeConverter &typeConverter, MLIRContext *context,
                      bool disableAtomicRMW)
@@ -678,7 +678,7 @@ private:
 /// there is no dimension to collapse any further.
 struct ConvertMemRefCollapseShape final
     : OpConversionPattern<memref::CollapseShapeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::CollapseShapeOp collapseShapeOp, OpAdaptor adaptor,
@@ -701,7 +701,7 @@ struct ConvertMemRefCollapseShape final
 /// the expansion would just have been undone.
 struct ConvertMemRefExpandShape final
     : OpConversionPattern<memref::ExpandShapeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExpandShapeOp expandShapeOp, OpAdaptor adaptor,

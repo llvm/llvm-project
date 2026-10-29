@@ -50,7 +50,7 @@ entry bar_with_entry(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPfoo_with_entry
-! CHECK:         %[[FOO_A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFfoo_with_entryEa"
+! CHECK:         %[[FOO_A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFfoo_with_entryEa")
 ! CHECK:         fir.if
 ! CHECK:           scf.execute_region
 ! CHECK:             fir.load %[[FOO_A]]#0
@@ -60,7 +60,7 @@ end subroutine
 ! CHECK:           }
 
 ! CHECK-LABEL: func.func @_QPbar_with_entry
-! CHECK:         %[[BAR_A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFfoo_with_entryEa"
+! CHECK:         %[[BAR_A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFfoo_with_entryEa")
 ! CHECK:         fir.if
 ! CHECK:           scf.execute_region
 ! CHECK:             fir.load %[[BAR_A]]#0

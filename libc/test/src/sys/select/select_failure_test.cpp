@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_select_macros.h"
+#include "hdr/types/fd_set.h"
+#include "hdr/types/struct_timeval.h"
 #include "src/sys/select/select.h"
 #include "src/unistd/read.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/select.h>
 #include <unistd.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

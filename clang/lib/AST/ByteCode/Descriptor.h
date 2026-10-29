@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
+#include "../ExprConstShared.h"
 #include "DeclOrExpr.h"
 #include "InitMap.h"
 #include "PrimType.h"
@@ -21,7 +22,6 @@
 
 namespace clang {
 namespace interp {
-class Block;
 class Record;
 class SourceInfo;
 struct Descriptor;
@@ -30,14 +30,13 @@ enum PrimType : uint8_t;
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
-using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
-                             bool IsMutable, bool IsVolatile, bool IsActive,
-                             bool InUnion, const Descriptor *FieldDesc);
+using BlockCtorFn = void (*)(std::byte *FieldPtr, bool IsConst, bool IsMutable,
+                             bool IsVolatile, bool IsActive, bool InUnion,
+                             const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
-using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
-                             const Descriptor *FieldDesc);
+using BlockDtorFn = void (*)(std::byte *FieldPtr, const Descriptor *FieldDesc);
 
 enum class GlobalInitState {
   Initialized,
@@ -268,6 +267,18 @@ public:
 
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;
+
+  /// Returns the kind of dynamic allocation source of this block.
+  static DynAllocKind getDynAllocKindForExpr(const Expr *E);
+  /// Returns the kind of dynamic allocation source of this block.
+  DynAllocKind getDynAllocKind() const {
+    return asExpr() ? getDynAllocKindForExpr(asExpr()) : DynAllocKind::None;
+  }
+  /// Checks if the descriptor is of a dynamic allocation.
+  bool isDynAlloc() const { return getDynAllocKind() != DynAllocKind::None; }
+
+  /// Compute the alignment for a dynamic allocation.
+  CharUnits computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;

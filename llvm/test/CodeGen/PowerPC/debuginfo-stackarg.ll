@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -stop-after=livedebugvalues -o - | FileCheck %s
+; RUN: llc < %s -O1 -stop-after=live-debug-values -o - | FileCheck %s
 
 ; This ll-file was created by:
 ;   clang --target=powerpc-apple-darwin9 -O1 -S -g -emit-llvm debuginfo-stackarg.c

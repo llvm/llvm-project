@@ -104,7 +104,7 @@ end subroutine
 ! at the inner call site, so the inner procedure still generates copy-back.
 ! The outer array must therefore not be marked fir.read_only.
 ! CHECK-LABEL: func.func @_QPtest_forwarded_intent_in(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 subroutine test_forwarded_intent_in(x)
   real, intent(in) :: x(4)
   call test_forwarded_without_intent(x)
@@ -142,7 +142,7 @@ end subroutine
 ! the target's contents, so the callee may define the target and copy-out is
 ! required.
 ! CHECK-LABEL: func.func @_QPtest_actual_intent_in_pointer(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.read_only}) {
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) {
 subroutine test_actual_intent_in_pointer(pi)
   integer, intent(in), pointer :: pi(:)
 ! CHECK: hlfir.copy_in

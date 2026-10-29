@@ -52,13 +52,10 @@
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
 ; CHECK-NEXT:       Cycle Info Analysis
-; CHECK-NEXT:       Post-Dominator Tree Construction
-; CHECK-NEXT:       Branch Probability Analysis
-; CHECK-NEXT:       Block Frequency Analysis
-; CHECK-NEXT:       Constant Hoisting
-; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Constant Hoisting
+; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Partially inline calls to library functions
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -66,13 +63,18 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       X86 Partial Reduction
-; CHECK-NEXT:       Expand indirectbr instructions
+; CHECK-NEXT:       Cycle Info Analysis 
+; CHECK-NEXT:       Lazy Branch Probability Analysis 
+; CHECK-NEXT:       Lazy Block Frequency Analysis 
+; CHECK-NEXT:       Expand indirectbr instructions 
+; CHECK-NEXT:       X86 Fence Non-Temporal Stores
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       CodeGen Prepare
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Prepare inline asm insts
@@ -111,8 +113,7 @@
 ; CHECK-NEXT:       X86 cmov Conversion
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Block Frequency Analysis
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
@@ -139,10 +140,9 @@
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
+; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components

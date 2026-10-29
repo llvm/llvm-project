@@ -724,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();
@@ -789,6 +789,18 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
 bool AreSameModuleSymbol(const Symbol &, const Symbol &);
+
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op,
+    SemanticsContext &context);
+parser::CharBlock MangleSpecialFunctions(parser::CharBlock name);
+std::string MangleDefinedOperator(parser::CharBlock name);
+
+// Map a mangled declare reduction name (e.g., "op.+", "op.combine.",
+// "op.max") back to the Fortran identifier used as the scope key for the
+// corresponding operator or procedure (e.g., "operator(+)", ".combine.",
+// "max"). Non-mangled names (procedure designators) are returned as-is.
+std::string GetReductionFortranId(parser::CharBlock mangledName);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

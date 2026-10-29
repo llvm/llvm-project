@@ -1,9 +1,12 @@
 # This file defines a workflow that periodically requests benchmark runs for the commits
 # that should have historical performance data but don't yet.
 #
+# The commits that should be benchmarked are the anchor commits, and on machines that enable it,
+# commits selected to bisect the most significant changes found in the data gathered so far.
+#
 # The workflow keeps no state: on every invocation, the commits that should be benchmarked
-# are recomputed from Git and the ones that have been benchmarked are recomputed from LNT
-# and from the Github Actions API. It then dispatches libcxx-benchmark-commit.yml for the
+# are recomputed from Git and LNT and the ones that have been benchmarked are recomputed from LNT
+# and from the Github Actions API. It then dispatches libcxx-lnt-pipeline.yml for the
 # difference, within a budget. This makes the system converge towards having data for all
 # the desired commits, without necessarily ever reaching that state (as new commits land).
 #
@@ -25,11 +28,6 @@ on:
         required: false
         type: boolean
         default: false
-      allow-missing-machine:
-        description: 'Plan for machines that have no data in LNT yet. Needed to seed a new machine.'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}
@@ -43,6 +41,7 @@ jobs:
     runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.select.outputs.matrix }}
+      refine-matrix: ${{ steps.select.outputs.refine-matrix }}
     steps:
       - name: Checkout the machine definitions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,13 +64,61 @@ jobs:
               machine: cfg['lnt-machine'],
               ...cfg.coverage,
             }))));
+            // Among those, we only refine commits for machines with a `refinement` key.
+            core.setOutput('refine-matrix', JSON.stringify(tracked.filter(cfg => cfg.coverage.refinement).map(cfg => ({
+              machine: cfg['lnt-machine'],
+              ...cfg.coverage.refinement,
+            }))));
+
+  # Select the anchor commits of each machine.
+  anchors:
+    permissions:
+      contents: read
+    needs:
+      - select-machines
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.select-machines.outputs.matrix) }}
+      fail-fast: false
+    name: "Anchors ${{ matrix.machine }}"
+    uses: $/.github/workflows/libcxx-lnt-anchor-commits.yml
+    with:
+      since: ${{ matrix.since }}
+      every: ${{ matrix.every }}
+      artifact-name: anchors-${{ matrix.machine }}
+
+  # Select the commits to refine for each machine.
+  refine:
+    permissions:
+      contents: read
+    needs:
+      - select-machines
+    if: ${{ needs.select-machines.outputs.refine-matrix != '[]' }}
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.select-machines.outputs.refine-matrix) }}
+      fail-fast: false
+    name: "Refine ${{ matrix.machine }}"
+    uses: $/.github/workflows/libcxx-lnt-refine-commits.yml
+    with:
+      lnt-machine: ${{ matrix.machine }}
+      metric: ${{ matrix.metric }}
+      direction: ${{ matrix.direction }}
+      max-commits: ${{ matrix.max-commits }}
+      artifact-name: refinement-${{ matrix.machine }}
 
   request-runs:
     permissions:
       contents: read
-      actions: write # to dispatch libcxx-benchmark-commit.yml
+      actions: write # to dispatch libcxx-lnt-pipeline.yml
     needs:
       - select-machines
+      - anchors
+      - refine
+    # Never prevent the anchor commits from being requested, even if selecting refinement commits failed
+    # or there was nothing to refine. This also runs when selecting the anchor commits of some machine
+    # failed, so that the other machines are unaffected.
+    if: ${{ !cancelled() && needs.select-machines.result == 'success' }}
     strategy:
       matrix:
         include: ${{ fromJSON(needs.select-machines.outputs.matrix) }}
@@ -81,84 +128,55 @@ jobs:
     timeout-minutes: 30
     env:
       MACHINE: ${{ matrix.machine }}
-      SINCE: ${{ matrix.since }}
-      EVERY: ${{ matrix.every }}
       SAMPLES: ${{ matrix.samples }}
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
-      LNT_URL: ${{ matrix.lnt-url }}
+      LNT_URL: https://lnt.llvm.org
 
-      ALLOW_MISSING_MACHINE: ${{ inputs.allow-missing-machine || 'false' }}
       DRY_RUN: ${{ inputs.dry-run || 'false' }}
     steps:
-      # Anchor commits are stable through time (except for the single new anchor commit every
-      # day/week/month depending on the granularity). Since computing anchor commits requires
-      # cloning the whole monorepo (which is expensive) and this job runs regularly, we cache
-      # anchor commits and avoid recomputing them unless necessary.
-      #
-      # Since we currently use weekly granularity for anchor commits on most LNT machines, we
-      # cache them and re-generate them only daily.
-      - name: Compute the cache key for anchor commits
-        id: anchor-key
-        run: echo "key=libcxx-benchmark-cron-anchors-${MACHINE}-${SINCE}-${EVERY}-$(date -u +%F)" >> "${GITHUB_OUTPUT}"
-
-      - name: Try restoring anchor commits for ${{ matrix.machine }} from cache
-        id: restore-anchors
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/anchors.txt # restore to temp since the checkout below would overwrite it
-          key: ${{ steps.anchor-key.outputs.key }}
-
-      - name: Checkout the full LLVM monorepo
-        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # Selecting anchor commits requires full Git history, but not the blob content.
-          fetch-depth: 0
-          filter: blob:none
-
-      - name: Checkout sparse LLVM monorepo
-        if: ${{ steps.restore-anchors.outputs.cache-hit == 'true' }}
+      - name: Checkout the LNT tooling
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: libcxx/utils # Only checkout what the tools need
 
       - name: Install Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
           cache: pip
           cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
 
       - name: Install dependencies
         run: pip install -r libcxx/utils/ci/lnt/requirements.txt
 
-      - name: Determine anchor commits
-        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
-        run: |
-          libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output anchors.txt
-          # Anchor commits go from oldest to newest. Reverse them to prioritize newer commits first.
-          tac anchors.txt > "${RUNNER_TEMP}/anchors.txt"
-
-      - name: Cache anchor commits
-        if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # The artifact is missing if selecting the anchor commits failed, in which case this job fails too.
+      - name: Download anchor commits for ${{ matrix.machine }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          path: ${{ runner.temp }}/anchors.txt
-          key: ${{ steps.anchor-key.outputs.key }}
+          name: anchors-${{ matrix.machine }}
+          path: ${{ runner.temp }}/anchors
 
+      # The artifact is missing if selecting refinement commits failed, in which case we only request the
+      # anchor commits.
+      - name: Download refinement commits for ${{ matrix.machine }}
+        if: ${{ matrix.refinement }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: refinement-${{ matrix.machine }}
+          path: ${{ runner.temp }}/refinement
+
+      # Anchor commits come first, then the commits selected to refine changes.
       - name: Determine which commits are missing from LNT
         run: |
-          allow_missing=()
-          if [ "${ALLOW_MISSING_MACHINE}" = "true" ]; then
-            allow_missing=(--allow-missing-machine)
+          # Anchor commits go from oldest to newest. Reverse them to prioritize newer commits first.
+          tac "${RUNNER_TEMP}/anchors/anchors.txt" > commits.txt
+          if [ -f "${RUNNER_TEMP}/refinement/refinement.txt" ]; then
+            cat "${RUNNER_TEMP}/refinement/refinement.txt" >> commits.txt
           fi
-
-          libcxx/utils/ci/lnt/plan-benchmarks --commit-list "${RUNNER_TEMP}/anchors.txt"                            \
-                                              --lnt-url "${LNT_URL}" --test-suite libcxx                            \
-                                              --machine "${MACHINE}" --samples "${SAMPLES}" "${allow_missing[@]}"   \
-                                              --output plan.jsonl
+          libcxx/utils/ci/lnt/plan-benchmarks --commit-list commits.txt --lnt-url "${LNT_URL}" --test-suite libcxx \
+                                              --machine "${MACHINE}" --samples "${SAMPLES}" --output plan.jsonl
 
       - name: Request the missing runs
         env:
@@ -169,5 +187,4 @@ jobs:
             dry_run=(--dry-run)
           fi
 
-          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --lnt-url "${LNT_URL}"  \
-                                                  --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"
+          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"

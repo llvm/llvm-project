@@ -344,7 +344,6 @@ namespace {
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
 using EquivalenceClassMap = DenseMap<const BasicBlock *, const BasicBlock *>;
 using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
-using EdgeWeightMap = DenseMap<Edge, uint64_t>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
@@ -1729,7 +1728,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrLifetime();
         }
       }
     }

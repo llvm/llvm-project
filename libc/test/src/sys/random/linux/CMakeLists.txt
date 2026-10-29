@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_random_unittests)
+add_libc_testsuite(libc-sys-random-tests)
 
 add_libc_test(
   getrandom_test
   SUITE
-    libc_sys_random_unittests
+    libc-sys-random-tests
   SRCS
     getrandom_test.cpp
   DEPENDS
@@ -18,7 +18,7 @@ add_libc_test(
 add_libc_test(
   getentropy_test
   SUITE
-    libc_sys_random_unittests
+    libc-sys-random-tests
   SRCS
     getentropy_test.cpp
   DEPENDS

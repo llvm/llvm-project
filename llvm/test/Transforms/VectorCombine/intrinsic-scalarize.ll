@@ -154,6 +154,19 @@ define <4 x float> @scalar_argument(float %x) {
   ret <4 x float> %v
 }
 
+; Verify that fast-math flags on FP intrinsics survive scalarization.
+define <4 x float> @pow_fmf_preserved(float %x) {
+; CHECK-LABEL: define <4 x float> @pow_fmf_preserved(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call arcp contract afn float @llvm.pow.f32(float [[X]], float 2.000000e+00)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> splat (float 1.000000e+00), float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[V]]
+;
+  %x.insert = insertelement <4 x float> splat (float 1.0), float %x, i64 0
+  %v = call arcp contract afn <4 x float> @llvm.pow.v4f32(<4 x float> %x.insert, <4 x float> splat (float 2.0))
+  ret <4 x float> %v
+}
+
 define <4 x i2> @scmp(i32 %x) {
 ; CHECK-LABEL: define <4 x i2> @scmp(
 ; CHECK-SAME: i32 [[X:%.*]]) {

@@ -104,7 +104,6 @@ CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
-CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableStaticDataPartitioning)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
@@ -432,13 +431,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<bool> EnableMachineFunctionSplitter(
-      "split-machine-functions",
-      cl::desc("Split out cold basic blocks from machine functions based on "
-               "profile information"),
-      cl::init(false));
-  CGBINDOPT(EnableMachineFunctionSplitter);
-
   static cl::opt<bool> EnableStaticDataPartitioning(
       "partition-static-data-sections",
       cl::desc("Partition data sections using profile information."),
@@ -547,10 +539,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
-  Options.ExceptionModel = getExceptionModel();
   Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
-  Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallGraphSection = getEnableCallGraphSection();
@@ -761,9 +751,9 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
-Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(const Triple &TargetTriple,
-                                      CodeGenOptLevel OptLevel) {
+Expected<std::unique_ptr<TargetMachine>> codegen::createTargetMachineForTriple(
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
+    CodeGenOptLevel OptLevel) {
   // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
@@ -771,9 +761,10 @@ codegen::createTargetMachineForTriple(const Triple &TargetTriple,
       TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+  Options.MCOptions.LibraryOptions = &LibraryOptions;
   auto *Target = TheTarget->createTargetMachine(
-      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
-      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(), Options,
       codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
       OptLevel);
   if (!Target)

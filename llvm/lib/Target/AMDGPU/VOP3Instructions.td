@@ -412,7 +412,7 @@ let True16Predicate = UseRealTrue16Insts in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64
-       (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+       (lo16_to_vgpr32 VGPR_16:$src),
        (i32 0), (i32 0x10)))
 >;
 
@@ -531,7 +531,7 @@ def : GCNPat<
   (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
       (i32 (V_BFE_I32_e64
-            (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+            (lo16_to_vgpr32 VGPR_16:$src),
             (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
       (i32 (COPY_TO_REGCLASS
          (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
@@ -575,8 +575,11 @@ defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
                                  Instruction inst> {
   def : GCNPat <
-    (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
-    (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+    (op2 (op1 (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+              (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+         (i16 (VOP3OpSel i16:$src2, i32:$src2_modifiers))),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+          $src2_modifiers, $src2, DSTCLAMP.NONE)
   >;
 }
 
@@ -854,16 +857,16 @@ multiclass Cvt_PK_F8_F32_t16_Pat<SDPatternOperator node, VOP3_Pseudo inst> {
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, -1)),
     (REG_SEQUENCE VGPR_32,
-      (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), lo16,
+      (i16 (vgpr32_lo16 $old)), lo16,
       (i16 (inst 0, $src0, 0, $src1,
-         (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), 0)), hi16)
+         (i16 (vgpr32_hi16 $old)), 0)), hi16)
 >;
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, 0)),
     (REG_SEQUENCE VGPR_32,
       (i16 (inst 0, $src0, 0, $src1,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), 0)), lo16,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), hi16)
+        (i16 (vgpr32_lo16 $old)), 0)), lo16,
+        (i16 (vgpr32_hi16 $old)), hi16)
 >;
 }
 
@@ -871,16 +874,16 @@ multiclass Cvt_PK_F8_F32_E5M3_t16_Pat<SDPatternOperator node, VOP3_Pseudo inst, 
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, -1)),
     (REG_SEQUENCE VGPR_32,
-      (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), lo16,
+      (i16 (vgpr32_lo16 $old)), lo16,
       (i16 (inst 0, $src0, 0, $src1, Clamp,
-         (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), 0)), hi16)
+         (i16 (vgpr32_hi16 $old)), 0)), hi16)
 >;
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, 0)),
     (REG_SEQUENCE VGPR_32,
       (i16 (inst 0, $src0, 0, $src1, Clamp,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), 0)), lo16,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), hi16)
+        (i16 (vgpr32_lo16 $old)), 0)), lo16,
+        (i16 (vgpr32_hi16 $old)), hi16)
 >;
 }
 
@@ -1484,10 +1487,11 @@ let SubtargetPredicate = HasCvtPkF16F32Inst in {
   }
 
   def : GCNPat<(v2f16 (fpround v2f32:$src)),
-               (V_CVT_PK_F16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (V_CVT_PK_F16_F32_e64 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                                     0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2f16 (fpround v2f64:$src)),
-               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
-                                     0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
+               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (f64 (EXTRACT_SUBREG VReg_128:$src, sub0_sub1))),
+                                     0, (V_CVT_F32_F64_e64 0, (f64 (EXTRACT_SUBREG VReg_128:$src, sub2_sub3))))>;
   def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                     (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
@@ -1607,7 +1611,7 @@ let True16Predicate = UseRealTrue16Insts in {
   def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
   def : GCNPat<
     (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
-    (V_SUB_NC_U16_t16_e64 0, VSrc_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
+    (V_SUB_NC_U16_t16_e64 0, VSrcT_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
   >;
 } // End True16Predicate = UseRealTrue16Insts
 
@@ -1815,10 +1819,15 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
     defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32>>;
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
-               (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (V_CVT_PK_BF16_F32_e64 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                                      0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2bf16 (build_vector (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                      (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  let True16Predicate = UseRealTrue16Insts in
+  def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+               (EXTRACT_SUBREG (v2bf16 (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))), lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
 }
@@ -1850,9 +1859,14 @@ def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
 }
 
-let HasClamp = 0, HasOpSel = 1 in {
+let HasClamp = 0, HasOpSel = 0 in {
 def VOP3_CVT_SR_F8_F16_Profile : VOP3_CVT_SR_F8_ByteSel_Profile<f16>;
-def VOP3_CVT_SR_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_SR_F8_F16_Profile>;
+def VOP3_CVT_SR_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_SR_F8_F16_Profile> {
+  let Src0RC64 = VSrcT_f16_LO16;
+  let Src0Mod = FPT16_LO16InputMods;
+  let Src0VOP3DPP = VGPROp_16_LO16;
+  let Src0ModVOP3DPP = FPT16_LO16VRegInputMods;
+}
 def VOP3_CVT_SR_F8_F16_Fake16_Profile : VOP3_Profile_Fake16<VOP3_CVT_SR_F8_F16_Profile>;
 }
 
@@ -1861,8 +1875,7 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
 
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
-    // to select a byte in the vdst. Bit 1 must be zero, and bit 0 can be non-zero to select
-    // the high 16-bits of src0.
+    // to select a byte in the vdst. Bit 0 and 1 must be zero.
     let Constraints = "$vdst = $vdst_in", SubtargetPredicate = HasF16FP8ConversionInsts in {
       defm V_CVT_SR_FP8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_F16_Profile,
                                                           VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;

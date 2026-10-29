@@ -1063,9 +1063,17 @@ PassInstrumentation instances may be registered directly with a
 [PassManager](#pass-manager) instance via the `addInstrumentation` method.
 Instrumentations added to the PassManager are run in a stack like fashion, i.e.
 the last instrumentation to execute a `runBefore*` hook will be the first to
-execute the respective `runAfter*` hook. The hooks of a `PassInstrumentation`
-class are guaranteed to be executed in a thread-safe fashion, so additional
-synchronization is not necessary. Below in an example instrumentation that
+execute the respective `runAfter*` hook. Corresponding `runBefore*` and
+`runAfter*` callbacks are guaranteed to execute on the same thread. The hooks of
+a `PassInstrumentation` class are serialized by default, so additional
+synchronization is not necessary.
+An instrumentation may override `isThreadSafe()` to return true if its callbacks
+support concurrent invocation on different threads. The instrumentor allows
+concurrent dispatch only when all registered instrumentations opt in; otherwise
+it preserves serialization of the entire callback sequence. Instrumentations
+must be registered before running the pass manager.
+
+Below is an example instrumentation that
 counts the number of times the `DominanceInfo` analysis is computed:
 
 ```c++
@@ -1110,6 +1118,11 @@ passes are taking the most time to execute, as well as how much of an effect a
 pass has on the total execution time of the pipeline. Users can enable this
 instrumentation directly on the PassManager via `enableTiming`. This
 instrumentation is also made available in mlir-opt via the `-mlir-timing` flag.
+With the default timing manager, timing callbacks may run concurrently on
+different threads. A custom `TimingManager` retains serialized callbacks unless
+it overrides `isThreadSafe()` to return true. Registering an instrumentation
+that requires serialization also serializes timing callbacks.
+
 The PassTiming instrumentation provides several different display modes for the
 timing results, each of which is described below:
 

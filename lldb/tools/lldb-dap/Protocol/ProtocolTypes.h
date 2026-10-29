@@ -680,7 +680,7 @@ struct SourceBreakpoint {
   /// If both this property and `condition` are specified, `hitCondition` should
   /// be evaluated only if the `condition` is met, and the debug adapter should
   /// stop only if both conditions are met.
-  std::optional<String> hitCondition;
+  String hitCondition;
 
   /// If this attribute exists and is non-empty, the debug adapter must not
   /// 'break' (stop)
@@ -712,7 +712,7 @@ struct FunctionBreakpoint {
   /// The debug adapter is expected to interpret the expression as needed.
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
-  std::optional<String> hitCondition;
+  String hitCondition;
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
@@ -743,7 +743,7 @@ struct DataBreakpoint {
 
   /// An expression that controls how many hits of the breakpoint are ignored.
   /// The debug adapter is expected to interpret the expression as needed.
-  std::optional<String> hitCondition;
+  String hitCondition;
 };
 bool fromJSON(const llvm::json::Value &, DataBreakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const DataBreakpoint &);
@@ -769,7 +769,7 @@ struct InstructionBreakpoint {
   /// The debug adapter is expected to interpret the expression as needed.
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
-  std::optional<String> hitCondition;
+  String hitCondition;
 
   /// The mode of this breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.

@@ -476,6 +476,7 @@ def IsInf : DXILOp<9, isSpecialFloat> {
 
 def IsFinite : DXILOp<10, isSpecialFloat> {
   let Doc = "Determines if the specified value is finite.";
+  let intrinsics = [IntrinSelect<int_dx_isfinite>];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -1558,5 +1559,39 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let arguments = [Int32Ty, Int1Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
+  let Doc = "inserts a memory barrier for the specified memory types";
+  let intrinsics = [IntrinSelect<int_dx_barrier_by_memory_type>];
+  let arguments = [Int32Ty, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
+}
+
+def BarrierByMemoryHandle : DXILOp<245, barrierByMemoryHandle> {
+  let Doc = "inserts a memory barrier for the resource identified by a handle";
+  let arguments = [HandleTy, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
+}
+
+def StartVertexLocation : DXILOp<256, startVertexLocation> {
+  let Doc = "returns the BaseVertexLocation from DrawIndexedInstanced or "
+            "StartVertexLocation from DrawInstanced";
+  let intrinsics = [IntrinSelect<int_dx_start_vertex_location>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
+  let stages = [Stages<DXIL1_8, [vertex]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
+  let Doc = "returns the StartInstanceLocation from Draw*Instanced";
+  let intrinsics = [IntrinSelect<int_dx_start_instance_location>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
+  let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

@@ -145,8 +145,8 @@ function(darwin_test_archs os valid_archs)
     endif()
   endif()
 
-  if(${os} MATCHES "^ios$")
-    message(STATUS "Disabling sanitizers armv7* slice for ios")
+  if(${os} MATCHES "^(ios|watchos)$")
+    message(STATUS "Disabling sanitizers armv7* slice for ${os}")
     list(FILTER archs EXCLUDE REGEX "armv7.*")
   endif()
 

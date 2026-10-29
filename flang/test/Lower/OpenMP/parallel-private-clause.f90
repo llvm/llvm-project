@@ -26,20 +26,20 @@
 !FIRDialect-DAG: %[[BETA:.*]] = fir.alloca !fir.char<1,5> <{bindc_name = "beta", uniq_name = "{{.*}}beta"}>
 !FIRDialect-DAG: %[[BETA_ARRAY:.*]] = fir.alloca !fir.array<10x!fir.char<1,5>> <{bindc_name = "beta_array", uniq_name = "{{.*}}beta_array"}>
 
-!FIRDialect-DAG: %[[ALPHA_DECL:.*]]:2 = hlfir.declare %[[ALPHA]] {uniq_name = "{{.*}}alpha"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG: %[[ALPHA_ARRAY_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY]]({{.*}}) {uniq_name = "{{.*}}alpha_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-!FIRDialect-DAG: %[[BETA_DECL:.*]]:2 = hlfir.declare %[[BETA]] typeparams {{.*}} {uniq_name = "{{.*}}beta"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-!FIRDialect-DAG: %[[BETA_ARRAY_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY]]({{.*}}) typeparams {{.*}} {uniq_name = "{{.*}}beta_array"} : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>)
+!FIRDialect-DAG: %[[ALPHA_DECL:.*]]:2 = hlfir.declare %[[ALPHA]] uniq_name("{{.*}}alpha") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG: %[[ALPHA_ARRAY_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY]]({{.*}}) uniq_name("{{.*}}alpha_array") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!FIRDialect-DAG: %[[BETA_DECL:.*]]:2 = hlfir.declare %[[BETA]] typeparams {{.*}} uniq_name("{{.*}}beta") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!FIRDialect-DAG: %[[BETA_ARRAY_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY]]({{.*}}) typeparams {{.*}} uniq_name("{{.*}}beta_array") : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>)
 
 !FIRDialect:     omp.parallel private(@{{.*}} %[[ALPHA_DECL]]#0 -> %[[ALPHA_PVT:.*]], @{{.*}} %{{.*}} -> %[[ALPHA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[BETA_PVT:.*]], @{{.*}} %{{.*}} -> %[[BETA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG1_PVT:.*]], @{{.*}} %{{.*}} -> %[[ARG2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG3_PVT:.*]], @{{.*}} %{{.*}} -> %[[ARG4_PVT:.*]] : {{.*}}) {
-!FIRDialect-DAG:  %[[ALPHA_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_PVT]] {uniq_name = "{{.*}}alpha"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG:  %[[ALPHA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY_PVT]](%{{.*}}) {uniq_name = "{{.*}}alpha_array"} :
-!FIRDialect-DAG:  %[[BETA_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_PVT]] typeparams {{.*}} {uniq_name = "{{.*}}beta"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-!FIRDialect-DAG:  %[[BETA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY_PVT]] {uniq_name = "{{.*}}beta_array"} :
-!FIRDialect-DAG:  %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "{{.*}}arg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG:  %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]](%{{.*}}) {uniq_name = "{{.*}}arg2"} :
-!FIRDialect-DAG:  %[[ARG3_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG3_PVT]] typeparams {{.*}} {uniq_name = "{{.*}}arg3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-!FIRDialect-DAG:  %[[ARG4_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG4_PVT]] {uniq_name = "{{.*}}arg4"} :
+!FIRDialect-DAG:  %[[ALPHA_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_PVT]] uniq_name("{{.*}}alpha") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG:  %[[ALPHA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY_PVT]](%{{.*}}) uniq_name("{{.*}}alpha_array") :
+!FIRDialect-DAG:  %[[BETA_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_PVT]] typeparams {{.*}} uniq_name("{{.*}}beta") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!FIRDialect-DAG:  %[[BETA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY_PVT]] uniq_name("{{.*}}beta_array") :
+!FIRDialect-DAG:  %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] uniq_name("{{.*}}arg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG:  %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]](%{{.*}}) uniq_name("{{.*}}arg2") :
+!FIRDialect-DAG:  %[[ARG3_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG3_PVT]] typeparams {{.*}} uniq_name("{{.*}}arg3") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!FIRDialect-DAG:  %[[ARG4_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG4_PVT]] uniq_name("{{.*}}arg4") :
 !FIRDialect:     omp.terminator
 !FIRDialect:  }
 
@@ -65,31 +65,31 @@ end subroutine
 
 !FIRDialect: func @_QPprivate_clause_scalar() {
 !FIRDialect-DAG:  %[[C:.*]] = fir.alloca complex<f32> <{bindc_name = "c", uniq_name = "_QFprivate_clause_scalarEc"}>
-!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] uniq_name("_QFprivate_clause_scalarEc") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !FIRDialect-DAG:  %[[I1:.*]] = fir.alloca i8 <{bindc_name = "i1", uniq_name = "_QFprivate_clause_scalarEi1"}>
-!FIRDialect-DAG:  %[[I1_DECL:.*]]:2 = hlfir.declare %[[I1]] {uniq_name = "_QFprivate_clause_scalarEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+!FIRDialect-DAG:  %[[I1_DECL:.*]]:2 = hlfir.declare %[[I1]] uniq_name("_QFprivate_clause_scalarEi1") : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 !FIRDialect-DAG:  %[[I16:.*]] = fir.alloca i128 <{bindc_name = "i16", uniq_name = "_QFprivate_clause_scalarEi16"}>
-!FIRDialect-DAG:  %[[I16_DECL:.*]]:2 = hlfir.declare %[[I16]] {uniq_name = "_QFprivate_clause_scalarEi16"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
+!FIRDialect-DAG:  %[[I16_DECL:.*]]:2 = hlfir.declare %[[I16]] uniq_name("_QFprivate_clause_scalarEi16") : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
 !FIRDialect-DAG:  %[[I2:.*]] = fir.alloca i16 <{bindc_name = "i2", uniq_name = "_QFprivate_clause_scalarEi2"}>
-!FIRDialect-DAG:  %[[I2_DECL:.*]]:2 = hlfir.declare %[[I2]] {uniq_name = "_QFprivate_clause_scalarEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+!FIRDialect-DAG:  %[[I2_DECL:.*]]:2 = hlfir.declare %[[I2]] uniq_name("_QFprivate_clause_scalarEi2") : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 !FIRDialect-DAG:  %[[I4:.*]] = fir.alloca i32 <{bindc_name = "i4", uniq_name = "_QFprivate_clause_scalarEi4"}>
-!FIRDialect-DAG:  %[[I4_DECL:.*]]:2 = hlfir.declare %[[I4]] {uniq_name = "_QFprivate_clause_scalarEi4"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG:  %[[I4_DECL:.*]]:2 = hlfir.declare %[[I4]] uniq_name("_QFprivate_clause_scalarEi4") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[I8:.*]] = fir.alloca i64 <{bindc_name = "i8", uniq_name = "_QFprivate_clause_scalarEi8"}>
-!FIRDialect-DAG:  %[[I8_DECL:.*]]:2 = hlfir.declare %[[I8]] {uniq_name = "_QFprivate_clause_scalarEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!FIRDialect-DAG:  %[[I8_DECL:.*]]:2 = hlfir.declare %[[I8]] uniq_name("_QFprivate_clause_scalarEi8") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 !FIRDialect-DAG:  %[[L:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFprivate_clause_scalarEl"}>
-!FIRDialect-DAG:  %[[L_DECL:.*]]:2 = hlfir.declare %[[L]] {uniq_name = "_QFprivate_clause_scalarEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!FIRDialect-DAG:  %[[L_DECL:.*]]:2 = hlfir.declare %[[L]] uniq_name("_QFprivate_clause_scalarEl") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 !FIRDialect-DAG:  %[[R:.*]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFprivate_clause_scalarEr"}>
-!FIRDialect-DAG:  %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {uniq_name = "_QFprivate_clause_scalarEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!FIRDialect-DAG:  %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] uniq_name("_QFprivate_clause_scalarEr") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 !FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[I1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I4_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I8_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I16_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[C_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[L_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[R_PVT:.*]] : {{.*}}) {
-!FIRDialect-DAG:    %[[I1_PVT_DECL:.*]]:2 = hlfir.declare %[[I1_PVT]] {uniq_name = "_QFprivate_clause_scalarEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
-!FIRDialect-DAG:    %[[I2_PVT_DECL:.*]]:2 = hlfir.declare %[[I2_PVT]] {uniq_name = "_QFprivate_clause_scalarEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
-!FIRDialect-DAG:    %[[I4_PVT_DECL:.*]]:2 = hlfir.declare %[[I4_PVT]] {uniq_name = "_QFprivate_clause_scalarEi4"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG:    %[[I8_PVT_DECL:.*]]:2 = hlfir.declare %[[I8_PVT]] {uniq_name = "_QFprivate_clause_scalarEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-!FIRDialect-DAG:    %[[I16_PVT_DECL:.*]]:2 = hlfir.declare %[[I16_PVT]] {uniq_name = "_QFprivate_clause_scalarEi16"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
-!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-!FIRDialect-DAG:    %[[L_PVT_DECL:.*]]:2 = hlfir.declare %[[L_PVT]] {uniq_name = "_QFprivate_clause_scalarEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-!FIRDialect-DAG:    %[[R_PVT_DECL:.*]]:2 = hlfir.declare %[[R_PVT]] {uniq_name = "_QFprivate_clause_scalarEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!FIRDialect-DAG:    %[[I1_PVT_DECL:.*]]:2 = hlfir.declare %[[I1_PVT]] uniq_name("_QFprivate_clause_scalarEi1") : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+!FIRDialect-DAG:    %[[I2_PVT_DECL:.*]]:2 = hlfir.declare %[[I2_PVT]] uniq_name("_QFprivate_clause_scalarEi2") : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+!FIRDialect-DAG:    %[[I4_PVT_DECL:.*]]:2 = hlfir.declare %[[I4_PVT]] uniq_name("_QFprivate_clause_scalarEi4") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG:    %[[I8_PVT_DECL:.*]]:2 = hlfir.declare %[[I8_PVT]] uniq_name("_QFprivate_clause_scalarEi8") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!FIRDialect-DAG:    %[[I16_PVT_DECL:.*]]:2 = hlfir.declare %[[I16_PVT]] uniq_name("_QFprivate_clause_scalarEi16") : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
+!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] uniq_name("_QFprivate_clause_scalarEc") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!FIRDialect-DAG:    %[[L_PVT_DECL:.*]]:2 = hlfir.declare %[[L_PVT]] uniq_name("_QFprivate_clause_scalarEl") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!FIRDialect-DAG:    %[[R_PVT_DECL:.*]]:2 = hlfir.declare %[[R_PVT]] uniq_name("_QFprivate_clause_scalarEr") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !FIRDialect:        omp.terminator
 !FIRDialect:      }
 subroutine private_clause_scalar()
@@ -111,10 +111,10 @@ end subroutine
 
 !FIRDialect: func @_QPprivate_clause_derived_type() {
 !FIRDialect: %[[T:.*]] = fir.alloca !fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}> <{bindc_name = "t", uniq_name = "{{.*}}Et"}>
-!FIRDialect: %[[T_DECL:.*]]:2 = hlfir.declare %[[T]] {uniq_name = "{{.*}}Et"} : (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
+!FIRDialect: %[[T_DECL:.*]]:2 = hlfir.declare %[[T]] uniq_name("{{.*}}Et") : (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
 
 !FIRDialect:   omp.parallel private(@[[DERIVED_PRIVATIZER]] %{{.*}}#0 -> %[[T:.*]] : {{.*}}) {
-!FIRDialect: %[[T_DECL:.*]]:2 = hlfir.declare %[[T]] {uniq_name = "{{.*}}Et"} : (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
+!FIRDialect: %[[T_DECL:.*]]:2 = hlfir.declare %[[T]] uniq_name("{{.*}}Et") : (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
 
 subroutine private_clause_derived_type()
 
@@ -132,19 +132,19 @@ end subroutine
 
 !FIRDialect: func @_QPprivate_clause_allocatable() {
 !FIRDialect-DAG:  %[[X:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "x", uniq_name = "{{.*}}Ex"}>
-!FIRDialect-DAG:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!FIRDialect-DAG:  %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] uniq_name("{{.*}}Ex") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 !FIRDialect-DAG:  %[[X2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "x2", uniq_name = "{{.*}}Ex2"}>
-!FIRDialect-DAG:  %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!FIRDialect-DAG:  %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] uniq_name("{{.*}}Ex2") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !FIRDialect-DAG:  %[[X3:.*]] = fir.address_of(@{{.*}}Ex3) : !fir.ref<!fir.box<!fir.heap<i32>>>
-!FIRDialect-DAG:  %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex3"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!FIRDialect-DAG:  %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3]] uniq_name("{{.*}}Ex3") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 !FIRDialect-DAG:  %[[X4:.*]] = fir.address_of(@{{.*}}Ex4) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!FIRDialect-DAG:  %[[X4_DECL:.*]]:2 = hlfir.declare %[[X4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex4"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!FIRDialect-DAG:  %[[X4_DECL:.*]]:2 = hlfir.declare %[[X4]] uniq_name("{{.*}}Ex4") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
 !FIRDialect:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[X_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X3_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X4_PVT:.*]] : {{.*}}) {
-!FIRDialect-DAG:    %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-!FIRDialect-DAG:    %[[X2_PVT_DECL:.*]]:2 = hlfir.declare %[[X2_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!FIRDialect-DAG:    %[[X3_PVT_DECL:.*]]:2 = hlfir.declare %[[X3_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex3"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-!FIRDialect-DAG:    %[[X4_PVT_DECL:.*]]:2 = hlfir.declare %[[X4_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex4"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!FIRDialect-DAG:    %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] uniq_name("{{.*}}Ex") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!FIRDialect-DAG:    %[[X2_PVT_DECL:.*]]:2 = hlfir.declare %[[X2_PVT]] uniq_name("{{.*}}Ex2") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!FIRDialect-DAG:    %[[X3_PVT_DECL:.*]]:2 = hlfir.declare %[[X3_PVT]] uniq_name("{{.*}}Ex3") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!FIRDialect-DAG:    %[[X4_PVT_DECL:.*]]:2 = hlfir.declare %[[X4_PVT]] uniq_name("{{.*}}Ex4") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !FIRDialect:        omp.terminator
 !FIRDialect:      }
 
@@ -167,10 +167,10 @@ end subroutine
 !FIRDialect-DAG: {{.*}} = fir.zero_bits !fir.heap<f32>
 !FIRDialect-DAG: {{.*}} = fir.embox %{{.*}} : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
 !FIRDialect-DAG: fir.store %{{.*}} to %[[X5]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-!FIRDialect-DAG: %[[X5_DECL:.*]]:2 = hlfir.declare %[[X5]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFprivate_clause_real_call_allocatableEx5"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+!FIRDialect-DAG: %[[X5_DECL:.*]]:2 = hlfir.declare %[[X5]] uniq_name("_QFprivate_clause_real_call_allocatableEx5") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 !FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[X5_PVT:.*]] : {{.*}}) {
 
-!FIRDialect-DAG: %[[X5_PVT_DECL:.*]]:2 = hlfir.declare %[[X5_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFprivate_clause_real_call_allocatableEx5"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+!FIRDialect-DAG: %[[X5_PVT_DECL:.*]]:2 = hlfir.declare %[[X5_PVT]] uniq_name("_QFprivate_clause_real_call_allocatableEx5") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 !FIRDialect-DAG: fir.call @_QFprivate_clause_real_call_allocatablePhelper_private_clause_real_call_allocatable(%[[X5_PVT_DECL]]#0) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> ()
 !FIRDialect-DAG:   omp.terminator
 !FIRDialect-DAG:   }
@@ -192,9 +192,9 @@ end subroutine
 
 !FIRDialect:  func.func @_QPincrement_list_items(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>> {fir.bindc_name = "head"}) {
 !FIRDialect:    %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>> <{bindc_name = "p", uniq_name = "_QFincrement_list_itemsEp"}>
-!FIRDialect:    %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFincrement_list_itemsEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>)
+!FIRDialect:    %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] uniq_name("_QFincrement_list_itemsEp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>)
 !FIRDialect: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[P_PVT:.*]] : {{.*}}) {
-!FIRDialect:      %[[P_PVT_DECL:.*]]:2 = hlfir.declare %[[P_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFincrement_list_itemsEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>)
+!FIRDialect:      %[[P_PVT_DECL:.*]]:2 = hlfir.declare %[[P_PVT]] uniq_name("_QFincrement_list_itemsEp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode{payload:i32,next:!fir.box<!fir.ptr<!fir.type<_QFincrement_list_itemsTnode>>>}>>>>)
 !FIRDialect:      omp.single   {
 
 !FIRDialect:         omp.terminator
@@ -223,18 +223,18 @@ end subroutine increment_list_items
 !FIRDialect:  func.func @_QPparallel_pointer() {
 !FIRDialect-DAG: %[[Y1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "y1", uniq_name = "_QFparallel_pointerEy1"}>
 !FIRDialect:     fir.store %{{.*}} to %[[Y1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!FIRDialect-DAG: %[[Y1_DECL:.*]]:2 = hlfir.declare %[[Y1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!FIRDialect-DAG: %[[Y1_DECL:.*]]:2 = hlfir.declare %[[Y1]] uniq_name("_QFparallel_pointerEy1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !FIRDialect-DAG: %[[Y2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> <{bindc_name = "y2", uniq_name = "_QFparallel_pointerEy2"}>
 
 !FIRDialect:     fir.store %{{.*}} to %[[Y2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-!FIRDialect-DAG: %[[Y2_DECL:.*]]:2 = hlfir.declare %[[Y2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+!FIRDialect-DAG: %[[Y2_DECL:.*]]:2 = hlfir.declare %[[Y2]] uniq_name("_QFparallel_pointerEy2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 !FIRDialect-DAG: %[[Z1:.*]] = fir.alloca i32 <{bindc_name = "z1", uniq_name = "_QFparallel_pointerEz1"}> {fir.target}
-!FIRDialect-DAG: %[[Z1_DECL:.*]]:2 = hlfir.declare %[[Z1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!FIRDialect-DAG: %[[Z1_DECL:.*]]:2 = hlfir.declare %[[Z1]] uniq_name("_QFparallel_pointerEz1") fortran_attrs<target> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[Z2:.*]] = fir.alloca !fir.array<10xi32> <{bindc_name = "z2", uniq_name = "_QFparallel_pointerEz2"}> {fir.target}
-!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%[[Z2_SHAPE:.*]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%[[Z2_SHAPE:.*]]) uniq_name("_QFparallel_pointerEz2") fortran_attrs<target> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !FIRDialect:      omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[Y1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[Y2_PVT:.*]] : {{.*}}) {
-!FIRDialect-DAG:    %[[Y1_PVT_DECL:.*]]:2 = hlfir.declare %[[Y1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!FIRDialect-DAG:    %[[Y2_PVT_DECL:.*]]:2 = hlfir.declare %[[Y2_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+!FIRDialect-DAG:    %[[Y1_PVT_DECL:.*]]:2 = hlfir.declare %[[Y1_PVT]] uniq_name("_QFparallel_pointerEy1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!FIRDialect-DAG:    %[[Y2_PVT_DECL:.*]]:2 = hlfir.declare %[[Y2_PVT]] uniq_name("_QFparallel_pointerEy2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 !FIRDialect-DAG:    %[[PP18:.*]] = fir.embox %[[Z1_DECL]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 !FIRDialect:       fir.store %[[PP18]] to %[[Y1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !FIRDialect:       %[[Z2_CAST:.*]] = fir.convert %[[Z2_DECL]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
@@ -261,7 +261,7 @@ subroutine simple_loop_1
   real, allocatable :: r;
    !FIRDialect:    omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[R:.*]] : {{.*}}) {
   !$OMP PARALLEL PRIVATE(r)
-  ! FIRDialect:      %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsimple_loop_1Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! FIRDialect:      %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] uniq_name("_QFsimple_loop_1Er") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
 
   ! FIRDialect:      %[[WS_LB:.*]] = arith.constant 1 : i32
@@ -272,7 +272,7 @@ subroutine simple_loop_1
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO
   do i=1, 9
-  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loop_1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("_QFsimple_loop_1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! FIRDialect:      hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:      %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>
   ! FIRDialect:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}} : (!fir.ref<i8>, i32) -> i1
@@ -299,8 +299,8 @@ subroutine simple_loop_2
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-  ! FIRDialect:     %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! FIRDialect:     %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] uniq_name("{{.*}}Er") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! FIRDialect:     %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("{{.*}}Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! FIRDialect:     hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>
   ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
@@ -325,9 +325,9 @@ subroutine simple_loop_3
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:      [[R_DECL:%.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! FIRDialect:      [[R_DECL:%.*]]:2 = hlfir.declare %[[R]] uniq_name("{{.*}}Er") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
-  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] uniq_name("{{.*}}Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   ! FIRDialect:      hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL:.*]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:      %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>

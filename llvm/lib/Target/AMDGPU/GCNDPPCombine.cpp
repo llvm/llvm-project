@@ -112,10 +112,6 @@ char GCNDPPCombineLegacy::ID = 0;
 
 char &llvm::GCNDPPCombineLegacyID = GCNDPPCombineLegacy::ID;
 
-FunctionPass *llvm::createGCNDPPCombinePass() {
-  return new GCNDPPCombineLegacy();
-}
-
 bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   unsigned Op = MI.getOpcode();
   if (!TII->isVOP3(Op)) {

@@ -138,7 +138,12 @@ if is_configured("llvm_use_sanitizer"):
             )
 
     if "Thread" in config.llvm_use_sanitizer:
-        config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+        tsan_suppressions = os.path.join(
+            os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
+        )
+        config.environment["TSAN_OPTIONS"] = (
+            "halt_on_error=1:suppressions=" + tsan_suppressions
+        )
         if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
@@ -224,6 +229,16 @@ if is_configured("llvm_include_dir"):
 # This path may be needed to locate required llvm tools
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--env", "LLVM_TOOLS_DIR=" + config.llvm_tools_dir]
+
+# Prevent tests from accidentally invoking the real dsymForUUID, which can
+# make slow network requests. Tests that need a working dsymForUUID mock
+# should override this with their own script.
+if platform.system() == "Darwin":
+    dotest_cmd += [
+        "--env",
+        "LLDB_APPLE_DSYMFORUUID_EXECUTABLE="
+        + os.path.join(config.lldb_src_root, "test", "Utils", "fake-dsymForUUID.sh"),
+    ]
 
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured("has_libcxx") and config.has_libcxx:
@@ -398,6 +413,10 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+# Propagate LLDBDAP_RUN_AS_SERVER to run the lldb-dap tests in server mode.
+if "LLDBDAP_RUN_AS_SERVER" in os.environ:
+    config.environment["LLDBDAP_RUN_AS_SERVER"] = os.environ["LLDBDAP_RUN_AS_SERVER"]
 
 # Transfer some environment variables into the tests on Windows build host.
 if platform.system() == "Windows":

@@ -10,6 +10,7 @@
 
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -257,6 +258,7 @@ public:
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
+  bool tryFoldAndExec(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -466,10 +468,6 @@ bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
   return false;
 }
 
-FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
-  return new SIFoldOperandsLegacy();
-}
-
 bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
                                             unsigned UseOpNo,
                                             int64_t ImmVal) const {
@@ -552,7 +550,42 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   // Helper function that attempts to inline the given value with a newly
   // chosen opsel pattern.
   auto tryFoldToInline = [&](uint32_t Imm) -> bool {
-    if (!BF16FromUpperFP32 && AMDGPU::isInlinableLiteralV216(Imm, OpType)) {
+    uint16_t Lo = static_cast<uint16_t>(Imm);
+    uint16_t Hi = static_cast<uint16_t>(Imm >> 16);
+
+    if (BF16FromUpperFP32) {
+      // Only <C, 0>, <0, C> and <C, C> are foldable, for an inlinable C.
+      uint16_t C = Lo ? Lo : Hi;
+      bool IsBF16 = true;
+      if ((Lo && Hi && Lo != Hi) ||
+          !AMDGPU::isInlinableLiteralBF16(C, ST->hasInv2PiInlineImm(), &IsBF16))
+        return false;
+
+      // BF16 inline constants are materialized as fp32, so the 16-bit value
+      // sits in the high half; integer ones are sign-extended, so it sits in
+      // the low half. The two cases therefore need opposite opsel settings.
+      int64_t NewImm = IsBF16 ? C : SignExtend64<16>(C);
+      uint32_t Bits = IsBF16 ? static_cast<uint32_t>(C) << 16
+                             : static_cast<uint32_t>(NewImm);
+      uint16_t ReadLo = static_cast<uint16_t>(Bits);
+      uint16_t ReadHi = static_cast<uint16_t>(Bits >> 16);
+
+      // Each half has to read one of the two, so a half that wants the sign
+      // extension of a negative integer cannot be served.
+      if ((Lo != ReadLo && Lo != ReadHi) || (Hi != ReadLo && Hi != ReadHi))
+        return false;
+
+      // Set opsel for a half that reads the upper 16 bits of the constant.
+      if (Lo != ReadLo)
+        NewModVal |= SISrcMods::OP_SEL_0;
+      if (Hi == ReadHi)
+        NewModVal |= SISrcMods::OP_SEL_1;
+      Mod.setImm(NewModVal);
+      Old.ChangeToImmediate(NewImm);
+      return true;
+    }
+
+    if (AMDGPU::isInlinableLiteralV216(Imm, OpType)) {
       Mod.setImm(NewModVal | SISrcMods::OP_SEL_1);
       Old.ChangeToImmediate(Imm);
       return true;
@@ -560,21 +593,14 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
 
     // Try to shuffle the halves around and leverage opsel to get an inline
     // constant.
-    uint16_t Lo = static_cast<uint16_t>(Imm);
-    uint16_t Hi = static_cast<uint16_t>(Imm >> 16);
     if (Lo == Hi) {
       if (AMDGPU::isInlinableLiteralV216(Lo, OpType)) {
-        // If the target has feature 'BF16InlineConstFromUpperFP32', packed BF16
-        // instructions using inline constant must use OPSEL to select the upper
-        // 16-bits from FP32.
-        if (BF16FromUpperFP32)
-          NewModVal |= (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
         Mod.setImm(NewModVal);
         Old.ChangeToImmediate(Lo);
         return true;
       }
 
-      if (!BF16FromUpperFP32 && static_cast<int16_t>(Lo) < 0) {
+      if (static_cast<int16_t>(Lo) < 0) {
         int32_t SExt = static_cast<int16_t>(Lo);
         if (AMDGPU::isInlinableLiteralV216(SExt, OpType)) {
           Mod.setImm(NewModVal);
@@ -593,8 +619,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
       }
     } else {
       uint32_t Swapped = (static_cast<uint32_t>(Lo) << 16) | Hi;
-      if (!BF16FromUpperFP32 &&
-          AMDGPU::isInlinableLiteralV216(Swapped, OpType)) {
+      if (AMDGPU::isInlinableLiteralV216(Swapped, OpType)) {
         Mod.setImm(NewModVal | SISrcMods::OP_SEL_0);
         Old.ChangeToImmediate(Swapped);
         return true;
@@ -1947,6 +1972,58 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   return true;
 }
 
+/// Remove S_AND of a lane mask with EXEC, when the lane mask is already known
+/// to have 0 in the bits of all inactive lanes.
+///
+/// Instruction selection inserts these unconditionally because it has not
+/// analysed what produced the lane mask.
+bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
+  if (MI.getOpcode() != LMC.AndOpc)
+    return false;
+
+  // The AND is going to be removed, so nothing may use the SCC it defines.
+  if (!MI.allImplicitDefsAreDead())
+    return false;
+
+  // Find the EXEC operand, and the lane mask it is being ANDed with.
+  unsigned ExecIdx = 0;
+  for (unsigned I : {1u, 2u}) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg() && MO.getReg() == LMC.ExecReg)
+      ExecIdx = I;
+  }
+  if (!ExecIdx)
+    return false;
+  MachineOperand &Src = MI.getOperand(3 - ExecIdx);
+  if (!Src.isReg() || !Src.getReg().isVirtual() || Src.getSubReg())
+    return false;
+
+  Register SrcReg = Src.getReg();
+  if (!TII->isMaskedByExec(SrcReg, MI, *MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Folding redundant AND with EXEC: " << MI);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (DstReg.isVirtual()) {
+    if (!MRI->constrainRegClass(SrcReg, MRI->getRegClass(DstReg)))
+      return false;
+    MRI->replaceRegWith(DstReg, SrcReg);
+  } else {
+    // A physical destination, e.g. the $vcc written by moveToVALU. Register
+    // allocation will usually make this copy an identity copy.
+    MachineBasicBlock *MBB = MI.getParent();
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), DstReg)
+        .addReg(SrcReg);
+  }
+
+  if (!Src.isKill())
+    MRI->clearKillFlags(SrcReg);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                                          const FoldableDef &OpToFold) const {
   // We need mutate the operands of new mov instructions to add implicit
@@ -3150,6 +3227,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (tryFoldRedundantAND(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldAndExec(MI)) {
         Changed = true;
         continue;
       }

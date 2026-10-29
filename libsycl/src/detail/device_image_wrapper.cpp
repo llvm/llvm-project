@@ -11,6 +11,9 @@
 #include <detail/context_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
+#include <cassert>
+#include <tuple>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -26,21 +29,15 @@ ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
 }
 
 ProgramWrapper::~ProgramWrapper() {
-  assert(MProgram);
+  assert(MProgram && "Program handle can't be nullptr");
   std::ignore = olDestroyProgram(MProgram);
   // TODO: define a way to report errors from dtors.
 }
 
-ol_symbol_handle_t
-ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
-  auto It = MKernels.find(KernelName);
-  if (It != MKernels.end())
-    return It->second;
-
+ol_symbol_handle_t ProgramWrapper::getKernel(std::string_view KernelName) {
   ol_symbol_handle_t Kernel{};
   callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
                OL_SYMBOL_KIND_KERNEL, &Kernel);
-  MKernels.emplace(KernelName, Kernel);
   return Kernel;
 }
 

@@ -267,10 +267,6 @@ INITIALIZE_PASS_END(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
 
 char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
 
-FunctionPass *llvm::createSIWholeQuadModeLegacyPass() {
-  return new SIWholeQuadModeLegacy;
-}
-
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {
   for (const auto &BII : Blocks) {
@@ -1697,7 +1693,7 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
                    .addReg(CountReg)
                    .addImm(0);
   auto CmpMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
-                   .addReg(CountReg, RegState::Kill)
+                   .addReg(CountReg)
                    .addImm(WavefrontSize);
   auto CmovMI =
       BuildMI(*MBB, FirstMI, DL, TII->get(LMC.CMovOpc), LMC.ExecReg).addImm(-1);

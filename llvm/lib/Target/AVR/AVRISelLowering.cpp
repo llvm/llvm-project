@@ -47,6 +47,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setSchedulingPreference(Sched::RegPressure);
   setStackPointerRegisterToSaveRestore(AVR::SP);
   setSupportsUnalignedAtomics(true);
+  setMaxAtomicSizeInBitsSupported(16);
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
@@ -991,9 +992,10 @@ SDValue AVRTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // emit frame pointer register (R29R28) we rely on here.
   MFI.setFrameAddressIsTaken(true);
 
-  // Note that AVRRegisterInfo::getFrameRegister returns R28, which is only
-  // the low half of the frame pointer: use the full 16-bit register pair.
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), AVR::R29R28,
+  // Return the frame pointer register (R29R28).
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  Register FP = TRI->getFrameRegister(DAG.getMachineFunction());
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), FP,
                             Op.getValueType());
 }
 

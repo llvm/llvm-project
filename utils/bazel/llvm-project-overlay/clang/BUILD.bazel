@@ -352,6 +352,14 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_avr_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAVR.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAVR.td",
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_bpf_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsBPF.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -663,6 +671,7 @@ td_library(
     includes = ["include"],
     deps = [
         "//mlir:BuiltinDialectTdFiles",
+        "//mlir:BytecodeTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
         "//mlir:InferTypeOpInterfaceTdFiles",
@@ -700,6 +709,19 @@ gentbl_cc_library(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRDialectBytecodeIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIRDialectBytecode.cpp.inc": [
+            "-gen-bytecode",
+            "-bytecode-dialect=CIR",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIRDialectBytecode.td",
     deps = [":CIRTdFiles"],
 )
 
@@ -922,6 +944,7 @@ cc_library(
         ":basic_builtins_aarch64_gen",
         ":basic_builtins_amdgpu_gen",
         ":basic_builtins_arm_gen",
+        ":basic_builtins_avr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
@@ -1133,6 +1156,7 @@ cc_library(
         # least bad approach. Using `includes` is *specifically* problematic for
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
+        "-I$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/ByteCode",
     ],
@@ -1247,6 +1271,7 @@ cc_library(
     name = "analysis",
     srcs = glob([
         "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/Models/*.h",
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/LifetimeSafety/*.cpp",
         "lib/Analysis/LifetimeSafety/*.h",
@@ -1260,6 +1285,7 @@ cc_library(
     includes = [
         "include",
         "lib/Analysis/FlowSensitive",
+        "lib/Analysis/FlowSensitive/Models",
     ],
     textual_hdrs = glob([
         "include/clang/Analysis/**/*.def",
@@ -1819,6 +1845,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
+            "lib/Driver/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -2130,6 +2157,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:Demangle",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -3070,13 +3098,20 @@ cc_library(
 
 cc_library(
     name = "cir_dialect",
-    srcs = glob(["lib/CIR/Dialect/IR/*.cpp"]),
+    srcs = glob(
+        [
+            "lib/CIR/Dialect/IR/*.cpp",
+            "lib/CIR/Dialect/IR/*.h",
+        ],
+        exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
+    ),
     hdrs = glob([
         "include/clang/CIR/Dialect/IR/*.h",
         "include/clang/CIR/Dialect/Builder/*.h",
     ]),
     includes = ["include"],
     deps = [
+        ":MLIRCIRDialectBytecodeIncGen",
         ":MLIRCIREnumsGen",
         ":MLIRCIRLoopOpInterfaceIncGen",
         ":MLIRCIROpInterfacesIncGen",
@@ -3142,8 +3177,10 @@ cc_library(
         ":cir_dialect",
         ":cir_openacc_support",
         ":cir_openmp_support",
+        "//mlir:ArithDialect",
         "//mlir:DLTIDialect",
         "//mlir:IR",
+        "//mlir:LLVMDialect",
         "//mlir:OpenACCDialect",
         "//mlir:OpenMPDialect",
     ],
@@ -3178,6 +3215,7 @@ cc_library(
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:ABI",
@@ -3355,6 +3393,7 @@ cc_library(
         ":cir_transforms",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
@@ -3391,6 +3430,7 @@ cc_library(
         ":MLIRCIROpsIncGen",
         ":ast",
         ":basic",
+        ":cir_all_dialects",
         ":cir_codegen",
         ":cir_dialect",
         ":cir_headers",
@@ -3404,7 +3444,9 @@ cc_library(
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",
+        "//mlir:BytecodeWriter",
         "//mlir:IR",
+        "//mlir:Parser",
         "//mlir:Pass",
     ],
 )

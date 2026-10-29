@@ -11,41 +11,98 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
+namespace mlir {
+namespace tosa {
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(std::initializer_list<TypeInfoRef> types,
+                                     SpecificationVersion version)
+    : second(version) {
+  first.reserve(types.size());
+  for (const TypeInfoRef &type : types)
+    first.push_back(*type.ptr);
+}
 
-// Building this ~5,000-line generated initializer map under HWAddressSanitizer
-// or MemorySanitizer leads to extreme compile times (>3.5 minutes) during
-// InstCombine and greedy register allocation due to instrumentation
-// overhead. Disable optimization under MSan/HWAsan to keep build times
-// manageable.
-#if LLVM_MEMORY_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
-__attribute__((optnone))
-#else
-LLVM_ATTRIBUTE_MINSIZE
-#endif
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(SmallVector<TypeInfo> types,
+                                     SpecificationVersion version)
+    : first(std::move(types)), second(version) {}
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(const VersionedTypeInfo &other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::VersionedTypeInfo(VersionedTypeInfo &&other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo &
+VersionedTypeInfo::operator=(const VersionedTypeInfo &other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo &
+VersionedTypeInfo::operator=(VersionedTypeInfo &&other) = default;
+
+LLVM_ATTRIBUTE_NOINLINE
+VersionedTypeInfo::~VersionedTypeInfo() = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::OpComplianceInfo(
+    std::initializer_list<T> mode,
+    std::initializer_list<VersionedTypeInfo> operandTypeInfoSet,
+    CheckCondition condition)
+    : mode(mode), operandTypeInfoSet(operandTypeInfoSet), condition(condition) {
+}
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::OpComplianceInfo(
+    SmallVector<T> mode, SmallVector<VersionedTypeInfo> operandTypeInfoSet,
+    CheckCondition condition)
+    : mode(std::move(mode)), operandTypeInfoSet(std::move(operandTypeInfoSet)),
+      condition(condition) {}
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE
+OpComplianceInfo<T>::OpComplianceInfo(const OpComplianceInfo &other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE
+OpComplianceInfo<T>::OpComplianceInfo(OpComplianceInfo &&other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
+OpComplianceInfo<T>::operator=(const OpComplianceInfo &other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
+OpComplianceInfo<T>::operator=(OpComplianceInfo &&other) = default;
+
+template <typename T>
+LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::~OpComplianceInfo() = default;
+
+template struct OpComplianceInfo<Profile>;
+template struct OpComplianceInfo<Extension>;
+
 TosaProfileCompliance::TosaProfileCompliance() {
-  const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
-  const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
-  const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
-  const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
-  const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
-  const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
-  const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
-  const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
-  const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
-  const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
-  const TypeInfo fp8e4m3T = {mlir::Float8E4M3FNType::getTypeID(), 8};
-  const TypeInfo fp8e5m2T = {mlir::Float8E5M2Type::getTypeID(), 8};
+  static const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
+  static const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
+  static const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
+  static const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
+  static const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
+  static const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
+  static const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
+  static const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
+  static const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
+  static const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
+  static const TypeInfo fp8e4m3T = {mlir::Float8E4M3FNType::getTypeID(), 8};
+  static const TypeInfo fp8e5m2T = {mlir::Float8E5M2Type::getTypeID(), 8};
 
   // micro-scaling formats
   // Note: these types exist to suppport the deprecated block_scaled operations
   // and can be removed once those operations are removed.
-  const TypeInfo fp6e2m3T = {mlir::Float6E2M3FNType::getTypeID(), 6};
-  const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};
-  const TypeInfo fp4e2m1T = {mlir::Float4E2M1FNType::getTypeID(), 4};
-  const TypeInfo fp8ue8m0T = {mlir::Float8E8M0FNUType::getTypeID(), 8};
-  const TypeInfo mxint8T = {mlir::tosa::mxint8Type::getTypeID(), 8};
+  static const TypeInfo fp6e2m3T = {mlir::Float6E2M3FNType::getTypeID(), 6};
+  static const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};
+  static const TypeInfo fp4e2m1T = {mlir::Float4E2M1FNType::getTypeID(), 4};
+  static const TypeInfo fp8ue8m0T = {mlir::Float8E8M0FNUType::getTypeID(), 8};
+  static const TypeInfo mxint8T = {mlir::tosa::mxint8Type::getTypeID(), 8};
 
   // Block scaled formats
   const TypeID blockScaledID = mlir::tosa::BlockScaledType::getTypeID();
@@ -57,22 +114,22 @@ TosaProfileCompliance::TosaProfileCompliance() {
   const TypeID fp8ue8m0ID = mlir::Float8E8M0FNUType::getTypeID();
   const TypeID mxint8ID = mlir::tosa::mxint8Type::getTypeID();
 
-  const TypeInfo bs32_fp8ue8m0_fp4e2m1T = {blockScaledID, 4, fp4e2m1ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp6e2m3T = {blockScaledID, 6, fp6e2m3ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp6e3m2T = {blockScaledID, 6, fp6e3m2ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp8e4m3T = {blockScaledID, 8, fp8e4m3ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_fp8e5m2T = {blockScaledID, 8, fp8e5m2ID,
-                                           fp8ue8m0ID,
-                                           tosa::BlockShape::BLOCK_SHAPE_32};
-  const TypeInfo bs32_fp8ue8m0_mxint8T = {
+  static const TypeInfo bs32_fp8ue8m0_fp4e2m1T = {
+      blockScaledID, 4, fp4e2m1ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp6e2m3T = {
+      blockScaledID, 6, fp6e2m3ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp6e3m2T = {
+      blockScaledID, 6, fp6e3m2ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp8e4m3T = {
+      blockScaledID, 8, fp8e4m3ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_fp8e5m2T = {
+      blockScaledID, 8, fp8e5m2ID, fp8ue8m0ID,
+      tosa::BlockShape::BLOCK_SHAPE_32};
+  static const TypeInfo bs32_fp8ue8m0_mxint8T = {
       blockScaledID, 8, mxint8ID, fp8ue8m0ID, tosa::BlockShape::BLOCK_SHAPE_32};
 
 // The profile-based compliance content below is auto-generated by a script
@@ -383,6 +440,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(CastToBlockScaled)
   POPULATE_PROFILE_INFO_COMMON(Const)
   POPULATE_PROFILE_INFO_COMMON(ArgMax)
+  POPULATE_PROFILE_INFO_COMMON(ArgMin)
   POPULATE_PROFILE_INFO_COMMON(Sub)
   POPULATE_PROFILE_INFO_COMMON(Maximum)
   POPULATE_PROFILE_INFO_COMMON(Minimum)
@@ -753,3 +811,5 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
 
   return stringifyScalarTypeInfo(typeInfo);
 }
+} // namespace tosa
+} // namespace mlir

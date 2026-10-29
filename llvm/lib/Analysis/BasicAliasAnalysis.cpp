@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -28,6 +29,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -52,7 +54,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -66,19 +67,17 @@
 
 using namespace llvm;
 
-/// Enable analysis of recursive PHI nodes.
-static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
-                                          cl::init(true));
-
-static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(true));
-
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
 STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
+
+BasicAAResult::BasicAAResult(const DataLayout &DL, const Function &F,
+                             const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                             DominatorTree *DT)
+    : Opts(getAnalysisOptions(F)), DL(DL), F(F), TLI(TLI), AC(AC), DT_(DT) {}
 
 bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
@@ -254,6 +253,10 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
+    // Handle longjmp during re-entry.
+    if (callsReturnsTwiceFn())
+      return false;
+
     if (I == CaptureInst) {
       if (OrAt)
         return false;
@@ -265,6 +268,13 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::callsReturnsTwiceFn() {
+  if (!CallsReturnsTwiceFn)
+    CallsReturnsTwiceFn =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *CallsReturnsTwiceFn;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -885,15 +895,6 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
-  switch (F->getIntrinsicID()) {
-  case Intrinsic::experimental_guard:
-  case Intrinsic::experimental_deoptimize:
-    // These intrinsics can read arbitrary memory, and additionally modref
-    // inaccessible memory to model control dependence.
-    return MemoryEffects::readOnly() |
-           MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
-  }
-
   return F->getMemoryEffects();
 }
 
@@ -1450,7 +1451,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // know that the recursive phi needs to be based on them in some way.
   bool isRecursive = false;
   auto CheckForRecPhi = [&](Value *PV) {
-    if (!EnableRecPhiAnalysis)
+    if (!Opts.basic_aa_recphi)
       return false;
     if (getUnderlyingObject(PV) == PN) {
       isRecursive = true;
@@ -1622,14 +1623,14 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
       isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
-  if (EnableSeparateStorageAnalysis) {
+  if (Opts.basic_aa_separate_storage) {
     for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
       if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
 
       AssumeInst *Assume = cast<AssumeInst>(Elem);
       OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
-      if (OBU.getTagName() == "separate_storage") {
+      if (getBundleAttrFromOBU(OBU) == BundleAttr::SeparateStorage) {
         assert(OBU.Inputs.size() == 2);
         const Value *Hint1 = OBU.Inputs[0].get();
         const Value *Hint2 = OBU.Inputs[1].get();
@@ -1658,8 +1659,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
           // so strictly more assumptions are valid for them.
           if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
-                                               /* AllowEphemerals */ true)) ||
-              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
+                                               AAQI.AllowEphemerals)) ||
+              (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
+                                        ValidAssumeForPtrContext(V2)))) {
             return AliasResult::NoAlias;
           }
         }

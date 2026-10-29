@@ -51,7 +51,7 @@ const DefCtor &constDefCtorRef{};
 // LLVM: @constDefCtorRef = constant ptr @_ZGR15constDefCtorRef_, align 8
 
 WithCtor withCtor{};
-// CIR-BEFORE:  cir.global external @withCtor = ctor : !rec_WithCtor {
+// CIR-BEFORE:  cir.global external @withCtor = #cir.zero : !rec_WithCtor ctor {
 // CIR-BEFORE-NEXT:    %[[GET_GLOB:.*]] = cir.get_global @withCtor : !cir.ptr<!rec_WithCtor>
 // CIR-BEFORE-NEXT:    cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT:  } align(1) ast(#cir.var.decl.ast)
@@ -68,7 +68,7 @@ WithCtor &withCtorRef = withCtor;
 // LLVM: @withCtorRef = constant ptr @withCtor, align 8
 
 const WithCtor &constWithCtorRef{};
-// CIR-BEFORE: cir.global external @constWithCtorRef = ctor : !cir.ptr<!rec_WithCtor> {
+// CIR-BEFORE: cir.global external @constWithCtorRef = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> ctor {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @constWithCtorRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT:   %[[GET_GLOB_OBJ:.*]] = cir.get_global @_ZGR16constWithCtorRef_ : !cir.ptr<!rec_WithCtor>
 // CIR-BEFORE-NEXT:   cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB_OBJ]]) : (!cir.ptr<!rec_WithCtor>{{.*}}) -> ()
@@ -85,7 +85,7 @@ const WithCtor &constWithCtorRef{};
 // LLVM: @constWithCtorRef = global ptr null, align 8
 
 const WithCtor &constWithCtorRef2{5};
-// CIR-BEFORE: cir.global external @constWithCtorRef2 = ctor : !cir.ptr<!rec_WithCtor> {
+// CIR-BEFORE: cir.global external @constWithCtorRef2 = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> ctor {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @constWithCtorRef2 : !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT:   %[[GET_GLOB_OBJ:.*]] = cir.get_global @_ZGR17constWithCtorRef2_ : !cir.ptr<!rec_WithCtor>
 // CIR-BEFORE-NEXT:   %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
@@ -104,7 +104,7 @@ const WithCtor &constWithCtorRef2{5};
 // LLVM: @constWithCtorRef2 = global ptr null, align 8
 
 WithCtorDtor withCtorDtor{};
-// CIR-BEFORE: cir.global external @withCtorDtor = ctor : !rec_WithCtorDtor {
+// CIR-BEFORE: cir.global external @withCtorDtor = #cir.zero : !rec_WithCtorDtor ctor {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @withCtorDtor : !cir.ptr<!rec_WithCtorDtor>
 // CIR-BEFORE-NEXT:   cir.call @_ZN12WithCtorDtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtorDtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT: } dtor {

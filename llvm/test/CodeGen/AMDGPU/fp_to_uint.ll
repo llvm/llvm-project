@@ -1154,18 +1154,18 @@ define amdgpu_kernel void @fp_to_uint_v2f32_to_v2i16(ptr addrspace(1) %out, <2 x
 ; EG-LABEL: fp_to_uint_v2f32_to_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
 ; EG-NEXT:     TRUNC T0.W, KC0[3].X,
 ; EG-NEXT:     TRUNC * T1.W, KC0[2].W,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, PV.W,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
 ; EG-NEXT:     LSHL T0.W, PS, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, T1.W,
+; EG-NEXT:     FLT_TO_UINT * T0.X, T1.W,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T4.X, PS, PV.W,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     OR_INT T0.X, PS, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %uint = fptoui <2 x float> %in to <2 x i16>
   store <2 x i16> %uint, ptr addrspace(1) %out
@@ -1227,18 +1227,18 @@ define amdgpu_kernel void @fp_to_uint_f32_to_v2i16(ptr addrspace(1) %out, float 
 ; EG-LABEL: fp_to_uint_f32_to_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
 ; EG-NEXT:     TRUNC T0.W, KC0[2].W,
 ; EG-NEXT:     TRUNC * T1.W, KC0[2].Z,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, PV.W,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
 ; EG-NEXT:     LSHL T0.W, PS, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, T1.W,
+; EG-NEXT:     FLT_TO_UINT * T0.X, T1.W,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T4.X, PV.W, PS,
-; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.x,
+; EG-NEXT:     OR_INT T0.X, PS, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %uint0 = fptoui float %in0 to i16
   %uint1 = fptoui float %in1 to i16
