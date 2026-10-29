@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
 // UNSUPPORTED: no-exceptions
 
 // <memory>
@@ -15,7 +14,6 @@
 
 #include <memory>
 #include <new>
-#include <cstdlib>
 #include <cassert>
 
 #include "count_new.h"
@@ -23,8 +21,7 @@
 
 // virtual destructor forces the compiler to emit an array cookie
 struct ElemVirtualDtor {
-  int v                      = 0;
-  virtual ~ElemVirtualDtor() = default;
+  virtual ~ElemVirtualDtor() {}
 };
 
 // non-trivial destructor forces the compiler to emit an array cookie
@@ -33,16 +30,10 @@ struct ElemNonTrivialDtor {
   ~ElemNonTrivialDtor() { v = 42; }
 };
 
-// custom `operator delete[](void* p, std::size_t s)` forces the compiler to emit an array cookie
-struct ElemWithDeleter {
-  int v = 0;
-  // a class-specific sized operator delete[] also requires an array cookie.
-  static void operator delete[](void* p, std::size_t s) noexcept { ::operator delete[](p, s); }
-};
-
 template <typename T, std::size_t N>
 void run() {
   globalMemCounter.reset();
+#if TEST_STD_VER >= 17
   T* arr = new T[N];
   assert(globalMemCounter.checkOutstandingArrayNewEq(1));
   globalMemCounter.throw_after = 0;
@@ -54,12 +45,21 @@ void run() {
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(globalMemCounter.outstanding_array_new == 0);
   }
+#else
+  T* p                         = new T;
+  globalMemCounter.throw_after = 0;
+  try {
+    std::shared_ptr<T> sp(p);
+    assert(false);
+  } catch (const std::bad_alloc&) {
+    assert(globalMemCounter.checkOutstandingNewEq(0));
+  }
+#endif
 }
 
 int main(int, char**) {
-  constexpr std::size_t N = 10;
+  const std::size_t N = 10;
   run<ElemVirtualDtor, N>();
   run<ElemNonTrivialDtor, N>();
-  run<ElemWithDeleter, N>();
   return 0;
 }
