@@ -1153,6 +1153,15 @@ def DerivFineY : DXILOp<86, unary> {
   let stages = [Stages<DXIL1_0, [library, pixel]>];
 }
 
+def SampleIndex : DXILOp<90, sampleIndex> {
+  let Doc = "returns the sample index in a sample-frequency pixel shader";
+  let intrinsics = [IntrinSelect<int_dx_sample_index>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [pixel]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def ThreadId : DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let intrinsics = [IntrinSelect<int_dx_thread_id>];

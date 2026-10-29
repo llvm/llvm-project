@@ -2244,6 +2244,10 @@ defm DIV_RZ_F64 : F_MATH_2<"div.rz.f64", F64RT, int_nvvm_div_rz_d>;
 defm DIV_RM_F64 : F_MATH_2<"div.rm.f64", F64RT, int_nvvm_div_rm_d>;
 defm DIV_RP_F64 : F_MATH_2<"div.rp.f64", F64RT, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, FTZ)>;
 def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
           (DIV_FULL_F32 reg_or_fpimm:$a, reg_or_fpimm:$b, NoFTZ)>;
 def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
