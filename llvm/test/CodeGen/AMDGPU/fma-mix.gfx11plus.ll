@@ -110,11 +110,8 @@ define float @fma_mix_f32_hi16_from_64bit_src(ptr addrspace(4) inreg %p) noinlin
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
   ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 [[COPY2]]
-  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GFX11-REAL16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], [[S_MOV_B32_1]], implicit-def dead $scc
-  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
-  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 [[COPY3]]
-  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, [[S_MOV_B32_2]], 8, [[S_MOV_B32_]], 8, [[S_MOV_B32_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 12, [[COPY3]], 8, [[S_MOV_B32_]], 8, [[S_MOV_B32_]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX11-REAL16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
   ; GFX11-REAL16-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -127,10 +124,8 @@ define float @fma_mix_f32_hi16_from_64bit_src(ptr addrspace(4) inreg %p) noinlin
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
   ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GFX11-FAKE16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
-  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, [[COPY3]], 8, [[COPY2]], 8, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 12, [[COPY3]], 8, [[COPY2]], 8, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX11-FAKE16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
   ; GFX11-FAKE16-NEXT:   SI_RETURN implicit $vgpr0
 entry:
