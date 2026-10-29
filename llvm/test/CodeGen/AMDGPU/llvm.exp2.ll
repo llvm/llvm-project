@@ -3596,7 +3596,6 @@ define <3 x half> @v_exp_v3f16(<3 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp_v3f16:
@@ -3687,7 +3686,6 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_v3f16_afn:

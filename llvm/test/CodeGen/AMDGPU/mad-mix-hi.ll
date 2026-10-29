@@ -451,12 +451,12 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX9-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
-; SDAG-GFX9:       ; %bb.0:
-; SDAG-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX9-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; SDAG-GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; SDAG-GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
 ; SDAG-VI:       ; %bb.0:
@@ -491,21 +491,10 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; GISEL-GFX11-FAKE16:       ; %bb.0:
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-FAKE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX11-FAKE16-NEXT:    v_and_b32_e64 v1, 0xffff, s0
-; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GISEL-GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GISEL-GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GISEL-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX9-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
-; GISEL-GFX9:       ; %bb.0:
-; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GISEL-GFX9-NEXT:    v_and_b32_e32 v1, s4, v1
-; GISEL-GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
 ; GISEL-VI:       ; %bb.0:

@@ -10,7 +10,10 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl,
+                              GISelFlags {
+  let GIIgnoreCopies = 1;
+}
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -2824,7 +2827,7 @@ def BFIImm32 : PatFrag<
 
 // Definition from ISA doc:
 // 32-bit: (y & x) | (z & ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
@@ -2832,26 +2835,26 @@ def : AMDGPUPatIgnoreCopies <
 >;
 
 // 32-bit: (y & C) | (z & ~C)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
 
 // 32-bit: (z & ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, (i32 0), VSrc_b32:$z)
 >;
 
 // 32-bit: (y | ~x)
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> i32:$y, (not_oneuse i32:$x)),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, (i32 -1))
 >;
 
 // SHA-256 Ch function
 // 32-bit: z ^ (x & (y ^ z))
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
@@ -2864,7 +2867,7 @@ foreach vt = [i64, v2i32] in {
   defvar not_oneuse_frag = !if(!eq(vt, i64), not_oneuse, vnot_oneuse);
 
   // (y & x) | (z & ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<or> (and vt:$y, vt:$x), (and vt:$z, (not_frag vt:$x))),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -2876,7 +2879,7 @@ foreach vt = [i64, v2i32] in {
   >;
 
   // (z & ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<and> vt:$z, (not_oneuse_frag vt:$x)),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
@@ -2886,7 +2889,7 @@ foreach vt = [i64, v2i32] in {
   >;
 
   // (y | ~x)
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<or> vt:$y, (not_oneuse_frag vt:$x)),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -2897,7 +2900,7 @@ foreach vt = [i64, v2i32] in {
 
   // SHA-256 Ch function
   // z ^ (x & (y ^ z))
-  def : AMDGPUPatIgnoreCopies <
+  def : GCNPat <
     (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
     (REG_SEQUENCE VReg_64,
       (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
@@ -4461,7 +4464,7 @@ def : AMDGPUPat <
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i32:$x, i32:$z),
                         (and i32:$y, (or i32:$x, i32:$z))),
   (V_BFI_B32_e64 (V_XOR_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
@@ -4470,7 +4473,7 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
 >;
 
-def : AMDGPUPatIgnoreCopies <
+def : GCNPat <
   (DivergentBinFrag<or> (and i64:$x, i64:$z),
                         (and i64:$y, (or i64:$x, i64:$z))),
   (REG_SEQUENCE VReg_64,

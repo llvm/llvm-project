@@ -134,18 +134,16 @@ define amdgpu_kernel void @ds4align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s2, s0
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s4, s3
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s2, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s3, 0xffff, s0
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s3, s3, 8
+; ALIGNED-GISEL-NEXT:    s_and_b32 s2, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s2, s2, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s2, s0, 16
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:1
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 24
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:1
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
@@ -193,11 +191,9 @@ define amdgpu_kernel void @ds4align2(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s1, s0
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s0, 16
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v2, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v2, v0 offset:2
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v2, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
 ; UNALIGNED-LABEL: ds4align2:
@@ -299,31 +295,27 @@ define amdgpu_kernel void @ds8align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
-; ALIGNED-GISEL-NEXT:    s_and_b32 s4, 0xffff, s0
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s4, s4, 8
+; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s3, s2
+; ALIGNED-GISEL-NEXT:    s_and_b32 s3, 0xffff, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s3, s2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:1
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 24
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s3, s3, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:1
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:5
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s2, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:6
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:5
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:7
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
@@ -383,17 +375,13 @@ define amdgpu_kernel void @ds8align2(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s2, s0
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s4, s3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:6
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
 ; UNALIGNED-LABEL: ds8align2:
@@ -535,43 +523,37 @@ define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s5, s5, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
-; ALIGNED-GISEL-NEXT:    s_and_b32 s5, 0xffff, s0
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s5, s5, 8
+; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
+; ALIGNED-GISEL-NEXT:    s_and_b32 s4, 0xffff, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:1
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 24
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s4, s4, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:1
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:5
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s2, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:6
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:5
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:7
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:8
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:9
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s3, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:10
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:10
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:9
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:11
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
@@ -641,23 +623,17 @@ define amdgpu_kernel void @ds12align2(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s2, s3
 ; ALIGNED-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
-; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:6
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:8
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:10
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:10
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
 ; UNALIGNED-LABEL: ds12align2:
@@ -909,55 +885,47 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s6, s6, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s5, s5, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s5, s6, s5
-; ALIGNED-GISEL-NEXT:    s_and_b32 s6, 0xffff, s0
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s6, s6, 8
+; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
+; ALIGNED-GISEL-NEXT:    s_and_b32 s5, 0xffff, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s5, s0, 16
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s6
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:1
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 24
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s5, s5, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s5
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:1
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:5
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s2, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:6
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:5
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:7
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:8
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:9
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s3, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:10
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:10
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s4
+; ALIGNED-GISEL-NEXT:    s_and_b32 s0, 0xffff, s4
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s0, 8
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:9
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:11
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s4, 16
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s4, 24
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:12
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:13
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s4, 24
+; ALIGNED-GISEL-NEXT:    ds_write_b8_d16_hi v1, v0 offset:14
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:14
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v2 offset:13
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:15
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
@@ -1034,31 +1002,23 @@ define amdgpu_kernel void @ds16align2(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; ALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-GISEL-NEXT:    v_readfirstlane_b32 s5, v0
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
 ; ALIGNED-GISEL-NEXT:    v_readfirstlane_b32 s4, v7
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s5, s5, 16
-; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s5, s0, 16
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:2
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:4
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:6
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s3, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:8
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:10
-; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s4, 16
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:10
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:12
-; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    ds_write_b16 v1, v0 offset:14
+; ALIGNED-GISEL-NEXT:    ds_write_b16_d16_hi v1, v0 offset:14
 ; ALIGNED-GISEL-NEXT:    s_endpgm
 ;
 ; UNALIGNED-LABEL: ds16align2:
