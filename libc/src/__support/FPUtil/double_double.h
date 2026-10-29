@@ -51,7 +51,7 @@ using FloatFloat = NumberPair<float>;
 //     <https://www.arith2025.org/proceedings/215900a141.pdf>.
 template <bool FAST2SUM = true, typename T = double>
 LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
   if constexpr (FAST2SUM) {
     r.hi = a + b;
     T t = r.hi - a;
@@ -63,6 +63,24 @@ LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
     T t3 = b - t1;
     T t4 = a - t2;
     r.lo = t3 + t4;
+  }
+  return r;
+}
+
+template <bool FAST2SUM = true, typename T = double>
+LIBC_INLINE constexpr NumberPair<T> exact_sub(T a, T b) {
+  NumberPair<T> r;
+  if constexpr (FAST2SUM) {
+    r.hi = a - b;
+    T t = a - r.hi;
+    r.lo = t - b;
+  } else {
+    r.hi = a - b;
+    T t1 = r.hi - a;
+    T t2 = r.hi - t1;
+    T t3 = a - t2;
+    T t4 = b + t1;
+    r.lo = t3 - t4;
   }
   return r;
 }
@@ -95,7 +113,7 @@ LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
 // Default splitting constant = 2^ceil(prec(double)/2) + 1 = 2^27 + 1.
 template <typename T = double, size_t N = DefaultSplit<T>::VALUE>
 LIBC_INLINE constexpr NumberPair<T> split(T a) {
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
   // CN = 2^N.
   constexpr T CN = static_cast<T>(1 << N);
   constexpr T C = CN + T(1);
@@ -111,7 +129,7 @@ template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
 LIBC_INLINE constexpr NumberPair<T> exact_mult(const NumberPair<T> &as, T a,
                                                T b) {
   NumberPair<T> bs = split<T, SPLIT_B>(b);
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
 
   r.hi = a * b;
   T t1 = as.hi * bs.hi - r.hi;
@@ -151,7 +169,7 @@ template <> struct TargetHasFmaInstruction<double> {
 // then a * b = r.hi + r.lo is exact for all rounding modes.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
 LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
     r.hi = a * b;

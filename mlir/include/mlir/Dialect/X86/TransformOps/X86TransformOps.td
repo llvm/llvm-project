@@ -114,4 +114,16 @@ def ApplyVectorContractMultiLevelUnrollForAMXPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyMathRsqrtApproximationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.math_rsqrt_approximation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns that approximate vectorized f32 `math.rsqrt` operations
+    using the AVX `vrsqrtps` instruction (`x86.avx.rsqrt`) followed by one
+    Newton-Raphson step. The inner vector dimension must be a multiple of 8.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // X86_TRANSFORM_OPS

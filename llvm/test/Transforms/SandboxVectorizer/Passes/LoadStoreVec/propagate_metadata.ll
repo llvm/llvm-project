@@ -6,8 +6,8 @@
 define void @propagate_metadata(ptr %ptr0) {
 ; CHECK-LABEL: define void @propagate_metadata(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !alias.scope [[META0:![0-9]+]], !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 4, !noalias [[META0]], !sandboxvec [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 4
@@ -24,5 +24,8 @@ define void @propagate_metadata(ptr %ptr0) {
 !1 = distinct !{!1, !2, !"some scope"}
 !2 = distinct !{!2, i1 false, !"some domain"}
 ;.
-; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
+; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"some scope"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"some domain"}
+; CHECK: [[META3]] = distinct !{!"sandboxregion"}
 ;.

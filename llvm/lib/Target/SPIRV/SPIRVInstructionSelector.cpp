@@ -6163,8 +6163,6 @@ bool SPIRVInstructionSelector::generateSampleImage(
 bool SPIRVInstructionSelector::selectImageQuerySize(
     Register ImageReg, Register &ResVReg, MachineInstr &I,
     std::optional<Register> LodReg) const {
-  unsigned Opcode =
-      LodReg ? SPIRV::OpImageQuerySizeLod : SPIRV::OpImageQuerySize;
   SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
   assert(ImageType && ImageType->getOpcode() == SPIRV::OpTypeImage &&
          "ImageReg is not an image type.");
@@ -6191,6 +6189,16 @@ bool SPIRVInstructionSelector::selectImageQuerySize(
   }
 
   SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  // Non-multisampled 1D, 2D, 3D, and Cube images with Sampled = 1 (compatible
+  // with sampling operations) require an explicit LOD. Query mip level zero
+  // when GetDimensions does not supply one.
+  bool IsSampled = ImageType->getOperand(6).getImm() == 1;
+  bool IsMultisampled = ImageType->getOperand(5).getImm() != 0;
+  if (!LodReg && IsSampled && !IsMultisampled &&
+      Dim != SPIRV::Dim::DIM_Buffer && Dim != SPIRV::Dim::DIM_Rect)
+    LodReg = GR.getOrCreateConstInt(0, I, I32Ty, TII, !STI.isShader());
+  unsigned Opcode =
+      LodReg ? SPIRV::OpImageQuerySizeLod : SPIRV::OpImageQuerySize;
   SPIRVTypeInst ResType =
       NumComponents == 1
           ? I32Ty

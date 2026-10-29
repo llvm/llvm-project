@@ -179,49 +179,89 @@ TypeSize EVT::getExtendedSizeInBits() const {
 }
 
 /// getEVTString - This function returns value type as a string, e.g. "i32".
-std::string EVT::getEVTString() const {
+void EVT::print(raw_ostream &OS) const {
   switch (V.SimpleTy) {
   default:
     if (isRISCVVectorTuple()) {
       unsigned Sz = getSizeInBits().getKnownMinValue();
       unsigned NF = getRISCVVectorTupleNumFields();
       unsigned MinNumElts = Sz / (NF * 8);
-      return "riscv_nxv" + utostr(MinNumElts) + "i8x" + utostr(NF);
+      OS << "riscv_nxv" << MinNumElts << "i8x" << NF;
+      return;
     }
-    if (isVector())
-      return (isScalableVector() ? "nxv" : "v") +
-             utostr(getVectorElementCount().getKnownMinValue()) +
-             getVectorElementType().getEVTString();
-    if (isInteger())
-      return "i" + utostr(getSizeInBits());
-    if (isFloatingPoint())
-      return "f" + utostr(getSizeInBits());
-    if (isCheriCapability())
-      return "c" + utostr(getSizeInBits());
+    if (isVector()) {
+      OS << (isScalableVector() ? "nxv" : "v")
+         << getVectorElementCount().getKnownMinValue()
+         << getVectorElementType();
+      return;
+    }
+    if (isInteger()) {
+      OS << "i" << getSizeInBits();
+      return;
+    }
+    if (isFloatingPoint()) {
+      OS << "f" << getSizeInBits();
+      return;
+    }
+    if (isCheriCapability()) {
+      OS << "c" << getSizeInBits();
+      return;
+    }
     llvm_unreachable("Invalid EVT!");
-  case MVT::bf16:      return "bf16";
-  case MVT::ppcf128:   return "ppcf128";
-  case MVT::isVoid:    return "isVoid";
-  case MVT::Other:     return "ch";
-  case MVT::Glue:      return "glue";
-  case MVT::x86mmx:    return "x86mmx";
-  case MVT::x86amx:    return "x86amx";
-  case MVT::i64x8:     return "i64x8";
-  case MVT::Metadata:  return "Metadata";
-  case MVT::Untyped:   return "Untyped";
-  case MVT::funcref:   return "funcref";
-  case MVT::exnref:    return "exnref";
-  case MVT::externref: return "externref";
+  case MVT::bf16:
+    OS << "bf16";
+    return;
+  case MVT::ppcf128:
+    OS << "ppcf128";
+    return;
+  case MVT::isVoid:
+    OS << "isVoid";
+    return;
+  case MVT::Other:
+    OS << "ch";
+    return;
+  case MVT::Glue:
+    OS << "glue";
+    return;
+  case MVT::x86mmx:
+    OS << "x86mmx";
+    return;
+  case MVT::x86amx:
+    OS << "x86amx";
+    return;
+  case MVT::i64x8:
+    OS << "i64x8";
+    return;
+  case MVT::Metadata:
+    OS << "Metadata";
+    return;
+  case MVT::Untyped:
+    OS << "Untyped";
+    return;
+  case MVT::funcref:
+    OS << "funcref";
+    return;
+  case MVT::exnref:
+    OS << "exnref";
+    return;
+  case MVT::externref:
+    OS << "externref";
+    return;
   case MVT::aarch64svcount:
-    return "aarch64svcount";
+    OS << "aarch64svcount";
+    return;
   case MVT::spirvbuiltin:
-    return "spirvbuiltin";
+    OS << "spirvbuiltin";
+    return;
   case MVT::amdgpuBufferFatPointer:
-    return "amdgpuBufferFatPointer";
+    OS << "amdgpuBufferFatPointer";
+    return;
   case MVT::amdgpuBufferStridedPointer:
-    return "amdgpuBufferStridedPointer";
+    OS << "amdgpuBufferStridedPointer";
+    return;
   case MVT::aarch64mfp8:
-    return "aarch64mfp8";
+    OS << "aarch64mfp8";
+    return;
   }
 }
 
@@ -372,5 +412,5 @@ void MVT::print(raw_ostream &OS) const {
   if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
     OS << "invalid";
   else
-    OS << EVT(*this).getEVTString();
+    OS << EVT(*this);
 }

@@ -76,9 +76,6 @@ struct catch_info {
   // Number of dst_types below (static_ptr, static_type)
   int number_to_static_ptr;
 
-  // Set whenever a search can be stopped
-  bool search_done;
-
   // There is no object (seen when we throw a null pointer to object).
   bool have_object;
   // Virtual base
@@ -127,8 +124,6 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
     // communicates to a dst_type node that a static_type was found
     //    above it, but it wasn't (static_ptr, static_type)
     bool found_any_static_type;
-    // Set whenever a search can be stopped
-    bool search_done;
 };
 
 // Has no base class
@@ -136,19 +131,16 @@ class _LIBCXXABI_TYPE_VIS __class_type_info : public __shim_type_info {
 public:
   _LIBCXXABI_HIDDEN ~__class_type_info() override;
 
-  _LIBCXXABI_HIDDEN void process_static_type_above_dst(__dynamic_cast_info *,
-                                                       const void *,
-                                                       const void *, int) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool
+  process_static_type_above_dst(__dynamic_cast_info*, const void*, const void*, int) const;
   _LIBCXXABI_HIDDEN void process_static_type_below_dst(__dynamic_cast_info *,
                                                        const void *, int) const;
-  _LIBCXXABI_HIDDEN void process_found_base_class(catch_info*, void*, int) const;
-  _LIBCXXABI_HIDDEN virtual void search_above_dst(__dynamic_cast_info *,
-                                                  const void *, const void *,
-                                                  int, bool) const;
-  _LIBCXXABI_HIDDEN virtual void
-  search_below_dst(__dynamic_cast_info *, const void *, int, bool) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool process_found_base_class(catch_info*, void*, int) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool
+  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
   _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
-  _LIBCXXABI_HIDDEN virtual void has_unambiguous_public_base(catch_info*, void*, int) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool has_unambiguous_public_base(catch_info*, void*, int) const;
 };
 
 // Has one non-virtual public base class at offset zero
@@ -158,9 +150,10 @@ public:
 
   _LIBCXXABI_HIDDEN ~__si_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, int) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool
+  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const final;
 };
 
 struct _LIBCXXABI_HIDDEN __base_class_type_info
@@ -176,9 +169,9 @@ public:
         __offset_shift = 8
     };
 
-    void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
-    void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
-    void has_unambiguous_public_base(catch_info*, void*, int) const;
+    [[nodiscard]] bool search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
+    [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
+    [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const;
 };
 
 // Has one or more base classes
@@ -197,9 +190,10 @@ public:
 
   _LIBCXXABI_HIDDEN ~__vmi_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, int) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool
+  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const final;
 };
 
 class _LIBCXXABI_TYPE_VIS __pbase_type_info : public __shim_type_info {
