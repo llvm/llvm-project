@@ -52,3 +52,26 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+---
+name:   AMinusC2PlusC2_commuted
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: AMinusC2PlusC2_commuted
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 43
+    ; CHECK-NEXT: %add:_(i64) = G_ADD %a, [[C]]
+    ; CHECK-NEXT: $x0 = COPY %add(i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(i64) = COPY $x0
+    %c1:_(i64) = G_CONSTANT i64 13
+    %c2:_(i64) = G_CONSTANT i64 56
+    %sub:_(i64) = G_SUB %a, %c1
+    %add:_(i64) = G_ADD %c2, %sub
+    $x0 = COPY %add
+    RET_ReallyLR implicit $x0
+
+...

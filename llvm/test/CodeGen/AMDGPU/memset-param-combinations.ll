@@ -59,12 +59,12 @@ define void @memset_p0_varsize_align_4_varsetval(ptr addrspace(0) align 4 %dst, 
 ; GFX942-GISEL-LABEL: memset_p0_varsize_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v10, 15, v3
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v12, vcc, v3, v10
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v13, vcc, 0, v4, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB0_3
@@ -181,12 +181,12 @@ define void @memset_p1_varsize_align_4_varsetval(ptr addrspace(1) align 4 %dst, 
 ; GFX942-GISEL-LABEL: memset_p1_varsize_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v10, 15, v3
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v12, vcc, v3, v10
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v13, vcc, 0, v4, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB1_3
@@ -301,12 +301,12 @@ define void @memset_p3_varsize_align_4_varsetval(ptr addrspace(3) align 4 %dst, 
 ; GFX942-GISEL-LABEL: memset_p3_varsize_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 15, v2
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, v2, v4
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v7, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB2_3
@@ -417,12 +417,12 @@ define void @memset_p5_varsize_align_4_varsetval(ptr addrspace(5) align 4 %dst, 
 ; GFX942-GISEL-LABEL: memset_p5_varsize_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v8, 15, v2
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v10, vcc, v2, v8
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v11, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB3_3
@@ -1396,12 +1396,12 @@ define void @memset_p1_varsz_align_4_set40(ptr addrspace(1) align 4 %dst, i64 %s
 ; GFX942-GISEL-LABEL: memset_p1_varsz_align_4_set40:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v8, 15, v2
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v10, vcc, v2, v8
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v11, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB12_3
@@ -1516,12 +1516,12 @@ define void @memset_p1_varsz_align_4_set0(ptr addrspace(1) align 4 %dst, i64 %si
 ; GFX942-GISEL-LABEL: memset_p1_varsz_align_4_set0:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 15
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v8, 15, v2
 ; GFX942-GISEL-NEXT:    v_sub_co_u32_e32 v10, vcc, v2, v8
-; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_subbrev_co_u32_e32 v11, vcc, 0, v3, vcc
+; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
 ; GFX942-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-GISEL-NEXT:    s_cbranch_execz .LBB13_3
