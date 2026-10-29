@@ -97,8 +97,6 @@ public:
   // Actual count of v_readfirstlane_b32
   // which need to be inserted to keep SChain SALU
   unsigned NumReadfirstlanes = 0;
-  // Inline asm register constraints cannot be changed to accept a VGPR.
-  bool MustLowerToReadFirstLane = false;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
   // Marks entries lowered to VALU for bulk removal from V2SCopies.
@@ -994,11 +992,6 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     if (!Visited.insert(Inst).second)
       continue;
 
-    if (Inst->isInlineAsm()) {
-      Info.MustLowerToReadFirstLane = true;
-      continue;
-    }
-
     // Copies and REG_SEQUENCE do not contribute to the final assembly
     // So, skip them but take care of the SGPR to VGPR copies bookkeeping.
     if (Inst->isRegSequence() &&
@@ -1048,9 +1041,6 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
-  if (Info->MustLowerToReadFirstLane)
-    return false;
-
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;
