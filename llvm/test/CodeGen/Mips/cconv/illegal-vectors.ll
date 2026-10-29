@@ -1159,34 +1159,33 @@ define void @arg_v4i18(<4 x i18> %vec, ptr %p) {
 ;
 ; MIPS32-LABEL: arg_v4i18:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    sll $1, $4, 14
-; MIPS32-NEXT:    lui $2, 63
-; MIPS32-NEXT:    lui $3, 65280
-; MIPS32-NEXT:    and $1, $1, $3
-; MIPS32-NEXT:    ori $2, $2, 65280
-; MIPS32-NEXT:    sll $3, $5, 4
-; MIPS32-NEXT:    and $2, $3, $2
-; MIPS32-NEXT:    sll $4, $4, 22
-; MIPS32-NEXT:    or $2, $4, $2
-; MIPS32-NEXT:    srl $2, $2, 8
-; MIPS32-NEXT:    lui $4, 3
-; MIPS32-NEXT:    or $1, $1, $2
-; MIPS32-NEXT:    ori $2, $4, 65280
-; MIPS32-NEXT:    and $2, $7, $2
-; MIPS32-NEXT:    sll $5, $6, 18
-; MIPS32-NEXT:    or $2, $5, $2
-; MIPS32-NEXT:    lw $5, 16($sp)
-; MIPS32-NEXT:    sb $7, 8($5)
-; MIPS32-NEXT:    sw $1, 0($5)
-; MIPS32-NEXT:    srl $1, $2, 8
-; MIPS32-NEXT:    ori $2, $4, 49152
+; MIPS32-NEXT:    lui $1, 3
+; MIPS32-NEXT:    ori $2, $1, 49152
 ; MIPS32-NEXT:    and $2, $6, $2
-; MIPS32-NEXT:    srl $2, $2, 14
+; MIPS32-NEXT:    sll $2, $2, 10
+; MIPS32-NEXT:    sll $3, $5, 28
 ; MIPS32-NEXT:    or $2, $3, $2
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    or $1, $1, $2
+; MIPS32-NEXT:    ori $3, $1, 65280
+; MIPS32-NEXT:    and $3, $7, $3
+; MIPS32-NEXT:    sll $6, $6, 18
+; MIPS32-NEXT:    or $3, $6, $3
+; MIPS32-NEXT:    srl $3, $3, 8
+; MIPS32-NEXT:    or $2, $3, $2
+; MIPS32-NEXT:    sll $3, $4, 14
+; MIPS32-NEXT:    lui $6, 65280
+; MIPS32-NEXT:    lw $8, 16($sp)
+; MIPS32-NEXT:    sb $7, 8($8)
+; MIPS32-NEXT:    sw $2, 4($8)
+; MIPS32-NEXT:    and $2, $3, $6
+; MIPS32-NEXT:    ori $1, $1, 65520
+; MIPS32-NEXT:    and $1, $5, $1
+; MIPS32-NEXT:    sll $1, $1, 4
+; MIPS32-NEXT:    sll $3, $4, 22
+; MIPS32-NEXT:    or $1, $3, $1
+; MIPS32-NEXT:    srl $1, $1, 8
+; MIPS32-NEXT:    or $1, $2, $1
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    sw $1, 4($5)
+; MIPS32-NEXT:    sw $1, 0($8)
   store <4 x i18> %vec, ptr %p
   ret void
 }
@@ -1336,27 +1335,26 @@ define void @call_v4i18(ptr %p) nounwind {
 ; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    jal arg_v4i18
 ; MIPS32-NEXT:    and $6, $1, $8
-; MIPS32-NEXT:    ori $18, $17, 49152
-; MIPS32-NEXT:    ori $17, $17, 65280
-; MIPS32-NEXT:    lui $1, 63
+; MIPS32-NEXT:    ori $18, $17, 65280
+; MIPS32-NEXT:    ori $19, $17, 49152
 ; MIPS32-NEXT:    jal ret_v4i18
-; MIPS32-NEXT:    ori $19, $1, 65280
+; MIPS32-NEXT:    ori $17, $17, 65520
 ; MIPS32-NEXT:    lui $1, 65280
-; MIPS32-NEXT:    and $6, $5, $17
-; MIPS32-NEXT:    sll $7, $4, 18
+; MIPS32-NEXT:    and $6, $4, $19
+; MIPS32-NEXT:    sll $6, $6, 10
+; MIPS32-NEXT:    sll $7, $3, 28
 ; MIPS32-NEXT:    or $6, $7, $6
-; MIPS32-NEXT:    srl $6, $6, 8
-; MIPS32-NEXT:    and $4, $4, $18
-; MIPS32-NEXT:    srl $4, $4, 14
-; MIPS32-NEXT:    sll $3, $3, 4
-; MIPS32-NEXT:    or $4, $3, $4
-; MIPS32-NEXT:    sll $4, $4, 24
-; MIPS32-NEXT:    or $4, $6, $4
+; MIPS32-NEXT:    and $7, $5, $18
+; MIPS32-NEXT:    sll $4, $4, 18
+; MIPS32-NEXT:    or $4, $4, $7
+; MIPS32-NEXT:    srl $4, $4, 8
+; MIPS32-NEXT:    or $4, $4, $6
 ; MIPS32-NEXT:    sll $6, $2, 14
 ; MIPS32-NEXT:    sb $5, 8($16)
 ; MIPS32-NEXT:    sw $4, 4($16)
 ; MIPS32-NEXT:    and $1, $6, $1
-; MIPS32-NEXT:    and $3, $3, $19
+; MIPS32-NEXT:    and $3, $3, $17
+; MIPS32-NEXT:    sll $3, $3, 4
 ; MIPS32-NEXT:    sll $2, $2, 22
 ; MIPS32-NEXT:    or $2, $2, $3
 ; MIPS32-NEXT:    srl $2, $2, 8

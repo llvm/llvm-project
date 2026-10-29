@@ -363,28 +363,29 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    call __moddi3
 ; RV32-NEXT:    or a2, s5, s6
 ; RV32-NEXT:    snez a2, a2
-; RV32-NEXT:    xori a0, a0, 2
 ; RV32-NEXT:    xori a3, s2, 1
+; RV32-NEXT:    xori a0, a0, 2
+; RV32-NEXT:    or a3, a3, s4
 ; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    or a1, a3, s4
-; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    seqz a1, a1
-; RV32-NEXT:    neg a3, a2
-; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    seqz a1, a3
+; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    andi a4, a0, 7
+; RV32-NEXT:    neg a3, a2
+; RV32-NEXT:    andi a4, a1, 1
 ; RV32-NEXT:    srli a5, a1, 31
+; RV32-NEXT:    slli a4, a4, 1
+; RV32-NEXT:    or a4, a5, a4
+; RV32-NEXT:    neg a5, a0
 ; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    or a0, a5, a0
-; RV32-NEXT:    andi a5, a1, 1
+; RV32-NEXT:    srli a5, a5, 30
+; RV32-NEXT:    or a5, a0, a5
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    slli a5, a5, 1
 ; RV32-NEXT:    or a1, a1, a2
-; RV32-NEXT:    or a0, a0, a5
+; RV32-NEXT:    sub a4, a4, a0
 ; RV32-NEXT:    sw a3, 0(s0)
 ; RV32-NEXT:    sw a1, 4(s0)
-; RV32-NEXT:    sw a0, 8(s0)
-; RV32-NEXT:    sb a4, 12(s0)
+; RV32-NEXT:    sw a4, 8(s0)
+; RV32-NEXT:    sb a5, 12(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -572,28 +573,29 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    call __moddi3
 ; RV32M-NEXT:    or a2, s5, s6
 ; RV32M-NEXT:    snez a2, a2
-; RV32M-NEXT:    xori a0, a0, 2
 ; RV32M-NEXT:    xori a3, s2, 1
+; RV32M-NEXT:    xori a0, a0, 2
+; RV32M-NEXT:    or a3, a3, s4
 ; RV32M-NEXT:    or a0, a0, a1
-; RV32M-NEXT:    or a1, a3, s4
-; RV32M-NEXT:    seqz a0, a0
-; RV32M-NEXT:    seqz a1, a1
-; RV32M-NEXT:    neg a3, a2
-; RV32M-NEXT:    addi a0, a0, -1
+; RV32M-NEXT:    seqz a1, a3
+; RV32M-NEXT:    snez a0, a0
 ; RV32M-NEXT:    addi a1, a1, -1
-; RV32M-NEXT:    andi a4, a0, 7
+; RV32M-NEXT:    neg a3, a2
+; RV32M-NEXT:    andi a4, a1, 1
 ; RV32M-NEXT:    srli a5, a1, 31
+; RV32M-NEXT:    slli a4, a4, 1
+; RV32M-NEXT:    or a4, a5, a4
+; RV32M-NEXT:    neg a5, a0
 ; RV32M-NEXT:    slli a0, a0, 2
-; RV32M-NEXT:    or a0, a5, a0
-; RV32M-NEXT:    andi a5, a1, 1
+; RV32M-NEXT:    srli a5, a5, 30
+; RV32M-NEXT:    or a5, a0, a5
 ; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    slli a5, a5, 1
 ; RV32M-NEXT:    or a1, a1, a2
-; RV32M-NEXT:    or a0, a0, a5
+; RV32M-NEXT:    sub a4, a4, a0
 ; RV32M-NEXT:    sw a3, 0(s0)
 ; RV32M-NEXT:    sw a1, 4(s0)
-; RV32M-NEXT:    sw a0, 8(s0)
-; RV32M-NEXT:    sb a4, 12(s0)
+; RV32M-NEXT:    sw a4, 8(s0)
+; RV32M-NEXT:    sb a5, 12(s0)
 ; RV32M-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32M-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32M-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

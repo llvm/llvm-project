@@ -1013,6 +1013,15 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= (UpperDemandedBits))
         return Op0;
     }
+    // Rebuild this use if shifting makes some source bits irrelevant. Keep
+    // sign-bit-only uses intact so they can still fold into sign extensions.
+    auto *SA = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+    if (SA && SA->getAPIntValue().ult(BitWidth) && !DemandedBits.isSignMask()) {
+      APInt SrcBits = DemandedBits.lshr(SA->getZExtValue());
+      if (SDValue Src = SimplifyMultipleUseDemandedBits(
+              Op.getOperand(0), SrcBits, DemandedElts, DAG, Depth + 1))
+        return DAG.getNode(ISD::SHL, SDLoc(Op), VT, Src, Op.getOperand(1));
+    }
     break;
   }
   case ISD::SRL: {
