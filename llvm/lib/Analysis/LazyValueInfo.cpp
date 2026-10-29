@@ -15,6 +15,7 @@
 #include "AnalysisOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -92,6 +93,9 @@ namespace {
   class LazyValueInfoCache;
   struct LVIValueHandle final : public CallbackVH {
     LazyValueInfoCache *Parent;
+    /// Numbers of the blocks with cache entries for this value, so that
+    /// erasing it does not have to visit every block.
+    mutable SmallSetVector<unsigned, 2> Blocks;
 
     LVIValueHandle(Value *V, LazyValueInfoCache *P = nullptr)
       : CallbackVH(V), Parent(P) { }
@@ -162,10 +166,11 @@ class LazyValueInfoCache {
     return BlockCache[Number].get();
   }
 
-  void addValueHandle(Value *Val) {
+  void addValueHandle(Value *Val, BasicBlock *BB) {
     auto HandleIt = ValueHandles.find_as(Val);
     if (HandleIt == ValueHandles.end())
-      ValueHandles.insert({Val, this});
+      HandleIt = ValueHandles.insert({Val, this}).first;
+    HandleIt->Blocks.insert(BB->getNumber());
   }
 
 public:
@@ -184,7 +189,7 @@ public:
     else
       Entry->LatticeElements.insert({Val, Result});
 
-    addValueHandle(Val);
+    addValueHandle(Val, BB);
   }
 
   void insertPredecessorResults(Value *Val, BasicBlock *BB,
@@ -193,7 +198,7 @@ public:
 
     Entry->PredecessorLatticeElements->insert({Val, PredLatticeElements});
 
-    addValueHandle(Val);
+    addValueHandle(Val, BB);
   }
 
   std::optional<BBLatticeElementMap>
@@ -232,7 +237,7 @@ public:
     if (!Entry->NonNullPointers) {
       Entry->NonNullPointers = InitFn(BB);
       for (Value *V : *Entry->NonNullPointers)
-        addValueHandle(V);
+        addValueHandle(V, BB);
     }
 
     return Entry->NonNullPointers->count(V);
@@ -259,21 +264,23 @@ public:
 } // namespace
 
 void LazyValueInfoCache::eraseValue(Value *V) {
-  for (auto &Elem : BlockCache) {
-    if (!Elem)
-      continue;
-
-    Elem->LatticeElements.erase(V);
-    Elem->OverDefined.erase(V);
-    if (Elem->NonNullPointers)
-      Elem->NonNullPointers->erase(V);
-    if (PerPredRanges)
-      Elem->PredecessorLatticeElements->erase(V);
-  }
-
   auto HandleIt = ValueHandles.find_as(V);
-  if (HandleIt != ValueHandles.end())
-    ValueHandles.erase(HandleIt);
+  if (HandleIt == ValueHandles.end())
+    return;
+  // Every cache entry of V is in a block recorded in its handle. A recorded
+  // block may have been erased since, which leaves its entry null.
+  for (unsigned Number : HandleIt->Blocks) {
+    if (Number >= BlockCache.size() || !BlockCache[Number])
+      continue;
+    BlockCacheEntry &Elem = *BlockCache[Number];
+    Elem.LatticeElements.erase(V);
+    Elem.OverDefined.erase(V);
+    if (Elem.NonNullPointers)
+      Elem.NonNullPointers->erase(V);
+    if (PerPredRanges)
+      Elem.PredecessorLatticeElements->erase(V);
+  }
+  ValueHandles.erase(HandleIt);
 }
 
 void LVIValueHandle::deleted() {
