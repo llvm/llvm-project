@@ -6595,7 +6595,8 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 }
 
 PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
-  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  Function &Fn = F;
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(Fn);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
@@ -6604,7 +6605,7 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   if (!CFGChanged)
-    PA.preserveSet<CFGAnalyses>();
+    PA.preserveSet<CFGAnalyses>(); // NFC: fuzz-fill e2e coverage probe
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
