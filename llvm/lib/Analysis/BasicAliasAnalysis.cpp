@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -53,7 +54,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -67,19 +67,17 @@
 
 using namespace llvm;
 
-/// Enable analysis of recursive PHI nodes.
-static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
-                                          cl::init(true));
-
-static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(true));
-
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
 STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
+
+BasicAAResult::BasicAAResult(const DataLayout &DL, const Function &F,
+                             const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                             DominatorTree *DT)
+    : Opts(getAnalysisOptions(F)), DL(DL), F(F), TLI(TLI), AC(AC), DT_(DT) {}
 
 bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
@@ -1453,7 +1451,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // know that the recursive phi needs to be based on them in some way.
   bool isRecursive = false;
   auto CheckForRecPhi = [&](Value *PV) {
-    if (!EnableRecPhiAnalysis)
+    if (!Opts.basic_aa_recphi)
       return false;
     if (getUnderlyingObject(PV) == PN) {
       isRecursive = true;
@@ -1625,7 +1623,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
       isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
-  if (EnableSeparateStorageAnalysis) {
+  if (Opts.basic_aa_separate_storage) {
     for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
       if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;

@@ -460,9 +460,7 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   InGroup<UnusedCommandLineArgument>;
 
 def err_drv_device_lib_not_found : Error<
-  "no %select{libclc|compiler-rt builtins bitcode}0 library '%1' found in the "
-  "clang resource directory%select{|; build compiler-rt with SPIR-V support or "
-  "pass '--no-offloadlib' to compile without it}0">;
+  "no %0 library '%1' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;

@@ -46,6 +46,7 @@
 namespace llvm {
 
 class OverflowingBinaryOperator;
+struct AnalysisOptions;
 class AssumptionCache;
 class BasicBlock;
 class Constant;
@@ -1698,6 +1699,8 @@ private:
   friend class VPSCEVExpander;
   // Needs getWithOperands to rebuild a node from its canonical operands.
   friend void SCEV::computeAndSetCanonical(ScalarEvolution &SE);
+
+  const AnalysisOptions &Opts;
 
   /// The function we are analyzing.
   Function &F;
