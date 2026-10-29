@@ -151,3 +151,55 @@ define i1 @slt_sext_i32_i64_multiuse(i32 %a, i32 %b, ptr %p) {
   %c = icmp slt i64 %sa, %sb
   ret i1 %c
 }
+
+define i1 @eq_sext_i32_i64(i32 %a, i32 %b) {
+; X86-LABEL: eq_sext_i32_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: eq_sext_i32_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+  %sa = sext i32 %a to i64
+  %sb = sext i32 %b to i64
+  %c = icmp eq i64 %sa, %sb
+  ret i1 %c
+}
+
+define i1 @ugt_sext_i32_i64(i32 %a, i32 %b) {
+; X86-LABEL: ugt_sext_i32_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    cmpl %eax, %edx
+; X86-NEXT:    sbbl %ecx, %esi
+; X86-NEXT:    setb %al
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: ugt_sext_i32_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    seta %al
+; X64-NEXT:    retq
+  %sa = sext i32 %a to i64
+  %sb = sext i32 %b to i64
+  %c = icmp ugt i64 %sa, %sb
+  ret i1 %c
+}
