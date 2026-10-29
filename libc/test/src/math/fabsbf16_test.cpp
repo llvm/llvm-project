@@ -13,11 +13,16 @@
 
 #include "FAbsTest.h"
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fabsbf16.h"
 
-#ifndef LIBC_TYPES_HAS_BUILTIN_BFLOAT16
-using bfloat16 = LIBC_NAMESPACE::fputil::BFloat16;
-#endif // LIBC_TYPES_HAS_BUILTIN_BFLOAT16
-
-LIST_FABS_TESTS(Fabsbf16, bfloat16, LIBC_NAMESPACE::fabsbf16)
+#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+static bfloat16 fabsbf16_test_wrapper(bfloat16 x) {
+  return LIBC_NAMESPACE::cpp::bit_cast<bfloat16>(LIBC_NAMESPACE::fabsbf16(
+      LIBC_NAMESPACE::cpp::bit_cast<LIBC_NAMESPACE::bfloat16>(x)));
+}
+LIST_FABS_TESTS(Fabsbf16, bfloat16, fabsbf16_test_wrapper)
+#else
+LIST_FABS_TESTS(Fabsbf16, LIBC_NAMESPACE::bfloat16, LIBC_NAMESPACE::fabsbf16)
+#endif
