@@ -701,3 +701,52 @@ spirv.module Logical GLSL450 {
 // CHECK: spirv.func @store_equal_vector(%[[VALUE:.+]]: vector<4xf32>)
 // CHECK: %[[PTR:.+]] = spirv.AccessChain
 // CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[VALUE]] : vector<4xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf16>, stride=4> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_different_element_width(%value: vector<4xf32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c0] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    // expected-error@+1 {{failed to legalize operation 'spirv.Store'}}
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xf32>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<3xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_nondivisible_vectors(%value: vector<4xf32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c0] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xf32>
+    spirv.Return
+  }
+}
+
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0) {aliased}
+// CHECK: spirv.GlobalVariable @wide bind(0, 0) {aliased}
+// CHECK-LABEL: spirv.func @store_nondivisible_vectors
+// CHECK-NOT: spirv.VectorShuffle
+// CHECK: spirv.Store "StorageBuffer" {{.+}} : vector<4xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @store_without_access_chain(%ptr: !spirv.ptr<vector<4xf32>, StorageBuffer>, %value: vector<4xf32>) "None" {
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xf32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.func @store_without_access_chain(
+// CHECK-SAME: %[[PTR:.+]]: !spirv.ptr<vector<4xf32>, StorageBuffer>, %[[VALUE:.+]]: vector<4xf32>)
+// CHECK-NOT: spirv.AccessChain
+// CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[VALUE]] : vector<4xf32>

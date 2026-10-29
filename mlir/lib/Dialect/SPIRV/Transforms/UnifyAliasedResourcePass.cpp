@@ -573,33 +573,37 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
       unsigned count = dstVector.getNumElements();
       unsigned ratio = srcVector.getNumElements() / count;
       unsigned bytes = count * dstVector.getElementTypeBitWidth() / 8;
-      for (unsigned i = 0; i < ratio; ++i) {
-        Value part = value;
-        if (ratio > 1) {
-          SmallVector<int32_t> components;
-          for (unsigned j = 0; j < count; ++j)
-            components.push_back(i * count + j);
-          part = spirv::VectorShuffleOp::create(
-              rewriter, loc, dstVector, value, value,
-              rewriter.getI32ArrayAttr(components));
-        }
-        Value ptr = adaptor.getPtr();
+
+      // Split the value into stores of the canonical resource's vector type.
+      auto getPart = [&](unsigned i) -> Value {
+        if (ratio == 1)
+          return value;
+        SmallVector<int32_t> components;
+        for (unsigned j = 0; j < count; ++j)
+          components.push_back(i * count + j);
+        return spirv::VectorShuffleOp::create(
+            rewriter, loc, dstVector, value, value,
+            rewriter.getI32ArrayAttr(components));
+      };
+      auto firstStore = spirv::StoreOp::create(
+          rewriter, loc, adaptor.getPtr(), getPart(0),
+          storeOp.getMemoryAccessAttr(), storeOp.getAlignmentAttr());
+      firstStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
+      for (unsigned i = 1; i < ratio; ++i) {
+        Value part = getPart(i);
+        auto indices = llvm::to_vector(acOp.getIndices());
+        Type indexType = indices.back().getType();
+        auto offset = spirv::ConstantOp::create(
+            rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, i));
+        indices.back() = spirv::IAddOp::create(rewriter, loc, indexType,
+                                               indices.back(), offset);
+        Value ptr = spirv::AccessChainOp::create(rewriter, loc,
+                                                 acOp.getBasePtr(), indices);
         auto alignment = storeOp.getAlignmentAttr();
-        if (i) {
-          auto indices = llvm::to_vector(acOp.getIndices());
-          Type indexType = indices.back().getType();
-          auto offset = spirv::ConstantOp::create(
-              rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, i));
-          indices.back() = spirv::IAddOp::create(rewriter, loc, indexType,
-                                                 indices.back(), offset);
-          ptr = spirv::AccessChainOp::create(rewriter, loc, acOp.getBasePtr(),
-                                             indices);
-          if (alignment)
-            alignment = rewriter.getI32IntegerAttr(
-                llvm::commonAlignment(llvm::Align(alignment.getInt()),
-                                      i * bytes)
-                    .value());
-        }
+        if (alignment)
+          alignment = rewriter.getI32IntegerAttr(
+              llvm::commonAlignment(llvm::Align(alignment.getInt()), i * bytes)
+                  .value());
         auto store = spirv::StoreOp::create(
             rewriter, loc, ptr, part, storeOp.getMemoryAccessAttr(), alignment);
         store->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
