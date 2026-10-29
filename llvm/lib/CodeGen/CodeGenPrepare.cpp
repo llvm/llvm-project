@@ -1257,7 +1257,7 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
 }
 
 /// Sink the specified cast instruction into its user blocks.
-static bool SinkCast(CastInst *CI) {
+static bool SinkCast(CastInst *CI, bool SinkPHIUsers = true) {
   BasicBlock *DefBB = CI->getParent();
 
   /// InsertedCasts - Only insert a cast in each block once.
@@ -1278,6 +1278,11 @@ static bool SinkCast(CastInst *CI) {
 
     // Preincrement use iterator so we don't invalidate it.
     ++UI;
+
+    // Leave PHI users on the original cast when the target cannot lower a phi
+    // of the sunk copies. See TargetLowering::shouldSinkAddrSpaceCastForPHI.
+    if (!SinkPHIUsers && isa<PHINode>(User))
+      continue;
 
     // The first insertion point of a block containing an EH pad is after the
     // pad.  If the pad is the user, we cannot sink the cast past the pad.
@@ -1405,7 +1410,10 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   if (SrcVT != DstVT)
     return false;
 
-  return SinkCast(CI);
+  bool SinkPHIUsers = true;
+  if (isa<AddrSpaceCastInst>(CI))
+    SinkPHIUsers = TLI.shouldSinkAddrSpaceCastForPHI();
+  return SinkCast(CI, SinkPHIUsers);
 }
 
 // Match a simple increment by constant operation.  Note that if a sub is

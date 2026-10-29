@@ -2278,6 +2278,13 @@ public:
   virtual bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                                    unsigned DestAS) const;
 
+  /// Return true if a noop addrspacecast may be sunk into a PHI predecessor.
+  ///
+  /// The cast is otherwise copied into each predecessor. AMDGPU isel of the
+  /// resulting phi uses an undef incoming on the divergent skip edge and drops
+  /// one pointer, so a byte store writes through the other buffer's base.
+  virtual bool shouldSinkAddrSpaceCastForPHI() const { return true; }
+
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
   /// minimum size the object must be to be aligned and PrefAlign is set to the
