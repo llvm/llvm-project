@@ -66,17 +66,17 @@ inline bool isGenericLambdaCallOperatorSpecialization(const CXXMethodDecl *MD) {
   return false;
 }
 
-inline bool isLambdaConversionOperator(CXXConversionDecl *C) {
+inline bool isLambdaConversionOperator(const CXXConversionDecl *C) {
   return C ? C->getParent()->isLambda() : false;
 }
 
-inline bool isLambdaConversionOperator(Decl *D) {
+inline bool isLambdaConversionOperator(const Decl *D) {
   if (!D) return false;
-  if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D))
+  if (const CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D))
     return isLambdaConversionOperator(Conv);
-  if (FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(D))
-    if (CXXConversionDecl *Conv =
-        dyn_cast_or_null<CXXConversionDecl>(F->getTemplatedDecl()))
+  if (const FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(D))
+    if (const CXXConversionDecl *Conv =
+            dyn_cast_or_null<CXXConversionDecl>(F->getTemplatedDecl()))
       return isLambdaConversionOperator(Conv);
   return false;
 }
