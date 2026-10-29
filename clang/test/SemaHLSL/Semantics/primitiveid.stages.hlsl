@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
 // Stage and IO direction checks for SV_PrimitiveID: only a pixel input.
-// Type, index and interpolation checks are covered by primitiveid.ps.hlsl.
+// Type, index and interpolation checks are covered by primitiveid.ps.hlsl and
+// primitiveid.ps.errors.hlsl.
 
 [shader("pixel")]
 float4 ok_ps_in(uint s : SV_PrimitiveID) : SV_Target {
