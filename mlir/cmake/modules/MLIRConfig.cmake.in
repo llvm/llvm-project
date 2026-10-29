@@ -46,29 +46,21 @@ if(NOT TARGET MLIRSupport)
   @MLIR_CONFIG_INCLUDE_EXPORTS@
 endif()
 
-# Ensure MLIR_TABLEGEN_EXE is a full path and has a corresponding imported
-# target. In install trees, MLIR_TABLEGEN_EXE may be a bare name
-# ("mlir-tblgen") rather than an absolute path. Resolve it so that
-# TableGen.cmake can use it as both a COMMAND and a DEPENDS entry.
+# Resolve bare executable names to file paths for TableGen's dependencies.
 if(MLIR_TABLEGEN_EXE AND NOT IS_ABSOLUTE "${MLIR_TABLEGEN_EXE}"
     AND NOT TARGET "${MLIR_TABLEGEN_EXE}")
+  unset(_mlir_tblgen_exe CACHE)
   find_program(_mlir_tblgen_exe "${MLIR_TABLEGEN_EXE}"
     HINTS "${LLVM_TOOLS_BINARY_DIR}")
   if(_mlir_tblgen_exe)
     set(MLIR_TABLEGEN_EXE "${_mlir_tblgen_exe}")
   endif()
-  unset(_mlir_tblgen_exe)
+  unset(_mlir_tblgen_exe CACHE)
 endif()
 
-if(NOT TARGET mlir-tblgen AND MLIR_TABLEGEN_EXE)
-  add_executable(mlir-tblgen IMPORTED GLOBAL)
-  set_target_properties(mlir-tblgen PROPERTIES
-    IMPORTED_LOCATION "${MLIR_TABLEGEN_EXE}")
-endif()
 if(NOT DEFINED MLIR_TABLEGEN_TARGET)
-  set(MLIR_TABLEGEN_TARGET mlir-tblgen)
+  set(MLIR_TABLEGEN_TARGET "${MLIR_TABLEGEN_EXE}")
 endif()
-
 # By creating these targets here, subprojects that depend on MLIR's
 # tablegen-generated headers can always depend on these targets whether building
 # in-tree with MLIR or not.
