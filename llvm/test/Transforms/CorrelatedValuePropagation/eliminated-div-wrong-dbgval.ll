@@ -1,5 +1,9 @@
 ; RUN: opt < %s -passes=correlated-propagation -S | FileCheck %s
 
+; When removing div instructions, any debug values need to be updated correctly
+; to the value they would have had (or be poisoned)
+; See issues #218630 & #218632
+
 define dso_local i32 @sdiv_elide(i32 noundef %x) #0 !dbg !9 {
 ; CHECK:      entry:
 ; CHECK-NEXT: #dbg_value(i32 poison, [[META1:![0-9]+]], !DIExpression(), [[META2:![0-9]+]])
