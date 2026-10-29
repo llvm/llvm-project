@@ -2991,7 +2991,7 @@ void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
   LibraryOptionsContext &C = getCAPILibraryOptions();
   size_t Begin = C.args().size();
-  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &errs());
+  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &nulls());
 
   // Code without a context, such as a target machine created through the C
   // API, reads the global values.

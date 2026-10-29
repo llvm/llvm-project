@@ -39,7 +39,7 @@ LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
  * This function parses the given arguments using the LLVM command line parser.
  * Note that the only stable thing about this function is its signature; you
  * cannot rely on any particular set of command line arguments being interpreted
- * the same way across LLVM versions. Errors are printed to standard error.
+ * the same way across LLVM versions.
  *
  * Library options, which passes read from their LLVMContext, apply to contexts
  * that the C API creates afterwards, including the global context, which is
