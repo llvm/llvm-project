@@ -67,7 +67,7 @@ public:
   }
 
   void addMemcpyableField(FieldDecl *F) {
-    //assert(!cir::MissingFeatures::isEmptyFieldForLayout());
+    // assert(!cir::MissingFeatures::isEmptyFieldForLayout());
     if (F->isZeroSize(CGF.getContext()))
       return;
     if (!FirstField)
@@ -184,7 +184,110 @@ private:
   uint64_t FirstFieldOffset, LastFieldOffset;
   unsigned LastAddedFieldIndex;
 };
-}
+
+class AssignmentMemcpyizer : public FieldMemcpyizer {
+private:
+  // Returns the memcpyable field copied by the given statement, if one
+  // exists. Otherwise returns null.
+  FieldDecl *getMemcpyableField(Stmt *S) {
+    if (!AssignmentsMemcpyable)
+      return nullptr;
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(S)) {
+      // Recognise trivial assignments.
+      if (BO->getOpcode() != BO_Assign)
+        return nullptr;
+      MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS());
+      if (!ME)
+        return nullptr;
+      FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+      if (!Field || !isMemcpyableField(Field))
+        return nullptr;
+      Stmt *RHS = BO->getRHS();
+      if (ImplicitCastExpr *EC = dyn_cast<ImplicitCastExpr>(RHS))
+        RHS = EC->getSubExpr();
+      if (!RHS)
+        return nullptr;
+      if (MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS)) {
+        if (ME2->getMemberDecl() == Field)
+          return Field;
+      }
+      return nullptr;
+    } else if (isa<CXXMemberCallExpr>(S)) {
+      // We want to represent all calls explicitly for analysis purposes.
+      return nullptr;
+    } else if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
+      // TODO(cir): https://github.com/llvm/clangir/issues/1177: This can result
+      // in memcpys instead of calls to trivial member functions.
+      FunctionDecl *FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
+      if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_memcpy)
+        return nullptr;
+      Expr *DstPtr = CE->getArg(0);
+      if (ImplicitCastExpr *DC = dyn_cast<ImplicitCastExpr>(DstPtr))
+        DstPtr = DC->getSubExpr();
+      UnaryOperator *DUO = dyn_cast<UnaryOperator>(DstPtr);
+      if (!DUO || DUO->getOpcode() != UO_AddrOf)
+        return nullptr;
+      MemberExpr *ME = dyn_cast<MemberExpr>(DUO->getSubExpr());
+      if (!ME)
+        return nullptr;
+      FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+      if (!Field || !isMemcpyableField(Field))
+        return nullptr;
+      Expr *SrcPtr = CE->getArg(1);
+      if (ImplicitCastExpr *SC = dyn_cast<ImplicitCastExpr>(SrcPtr))
+        SrcPtr = SC->getSubExpr();
+      UnaryOperator *SUO = dyn_cast<UnaryOperator>(SrcPtr);
+      if (!SUO || SUO->getOpcode() != UO_AddrOf)
+        return nullptr;
+      MemberExpr *ME2 = dyn_cast<MemberExpr>(SUO->getSubExpr());
+      if (!ME2 || Field != dyn_cast<FieldDecl>(ME2->getMemberDecl()))
+        return nullptr;
+      return Field;
+    }
+
+    return nullptr;
+  }
+
+  bool AssignmentsMemcpyable;
+  SmallVector<Stmt *, 16> AggregatedStmts;
+
+public:
+  AssignmentMemcpyizer(CIRGenFunction &CGF, const CXXMethodDecl *AD,
+                       FunctionArgList &Args)
+      : FieldMemcpyizer(CGF, AD, Args[Args.size() - 1]),
+        AssignmentsMemcpyable(CGF.getLangOpts().getGC() == LangOptions::NonGC) {
+    assert(Args.size() == 2);
+  }
+
+  void emitAssignment(Stmt *S) {
+    FieldDecl *F = getMemcpyableField(S);
+    if (F) {
+      addMemcpyableField(F);
+      AggregatedStmts.push_back(S);
+    } else {
+      emitAggregatedStmts();
+      if (CGF.emitStmt(S, /*useCurrentScope=*/true).failed())
+        llvm_unreachable("Should not get here!");
+    }
+  }
+
+  void emitAggregatedStmts() {
+    if (AggregatedStmts.size() <= 1) {
+      if (!AggregatedStmts.empty()) {
+        CopyingValueRepresentation CVR(CGF);
+        if (CGF.emitStmt(AggregatedStmts[0], /*useCurrentScope=*/true).failed())
+          llvm_unreachable("Should not get here!");
+      }
+      reset();
+    }
+
+    emitMemcpy();
+    AggregatedStmts.clear();
+  }
+
+  void finish() { emitAggregatedStmts(); }
+};
+} // namespace
 
 /// Return the smallest possible amount of storage that might be allocated
 /// starting from the beginning of an object of a particular class.
