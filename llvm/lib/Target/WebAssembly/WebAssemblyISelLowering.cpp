@@ -352,6 +352,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Partial MLA reductions.
     for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA}) {
+      // Combine v8i8 -> v4i32.
+      setTargetDAGCombine(Op);
       setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
       setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v8i16, Legal);
     }
@@ -3917,6 +3919,41 @@ static SDValue performMulCombine(SDNode *N,
   }
 }
 
+static SDValue performPartialReduceMLACombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue ACC = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+
+  // Tablegen handles v4i16 and v8i16.
+  if (LHS.getValueType() != MVT::v8i8)
+    return SDValue();
+
+  assert(LHS.getValueType() == RHS.getValueType());
+  assert(ACC.getValueType() == MVT::v4i32);
+
+  bool IsSigned = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
+  unsigned ExtLowOpc =
+      IsSigned ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+  unsigned PairwiseOpc = IsSigned ? WebAssemblyISD::EXT_ADD_PAIRWISE_S
+                                  : WebAssemblyISD::EXT_ADD_PAIRWISE_U;
+
+  SDValue ExtLHS =
+      DAG.getNode(ExtLowOpc, DL, MVT::v8i16, DoubleVectorWidth(LHS, 16, DAG));
+  if (isOneOrOneSplat(RHS)) {
+    // Just accumulating.
+    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, ACC,
+                       DAG.getNode(PairwiseOpc, DL, MVT::v4i32, ExtLHS));
+  } else {
+    SDValue ExtRHS =
+        DAG.getNode(ExtLowOpc, DL, MVT::v8i16, DoubleVectorWidth(RHS, 16, DAG));
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::v8i16, ExtLHS, ExtRHS);
+    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, ACC,
+                       DAG.getNode(PairwiseOpc, DL, MVT::v4i32, Mul));
+  }
+}
+
 SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   EVT OutVT = N->getValueType(0);
   if (!OutVT.isVector())
@@ -4090,6 +4127,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return performPartialReduceMLACombine(N, DCI.DAG);
   case ISD::SHL:
     return performShiftCombine(N, DCI);
   case ISD::FMINIMUM:
