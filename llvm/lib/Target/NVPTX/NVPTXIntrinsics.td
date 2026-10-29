@@ -2126,6 +2126,38 @@ defm MIN : MIN_MAX<"min">;
 defm MAX : MIN_MAX<"max">;
 
 //
+// Mixed Precision Helpers
+//
+
+// Match only when the fold removes at least one explicit conversion, and the
+// extended vector is not shared.
+class FoldableFPExtendV2F32<dag ops, dag frag>
+  : PatFrag<ops, frag, [{
+      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
+                                N->getOperand(1)->hasOneUse());
+    }]>;
+
+// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
+// behind depending on whether the source lanes share a register.
+def fpextend_v2f32_from_packed
+  : FoldableFPExtendV2F32<(ops node:$a),
+                          (v2f32 (build_vector
+                            (f32 (fpextend (extractelt node:$a, 0))),
+                            (f32 (fpextend (extractelt node:$a, 1)))))>;
+
+def fpextend_v2f32_from_lanes
+  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
+                          (v2f32 (build_vector
+                            (f32 (fpextend node:$a0)),
+                            (f32 (fpextend node:$a1))))>;
+
+// Fuse downconverting add/sub/mul only when the result of the operation is
+// solely used for downconverting.
+def extractelt_only_for_cvt
+  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
+            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
+
+//
 // Multiplication
 //
 
@@ -2163,6 +2195,32 @@ foreach ftz = ["", "ftz"] in {
 defm MUL_F64 :
   F_MATH_2_RNDOP_TY<"mul.${rnd}.f64", F64RT, int_nvvm_fmul>;
 
+// Mixed Precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar MulOp = !cast<Intrinsic>("int_nvvm_fmul" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def MUL # !toupper(!subst(".", "_", ftz) # "_rz_" # t.PtxType # "_f32x2_f32x2") :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "mul" # ftz # ".rz." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("MUL" # !toupper(!subst(".", "_", ftz) #
+                                     "_rz_" # t.PtxType # "_f32x2_f32x2"));
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt
+                       (MulOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+                     (extractelt_only_for_cvt
+                       (MulOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
+
 //
 // Div
 //
@@ -2186,6 +2244,10 @@ defm DIV_RZ_F64 : F_MATH_2<"div.rz.f64", F64RT, int_nvvm_div_rz_d>;
 defm DIV_RM_F64 : F_MATH_2<"div.rm.f64", F64RT, int_nvvm_div_rm_d>;
 defm DIV_RP_F64 : F_MATH_2<"div.rp.f64", F64RT, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, FTZ)>;
 def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
           (DIV_FULL_F32 reg_or_fpimm:$a, reg_or_fpimm:$b, NoFTZ)>;
 def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
@@ -2519,34 +2581,6 @@ foreach ftz = ["", "ftz"] in {
 defm ADD_F64 : F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
 // Mixed Precision
-
-// Match only when the fold removes at least one explicit conversion, and the
-// extended vector is not shared.
-class FoldableFPExtendV2F32<dag ops, dag frag>
-  : PatFrag<ops, frag, [{
-      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
-                                N->getOperand(1)->hasOneUse());
-    }]>;
-
-// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
-// behind depending on whether the source lanes share a register.
-def fpextend_v2f32_from_packed
-  : FoldableFPExtendV2F32<(ops node:$a),
-                          (v2f32 (build_vector
-                            (f32 (fpextend (extractelt node:$a, 0))),
-                            (f32 (fpextend (extractelt node:$a, 1)))))>;
-
-def fpextend_v2f32_from_lanes
-  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
-                          (v2f32 (build_vector
-                            (f32 (fpextend node:$a0)),
-                            (f32 (fpextend node:$a1))))>;
-
-// Fuse downconverting add/sub only when the result of the add/sub is solely
-// used for downconverting.
-def extractelt_only_for_cvt
-  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
-            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
 
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");

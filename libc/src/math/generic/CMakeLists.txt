@@ -2102,6 +2102,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminf80
+  SRCS
+    fminf80.cpp
+  HDRS
+    ../fminf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminf80
+)
+
+add_entrypoint_object(
   fminbf16
   SRCS
     fminbf16.cpp
@@ -2163,6 +2174,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaxf80
+  SRCS
+    fmaxf80.cpp
+  HDRS
+    ../fmaxf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaxf80
+)
+
+add_entrypoint_object(
   fmaxbf16
   SRCS
     fmaxbf16.cpp
@@ -2221,6 +2243,17 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximumf128
+)
+
+add_entrypoint_object(
+  fmaximumf80
+  SRCS
+    fmaximumf80.cpp
+  HDRS
+    ../fmaximumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximumf80
 )
 
 add_entrypoint_object(
@@ -2465,6 +2498,17 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.math.fminimumf128
+)
+
+add_entrypoint_object(
+  fminimumf80
+  SRCS
+    fminimumf80.cpp
+  HDRS
+    ../fminimumf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimumf80
 )
 
 add_entrypoint_object(
@@ -3761,6 +3805,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cosh
+  SRCS
+    cosh.cpp
+  HDRS
+    ../cosh.h
+  DEPENDS
+    libc.src.__support.math.cosh
+)
+
+add_entrypoint_object(
   coshf
   SRCS
     coshf.cpp
@@ -3781,6 +3835,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinh
+  SRCS
+    sinh.cpp
+  HDRS
+    ../sinh.h
+  DEPENDS
+    libc.src.__support.math.sinh
+)
+
+add_entrypoint_object(
   sinhf
   SRCS
     sinhf.cpp
@@ -3798,6 +3862,16 @@ add_entrypoint_object(
     ../sinhf16.h
   DEPENDS
     libc.src.__support.math.sinhf16
+)
+
+add_entrypoint_object(
+  tanh
+  SRCS
+    tanh.cpp
+  HDRS
+    ../tanh.h
+  DEPENDS
+    libc.src.__support.math.tanh
 )
 
 add_entrypoint_object(

@@ -1285,6 +1285,7 @@ AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
 
 AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
     : symTabMap(std::move(other.symTabMap)),
+      symbolLookupsDisabled(other.symbolLookupsDisabled),
       domInfoCache(std::move(other.domInfoCache)),
       sortedScopeCache(std::move(other.sortedScopeCache)),
       multiScopeCache(std::move(other.multiScopeCache)),
@@ -2282,6 +2283,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
 const mlir::SymbolTable *
 fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
   assert(from);
+  if (symbolLookupsDisabled)
+    return nullptr;
   Operation *symTabOp = mlir::SymbolTable::getNearestSymbolTable(from);
   if (!symTabOp)
     return nullptr;
