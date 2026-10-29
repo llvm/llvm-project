@@ -319,7 +319,27 @@ AIRTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 AIRTargetLowering::AIRTargetLowering(const AIRTargetMachine &TM,
                                          const AIRSubtarget &STI)
-    : TargetLowering(TM, STI) {}
+    : TargetLowering(TM, STI) {
+  // AIR has no instruction selection, but the cost model the optimizations
+  // of portable AIR use asks which types and operations the target has: a
+  // GPU's 16- and 32-bit integers and floats, with their minimum, maximum,
+  // absolute value and bit counts (otherwise each costs a legalization, and
+  // simplifycfg keeps branches a GPU would rather select). 64-bit integers
+  // too, as register pairs (comparisons and selects of addresses are
+  // everywhere).
+  const TargetRegisterClass *RC = STI.getRegisterInfo()->getRegClass(0);
+  for (MVT VT : {MVT::i1, MVT::i16, MVT::i32, MVT::i64, MVT::f16, MVT::f32})
+    addRegisterClass(VT, RC);
+  computeRegisterProperties(STI.getRegisterInfo());
+  for (MVT VT : {MVT::i16, MVT::i32})
+    setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS,
+                        ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::BITREVERSE},
+                       VT, Legal);
+  for (MVT VT : {MVT::f16, MVT::f32})
+    setOperationAction({ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUM,
+                        ISD::FMAXIMUM, ISD::FMA, ISD::FABS, ISD::FCOPYSIGN},
+                       VT, Legal);
+}
 
 bool AIRTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               const AddrMode &AM, Type *Ty,

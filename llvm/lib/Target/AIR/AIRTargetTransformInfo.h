@@ -106,6 +106,10 @@ public:
       case Instruction::AddrSpaceCast:
         return 0;
       case Instruction::ZExt:
+        // to a 64-bit register pair: the high half is zero
+        if (Dst->isIntegerTy(64) && Src->getScalarSizeInBits() == 32)
+          return 0;
+        return 1;
       case Instruction::SExt:
         return 1;
       default:
