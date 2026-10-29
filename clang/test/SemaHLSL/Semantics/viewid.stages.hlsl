@@ -3,7 +3,7 @@
 
 // Stage and IO direction checks for SV_ViewID: an input to every graphics
 // stage except amplification shaders. Type, index and interpolation checks are
-// covered by viewid.ps.hlsl.
+// covered by viewid.ps.hlsl and viewid.ps.errors.hlsl.
 
 [shader("vertex")]
 float4 ok_vs_in(uint v : SV_ViewID) : SV_Position {
