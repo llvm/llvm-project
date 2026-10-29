@@ -33,6 +33,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -2768,8 +2769,36 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   return Changed;
 }
 
+/// Returns true if \p I may be simplified by the pass. Only those are queued as
+/// checks by State::addInfoFor, everything else only contributes facts.
+static bool isSimplificationCandidate(const Instruction &I) {
+  CmpPredicate Pred;
+  if (match(&I, m_ICmpLike(Pred, m_Value(), m_Value())))
+    return true;
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::ucmp:
+  case Intrinsic::scmp:
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+    return true;
+  default:
+    return false;
+  }
+}
+
 PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  // Wthout any constraints to eliminate, the pass  cannot possibly change
+  // anything. Bail out before computing any analyses.
+  if (none_of(instructions(F), isSimplificationCandidate))
+    return PreservedAnalyses::all();
+
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   // SCEV is only used for loops, only construct it if there are some.
