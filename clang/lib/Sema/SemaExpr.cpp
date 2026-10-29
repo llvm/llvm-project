@@ -20240,8 +20240,16 @@ bool Sema::tryCaptureVariable(
   // Exception: Function parameters are not tied to the function's DeclContext
   // until we enter the function definition. Capturing them anyway would result
   // in an out-of-bounds error while traversing DC and its parents.
-  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod())
-    return true;
+
+  bool InDefaultArg = llvm::any_of(
+    ExprEvalContexts, [](const ExpressionEvaluationContextRecord &C) {
+      return isa_and_nonnull<ParmVarDecl>(C.ManglingContextDecl);
+    });
+  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod() && !InDefaultArg &&
+    llvm::any_of(ExprEvalContexts,
+                 [](const ExpressionEvaluationContextRecord &C) {
+                   return C.isUnevaluated();
+                 })) return true;
 
   const auto *VD = dyn_cast<VarDecl>(Var);
   if (VD) {
