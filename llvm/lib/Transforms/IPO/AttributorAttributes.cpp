@@ -6152,11 +6152,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     bool UsedAssumedInformation = false;
     if (IsVoidTy || CheckReturnedArgs(UsedAssumedInformation)) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
-      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+      // If the function only reads memory and does not return the value, the
+      // value can still be captured by whether the function returns.
+      bool IsKnownWillReturn;
+      bool IsAssumedWillReturn = AA::hasAssumedIRAttr<Attribute::WillReturn>(
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownWillReturn);
+      if (IsAssumedWillReturn && T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
       if (IsKnownNoUnwind && (IsVoidTy || !UsedAssumedInformation)) {
         addKnownBits(NOT_CAPTURED_IN_RET);
-        if (isKnown(NOT_CAPTURED_IN_MEM))
+        if (IsKnownWillReturn && isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
       }
     }
