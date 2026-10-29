@@ -29,10 +29,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "tti"
 
-static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
-                                     cl::Hidden,
-                                     cl::desc("Recognize reduction patterns."));
-
 static cl::opt<unsigned> CacheLineSize(
     "cache-line-size", cl::init(0), cl::Hidden,
     cl::desc("Use this to override the target cache line size when "
@@ -179,11 +175,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
       continue;
 
     // Make sure this blocks ends with a conditional branch.
-    Instruction *TI = BB->getTerminator();
-    if (!TI)
-      continue;
-
-    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator()))
       ExitBranch = BI;
     else
       continue;
@@ -434,6 +426,11 @@ bool TargetTransformInfo::isLegalAddScalableImmediate(int64_t Imm) const {
 
 bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
+}
+
+bool TargetTransformInfo::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  return TTIImpl->preferLoopExitWithEqualityComparison(Cond, PostIncExitValue);
 }
 
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -771,10 +768,6 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
-bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
-  return TTIImpl->haveFastClmul(Ty);
-}
-
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
     const Instruction *I) const {
   return TTIImpl->isExpensiveToSpeculativelyExecute(I);
@@ -1082,7 +1075,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
-  // Use call cost for frem intructions that have platform specific vector math
+  // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
@@ -1628,12 +1621,6 @@ bool TargetTransformInfo::isProfitableToSinkOperands(
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
-}
-
-unsigned
-TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
-                                                 Type *ArrayType) const {
-  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 void TargetTransformInfo::collectKernelLaunchBounds(

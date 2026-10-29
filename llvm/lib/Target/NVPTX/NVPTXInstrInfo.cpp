@@ -235,14 +235,10 @@ static bool isIntegerSetp(const MachineInstr &MI) {
 
 static bool isScalarFloatSetp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case NVPTX::SETP_bf16rr:
-  case NVPTX::SETP_f16rr:
-  case NVPTX::SETP_f32rr:
-  case NVPTX::SETP_f32ri:
-  case NVPTX::SETP_f32ir:
-  case NVPTX::SETP_f64rr:
-  case NVPTX::SETP_f64ri:
-  case NVPTX::SETP_f64ir:
+  case NVPTX::SETP_bf16:
+  case NVPTX::SETP_f16:
+  case NVPTX::SETP_f32:
+  case NVPTX::SETP_f64:
     return true;
   default:
     return false;
@@ -322,58 +318,7 @@ static void invertScalarCompareInstr(MachineInstr &MI) {
     llvm_unreachable("Invalid SETP instruction");
 }
 
-static unsigned getInvertedSelpOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  case NVPTX::SELP_b16ri:
-    return NVPTX::SELP_b16ir;
-  case NVPTX::SELP_b16ir:
-    return NVPTX::SELP_b16ri;
-  case NVPTX::SELP_b32ri:
-    return NVPTX::SELP_b32ir;
-  case NVPTX::SELP_b32ir:
-    return NVPTX::SELP_b32ri;
-  case NVPTX::SELP_b64ri:
-    return NVPTX::SELP_b64ir;
-  case NVPTX::SELP_b64ir:
-    return NVPTX::SELP_b64ri;
-  case NVPTX::SELP_f16ri:
-    return NVPTX::SELP_f16ir;
-  case NVPTX::SELP_f16ir:
-    return NVPTX::SELP_f16ri;
-  case NVPTX::SELP_f32ri:
-    return NVPTX::SELP_f32ir;
-  case NVPTX::SELP_f32ir:
-    return NVPTX::SELP_f32ri;
-  case NVPTX::SELP_f64ri:
-    return NVPTX::SELP_f64ir;
-  case NVPTX::SELP_f64ir:
-    return NVPTX::SELP_f64ri;
-  case NVPTX::SELP_bf16ri:
-    return NVPTX::SELP_bf16ir;
-  case NVPTX::SELP_bf16ir:
-    return NVPTX::SELP_bf16ri;
-  case NVPTX::SELP_b16rr:
-  case NVPTX::SELP_b16ii:
-  case NVPTX::SELP_b32rr:
-  case NVPTX::SELP_b32ii:
-  case NVPTX::SELP_b64rr:
-  case NVPTX::SELP_b64ii:
-  case NVPTX::SELP_f16rr:
-  case NVPTX::SELP_f16ii:
-  case NVPTX::SELP_f32rr:
-  case NVPTX::SELP_f32ii:
-  case NVPTX::SELP_f64rr:
-  case NVPTX::SELP_f64ii:
-  case NVPTX::SELP_bf16rr:
-  case NVPTX::SELP_bf16ii:
-    return Opcode;
-  default:
-    llvm_unreachable("Unexpected select instruction");
-  }
-}
-
-static void invertSelpInstr(MachineInstr &MI, const NVPTXInstrInfo &TII) {
-  MI.setDesc(TII.get(getInvertedSelpOpcode(MI.getOpcode())));
+static void invertSelpInstr(MachineInstr &MI) {
   MachineOperand Src0 = MI.getOperand(1);
   MI.removeOperand(1);
   MI.insert(MI.operands_begin() + 2, {Src0});
@@ -427,7 +372,7 @@ MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   }
 
   for (MachineInstr *SelectMI : SelectInstrs)
-    invertSelpInstr(*SelectMI, *this);
+    invertSelpInstr(*SelectMI);
 
   return &MI;
 }

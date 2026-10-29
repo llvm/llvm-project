@@ -343,6 +343,41 @@ def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
   ];
 }
 
+def RangeOpInterface : OpInterface<"RangeOpInterface"> {
+  let description = [{
+    An interface for operations that can carry range metadata. The default
+    implementations expect a ConstantRangeAttr named `range`.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyRangeOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the range attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::ConstantRangeAttr",
+      /*methodName=*/  "getRangeOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRangeAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the range attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setRange",
+      /*args=*/        (ins "::mlir::LLVM::ConstantRangeAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRangeAttr(attr);
+      }]
+      >
+  ];
+}
+
 def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface"> {
   let description = [{
     An interface for operations receiving an exception behavior attribute

@@ -189,10 +189,19 @@ public:
   }
 
   Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    auto *CBase = dyn_cast<Constant>(Base);
+    auto *CVal = dyn_cast<Constant>(Val);
+    auto *COffset = dyn_cast<Constant>(Offset);
+    if (CBase && CVal && COffset)
+      return ConstantFoldBitInsertOperands(CBase, CVal, COffset, DL);
     return nullptr;
   }
 
   Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    auto *CSrc = dyn_cast<Constant>(Src);
+    auto *COffset = dyn_cast<Constant>(Offset);
+    if (CSrc && COffset)
+      return ConstantFoldBitExtractOperands(Ty, CSrc, COffset, DL);
     return nullptr;
   }
 

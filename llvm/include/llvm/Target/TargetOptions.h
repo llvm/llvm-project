@@ -45,7 +45,7 @@ enum class BasicBlockSection {
           // basic block sections for a subset of basic blocks which can be
           // used to control object size bloats from creating sections.
   Preset, // Similar to list but the blocks are identified by passes which
-          // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
+          // seek to use Basic Block Sections, e.g. -function-splitting=all.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
 };
@@ -57,7 +57,6 @@ enum class FunctionSplittingMode {
                   // which have a basic block sections profile. Such functions
                   // are still laid out using the profile, but are emitted as a
                   // single contiguous section.
-                  // NOTE: Not implemented yet.
   BBSectionsOnly, // Split only functions that have a basic block sections
                   // profile. Functions without one are not split, even if
                   // they have PGO/SamplePGO data. This is the default, and
@@ -135,7 +134,7 @@ public:
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true) {}
+        VerifyArgABICompliance(false) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -292,9 +291,8 @@ public:
   unsigned XCOFFReadOnlyPointers : 1;
 
   /// When set to true, call/return argument extensions of narrow integers
-  /// are verified in the target backend if it cares about them. This is
-  /// not done with internal tools like llc that run many tests that ignore
-  /// (lack) these extensions.
+  /// are verified in the target backend if it cares about them. This is off
+  /// by default and enabled explicitly by each front-end separately.
   unsigned VerifyArgABICompliance : 1;
 
   /// Name of the stack usage file (i.e., .su file) if user passes
@@ -312,9 +310,6 @@ public:
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 public:
-  /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
-
   /// Machine level options.
   MCTargetOptions MCOptions;
 

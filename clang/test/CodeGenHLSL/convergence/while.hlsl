@@ -91,7 +91,7 @@ void test5() {
 // CHECK: while.cond:
 // CHECK:   [[T1:%[0-9]+]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[T0]]) ]
 // CHECK:                    call{{.*}} noundef i1 @_Z4condv() [[A3]] [ "convergencectrl"(token [[T1]]) ]
-// CHECK: while.cond2:
+// CHECK: while.cond1:
 // CHECK:   [[T2:%[0-9]+]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[T1]]) ]
 // CHECK:                    call{{.*}} noundef i1 @_Z4condv() [[A3]] [ "convergencectrl"(token [[T2]]) ]
 // CHECK: if.then:
@@ -116,7 +116,7 @@ void test6() {
 // CHECK: while.cond:
 // CHECK:   [[T1:%[0-9]+]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[T0]]) ]
 // CHECK:                    call{{.*}} noundef i1 @_Z4condv() [[A3]] [ "convergencectrl"(token [[T1]]) ]
-// CHECK: while.cond2:
+// CHECK: while.cond1:
 // CHECK:   [[T2:%[0-9]+]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[T1]]) ]
 // CHECK:                    call{{.*}} noundef i1 @_Z4condv() [[A3]] [ "convergencectrl"(token [[T2]]) ]
 // CHECK: if.then:

@@ -1,5 +1,7 @@
 add_lldb_library(lldbPluginTypeSystemClike PLUGIN
   Identifier.cpp
+  LanguageOpts.cpp
+  Type.cpp
   TypeSystemClike.cpp
 
   LINK_COMPONENTS
@@ -8,4 +10,6 @@ add_lldb_library(lldbPluginTypeSystemClike PLUGIN
     lldbCore
     lldbSymbol
     lldbUtility
+  CLANG_LIBS
+    clangBasic
 )

@@ -71,6 +71,12 @@ Session::~Session() {
   ORC_RT_LOG(Info, Session, "Session %p destructor complete", this);
 }
 
+SymbolLookupResult
+Session::lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept {
+  std::scoped_lock<std::mutex> Lock(M);
+  return InstanceSymbols.lookup(LS);
+}
+
 void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
   assert(CA && "doAttach called with null CA object");
 

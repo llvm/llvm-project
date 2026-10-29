@@ -26,7 +26,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InIter, class _Sent, class _OutIter, class _Proj, class _Pred>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_InIter, _OutIter>
+_LIBCPP_CONSTEXPR_SINCE_CXX14 __in_out_result<_InIter, _OutIter>
 __copy_if(_InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, _Proj& __proj) {
   for (; __first != __last; ++__first) {
     if (std::__invoke(__pred, std::__invoke(__proj, *__first))) {
@@ -38,7 +38,7 @@ __copy_if(_InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, _Proj
 }
 
 template <class _InputIterator, class _OutputIterator, class _Predicate>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy_if(_InputIterator __first, _InputIterator __last, _OutputIterator __result, _Predicate __pred) {
   __identity __proj;
   return std::__copy_if(__first, __last, __result, __pred, __proj).__out_;

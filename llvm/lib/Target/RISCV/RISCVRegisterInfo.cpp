@@ -29,13 +29,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableCostPerUse("riscv-cost-per-use", cl::init(true),
-                                      cl::Hidden);
-static cl::opt<bool>
-    EnableRegAllocHints("riscv-regalloc-hints", cl::Hidden, cl::init(true),
-                        cl::desc("Enable two address hints for register "
-                                 "allocation"));
-
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
 static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
@@ -197,10 +190,6 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
-
-  // Additionally reserve dummy register used to form the register pair
-  // beginning with 'x0' for instructions that take register pairs.
-  markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
 
   // There are only 16 GPRs for RVE.
   if (Subtarget.hasStdExtE())
@@ -979,12 +968,20 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
   }
 }
 
+std::pair<Register, Register>
+RISCVRegisterInfo::getGPRPairSubRegs(MCRegister Pair) const {
+  if (Pair == RISCV::X0_Pair)
+    return {RISCV::X0, RISCV::X0};
+  return {getSubReg(Pair, RISCV::sub_gpr_even),
+          getSubReg(Pair, RISCV::sub_gpr_odd)};
+}
+
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
   // Set CostPerUse to 1 only when optimizing for size and RVC exists.
-  return MF.getFunction().hasOptSize() &&
-                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
-                 EnableCostPerUse
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+  return MF.getFunction().hasOptSize() && ST.hasStdExtZca() &&
+                 ST.getCLOpts().cost_per_use
              ? 1
              : 0;
 }
@@ -1046,7 +1043,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
-  if (!VRM || !EnableRegAllocHints)
+  if (!VRM || !MF.getSubtarget<RISCVSubtarget>().getCLOpts().regalloc_hints)
     return BaseImplRetVal;
 
   // Add any two address hints after any copy hints.

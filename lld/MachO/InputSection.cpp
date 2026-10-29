@@ -241,14 +241,14 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = dyn_cast<Symbol *>(minuend.referent))
-        minuendVA = toSym->getVA() + minuend.addend;
+        minuendVA = toSym->getVA() + minuend.getAddend();
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
-        minuendVA = referentIsec->getVA(minuend.addend);
+        minuendVA = referentIsec->getVA(minuend.getAddend());
       }
       referentVA = minuendVA - fromSym->getVA();
-    } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
+    } else if (auto *referentSym = dyn_cast_if_present<Symbol *>(r.referent)) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
@@ -258,7 +258,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.addend);
+      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
       if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets
@@ -267,12 +267,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         // contiguous).
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.addend);
+        writeChainedFixup(loc, referentSym, r.getAddend());
         continue;
       }
-    } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+    } else if (auto *referentIsec =
+                   dyn_cast_if_present<InputSection *>(r.referent)) {
       assert(!::shouldOmitFromOutput(referentIsec));
-      referentVA = referentIsec->getVA(r.addend);
+      referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
         writeChainedRebase(loc, referentVA);

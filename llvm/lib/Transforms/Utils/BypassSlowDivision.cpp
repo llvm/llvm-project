@@ -411,7 +411,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   }
 
   if (isa<ConstantInt>(Divisor)) {
-    // If the divisor is not a constant, DAGCombiner will convert it to a
+    // If the divisor is a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
     return std::nullopt;

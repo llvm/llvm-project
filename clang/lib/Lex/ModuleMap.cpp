@@ -1126,8 +1126,8 @@ static void inferFrameworkLink(Module *Mod) {
 
   StringRef FrameworkName(Mod->Name);
   FrameworkName.consume_back("_Private");
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
-                                                   /*IsFramework=*/true));
+  Mod->LinkLibraries.emplace_back(FrameworkName.str(),
+                                  /*IsFramework=*/true);
 }
 
 Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
@@ -1357,10 +1357,15 @@ void ModuleMap::recordDirectoryDependencies(Module *Mod, StringRef Dir) {
   FileMgr.getVirtualFileSystem().getDirectoryContentRealSources(Dir, Sources);
   for (StringRef Source : Sources) {
     SmallString<256> Canonical(Source);
-    FileMgr.makeAbsolutePath(Canonical);
-    llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
+    canonicalizeDirectoryDependency(FileMgr, Canonical);
     Mod->addDirectoryDependency(Canonical);
   }
+}
+
+void ModuleMap::canonicalizeDirectoryDependency(const FileManager &FileMgr,
+                                                SmallVectorImpl<char> &Path) {
+  FileMgr.makeAbsolutePath(Path);
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(
@@ -2296,8 +2301,8 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  ActiveModule->LinkLibraries.push_back(
-      Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
+  ActiveModule->LinkLibraries.emplace_back(std::string{LD.Library},
+                                           LD.Framework);
 }
 
 void ModuleMapLoader::handleConfigMacros(

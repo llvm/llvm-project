@@ -29,7 +29,6 @@ class QualType;
 namespace interp {
 
 template <class Emitter> class LocalScope;
-template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
@@ -38,9 +37,7 @@ template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
 template <class Emitter> class LoopScope;
-template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
-template <class Emitter> class StmtExprScope;
 template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
@@ -361,7 +358,6 @@ protected:
 private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
-  friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
   friend class InitStackScope<Emitter>;
@@ -370,9 +366,7 @@ private:
   friend class SourceLocScope<Emitter>;
   friend struct InitLink;
   friend class LoopScope<Emitter>;
-  friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
-  friend class StmtExprScope<Emitter>;
   friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.

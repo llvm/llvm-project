@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_sem_unittests)
+add_libc_testsuite(libc-sys-sem-tests)
 
 add_libc_test(
   sem_test
   SUITE
-    libc_sys_sem_unittests
+    libc-sys-sem-tests
   SRCS
     sem_test.cpp
   DEPENDS

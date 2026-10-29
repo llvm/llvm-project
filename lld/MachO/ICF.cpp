@@ -163,13 +163,13 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // ICF runs before Undefineds are treated (and potentially converted into
       // DylibSymbols).
       if (isa<DylibSymbol>(sa) || isa<Undefined>(sa))
-        return sa == sb && ra.addend == rb.addend;
+        return sa == sb && ra.getAddend() == rb.getAddend();
       assert(isa<Defined>(sa));
       const auto *da = cast<Defined>(sa);
       const auto *db = cast<Defined>(sb);
       if (!da->isec() || !db->isec()) {
         assert(da->isAbsolute() && db->isAbsolute());
-        return da->value + ra.addend == db->value + rb.addend;
+        return da->value + ra.getAddend() == db->value + rb.getAddend();
       }
       isecA = da->isec();
       valueA = da->value;
@@ -197,7 +197,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     assert(isecA->kind() == isecB->kind());
     // We will compare ConcatInputSection contents in equalsVariable.
     if (isa<ConcatInputSection>(isecA))
-      return valueA + ra.addend == valueB + rb.addend;
+      return valueA + ra.getAddend() == valueB + rb.getAddend();
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
     if (isa<Symbol *>(ra.referent))
@@ -205,10 +205,10 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
       return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
-             ra.addend == rb.addend;
+             ra.getAddend() == rb.getAddend();
     assert(valueA == 0 && valueB == 0);
     // For section relocs, we compare the content at the section offset.
-    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    return isecA->getOffset(ra.getAddend()) == isecB->getOffset(rb.getAddend());
   };
   if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;
@@ -449,16 +449,25 @@ void ICF::run() {
     });
   }
   const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
-  llvm::stable_sort(
-      icfInputs, [&](const ConcatInputSection *a, const ConcatInputSection *b) {
-        // When using safe_thunks, ensure that we first sort by icfEqClass and
-        // then by keepUnique (descending). This guarantees that within an
-        // equivalence class, the keepUnique inputs are always first.
-        if (useSafeThunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
-            return a->keepUnique > b->keepUnique;
-        return a->icfEqClass[0] < b->icfEqClass[0];
-      });
+  // Sort by icfEqClass so that inputs in the same equivalence class are
+  // consecutive. When using safe_thunks, also sort by keepUnique (descending)
+  // within a class. This guarantees that within an equivalence class, the
+  // keepUnique inputs are always first. The index in the low bits keeps the
+  // order stable.
+  assert(icfInputs.size() <= (1u << 31));
+  SmallVector<uint64_t, 0> keys(icfInputs.size());
+  parallelFor(0, icfInputs.size(), [&](size_t i) {
+    uint64_t key = uint64_t(icfInputs[i]->icfEqClass[0]) << 32 | i;
+    if (useSafeThunks && !icfInputs[i]->keepUnique)
+      key |= 1u << 31;
+    keys[i] = key;
+  });
+  parallelSort(keys.begin(), keys.end());
+  std::vector<ConcatInputSection *> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(icfInputs[k & ((1u << 31) - 1)]);
+  icfInputs = std::move(sorted);
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
   });
@@ -478,7 +487,7 @@ void ICF::run() {
 
   // When using safe_thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
-  // InputSections, we can't paralellize this.
+  // InputSections, we can't parallelize this.
   if (useSafeThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);
@@ -591,7 +600,7 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
     InputSection *thunk = bodySym->isec();
     assert(thunk && !thunk->relocs.empty());
     const Relocation &r = thunk->relocs.front();
-    assert(r.addend == 0);
+    assert(r.getAddend() == 0);
     bodySym = cast<Defined>(cast<Symbol *>(r.referent));
     assert(!bodySym->branchExtensionThunk);
   }

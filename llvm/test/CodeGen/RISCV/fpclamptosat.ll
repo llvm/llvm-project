@@ -6589,3 +6589,20 @@ define i32 @ustest_f16i32_nsat(half %x) {
   ret i32 %spec.store.select7
 }
 
+; A zero clamp is not saturation bound, so umin(fptoui(x), 0) should fold to 0.
+define i32 @utest_f32i32_zero(float %x) {
+; RV32-LABEL: utest_f32i32_zero:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: utest_f32i32_zero:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    ret
+entry:
+  %conv = fptoui float %x to i32
+  %spec.store.select = call i32 @llvm.umin.i32(i32 %conv, i32 0)
+  ret i32 %spec.store.select
+}
+

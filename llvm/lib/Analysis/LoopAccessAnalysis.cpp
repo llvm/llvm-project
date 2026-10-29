@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -102,77 +103,8 @@ static cl::opt<unsigned, true> VectorizeMemoryCheckThreshold(
     cl::init(128));
 unsigned VectorizerParams::VectorizeMemoryCheckThreshold;
 
-/// The maximum iterations used to merge memory checks
-static cl::opt<unsigned> MemoryCheckMergeThreshold(
-    "memory-check-merge-threshold", cl::Hidden,
-    cl::desc("Maximum number of comparisons done when trying to merge "
-             "runtime memory checks. (default = 100)"),
-    cl::init(100));
-
-enum class StencilMergePolicy { Off, Auto, Force };
-
-static cl::opt<StencilMergePolicy> StencilMerge(
-    "stencil-runtime-check-merge", cl::Hidden,
-    cl::desc("Control stencil-pattern merging of runtime memory checks"),
-    cl::init(StencilMergePolicy::Off),
-    cl::values(
-        clEnumValN(StencilMergePolicy::Off, "off",
-                   "Disable stencil merge (default)"),
-        clEnumValN(StencilMergePolicy::Auto, "auto",
-                   "Enable stencil merge when runtime check count exceeds "
-                   "-vectorize-memory-check-threshold"),
-        clEnumValN(StencilMergePolicy::Force, "force",
-                   "Always attempt stencil merge regardless of check "
-                   "count")));
-
-static cl::opt<unsigned> StencilMergeMaxGroups(
-    "stencil-merge-max-groups", cl::Hidden,
-    cl::desc(
-        "Skip stencil group merging when the number of runtime checking groups "
-        "exceeds this limit, to bound compile time (default =4096)."),
-    cl::init(4096));
-
 /// Maximum SIMD width.
 const unsigned VectorizerParams::MaxVectorWidth = 64;
-
-/// We collect dependences up to this threshold.
-static cl::opt<unsigned>
-    MaxDependences("max-dependences", cl::Hidden,
-                   cl::desc("Maximum number of dependences collected by "
-                            "loop-access analysis (default = 100)"),
-                   cl::init(100));
-
-/// This enables versioning on the strides of symbolically striding memory
-/// accesses in code like the following.
-///   for (i = 0; i < N; ++i)
-///     A[i * Stride1] += B[i * Stride2] ...
-///
-/// Will be roughly translated to
-///    if (Stride1 == 1 && Stride2 == 1) {
-///      for (i = 0; i < N; i+=4)
-///       A[i:i+3] += ...
-///    } else
-///      ...
-static cl::opt<bool> EnableMemAccessVersioning(
-    "enable-mem-access-versioning", cl::init(true), cl::Hidden,
-    cl::desc("Enable symbolic stride memory access versioning"));
-
-/// Enable store-to-load forwarding conflict detection. This option can
-/// be disabled for correctness testing.
-static cl::opt<bool> EnableForwardingConflictDetection(
-    "store-to-load-forwarding-conflict-detection", cl::Hidden,
-    cl::desc("Enable conflict detection in loop-access analysis"),
-    cl::init(true));
-
-static cl::opt<unsigned> MaxForkedSCEVDepth(
-    "max-forked-scev-depth", cl::Hidden,
-    cl::desc("Maximum recursion depth when finding forked SCEVs (default = 5)"),
-    cl::init(5));
-
-static cl::opt<bool> SpeculateUnitStride(
-    "laa-speculate-unit-stride", cl::Hidden,
-    cl::desc("Speculate that non-constant strides are unit in LAA"),
-    cl::init(true));
 
 static cl::opt<bool, true> HoistRuntimeChecks(
     "hoist-runtime-checks", cl::Hidden,
@@ -248,8 +180,7 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
-    AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -313,9 +244,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
+  MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -347,7 +276,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // FIXME: two independent off-by-EltSize bugs on this branch:
     //  1. StartOffset here is actually the HIGHEST offset, because it is
@@ -444,7 +373,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
@@ -460,7 +389,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -481,6 +410,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     ScStart = PtrExpr;
     ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
+    assert(AR->getLoop() == Lp && "LoopGuards must be the guards of Lp");
     const SCEV *Step = AR->getStepRecurrence(*SE);
     // The address of the last accessed element, if it can be computed
     // precisely.
@@ -539,6 +469,12 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     *PtrBoundsPair = Res;
   return Res;
 }
+
+RuntimePointerChecking::RuntimePointerChecking(
+    MemoryDepChecker &DC, ScalarEvolution *SE,
+    ScalarEvolution::LoopGuards &LoopGuards)
+    : Opts(getAnalysisOptions(*DC.getInnermostLoop())), DC(DC), SE(SE),
+      LoopGuards(LoopGuards) {}
 
 /// Calculate Start and End points of memory access using
 /// getStartAndEndForAccess.
@@ -835,7 +771,7 @@ void RuntimePointerChecking::groupChecks(
           // This should limit the cost of grouping the pointers to something
           // reasonable.  If we do end up hitting this threshold, the algorithm
           // will create separate groups for all remaining pointers.
-          if (TotalComparisons > MemoryCheckMergeThreshold)
+          if (TotalComparisons > Opts.memory_check_merge_threshold)
             break;
 
           TotalComparisons++;
@@ -1301,7 +1237,7 @@ void RuntimePointerChecking::mergeStencilGroups() {
   //     otherwise reject the loop for having too many runtime checks. In that
   //     case the merge can only improve things: at worst we decline to merge
   //     and behave as before.
-  if (StencilMerge == StencilMergePolicy::Off) {
+  if (Opts.stencil_runtime_check_merge == StencilMergePolicy::Off) {
     LLVM_DEBUG(dbgs() << "LAA: stencil merge disabled\n");
     return;
   }
@@ -1323,14 +1259,14 @@ void RuntimePointerChecking::mergeStencilGroups() {
   // their own Start and End values. That extra SCEV work adds up on a loop
   // with very many groups, so bail out above a configurable limit as a
   // safety net against pathological inputs.
-  if (CheckingGroups.size() > StencilMergeMaxGroups) {
+  if (CheckingGroups.size() > Opts.stencil_merge_max_groups) {
     LLVM_DEBUG(
         dbgs() << "LAA: " << CheckingGroups.size()
                << " groups exceeds stencil-merge-max-groups, skipping\n");
     return;
   }
 
-  if (StencilMerge == StencilMergePolicy::Auto) {
+  if (Opts.stencil_runtime_check_merge == StencilMergePolicy::Auto) {
     unsigned TotalChecks = 0;
     for (unsigned I = 0; I < CheckingGroups.size(); ++I)
       for (unsigned J = I + 1; J < CheckingGroups.size(); ++J)
@@ -1693,12 +1629,14 @@ public:
   using MemAccessInfo =
       PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
 
-  AccessAnalysis(const Loop *TheLoop, AAResults *AA, const LoopInfo *LI,
-                 DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
+  AccessAnalysis(const AnalysisOptions &Opts, const Loop *TheLoop,
+                 AAResults *AA, const LoopInfo *LI, DominatorTree &DT,
+                 MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : Opts(Opts), TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA),
+        LI(LI), DT(DT), DepCands(DA), PSE(PSE),
+        LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1758,10 +1696,12 @@ public:
   /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
-  /// We decided that no dependence analysis would be used.  Reset the state.
+  /// Reset dependence checks after a successful runtime-check retry.
+  /// Remove unknown dependences covered by runtime checks, but retain known
+  /// dependences to constrain reordering.
   void resetDepChecks(MemoryDepChecker &DepChecker) {
     CheckDeps.clear();
-    DepChecker.clearDependences();
+    DepChecker.removeUnknownDependences();
   }
 
   ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
@@ -1795,6 +1735,8 @@ private:
     return ScopeList;
   }
 
+  const AnalysisOptions &Opts;
+
   /// Map of all accesses. Values are the types used to access memory pointed to
   /// by the pointer.
   PtrAccessMap Accesses;
@@ -1807,6 +1749,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -1887,6 +1832,9 @@ llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
   const auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
+
+  if (Size == 0)
+    return std::nullopt;
 
   // Huge step value - give up.
   std::optional<int64_t> StepVal = APStepVal->trySExtValue();
@@ -2159,7 +2107,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
-  findForkedSCEVs(SE, TheLoop, Ptr, RTCheckPtrs, MaxForkedSCEVDepth);
+  findForkedSCEVs(SE, TheLoop, Ptr, RTCheckPtrs, Opts.max_forked_scev_depth);
   assert(!RTCheckPtrs.empty() &&
          "Must have some runtime-check pointer candidates");
 
@@ -2332,11 +2280,35 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+    auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
+
     for (auto &Access : AccessInfos) {
-      for (const auto &AccessTy : Accesses[Access]) {
+      // A written pointer is only checked via its write access, so its bounds
+      // must also cover the types it is loaded with.
+      SmallSetVector<Type *, 1> AccessTys = Accesses.lookup(Access);
+      if (Access.getInt()) {
+        auto ReadIt = Accesses.find(MemAccessInfo(Access.getPointer(), false));
+        if (ReadIt != Accesses.end())
+          AccessTys.insert_range(ReadIt->second);
+      }
+
+      // The widest fixed and scalable types cover all accesses of their kind.
+      for (bool Scalable : {false, true}) {
+        auto HasMatchingSizeKind = [&](Type *Ty) {
+          return StoreSize(Ty).isScalable() == Scalable;
+        };
+        auto Tys = make_filter_range(AccessTys, std::ref(HasMatchingSizeKind));
+        if (Tys.empty())
+          continue;
+
+        Type *AccessTy = *max_element(Tys, [&](Type *A, Type *B) {
+          return TypeSize::isKnownLT(StoreSize(A), StoreSize(B));
+        });
+
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
-                                  false)) {
+                                  /*Assume=*/false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
           Retries.emplace_back(Access, AccessTy);
@@ -2718,6 +2690,17 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   return Diff == 1;
 }
 
+MemoryDepChecker::MemoryDepChecker(PredicatedScalarEvolution &PSE,
+                                   AssumptionCache *AC, DominatorTree *DT,
+                                   const Loop *L,
+                                   const SymbolicStrideMap &SymbolicStrides,
+                                   unsigned MaxTargetVectorWidthInBits,
+                                   ScalarEvolution::LoopGuards &LoopGuards)
+    : Opts(getAnalysisOptions(*L)), PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
+      SymbolicStrides(SymbolicStrides),
+      MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
+      LoopGuards(LoopGuards) {}
+
 void MemoryDepChecker::addAccess(StoreInst *SI) {
   visitPointers(SI->getPointerOperand(), *InnermostLoop,
                 [this, SI](Value *Ptr) {
@@ -2870,9 +2853,8 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
-static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
-                                     const SCEV &MaxBTC, const SCEV &Dist,
-                                     uint64_t MaxStride) {
+static bool isSafeDependenceDistance(ScalarEvolution &SE, const SCEV &MaxBTC,
+                                     const SCEV &Dist, uint64_t MaxStride) {
 
   // If we can prove that
   //      (**) |Dist| > MaxBTC * Step
@@ -2891,21 +2873,16 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const SCEV *Step = SE.getConstant(MaxBTC.getType(), MaxStride);
-  const SCEV *Product = SE.getMulExpr(&MaxBTC, Step);
-
-  const SCEV *CastedDist = &Dist;
-  const SCEV *CastedProduct = Product;
-  uint64_t DistTypeSizeBits = DL.getTypeSizeInBits(Dist.getType());
-  uint64_t ProductTypeSizeBits = DL.getTypeSizeInBits(Product->getType());
-
-  // The dependence distance can be positive/negative, so we sign extend Dist;
-  // The multiplication of the absolute stride in bytes and the
-  // backedgeTakenCount is non-negative, so we zero extend Product.
-  if (DistTypeSizeBits > ProductTypeSizeBits)
-    CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
-  else
-    CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
+  // The dependence distance can be positive/negative, so we sign-extend Dist.
+  // MaxBTC is non-negative, so we zero-extended to the wider type before
+  // computing MaxBTC * Step.
+  // FIXME: The checks below can still wrap if MaxBTC * MaxStride does not fit
+  // in WideTy with two bits to spare, e.g. for an unbounded i64 MaxBTC.
+  Type *WideTy = SE.getWiderType(Dist.getType(), MaxBTC.getType());
+  const SCEV *Step = SE.getConstant(WideTy, MaxStride);
+  const SCEV *CastedDist = SE.getNoopOrSignExtend(&Dist, WideTy);
+  const SCEV *CastedProduct =
+      SE.getMulExpr(SE.getNoopOrZeroExtend(&MaxBTC, WideTy), Step);
 
   // Is  Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= Dist)
@@ -2974,16 +2951,13 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-
-  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
-  auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
+  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, LoopGuards);
+  auto SinkStart = SE.applyLoopGuards(SinkStart_, LoopGuards);
   if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
     return true;
 
-  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
-  auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
+  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, LoopGuards);
+  auto SrcStart = SE.applyLoopGuards(SrcStart_, LoopGuards);
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart);
 }
 
@@ -3148,8 +3122,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // they are far enough appart that accesses won't access the same location
   // across all loop ierations.
   if (HasSameSize &&
-      isSafeDependenceDistance(
-          DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
+      isSafeDependenceDistance(SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                               *Dist, MaxStride))
     return Dependence::NoDep;
 
   const APInt *APDist = nullptr;
@@ -3173,10 +3147,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::NoDep;
     }
   } else {
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+    Dist = SE.applyLoopGuards(Dist, LoopGuards);
   }
 
   // Negative distances are not plausible dependencies.
@@ -3212,7 +3183,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // couldPreventStoreLoadForward, even if it changed MinDepDistBytes, since a
     // forward dependency will allow vectorization using any width.
 
-    if (IsTrueDataDependence && EnableForwardingConflictDetection) {
+    if (IsTrueDataDependence &&
+        Opts.store_to_load_forwarding_conflict_detection) {
       if (!ConstDist) {
         return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
                                               : Dependence::Unknown;
@@ -3317,7 +3289,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
-  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
+  if (IsTrueDataDependence &&
+      Opts.store_to_load_forwarding_conflict_detection && ConstDist &&
       couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
@@ -3388,7 +3361,7 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                 isDependent(*A.first, A.second, *B.first, B.second);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
-            // Gather dependences unless we accumulated MaxDependences
+            // Gather dependences unless we accumulated -max-dependences
             // dependences.  In that case return as soon as we find the first
             // unsafe dependence.  This puts a limit on this quadratic
             // algorithm.
@@ -3396,7 +3369,7 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
               if (Type != Dependence::NoDep)
                 Dependences.emplace_back(A.second, B.second, Type);
 
-              if (Dependences.size() >= MaxDependences) {
+              if (Dependences.size() >= Opts.max_dependences) {
                 RecordDependences = false;
                 Dependences.clear();
                 LLVM_DEBUG(dbgs()
@@ -3509,7 +3482,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
   const bool EnableMemAccessVersioningOfLoop =
-      EnableMemAccessVersioning &&
+      Opts.enable_mem_access_versioning &&
       !TheLoop->getHeader()->getParent()->hasOptSize();
 
   // Traverse blocks in fixed RPOT order, regardless of their storage in the
@@ -3542,6 +3515,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
         for (Metadata *Op : Decl->getScopeList()->operands())
           LoopAliasScopes.insert(cast<MDNode>(Op));
+
+      // Operand bundles may access memory, even if the callee does not.
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && CB->hasReadingOperandBundles()) {
+        recordAnalysis("CantVectorizeInstruction", &I)
+            << "call instruction with operand bundles cannot be vectorized";
+        HasComplexMemInst = true;
+        continue;
+      }
 
       // Many math library functions read the rounding mode. We will only
       // vectorize a loop if it contains known function calls that don't set
@@ -3626,7 +3608,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   }
 
   MemoryDepChecker::DepCandidates DepCands;
-  AccessAnalysis Accesses(TheLoop, AA, LI, *DT, DepCands, *PSE,
+  AccessAnalysis Accesses(Opts, TheLoop, AA, LI, *DT, DepCands, *PSE,
                           LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
@@ -3779,7 +3761,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         return false;
       }
 
-      // Clear the dependency checks. They are no longer needed.
+      // The runtime checks cover the unknown dependences, so drop those. Keep
+      // the known ones, as they still constrain reordering.
       Accesses.resetDepChecks(*DepChecker);
 
       DepsAreSafe = true;
@@ -4016,7 +3999,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
                        "versioning:");
   LLVM_DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *StrideExpr << "\n");
 
-  if (!SpeculateUnitStride) {
+  if (!Opts.laa_speculate_unit_stride) {
     LLVM_DEBUG(dbgs() << "  Chose not to due to -laa-speculate-unit-stride\n");
     return;
   }
@@ -4077,8 +4060,11 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AAResults *AA,
                                DominatorTree *DT, LoopInfo *LI,
                                AssumptionCache *AC, bool AllowPartial)
-    : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial) {
+    : Opts(getAnalysisOptions(*L)),
+      PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
+      PtrRtChecking(nullptr), TheLoop(L),
+      LoopGuards(ScalarEvolution::LoopGuards::collectOnDemand(L, *SE)),
+      AllowPartial(AllowPartial) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI && !TTI->enableScalableVectorization())
     // Scale the vector width by 2 as rough estimate to also consider

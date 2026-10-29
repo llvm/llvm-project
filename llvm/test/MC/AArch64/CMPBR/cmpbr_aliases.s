@@ -72,3 +72,16 @@
 
 // CHECK: cbgt x5, x3, #-1024                  // encoding: [0x05,0x20,0x03,0xf4]
     cblt x3, x5, #-1024
+// Constant expressions in adjusted immediate aliases.
+
+// CHECK: cbgt w5, #0, #-1024                  // encoding: [0x05,0x20,0x00,0x75]
+    cbge w5, #(2 - 1), #-1024
+
+// CHECK: cbhi x5, #63, #-1024                 // encoding: [0x05,0xa0,0x5f,0xf5]
+    cbhs x5, #+64, #-1024
+
+// CHECK: cblt w5, #0, #-1024                  // encoding: [0x05,0x20,0x20,0x75]
+    cble w5, #(-1), #-1024
+
+// CHECK: cblo x5, #63, #-1024                 // encoding: [0x05,0xa0,0x7f,0xf5]
+    cbls x5, #+62, #-1024

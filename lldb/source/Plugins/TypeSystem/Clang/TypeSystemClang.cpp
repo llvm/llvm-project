@@ -42,6 +42,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -66,6 +67,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
@@ -653,6 +655,11 @@ void TypeSystemClang::Initialize() {
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
       GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
       DebuggerInitialize);
+
+  llvm::SmallString<128> path;
+  if (clang::driver::Driver::getDefaultModuleCachePath(path))
+    ModuleList::GetGlobalModuleListProperties().SetClangModulesCachePath(
+        FileSpec(path));
 }
 
 void TypeSystemClang::Terminate() {
@@ -8881,12 +8888,6 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
-
-  CompilerType ct(weak_from_this(), type);
-  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
-    metadata->Dump(&s);
-  }
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
@@ -8975,7 +8976,25 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+
+    if (level == eDescriptionLevelVerbose) {
+      std::optional<ClangASTMetadata> metadata =
+          GetMetadata(qual_type.getTypePtr());
+      if (metadata) {
+        s << "type-metadata = ";
+        metadata->Dump(&s);
+      }
+
+      metadata.reset();
+      if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
+        metadata = GetMetadata(tag);
+
+      if (metadata) {
+        s << "decl-metadata = ";
+        metadata->Dump(&s);
+      }
+    }
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {

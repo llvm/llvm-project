@@ -99,6 +99,7 @@ struct LoweringPreparePass
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
   void lowerLocalInitOp(cir::LocalInitOp op);
+  void lowerRegisterExitDtorOp(cir::RegisterExitDtorOp op);
   void lowerStdOp(cir::StdOpInterface op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
@@ -130,32 +131,44 @@ struct LoweringPreparePass
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
-  // Function that generates the guard global variable, get-global, and 'if'
-  // condition for global TLS init function generation. This inserts an 'if'
-  // with the store at the beginning of the 'then' region, so inserts into the
-  // body should happen after that.
-  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
-                                     mlir::Location loc, cir::GlobalOp guard);
+  // Function that generates the get-global and 'if' condition on a guard
+  // variable for an init function that must run once: the global TLS init
+  // function, or the initializer of a C++20 named-module interface unit. This
+  // inserts an 'if' with the store at the beginning of the 'then' region, so
+  // inserts into the body should happen after that.
+  cir::IfOp buildInitGuardCheck(CIRBaseBuilderTy &builder, mlir::Location loc,
+                                cir::GlobalOp guard, bool threadLocal);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
                                   cir::CallOp &dtorCall);
+  /// Create a `void __cxx_global_array_dtor[.N](void *)` helper after `op`,
+  /// with an empty entry block.
+  cir::FuncOp buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
+                                       mlir::Operation *op);
 
   /// Build a function named `fnName` with the given linkage that calls each
   /// of `initializers` in order, then returns, and register it in
-  /// `globalCtorList` under `priority`. Shared by the default
-  /// `_GLOBAL__sub_I_*` initializer function and the per-priority
-  /// `_GLOBAL__I_<priority>` initializer functions.
-  cir::FuncOp buildGlobalInitCallerFunc(
-      llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-      llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority);
+  /// `globalCtorList` under `priority`. With a `guard` byte, the calls run
+  /// only when it is still zero and set it first. Shared by the default
+  /// `_GLOBAL__sub_I_*` initializer function, the C++20 named-module
+  /// initializer, and the per-priority `_GLOBAL__I_<priority>` initializer
+  /// functions.
+  cir::FuncOp
+  buildGlobalInitCallerFunc(llvm::StringRef fnName,
+                            cir::GlobalLinkageKind linkage,
+                            llvm::ArrayRef<cir::FuncOp> initializers,
+                            uint32_t priority, cir::GlobalOp guard = {});
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
   /// Build one `_GLOBAL__I_<priority>` function per distinct priority found
   /// in `prioritizedDynamicInitializers`, in ascending priority order, and
-  /// register each with `globalCtorList`.
-  void buildCXXGlobalPriorityInitFuncs();
+  /// register each with `globalCtorList`. The first of them, the highest
+  /// priority, calls `importedInits` before its own initializers and takes
+  /// them out of the vector, as classic CodeGen does.
+  void buildCXXGlobalPriorityInitFuncs(
+      llvm::SmallVectorImpl<cir::FuncOp> &importedInits);
   // Build an init function for all of the ordered global thread local storage
   // variables.
   void buildCXXGlobalTlsFunc();
@@ -337,6 +350,16 @@ struct LoweringPreparePass
     return sdkVersion;
   }
 
+  /// Appends the CUID hash recorded on the module by CIRGen, if any, to
+  /// \p name.
+  std::string addCUIDSuffix(llvm::StringRef name) {
+    std::string result = name.str();
+    if (auto cuidHash = mlirModule->getAttrOfType<mlir::StringAttr>(
+            CIRDialect::getCUIDHashAttrName()))
+      result += ("_" + cuidHash.getValue()).str();
+    return result;
+  }
+
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
 
@@ -398,16 +421,58 @@ struct LoweringPreparePass
     }
   }
 
+  /// Register `dtorFunc` to be called with `arg` when the program exits, or
+  /// when the current thread exits if `tls` is set.
+  cir::CallOp emitAtExitCall(CIRBaseBuilderTy &builder, mlir::Location loc,
+                             cir::FuncOp dtorFunc, mlir::Value arg, bool tls) {
+    cir::GlobalOp handle;
+    cir::FuncOp fnAtExit;
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      // Create a variable that binds the atexit to this shared object.
+      builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+      handle = getOrCreateRuntimeVariable(
+          builder, "__dso_handle", loc, builder.getUIntNTy(8),
+          cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
+
+      // Create a runtime helper function:
+      //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
+      cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
+      IntType intTy = builder.getSIntNTy(32);
+      auto fnAtExitType =
+          cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, intTy);
+
+      llvm::StringLiteral nameAtExit = "__cxa_atexit";
+      if (tls)
+        nameAtExit = getTargetInfo().getTriple().isOSDarwin()
+                         ? llvm::StringLiteral("_tlv_atexit")
+                         : llvm::StringLiteral("__cxa_thread_atexit");
+
+      fnAtExit = buildRuntimeFunction(builder, nameAtExit, loc, fnAtExitType);
+    }
+
+    mlir::Value args[3];
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    args[0] = cir::GetGlobalOp::create(builder, loc, dtorPtrTy,
+                                       dtorFunc.getSymName());
+    args[0] = cir::CastOp::create(builder, loc, voidFnPtrTy,
+                                  cir::CastKind::bitcast, args[0]);
+    args[1] = cir::CastOp::create(builder, loc, voidPtrTy,
+                                  cir::CastKind::bitcast, arg);
+    args[2] = cir::GetGlobalOp::create(
+        builder, loc, builder.getPointerTo(handle.getSymType()),
+        handle.getSymName());
+    // TODO(cir): set the runtime calling convention on the __cxa_atexit call.
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    return builder.createCallOp(loc, fnAtExit, args);
+  }
+
   void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
                                    cir::GlobalOp global,
                                    mlir::Region &dtorRegion, bool tls,
                                    mlir::Block &entryBB) {
-    // Create a variable that binds the atexit to this shared object.
-    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
-    cir::GlobalOp handle = getOrCreateRuntimeVariable(
-        builder, "__dso_handle", global.getLoc(), builder.getUIntNTy(8),
-        cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
-
     // If this is a simple call to a destructor, get the called function.
     // Otherwise, create a helper function for the entire dtor region,
     // replacing the current dtor region body with a call to the helper
@@ -416,39 +481,11 @@ struct LoweringPreparePass
     cir::FuncOp dtorFunc =
         getOrCreateDtorFunc(builder, global, dtorRegion, dtorCall);
 
-    // Create a runtime helper function:
-    //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
-    cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
-    cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
-    IntType intTy = builder.getSIntNTy(32);
-    auto fnAtExitType =
-        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, intTy);
-
-    llvm::StringLiteral nameAtExit = "__cxa_atexit";
-    if (tls)
-      nameAtExit = getTargetInfo().getTriple().isOSDarwin()
-                       ? llvm::StringLiteral("_tlv_atexit")
-                       : llvm::StringLiteral("__cxa_thread_atexit");
-
-    cir::FuncOp fnAtExit = buildRuntimeFunction(builder, nameAtExit,
-                                                global.getLoc(), fnAtExitType);
-
     // Replace the dtor (or helper) call with a call to
     //   __cxa_atexit(&dtor, &var, &__dso_handle)
     builder.setInsertionPointAfter(dtorCall);
-    mlir::Value args[3];
-    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
-    args[0] = cir::GetGlobalOp::create(builder, dtorCall.getLoc(), dtorPtrTy,
-                                       dtorFunc.getSymName());
-    args[0] = cir::CastOp::create(builder, dtorCall.getLoc(), voidFnPtrTy,
-                                  cir::CastKind::bitcast, args[0]);
-    args[1] =
-        cir::CastOp::create(builder, dtorCall.getLoc(), voidPtrTy,
-                            cir::CastKind::bitcast, dtorCall.getArgOperand(0));
-    args[2] = cir::GetGlobalOp::create(builder, handle.getLoc(), handlePtrTy,
-                                       handle.getSymName());
-    builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
+    emitAtExitCall(builder, dtorCall.getLoc(), dtorFunc,
+                   dtorCall.getArgOperand(0), tls);
     dtorCall->erase();
     mlir::Block &dtorBlock = dtorRegion.front();
     entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
@@ -467,6 +504,9 @@ struct LoweringPreparePass
                             bool isLocalVarDecl, mlir::Value guardPtr,
                             cir::PointerType guardPtrTy, bool threadsafe) {
     auto loc = globalOp->getLoc();
+
+    // TODO(cir): set the runtime calling convention on the __cxa_guard_* calls.
+    assert(!cir::MissingFeatures::opFuncCallingConv());
 
     // The semantics of dynamic initialization of variables with static or
     // thread storage duration depends on whether they are declared at
@@ -739,6 +779,8 @@ static mlir::Value buildComplexBinOpLibCall(
     libFunc = pass.buildRuntimeFunction(builder, libFuncName, loc, libFuncTy);
   }
 
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   cir::CallOp call =
       builder.createCallOp(loc, libFunc, {lhsReal, lhsImag, rhsReal, rhsImag});
   return call.getResult();
@@ -1010,6 +1052,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
                                     rhsImag);
   }
   }
+  llvm_unreachable("fully covered switch");
 }
 
 void LoweringPreparePass::lowerComplexFDivOp(cir::ComplexFDivOp op) {
@@ -1178,15 +1221,90 @@ void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
   op->erase();
 }
 
+cir::FuncOp
+LoweringPreparePass::buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
+                                              mlir::Operation *op) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(op);
+  SmallString<256> fnName("__cxx_global_array_dtor");
+  uint32_t cnt = dynamicInitializerNames[fnName]++;
+  if (cnt)
+    fnName += "." + std::to_string(cnt);
+
+  auto fnType =
+      cir::FuncType::get({builder.getVoidPtrTy()}, builder.getVoidTy());
+  cir::FuncOp dtorFunc =
+      buildRuntimeFunction(builder, fnName, op->getLoc(), fnType,
+                           cir::GlobalLinkageKind::InternalLinkage);
+
+  SmallVector<mlir::NamedAttribute> paramAttrs;
+  paramAttrs.push_back(
+      builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+  SmallVector<mlir::Attribute> argAttrDicts;
+  argAttrDicts.push_back(
+      mlir::DictionaryAttr::get(builder.getContext(), paramAttrs));
+  dtorFunc.setArgAttrsAttr(
+      mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
+
+  dtorFunc.addEntryBlock();
+  return dtorFunc;
+}
+
+void LoweringPreparePass::lowerRegisterExitDtorOp(cir::RegisterExitDtorOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  mlir::Location loc = op.getLoc();
+  auto object = symbolTables.lookupNearestSymbolFrom<cir::GlobalOp>(
+      op, op.getObjectAttr());
+  assert(object && "register_exit_dtor must reference a cir.global");
+  mlir::Block &body = op.getBody().front();
+  builder.setInsertionPoint(op);
+
+  // When the body is a single call on the object's address, register the
+  // callee directly with that address.
+  cir::FuncOp dtorFunc;
+  mlir::Value arg;
+  if (body.getOperations().size() == 3) {
+    auto getGlobal = mlir::dyn_cast<cir::GetGlobalOp>(body.front());
+    auto call = mlir::dyn_cast<cir::CallOp>(*std::next(body.begin()));
+    if (getGlobal && call && getGlobal.getName() == op.getObject() &&
+        call.getNumArgOperands() == 1 &&
+        call.getArgOperand(0) == getGlobal.getResult()) {
+      dtorFunc = getCalledFunction(call);
+      if (dtorFunc)
+        arg = builder.clone(*getGlobal)->getResult(0);
+    }
+  }
+
+  // Otherwise the body moves into a helper that ignores its argument, and the
+  // helper is registered with a null argument.
+  if (!dtorFunc) {
+    dtorFunc = buildGlobalArrayDtorFunc(builder, object);
+    mlir::Block *entryBB = &dtorFunc.getBody().front();
+    entryBB->getOperations().splice(entryBB->end(), body.getOperations());
+    auto yieldOp = mlir::cast<cir::YieldOp>(entryBB->getTerminator());
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(yieldOp);
+      cir::ReturnOp::create(builder, yieldOp.getLoc());
+    }
+    yieldOp->erase();
+    arg = builder.getNullPtr(builder.getVoidPtrTy(), loc);
+  }
+
+  cir::CallOp atExitCall = emitAtExitCall(builder, loc, dtorFunc, arg,
+                                          object.getTlsModel().has_value());
+  // The atexit functions do not throw, and marking the call so keeps it out of
+  // an invoke inside the initializer.
+  atExitCall.setNothrowAttr(builder.getUnitAttr());
+  op->erase();
+}
+
 cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::GlobalOp op,
                                                      mlir::Region &dtorRegion,
                                                      cir::CallOp &dtorCall) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
-
-  cir::VoidType voidTy = builder.getVoidTy();
-  auto voidPtrTy = cir::PointerType::get(voidTy);
 
   // Look for operations in dtorBlock
   mlir::Block &dtorBlock = dtorRegion.front();
@@ -1216,30 +1334,8 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   }
 
   // Otherwise, we need to create a helper function to replace the dtor region.
-  // This name is kind of arbitrary, but it matches the name that classic
-  // codegen uses, based on the expected case that gets us here.
-  builder.setInsertionPointAfter(op);
-  SmallString<256> fnName("__cxx_global_array_dtor");
-  uint32_t cnt = dynamicInitializerNames[fnName]++;
-  if (cnt)
-    fnName += "." + std::to_string(cnt);
-
-  // Create the helper function.
-  auto fnType = cir::FuncType::get({voidPtrTy}, voidTy);
-  cir::FuncOp dtorFunc =
-      buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
-                           cir::GlobalLinkageKind::InternalLinkage);
-
-  SmallVector<mlir::NamedAttribute> paramAttrs;
-  paramAttrs.push_back(
-      builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
-  SmallVector<mlir::Attribute> argAttrDicts;
-  argAttrDicts.push_back(
-      mlir::DictionaryAttr::get(builder.getContext(), paramAttrs));
-  dtorFunc.setArgAttrsAttr(
-      mlir::ArrayAttr::get(builder.getContext(), argAttrDicts));
-
-  mlir::Block *entryBB = dtorFunc.addEntryBlock();
+  cir::FuncOp dtorFunc = buildGlobalArrayDtorFunc(builder, op);
+  mlir::Block *entryBB = &dtorFunc.getBody().front();
 
   // Move everything from the dtor region into the helper function.
   entryBB->getOperations().splice(entryBB->begin(), dtorBlock.getOperations(),
@@ -1277,7 +1373,9 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
       mlir::cast<cir::GetGlobalOp>(dtorBlock.getOperations().front());
   builder.setInsertionPointAfter(origGGop);
   mlir::Value ggopResult = origGGop.getResult();
-  dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult);
+  dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult,
+                                  /*attrs=*/{}, /*argAttrs=*/{},
+                                  /*resAttrs=*/{}, dtorFunc.getCallingConv());
 
   // Add a yield after the call.
   auto finalYield = cir::YieldOp::create(builder, op.getLoc());
@@ -1351,12 +1449,13 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 
   cir::IfOp guardIf;
   if (needsTlsGuard) {
-    guardIf = buildGlobalTlsGuardCheck(
+    guardIf = buildInitGuardCheck(
         builder, op.getLoc(),
         getOrCreateStaticLocalDeclGuardAddress(
             builder, op, op.getTlsRefs()->getGuardName().getValue(),
             /*isLocalVarDecl=*/false,
-            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()),
+        /*threadLocal=*/true);
     builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
   }
 
@@ -1462,9 +1561,13 @@ cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
 
 void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   CIRBaseBuilderTy builder(getContext());
+  mlir::ptr::MemorySpaceAttrInterface eltAS;
+  if (unsigned targetAS =
+          getTargetInfo().getTargetAddressSpace(clang::LangAS::Default))
+    eltAS = cir::TargetAddressSpaceAttr::get(&getContext(), targetAS);
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(eltAS);
   mlir::Attribute entry = cir::GlobalViewAttr::get(
-      builder.getVoidPtrTy(),
-      mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
+      voidPtrTy, mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
 
   mlir::StringAttr usedName = builder.getStringAttr("llvm.used");
   cir::GlobalOp used =
@@ -1478,8 +1581,7 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
   elements.push_back(entry);
 
-  cir::ArrayType arrayTy =
-      cir::ArrayType::get(builder.getVoidPtrTy(), elements.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, elements.size());
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&getContext(), elements));
 
@@ -1490,8 +1592,10 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
 
   builder.setInsertionPointToStart(mlirModule.getBody());
-  used = cir::GlobalOp::create(builder, mlirModule.getLoc(),
-                               usedName.getValue(), arrayTy);
+  used = cir::GlobalOp::create(
+      builder, mlirModule.getLoc(), usedName.getValue(), arrayTy,
+      /*isConstant=*/false,
+      cir::CIRDataLayout(mlirModule).getDefaultGlobalsAddrSpace(&getContext()));
   used.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   used.setInitialValueAttr(initAttr);
   used.setSectionAttr(builder.getStringAttr("llvm.metadata"));
@@ -1760,13 +1864,18 @@ void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
           builder, aliasLoc, cir::CmpOpKind::ne, funcLoad, nullCheck);
       cir::IfOp::create(builder, aliasLoc, cmp, /*withElseRegion=*/false,
                         [&](mlir::OpBuilder &, mlir::Location loc) {
-                          builder.createCallOp(aliasLoc, initAlias, {});
+                          builder.createCallOp(aliasLoc, initAlias, {},
+                                               /*attrs=*/{},
+                                               /*argAttrs=*/{}, /*resAttrs=*/{},
+                                               initAlias.getCallingConv());
                           cir::YieldOp::create(builder, aliasLoc);
                         });
     } else {
       // If this IS a definition, we know the alias exists, so we can just emit
       // a call to it.
-      builder.createCallOp(aliasLoc, initAlias, {});
+      builder.createCallOp(aliasLoc, initAlias, {}, /*attrs=*/{},
+                           /*argAttrs=*/{}, /*resAttrs=*/{},
+                           initAlias.getCallingConv());
     }
   }
   cir::GetGlobalOp get = builder.createGetGlobal(op, /*tls=*/true);
@@ -1946,7 +2055,8 @@ void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   cir::CallOp call = builder.createCallOp(
       wrapperFunc.getLoc(),
       mlir::FlatSymbolRefAttr::get(wrapperFunc.getSymNameAttr()),
-      wrapperFunc.getFunctionType().getReturnType(), {});
+      wrapperFunc.getFunctionType().getReturnType(), {}, /*attrs=*/{},
+      /*argAttrs=*/{}, /*resAttrs=*/{}, wrapperFunc.getCallingConv());
   op->replaceAllUsesWith(call);
   op.erase();
 }
@@ -2053,9 +2163,11 @@ LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
   return g;
 }
 
-cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
-    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
-  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+cir::IfOp LoweringPreparePass::buildInitGuardCheck(CIRBaseBuilderTy &builder,
+                                                   mlir::Location loc,
+                                                   cir::GlobalOp guard,
+                                                   bool threadLocal) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, threadLocal);
   mlir::Value getGuardValue = getGuard;
 
   // Classic codegen always just loads the first byte of the guard instead of
@@ -2093,13 +2205,15 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   mlir::Block *entryBB = tlsInit.addEntryBlock();
   builder.setInsertionPointToStart(entryBB);
 
-  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
-      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+  cir::IfOp ifOperation = buildInitGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc),
+      /*threadLocal=*/true);
 
   // Emit the body of the guarded spot.
   builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
   for (cir::FuncOp initFunc : globalThreadLocalInitializers)
-    builder.createCallOp(loc, initFunc, {});
+    builder.createCallOp(loc, initFunc, {}, /*attrs=*/{}, /*argAttrs=*/{},
+                         /*resAttrs=*/{}, initFunc.getCallingConv());
   cir::YieldOp::create(builder, loc);
 
   builder.setInsertionPointAfter(ifOperation);
@@ -2119,21 +2233,38 @@ static std::string getPrioritySuffix(unsigned priority) {
 
 cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
     llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority) {
+    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority,
+    cir::GlobalOp guard) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp fn = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
                                         fnType, linkage);
   builder.setInsertionPointToStart(fn.addEntryBlock());
-  for (cir::FuncOp init : initializers)
-    builder.createCallOp(init.getLoc(), init, {});
-  cir::ReturnOp::create(builder, fn.getLoc());
+  mlir::Location loc = fn.getLoc();
+  auto emitCalls = [&] {
+    for (cir::FuncOp init : initializers)
+      builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
+                           /*argAttrs=*/{}, /*resAttrs=*/{},
+                           init.getCallingConv());
+  };
+  if (guard) {
+    cir::IfOp guardIf =
+        buildInitGuardCheck(builder, loc, guard, /*threadLocal=*/false);
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+    emitCalls();
+    cir::YieldOp::create(builder, loc);
+    builder.setInsertionPointAfter(guardIf);
+  } else {
+    emitCalls();
+  }
+  cir::ReturnOp::create(builder, loc);
   globalCtorList.emplace_back(fnName, priority);
   return fn;
 }
 
-void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
+void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs(
+    llvm::SmallVectorImpl<cir::FuncOp> &importedInits) {
   // std::map keeps priorities in ascending order, so each group is already
   // ready to emit into its own function, named after its priority so that
   // the functions are naturally ordered relative to one another.
@@ -2142,40 +2273,89 @@ void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
     fnName += "_GLOBAL__I_";
     fnName += getPrioritySuffix(priority);
 
+    llvm::SmallVector<cir::FuncOp> calls(importedInits.begin(),
+                                         importedInits.end());
+    calls.append(initializers.begin(), initializers.end());
+    importedInits.clear();
     buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
-                              initializers, priority);
+                              calls, priority);
   }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
-  buildCXXGlobalPriorityInitFuncs();
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
+  mlir::Location loc = mlirModule.getLoc();
 
-  if (dynamicInitializers.empty())
-    return;
+  // The initializers of the imported C++20 named modules, recorded by CIRGen
+  // as the mangled names of functions this translation unit declares, at the
+  // location of the import, and calls before its own initializers.
+  llvm::SmallVector<cir::FuncOp> importedInits;
+  if (auto inits = mlirModule->getAttrOfType<mlir::ArrayAttr>(
+          cir::CIRDialect::getCXXModuleImportedInitsAttrName()))
+    for (auto init : inits.getAsRange<cir::CXXModuleInitAttr>())
+      importedInits.push_back(
+          buildRuntimeFunction(builder, init.getName().getValue(),
+                               init.getLoc(), builder.getVoidFnTy()));
 
-  SmallString<256> fnName;
-  cir::GlobalLinkageKind linkage;
-  // Include the filename in the symbol name. Including "sub_" matches gcc
-  // and makes sure these symbols appear lexicographically behind the symbols
-  // with priority (TBD).  Module implementation units behave the same
-  // way as a non-modular TU with imports.
   // The C++20 named-module init function name is precomputed by CIRGen and
   // stored as a module-level attribute.  Its presence is what marks this
   // module as a named-module interface unit, so the name and the external
   // linkage that goes with it both come from the attribute and this pass needs
   // no live ASTContext.  Modules built directly from textual CIR can opt in to
   // the module-init form by setting the same attribute.
-  if (auto fnNameAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+  if (auto moduleInitFnName = mlirModule->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
-    fnName += fnNameAttr.getValue();
-    linkage = cir::GlobalLinkageKind::ExternalLinkage;
-  } else {
-    fnName += "_GLOBAL__sub_I_";
-    fnName += getTransformedFileName(mlirModule);
-    linkage = cir::GlobalLinkageKind::InternalLinkage;
+    // As in classic CodeGen's EmitCXXModuleInitFunc, an interface unit gets
+    // one initializer function, even with nothing to run, since importing
+    // translation units may call it. It runs the imported modules'
+    // initializers, then the unit's own in priority order, which get no
+    // `_GLOBAL__I_<priority>` function of their own. The global ctor entry
+    // and every importing translation unit call it, so a guard byte makes
+    // the initializers run once; there is none when there is nothing to run.
+    llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                                importedInits.end());
+    for (const auto &[priority, inits] : prioritizedDynamicInitializers)
+      initializers.append(inits.begin(), inits.end());
+    initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+    llvm::StringRef fnName = moduleInitFnName.getValue();
+    cir::GlobalOp guard;
+    if (!initializers.empty()) {
+      cir::IntType guardTy = builder.getSIntNTy(8);
+      guard =
+          createGuardGlobalOp(builder, loc, (fnName + "__in_chrg").str(),
+                              guardTy, cir::GlobalLinkageKind::InternalLinkage);
+      guard.setAlignment(clang::CharUnits::One().getAsAlign().value());
+      guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+    }
+    buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::ExternalLinkage,
+                              initializers,
+                              cir::GlobalCtorAttr::getDefaultPriority(), guard);
+    return;
   }
 
-  buildGlobalInitCallerFunc(fnName, linkage, dynamicInitializers,
+  // Any other translation unit, as in classic CodeGen's
+  // EmitCXXGlobalInitFunc: one function per priority, the imported modules'
+  // initializers in front of the first, then the default-priority function
+  // for the rest, only when there is something left to call.
+  buildCXXGlobalPriorityInitFuncs(importedInits);
+  if (importedInits.empty() && dynamicInitializers.empty())
+    return;
+
+  llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                              importedInits.end());
+  initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority (TBD).  Module implementation units behave the same
+  // way as a non-modular TU with imports.
+  SmallString<256> fnName;
+  fnName += "_GLOBAL__sub_I_";
+  fnName += getTransformedFileName(mlirModule);
+  buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
+                            initializers,
                             cir::GlobalCtorAttr::getDefaultPriority());
 }
 
@@ -2597,6 +2777,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
+  } else if (auto registerOp = dyn_cast<cir::RegisterExitDtorOp>(op)) {
+    lowerRegisterExitDtorOp(registerOp);
   } else if (auto stdOp = mlir::dyn_cast<cir::StdOpInterface>(op)) {
     lowerStdOp(stdOp);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
@@ -2629,7 +2811,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
 
     if (mlir::Attribute attr =
-            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic());
+        attr && !fnOp.isDeclaration()) {
       auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
       llvm::StringRef kernelName = kernelNameAttr.getKernelName();
       cudaKernelMap[kernelName] = fnOp;
@@ -2683,14 +2866,11 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     return;
 
   // There's no device-side binary, so no need to proceed for CUDA.
-  // HIP has to create an external symbol in this case, which is NYI.
+  // HIP creates an external symbol in this case.
   auto deviceBinaryAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
       CIRDialect::getCUDADeviceBinaryAttrName());
-  if (!deviceBinaryAttr) {
-    if (isHIP)
-      assert(!cir::MissingFeatures::hipModuleCtor());
+  if (!deviceBinaryAttr && !isHIP)
     return;
-  }
 
   // Set up common types and builder.
   llvm::StringRef cudaPrefix = getCUDAPrefix(getLangOpts());
@@ -2712,22 +2892,28 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   llvm::StringRef fatbinSectionName =
       getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
 
-  // Create the fatbin string constant with GPU binary contents.
-  // The dialect verifier guarantees the attribute is typed as the array.
-  auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
-  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
-  GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
-                                        /*isConstant=*/true, {},
-                                        GlobalLinkageKind::PrivateLinkage);
-  if (isHIP) {
-    const unsigned HIPCodeObjectAlign = 4096;
-    fatbinStr.setAlignment(HIPCodeObjectAlign);
-  } else {
-    fatbinStr.setAlignment(8);
-  }
+  GlobalOp fatbinStr;
+  if (deviceBinaryAttr) {
+    // Create the fatbin string constant with GPU binary contents.
+    // The dialect verifier guarantees the attribute is typed as the array.
+    auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
+    std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+    fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
+                                 /*isConstant=*/true, {},
+                                 GlobalLinkageKind::PrivateLinkage);
+    constexpr unsigned HIPCodeObjectAlign = 4096;
+    fatbinStr.setAlignment(isHIP ? HIPCodeObjectAlign : 8);
 
-  fatbinStr.setInitialValueAttr(
-      cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
+    fatbinStr.setInitialValueAttr(
+        cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
+  } else {
+    // If fatbin is not available, create an external symbol __hip_fatbin in
+    // section .hip_fatbin. It is populated elsewhere, e.g. by lld through a
+    // linker script.
+    fatbinStr = GlobalOp::create(
+        builder, loc, addCUIDSuffix("__hip_fatbin"), builder.getUIntNTy(8),
+        /*isConstant=*/true, {}, GlobalLinkageKind::ExternalLinkage);
+  }
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2762,6 +2948,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   // Create the GPU binary handle global variable.
   std::string gpubinHandleName =
       addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
+  if (isHIP)
+    gpubinHandleName = addCUIDSuffix(gpubinHandleName);
 
   GlobalOp gpuBinHandle = GlobalOp::create(
       builder, loc, gpubinHandleName, voidPtrPtrTy,
@@ -2964,9 +3152,6 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
 /// the dtor list would cause a double-free. It is meant to be registered via
 /// atexit() at the end of the module ctor.
 std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
-  if (!mlirModule->getAttr(CIRDialect::getCUDADeviceBinaryAttrName()))
-    return {};
-
   llvm::StringRef prefix = getCUDAPrefix(getLangOpts());
 
   VoidType voidTy = VoidType::get(&getContext());
@@ -2988,7 +3173,8 @@ std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
       buildRuntimeFunction(builder, dtorName, loc, FuncType::get({}, voidTy),
                            GlobalLinkageKind::InternalLinkage);
 
-  std::string gpubinName = addUnderscoredPrefix(prefix, "_gpubin_handle");
+  std::string gpubinName =
+      addCUIDSuffix(addUnderscoredPrefix(prefix, "_gpubin_handle"));
   GlobalOp gpuBinGlobal = cast<GlobalOp>(mlirModule.lookupSymbol(gpubinName));
 
   mlir::Block *entryBlock = dtor.addEntryBlock();
@@ -3161,17 +3347,20 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   cir::CIRBaseBuilderTy globalBuilder(getContext());
   globalBuilder.setInsertionPointToStart(mlirModule.getBody());
 
-  // void __{cuda|hip}RegisterVar(void **fatbinHandle,
-  //                              char *hostVar, char *deviceAddress,
-  //                              const char *deviceName, int ext,
-  //                              size_t size, int constant, int normalized);
-  // OG ignores parameter types, treating pointers as void*.
   cir::VoidType voidTy = builder.getVoidTy();
-  FuncOp cudaRegisterVar = buildRuntimeFunction(
-      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
-      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
-                     sizeTy, intTy, intTy},
-                    voidTy));
+  FuncOp cudaRegisterVar;
+  FuncOp cudaRegisterManagedVar;
+
+  // void __cudaRegisterSurface(void **fatbinHandle,
+  //                            const struct surfaceReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int type, int ext);
+  FuncOp cudaRegisterSurface = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterSurface"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
+          voidTy));
 
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
@@ -3188,17 +3377,9 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
 
   for (auto &[global, regAttr] : cudaDeviceVars) {
-    switch (regAttr.getKind()) {
-    case cir::CUDADeviceVarKind::Variable:
-      break;
-    case cir::CUDADeviceVarKind::Surface:
-      llvm_unreachable("Surface registration NYI");
-    case cir::CUDADeviceVarKind::Texture:
-      llvm_unreachable("Texture registration NYI");
-    }
-
-    if (regAttr.getIsManaged())
-      llvm_unreachable("Managed variable registration NYI");
+    // External managed variables are registered by their defining TU.
+    if (regAttr.getIsManaged() && global.isDeclaration())
+      continue;
 
     GlobalOp deviceNameStr = makeConstantString(regAttr.getDeviceSideName());
     mlir::Value deviceName = builder.createBitcast(
@@ -3206,17 +3387,80 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
     mlir::Value hostVar =
         builder.createBitcast(builder.createGetGlobal(global), voidPtrTy);
 
-    auto isExtern = ConstantOp::create(
-        builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
     llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
-    auto varSize = ConstantOp::create(
-        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
-    auto isConstant = ConstantOp::create(
-        builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
-    auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
-    builder.createCallOp(loc, cudaRegisterVar,
-                         {fatbinHandle, hostVar, deviceName, deviceName,
-                          isExtern, varSize, isConstant, normalized});
+
+    if (regAttr.getIsManaged()) {
+      // void __hipRegisterManagedVar(void **fatbinHandle, char *managedVar,
+      //                              char *var, const char *deviceName,
+      //                              size_t size, unsigned align);
+      if (!cudaRegisterManagedVar)
+        cudaRegisterManagedVar = buildRuntimeFunction(
+            globalBuilder,
+            addUnderscoredPrefix(cudaPrefix, "RegisterManagedVar"), loc,
+            FuncType::get(
+                {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
+                voidTy));
+
+      llvm::StringRef name = global.getSymName();
+      assert(name.ends_with(".managed") &&
+             "HIP managed variables not transformed");
+      auto managedVar = mlirModule.lookupSymbol<GlobalOp>(
+          name.drop_back(llvm::StringRef(".managed").size()));
+      mlir::Value managedPtr =
+          builder.createBitcast(builder.createGetGlobal(managedVar), voidPtrTy);
+      auto varSize = ConstantOp::create(
+          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+      auto align = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, global.getAlignment().value_or(1)));
+      builder.createCallOp(
+          loc, cudaRegisterManagedVar,
+          {fatbinHandle, managedPtr, hostVar, deviceName, varSize, align});
+    } else {
+      auto isExtern = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
+
+      switch (regAttr.getKind()) {
+      case cir::CUDADeviceVarKind::Variable: {
+        // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+        //                              char *hostVar, char *deviceAddress,
+        //                              const char *deviceName, int ext,
+        //                              size_t size, int constant,
+        //                              int normalized);
+        // OG ignores parameter types, treating pointers as void*.
+        if (!cudaRegisterVar)
+          cudaRegisterVar = buildRuntimeFunction(
+              globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"),
+              loc,
+              FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy,
+                             intTy, sizeTy, intTy, intTy},
+                            voidTy));
+
+        auto varSize = ConstantOp::create(
+            builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+        auto isConstant = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+        auto normalized =
+            ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+
+        builder.createCallOp(loc, cudaRegisterVar,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              isExtern, varSize, isConstant, normalized});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Surface: {
+        cir::ConstantOp surfaceType = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
+        builder.createCallOp(loc, cudaRegisterSurface,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              surfaceType, isExtern});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Texture:
+        llvm_unreachable("Texture registration NYI");
+      }
+    }
   }
 }
 
@@ -3238,7 +3482,7 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexFMulOp, cir::ComplexFDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
                   cir::StoreOp, cir::CmpThreeWayOp, cir::LocalInitOp,
-                  cir::StdOpInterface>(op))
+                  cir::RegisterExitDtorOp, cir::StdOpInterface>(op))
       opsToTransform.push_back(op);
   });
 
@@ -3251,7 +3495,7 @@ void LoweringPreparePass::runOnOperation() {
     buildCUDAModuleCtor();
     // The fatbin global now references the same attribute; drop the module's
     // reference so an emitted .cir doesn't print the bytes twice. This has to
-    // happen out here because the ctor and both dtor builders test the
+    // happen out here because the ctor and the CUDA dtor builder test the
     // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
   }

@@ -20,10 +20,6 @@
 // RUN: %clang --target=ppc64 -mabi=elfv2 %s -### -o %t.o 2>&1 \
 // RUN: | FileCheck -check-prefix=CHECK-UNKNOWN-ELFv2 %s
 
-// RUN: %clang -target powerpc64-unknown-freebsd11 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv1 %s
-// RUN: %clang -target powerpc64-unknown-freebsd12 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv1 %s
-// RUN: %clang -target powerpc64-unknown-freebsd13 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE %s
-// RUN: %clang -target powerpc64-unknown-freebsd14 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE %s
 // RUN: %clang -target powerpc64-unknown-freebsd %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE %s
 // RUN: %clang -target powerpc64le-unknown-freebsd13 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2 %s
 // RUN: %clang -target powerpc64-unknown-openbsd %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE-PIE %s

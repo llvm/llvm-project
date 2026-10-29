@@ -300,12 +300,15 @@ template<typename T> struct DefaultRefDerefTraits {
   }
 };
 
+enum HashTableEmptyValueType { HashTableEmptyValue };
+
 template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> struct Ref {
   typename PtrTraits::StorageType t;
 
   enum AdoptTag { Adopt };
 
   Ref() : t{} {};
+  Ref(HashTableEmptyValueType) : t(nullptr) { }
   Ref(T &t, AdoptTag) : t(&t) { }
   Ref(T &t) : t(&RefDerefTraits::ref(t)) { }
   Ref(const Ref& o) : t(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.t))) { }
