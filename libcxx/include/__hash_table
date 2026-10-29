@@ -1962,20 +1962,32 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT {
   size_t __chash      = std::__constrain_hash(__cn->__hash(), __bc);
   // find previous node
   __next_pointer __pn = __bucket_list_[__chash];
-  for (; __pn->__next_ != __cn; __pn = __pn->__next_)
-    ;
-  // Fix up __bucket_list_
-  // if __pn is not in same bucket (before begin is not in same bucket) &&
-  //    if __cn->__next_ is not in same bucket (nullptr is not in same bucket)
-  if (__pn == __first_node_.__ptr() || std::__constrain_hash(__pn->__hash(), __bc) != __chash) {
-    if (__cn->__next_ == nullptr || std::__constrain_hash(__cn->__next_->__hash(), __bc) != __chash)
+
+  if (__pn->__next_ == __cn) {
+    // If we're at the start of the bucket we might need to update the bucket list.
+
+    // If there are no more nodes, update the bucket to be emtpy
+    if (__cn->__next_ == nullptr)
       __bucket_list_[__chash] = nullptr;
-  }
-  // if __cn->__next_ is not in same bucket (nullptr is in same bucket)
-  if (__cn->__next_ != nullptr) {
-    size_t __nhash = std::__constrain_hash(__cn->__next_->__hash(), __bc);
-    if (__nhash != __chash)
+
+    // If the next element is not in the same bucket, we need update the current bucket to be empty and the next bucket
+    // to the previous node.
+    else if (auto __nhash = std::__constrain_hash(__cn->__next_->__hash(), __bc); __nhash != __chash) {
+      __bucket_list_[__chash] = nullptr;
       __bucket_list_[__nhash] = __pn;
+    }
+    // Otherwise we don't need to do anything special. Simply removing the bucket from the linked list is enough.
+  } else {
+    // The removed node is not at the start of the bucket, so we need to find it.
+    for (; __pn->__next_ != __cn; __pn = __pn->__next_)
+      ;
+
+    // If we're at the end of the bucket and point to the next bucket, we need to update the bucket list.
+    if (__cn->__next_ != nullptr) {
+      size_t __nhash = std::__constrain_hash(__cn->__next_->__hash(), __bc);
+      if (__nhash != __chash)
+        __bucket_list_[__nhash] = __pn;
+    }
   }
   // remove __cn
   __pn->__next_ = __cn->__next_;
