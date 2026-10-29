@@ -60,9 +60,12 @@ public:
     Offset = Offset.value_or(StackOffset::getFixed(0)) +
              StackOffset::getFixed(VectorOff);
   }
-  bool hasValidOffset() const { return Offset.has_value(); }
+  // Whether the parsed offset has only a fixed component.
+  bool hasValidOffset() const { return Offset && Offset->getScalable() == 0; }
+  // Whether a fixed or scalable offset was parsed.
+  bool hasValidStackOffset() const { return Offset.has_value(); }
   int64_t getOffset() const {
-    assert(Offset->getScalable() == 0 && "Expected a fixed offset");
+    assert(hasValidOffset() && "Expected a fixed offset");
     return Offset->getFixed();
   }
 
@@ -70,15 +73,15 @@ public:
   // pointer. In that case, `Off` is set to the offset between `*this` and
   // `Other` (negative if `Other` is before `*this`).
   LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
-                               const SelectionDAG &DAG, int64_t &Off) const;
-
-  /// Like the above, but also allows a scalable offset between the pointers.
-  LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
                                const SelectionDAG &DAG, StackOffset &Off) const;
+
+  // Like the above, but also allows a known fixed offset between the pointers.
+  LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
+                               const SelectionDAG &DAG, int64_t &Off) const;
 
   bool equalBaseIndex(const BaseIndexOffset &Other,
                       const SelectionDAG &DAG) const {
-    int64_t Off;
+    StackOffset Off;
     return equalBaseIndex(Other, DAG, Off);
   }
 
@@ -102,11 +105,9 @@ public:
                                        const LocationSize NumBytes1,
                                        const SelectionDAG &DAG, bool &IsAlias);
 
-  /// Parses tree in N for base, index, offset addresses. By default, scalable
-  /// offsets remain part of the base or index.
+  /// Parses tree in N for base, index, and fixed/scalable offsets.
   LLVM_ABI static BaseIndexOffset match(const SDNode *N,
-                                        const SelectionDAG &DAG,
-                                        bool MatchScalableOffsets = false);
+                                        const SelectionDAG &DAG);
 
   LLVM_ABI void print(raw_ostream &OS) const;
   LLVM_ABI void dump() const;

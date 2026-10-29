@@ -21,10 +21,10 @@ TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
   auto AddOffset = [&](SDValue Ptr, uint64_t Bytes, bool Scalable) {
     return DAG->getMemBasePlusOffset(Ptr, TypeSize::get(Bytes, Scalable), Loc);
   };
-  auto Match = [&](SDValue Ptr, bool Scalable = true) {
+  auto Match = [&](SDValue Ptr) {
     SDValue Load = DAG->getLoad(VT, Loc, DAG->getEntryNode(), Ptr,
                                 MachinePointerInfo(), Align(4));
-    return BaseIndexOffset::match(Load.getNode(), *DAG, Scalable);
+    return BaseIndexOffset::match(Load.getNode(), *DAG);
   };
 
   // Compare nested offsets with different fixed and scalable components.
@@ -32,6 +32,10 @@ TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
   SDValue Ptr1 = AddOffset(AddOffset(Ptr0, 16, true), 4, false);
   auto Base0 = Match(Ptr0);
   auto Base1 = Match(Ptr1);
+  EXPECT_FALSE(Base0.hasValidOffset());
+  EXPECT_TRUE(Base0.hasValidStackOffset());
+  EXPECT_FALSE(Base1.hasValidOffset());
+  EXPECT_TRUE(Base1.hasValidStackOffset());
   StackOffset Diff;
   ASSERT_TRUE(Base0.equalBaseIndex(Base1, *DAG, Diff));
   EXPECT_EQ(Diff, StackOffset::get(4, 16));
@@ -41,8 +45,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
   // The fixed-offset interface must not discard the scalable difference.
   int64_t FixedDiff;
   EXPECT_FALSE(Base0.equalBaseIndex(Base1, *DAG, FixedDiff));
-  EXPECT_FALSE(
-      Match(Ptr0, false).equalBaseIndex(Match(Ptr1, false), *DAG, FixedDiff));
 
   // Reassociation must not affect the result. Equal scalable components
   // cancel, leaving a difference that the fixed-offset interface can use.
@@ -52,6 +54,11 @@ TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
   EXPECT_TRUE(
       Base1.equalBaseIndex(Match(AddOffset(Ptr2, 4, false)), *DAG, FixedDiff));
   EXPECT_EQ(FixedDiff, 4);
+
+  auto FixedBase = Match(AddOffset(Base, 8, false));
+  EXPECT_TRUE(FixedBase.hasValidOffset());
+  EXPECT_TRUE(FixedBase.hasValidStackOffset());
+  EXPECT_EQ(FixedBase.getOffset(), 8);
 
   SDValue OtherBase = DAG->getRegister(2, MVT::i64);
   EXPECT_FALSE(

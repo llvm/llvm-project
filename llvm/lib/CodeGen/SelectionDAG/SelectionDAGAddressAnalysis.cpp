@@ -37,7 +37,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
   // Conservatively fail if we a match failed..
   if (!Base.getNode() || !Other.Base.getNode())
     return false;
-  if (!hasValidOffset() || !Other.hasValidOffset())
+  if (!hasValidStackOffset() || !Other.hasValidStackOffset())
     return false;
   // Initial Offset difference.
   Off = *Other.Offset - *Offset;
@@ -206,8 +206,7 @@ bool BaseIndexOffset::contains(const SelectionDAG &DAG, int64_t BitSize,
 
 /// Parses tree in Ptr for base, index, offset addresses.
 static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
-                                   const SelectionDAG &DAG,
-                                   bool MatchScalableOffsets) {
+                                   const SelectionDAG &DAG) {
   SDValue Ptr = N->getBasePtr();
 
   // (((B + I*M) + c)) + c ...
@@ -229,8 +228,7 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
       return BaseIndexOffset(SDValue(), SDValue(), 0, false);
   }
 
-  // Consume fixed and (optionally) scalable offsets, including ORs that act
-  // as adds.
+  // Consume fixed and scalable offsets, including ORs that act as adds.
   while (true) {
     switch (Base->getOpcode()) {
     case ISD::OR:
@@ -246,11 +244,9 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
     case ISD::PTRADD:
       if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1)))
         Offset += StackOffset::getFixed(C->getSExtValue());
-      else if (MatchScalableOffsets &&
-               Base->getOperand(1).getOpcode() == ISD::VSCALE)
+      else if (Base->getOperand(1).getOpcode() == ISD::VSCALE)
         Offset += StackOffset::getScalable(
-            cast<ConstantSDNode>(Base->getOperand(1).getOperand(0))
-                ->getSExtValue());
+            Base->getOperand(1).getConstantOperandAPInt(0).getSExtValue());
       else
         break;
       Base = DAG.getTargetLoweringInfo().unwrapAddress(Base->getOperand(0));
@@ -316,10 +312,10 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
   return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
 }
 
-BaseIndexOffset BaseIndexOffset::match(const SDNode *N, const SelectionDAG &DAG,
-                                       bool MatchScalableOffsets) {
+BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
+                                       const SelectionDAG &DAG) {
   if (const auto *LS0 = dyn_cast<LSBaseSDNode>(N))
-    return matchLSNode(LS0, DAG, MatchScalableOffsets);
+    return matchLSNode(LS0, DAG);
   if (const auto *LN = dyn_cast<LifetimeSDNode>(N)) {
     return BaseIndexOffset(LN->getOperand(1), SDValue(), 0, false);
   }
@@ -338,11 +334,9 @@ void BaseIndexOffset::print(raw_ostream& OS) const {
   OS << "] index=[";
   if (Index)
     Index->print(OS);
-  OS << "] offset=";
-  if (Offset)
-    OS << Offset->getFixed() << " + " << Offset->getScalable() << " * vscale";
-  else
-    OS << "<unknown>";
+  OS << "] offset=" << Offset->getFixed();
+  if (Offset->getScalable() != 0)
+    OS << " + " << Offset->getScalable() << " * vscale";
 }
 
 #endif

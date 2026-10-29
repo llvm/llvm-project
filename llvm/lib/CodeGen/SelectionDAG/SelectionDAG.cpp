@@ -14589,11 +14589,13 @@ static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
   if (LS->getChain() != Base->getChain())
     return false;
   EVT VT = LS->getMemoryVT();
+  if (!VT.getScalarType().isByteSized())
+    return false;
   if (VT.getStoreSize() != Bytes)
     return false;
 
-  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG, Bytes.isScalable());
-  auto LocDecomp = BaseIndexOffset::match(LS, DAG, Bytes.isScalable());
+  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG);
+  auto LocDecomp = BaseIndexOffset::match(LS, DAG);
   StackOffset Offset;
   if (!BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
     return false;
@@ -14601,16 +14603,6 @@ static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
   int64_t ExpectedOffset = Dist * (int64_t)Bytes.getKnownMinValue();
   if (Bytes.isFixed())
     return Offset == StackOffset::getFixed(ExpectedOffset);
-
-  // getVScale folds scalable offsets to constants when vscale is known.
-  ConstantRange VScaleRange =
-      getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
-  if (const APInt *KnownVScale = VScaleRange.getSingleElement()) {
-    uint64_t VScale = KnownVScale->getZExtValue();
-    uint64_t ActualBytes = Offset.getFixed() + Offset.getScalable() * VScale;
-    return ActualBytes == ExpectedOffset * VScale;
-  }
-
   return Offset == StackOffset::getScalable(ExpectedOffset);
 }
 
