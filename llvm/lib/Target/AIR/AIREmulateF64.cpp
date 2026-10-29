@@ -83,12 +83,27 @@ static cl::opt<bool> HintDirected(
 /// An emulation that stays a hint: a constrained operation rounding toward
 /// zero, upward or downward, whose key agx-lower-air restores (no "+"
 /// operands it would miscount).
+/// So are bfloat ones in any rounding (in float or soft-f64 for Metal, whose
+/// float denormals may flush; native on AGX). The "+f32-denormals" marker
+/// only chooses the emulation, and is not in the hint's key.
 static bool keepsAsHint(StringRef Key) {
-  if (!HintDirected || !Key.starts_with("call:llvm.experimental.constrained.") ||
-      Key.contains("|+"))
+  if (!HintDirected || !Key.starts_with("call:llvm.experimental.constrained."))
+    return false;
+  if ((Key.contains(".bf16") || Key.contains(".v2bf16")) &&
+      !Key.contains("constrained.fpext") && !Key.contains("constrained.fptrunc"))
+    return true;
+  if (Key.contains("|+"))
     return false;
   return Key.contains("|round.towardzero") || Key.contains("|round.upward") ||
          Key.contains("|round.downward");
+}
+
+static std::string hintKey(StringRef Key) {
+  std::string K = Key.str();
+  for (StringRef Marker : {"|+f32-denormals"})
+    if (size_t At = K.find(Marker.str()); At != std::string::npos)
+      K.erase(At, Marker.size());
+  return K;
 }
 
 bool isDouble(const Type *T) { return T->getScalarType()->isDoubleTy(); }
@@ -1493,7 +1508,7 @@ void EmulateF64::inlineEmulations() {
       // the hint: its body simplified below, as the inlined emulations are
       std::string Name = (air::HintPrefix + Twine(HintCount++)).str();
       F.setName(Name);
-      F.addFnAttr(air::HintAttr, Key);
+      F.addFnAttr(air::HintAttr, hintKey(Key));
       F.removeFnAttr(EmulationAttr);
       F.addFnAttr(Attribute::NoInline);
       F.setLinkage(GlobalValue::InternalLinkage);

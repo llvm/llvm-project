@@ -6,7 +6,7 @@
 ; conversions on the bits. strictfp goes.
 ; RUN: opt -mtriple=air -passes=air-emulate-f64 -S < %s \
 ; RUN:   | FileCheck %s --implicit-check-not='@llvm.experimental.constrained' --implicit-check-not=strictfp
-; RUN: opt -mtriple=air -passes=air-emulate-f64 -S < %s | FileCheck %s --check-prefix=HINT
+; RUN: opt -mtriple=air -passes=air-emulate-f64 -S < %s | FileCheck %s --check-prefix=HINT --implicit-check-not=f32-denormals
 
 target triple = "air"
 
@@ -58,20 +58,22 @@ define void @directed(ptr addrspace(1) %p, float %x, float %y, half %h, i64 %i) 
   ret void
 }
 
-; bfloat: no bfloat arithmetic is left.
+; bfloat: no bfloat arithmetic is left. The arithmetic is hints (native on
+; AGX) whose bodies compute in float, the fma in float where exact (rounded to
+; odd, then to nearest bfloat) else in soft-f64 rounded to odd (toward zero,
+; odd where rounding away differs); conversions are on the bits.
 ; CHECK-LABEL: define void @bf16(
 ; CHECK-NOT: {{(fadd|fmul|fma|fpext|fptrunc).*bfloat}}
-; CHECK: %[[X:[0-9]+]] = bitcast bfloat %x to i16
-; CHECK: fadd float
-; fma in float where exact (rounded to odd, then to nearest bfloat), else
-; soft-f64 rounded to odd (toward zero, odd where rounding away differs)
-; CHECK: bf16.fma.slow
-; CHECK: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 0)
-; CHECK: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 %{{[0-9]+}})
-; CHECK: call i32 @__air_f64_to_bf16_r(i64 %{{[0-9]+}}, i32 1)
-; CHECK: fmul <2 x float>
-; CHECK: bitcast <2 x i16> %{{[0-9]+}} to <2 x bfloat>
+; CHECK: call bfloat @__air_hint.{{[0-9]+}}(bfloat %x, bfloat %x)
+; CHECK: call bfloat @__air_hint.{{[0-9]+}}(bfloat %a, bfloat %x, bfloat %x)
+; CHECK: call <2 x bfloat> @__air_hint.{{[0-9]+}}(<2 x bfloat> %v, <2 x bfloat> %v)
 ; CHECK: ret void
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.fadd.bf16|---|round.dynamic|fpexcept.ignore"
+; HINT-DAG: "air-hint"="call:llvm.experimental.constrained.fma.bf16|----|round.dynamic|fpexcept.ignore"
+; HINT-DAG: bf16.fma.slow
+; HINT-DAG: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 0)
+; HINT-DAG: call i32 @__air_f64_to_bf16_r(i64 %{{[0-9]+}}, i32 1)
+; HINT-DAG: fmul <2 x float>
 define void @bf16(ptr addrspace(1) %p, bfloat %x, <2 x bfloat> %v, float %f) "air-kernel" strictfp {
   %a = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat %x, bfloat %x, metadata !"round.dynamic", metadata !"fpexcept.ignore") strictfp
   %b = call bfloat @llvm.experimental.constrained.fma.bf16(bfloat %a, bfloat %x, bfloat %x, metadata !"round.dynamic", metadata !"fpexcept.ignore") strictfp
@@ -85,11 +87,11 @@ define void @bf16(ptr addrspace(1) %p, bfloat %x, <2 x bfloat> %v, float %f) "ai
 }
 
 ; Where float denormals flush, bfloat's (float denormals in float) would
-; too: soft-f64 instead.
+; too: the hint's body is soft-f64 instead; its key has no "+" marker.
 ; CHECK-LABEL: define void @bf16_ftz(
-; CHECK: call i64 @__air_f64_add_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 1)
-; CHECK: call i32 @__air_f64_to_bf16_r(i64 %{{[0-9]+}}, i32 1)
+; CHECK: call bfloat @__air_hint.{{[0-9]+}}(bfloat %x, bfloat %x)
 ; CHECK: ret void
+; HINT-DAG: call i64 @__air_f64_add_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 1)
 define void @bf16_ftz(ptr addrspace(1) %p, bfloat %x) "air-kernel" strictfp denormal_fpenv(float: preservesign) {
   %a = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat %x, bfloat %x, metadata !"round.dynamic", metadata !"fpexcept.ignore") strictfp
   store bfloat %a, ptr addrspace(1) %p
