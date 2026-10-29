@@ -228,6 +228,7 @@ Legends:
 - N/A: Not defined in the standard or will not be added.
 - \*: LLVM libc extension.
 - ? Because of a conflict between float16 logb function and bfloat16 log function, the latter is implemented as `log_bf16`.
+- `long double` functions are aliases to `f80`, `double-double`, `float128`, or `double` according to the target architecture.
 
 % TODO(lntue): Add a new page to discuss about the algorithms used in the
 % implementations and include the link here.
