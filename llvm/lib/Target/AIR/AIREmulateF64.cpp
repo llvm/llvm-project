@@ -826,6 +826,31 @@ static StringRef ieeeF32Op(const Instruction &I) {
       return "fma";
     if (II->getIntrinsicID() == Intrinsic::sqrt && !II->hasApproxFunc())
       return "sqrt";
+    // the constrained forms rounding to nearest (a front end's module in
+    // constrained mode): the same operations
+    if (auto *C = dyn_cast<ConstrainedFPIntrinsic>(II)) {
+      std::optional<RoundingMode> R = C->getRoundingMode();
+      if (!R || (*R != RoundingMode::NearestTiesToEven &&
+                 *R != RoundingMode::Dynamic))
+        return "";
+      switch (C->getIntrinsicID()) {
+      case Intrinsic::experimental_constrained_fadd:
+        return "add";
+      case Intrinsic::experimental_constrained_fsub:
+        return "sub";
+      case Intrinsic::experimental_constrained_fmul:
+        return "mul";
+      case Intrinsic::experimental_constrained_fdiv:
+        return "div";
+      case Intrinsic::experimental_constrained_fma:
+      case Intrinsic::experimental_constrained_fmuladd:
+        return "fma";
+      case Intrinsic::experimental_constrained_sqrt:
+        return "sqrt";
+      default:
+        return "";
+      }
+    }
   }
   return "";
 }
@@ -901,9 +926,11 @@ void EmulateF64::replaceOperations(Function &F) {
     if (StringRef Name = ieeeF32Op(I); !Name.empty() && ieeeF32(F)) {
       // "ieee32:<op>" (before the calls below: fma and sqrt are intrinsic calls): the f32 operation with denormal operands and results
       SmallVector<Value *, 3> Ops;
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        Ops.append(II->arg_begin(), II->arg_end());
-      else
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        for (Value *A : II->args())
+          if (!isa<MetadataAsValue>(A)) // (a constrained form's rounding)
+            Ops.push_back(A);
+      } else
         Ops.append(I.op_begin(), I.op_end());
       replaceWithEmulation(I, ("ieee32:" + Name).str(), Ops);
       continue;
@@ -1216,15 +1243,18 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
     Value *Away = Call(B.CreateSelect(B.CreateICmpSLT(TZ, B.getInt64(0)),
                                       B.getInt32(3), B.getInt32(2)));
     Value *Odd = B.CreateOr(TZ, B.CreateZExt(B.CreateICmpNE(TZ, Away), I64));
-    Value *SlowR = B.CreateBitCast(
-        Lib("__air_f64_to_f32_r", I32, {Odd, B.getInt32(1)}), F32);
+    // (the paths meet on the bits: a flushing GPU may flush a float on its
+    // way through a phi)
+    Value *SlowR = Lib("__air_f64_to_f32_r", I32, {Odd, B.getInt32(1)});
     BasicBlock *SlowEnd = B.GetInsertBlock();
     B.CreateBr(Done);
+    B.SetInsertPoint(FastEnd->getTerminator());
+    Value *FastBits = Bits(Fast);
     B.SetInsertPoint(Done);
-    PHINode *P = B.CreatePHI(F32, 2);
-    P->addIncoming(Fast, FastEnd);
+    PHINode *P = B.CreatePHI(I32, 2);
+    P->addIncoming(FastBits, FastEnd);
     P->addIncoming(SlowR, SlowEnd);
-    return Fin(P);
+    return Fin(B.CreateBitCast(P, F32));
   }
   if (StringRef RMW = Op; RMW.consume_front("atomic:")) {
     // A double precision read-modify-write as a compare-exchange loop of its
