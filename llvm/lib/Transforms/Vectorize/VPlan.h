@@ -877,12 +877,6 @@ public:
     ReductionFlags = ReductionFlagsTy(Kind, IsOrdered, IsInLoop, FMFs);
   }
 
-  void transferFlags(VPIRFlags &Other) {
-    OpType = Other.OpType;
-    AllFlags[0] = Other.AllFlags[0];
-    AllFlags[1] = Other.AllFlags[1];
-  }
-
   /// Only keep flags also present in \p Other. \p Other must have the same
   /// OpType as the current object.
   void intersectFlags(const VPIRFlags &Other);
@@ -3478,11 +3472,9 @@ public:
   VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
 
   VPReplicateRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
-    auto *Copy = new VPReplicateRecipe(
+    return new VPReplicateRecipe(
         getUnderlyingInstr(), NewOperands, IsSingleScalar,
         isPredicated() ? getMask() : nullptr, *this, *this, getDebugLoc());
-    Copy->transferFlags(*this);
-    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPReplicateSC)
@@ -4917,10 +4909,6 @@ class VPlan {
   /// the tail.
   VPValue *TripCount = nullptr;
 
-  /// Represents the backedge taken count of the original loop, for folding
-  /// the tail. It equals TripCount - 1.
-  VPSymbolicValue *BackedgeTakenCount = nullptr;
-
   /// Represents the vector trip count.
   VPSymbolicValue VectorTripCount;
 
@@ -5071,15 +5059,6 @@ public:
            "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
-
-  /// The backedge taken count of the original loop.
-  VPValue *getOrCreateBackedgeTakenCount() {
-    // BTC shares the canonical IV type with VectorTripCount.
-    if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue(VectorTripCount.getType());
-    return BackedgeTakenCount;
-  }
-  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
