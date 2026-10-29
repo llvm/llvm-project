@@ -20,6 +20,7 @@
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -189,6 +190,21 @@ public:
   // FIXME Could move into Triple class.
   unsigned getIntSize(const Triple &TT) const {
     return TT.isArch16Bit() ? 16 : 32;
+  }
+
+  /// Helpers for extension attributes.  TODO: Move everything from TLI to
+  /// here.
+  static Attribute::AttrKind getExtAttrForBoolReturn(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    TargetLibraryInfo::initBoolExtensionsForTriple(ShouldZExtBoolParam,
+                                                   ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolReturn ? Attribute::ZExt : Attribute::None;
+  }
+
+  static Attribute::AttrKind getExtAttrForI8Return(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
   }
 
   /// Get the C-type function signature of the Libcall if provided,

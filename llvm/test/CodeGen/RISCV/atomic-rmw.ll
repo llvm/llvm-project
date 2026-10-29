@@ -35040,9 +35040,8 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB165_4
 ; RV64I-NEXT:  .LBB165_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    blt s2, a0, .LBB165_1
+; RV64I-NEXT:    blt s2, a1, .LBB165_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB165_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35170,9 +35169,8 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB166_4
 ; RV64I-NEXT:  .LBB166_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    blt s2, a0, .LBB166_1
+; RV64I-NEXT:    blt s2, a1, .LBB166_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB166_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35305,9 +35303,8 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB167_4
 ; RV64I-NEXT:  .LBB167_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    blt s2, a0, .LBB167_1
+; RV64I-NEXT:    blt s2, a1, .LBB167_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB167_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35440,9 +35437,8 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB168_4
 ; RV64I-NEXT:  .LBB168_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    blt s2, a0, .LBB168_1
+; RV64I-NEXT:    blt s2, a1, .LBB168_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB168_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35575,9 +35571,8 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB169_4
 ; RV64I-NEXT:  .LBB169_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    blt s2, a0, .LBB169_1
+; RV64I-NEXT:    blt s2, a1, .LBB169_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB169_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35705,9 +35700,8 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB170_4
 ; RV64I-NEXT:  .LBB170_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bge s2, a0, .LBB170_1
+; RV64I-NEXT:    bge s2, a1, .LBB170_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB170_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35835,9 +35829,8 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB171_4
 ; RV64I-NEXT:  .LBB171_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bge s2, a0, .LBB171_1
+; RV64I-NEXT:    bge s2, a1, .LBB171_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB171_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -35970,9 +35963,8 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB172_4
 ; RV64I-NEXT:  .LBB172_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bge s2, a0, .LBB172_1
+; RV64I-NEXT:    bge s2, a1, .LBB172_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB172_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36105,9 +36097,8 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB173_4
 ; RV64I-NEXT:  .LBB173_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bge s2, a0, .LBB173_1
+; RV64I-NEXT:    bge s2, a1, .LBB173_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB173_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36240,9 +36231,8 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB174_4
 ; RV64I-NEXT:  .LBB174_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bge s2, a0, .LBB174_1
+; RV64I-NEXT:    bge s2, a1, .LBB174_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB174_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36370,9 +36360,8 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB175_4
 ; RV64I-NEXT:  .LBB175_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bltu s2, a0, .LBB175_1
+; RV64I-NEXT:    bltu s2, a1, .LBB175_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB175_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36500,9 +36489,8 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB176_4
 ; RV64I-NEXT:  .LBB176_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bltu s2, a0, .LBB176_1
+; RV64I-NEXT:    bltu s2, a1, .LBB176_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB176_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36635,9 +36623,8 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB177_4
 ; RV64I-NEXT:  .LBB177_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bltu s2, a0, .LBB177_1
+; RV64I-NEXT:    bltu s2, a1, .LBB177_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB177_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36770,9 +36757,8 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB178_4
 ; RV64I-NEXT:  .LBB178_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bltu s2, a0, .LBB178_1
+; RV64I-NEXT:    bltu s2, a1, .LBB178_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB178_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -36905,9 +36891,8 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB179_4
 ; RV64I-NEXT:  .LBB179_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bltu s2, a0, .LBB179_1
+; RV64I-NEXT:    bltu s2, a1, .LBB179_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB179_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -37035,9 +37020,8 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB180_4
 ; RV64I-NEXT:  .LBB180_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bgeu s2, a0, .LBB180_1
+; RV64I-NEXT:    bgeu s2, a1, .LBB180_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB180_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -37165,9 +37149,8 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB181_4
 ; RV64I-NEXT:  .LBB181_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bgeu s2, a0, .LBB181_1
+; RV64I-NEXT:    bgeu s2, a1, .LBB181_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB181_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -37300,9 +37283,8 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB182_4
 ; RV64I-NEXT:  .LBB182_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bgeu s2, a0, .LBB182_1
+; RV64I-NEXT:    bgeu s2, a1, .LBB182_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB182_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -37435,9 +37417,8 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB183_4
 ; RV64I-NEXT:  .LBB183_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bgeu s2, a0, .LBB183_1
+; RV64I-NEXT:    bgeu s2, a1, .LBB183_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB183_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
@@ -37570,9 +37551,8 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    bnez a0, .LBB184_4
 ; RV64I-NEXT:  .LBB184_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    mv a2, a1
-; RV64I-NEXT:    bgeu s2, a0, .LBB184_1
+; RV64I-NEXT:    bgeu s2, a1, .LBB184_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64I-NEXT:    # in Loop: Header=BB184_2 Depth=1
 ; RV64I-NEXT:    mv a2, s0
