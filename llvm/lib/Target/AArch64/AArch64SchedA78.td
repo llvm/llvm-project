@@ -780,8 +780,8 @@ def A78Rd_IMA  : SchedReadAdvance<1, [A78Wr_IMA]>;
 def A78Wr_FMA : SchedWriteRes<[A78UnitV]> { let Latency = 4; }
 def A78Rd_FMA : SchedReadAdvance<2, [WriteFMul, A78Wr_FMA]>;
 
-def A78Wr_VA : SchedWriteRes<[A78UnitV1]> { let Latency = 4; }
-def A78Rd_VA : SchedReadAdvance<3, [A78Wr_VA]>;
+def A78Wr_VA : SchedWriteRes<[A78UnitV1]> { let Latency = 3; }
+def A78Rd_VA : SchedReadAdvance<2, [A78Wr_VA]>;
 
 def A78Wr_VDOT : SchedWriteRes<[A78UnitV]> { let Latency = 3; }
 def A78Rd_VDOT : SchedReadAdvance<2, [A78Wr_VDOT]>;
