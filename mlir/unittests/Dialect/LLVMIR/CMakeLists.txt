@@ -5,6 +5,7 @@ add_mlir_unittest(MLIRLLVMIRTests
 )
 mlir_target_link_libraries(MLIRLLVMIRTests
   PRIVATE
+  MLIRDLTIDialect
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRROCDLDialect

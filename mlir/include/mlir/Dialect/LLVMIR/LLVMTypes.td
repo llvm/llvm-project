@@ -330,7 +330,9 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 // LLVMTargetExtType
 //===----------------------------------------------------------------------===//
 
-def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target"> {
+def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+                                ["getPreferredAlignment"]>]> {
   let summary = "LLVM target-specific extension type";
   let description = [{
     LLVM dialect target extension type, which are generally unintrospectable
@@ -359,6 +361,9 @@ def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target"> {
 
     bool hasProperty(Property Prop) const;
     bool supportsMemOps() const;
+
+    /// Return the type used for layout, or void for an unsized extension type.
+    Type getLayoutType() const;
   }];
 }
 
