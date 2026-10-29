@@ -58,6 +58,8 @@ body:             |
 ---
 # GCN-LABEL: name: and_execnz_imm_vccnz_debug
 # GCN-NOT: S_AND_
+# GCN: DBG_VALUE $noreg, $noreg
+# GCN-NEXT: DBG_VALUE $noreg, $noreg
 # GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
 name:            and_execnz_imm_vccnz_debug
 body:             |
@@ -69,11 +71,75 @@ body:             |
 
   bb.2:
     $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
-    DBG_VALUE
-    DBG_VALUE
+    DBG_VALUE $vcc, $noreg
+    DBG_VALUE $vcc_lo, $noreg
     DBG_VALUE
     DBG_VALUE
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_debug_sreg
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_AND_
+# GCN: DBG_VALUE $noreg, $noreg
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_debug_sreg
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    DBG_VALUE $sgpr0_sgpr1, $noreg
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_debug_sreg_redefined
+# GCN-NOT: S_AND_
+# GCN: $sgpr0_sgpr1 = S_MOV_B64 0
+# GCN-NEXT: DBG_VALUE $sgpr0_sgpr1, $noreg
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_debug_sreg_redefined
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    $sgpr0_sgpr1 = S_MOV_B64 0
+    DBG_VALUE $sgpr0_sgpr1, $noreg
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: and_execz_vcc_input_debug_live_vcc
+# GCN-NOT: S_AND_
+# GCN: $vcc = S_MOV_B64 $exec
+# GCN-NEXT: DBG_VALUE $vcc, $noreg
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_vcc_input_debug_live_vcc
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
+    DBG_VALUE $vcc, $noreg
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_ENDPGM 0
 ...
 ---
@@ -345,6 +411,8 @@ body:             |
 # W32-LABEL: name: and_execz_mov_vccz_w32
 # W32-NOT: S_MOV_
 # W32-NOT: S_AND_
+# W32: DBG_VALUE $noreg, $noreg
+# W32-NEXT: DBG_VALUE $noreg, $noreg
 # W32: S_CBRANCH_EXECZ %bb.1, implicit $exec
 name:            and_execz_mov_vccz_w32
 body:             |
@@ -356,7 +424,11 @@ body:             |
 
   bb.2:
     $sgpr0 = S_MOV_B32 -1
+    DBG_VALUE $sgpr0, $noreg
     $vcc_lo = S_AND_B32 $exec_lo, killed $sgpr0, implicit-def dead $scc
+    DBG_VALUE $vcc_lo, $noreg
+    DBG_VALUE
+    DBG_VALUE
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
 ...

@@ -23,6 +23,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -191,6 +192,17 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   const unsigned AndN2 = IsWave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
   const unsigned Mov = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
 
+  auto UndefDebugUses = [this, &MI](MachineInstr &Def, Register Reg) {
+    for (MachineInstr &I :
+         make_range(std::next(Def.getIterator()), MI.getIterator())) {
+      PhysRegInfo Info = AnalyzePhysRegInBundle(I, Reg, TRI);
+      if (Info.FullyDefined || Info.Clobbered)
+        break;
+      if (I.isDebugValue() && I.readsRegister(Reg, TRI))
+        I.setDebugValueUndef();
+    }
+  };
+
   MachineBasicBlock::reverse_iterator A = MI.getReverseIterator(),
                                       E = MBB.rend();
   bool ReadsCond = false;
@@ -228,9 +240,9 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   Register SReg;
   if (Op2.isReg()) {
     SReg = Op2.getReg();
-    auto M = std::next(A);
+    auto M = next_nodbg(A, E, /*SkipPseudoOp=*/false);
     bool ReadsSreg = false;
-    for (; M != E; ++M) {
+    for (; M != E; M = next_nodbg(M, E, /*SkipPseudoOp=*/false)) {
       if (M->definesRegister(SReg, TRI))
         break;
       if (M->modifiesRegister(SReg, TRI))
@@ -248,6 +260,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     // into the AND.
     if (!ReadsSreg && Op2.isKill()) {
       A->getOperand(2).ChangeToImmediate(MaskValue);
+      UndefDebugUses(*M, SReg);
       M->eraseFromParent();
     }
   } else if (Op2.isImm()) {
@@ -271,6 +284,8 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
         BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
             .addReg(ExecReg);
       }
+    } else {
+      UndefDebugUses(*A, CondReg);
     }
     // Remove AND instruction
     A->eraseFromParent();
