@@ -12,6 +12,7 @@ libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
 libclc_add_sources(${LIBCLC_OPENCL_TARGET}
   BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../generic
   FILES
+  common/smoothstep.cl
   geometric/distance.cl
   geometric/length.cl
   geometric/normalize.cl
