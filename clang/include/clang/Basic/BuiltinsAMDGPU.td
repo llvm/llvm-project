@@ -160,6 +160,10 @@ def __builtin_amdgcn_wave_barrier : AMDGPUBuiltin<"void()">;
 def __builtin_amdgcn_sched_barrier : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_sched_group_barrier : AMDGPUBuiltin<"void(_Constant int, _Constant int, _Constant int)">;
 def __builtin_amdgcn_iglp_opt : AMDGPUBuiltin<"void(_Constant int)">;
+def __builtin_amdgcn_pad_waitcnt : AMDGPUBuiltin<"void(_Constant int, _Constant int)"> {
+  let Documentation = [DocPadWaitcnt];
+  let ArgNames = ["counter", "count"];
+}
 def __builtin_amdgcn_s_dcache_inv : AMDGPUBuiltin<"void()">;
 def __builtin_amdgcn_buffer_wbinvl1 : AMDGPUBuiltin<"void()">;
 def __builtin_amdgcn_fence : AMDGPUBuiltin<"void(unsigned int, char const *, ...)">;

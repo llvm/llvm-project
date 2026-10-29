@@ -432,6 +432,14 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::PAD_WAITCNT) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" pad_waitcnt(" +
+                                    Twine(MI->getOperand(0).getImm()) + ", " +
+                                    Twine(MI->getOperand(1).getImm()) + ")");
+      return;
+    }
+
     if (MI->getOpcode() == AMDGPU::SI_MASKED_UNREACHABLE) {
       if (isVerbose())
         OutStreamer->emitRawComment(" divergent unreachable");
