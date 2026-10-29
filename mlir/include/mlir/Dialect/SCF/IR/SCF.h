@@ -114,6 +114,12 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
 
+/// A simple, conservative analysis to determine if the loop is shape
+/// preserving. I.e., the arg-th yielded value has the same shape as the
+/// corresponding region iter_arg: it is the iter_arg, or derives from it
+/// through tied results of destination-style ops and of shape-preserving loops.
+bool isShapePreserving(ForOp forOp, int64_t arg);
+
 /// Helper function to compute the difference between two values. This is used
 /// by the loop implementations to compute the trip count.
 std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub, bool isSigned);
