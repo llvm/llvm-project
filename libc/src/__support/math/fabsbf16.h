@@ -12,16 +12,13 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr bfloat16 fabsbf16(bfloat16 x) { return fputil::abs(x); }
+using LIBC_NAMESPACE::fputil::BFloat16;
 
-#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
-LIBC_INLINE constexpr __bf16 fabsbf16(__bf16 x) { return fputil::abs(x); }
-#endif
+LIBC_INLINE constexpr BFloat16 fabsbf16(BFloat16 x) { return fputil::abs(x); }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

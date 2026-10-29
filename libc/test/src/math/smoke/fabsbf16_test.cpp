@@ -8,12 +8,11 @@
 
 #include "FAbsTest.h"
 
-#include "src/__support/macros/properties/types.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fabsbf16.h"
 
-#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
-LIST_FABS_TESTS(Fabsbf16, __bf16, LIBC_NAMESPACE::fabsbf16)
-#else
-#include "src/__support/FPUtil/bfloat16.h"
+#ifndef LIBC_TYPES_HAS_BUILTIN_BFLOAT16
+using bfloat16 = LIBC_NAMESPACE::fputil::BFloat16;
+#endif // LIBC_TYPES_HAS_BUILTIN_BFLOAT16
+
 LIST_FABS_TESTS(Fabsbf16, bfloat16, LIBC_NAMESPACE::fabsbf16)
-#endif
