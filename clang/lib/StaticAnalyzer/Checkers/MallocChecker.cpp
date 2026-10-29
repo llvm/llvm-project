@@ -174,7 +174,7 @@ namespace {
 class RefState {
   enum Kind {
     // Reference to allocated memory, no information about allocation size.
-    AllocatedAnySize,
+    AllocatedOfAnySize,
     // Reference to zero-allocated memory.
     AllocatedOfSizeZero,
     // Reference to released/freed memory.
@@ -200,7 +200,7 @@ class RefState {
 
 public:
   bool isAllocated() const {
-    return K == AllocatedAnySize || K == AllocatedOfSizeZero;
+    return K == AllocatedOfAnySize || K == AllocatedOfSizeZero;
   }
   bool isAllocatedOfSizeZero() const { return K == AllocatedOfSizeZero; }
   bool isReleased() const { return K == Released; }
@@ -214,7 +214,7 @@ public:
   }
 
   static RefState getAllocated(AllocationFamily F, const Stmt *S) {
-    return RefState(AllocatedAnySize, S, F);
+    return RefState(AllocatedOfAnySize, S, F);
   }
   static RefState getAllocatedOfSizeZero(const RefState *RS) {
     return RefState(AllocatedOfSizeZero, RS->getStmt(),
@@ -238,7 +238,7 @@ public:
 
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const {
     switch (K) {
-    case AllocatedAnySize:
+    case AllocatedOfAnySize:
       OS << "Allocated";
       break;
 #define CASE(ID) case ID: OS << #ID; break;
