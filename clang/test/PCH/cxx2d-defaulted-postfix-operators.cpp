@@ -37,6 +37,23 @@ template <typename T> struct Y {
 } // namespace A
 } // namespace LookupContext
 
+// Ensure that requires-clauses on defaulted postfix operators and the prefix
+// operators they select round-trip through an AST file.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> struct Constrained {
+  T v;
+  constexpr Constrained &operator++() requires Small<T> { v += 1; return *this; }
+  constexpr Constrained &operator++() { v += 10; return *this; }
+  constexpr Constrained &operator--() { --v; return *this; }
+  Constrained operator++(int) requires Small<T> = default;
+  friend Constrained operator--(Constrained &, int) requires Small<T> = default;
+};
+template <typename T> struct PrefixConstrained {
+  T v;
+  constexpr PrefixConstrained &operator++() requires Small<T> { ++v; return *this; }
+  PrefixConstrained operator++(int) requires requires(PrefixConstrained &p) { ++p; } = default;
+};
+
 #else
 
 constexpr int counter() {
@@ -55,5 +72,24 @@ constexpr int lookup() {
 }
 static_assert(lookup() == 12);
 } // namespace Other
+
+constexpr int constrained() {
+  Constrained<int> c{1};
+  Constrained<int> a = c++;
+  Constrained<int> b = c--;
+  return a.v * 100 + b.v * 10 + c.v;
+}
+static_assert(constrained() == 121);
+template <typename T> concept PostIncrementable = requires(T t) { t++; };
+static_assert(PostIncrementable<Constrained<int>>);
+static_assert(!PostIncrementable<Constrained<long long>>);
+
+constexpr int prefix_constrained() {
+  PrefixConstrained<int> p{1};
+  PrefixConstrained<int> a = p++;
+  return a.v * 10 + p.v;
+}
+static_assert(prefix_constrained() == 12);
+static_assert(!PostIncrementable<PrefixConstrained<long long>>);
 
 #endif

@@ -51,3 +51,31 @@ Explicit use_explicit(Explicit e) { return e++; }
 // CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 %{{.*}}, i64 4, i1 false)
 // CHECK:         call {{.*}} @_ZN8ExplicitppEv(
 // CHECK:         ret i32
+
+// The requires-clause of a constrained defaulted postfix operator is part of
+// its mangled name, and the implicit definition calls the more constrained
+// prefix operator.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> struct Constrained {
+  T v;
+  Constrained &operator++() requires Small<T>;
+  Constrained &operator++();
+  Constrained &operator--();
+  Constrained operator++(int) requires Small<T> = default;
+  friend Constrained operator--(Constrained &, int) requires Small<T> = default;
+};
+Constrained<int> use_constrained(Constrained<int> c) { c--; return c++; }
+
+// CHECK-LABEL: define {{.*}} @_Z15use_constrained11ConstrainedIiE(
+// CHECK:         call i32 @_ZN11ConstrainedIiEFmmERS0_iQ5SmallIT_E(ptr {{.*}} %c, i32 noundef 0)
+// CHECK:         call i32 @_ZN11ConstrainedIiEppEiQ5SmallIT_E(ptr {{.*}} %c, i32 noundef 0)
+
+// CHECK-LABEL: define linkonce_odr i32 @_ZN11ConstrainedIiEFmmERS0_iQ5SmallIT_E(ptr {{.*}} %0, i32 noundef %1)
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 %{{.*}}, i64 4, i1 false)
+// CHECK:         call {{.*}} @_ZN11ConstrainedIiEmmEv(
+// CHECK:         ret i32
+
+// CHECK-LABEL: define linkonce_odr i32 @_ZN11ConstrainedIiEppEiQ5SmallIT_E(ptr {{.*}} %this, i32 noundef %0)
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 %this1, i64 4, i1 false)
+// CHECK-NEXT:    call {{.*}} @_ZN11ConstrainedIiEppEvQ5SmallIT_E(ptr {{.*}} %this1)
+// CHECK:         ret i32

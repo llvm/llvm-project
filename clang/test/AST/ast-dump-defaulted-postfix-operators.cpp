@@ -90,3 +90,30 @@ struct Deleted {
 // CHECK:      CXXMethodDecl {{.*}} operator++ 'Deleted (int)' default_delete
 // CHECK-NEXT:   ParmVarDecl {{.*}} 'int'
 // CHECK-NOT:    CompoundStmt
+
+// A constrained defaulted postfix operator keeps its requires-clause, and its
+// implicit definition calls the prefix operator selected by overload
+// resolution, which is the more constrained one.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> struct Constrained {
+  T v;
+  Constrained &operator++() requires Small<T>;
+  Constrained &operator++();
+  Constrained operator++(int) requires Small<T> = default;
+};
+void use_constrained(Constrained<int> c) { c++; }
+
+// CHECK:      ClassTemplateSpecializationDecl {{.*}} struct Constrained definition
+// CHECK:        CXXMethodDecl [[PREFIX:0x[0-9a-f]+]] {{.*}} used operator++ 'Constrained<int> &()'
+// CHECK-NEXT:     ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'Small'
+// CHECK:        CXXMethodDecl {{.*}} operator++ 'Constrained<int> &()'
+// CHECK-NEXT:   CXXMethodDecl {{.*}} used constexpr operator++ 'Constrained<int> (int) noexcept(false)' implicit_instantiation default implicit-inline
+// CHECK-NEXT:     ParmVarDecl {{.*}} 'int'
+// CHECK-NEXT:     ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'Small'
+// CHECK:          CompoundStmt
+// CHECK-NEXT:       DeclStmt
+// CHECK-NEXT:         VarDecl {{.*}} used 'Constrained<int>' nrvo callinit
+// CHECK:            CXXOperatorCallExpr {{.*}} 'Constrained<int>' lvalue '++'
+// CHECK-NEXT:         ImplicitCastExpr {{.*}} 'Constrained<int> &(*)()' <FunctionToPointerDecay>
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'Constrained<int> &()' lvalue CXXMethod [[PREFIX]] 'operator++' 'Constrained<int> &()'
+// CHECK:            ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} 'Constrained<int>')

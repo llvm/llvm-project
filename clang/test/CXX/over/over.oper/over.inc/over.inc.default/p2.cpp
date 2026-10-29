@@ -409,3 +409,32 @@ void use_constrained_postfix(ConstrainedPostfix<int> a, ConstrainedPostfix<long 
   a++; // expected-error {{object of type 'ConstrainedPostfix<int>' cannot be incremented because its defaulted postfix increment operator is implicitly deleted}}
   b++; // expected-error {{cannot increment value of type 'ConstrainedPostfix<long long>'}}
 }
+
+// Constrained special member functions. The copy constructor and destructor
+// are selected by overload resolution, so their constraints decide whether the
+// defaulted postfix operator is deleted.
+template <typename T> struct ConstrainedCopy {
+  ConstrainedCopy() = default;
+  ConstrainedCopy(const ConstrainedCopy &) requires Small<T> = default;
+  ConstrainedCopy(const ConstrainedCopy &) = delete; // expected-note {{'ConstrainedCopy' has been explicitly marked deleted here}}
+  ConstrainedCopy &operator++();
+  ConstrainedCopy operator++(int) = default; // #ConstrainedCopy
+  // expected-note@#ConstrainedCopy {{explicitly defaulted function was implicitly deleted here}}
+  // expected-error@#ConstrainedCopy {{call to deleted constructor of 'ConstrainedCopy<long long>'}}
+};
+void use_constrained_copy(ConstrainedCopy<int> &a, ConstrainedCopy<long long> &b) {
+  a++; // OK
+  b++; // expected-error {{object of type 'ConstrainedCopy<long long>' cannot be incremented because its defaulted postfix increment operator is implicitly deleted}}
+}
+template <typename T> struct ConstrainedDestructor {
+  ~ConstrainedDestructor() requires Small<T> = default;
+  ~ConstrainedDestructor() = delete; // expected-note {{'~ConstrainedDestructor' has been explicitly marked deleted here}}
+  ConstrainedDestructor &operator--();
+  friend ConstrainedDestructor operator--(ConstrainedDestructor &, int) = default; // #ConstrainedDestructor
+  // expected-note@#ConstrainedDestructor {{explicitly defaulted function was implicitly deleted here}}
+  // expected-note@#ConstrainedDestructor {{defaulted 'operator--' is implicitly deleted because it would invoke a deleted destructor}}
+};
+void use_constrained_destructor(ConstrainedDestructor<int> &a, ConstrainedDestructor<long long> &b) {
+  a--; // OK
+  b--; // expected-error {{object of type 'ConstrainedDestructor<long long>' cannot be decremented because its defaulted postfix decrement operator is implicitly deleted}}
+}

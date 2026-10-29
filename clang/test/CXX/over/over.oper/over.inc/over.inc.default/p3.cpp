@@ -455,6 +455,7 @@ static_assert(explicit_object_postfix_only() == 10);
 // Constrained prefix operators.
 template <typename T> concept Small = sizeof(T) <= 4;
 template <typename T> concept Int = __is_same(T, int);
+template <typename T, typename U> concept Same = __is_same(T, U);
 template <typename T> struct ConstrainedPrefix {
   T v;
   constexpr ConstrainedPrefix &operator++() requires Small<T> { ++v; return *this; }
@@ -570,4 +571,41 @@ struct ExplicitObjectNoexcept {
 extern ExplicitObjectNoexcept explicit_object_noexcept;
 static_assert(noexcept(explicit_object_noexcept++));
 static_assert(!noexcept(explicit_object_noexcept--));
+// A requires-expression observes whether a defaulted postfix operator is
+// usable, its exception specification and its return type.
+template <typename T> concept PostIncrementable = requires(T t) { t++; };
+template <typename T> concept NoexceptPostIncrementable = requires(T t) {
+  { t++ } noexcept -> Same<T>;
+};
+struct NoPrefix {
+  NoPrefix operator++(int) = default; // #NoPrefix
+  // expected-warning@#NoPrefix {{explicitly defaulted postfix increment operator is implicitly deleted}}
+  // expected-note@#NoPrefix {{defaulted 'operator++' is implicitly deleted because there is no viable prefix 'operator++' for an lvalue of type 'NoPrefix'}}
+  // expected-note@#NoPrefix {{replace 'default' with 'delete'}}
+};
+static_assert(PostIncrementable<Noexcept>);
+static_assert(NoexceptPostIncrementable<Noexcept>);
+static_assert(PostIncrementable<ThrowingPrefix>);
+static_assert(!NoexceptPostIncrementable<ThrowingPrefix>);
+static_assert(!PostIncrementable<NoPrefix>);
+static_assert(PostIncrementable<ConstrainedPostfix<int>>);
+static_assert(!PostIncrementable<ConstrainedPostfix<long long>>);
+// A defaulted postfix operator constrained on its own prefix operator is not
+// viable, rather than deleted, when there is no prefix operator.
+template <typename T> struct PrefixConstrainedPostfix {
+  T v;
+  constexpr PrefixConstrainedPostfix &operator++() requires Small<T> { ++v; return *this; }
+  PrefixConstrainedPostfix operator++(int) requires requires(PrefixConstrainedPostfix &p) { ++p; } = default;
+};
+constexpr int prefix_constrained_postfix() {
+  PrefixConstrainedPostfix<int> p{1};
+  PrefixConstrainedPostfix<int> a = p++;
+  return a.v * 10 + p.v;
+}
+static_assert(prefix_constrained_postfix() == 12);
+static_assert(PostIncrementable<PrefixConstrainedPostfix<int>>);
+static_assert(!PostIncrementable<PrefixConstrainedPostfix<long long>>);
+void prefix_constrained_postfix_unsatisfied(PrefixConstrainedPostfix<long long> p) {
+  p++; // expected-error {{cannot increment value of type 'PrefixConstrainedPostfix<long long>'}}
+}
 #endif

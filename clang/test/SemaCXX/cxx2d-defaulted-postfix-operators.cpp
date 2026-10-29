@@ -178,4 +178,48 @@ consteval int use_consteval() {
   return a.v * 10 + c.v;
 }
 static_assert(use_consteval() == 12);
+
+// Defaulted postfix operators may be constrained in every mode that has
+// requires-clauses.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> struct Constrained {
+  T v;
+  constexpr Constrained &operator++() requires Small<T> { ++v; return *this; }
+  constexpr Constrained &operator--() { --v; return *this; }
+  Constrained operator++(int) requires Small<T> = default;
+  // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
+  // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
+  friend Constrained operator--(Constrained &, int) requires Small<T> = default;
+  // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
+  // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
+};
+constexpr int use_constrained() {
+  Constrained<int> c{1};
+  Constrained<int> a = c++;
+  Constrained<int> b = c--;
+  return a.v * 100 + b.v * 10 + c.v;
+}
+static_assert(use_constrained() == 121);
+template <typename T> concept PostIncrementable = requires(T t) { t++; };
+static_assert(PostIncrementable<Constrained<int>>);
+static_assert(!PostIncrementable<Constrained<long long>>);
+void use_constrained_unsatisfied(Constrained<long long> c) {
+  c++; // expected-error {{cannot increment value of type 'Constrained<long long>'}}
+  c--; // expected-error {{cannot decrement value of type 'Constrained<long long>'}}
+}
+
+// An unsatisfied constraint on the prefix operator deletes the defaulted
+// postfix operator.
+template <typename T> struct ConstrainedPrefix {
+  ConstrainedPrefix &operator++() requires Small<T>;
+  ConstrainedPrefix operator++(int) = default; // #ConstrainedPrefix
+  // pre2d-warning@#ConstrainedPrefix {{defaulted postfix increment and decrement operators are a C++2d extension}}
+  // compat-warning@#ConstrainedPrefix {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
+  // expected-note@#ConstrainedPrefix {{explicitly defaulted function was implicitly deleted here}}
+  // expected-note@#ConstrainedPrefix {{defaulted 'operator++' is implicitly deleted because there is no viable prefix 'operator++' for an lvalue of type 'ConstrainedPrefix<long long>'}}
+};
+void use_constrained_prefix(ConstrainedPrefix<int> a, ConstrainedPrefix<long long> b) {
+  a++;
+  b++; // expected-error {{object of type 'ConstrainedPrefix<long long>' cannot be incremented because its defaulted postfix increment operator is implicitly deleted}}
+}
 #endif
