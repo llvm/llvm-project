@@ -14,10 +14,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+bfloat16 fabsbf16(bfloat16 x);
 #if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
 __bf16 fabsbf16(__bf16 x);
-#else
-bfloat16 fabsbf16(bfloat16 x);
 #endif
 
 } // namespace LIBC_NAMESPACE_DECL
