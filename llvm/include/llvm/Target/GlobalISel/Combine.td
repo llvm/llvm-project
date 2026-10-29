@@ -1771,21 +1771,22 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
+// Fold (udiv x, (shl C, y)) -> (lshr x, (add y, log2(C))) for power-of-two C.
 def udiv_by_shifted_pow2 : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_UDIV $dst, $x, $y):$root,
    [{ return Helper.matchUDivByShiftedPow2(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def signed_divrem_frags : GICombinePatFrag<
-  (outs root:$dst), (ins),
-  [(pattern (G_SDIV $dst, $x, $y)), (pattern (G_SREM $dst, $x, $y))]>;
-
-def signed_divrem_to_unsigned : GICombineRule<
+// Convert signed division or remainder of nonnegative operands to unsigned.
+class signed_divrem_to_unsigned<Instruction opcode> : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (signed_divrem_frags $dst):$root,
+  (match (opcode $dst, $x, $y):$root,
    [{ return Helper.matchSignedDivRemToUnsigned(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV>;
+def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM>;
 
 def intdiv_combines : GICombineGroup<[udiv_by_pow2, udiv_by_shifted_pow2,
                                       sdiv_by_pow2,
@@ -3141,7 +3142,7 @@ def known_bits_simplifications : GICombineGroup<[
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
   redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
-  sext_inreg_to_zext_inreg, signed_divrem_to_unsigned]>;
+  sext_inreg_to_zext_inreg, sdiv_to_unsigned, srem_to_unsigned]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
                                                narrow_binop_feeding_and]>;
