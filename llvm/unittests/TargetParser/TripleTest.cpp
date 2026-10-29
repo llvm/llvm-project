@@ -3359,6 +3359,8 @@ TEST(TripleTest, DefaultExceptionHandling) {
             Triple("spirv32--").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::None,
             Triple("spirv64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("avr--").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());

@@ -11920,8 +11920,10 @@ def err_opencl_global_invalid_addr_space : Error<
   "%select{program scope|static local|extern}0 variable must reside in %1 address space">;
 def err_missing_actual_pipe_type : Error<
   "missing actual type specifier for pipe">;
-def err_reference_pipe_type : Error <
-  "pipes packet types cannot be of reference type">;
+def err_invalid_pipe_packet_type : Error<
+  "%select{pointer|reference|block pointer|non-object|incomplete}0 type %1 "
+  "cannot be used as a pipe packet type">,
+  LegacyStableIds<["err_reference_pipe_type"]>;
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to an OpenCL kernel function">;
@@ -12149,6 +12151,8 @@ def warn_omp_minus_in_reduction_deprecated : Warning<
   InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_clause_modifier : Error<
+  "unexpected modifier in OpenMP clause '%0'">;
 def err_omp_unexpected_call_to_omp_runtime_api
     : Error<"calls to OpenMP runtime API are not allowed within a region that "
             "corresponds to a construct with an order clause that specifies "
@@ -12869,6 +12873,9 @@ def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
+def err_omp_adjust_args_invalid_item : Error<
+  "expected a parameter name, a parameter position, or a parameter range in "
+  "'adjust_args' clause">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
 def err_omp_append_args_with_varargs : Error<
@@ -13780,8 +13787,8 @@ def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not ma
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_interpolation_conflict : Error<
   "'nointerpolation' cannot be combined with other interpolation modifiers">;
-def err_hlsl_interpolation_position : Error<
-  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_semantic : Error<
+  "'nointerpolation' cannot be used on %0">;
 def err_hlsl_interpolation_type : Error<
   "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
 def warn_hlsl_duplicate_interpolation : Warning<
@@ -13807,7 +13814,7 @@ def err_hlsl_semantic_64bit_type
             "or outputs (was %1)">;
 def err_hlsl_semantic_invalid_type
     : Error<"semantic %0 must be a "
-            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
             "32 bit unsigned integer}3 type (was %4)">;

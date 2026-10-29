@@ -860,6 +860,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
+  case ISD::TRUNCATE:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    SDValue Src = Op.getOperand(0);
+    // Preserve shared casts unless the cast is free and its source is not
+    // shared, or the truncate cancels an extension.
+    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
+                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
+    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
+                      ISD::isExtOpcode(Src.getOpcode()) &&
+                      Src.getOperand(0).getValueType() == VT;
+    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
+      break;
+    unsigned SrcBits = Src.getScalarValueSizeInBits();
+    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
+    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
+        DemandedBits.getActiveBits() > SrcBits)
+      SrcDemandedBits.setSignBit();
+
+    // Do not preserve flags that the simplified source may invalidate.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -9383,6 +9409,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
+bool TargetLowering::expandMODF(SDNode *Node, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse = FracPart;
+  if (!Flags.hasNoInfs()) {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  Results.push_back(ResultFrac);
+  Results.push_back(IntPart);
+  return true;
+}
+
 SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -11518,12 +11573,24 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   auto [Mask, StepVector] = getLegalMaskAndStepVector(
       DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
 
-  // TODO: Handle the step vector needing to be split.
-  assert(StepVector && "Step vector needs splitting");
+  // No legal step vector: split the mask in half and recombine the results.
+  // Lo = get_active_lane_mask Start, End
+  // Hi = get_active_lane_mask (uaddsat Start, LoNumElts), End
+  if (!StepVector) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+    SDValue Lo = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, LoVT, Start, End);
+    SDValue LoNumElts =
+        DAG.getElementCount(DL, OpVT, LoVT.getVectorElementCount());
+    SDValue HiStart = DAG.getNode(ISD::UADDSAT, DL, OpVT, Start, LoNumElts);
+    SDValue Hi = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, HiVT, HiStart, End);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
 
   // Rebase and saturate the termination value.
-  SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
-                                DL, OpVT);
+  SDValue Max =
+      DAG.getConstant(maxUIntN(std::min(StepVector.getScalarValueSizeInBits(),
+                                        OpVT.getScalarSizeInBits())),
+                      DL, OpVT);
   End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
   End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
   End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());
@@ -11684,16 +11751,20 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
   }
 
-  // If the subtract doesn't overflow then just use abs(sub())
-  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+  // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
+  // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
+  bool UseSigned =
+      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+  if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  if (DAG.willNotOverflowSub(UseSigned, RHS, LHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
@@ -12439,37 +12510,39 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
 }
 
 static SDValue clampDynamicVectorIndex(SelectionDAG &DAG, SDValue Idx,
-                                       EVT VecVT, const SDLoc &dl,
+                                       EVT VecVT, const SDLoc &DL,
                                        ElementCount SubEC) {
   assert(!(SubEC.isScalable() && VecVT.isFixedLengthVector()) &&
          "Cannot index a scalable vector within a fixed-width vector");
-
-  unsigned NElts = VecVT.getVectorMinNumElements();
-  unsigned NumSubElts = SubEC.getKnownMinValue();
+  ElementCount NElts = VecVT.getVectorElementCount();
   EVT IdxVT = Idx.getValueType();
 
-  if (VecVT.isScalableVector() && !SubEC.isScalable()) {
-    // If this is a constant index and we know the value plus the number of the
-    // elements in the subvector minus one is less than the minimum number of
-    // elements then it's safe to return Idx.
-    if (auto *IdxCst = dyn_cast<ConstantSDNode>(Idx))
-      if (IdxCst->getZExtValue() + (NumSubElts - 1) < NElts)
-        return Idx;
-    SDValue VS =
-        DAG.getVScale(dl, IdxVT, APInt(IdxVT.getFixedSizeInBits(), NElts));
-    unsigned SubOpcode = NumSubElts <= NElts ? ISD::SUB : ISD::USUBSAT;
-    SDValue Sub = DAG.getNode(SubOpcode, dl, IdxVT, VS,
-                              DAG.getConstant(NumSubElts, dl, IdxVT));
-    return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx, Sub);
+  // Attempt to prove all accessed lanes sit within VecVT.
+  ElementCount IdxAsEC;
+  if (sd_match(Idx, m_ElementCount(IdxAsEC))) {
+    if (SubEC.isScalar() && ElementCount::isKnownLT(IdxAsEC, NElts))
+      return Idx;
+    // Calculate end index as TypeSize to remove possibility of overflow.
+    if (IdxAsEC.isScalable() == SubEC.isScalable() &&
+        TypeSize::isKnownLE(TypeSize(IdxAsEC) + TypeSize(SubEC),
+                            TypeSize(NElts)))
+      return Idx;
   }
-  if (isPowerOf2_32(NElts) && NumSubElts == 1) {
-    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(), Log2_32(NElts));
-    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
-                       DAG.getConstant(Imm, dl, IdxVT));
+
+  // Can we mask Idx rather than clamp it.
+  if (SubEC.isScalar() && NElts.isPowerOf2()) {
+    SDValue EC = DAG.getElementCount(DL, IdxVT, NElts);
+    SDValue Mask =
+        DAG.getNode(ISD::SUB, DL, IdxVT, EC, DAG.getConstant(1, DL, IdxVT));
+    return DAG.getNode(ISD::AND, DL, IdxVT, Idx, Mask);
   }
-  unsigned MaxIndex = NumSubElts < NElts ? NElts - NumSubElts : 0;
-  return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
-                     DAG.getConstant(MaxIndex, dl, IdxVT));
+
+  unsigned SubOpcode =
+      ElementCount::isKnownLE(SubEC, NElts) ? ISD::SUB : ISD::USUBSAT;
+  SDValue MaxSafeIndex =
+      DAG.getNode(SubOpcode, DL, IdxVT, DAG.getElementCount(DL, IdxVT, NElts),
+                  DAG.getElementCount(DL, IdxVT, SubEC));
+  return DAG.getNode(ISD::UMIN, DL, IdxVT, Idx, MaxSafeIndex);
 }
 
 SDValue
@@ -12498,6 +12571,9 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
          "Converting bits to bytes lost precision");
   assert(SubVecVT.getVectorElementType() == EltVT &&
          "Sub-vector must be a vector with matching element type");
+  assert((SubVecVT.getVectorElementCount().isScalar() ||
+          isa<ConstantSDNode>(Index)) &&
+         "Subvector Index must be constant!");
 
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
@@ -12505,15 +12581,13 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   if (!DAG.isGuaranteedNotToBePoison(Index))
     Index = DAG.getFreeze(Index);
 
-  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
-                                  SubVecVT.getVectorElementCount());
-
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())
     Index =
-        DAG.getNode(ISD::MUL, dl, IdxVT, Index,
-                    DAG.getVScale(dl, IdxVT, APInt(IdxVT.getSizeInBits(), 1)));
+        DAG.getVScale(dl, IdxVT, cast<ConstantSDNode>(Index)->getAPIntValue());
 
+  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
+                                  SubVecVT.getVectorElementCount());
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
   return DAG.getMemBasePlusOffset(VecPtr, Index, dl, PtrArithFlags);
@@ -14693,9 +14767,21 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
     HiOps.push_back(Hi);
   }
 
-  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps, Node->getFlags());
-  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps, Node->getFlags());
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+  bool IsStrict = Node->isStrictFPOpcode();
+  SDVTList LoVTs =
+      IsStrict ? DAG.getVTList(LoVT, MVT::Other) : DAG.getVTList(LoVT);
+  SDVTList HiVTs =
+      IsStrict ? DAG.getVTList(HiVT, MVT::Other) : DAG.getVTList(HiVT);
+  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVTs, LoOps, Node->getFlags());
+  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVTs, HiOps, Node->getFlags());
+  SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
+
+  if (!IsStrict)
+    return Res;
+
+  SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                              SplitOpLo.getValue(1), SplitOpHi.getValue(1));
+  return DAG.getMergeValues({Res, Chain}, DL);
 }
 
 SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,

@@ -3994,29 +3994,25 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
       rewriter.eraseOp(boundsOp);
   };
 
+  auto isUnitExtent = [&](mlir::acc::GPUParallelDimAttr parDim) {
+    std::optional<uint64_t> width =
+        computeRegion.getKnownConstantLaunchArg(parDim);
+    return width && *width == 1;
+  };
+
+  // A dimension launched one wide partitions nothing, so skip it.
   bool hasThreadDim = false;
-  bool hasBlockDim = false;
   for (auto pd : op.getParDims().getArray()) {
+    if (isUnitExtent(pd))
+      continue;
     hasThreadDim |= pd.isAnyThread();
-    hasBlockDim |= pd.isAnyBlock();
   }
 
-  // Block-only (gang) reduction: each element is produced by one gang, so the
-  // per-gang copy already holds the result and the combine does the rest.
-  if (hasBlockDim && !hasThreadDim) {
+  // Without a thread dimension no two threads share an accumulator copy, so
+  // each copy already holds a complete total and nothing has to be merged
+  // here. Merging across gangs, if any, is left to the combine.
+  if (!hasThreadDim) {
     eraseDeadBounds();
-    return;
-  }
-
-  // A thread-only accumulate merges with a within-block all_reduce, which is
-  // complete only in one block: block context, or a launch with no block dim.
-  // Multi-block thread-only still grid-strides across blocks, so stays NYI.
-  bool regionLaunchesBlocks = llvm::any_of(
-      computeRegion.getLaunchParDims(),
-      [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyBlock(); });
-  if (!reductionHasBlockContext(op) && regionLaunchesBlocks) {
-    (void)accSupport.emitNYI(
-        loc, "reduction: thread-only array reduction accumulate");
     return;
   }
 
@@ -4179,20 +4175,27 @@ void ACCCGToGPULowering::processReductionCombineOp(acc::ReductionCombineOp op) {
 
   SmallVector<mlir::acc::GPUParallelDimAttr> parDims =
       getReductionCombineParDims(op);
-  for (auto parDim : parDims) {
-    if (parDim.isAnyBlock() && !destIsPerThreadPrivate) {
-      // Block reduction directly stores to the accumulator using atomic.
-      // The predication (tid.x == 0 when subgroup-aligned) is already handled
-      // by the parent predicate_region processing.
-      // Reloading a grid-shared slot races with other blocks; record
-      // it and replace with the block-reduced register value in the fixup.
-      auto srcLoad =
-          memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
-      pendingCombineReloads.push_back({srcMemref, srcLoad});
-      constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad,
-                                  kind);
-      return;
-    }
+  // An atomic is needed exactly when more than one block can reach the
+  // destination. A block dimension in the reduction's parallel dims implies
+  // that; so does a thread-only reduction in a multi-block launch, where every
+  // block combines its own partial into the same shared slot.
+  bool destIsGridShared =
+      !destIsPerThreadPrivate &&
+      (llvm::any_of(parDims,
+                    [](mlir::acc::GPUParallelDimAttr parDim) {
+                      return parDim.isAnyBlock();
+                    }) ||
+       computeRegion.launchesMultipleBlocks());
+  if (destIsGridShared) {
+    // The predication (tid.x == 0 when subgroup-aligned) is already handled
+    // by the parent predicate_region processing.
+    // Reloading a grid-shared slot races with other blocks; record it and
+    // replace with the block-reduced register value in the fixup.
+    auto srcLoad =
+        memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
+    pendingCombineReloads.push_back({srcMemref, srcLoad});
+    constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad, kind);
+    return;
   }
 
   // Atomic construction is not needed; lower this operation to typical

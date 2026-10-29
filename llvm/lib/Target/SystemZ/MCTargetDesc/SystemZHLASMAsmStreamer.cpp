@@ -518,6 +518,17 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   }
 }
 
+// Print the HLASM address constant type for a value of the given size:
+// A(...) is a fullword, AD(...) a doubleword, AL<n>(...) any other length.
+static void printAddrConstPrefix(raw_ostream &OS, unsigned Size) {
+  if (Size == 4)
+    OS << "A(";
+  else if (Size == 8)
+    OS << "AD(";
+  else
+    OS << "AL" << Size << '(';
+}
+
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
@@ -564,7 +575,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     }
 
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     emitHLASMValueImpl(BE.getLHS(), Size);
 
     switch (BE.getOpcode()) {
@@ -602,7 +613,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   default:
     Parens &= isa<MCSymbolRefExpr>(Value);
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';

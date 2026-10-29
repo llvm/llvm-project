@@ -64,6 +64,46 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   }
 }
 
+TEST(RuntimeLibcallsTest, DefaultRuntimeLibraries) {
+  using Info = RTLIB::RuntimeLibcallsInfo;
+  const RTLIB::RuntimeLibrary X86Libs[] = {
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::unwind};
+  const RTLIB::RuntimeLibrary AArch64Libs[] = {
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc,        RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::sme,         RTLIB::RuntimeLibrary::unwind};
+  const RTLIB::RuntimeLibrary Arm64ECLibs[] = {
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::unwind};
+  const RTLIB::RuntimeLibrary PPCLibs[] = {
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::unwind};
+  const RTLIB::RuntimeLibrary AMDGPULibs[] = {
+      RTLIB::RuntimeLibrary::compiler_rt_profile};
+  const RTLIB::RuntimeLibrary SPIRVLibs[] = {RTLIB::RuntimeLibrary::libc};
+
+  EXPECT_EQ(
+      Info::getDefaultRuntimeLibraries(Triple("x86_64-unknown-linux-gnu")),
+      ArrayRef(X86Libs));
+  EXPECT_EQ(
+      Info::getDefaultRuntimeLibraries(Triple("aarch64-unknown-linux-gnu")),
+      ArrayRef(AArch64Libs));
+  EXPECT_EQ(Info::getDefaultRuntimeLibraries(Triple("arm64ec-pc-windows-msvc")),
+            ArrayRef(Arm64ECLibs));
+  EXPECT_EQ(
+      Info::getDefaultRuntimeLibraries(Triple("powerpc64le-unknown-linux-gnu")),
+      ArrayRef(PPCLibs));
+  EXPECT_EQ(Info::getDefaultRuntimeLibraries(Triple("amdgcn-amd-amdhsa")),
+            ArrayRef(AMDGPULibs));
+  EXPECT_EQ(Info::getDefaultRuntimeLibraries(Triple("spirv64-unknown-unknown")),
+            ArrayRef(SPIRVLibs));
+  EXPECT_TRUE(
+      Info::getDefaultRuntimeLibraries(Triple("nvptx64-nvidia-cuda")).empty());
+}
+
 TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
   LLVMContext Ctx;
   using Info = RTLIB::RuntimeLibcallsInfo;

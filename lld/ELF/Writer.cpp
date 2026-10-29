@@ -1623,8 +1623,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
-    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
-    // ctx.in.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    // Break to avoid duplicate diagnostics from the loop.
     if (errCount(ctx))
       break;
   }
@@ -2925,8 +2924,8 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   unsigned flags = 0;
   if (!ctx.arg.relocatable)
     flags |= FileOutputBuffer::F_executable;
-  if (ctx.arg.mmapOutputFile)
-    flags |= FileOutputBuffer::F_mmap;
+  if (!ctx.arg.mmapOutputFile)
+    flags |= FileOutputBuffer::F_in_memory;
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 

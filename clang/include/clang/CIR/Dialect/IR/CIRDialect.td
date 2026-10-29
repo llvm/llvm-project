@@ -153,14 +153,6 @@ def CIR_Dialect : Dialect {
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
-
-    /// Returns true if \p ty and every type nested in it are CIR types.
-    /// Memoized, since FuncType verification re-queries the same records.
-    bool isPureCIRType(mlir::Type ty) const;
-
-  private:
-    mutable llvm::DenseMap<mlir::Type, bool> pureCIRTypeCache;
-    mutable std::mutex pureCIRTypeCacheMutex;
   }];
 }
 

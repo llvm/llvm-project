@@ -18,14 +18,14 @@ module {}
 // -----
 
 !s32i = !cir.int<s, 32>
-// expected-error @below {{union padding cannot be void}}
+// expected-error @below {{union padding must be !u8i or an array of !u8i}}
 !rec_U = !cir.union<"U" {data !s32i}, padding = {!cir.void}>
 
 module {}
 
 // -----
 
-// expected-error @below {{failed to verify 'elementType': any type except void}}
+// expected-error @below {{failed to verify 'elementType': any CIR type except void}}
 !arr = !cir.array<!cir.void x 4>
 
 module {}

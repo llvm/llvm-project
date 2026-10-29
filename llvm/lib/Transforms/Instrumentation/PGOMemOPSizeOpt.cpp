@@ -422,8 +422,7 @@ PreservedAnalyses PGOMemOPSizeOpt::run(Function &F,
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  const InstrumentationOptions &Opts =
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(F);
   bool Changed = pgoMemOPSizeOptImpl(Opts, F, BFI, ORE, DT, TLI);
   if (!Changed)
     return PreservedAnalyses::all();

@@ -830,8 +830,8 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
 template <typename IteratorT>
 std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
                                           StringAttr name) {
-  constexpr unsigned kSmallAttributeList = 16;
-  if (std::distance(first, last) > kSmallAttributeList)
+  constexpr size_t kSmallAttributeList = 16;
+  if (static_cast<size_t>(std::distance(first, last)) > kSmallAttributeList)
     return findAttrSorted(first, last, name.strref());
   return findAttrUnsorted(first, last, name);
 }
