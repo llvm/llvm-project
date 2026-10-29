@@ -64,6 +64,13 @@ struct V2PhysSCopyInfo {
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
 
+/// Use two MMO flags to encode the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
+    MachineMemOperand::MOTargetFlag5;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag6;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -306,6 +313,15 @@ public:
                            int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
+
+  /// Return true if the memory operations described by \p BaseOps1 and
+  /// \p BaseOps2 (as returned by getMemOperandsWithOffsetWidth) address the
+  /// same base. Unlike shouldClusterMemOps, this does not apply the
+  /// MaxMemoryClusterDWords budget, which only bounds pre-RA register pressure.
+  /// Only the first base operand is compared, unlike
+  /// memOpsHaveSameBaseOperands which requires all of them to match.
+  bool memOpsHaveSameBase(ArrayRef<const MachineOperand *> BaseOps1,
+                          ArrayRef<const MachineOperand *> BaseOps2) const;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;

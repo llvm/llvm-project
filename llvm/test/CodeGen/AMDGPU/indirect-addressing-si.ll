@@ -5460,7 +5460,7 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
 ; GENERIC-NEXT:    ;;#ASMSTART
-; GENERIC-NEXT:    v_mov_b32 v1, 62
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 62
 ; GENERIC-NEXT:    ;;#ASMEND
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5623,7 +5623,7 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:76 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
-; NOOPT-NEXT:    v_mov_b32 v0, 62
+; NOOPT-NEXT:    v_mov_b32_e32 v0, 62
 ; NOOPT-NEXT:    ;;#ASMEND
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:68 ; 4-byte Folded Spill
@@ -6021,7 +6021,7 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
-; SI-MOVREL-NEXT:    v_mov_b32 v1, 62
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v1, 62
 ; SI-MOVREL-NEXT:    ;;#ASMEND
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6139,7 +6139,7 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
 ; VI-NEXT:    v_mov_b32_e32 v3, s19
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    v_mov_b32 v1, 62
+; VI-NEXT:    v_mov_b32_e32 v1, 62
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    v_mov_b32_e32 v4, s12
 ; VI-NEXT:    v_mov_b32_e32 v5, s13
@@ -6262,7 +6262,7 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; GFX9-IDXMODE-NEXT:    global_load_dword v14, v1, s[0:1] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
-; GFX9-IDXMODE-NEXT:    v_mov_b32 v1, 62
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 62
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v2, s18
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, s19
@@ -6370,7 +6370,7 @@ entry:
   %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %id.ext
   %idx0 = load volatile i32, ptr addrspace(1) %gep
   %idx1 = add i32 %idx0, 1
-  %live.out.val = call i32 asm sideeffect "v_mov_b32 $0, 62", "=v"()
+  %live.out.val = call i32 asm sideeffect "v_mov_b32_e32 $0, 62", "=v"()
   %vec1 = insertelement <16 x i32> %vec0, i32 %live.out.val, i32 %idx0
   %vec2 = insertelement <16 x i32> %vec1, i32 63, i32 %idx1
   store volatile <16 x i32> %vec2, ptr addrspace(1) %out0

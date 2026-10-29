@@ -205,6 +205,7 @@ CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0, Benign) ///< -cl-fp32-correctly-
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0, Benign) ///< Set when -fhip-kernel-arg-name is enabled.
+CODEGENOPT(AMDGCNSPIRVSizeOptimization, 1, 0, Benign) ///< Set when -fenable-spirv-size-optimization is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0, Benign) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0, Benign) ///< Split machine functions using profile information.
 CODEGENOPT(PartitionStaticDataSections, 1, 0, Benign) /// < Partition static data sections using profile information.

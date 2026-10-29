@@ -2,6 +2,7 @@
 /// SPIR-V device compilation.
 
 // RUN: %clang -### -fsycl --target=x86_64-pc-windows-msvc \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl \
 // RUN:   -x c++ %s 2>&1 | FileCheck %s
 
 // CHECK: "-triple" "spirv64-unknown-unknown"

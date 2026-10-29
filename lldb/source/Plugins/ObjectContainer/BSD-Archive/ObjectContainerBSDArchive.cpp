@@ -390,7 +390,8 @@ FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
 ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    if (module_sp->GetObjectName() && m_archive_sp) {
+    const bool module_has_name = !module_sp->GetObjectName().empty();
+    if (module_has_name && m_archive_sp) {
       Object *object = m_archive_sp->FindObject(
           module_sp->GetObjectName(), module_sp->GetObjectModificationTime());
       if (object) {

@@ -930,6 +930,27 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   return false;
 }
 
+bool ARMBaseRegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  // CodeView numbers ARM's general-purpose, status, S, D and Q registers, but
+  // it has no encoding for the synthetic register tuples (see
+  // ARM_MC::initLLVMToCVRegMapping). A variable living in one therefore has no
+  // describable location at all.
+  //
+  // DPair deliberately contains the Q registers as well as the odd-even D
+  // pairs ("(interleave QPR, TuplesOE2D)" in ARMRegisterInfo.td), so QPR is
+  // excluded here; without that exclusion every Q-register variable would
+  // silently lose its location.
+  if (ARM::DPairRegClass.contains(LLVMReg))
+    return !ARM::QPRRegClass.contains(LLVMReg);
+  return ARM::DPairSpcRegClass.contains(LLVMReg) ||
+         ARM::DTripleRegClass.contains(LLVMReg) ||
+         ARM::DTripleSpcRegClass.contains(LLVMReg) ||
+         ARM::DQuadRegClass.contains(LLVMReg) ||
+         ARM::QQPRRegClass.contains(LLVMReg) ||
+         ARM::QQQQPRRegClass.contains(LLVMReg) ||
+         ARM::GPRPairRegClass.contains(LLVMReg);
+}
+
 bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                   const TargetRegisterClass *SrcRC,
                                   unsigned SubReg,
@@ -980,7 +1001,12 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
   //  (3) Doesn't regress any test cases (in-tree, test-suite, and SPEC)
   // In practice the SizeMultiplier will only factor in for straight line code
   // that uses a lot of NEON vectors, which isn't terribly common.
-  unsigned SizeMultiplier = MBB->size()/100;
+  // Preserve the previous treatment of bundled instructions and pseudo probes,
+  // but do not let debug instructions affect code generation.
+  auto NonDebugInstrs = instructionsWithoutDebug(
+      MBB->instr_begin(), MBB->instr_end(), /*SkipPseudoOp=*/false);
+  unsigned SizeMultiplier =
+      std::distance(NonDebugInstrs.begin(), NonDebugInstrs.end()) / 100;
   SizeMultiplier = SizeMultiplier ? SizeMultiplier : 1;
   if (It->second < NewRCWeight.WeightLimit * SizeMultiplier) {
     It->second += NewRCWeight.RegWeight;

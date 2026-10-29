@@ -3,14 +3,14 @@ import("//llvm/utils/TableGen/tablegen.gni")
 tablegen("AArch64TargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-arm-target-def" ]
-  td_file = "//llvm/lib/Target/AArch64/AArch64.td"
+  td_file = "//llvm/lib/Target/AArch64/AArch64TargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 tablegen("PPCGenTargetFeatures") {
   visibility = [ ":gen" ]
   args = [ "-gen-target-features" ]
-  td_file = "//llvm/lib/Target/PowerPC/PPC.td"
+  td_file = "//llvm/lib/Target/PowerPC/PPCTargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 

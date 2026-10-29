@@ -105,7 +105,7 @@ observation: 17
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 2684357888.0
+priority: 2684357632.0
 reward: 0.0
 observation: 18
 li_size: 0
@@ -231,7 +231,7 @@ observation: 38
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 2684358656.0
+priority: 2684358400.0
 reward: 0.0
 observation: 39
 li_size: 0
@@ -273,19 +273,19 @@ observation: 45
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3806.0
+priority: 3774.0
 reward: 0.0
 observation: 46
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3246.0
+priority: 3230.0
 reward: 0.0
 observation: 47
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3230.0
+priority: 3214.0
 reward: 0.0
 observation: 48
 li_size: 0
@@ -297,7 +297,7 @@ observation: 49
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3790.0
+priority: 3758.0
 reward: 0.0
 observation: 50
 li_size: 0
@@ -321,7 +321,7 @@ observation: 53
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 4656.0
+priority: 4592.0
 reward: 0.0
 observation: 54
 li_size: 0
@@ -369,7 +369,7 @@ observation: 61
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 2147485184.0
+priority: 2147484928.0
 reward: 0.0
 observation: 62
 li_size: 0
@@ -387,7 +387,7 @@ observation: 64
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 2147485184.0
+priority: 2147484928.0
 reward: 0.0
 observation: 65
 li_size: 0
@@ -406,4 +406,4 @@ li_size: 0
 stage: 0
 weight: 0.0
 priority: 2684354560.0
-reward: 37.60835647583008
+reward: 37.06101608276367

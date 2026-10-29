@@ -3,7 +3,7 @@ if(NOT (TARGET libc.src.__support.threads.thread AND
   return()
 endif()
 
-add_libc_integration_test_suite(libc-support-threads-integration-tests)
+add_libc_testsuite(libc-support-threads-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   thread_detach_test

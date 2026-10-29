@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Constants.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -34,14 +36,6 @@
 
 using namespace llvm;
 using namespace PatternMatch;
-
-// As set of temporary options to help migrate how splats are represented.
-static cl::opt<bool> UseConstantIntForFixedLengthSplat(
-    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantIntForScalableSplat(
-    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -1585,7 +1579,9 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = isa<ConstantFP>(C);
-  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
+  bool isSplatInt =
+      isa<ConstantInt>(C) &&
+      getIROptions(C->getContext()).use_constant_int_for_fixed_length_splat;
   bool isSplatByte = isa<ConstantByte>(C);
   bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
@@ -1642,7 +1638,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
-      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+      if (isa<ConstantInt>(V) &&
+          getIROptions(V->getContext()).use_constant_int_for_fixed_length_splat)
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
     }
@@ -1659,7 +1656,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   // Maintain special handling of zero.
   if (!V->isNullValue()) {
-    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+    if (isa<ConstantInt>(V) &&
+        getIROptions(V->getContext()).use_constant_int_for_scalable_splat)
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
   }
@@ -1720,14 +1718,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   Type *OnlyIfReducedTy = OnlyIfReduced ? Ty : nullptr;
   switch (getOpcode()) {
   case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
@@ -1998,6 +1988,44 @@ ConstantRange Constant::toConstantRange() const {
   }
 
   return ConstantRange::getFull(BitWidth);
+}
+
+ConstantFPRange Constant::toConstantFPRange() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFPRange(CFP->getValue());
+
+  const fltSemantics &Sem = getType()->getScalarType()->getFltSemantics();
+  if (!getType()->isVectorTy())
+    return ConstantFPRange::getFull(Sem);
+
+  if (auto *CFP =
+          dyn_cast_or_null<ConstantFP>(getSplatValue(/*AllowPoison=*/true)))
+    return ConstantFPRange(CFP->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(ConstantFPRange(CDV->getElementAsAPFloat(I)));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantFPRange::getFull(Sem);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CFP = dyn_cast<ConstantFP>(Elem);
+      if (!CFP)
+        return ConstantFPRange::getFull(Sem);
+      CR = CR.unionWith(ConstantFPRange(CFP->getValue()));
+    }
+    return CR;
+  }
+
+  return ConstantFPRange::getFull(Sem);
 }
 
 //---- ConstantPointerNull::get() implementation.

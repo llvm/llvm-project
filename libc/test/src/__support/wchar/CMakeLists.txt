@@ -1,9 +1,9 @@
-add_custom_target(libc-support-wchar-tests)
+add_libc_testsuite(libc-support-wchar-tests PARENT libc-support-tests)
 
 add_libc_test(
   string_converter_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     string_converter_test.cpp
   DEPENDS
@@ -18,7 +18,7 @@ add_libc_test(
 add_libc_test(
   utf8_to_32_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     utf8_to_32_test.cpp
   DEPENDS
@@ -31,7 +31,7 @@ add_libc_test(
 add_libc_test(
   utf32_to_8_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     utf32_to_8_test.cpp
   DEPENDS
@@ -44,7 +44,7 @@ add_libc_test(
 add_libc_test(
   wcsnrtombs_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     wcsnrtombs_test.cpp
   DEPENDS

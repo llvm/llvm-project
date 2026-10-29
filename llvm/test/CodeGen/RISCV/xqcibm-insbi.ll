@@ -25,6 +25,44 @@ define i32 @insb(i32 %in1, i32 %in2) {
   ret i32 %xor2
 }
 
+define i32 @or_and_shl (i32 %a, i32 %b) {
+; RV32I-LABEL: or_and_shl:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    slli a1, a1, 31
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: or_and_shl:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.insb a0, a1, 1, 31
+; RV32XQCIBM-NEXT:    ret
+  %shl = shl i32 %b, 31
+  %and = and i32 %a, 2147483647
+  %or = or i32 %and, %shl
+  ret i32 %or
+}
+
+define i32 @or_and_shl_commuted (i32 %a, i32 %b) {
+; RV32I-LABEL: or_and_shl_commuted:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    slli a1, a1, 31
+; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: or_and_shl_commuted:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    qc.insb a0, a1, 1, 31
+; RV32XQCIBM-NEXT:    ret
+  %shl = shl i32 %b, 31
+  %and = and i32 %a, 2147483647
+  %or = or i32 %shl, %and
+  ret i32 %or
+}
+
 define i32 @insb_and_multiple(i32 %in1, i32 %in2) {
 ; RV32I-LABEL: insb_and_multiple:
 ; RV32I:       # %bb.0:

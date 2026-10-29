@@ -2247,8 +2247,17 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   int Opcode = -1;
   if (IsGFX13Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Register RsrcReg = MI.getOperand(ArgOffset + Intr->RsrcIndex).getReg();
+    const LLT I32 = LLT::integer(32);
+    bool IndexedRsrc = MRI->getType(RsrcReg) == I32;
+    bool IndexedSamp = false;
+    if (BaseOpcode->Sampler) {
+      Register SampReg = MI.getOperand(ArgOffset + Intr->SampIndex).getReg();
+      IndexedSamp = MRI->getType(SampReg) == I32;
+    }
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IndexedSamp);
   } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
@@ -2876,7 +2885,14 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   if (mi_match(Trunc, MRI, m_GLShr(m_Reg(LShlSrc), m_Reg(Cst)))) {
     Cst = stripCopy(Cst, MRI);
     if (mi_match(Cst, MRI, m_SpecificICst(16))) {
-      Out = stripBitCast(LShlSrc, MRI);
+      Register Result = stripBitCast(LShlSrc, MRI);
+      // op_sel can only select the high half of a 32-bit source. If the
+      // shift source is wider (e.g. a 64-bit D16 image sample result), we
+      // cannot fold it directly. Do not assign Out before this check since
+      // the caller may pass the same register for both In and Out.
+      if (MRI.getType(Result).getSizeInBits() != 32)
+        return false;
+      Out = Result;
       return true;
     }
   }
@@ -4682,7 +4698,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
 
     MachineInstr *Sel = MRI->getVRegDef(VReg);
     // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+    if (Sel && Sel->getOpcode() == AMDGPU::V_PK_FMA_F32 &&
         !TII.isLegalPkFMAF32OpSel(*Sel))
       TII.decomposePkFMAF32(*Sel, *MRI);
 

@@ -449,6 +449,14 @@ static Value *MakeFPArith(unsigned IntrinsicID, APFloat::roundingMode RM,
                       {CGF.Builder.getInt32(static_cast<int>(RM))});
 }
 
+static Value *MakeIdp2a(unsigned IntrinsicID, bool IsHi, const CallExpr *E,
+                        CodeGenFunction &CGF) {
+  return CGF.Builder.CreateCall(
+      CGF.CGM.getIntrinsic(IntrinsicID),
+      {CGF.EmitScalarExpr(E->getArg(0)), CGF.EmitScalarExpr(E->getArg(1)),
+       CGF.Builder.getInt1(IsHi), CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 } // namespace
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
@@ -1587,6 +1595,22 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         Intrinsic::nvvm_mbarrier_init, {Ptr->getType()},
         {Ptr, EmitScalarExpr(E->getArg(1)), Builder.getInt32(0)});
   }
+  case NVPTX::BI__nvvm_idp2a_lo_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/true, E, *this);
   default:
     return nullptr;
   }
