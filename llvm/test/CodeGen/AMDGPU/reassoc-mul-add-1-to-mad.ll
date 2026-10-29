@@ -1067,7 +1067,7 @@ define i16 @v_mul_add_1_i16(i16 %x, i16 %y) {
 ; GFX9-LABEL: v_mul_add_1_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i16:
@@ -1210,7 +1210,7 @@ define i16 @v_mul_add_1_i16_commute(i16 %x, i16 %y) {
 ; GFX9-LABEL: v_mul_add_1_i16_commute:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i16_commute:
@@ -1275,7 +1275,7 @@ define i16 @v_mul_add_x_i16(i16 %x, i16 %y) {
 ; GFX9-LABEL: v_mul_add_x_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_x_i16:
@@ -4287,7 +4287,7 @@ define i16 @v_mul_9_add_52_i16(i16 %arg) {
 ; GFX9-LABEL: v_mul_9_add_52_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, 9, 52
+; GFX9-NEXT:    v_mad_u16 v0, v0, 9, 52
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_9_add_52_i16:
@@ -4594,7 +4594,7 @@ define i16 @v_mul_5_add_1_i16(i16 %arg) {
 ; GFX9-LABEL: v_mul_5_add_1_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, 5, 1
+; GFX9-NEXT:    v_mad_u16 v0, v0, 5, 1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_5_add_1_i16:
@@ -4664,7 +4664,7 @@ define i16 @v_mul_284_add_82_i16(i16 %arg) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_movk_i32 s4, 0x11c
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x52
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, s4, v1
+; GFX9-NEXT:    v_mad_u16 v0, v0, s4, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_284_add_82_i16:
@@ -5553,7 +5553,7 @@ define i8 @v_mul_add_1_i8(i8 %x, i8 %y) {
 ; GFX9-LABEL: v_mul_add_1_i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i8:
@@ -5619,7 +5619,7 @@ define i8 @v_mul_add_1_i8_commute(i8 %x, i8 %y) {
 ; GFX9-LABEL: v_mul_add_1_i8_commute:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i8_commute:
@@ -5684,7 +5684,7 @@ define i8 @v_mul_add_1_i8_zext(i8 zeroext %x, i8 zeroext %y) {
 ; GFX9-LABEL: v_mul_add_1_i8_zext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i8_zext:
@@ -5749,7 +5749,7 @@ define i8 @v_mul_add_1_i8_zext_commute(i8 zeroext %x, i8 zeroext %y) {
 ; GFX9-LABEL: v_mul_add_1_i8_zext_commute:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mul_add_1_i8_zext_commute:
@@ -5826,9 +5826,9 @@ define <2 x i8> @v_mul_add_1_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX9-LABEL: v_mul_add_1_v2i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v3, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v3, v1
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v2, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v2, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -5931,9 +5931,9 @@ define <2 x i8> @v_mul_add_1_v2i8_commute(<2 x i8> %x, <2 x i8> %y) {
 ; GFX9-LABEL: v_mul_add_1_v2i8_commute:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_legacy_u16 v1, v1, v3, v1
+; GFX9-NEXT:    v_mad_u16 v1, v1, v3, v1
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v2, v0
+; GFX9-NEXT:    v_mad_u16 v0, v0, v2, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
