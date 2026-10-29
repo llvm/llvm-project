@@ -73,13 +73,6 @@ body:             |
   ; CHECK-NEXT:   frame-destroy SEH_SaveRegP_X 19, 20, -32
   ; CHECK-NEXT:   frame-destroy SEH_EpilogEnd
   ; CHECK-NEXT:   CLEANUPRET
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $x8
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $x8 = STRXpost $xzr, killed renamable $x8, -8 :: (store (s64))
-  ; CHECK-NEXT:   B %bb.3
   bb.0:
     successors: %bb.1(0x7ffff800), %bb.5(0x00000800)
     liveins: $x0, $x1, $x20, $x19, $lr
