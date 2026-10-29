@@ -5605,8 +5605,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                  /*OnlyLatches=*/true);
-  RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
-                 VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
       BestVF * BestUF, *OrigLoop->getHeader()->getParent());
 
