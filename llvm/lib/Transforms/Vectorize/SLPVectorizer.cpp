@@ -2401,9 +2401,9 @@ private:
         getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
   }
 
-  /// Gets the root instruction for the given node. If the node is a strided
-  /// load/store node with the reverse order, the root instruction is the last
-  /// one.
+  /// Gets the root instruction for the given node. If the node is a
+  /// non-widened strided load/store node with the reverse order, the root
+  /// instruction is the last one, otherwise it is the main operation.
   Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
@@ -5961,7 +5961,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
-  SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, StrideIntVal);
+  SPtrInfo.StrideVal =
+      ConstantInt::getSigned(StrideTy, StrideIntVal, /*ImplicitTrunc=*/true);
   SPtrInfo.Ty = cast<FixedVectorType>(getWidenedType(NewScalarTy, VecSz));
   return true;
 }
@@ -8022,9 +8023,11 @@ Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
   if (Entry.hasState() &&
       (Entry.getOpcode() == Instruction::Store ||
        Entry.getOpcode() == Instruction::Load) &&
-      Entry.State == TreeEntry::StridedVectorize && Entry.isReverse())
+      Entry.State == TreeEntry::StridedVectorize && Entry.isReverse() &&
+      !isWidenedStridedLoad(&Entry))
     return dyn_cast<Instruction>(Entry.Scalars[Entry.ReorderIndices.front()]);
-  return dyn_cast<Instruction>(Entry.Scalars.front());
+  return Entry.hasState() ? Entry.getMainOp()
+                          : dyn_cast<Instruction>(Entry.Scalars.front());
 }
 
 void BoUpSLP::buildExternalUses(
@@ -8052,6 +8055,24 @@ void BoUpSLP::buildExternalUses(
           KeptReassocScalars.insert(Op).second)
         KeptWorklist.push_back(Op);
   }
+  // The blended loads and the loads of the extracted aggregates use the
+  // pointers of the out-of-tree instructions. If vectorized, these pointers
+  // get erased, so all their uses must be replaced by the extracts.
+  SmallPtrSet<Value *, 4> VectorLoadPtrs;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (DeletedNodes.contains(TE.get()) ||
+        TransformedToGatherNodes.contains(TE.get()))
+      continue;
+    if (TE->State == TreeEntry::BlendedLoadVectorize) {
+      SelectInst *Sel = getBlendedLoadSelect(TE->Scalars);
+      VectorLoadPtrs.insert({Sel->getTrueValue(), Sel->getFalseValue()});
+    } else if (TE->State == TreeEntry::Vectorize &&
+               TE->getOpcode() == Instruction::ExtractValue &&
+               TE->StructEVIndices.empty()) {
+      VectorLoadPtrs.insert(
+          cast<LoadInst>(TE->getSingleOperand(0))->getPointerOperand());
+    }
+  }
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -8074,7 +8095,8 @@ void BoUpSLP::buildExternalUses(
       if (It != ScalarToExtUses.end() && !ExternalUses[It->second].User)
         continue;
 
-      if (!IsStructScalar && Scalar->hasNUsesOrMore(NumVectScalars)) {
+      if (!IsStructScalar && (VectorLoadPtrs.contains(Scalar) ||
+                              Scalar->hasNUsesOrMore(NumVectScalars))) {
         unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract from lane " << FoundLane
                           << " from " << *Scalar << "for many users.\n");
@@ -25344,10 +25366,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         // per-lane condition operand. E->Scalars stays in natural lane order,
         // so the contiguous loads line up with the mask; ReorderIndices, if
         // any, is applied below by the shared FinalShuffle.
-        Value *P0 = cast<LoadInst>(E->Scalars.front())->getPointerOperand();
-        if (auto *GEP = dyn_cast<GetElementPtrInst>(P0))
-          P0 = GEP->getPointerOperand();
-        auto *Sel = cast<SelectInst>(P0);
+        SelectInst *Sel = getBlendedLoadSelect(E->Scalars);
         Align CommonAlignment =
             computeBlendedLoadBaseAlignment(E->Scalars, *DL);
         Value *BlendMask = vectorizeOperand(E, 0);
@@ -35059,7 +35078,8 @@ private:
                 Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
                 IsSigned);
           Value *Scale = ConstantVector::getSplat(
-              EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
+              EC, ConstantInt::get(DestTy->getScalarType(), Cnt,
+                                   /*IsSigned=*/false, /*ImplicitTrunc=*/true));
           LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;

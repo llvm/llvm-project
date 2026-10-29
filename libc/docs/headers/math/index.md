@@ -215,7 +215,7 @@ log
 | sinpi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.13              | F.10.1.13                  |
 | sqrt      | {{ check }}       | {{ check }}      | {{ check }}             | {{ check }}           | {{ check }}             | {{ check }}             | 7.12.7.10              | F.10.4.10                  |
 | tan       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.7               | F.10.1.7                   |
-| tanh      | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.6               | F.10.2.6                   |
+| tanh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.5.6               | F.10.2.6                   |
 | tanpi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.14              | F.10.1.14                  |
 | tgamma    |                   |                  |                         |                       |                         |                         | 7.12.8.4               | F.10.5.4                   |
 
