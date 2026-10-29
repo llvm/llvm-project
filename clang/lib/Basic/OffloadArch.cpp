@@ -50,7 +50,7 @@ const char *OffloadArchToString(OffloadArch A) {
   case OffloadArch::TargetArch::IntelCPU:
     return "graniterapids";
   case OffloadArch::TargetArch::IntelGPU:
-    return "bmg_g21";
+    return llvm::IntelGPU::getArchName(A.intelGPUKind()).data();
   case OffloadArch::TargetArch::IntelIGCA:
     return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
   case OffloadArch::TargetArch::Generic:
@@ -89,18 +89,17 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
     return OffloadArch::getAMDGCNSPIRV();
   if (S == "generic")
     return OffloadArch::getGeneric();
+  // Intel CPU offload has a single processor and no TargetParser list.
   if (S == "graniterapids")
-    return OffloadArch::getIntel(OffloadArch::TargetArch::IntelCPU,
-                                 OffloadArch::IntelArch::GRANITERAPIDS);
-  if (S == "bmg_g21")
-    return OffloadArch::getIntel(OffloadArch::TargetArch::IntelGPU,
-                                 OffloadArch::IntelArch::BMG_G21);
+    return OffloadArch::getIntelCPU();
 
   // Otherwise defer to the vendor TargetParser GPU lists.
   if (llvm::NVPTX::GPUKind NV = llvm::NVPTX::parseArch(S))
     return OffloadArch::getNVPTX(NV);
   if (llvm::AMDGPU::GPUKind AK = llvm::AMDGPU::parseArchAMDGCN(S))
     return OffloadArch::getAMDGPU(AK);
+  if (llvm::IntelGPU::GPUKind IK = llvm::IntelGPU::parseArch(S))
+    return OffloadArch::getIntelGPU(IK);
   if (llvm::IntelGPU::IGCATarget IT = llvm::IntelGPU::parseIGCATarget(S))
     return OffloadArch::getIntelIGCA(IT);
   return OffloadArch::getUnknown();

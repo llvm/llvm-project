@@ -632,6 +632,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_netinet_tcp_macros",
+    hdrs = [
+        "include/llvm-libc-macros/linux/netinet-tcp-macros.h",
+        "include/llvm-libc-macros/netinet-tcp-macros.h",
+    ],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_sys_wait_macros",
     hdrs = [
         "include/llvm-libc-macros/linux/sys-wait-macros.h",
@@ -816,6 +824,17 @@ libc_support_library(
 libc_support_library(
     name = "hdr_netinet_in_macros",
     hdrs = ["hdr/netinet_in_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_netinet_tcp_macros",
+    hdrs = ["hdr/netinet_tcp_macros.h"],
+    deps = select({
+        ":full_build": [
+            ":llvm_libc_macros_netinet_tcp_macros",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(
@@ -6995,6 +7014,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmaximumf80",
+    hdrs = ["src/__support/math/fmaximumf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmaximuml",
     hdrs = ["src/__support/math/fmaximuml.h"],
     deps = [
@@ -7195,6 +7224,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fminf80",
+    hdrs = ["src/__support/math/fminf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fminimum",
     hdrs = ["src/__support/math/fminimum.h"],
     deps = [
@@ -7239,6 +7278,16 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimumf80",
+    hdrs = ["src/__support/math/fminimumf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
     ],
 )
 
@@ -9827,6 +9876,16 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxf80",
+    hdrs = ["src/__support/math/fmaxf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
     ],
 )
 
@@ -13935,6 +13994,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "fmaxf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fmaxf80",
+    ],
+)
+
+libc_math_function(
     name = "fmaxl",
     additional_deps = [
         ":__support_math_fmaxl",
@@ -13975,6 +14043,15 @@ libc_math_function(
     name = "fmaximumf16",
     additional_deps = [
         ":__support_math_fmaximumf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fmaximumf80",
     ],
 )
 
@@ -14134,6 +14211,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "fminf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fminf80",
+    ],
+)
+
+libc_math_function(
     name = "fminimum",
     additional_deps = [
         ":__support_math_fminimum",
@@ -14167,6 +14253,15 @@ libc_math_function(
     name = "fminimumf16",
     additional_deps = [
         ":__support_math_fminimumf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fminimumf80",
     ],
 )
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/OffloadArch.h"
-#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
@@ -37,10 +36,11 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(IntelCPU.isIntelCPU());
   EXPECT_FALSE(IntelCPU.isIntelGPU());
 
-  OffloadArch IntelGPU = parse("bmg_g21");
+  OffloadArch IntelGPU = parse("xe-bmg-g21");
   EXPECT_TRUE(IntelGPU.isIntel());
   EXPECT_FALSE(IntelGPU.isIntelCPU());
   EXPECT_TRUE(IntelGPU.isIntelGPU());
+  EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
 
   OffloadArch IGCA = parse("igca_20ca");
   EXPECT_TRUE(IGCA.isIntelIGCA());
@@ -67,12 +67,24 @@ TEST(OffloadArchTest, Unknown) {
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",
-        "graniterapids", "bmg_g21", "igca_10", "igca_20c", "igca_20ca",
-        "igca_15r", "igca_15ra", "generic"}) {
+        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "igca_10",
+        "igca_20c", "igca_20ca", "igca_15r", "igca_15ra", "generic"}) {
     OffloadArch A = parse(Name);
     EXPECT_FALSE(A.isUnknown()) << Name;
     EXPECT_STREQ(OffloadArchToString(A), Name);
   }
+}
+
+TEST(OffloadArchTest, IntelGPUOtherSpellings) {
+  // An alias and a numeric name denote the device and print as its name.
+  EXPECT_EQ(parse("xe-arl-u"), parse("xe-mtl-u"));
+  EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
+  EXPECT_STREQ(OffloadArchToString(parse("xe-tgllp")), "xe-tgl");
+  EXPECT_STREQ(OffloadArchToString(parse("xe_20.1.0")), "xe-bmg-g21");
+
+  // An unlisted numeric name and the old bmg_g21 spelling are unknown.
+  EXPECT_TRUE(parse("xe_40.11.0").isUnknown());
+  EXPECT_TRUE(parse("bmg_g21").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {
@@ -122,10 +134,6 @@ TEST(OffloadArchTest, IntelIGCAComparison) {
     }
   }
 
-  // The same 'Kind' under another TargetArch is still a different architecture.
-  OffloadArch IGCA = parse("igca_20ca");
-  OffloadArch SameKind = OffloadArch::getIntel(
-      OffloadArch::TargetArch::IntelGPU,
-      static_cast<OffloadArch::IntelArch>(IGCA.igcaTarget().pack()));
-  EXPECT_NE(IGCA, SameKind);
+  // An IGCA target is not the same architecture as a device that runs it.
+  EXPECT_NE(parse("igca_20ca"), parse("xe-pvc"));
 }

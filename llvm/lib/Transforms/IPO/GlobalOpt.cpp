@@ -1637,6 +1637,13 @@ processGlobal(GlobalValue &GV,
   if (GV.getName().starts_with("llvm."))
     return false;
 
+  // The only transformation performed here on functions is setting
+  // unnamed_addr. Avoid scanning uses when its value cannot be strengthened.
+  if (isa<Function>(GV) &&
+      (GV.hasGlobalUnnamedAddr() ||
+       (!GV.hasLocalLinkage() && GV.hasAtLeastLocalUnnamedAddr())))
+    return false;
+
   GlobalStatus GS;
 
   if (GlobalStatus::analyzeGlobal(&GV, GS))

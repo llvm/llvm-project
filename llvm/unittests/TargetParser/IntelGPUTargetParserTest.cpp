@@ -78,6 +78,77 @@ TEST(IntelGPUTargetParserTest, NumericArchName) {
       "xe_12.60.7");
 }
 
+TEST(IntelGPUTargetParserTest, KindArchNames) {
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_XE_PVC), "xe-pvc");
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_XE_DG2), "xe-dg2");
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_NONE), "");
+}
+
+TEST(IntelGPUTargetParserTest, ParseArch) {
+  // A human-friendly name, a compatibility name and an alias.
+  EXPECT_EQ(IntelGPU::parseArch("xe-pvc"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe-dg2"), IntelGPU::GK_XE_DG2);
+  EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_XE_MTL_U);
+  EXPECT_EQ(IntelGPU::parseArch("xe-tgllp"), IntelGPU::GK_XE_TGLLP);
+
+  // A numeric name names the device with that GPU IP version. The revision
+  // must be given but takes no part in the lookup.
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.0"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.70.4"), IntelGPU::GK_XE_MTL_U);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60"), IntelGPU::GK_NONE);
+  // A numeric name for a device this build does not know names no device.
+  EXPECT_EQ(IntelGPU::parseArch("xe_40.11.0"), IntelGPU::GK_NONE);
+
+  // Unknown or malformed names name no device.
+  EXPECT_EQ(IntelGPU::parseArch(""), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("pvc"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("XE-PVC"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.pvc"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7.1"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60."), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12."), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_012.60.0"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.abc"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.-1"), IntelGPU::GK_NONE);
+
+  // The revision may be any number.
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.64"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_XE_PVC);
+}
+
+TEST(IntelGPUTargetParserTest, EveryNameParses) {
+  // Every name the table declares has to be an --offload-arch value, and has to
+  // name the row it came from.
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#define INTEL_GPU_ALIAS(NAME, KIND)                                            \
+  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
+TEST(IntelGPUTargetParserTest, NumericNamesParse) {
+  // The numeric name offload-arch prints for a device names that device.
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  EXPECT_EQ(IntelGPU::parseArch(                                               \
+                IntelGPU::getNumericArchName(gpuIPVersion(MAJOR, MINOR, 0))),  \
+            IntelGPU::GK_##KIND)                                               \
+      << NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
+TEST(IntelGPUTargetParserTest, AliasesAreNeverReported) {
+  // A device is always reported by its row's name, not an alias.
+#define INTEL_GPU_ALIAS(NAME, KIND)                                            \
+  EXPECT_NE(IntelGPU::getArchName(IntelGPU::GK_##KIND), NAME) << NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
 TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   using IntelGPU::IGCAFeatureSet;
   using IntelGPU::IGCATarget;
