@@ -234,8 +234,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     // stage bits is meaningful, including none of them: the zero mask names
     // every stage.
     unsigned MaskArgNum = IsMark ? 0 : 1;
-    return SemaRef.BuiltinConstantArgRange(TheCall, MaskArgNum, 0,
-                                           llvm::AMDGPU::AsyncStages::ALL);
+    return SemaRef.BuiltinConstantArgRange(
+        TheCall, MaskArgNum, 0,
+        llvm::to_underlying(llvm::AMDGPU::AsyncStages::ALL));
   }
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);

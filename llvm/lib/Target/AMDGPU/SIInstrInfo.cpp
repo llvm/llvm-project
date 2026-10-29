@@ -5922,7 +5922,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
   if (Opcode == AMDGPU::ASYNCMARK || Opcode == AMDGPU::WAIT_ASYNCMARK) {
     int64_t Mask = MI.getOperand(MI.getNumExplicitOperands() - 1).getImm();
-    if (!AMDGPU::AsyncStages::isValidMask(Mask)) {
+    if (!AMDGPU::isValidAsyncStageMask(Mask)) {
       ErrInfo = "invalid asyncmark stage mask";
       return false;
     }
