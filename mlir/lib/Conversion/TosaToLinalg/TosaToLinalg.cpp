@@ -1840,8 +1840,7 @@ public:
       return rewriter.notifyMatchFailure(op, "unsupported input zero point");
     FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
     if (succeeded(maybeOZp) && op.verifyOutputZeroPoint(*maybeOZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "output zero point must be zero for non-int8 integer types");
+      return rewriter.notifyMatchFailure(op, "unsupported output zero point");
 
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
