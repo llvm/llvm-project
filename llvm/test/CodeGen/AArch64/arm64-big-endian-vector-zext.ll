@@ -28,9 +28,8 @@ define <1 x i16> @zext_v1i8_v1i16(<1 x i8> %x) {
 define <1 x i64> @zext_v1i32_v1i64(<1 x i32> %x) {
 ; CHECK-LABEL: zext_v1i32_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fmov s0, s0
 ; CHECK-NEXT:    ret
   %z = zext <1 x i32> %x to <1 x i64>
   ret <1 x i64> %z
