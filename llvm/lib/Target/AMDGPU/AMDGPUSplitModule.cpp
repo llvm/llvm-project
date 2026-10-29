@@ -47,7 +47,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
@@ -56,6 +55,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/SplitModuleUtils.h"
 #include <cassert>
 #include <cmath>
 #include <utility>
@@ -139,7 +139,7 @@ struct SplitModuleTimer : NamedRegionTimer {
 //===----------------------------------------------------------------------===//
 
 using CostType = InstructionCost::CostType;
-using FunctionsCostMap = DenseMap<const Function *, CostType>;
+using FunctionsCostMap = splitmodule::FunctionCostMap;
 using GetTTIFn = function_ref<const TargetTransformInfo &(Function &)>;
 static constexpr unsigned InvalidPID = -1;
 
@@ -149,19 +149,6 @@ static constexpr unsigned InvalidPID = -1;
 static auto formatRatioOf(CostType Num, CostType Dem) {
   CostType DemOr1 = Dem ? Dem : 1;
   return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
-}
-
-/// Checks whether a given function is non-copyable.
-///
-/// Non-copyable functions cannot be cloned into multiple partitions, and only
-/// one copy of the function can be present across all partitions.
-///
-/// Kernel functions and external functions fall into this category. If we were
-/// to clone them, we would end up with multiple symbol definitions and a very
-/// unhappy linker.
-static bool isNonCopyable(const Function &F) {
-  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
-         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// Cost analysis function. Calculates the cost of each function in \p M
@@ -175,38 +162,31 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
   SplitModuleTimer SMT("calculateFunctionCosts", "cost analysis");
 
   LLVM_DEBUG(dbgs() << "[cost analysis] calculating function costs\n");
-  CostType ModuleCost = 0;
   [[maybe_unused]] CostType KernelCost = 0;
 
-  for (auto &Fn : M) {
-    if (Fn.isDeclaration())
-      continue;
-
-    CostType FnCost = 0;
-    const auto &TTI = GetTTI(Fn);
-    for (const auto &BB : Fn) {
-      for (const auto &I : BB) {
-        auto Cost =
-            TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
-        assert(Cost != InstructionCost::getMax());
-        // Assume expensive if we can't tell the cost of an instruction.
-        CostType CostVal = Cost.isValid()
-                               ? Cost.getValue()
+  CostType ModuleCost = splitmodule::calculateFunctionCosts(
+      M,
+      [&](Function &Fn) {
+        CostType FnCost = 0;
+        const auto &TTI = GetTTI(Fn);
+        for (const auto &BB : Fn) {
+          for (const auto &I : BB) {
+            auto Cost =
+                TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+            assert(Cost != InstructionCost::getMax());
+            // Assume expensive if we can't tell the cost of an instruction.
+            CostType CostVal =
+                Cost.isValid() ? Cost.getValue()
                                : (CostType)TargetTransformInfo::TCC_Expensive;
-        assert((FnCost + CostVal) >= FnCost && "Overflow!");
-        FnCost += CostVal;
-      }
-    }
-
-    assert(FnCost != 0);
-
-    CostMap[&Fn] = FnCost;
-    assert((ModuleCost + FnCost) >= ModuleCost && "Overflow!");
-    ModuleCost += FnCost;
-
-    if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv()))
-      KernelCost += FnCost;
-  }
+            assert((FnCost + CostVal) >= FnCost && "Overflow!");
+            FnCost += CostVal;
+          }
+        }
+        if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv()))
+          KernelCost += FnCost;
+        return FnCost;
+      },
+      CostMap);
 
   if (CostMap.empty())
     return 0;
@@ -242,216 +222,23 @@ static bool canBeIndirectlyCalled(const Function &F) {
 // Graph-based Module Representation
 //===----------------------------------------------------------------------===//
 
-/// AMDGPUSplitModule's view of the source Module, as a graph of all components
-/// that can be split into different modules.
-///
-/// The most trivial instance of this graph is just the CallGraph of the module,
-/// but it is not guaranteed that the graph is strictly equal to the CG. It
-/// currently always is but it's designed in a way that would eventually allow
-/// us to create abstract nodes, or nodes for different entities such as global
-/// variables or any other meaningful constraint we must consider.
-///
-/// The graph is only mutable by this class, and is generally not modified
-/// after \ref SplitGraph::buildGraph runs. No consumers of the graph can
-/// mutate it.
-class SplitGraph {
+/// AMDGPU keeps its original graph-building rules; storage, traversal,
+/// costs, and cached node creation are inherited from the shared graph.
+class SplitGraph final : public splitmodule::SplitGraph {
 public:
-  class Node;
-
-  enum class EdgeKind : uint8_t {
-    /// The nodes are related through a direct call. This is a "strong" edge as
-    /// it means the Src will directly reference the Dst.
-    DirectCall,
-    /// The nodes are related through an indirect call.
-    /// This is a "weaker" edge and is only considered when traversing the graph
-    /// starting from a kernel. We need this edge for resource usage analysis.
-    ///
-    /// The reason why we have this edge in the first place is due to how
-    /// AMDGPUResourceUsageAnalysis works. In the presence of an indirect call,
-    /// the resource usage of the kernel containing the indirect call is the
-    /// max resource usage of all functions that can be indirectly called.
-    IndirectCall,
-  };
-
-  /// An edge between two nodes. Edges are directional, and tagged with a
-  /// "kind".
-  struct Edge {
-    Edge(Node *Src, Node *Dst, EdgeKind Kind)
-        : Src(Src), Dst(Dst), Kind(Kind) {}
-
-    Node *Src; ///< Source
-    Node *Dst; ///< Destination
-    EdgeKind Kind;
-  };
-
-  using EdgesVec = SmallVector<const Edge *, 0>;
-  using edges_iterator = EdgesVec::const_iterator;
-  using nodes_iterator = const Node *const *;
-
-  SplitGraph(const Module &M, const FunctionsCostMap &CostMap,
-             CostType ModuleCost)
-      : M(M), CostMap(CostMap), ModuleCost(ModuleCost) {}
-
-  void buildGraph(CallGraph &CG);
-
-#ifndef NDEBUG
-  bool verifyGraph() const;
-#endif
-
-  bool empty() const { return Nodes.empty(); }
-  iterator_range<nodes_iterator> nodes() const { return Nodes; }
-  const Node &getNode(unsigned ID) const { return *Nodes[ID]; }
-
-  unsigned getNumNodes() const { return Nodes.size(); }
-  BitVector createNodesBitVector() const { return BitVector(Nodes.size()); }
-
-  const Module &getModule() const { return M; }
-
-  CostType getModuleCost() const { return ModuleCost; }
-  CostType getCost(const Function &F) const { return CostMap.at(&F); }
-
-  /// \returns the aggregated cost of all nodes in \p BV (bits set to 1 = node
-  /// IDs).
-  CostType calculateCost(const BitVector &BV) const;
+  using splitmodule::SplitGraph::SplitGraph;
+  void buildGraph(CallGraph &CG) override;
 
 private:
-  /// Retrieves the node for \p GV in \p Cache, or creates a new node for it and
-  /// updates \p Cache.
-  Node &getNode(DenseMap<const GlobalValue *, Node *> &Cache,
-                const GlobalValue &GV);
+  bool isNonCopyable(const Function &F) const override {
+    return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+           AMDGPU::isEntryFunctionCC(F.getCallingConv());
+  }
 
-  // Create a new edge between two nodes and add it to both nodes.
-  const Edge &createEdge(Node &Src, Node &Dst, EdgeKind EK);
-
-  const Module &M;
-  const FunctionsCostMap &CostMap;
-  CostType ModuleCost;
-
-  // Final list of nodes with stable ordering.
-  SmallVector<Node *> Nodes;
-
-  SpecificBumpPtrAllocator<Node> NodesPool;
-
-  // Edges are trivially destructible objects, so as a small optimization we
-  // use a BumpPtrAllocator which avoids destructor calls but also makes
-  // allocation faster.
-  static_assert(
-      std::is_trivially_destructible_v<Edge>,
-      "Edge must be trivially destructible to use the BumpPtrAllocator");
-  BumpPtrAllocator EdgesPool;
+  bool isEntryFunctionCC(const Function &F) const override {
+    return AMDGPU::isEntryFunctionCC(F.getCallingConv());
+  }
 };
-
-/// Nodes in the SplitGraph contain both incoming, and outgoing edges.
-/// Incoming edges have this node as their Dst, and Outgoing ones have this node
-/// as their Src.
-///
-/// Edge objects are shared by both nodes in Src/Dst. They provide immediate
-/// feedback on how two nodes are related, and in which direction they are
-/// related, which is valuable information to make splitting decisions.
-///
-/// Nodes are fundamentally abstract, and any consumers of the graph should
-/// treat them as such. While a node will be a function most of the time, we
-/// could also create nodes for any other reason. In the future, we could have
-/// single nodes for multiple functions, or nodes for GVs, etc.
-class SplitGraph::Node {
-  friend class SplitGraph;
-
-public:
-  Node(unsigned ID, const GlobalValue &GV, CostType IndividualCost,
-       bool IsNonCopyable)
-      : ID(ID), GV(GV), IndividualCost(IndividualCost),
-        IsNonCopyable(IsNonCopyable), IsEntryFnCC(false), IsGraphEntry(false) {
-    if (auto *Fn = dyn_cast<Function>(&GV))
-      IsEntryFnCC = AMDGPU::isEntryFunctionCC(Fn->getCallingConv());
-  }
-
-  /// An 0-indexed ID for the node. The maximum ID (exclusive) is the number of
-  /// nodes in the graph. This ID can be used as an index in a BitVector.
-  unsigned getID() const { return ID; }
-
-  const Function &getFunction() const { return cast<Function>(GV); }
-
-  /// \returns the cost to import this component into a given module, not
-  /// accounting for any dependencies that may need to be imported as well.
-  CostType getIndividualCost() const { return IndividualCost; }
-
-  bool isNonCopyable() const { return IsNonCopyable; }
-  bool isEntryFunctionCC() const { return IsEntryFnCC; }
-
-  /// \returns whether this is an entry point in the graph. Entry points are
-  /// defined as follows: if you take all entry points in the graph, and iterate
-  /// their dependencies, you are guaranteed to visit all nodes in the graph at
-  /// least once.
-  bool isGraphEntryPoint() const { return IsGraphEntry; }
-
-  StringRef getName() const { return GV.getName(); }
-
-  bool hasAnyIncomingEdges() const { return IncomingEdges.size(); }
-  bool hasAnyIncomingEdgesOfKind(EdgeKind EK) const {
-    return any_of(IncomingEdges, [&](const auto *E) { return E->Kind == EK; });
-  }
-
-  iterator_range<edges_iterator> outgoing_edges() const {
-    return OutgoingEdges;
-  }
-
-  bool shouldFollowIndirectCalls() const { return isEntryFunctionCC(); }
-
-  /// Visit all children of this node in a recursive fashion. Also visits Self.
-  /// If \ref shouldFollowIndirectCalls returns false, then this only follows
-  /// DirectCall edges.
-  ///
-  /// \param Visitor Visitor Function.
-  void visitAllDependencies(std::function<void(const Node &)> Visitor) const;
-
-  /// Adds the depedencies of this node in \p BV by setting the bit
-  /// corresponding to each node.
-  ///
-  /// Implemented using \ref visitAllDependencies, hence it follows the same
-  /// rules regarding dependencies traversal.
-  ///
-  /// \param[out] BV The bitvector where the bits should be set.
-  void getDependencies(BitVector &BV) const {
-    visitAllDependencies([&](const Node &N) { BV.set(N.getID()); });
-  }
-
-private:
-  void markAsGraphEntry() { IsGraphEntry = true; }
-
-  unsigned ID;
-  const GlobalValue &GV;
-  CostType IndividualCost;
-  bool IsNonCopyable : 1;
-  bool IsEntryFnCC : 1;
-  bool IsGraphEntry : 1;
-
-  // TODO: Use a single sorted vector (with all incoming/outgoing edges grouped
-  // together)
-  EdgesVec IncomingEdges;
-  EdgesVec OutgoingEdges;
-};
-
-void SplitGraph::Node::visitAllDependencies(
-    std::function<void(const Node &)> Visitor) const {
-  const bool FollowIndirect = shouldFollowIndirectCalls();
-  // FIXME: If this can access SplitGraph in the future, use a BitVector
-  // instead.
-  DenseSet<const Node *> Seen;
-  SmallVector<const Node *, 8> WorkList({this});
-  while (!WorkList.empty()) {
-    const Node *CurN = WorkList.pop_back_val();
-    if (auto [It, Inserted] = Seen.insert(CurN); !Inserted)
-      continue;
-
-    Visitor(*CurN);
-
-    for (const Edge *E : CurN->outgoing_edges()) {
-      if (!FollowIndirect && E->Kind == EdgeKind::IndirectCall)
-        continue;
-      WorkList.push_back(E->Dst);
-    }
-  }
-}
 
 /// Checks if \p I has MD_callees and if it does, parse it and put the function
 /// in \p Callees.
@@ -570,7 +357,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
   for (Node *N : Nodes) {
     // Functions with an Entry CC are always graph entry points too.
     if (N->isEntryFunctionCC()) {
-      N->markAsGraphEntry();
+      markAsGraphEntry(*N);
       N->getDependencies(NodesReachableByKernels);
     } else if (!N->hasAnyIncomingEdgesOfKind(EdgeKind::DirectCall))
       CandidateEntryPoints.push_back(N);
@@ -584,7 +371,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
     // NodesReachableByKernels is all 1s. It'd allow us to avoid
     // considering some nodes as non-entries in some specific cases.
     if (!NodesReachableByKernels.test(N->getID())) {
-      N->markAsGraphEntry();
+      markAsGraphEntry(*N);
       N->getDependencies(ReachableNodes);
     }
   }
@@ -621,141 +408,13 @@ void SplitGraph::buildGraph(CallGraph &CG) {
   for (Node *N : reverse(PostOrder)) {
     if (ReachableNodes.test(N->getID()))
       continue;
-    N->markAsGraphEntry();
+    markAsGraphEntry(*N);
     N->getDependencies(ReachableNodes);
   }
 
 #ifndef NDEBUG
   assert(verifyGraph());
 #endif
-}
-
-#ifndef NDEBUG
-bool SplitGraph::verifyGraph() const {
-  unsigned ExpectedID = 0;
-  // Exceptionally using a set here in case IDs are messed up.
-  DenseSet<const Node *> SeenNodes;
-  DenseSet<const Function *> SeenFunctionNodes;
-  for (const Node *N : Nodes) {
-    if (N->getID() != (ExpectedID++)) {
-      errs() << "Node IDs are incorrect!\n";
-      return false;
-    }
-
-    if (!SeenNodes.insert(N).second) {
-      errs() << "Node seen more than once!\n";
-      return false;
-    }
-
-    if (&getNode(N->getID()) != N) {
-      errs() << "getNode doesn't return the right node\n";
-      return false;
-    }
-
-    for (const Edge *E : N->IncomingEdges) {
-      if (!E->Src || !E->Dst || (E->Dst != N) ||
-          (find(E->Src->OutgoingEdges, E) == E->Src->OutgoingEdges.end())) {
-        errs() << "ill-formed incoming edges\n";
-        return false;
-      }
-    }
-
-    for (const Edge *E : N->OutgoingEdges) {
-      if (!E->Src || !E->Dst || (E->Src != N) ||
-          (find(E->Dst->IncomingEdges, E) == E->Dst->IncomingEdges.end())) {
-        errs() << "ill-formed outgoing edges\n";
-        return false;
-      }
-    }
-
-    const Function &Fn = N->getFunction();
-    if (AMDGPU::isEntryFunctionCC(Fn.getCallingConv())) {
-      if (N->hasAnyIncomingEdges()) {
-        errs() << "Kernels cannot have incoming edges\n";
-        return false;
-      }
-    }
-
-    if (Fn.isDeclaration()) {
-      errs() << "declarations shouldn't have nodes!\n";
-      return false;
-    }
-
-    auto [It, Inserted] = SeenFunctionNodes.insert(&Fn);
-    if (!Inserted) {
-      errs() << "one function has multiple nodes!\n";
-      return false;
-    }
-  }
-
-  if (ExpectedID != Nodes.size()) {
-    errs() << "Node IDs out of sync!\n";
-    return false;
-  }
-
-  if (createNodesBitVector().size() != getNumNodes()) {
-    errs() << "nodes bit vector doesn't have the right size!\n";
-    return false;
-  }
-
-  // Check we respect the promise of Node::isKernel
-  BitVector BV = createNodesBitVector();
-  for (const Node *N : nodes()) {
-    if (N->isGraphEntryPoint())
-      N->getDependencies(BV);
-  }
-
-  // Ensure each function in the module has an associated node.
-  for (const auto &Fn : M) {
-    if (!Fn.isDeclaration()) {
-      if (!SeenFunctionNodes.contains(&Fn)) {
-        errs() << "Fn has no associated node in the graph!\n";
-        return false;
-      }
-    }
-  }
-
-  if (!BV.all()) {
-    errs() << "not all nodes are reachable through the graph's entry points!\n";
-    return false;
-  }
-
-  return true;
-}
-#endif
-
-CostType SplitGraph::calculateCost(const BitVector &BV) const {
-  CostType Cost = 0;
-  for (unsigned NodeID : BV.set_bits())
-    Cost += getNode(NodeID).getIndividualCost();
-  return Cost;
-}
-
-SplitGraph::Node &
-SplitGraph::getNode(DenseMap<const GlobalValue *, Node *> &Cache,
-                    const GlobalValue &GV) {
-  auto &N = Cache[&GV];
-  if (N)
-    return *N;
-
-  CostType Cost = 0;
-  bool NonCopyable = false;
-  if (const Function *Fn = dyn_cast<Function>(&GV)) {
-    NonCopyable = isNonCopyable(*Fn);
-    Cost = CostMap.at(Fn);
-  }
-  N = new (NodesPool.Allocate()) Node(Nodes.size(), GV, Cost, NonCopyable);
-  Nodes.push_back(N);
-  assert(&getNode(N->getID()) == N);
-  return *N;
-}
-
-const SplitGraph::Edge &SplitGraph::createEdge(Node &Src, Node &Dst,
-                                               EdgeKind EK) {
-  const Edge *E = new (EdgesPool.Allocate<Edge>(1)) Edge(&Src, &Dst, EK);
-  Src.OutgoingEdges.push_back(E);
-  Dst.IncomingEdges.push_back(E);
-  return *E;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1502,46 +1161,30 @@ static void splitAMDGPUModule(
   // One module will import all GlobalValues that are not Functions
   // and are not subject to conservative import.
   bool ImportAllGVs = true;
+  DenseSet<const Function *> FnsInPart;
+  CostType PartCost = 0;
 
-  for (unsigned PID = 0; PID < NumParts; ++PID) {
-    SplitModuleTimer SMT2("modules_creation",
-                          "creating modules for each partition");
-    LLVM_DEBUG(dbgs() << "[split] creating new modules\n");
-
-    DenseSet<const Function *> FnsInPart;
-    for (unsigned NodeID : (*Proposal)[PID].set_bits())
-      FnsInPart.insert(&SG.getNode(NodeID).getFunction());
-
-    // Don't create empty modules.
-    if (FnsInPart.empty()) {
-      LLVM_DEBUG(dbgs() << "[split] P" << PID
-                        << " is empty, not creating module\n");
-      continue;
+  auto ShouldCloneDefinition = [&](const GlobalValue *GV, unsigned) {
+    // Functions go in their assigned partition.
+    if (const auto *Fn = dyn_cast<Function>(GV)) {
+      if (FnsInPart.contains(Fn)) {
+        PartCost += SG.getCost(*Fn);
+        return true;
+      }
+      return false;
     }
 
-    ValueToValueMapTy VMap;
-    CostType PartCost = 0;
-    std::unique_ptr<Module> MPart(
-        CloneModule(M, VMap, [&](const GlobalValue *GV) {
-          // Functions go in their assigned partition.
-          if (const auto *Fn = dyn_cast<Function>(GV)) {
-            if (FnsInPart.contains(Fn)) {
-              PartCost += SG.getCost(*Fn);
-              return true;
-            }
-            return false;
-          }
+    // Aliases should not be separated from their underlying object.
+    if (const auto *GA = dyn_cast<GlobalAlias>(GV)) {
+      if (const auto *Fn = dyn_cast<Function>(GA->getAliaseeObject()))
+        return FnsInPart.contains(Fn);
+    }
 
-          // Aliases should not be separated from their underlying object.
-          if (const auto *GA = dyn_cast<GlobalAlias>(GV)) {
-            if (const auto *Fn = dyn_cast<Function>(GA->getAliaseeObject()))
-              return FnsInPart.contains(Fn);
-          }
+    // Everything else goes in the first non-empty module we create.
+    return ImportAllGVs || needsConservativeImport(GV);
+  };
 
-          // Everything else goes in the first non-empty module we create.
-          return ImportAllGVs || needsConservativeImport(GV);
-        }));
-
+  auto ProcessPartition = [&](std::unique_ptr<Module> MPart, unsigned PID) {
     ImportAllGVs = false;
 
     // Clean-up conservatively imported GVs without any users.
@@ -1557,6 +1200,28 @@ static void splitAMDGPUModule(
         printPartitionSummary(dbgs(), PID, *MPart, PartCost, ModuleCost));
 
     ModuleCallback(std::move(MPart));
+  };
+
+  for (unsigned PID = 0; PID < NumParts; ++PID) {
+    SplitModuleTimer SMT2("modules_creation",
+                          "creating modules for each partition");
+    LLVM_DEBUG(dbgs() << "[split] creating new modules\n");
+
+    FnsInPart.clear();
+    PartCost = 0;
+    for (unsigned NodeID : (*Proposal)[PID].set_bits())
+      FnsInPart.insert(&SG.getNode(NodeID).getFunction());
+
+    // Don't create empty modules.
+    if (FnsInPart.empty()) {
+      LLVM_DEBUG(dbgs() << "[split] P" << PID
+                        << " is empty, not creating module\n");
+      continue;
+    }
+
+    splitmodule::materializePartitions(
+        M, PID, ShouldCloneDefinition, ProcessPartition,
+        splitmodule::ModuleAsmPolicy::PreserveAll);
   }
 }
 } // namespace
