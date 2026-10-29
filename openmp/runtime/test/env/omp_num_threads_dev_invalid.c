@@ -1,5 +1,6 @@
 // RUN: %libomp-compile
 // RUN: env KMP_WARNINGS=1 OMP_NUM_THREADS_DEV_abc=10 OMP_NUM_THREADS_ALL=4 \
+// RUN:   env -u OMP_NUM_THREADS \
 // RUN:   %libomp-run 2>&1 | FileCheck %s
 //
 // Malformed `_DEV_<token>` is rejected with a warning, and a sibling
