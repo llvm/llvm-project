@@ -475,6 +475,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getegid
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
+    libc.src.unistd.getgroups
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize
     libc.src.unistd.getpgid
