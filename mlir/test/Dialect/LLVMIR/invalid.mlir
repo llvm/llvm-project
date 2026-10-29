@@ -1714,6 +1714,77 @@ func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
 
 // -----
 
+func.func @invalid_bitcast_size_mismatch(%arg0: i128) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 128 bits and 64 bits}}
+  %0 = llvm.bitcast %arg0 : i128 to vector<4xbf16>
+}
+
+// -----
+
+func.func @invalid_bitcast_scalar_size_mismatch(%arg0: i32) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 32 bits and 64 bits}}
+  %0 = llvm.bitcast %arg0 : i32 to i64
+}
+
+// -----
+
+func.func @invalid_bitcast_vector_size_mismatch(%arg0: vector<4xi32>) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 128 bits and 256 bits}}
+  %0 = llvm.bitcast %arg0 : vector<4xi32> to vector<4xi64>
+}
+
+// -----
+
+func.func @invalid_bitcast_scalable_size_mismatch(%arg0: vector<[4]xi32>) {
+  // expected-error@+1 {{operand and result must have the same bit width, got vscale x 128 bits and 128 bits}}
+  %0 = llvm.bitcast %arg0 : vector<[4]xi32> to vector<16xi8>
+}
+
+// -----
+
+func.func @invalid_bitcast_ptr_vector_size_mismatch(%arg0: vector<2x!llvm.ptr>) {
+  // expected-error@+1 {{cannot cast between vectors of pointers with different sizes}}
+  %0 = llvm.bitcast %arg0 : vector<2x!llvm.ptr> to vector<4x!llvm.ptr>
+}
+
+// -----
+
+func.func @invalid_bitcast_amx_size_mismatch(%arg0: !llvm.x86_amx) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 8192 bits and 128 bits}}
+  %0 = llvm.bitcast %arg0 : !llvm.x86_amx to i128
+}
+
+// -----
+
+func.func @invalid_bitcast_byte_size_mismatch(%arg0: i64) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 64 bits and 8 bits}}
+  %0 = llvm.bitcast %arg0 : i64 to !llvm.byte<8>
+}
+
+// -----
+
+func.func @invalid_bitcast_byte_to_int_size_mismatch(%arg0: !llvm.byte<64>) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 64 bits and 32 bits}}
+  %0 = llvm.bitcast %arg0 : !llvm.byte<64> to i32
+}
+
+// -----
+
+func.func @invalid_bitcast_byte_to_byte_size_mismatch(%arg0: !llvm.byte<64>) {
+  // expected-error@+1 {{operand and result must have the same bit width, got 64 bits and 8 bits}}
+  %0 = llvm.bitcast %arg0 : !llvm.byte<64> to !llvm.byte<8>
+}
+
+// -----
+
+func.func @invalid_bitcast_no_primitive_size() {
+  %0 = llvm.mlir.undef : !llvm.target<"spirv.Event">
+  // expected-error@+1 {{operand and result must have a primitive bit width}}
+  %1 = llvm.bitcast %0 : !llvm.target<"spirv.Event"> to i32
+}
+
+// -----
+
 func.func @invalid_target_ext_alloca() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   // expected-error@+1 {{this target extension type cannot be used in alloca}}
