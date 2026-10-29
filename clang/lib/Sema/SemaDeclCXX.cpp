@@ -19559,11 +19559,11 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
     return;
 
   // Which kinds of functions can be defaulted in the current language mode.
-  unsigned DefaultableKinds = diag::DefaultableFunctionKinds::SpecialMembers;
+  unsigned DefaultableKinds = diag::DefaultableFunctionKinds::Default;
   if (getLangOpts().CPlusPlus29)
-    DefaultableKinds = diag::DefaultableFunctionKinds::PostfixOperators;
+    DefaultableKinds = diag::DefaultableFunctionKinds::Cxx29;
   else if (getLangOpts().CPlusPlus20)
-    DefaultableKinds = diag::DefaultableFunctionKinds::Comparisons;
+    DefaultableKinds = diag::DefaultableFunctionKinds::Cxx20;
 
   auto *FD = dyn_cast<FunctionDecl>(Dcl);
   if (!FD) {

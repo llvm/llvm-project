@@ -98,9 +98,9 @@ def err_invalid_storage_class_in_func_decl : Error<
 def err_expected_namespace_name : Error<"expected namespace name">;
 def err_default_special_members : Error<
   "only special member functions"
-  "%enum_select<DefaultableFunctionKinds>{%SpecialMembers{}|"
-  "%Comparisons{ and comparison operators}|"
-  "%PostfixOperators{, comparison operators, and postfix increment and "
+  "%enum_select<DefaultableFunctionKinds>{%Default{}|"
+  "%Cxx20{ and comparison operators}|"
+  "%Cxx29{, comparison operators, and postfix increment and "
   "decrement operators}}0 may be defaulted">;
 def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
