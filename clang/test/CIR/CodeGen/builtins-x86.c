@@ -61,7 +61,7 @@ typedef __bf16   v8bf __attribute__((vector_size(16)));
 
 v4f test_cmpeqps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpeqps
-  // CIR: cir.vec.cmp(eq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpeqps
@@ -74,7 +74,7 @@ v4f test_cmpeqps(v4f a, v4f b) {
 
 v4f test_cmpltps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpltps
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpltps
@@ -87,7 +87,7 @@ v4f test_cmpltps(v4f a, v4f b) {
 
 v4f test_cmpleps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpleps
-  // CIR: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(ole, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpleps
@@ -100,7 +100,7 @@ v4f test_cmpleps(v4f a, v4f b) {
 
 v4f test_cmpunordps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpunordps
-  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpunordps
@@ -113,12 +113,10 @@ v4f test_cmpunordps(v4f a, v4f b) {
 
 v4f test_cmpordps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpordps
-  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CIR: cir.not %{{.*}} : !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(ord, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: @test_cmpordps
-  // LLVM: fcmp uno <4 x float>
-  // LLVM: xor <4 x i32> %{{.*}}, splat (i32 -1)
+  // LLVM: fcmp ord <4 x float>
 
   // OGCG-LABEL: @test_cmpordps
   // OGCG: fcmp ord <4 x float>
@@ -127,7 +125,7 @@ v4f test_cmpordps(v4f a, v4f b) {
 
 v4f test_cmpneqps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpneqps
-  // CIR: cir.vec.cmp(ne, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(une, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpneqps

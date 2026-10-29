@@ -3931,6 +3931,49 @@ convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+/// Convert from a CIR fp comparison kind to an LLVM IR floating-point
+/// comparison kind.
+static mlir::LLVM::FCmpPredicate
+convertCmpKindToFCmpPredicate(cir::FCmpOpKind kind) {
+  using CIR = cir::FCmpOpKind;
+  using LLVMFCmp = mlir::LLVM::FCmpPredicate;
+  switch (kind) {
+  case CIR::_false:
+    return LLVMFCmp::_false;
+  case CIR::oeq:
+    return LLVMFCmp::oeq;
+  case CIR::ogt:
+    return LLVMFCmp::ogt;
+  case CIR::oge:
+    return LLVMFCmp::oge;
+  case CIR::olt:
+    return LLVMFCmp::olt;
+  case CIR::ole:
+    return LLVMFCmp::ole;
+  case CIR::one:
+    return LLVMFCmp::one;
+  case CIR::ord:
+    return LLVMFCmp::ord;
+  case CIR::ueq:
+    return LLVMFCmp::ueq;
+  case CIR::ugt:
+    return LLVMFCmp::ugt;
+  case CIR::uge:
+    return LLVMFCmp::uge;
+  case CIR::ult:
+    return LLVMFCmp::ult;
+  case CIR::ule:
+    return LLVMFCmp::ule;
+  case CIR::une:
+    return LLVMFCmp::une;
+  case CIR::uno:
+    return LLVMFCmp::uno;
+  case CIR::_true:
+    return LLVMFCmp::_true;
+  }
+  llvm_unreachable("Unknown FCmpOpKind");
+}
+
 static llvm::StringRef
 convertCmpKindToConstrainedFCmpPredicate(cir::CmpOpKind kind) {
   using CIR = cir::CmpOpKind;
@@ -3972,10 +4015,51 @@ static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+static llvm::StringRef
+convertCmpKindToConstrainedFCmpPredicate(cir::FCmpOpKind kind) {
+  using CIR = cir::FCmpOpKind;
+  switch (kind) {
+  case CIR::_false:
+    return "false";
+  case CIR::oeq:
+    return "oeq";
+  case CIR::ogt:
+    return "ogt";
+  case CIR::oge:
+    return "oge";
+  case CIR::olt:
+    return "olt";
+  case CIR::ole:
+    return "ole";
+  case CIR::one:
+    return "one";
+  case CIR::ord:
+    return "ord";
+  case CIR::ueq:
+    return "ueq";
+  case CIR::ugt:
+    return "ugt";
+  case CIR::uge:
+    return "uge";
+  case CIR::ult:
+    return "ult";
+  case CIR::ule:
+    return "ule";
+  case CIR::une:
+    return "une";
+  case CIR::uno:
+    return "uno";
+  case CIR::_true:
+    return "true";
+  }
+  llvm_unreachable("Unknown FCmpOpKind");
+}
+
+template <typename OpKindTy>
 static mlir::LLVM::CallIntrinsicOp
 createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                          cir::CmpOpKind kind, cir::FenvAttr fenv,
+                          OpKindTy kind, bool isSignaling, cir::FenvAttr fenv,
                           mlir::Type llvmResTy) {
   llvm::SmallVector<mlir::Value, 4> callOperands = {
       lhs, rhs,
@@ -3983,7 +4067,7 @@ createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                               convertCmpKindToConstrainedFCmpPredicate(kind)),
       createFenvMetadataValue(rewriter, loc,
                               getConstrainedExceptMetadata(fenv))};
-  llvm::StringRef intrinsicName = isSignalingConstrainedFCmp(kind)
+  llvm::StringRef intrinsicName = isSignaling
                                       ? "llvm.experimental.constrained.fcmps"
                                       : "llvm.experimental.constrained.fcmp";
   return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
@@ -4022,7 +4106,8 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     if (cir::FenvAttr fenv = cmpOp.getFenvAttr()) {
       mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
           rewriter, cmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-          cmpOp.getKind(), fenv, llvmResTy);
+          cmpOp.getKind(), isSignalingConstrainedFCmp(cmpOp.getKind()), fenv,
+          llvmResTy);
       rewriter.replaceOp(cmpOp, call.getResult(0));
       return mlir::success();
     }
@@ -5525,9 +5610,10 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
       llvm::ElementCount size = op.getLhs().getType().getSize();
       auto i1VecTy = mlir::VectorType::get(
           size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(rewriter, op.getLoc(),
-                                            adaptor.getLhs(), adaptor.getRhs(),
-                                            op.getKind(), fenv, i1VecTy)
+      bitResult = createConstrainedFCmpCall(
+                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
+                      fenv, i1VecTy)
                       .getResult(0);
     } else {
       bitResult = mlir::LLVM::FCmpOp::create(
@@ -5536,6 +5622,41 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
+  }
+
+  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
+  // must be sign-extended to the correct result type, unless a vector of i1 is
+  // the type we need.
+  mlir::Type vecElemTy = op.getType().getElementType();
+  if (isa<cir::IntType>(vecElemTy) &&
+      cast<cir::IntType>(vecElemTy).getWidth() > 1)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
+        op, typeConverter->convertType(op.getType()), bitResult);
+  else
+    rewriter.replaceOp(op, bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecFCmpOpLowering::matchAndRewrite(
+    cir::VecFCmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type elementType = op.getLhs().getType().getElementType();
+  if (!mlir::isa<cir::FPTypeInterface>(elementType))
+    return op.emitError() << "unsupported type for VecFCmpOp: " << elementType;
+
+  mlir::Value bitResult;
+  if (cir::FenvAttr fenv = op.getFenvAttr()) {
+    llvm::ElementCount size = op.getLhs().getType().getSize();
+    auto i1VecTy = mlir::VectorType::get(
+        size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
+    bitResult = createConstrainedFCmpCall(
+                    rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+                    op.getKind(), op.getSignaling(), fenv, i1VecTy)
+                    .getResult(0);
+  } else {
+    bitResult = mlir::LLVM::FCmpOp::create(
+        rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
+        adaptor.getLhs(), adaptor.getRhs());
   }
 
   // LLVM IR vector comparison returns a vector of i1. This one-bit vector

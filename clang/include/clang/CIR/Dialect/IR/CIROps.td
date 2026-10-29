@@ -6575,6 +6575,78 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
 }
 
 //===----------------------------------------------------------------------===//
+// VecFCmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FCmpOpKind : CIR_I32Enum<"FCmpOpKind", "floating compare operation kind", [
+  I32EnumCase<"_false", 0, "false">,
+  I32EnumCase<"oeq", 1>,
+  I32EnumCase<"ogt", 2>,
+  I32EnumCase<"oge", 3>,
+  I32EnumCase<"olt", 4>,
+  I32EnumCase<"ole", 5>,
+  I32EnumCase<"one", 6>,
+  I32EnumCase<"ord", 7>,
+  I32EnumCase<"ueq", 8>,
+  I32EnumCase<"ugt", 9>,
+  I32EnumCase<"uge", 10>,
+  I32EnumCase<"ult", 11>,
+  I32EnumCase<"ule", 12>,
+  I32EnumCase<"une", 13>,
+  I32EnumCase<"uno", 14>,
+  I32EnumCase<"_true", 15, "true">
+]>;
+
+def CIR_FCmpOpKindAttr : CIR_EnumAttr<CIR_FCmpOpKind, "fcmp">;
+
+def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
+    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+  let summary = "Compare two floating point vectors";
+  let description = [{
+    The `cir.vec.fcmp` operation does an element-wise comparison of two vectors
+    of the same floating type. The result is a vector of the same size as the operands
+    whose element type is signed integral type. The values in the result are 0 or -1.
+
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation.
+
+    `signaling` attribute overrides whether a floating-point
+    comparison raises an invalid exception for quiet NaN operands if fenv
+    attribute is present.
+
+    ```
+    %ogt = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_FCmpOpKindAttr:$kind,
+    CIR_VectorType:$lhs,
+    CIR_VectorType:$rhs,
+    UnitAttr:$signaling,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) (`signaling` $signaling^)?
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "cir::FCmpOpKind":$kind,
+                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, kind, lhs, rhs, /*signaling=*/false,
+            cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleOp
 //===----------------------------------------------------------------------===//
 

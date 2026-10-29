@@ -32,39 +32,14 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-// OG has unordered comparison as a form of optimization in addition to
-// ordered comparison, while CIR doesn't.
-//
-// This means that we can't encode the comparison code of UGT (unordered
-// greater than), at least not at the CIR level.
-//
-// The boolean shouldInvert compensates for this.
-// For example: to get to the comparison code UGT, we pass in
-// emitVectorFCmp (OLE, shouldInvert = true) since OLE is the inverse of UGT.
-
-// There are several ways to support this otherwise:
-// - register extra CmpOpKind for unordered comparison types and build the
-// translation code for
-//    to go from CIR -> LLVM dialect. Notice we get this naturally with
-//    shouldInvert, benefiting from existing infrastructure, albeit having to
-//    generate an extra `not` at CIR).
-// - Just add extra comparison code to a new VecCmpOpKind instead of
-// cluttering CmpOpKind.
-// - Add a boolean in VecCmpOp to indicate if it's doing unordered or ordered
-// comparison
-// - Just emit the intrinsics call instead of calling this helper, see how the
-// LLVM lowering handles this.
 static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
-                                  cir::CmpOpKind pred, bool shouldInvert) {
+                                  cir::FCmpOpKind pred, bool signaling) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
-                                             pred, ops[0], ops[1]);
-  // TODO(cir): Add dedicated predicates to avoid the need to invert this.
-  mlir::Value bitCast = builder.createBitcast(
-      shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
-  return bitCast;
+  mlir::Value cmp = builder.createVecFCompare(cgf.getLoc(expr.getExprLoc()),
+                                              pred, ops[0], ops[1], signaling);
+  return builder.createBitcast(cmp, ops[0].getType());
 }
 
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -2752,36 +2727,36 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return {};
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::oeq,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpltps:
   case X86::BI__builtin_ia32_cmpltpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::olt,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpleps:
   case X86::BI__builtin_ia32_cmplepd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ole,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpunordps:
   case X86::BI__builtin_ia32_cmpunordpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::uno,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::ne,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::une,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::uge,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ugt,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ord,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpph128_mask:
   case X86::BI__builtin_ia32_cmpph256_mask:
   case X86::BI__builtin_ia32_cmpph512_mask:

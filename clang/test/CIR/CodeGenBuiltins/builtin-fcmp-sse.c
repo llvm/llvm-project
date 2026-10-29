@@ -18,9 +18,8 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
   // CIR:           %[[LOAD_1:.*]] = cir.load align(16) %[[ALLOCA_1]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-  // CIR:           %[[VEC_0:.*]] = cir.vec.cmp(le, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CIR:           %[[UNARY_0:.*]] = cir.not %[[VEC_0]] : !cir.vector<4 x !s32i>
-  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[UNARY_0]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
+  // CIR:           %[[VEC_0:.*]] = cir.vec.fcmp(ugt, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[VEC_0]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
   // CIR:           cir.store %[[CAST_0]], %[[ALLOCA_2]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
   // CIR:           %[[LOAD_2:.*]] = cir.load %[[ALLOCA_2]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
   // CIR:           cir.return %[[LOAD_2]] : !cir.vector<4 x !cir.float>
@@ -35,10 +34,9 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
   // LLVM-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[TMP4]], align 16
-  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ole <4 x float> [[TMP6]], [[TMP7]]
+  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ugt <4 x float> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
-  // LLVM-NEXT:    [[TMP10:%.*]] = xor <4 x i32> [[TMP9]], splat (i32 -1)
-  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <4 x float>
+  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP9]] to <4 x float>
   // LLVM-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP5]], align 16
   // LLVM-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[TMP5]], align 16
   // LLVM-NEXT:    ret <4 x float> [[TMP12]]
@@ -69,9 +67,8 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
   // CIR:           %[[LOAD_1:.*]] = cir.load align(16) %[[ALLOCA_1]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
-  // CIR:           %[[VEC_0:.*]] = cir.vec.cmp(le, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i> 
-  // CIR:           %[[UNARY_0:.*]] = cir.not %[[VEC_0]] : !cir.vector<2 x !s64i> 
-  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[UNARY_0]] : !cir.vector<2 x !s64i> -> !cir.vector<2 x !cir.double> 
+  // CIR:           %[[VEC_0:.*]] = cir.vec.fcmp(ugt, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i>
+  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[VEC_0]] : !cir.vector<2 x !s64i> -> !cir.vector<2 x !cir.double>
   // CIR:           cir.store %[[CAST_0]], %[[ALLOCA_2]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_2:.*]] = cir.load %[[ALLOCA_2]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
   // CIR:           cir.return %[[LOAD_2]] : !cir.vector<2 x !cir.double> 
@@ -86,10 +83,9 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
   // LLVM-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[TMP4]], align 16
-  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ole <2 x double> [[TMP6]], [[TMP7]]
+  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ugt <2 x double> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
-  // LLVM-NEXT:    [[TMP10:%.*]] = xor <2 x i64> [[TMP9]], splat (i64 -1)
-  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP10]] to <2 x double>
+  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP9]] to <2 x double>
   // LLVM-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP5]], align 16
   // LLVM-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[TMP5]], align 16
   // LLVM-NEXT:    ret <2 x double> [[TMP12]]
@@ -120,9 +116,8 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float> 
   // CIR:           %[[LOAD_1:.*]] = cir.load align(16) %[[ALLOCA_1]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float> 
-  // CIR:           %[[VEC_0:.*]] = cir.vec.cmp(lt, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> 
-  // CIR:           %[[UNARY_0:.*]] = cir.not %[[VEC_0]] : !cir.vector<4 x !s32i> 
-  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[UNARY_0]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float> 
+  // CIR:           %[[VEC_0:.*]] = cir.vec.fcmp(uge, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[VEC_0]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
   // CIR:           cir.store %[[CAST_0]], %[[ALLOCA_2]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>> 
   // CIR:           %[[LOAD_2:.*]] = cir.load %[[ALLOCA_2]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float> 
   // CIR:           cir.return %[[LOAD_2]] : !cir.vector<4 x !cir.float> 
@@ -137,10 +132,9 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
   // LLVM-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
   // LLVM-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[TMP4]], align 16
-  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp olt <4 x float> [[TMP6]], [[TMP7]]
+  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp uge <4 x float> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
-  // LLVM-NEXT:    [[TMP10:%.*]] = xor <4 x i32> [[TMP9]], splat (i32 -1)
-  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <4 x float>
+  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP9]] to <4 x float>
   // LLVM-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP5]], align 16
   // LLVM-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[TMP5]], align 16
   // LLVM-NEXT:    ret <4 x float> [[TMP12]]
@@ -171,9 +165,8 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // CIR:           cir.store %[[ARG1]], %[[ALLOCA_1]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_0:.*]] = cir.load align(16) %[[ALLOCA_0]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
   // CIR:           %[[LOAD_1:.*]] = cir.load align(16) %[[ALLOCA_1]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
-  // CIR:           %[[VEC_0:.*]] = cir.vec.cmp(lt, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i> 
-  // CIR:           %[[UNARY_0:.*]] = cir.not %[[VEC_0]] : !cir.vector<2 x !s64i> 
-  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[UNARY_0]] : !cir.vector<2 x !s64i> -> !cir.vector<2 x !cir.double> 
+  // CIR:           %[[VEC_0:.*]] = cir.vec.fcmp(uge, %[[LOAD_0]], %[[LOAD_1]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i>
+  // CIR:           %[[CAST_0:.*]] = cir.cast bitcast %[[VEC_0]] : !cir.vector<2 x !s64i> -> !cir.vector<2 x !cir.double>
   // CIR:           cir.store %[[CAST_0]], %[[ALLOCA_2]] : !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>> 
   // CIR:           %[[LOAD_2:.*]] = cir.load %[[ALLOCA_2]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double> 
   // CIR:           cir.return %[[LOAD_2]] : !cir.vector<2 x !cir.double> 
@@ -188,10 +181,9 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // LLVM-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP4]], align 16
   // LLVM-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
   // LLVM-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[TMP4]], align 16
-  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP6]], [[TMP7]]
+  // LLVM-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
-  // LLVM-NEXT:    [[TMP10:%.*]] = xor <2 x i64> [[TMP9]], splat (i64 -1)
-  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP10]] to <2 x double>
+  // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP9]] to <2 x double>
   // LLVM-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP5]], align 16
   // LLVM-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[TMP5]], align 16
   // LLVM-NEXT:    ret <2 x double> [[TMP12]]
