@@ -620,3 +620,51 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
   %result = fptrunc float %select to half
   ret half %result
 }
+
+define i1 @f32_subnormal_to_f16_not_normal(float nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f32_subnormal_to_f16_not_normal(
+; CHECK-SAME: float nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.f16(half [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc float %x to half
+  %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f64_subnormal_to_f32_not_normal(double nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f64_subnormal_to_f32_not_normal(
+; CHECK-SAME: double nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc double [[X]] to float
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc double %x to float
+  %normal = call i1 @llvm.is.fpclass.f32(float %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f32_subnormal_to_bf16_can_be_normal(float nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f32_subnormal_to_bf16_can_be_normal(
+; CHECK-SAME: float nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc float [[X]] to bfloat
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.bf16(bfloat [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc float %x to bfloat
+  %normal = call i1 @llvm.is.fpclass.bf16(bfloat %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f32_normal_to_f16_can_be_normal(float nofpclass(nan inf sub zero) %x) {
+; CHECK-LABEL: define i1 @f32_normal_to_f16_can_be_normal(
+; CHECK-SAME: float nofpclass(nan inf zero sub) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.f16(half [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc float %x to half
+  %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
+  ret i1 %normal
+}
