@@ -7,9 +7,11 @@
 ; RUN: llc -O0 -mtriple=spirv32v1.4-unknown-vulkan %t/uniform-id.ll -o - | FileCheck %t/uniform-id.ll
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.4-unknown-vulkan %t/uniform-id.ll -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 ; RUN: not --crash llc -O0 -mtriple=spirv32v1.3-unknown-vulkan %t/uniform-id.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-vulkan %t/buffer-block.ll -o - | FileCheck %t/buffer-block.ll
+; RUN: not --crash llc -O0 -mtriple=spirv32v1.4-unknown-vulkan %t/buffer-block.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 
 ; MaxByteOffset requires SPIR-V 1.1, AlignmentId and MaxByteOffsetId require
-; 1.2, UniformId requires 1.4.
+; 1.2, UniformId requires 1.4, BufferBlock is removed after 1.3.
 
 ; CHECK-ERR: LLVM ERROR: Adding SPIR-V requirements this target can't satisfy.
 
@@ -55,3 +57,16 @@ define i32 @f() {
 
 !1 = !{!2}
 !2 = !{i32 27, i32 2}
+
+;--- buffer-block.ll
+; CHECK: OpDecorate %[[#]] BufferBlock
+
+@uvar = external local_unnamed_addr addrspace(7) externally_initialized constant i32, !spirv.Decorations !1
+
+define i32 @f() {
+  %v = load i32, ptr addrspace(7) @uvar
+  ret i32 %v
+}
+
+!1 = !{!2}
+!2 = !{i32 3}

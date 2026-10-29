@@ -1371,7 +1371,7 @@ multiclass DecorationOperand<bits<32> value, bits<32> minVersion, bits<32> maxVe
 defm RelaxedPrecision : DecorationOperand<0, 0, 0, [], [Shader]>;
 defm SpecId : DecorationOperand<1, 0, 0, [], [Shader, Kernel]>;
 defm Block : DecorationOperand<2, 0, 0, [], [Shader]>;
-defm BufferBlock : DecorationOperand<3, 0, 0, [], [Shader]>;
+defm BufferBlock : DecorationOperand<3, 0, 0x10300, [], [Shader]>;
 defm RowMajor : DecorationOperand<4, 0, 0, [], [Matrix]>;
 defm ColMajor : DecorationOperand<5, 0, 0, [], [Matrix]>;
 defm ArrayStride : DecorationOperand<6, 0, 0, [], [Shader]>;
