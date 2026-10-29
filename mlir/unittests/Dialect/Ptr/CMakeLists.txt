@@ -1,0 +1,9 @@
+add_mlir_unittest(MLIRPtrTests
+  PtrTest.cpp
+)
+mlir_target_link_libraries(MLIRPtrTests
+  PRIVATE
+  MLIRIR
+  MLIRPtrDialect
+  MLIRDataLayoutInterfaces
+)
