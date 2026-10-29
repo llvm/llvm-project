@@ -460,14 +460,13 @@ public:
     return NoWrapPredicates;
   }
 
-private:
-  /// Private constructor - used by \c isInductionPHI and
-  /// \c getCanonicalIntInduction.
+  LLVM_ABI
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr,
                       ArrayRef<const SCEVPredicate *> NoWrapPreds = {});
 
+private:
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.
