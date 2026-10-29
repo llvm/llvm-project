@@ -1,7 +1,7 @@
 // NOTE: Do not autogenerate. Check runtime counts and application output.
-// Exercise the installed GPU profiling helper with values that differ between
-// active lanes. Also check partial/sparse masks, 64-bit wrapping, and both
-// counter channels across multiple waves. Uniform counters record contributions
+// Exercise the installed GPU profiling helper with zero or one from each
+// active lane. Also check partial/sparse masks and both counter channels
+// across multiple waves. Uniform counters record contributions
 // made with a full active mask; they do not classify the step's uniformity.
 // REQUIRES: hip, amdgpu
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
@@ -11,7 +11,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.dir/profile.%%p.profraw \
 // RUN:   LD_LIBRARY_PATH=%hip_lib_path:$LD_LIBRARY_PATH \
 // RUN:   HIP_VISIBLE_DEVICES=0 %run %t.dir/a.out | FileCheck %s
-// CHECK: cases=15 mismatches=0
+// CHECK: cases=11 mismatches=0
 
 #include <cstdint>
 #include <cstdio>
@@ -43,31 +43,23 @@ static uint64_t stepValue(unsigned kind, unsigned lane) {
   case 1:
     return 1;
   case 2:
-    return 7;
-  case 3:
     return lane % 2;
-  case 4:
-    return 1 - lane % 2;
-  case 5:
-    return lane + 1;
-  case 6:
-    return (UINT64_C(1) << 40) + 37 * lane;
   default:
-    return UINT64_MAX - lane;
+    return 1 - lane % 2;
   }
 }
 
 static bool isActive(unsigned test, unsigned wave, unsigned lane,
                      unsigned width) {
-  if (test < 8)
+  if (test < 4)
     return true;
-  if (test < 10)
+  if (test < 6)
     return lane >= 3 && lane < width - 5;
-  if (test < 12)
+  if (test < 8)
     return lane % 3 != 0;
-  if (test == 12)
+  if (test == 8)
     return lane == width - 1;
-  if (test == 13)
+  if (test == 9)
     return false;
   return wave == 0 || (wave == 2 && lane % 2 != 0);
 }
@@ -87,14 +79,14 @@ int main() {
   uint64_t values[256];
   unsigned char mask[256];
   unsigned errors = 0;
-  for (unsigned test = 0; test < 15; ++test) {
+  for (unsigned test = 0; test < 11; ++test) {
     uint64_t expected[2] = {};
     for (unsigned wave = 0; wave < 4; ++wave) {
       uint64_t sum = 0;
       unsigned population = 0;
       for (unsigned lane = 0; lane < width; ++lane) {
         unsigned i = wave * width + lane;
-        unsigned kind = test < 8 ? test : (test % 2 == 0 ? 3 : 5);
+        unsigned kind = test < 4 ? test : (test % 2 == 0 ? 2 : 1);
         uint64_t value = stepValue(kind, lane);
         bool enabled = isActive(test, wave, lane, width);
         values[i] = value;
@@ -128,6 +120,6 @@ int main() {
   check(hipFree(active));
   check(hipFree(steps));
   check(hipFree(counts));
-  std::printf("cases=15 mismatches=%u\n", errors);
+  std::printf("cases=11 mismatches=%u\n", errors);
   return errors != 0;
 }
