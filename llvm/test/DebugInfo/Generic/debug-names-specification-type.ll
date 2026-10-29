@@ -42,7 +42,7 @@
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "Specified", file: !1, line: 1, size: 8)
-; Has no name, which is inherited from !8.
+; The name is inherited from !8.
 !9 = !DICompositeType(tag: DW_TAG_structure_type, file: !1, line: 1, size: 8, specification: !8)
 
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
