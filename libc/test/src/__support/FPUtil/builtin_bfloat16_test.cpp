@@ -19,8 +19,8 @@ using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
 TEST(LlvmLibcBuiltinBFloat16Test, TypeSizeAndAlignment) {
   static_assert(sizeof(__bf16) == 2);
   static_assert(alignof(__bf16) == 2);
-  __bf16 a = 1.0;
-  double b = 1.0;
+  constexpr __bf16 a = 1.0;
+  constexpr double b = 1.0;
   static_assert(__bf16(b) == a);
 }
 
