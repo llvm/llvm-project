@@ -129,7 +129,7 @@ private:
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
-  int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
+  int getS_CMPOpcode(CmpInst::Predicate P, uint64_t Size) const;
   bool selectG_ICMP_or_FCMP(MachineInstr &I) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
@@ -249,7 +249,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, int>
+  std::pair<Register, int64_t>
   selectFlatOffsetImpl(MachineOperand &Root,
                        AMDGPU::FlatAddrSpace FlatVariant) const;
 
@@ -295,7 +295,7 @@ private:
   bool isFlatScratchBaseLegalSV(Register Addr) const;
   bool isFlatScratchBaseLegalSVImm(Register Addr) const;
 
-  std::pair<Register, unsigned>
+  std::pair<Register, int64_t>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
@@ -306,8 +306,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS128Bit8ByteAligned(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned> selectDSReadWrite2Impl(MachineOperand &Root,
-                                                       unsigned size) const;
+  std::pair<Register, int64_t> selectDSReadWrite2Impl(MachineOperand &Root,
+                                                      unsigned size) const;
   InstructionSelector::ComplexRendererFns
   selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
