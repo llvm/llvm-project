@@ -6031,6 +6031,27 @@ uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
   return support::endian::read64le(Hasher.result().data());
 }
 
+#ifndef NDEBUG
+// Check that clones I and J of FS have identical callsite and alloc versions.
+static bool clonesHaveSameVersions(const FunctionSummary *FS, unsigned I,
+                                   unsigned J) {
+  for (auto &SN : FS->callsites()) {
+    assert(SN.Clones.size() > I && SN.Clones.size() > J &&
+           "Callsite summary has fewer entries than other summaries in "
+           "function");
+    if (SN.Clones[I] != SN.Clones[J])
+      return false;
+  }
+  for (auto &AN : FS->allocs()) {
+    assert(AN.Versions.size() > I && AN.Versions.size() > J &&
+           "Alloc summary has fewer entries than other summaries in function");
+    if (AN.Versions[I] != AN.Versions[J])
+      return false;
+  }
+  return true;
+}
+#endif
+
 static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     Function &F, unsigned NumClones, Module &M, OptimizationRemarkEmitter &ORE,
     std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
@@ -6070,8 +6091,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   FunctionsClonedThinBackend++;
 
   // Map of hash of callsite/alloc versions to the instantiated function clone
-  // (possibly the original) implementing those calls. Used to avoid
-  // instantiating duplicate function clones.
+  // (possibly the original) implementing those calls and its clone number. Used
+  // to avoid instantiating duplicate function clones.
   // FIXME: Ideally the thin link would not generate such duplicate clones to
   // start with, but right now it happens due to phase ordering in the function
   // assignment and possible new clones that produces. We simply make each
@@ -6079,10 +6100,10 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   // (except for available_externally which are made declarations as they would
   // be aliases in the prevailing module, and available_externally aliases are
   // not well supported right now).
-  DenseMap<uint64_t, Function *> HashToFunc;
+  DenseMap<uint64_t, std::pair<Function *, unsigned>> HashToFunc;
 
   // Save the hash of the original function version.
-  HashToFunc[ComputeHash(FS, 0)] = &F;
+  HashToFunc[ComputeHash(FS, 0)] = {&F, 0};
 
   for (unsigned I = 1; I < NumClones; I++) {
     VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
@@ -6091,9 +6112,11 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     // If this clone would duplicate a previously seen clone, don't generate the
     // duplicate clone body, just make an alias to satisfy any (potentially
     // cross-module) references.
-    if (HashToFunc.contains(Hash)) {
+    if (auto It = HashToFunc.find(Hash); It != HashToFunc.end()) {
       FunctionCloneDuplicatesThinBackend++;
-      auto *Func = HashToFunc[Hash];
+      auto [Func, OrigI] = It->second;
+      assert(clonesHaveSameVersions(FS, I, OrigI) &&
+             "Duplicate clone hash collision");
       if (Func->hasAvailableExternallyLinkage()) {
         // Skip these as EliminateAvailableExternallyPass does not handle
         // available_externally aliases correctly and we end up with an
@@ -6117,7 +6140,7 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       continue;
     }
     auto *NewF = CloneFunction(&F, *VMaps.back());
-    HashToFunc[Hash] = NewF;
+    HashToFunc[Hash] = {NewF, I};
     FunctionClonesThinBackend++;
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
