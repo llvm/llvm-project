@@ -372,9 +372,10 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
 CoExecInfo getMFMACoExecInfo(unsigned Opcode);
 
 /// Get the first cycle, counted from \p MFMA issuing at cycle 0, at which a
-/// VALU can issue on gfx942 with the peak TOPS limiter enabled, or on gfx950.
-/// A scaled MFMA is assumed to issue behind another MFMA; issued into an idle
-/// MFMA pipe, it takes one more cycle.
+/// VALU can issue on gfx942 (MI300X, or MI308X with the peak TOPS limiter
+/// enabled) or on gfx950. With the limiter disabled, MI308X holds VALU until
+/// an XDL's passes end. A scaled MFMA is assumed to issue behind another MFMA;
+/// issued into an idle MFMA pipe, it takes one more cycle.
 unsigned getVALUIssueCycle(const MachineInstr &MFMA, const SIInstrInfo &TII);
 
 /// Same as getVALUIssueCycle, for a packed VALU or a DOT with opcode
