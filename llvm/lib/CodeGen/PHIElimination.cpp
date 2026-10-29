@@ -600,7 +600,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           MachineBasicBlock::iterator KillInst = opBlock.end();
           for (MachineBasicBlock::iterator Term = InsertPos;
                Term != opBlock.end(); ++Term) {
-            if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
+            if (!Term->isDebugInstr() &&
+                Term->readsRegister(SrcReg, /*TRI=*/nullptr))
               KillInst = Term;
           }
 
