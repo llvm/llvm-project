@@ -1671,6 +1671,48 @@ struct MIFEventPostOpConversion
   }
 };
 
+/// Convert mif.event_query operation to runtime call of 'prif_event_query'
+struct MIFEventQueryOpConversion
+    : public mlir::OpRewritePattern<mif::EventQueryOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::EventQueryOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    mlir::Type ptrTy = getBuiltinCptrType(builder, loc);
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
+    mlir::FunctionType ftype = mlir::FunctionType::get(
+        builder.getContext(),
+        /*inputs*/
+        {builder.getRefType(ptrTy), builder.getRefType(i64Ty),
+         getPRIFStatType(builder)},
+        /*results*/ {});
+    mlir::func::FuncOp funcOp =
+        builder.createFunction(loc, getPRIFProcName("event_query"), ftype);
+
+    mlir::Value count = builder.createTemporary(loc, i64Ty);
+    mlir::Value stat = op.getStat();
+    if (!stat)
+      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
+
+    mlir::Value cptrEvent =
+        convertRefTypeToCPtrType(builder, loc, op.getEvent());
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, ftype, cptrEvent, count, stat);
+    fir::CallOp::create(builder, loc, funcOp, args);
+
+    count = fir::LoadOp::create(builder, loc, count).getResult();
+    count = builder.createConvert(loc, op.getType(), count);
+    rewriter.replaceOp(op, count);
+    return mlir::success();
+  }
+};
+
 static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
                              fir::DeclareOp op) {
   builder.setInsertionPointAfter(op);
@@ -1746,16 +1788,16 @@ void mif::populateMIFOpConversionPatterns(
     mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFAllocCoarrayOpConversion>(patterns.getContext(), &dl,
                                                &converter);
-  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
-                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
-                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
-                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
-                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
-                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
-                  MIFChangeTeamOpConversion, MIFGetTeamOpConversion,
-                  MIFTeamNumberOpConversion, MIFDeallocCoarrayOpConversion,
-                  MIFCoshapeOpConversion, MIFLcoboundOpConversion,
-                  MIFUcoboundOpConversion, MIFImageIndexOpConversion,
-                  MIFEventPostOpConversion, MIFEventWaitOpConversion>(
+  patterns.insert<
+      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
+      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
+      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
+      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
+      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
+      MIFGetTeamOpConversion, MIFTeamNumberOpConversion,
+      MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
+      MIFLcoboundOpConversion, MIFUcoboundOpConversion,
+      MIFImageIndexOpConversion, MIFEventPostOpConversion,
+      MIFEventWaitOpConversion, MIFEventQueryOpConversion>(
       patterns.getContext());
 }
