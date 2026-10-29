@@ -45,10 +45,13 @@ static bool isZeroVectorConstant(Operation *op) {
 }
 
 // Recursively follows single-use values through scf.yield operations
-// and returns the first non-yield user result in the contraction chain.
-static Value contractionUsersAfterYield(Value v) {
-  if (v.getNumUses() != 1)
+// and returns the first value that has more than one user, or is not used by a
+// yield operation. Returns nullptr if the chain is ultimately unused.
+static Value contractionResultAfterYield(Value v) {
+  if (v.hasNUses(0))
     return nullptr;
+  if (v.hasNUsesOrMore(2))
+    return v;
 
   OpOperand &use = *v.use_begin();
   Operation *user = use.getOwner();
@@ -60,7 +63,7 @@ static Value contractionUsersAfterYield(Value v) {
   Operation *parent = yield->getParentOp();
   unsigned idx = use.getOperandNumber();
 
-  return contractionUsersAfterYield(parent->getResult(idx));
+  return contractionResultAfterYield(parent->getResult(idx));
 }
 
 // Function to collapse the last two dimension (k or n, and vnni) to help the
@@ -598,7 +601,7 @@ static std::pair<std::optional<SmallVector<Operation *>>,
 getInPlaceAccAccesses(ArrayRef<vector::ContractionOp> ops, bool writeOnly) {
   SmallVector<Operation *> reads, writes;
   for (vector::ContractionOp op : ops) {
-    Value result = contractionUsersAfterYield(op.getResult());
+    Value result = contractionResultAfterYield(op.getResult());
     if (!result || !result.hasOneUse())
       return {std::nullopt, std::nullopt};
     Operation *write = *result.user_begin();
@@ -947,20 +950,21 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    // Only the contract result's first consumer is needed, not the final
-    // store. This keeps the lowering independent of the epilogue ops (truncf,
-    // bias add, ReLU, ...) that sit between the contraction and the write.
-    Value resultChainEnd = contractionUsersAfterYield(contractOp.getResult());
+    // Find the value representing the final result of the accumulation by
+    // traversing a single-use chain through the loop levels. This keeps the
+    // lowering independent of the epilogue ops (truncf, bias add, ReLU, ...)
+    // that sit between the contraction and the write.
+    Value resultChainEnd = contractionResultAfterYield(contractOp.getResult());
 
     if (!accReadOp || !resultChainEnd)
       return rewriter.notifyMatchFailure(
           contractOp, "The ACC operand of the vector.contract should be a "
-                      "transfer_read or a load. And, the result should have a "
-                      "single-use chain to its consumer.");
+                      "transfer_read, a load, or a zero vector constant. And, "
+                      "the computation should not be dead.");
 
     bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
 
-    Block *resultBlock = resultChainEnd.user_begin()->getBlock();
+    Block *resultBlock = resultChainEnd.getParentBlock();
 
     Type ipType = rewriter.getBF16Type();
     Type opType = rewriter.getF32Type();
@@ -1194,11 +1198,11 @@ struct VectorContractToAMXDotProduct
           rewriter, loc, vectorType, resultBuffer, ValueRange{c0, c0}, padding,
           map, inBounds);
 
-      Value resultOp = contractionUsersAfterYield(contractOp.getResult());
-      if (auto vecType = dyn_cast<VectorType>(resultOp.getType()))
+      Value result = contractionResultAfterYield(contractOp.getResult());
+      if (auto vecType = dyn_cast<VectorType>(result.getType()))
         vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
 
-      rewriter.replaceAllUsesWith(resultOp, vecRow);
+      rewriter.replaceAllUsesWith(result, vecRow);
       return success();
     }
 
@@ -1804,12 +1808,12 @@ struct VectorContractToAMXDotProduct
       vector::ContractionOp contOp = ops[i];
       Value vecRow = writeResults[i];
 
-      Value resultWriteOp = contractionUsersAfterYield(contOp.getResult());
-      if (auto vecType = dyn_cast<VectorType>(resultWriteOp.getType()))
+      Value result = contractionResultAfterYield(contOp.getResult());
+      if (auto vecType = dyn_cast<VectorType>(result.getType()))
         vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType,
                                              writeResults[i]);
 
-      rewriter.replaceAllUsesWith(resultWriteOp, vecRow);
+      rewriter.replaceAllUsesWith(result, vecRow);
     }
 
     return success();
