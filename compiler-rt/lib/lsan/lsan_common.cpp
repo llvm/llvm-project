@@ -13,6 +13,7 @@
 
 #include "lsan_common.h"
 
+#include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -41,9 +42,18 @@ namespace __lsan {
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
 // also to protect the global list of root regions.
 static Mutex global_mutex;
+static atomic_uintptr_t exit_caller_sp;
 
 void LockGlobal() SANITIZER_ACQUIRE(global_mutex) { global_mutex.Lock(); }
 void UnlockGlobal() SANITIZER_RELEASE(global_mutex) { global_mutex.Unlock(); }
+
+void RecordExitCallerSP(uptr sp) {
+  atomic_store(&exit_caller_sp, sp, memory_order_relaxed);
+}
+
+static uptr GetExitCallerSP() {
+  return atomic_load(&exit_caller_sp, memory_order_relaxed);
+}
 
 Flags lsan_flags;
 
@@ -888,6 +898,11 @@ static bool CheckForLeaksOnce() {
     // threads are suspended and stack pointers captured.
     param.caller_tid = GetTid();
     param.caller_sp = reinterpret_cast<uptr>(__builtin_frame_address(0));
+    // If exit() has started, leak checking runs from the termination/atexit
+    // path. Use the stack boundary captured at exit() entry so frames created
+    // by libc exit handlers and LSan itself do not expand the live stack root.
+    if (uptr exit_sp = GetExitCallerSP())
+      param.caller_sp = exit_sp;
     LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
     if (!param.success) {
       Report("LeakSanitizer has encountered a fatal error.\n");

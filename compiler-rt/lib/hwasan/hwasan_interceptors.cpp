@@ -24,6 +24,7 @@
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "interception/interception.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -313,6 +314,19 @@ INTERCEPTOR(void, pthread_exit, void *retval) {
   REAL(pthread_exit)(retval);
 }
 
+#    if CAN_SANITIZE_LEAKS
+// TODO: Intercept more program-killing functions that behave like exit().
+INTERCEPTOR(void, exit, int status) {
+  if (hwasan_inited && common_flags()->detect_leaks &&
+      common_flags()->leak_check_at_exit) {
+    // Capture the boundary before libc runs atexit handlers.
+    __lsan::RecordExitCallerSP(GET_CURRENT_FRAME());
+  }
+  REAL(exit)(status);
+}
+
+#    endif
+
 #    if SANITIZER_GLIBC
 INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
   int result;
@@ -536,6 +550,9 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(pthread_detach);
   INTERCEPT_FUNCTION(pthread_exit);
+#    if CAN_SANITIZE_LEAKS
+  INTERCEPT_FUNCTION(exit);
+#    endif
 #    if SANITIZER_GLIBC
   INTERCEPT_FUNCTION(pthread_tryjoin_np);
   INTERCEPT_FUNCTION(pthread_timedjoin_np);

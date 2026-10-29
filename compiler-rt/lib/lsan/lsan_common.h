@@ -274,6 +274,7 @@ void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();
 void InitCommonLsan();
+void RecordExitCallerSP(uptr sp);
 void DoLeakCheck();
 void DoRecoverableLeakCheckVoid();
 void DisableCounterUnderflow();
