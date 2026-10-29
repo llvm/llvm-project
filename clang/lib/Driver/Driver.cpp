@@ -3950,10 +3950,6 @@ static StringRef getCanonicalArchString(Compilation &C,
       }
     }
   } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
-    // FIXME(IGCA): Require the "intel" vendor in the triple for IGCA targets,
-    // instead of accepting them on any SPIR-V triple.
-    // FIXME(IGCA): This only checks ArchStr's starting with "igca". Typos such
-    // as IGCA_20ca still fall through this check.
     if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "IGCA" << ArchStr;
