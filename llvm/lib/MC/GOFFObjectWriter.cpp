@@ -267,6 +267,25 @@ public:
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    // See
+    // https://www.ibm.com/docs/en/hla-and-tf/1.6.0?topic=statements-amode-instruction#amode__modcomb,
+    // Table 2. HLASM sets the AMODE based on the RMODE if no AMODE is given.
+    GOFF::ESDAmode Amode;
+    switch (EDAttr.Rmode) {
+    case GOFF::ESD_RMODE_24:
+      Amode = GOFF::ESD_AMODE_24;
+      break;
+    case GOFF::ESD_RMODE_31:
+      Amode = GOFF::ESD_AMODE_31;
+      break;
+    case GOFF::ESD_RMODE_64:
+      Amode = GOFF::ESD_AMODE_64;
+      break;
+    default:
+      Amode = GOFF::ESD_AMODE_None;
+      break;
+    }
+    BehavAttrs.setAmode(Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
   }

@@ -59,15 +59,24 @@ constexpr Triple::EnvironmentType AllStages[] = {
     Triple::Amplification, Triple::Mesh,  Triple::Library};
 
 // The semantic kinds getAvailableStages knows about.
-constexpr SemanticKind SupportedKinds[] = {
-    SemanticKind::Arbitrary,        SemanticKind::Position,
-    SemanticKind::VertexID,         SemanticKind::Target,
-    SemanticKind::IsFrontFace,      SemanticKind::ClipDistance,
-    SemanticKind::CullDistance,     SemanticKind::TessFactor,
-    SemanticKind::InsideTessFactor, SemanticKind::DispatchThreadID,
-    SemanticKind::GroupID,          SemanticKind::GroupIndex,
-    SemanticKind::GroupThreadID,    SemanticKind::InstanceID,
-    SemanticKind::ShadingRate,      SemanticKind::Barycentrics};
+constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
+                                           SemanticKind::Position,
+                                           SemanticKind::VertexID,
+                                           SemanticKind::Target,
+                                           SemanticKind::IsFrontFace,
+                                           SemanticKind::ClipDistance,
+                                           SemanticKind::CullDistance,
+                                           SemanticKind::TessFactor,
+                                           SemanticKind::InsideTessFactor,
+                                           SemanticKind::DispatchThreadID,
+                                           SemanticKind::GroupID,
+                                           SemanticKind::GroupIndex,
+                                           SemanticKind::GroupThreadID,
+                                           SemanticKind::InstanceID,
+                                           SemanticKind::ShadingRate,
+                                           SemanticKind::Barycentrics,
+                                           SemanticKind::StartVertexLocation,
+                                           SemanticKind::StartInstanceLocation};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -162,6 +171,24 @@ TEST(HLSLSemanticStagesTest, BarycentricsSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked},
   };
   expectOnlySignaturePoints(SemanticKind::Barycentrics, Valid);
+}
+
+// SV_StartVertexLocation is read with a dedicated operation and is never placed
+// in a signature. Valid only on vertex inputs.
+TEST(HLSLSemanticStagesTest, StartVertexLocationSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+  };
+  expectOnlySignaturePoints(SemanticKind::StartVertexLocation, Valid);
+}
+
+// SV_StartInstanceLocation is read with a dedicated operation and is never
+// placed in a signature. Valid only on vertex inputs.
+TEST(HLSLSemanticStagesTest, StartInstanceLocationSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+  };
+  expectOnlySignaturePoints(SemanticKind::StartInstanceLocation, Valid);
 }
 
 } // namespace

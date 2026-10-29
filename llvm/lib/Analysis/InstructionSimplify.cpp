@@ -6849,7 +6849,7 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
-                                         Value *Op1) {
+                                         Value *Op1, unsigned MaxRecurse) {
   auto IsMinimumMaximumIntrinsic = [](Intrinsic::ID ID) {
     switch (ID) {
     case Intrinsic::maxnum:
@@ -6882,6 +6882,13 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   // For minnum/maxnum, Y is NaN => m(X, NaN) == X and m(X, NaN) == X.
   if (X0 == Op1 || Y0 == Op1)
     return M0;
+
+  // m(m(X, Y), Z) --> m(X, Y) if m(X, Z) == X or m(Y, Z) == Y.
+  if (MaxRecurse--) {
+    if (foldMinimumMaximumSharedOp(IID, X0, Op1, MaxRecurse) == X0 ||
+        foldMinimumMaximumSharedOp(IID, Y0, Op1, MaxRecurse) == Y0)
+      return M0;
+  }
 
   auto *M1 = dyn_cast<IntrinsicInst>(Op1);
   if (!M1 || !IsMinimumMaximumIntrinsic(M1->getIntrinsicID()))
@@ -7410,10 +7417,11 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     }
 
     // Min/max of the same operation with common operand:
-    // m(m(X, Y)), X --> m(X, Y) (4 commuted variants)
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1))
+    // m(m(X, Y), X) --> m(X, Y) (4 commuted variants), also through nested m,
+    // e.g. m(m(m(X, Y), Z), X) --> m(m(X, Y), Z).
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1, RecursionLimit))
       return V;
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0))
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0, RecursionLimit))
       return V;
 
     break;

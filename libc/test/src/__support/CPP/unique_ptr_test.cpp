@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/alloc-checker.h"
@@ -242,3 +243,26 @@ TEST(LlvmLibcUniquePtrTest, BaseDerivedConversion) {
   ASSERT_TRUE(static_cast<bool>(base_ptr));
   ASSERT_EQ(base_ptr->val, 100);
 }
+
+#ifndef NDEBUG
+// In full builds, LIBC_ASSERT exits with code 0xFF. Otherwise, it uses the
+// system assert, which raises SIGABRT.
+#if defined(LIBC_FULL_BUILD) && !defined(LIBC_COPT_USE_C_ASSERT)
+#define EXPECT_ASSERT_FAILURE(FUNC) EXPECT_EXITS(FUNC, 0xFF)
+#else
+#define EXPECT_ASSERT_FAILURE(FUNC) EXPECT_DEATH(FUNC, WITH_SIGNAL(SIGABRT))
+#endif
+
+// Test that dereferencing a null unique_ptr asserts.
+TEST(LlvmLibcUniquePtrTest, NullDereferenceDeath) {
+  struct Foo {
+    int val;
+  };
+  unique_ptr<Foo> ptr;
+  EXPECT_ASSERT_FAILURE([&] { (void)*ptr; });
+  EXPECT_ASSERT_FAILURE([&] { (void)ptr->val; });
+
+  unique_ptr<int[]> arr;
+  EXPECT_ASSERT_FAILURE([&] { (void)arr[0]; });
+}
+#endif // NDEBUG

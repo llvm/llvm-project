@@ -5856,15 +5856,14 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput = C.getArgs().MakeArgString(TempPath.c_str());
   }
 
-  // If we're saving temps and the temp file conflicts with the input file,
-  // then avoid overwriting input file.
-  if (!AtTopLevel && isSaveTempsEnabled() && NamedOutput == BaseName) {
+  // If we're saving temps and the temp file is the input file, then avoid
+  // overwriting the input file. Compare the files, not their names: the output
+  // can name the input by another path (e.g. "sub/t.s" from -save-temps=obj),
+  // or with different case on a case-insensitive file system ("t.s" for an
+  // input "t.S").
+  if (!AtTopLevel && isSaveTempsEnabled()) {
     bool SameFile = false;
-    SmallString<256> Result;
-    llvm::sys::fs::current_path(Result);
-    llvm::sys::path::append(Result, BaseName);
-    llvm::sys::fs::equivalent(BaseInput, Result.c_str(), SameFile);
-    // Must share the same path to conflict.
+    llvm::sys::fs::equivalent(BaseInput, NamedOutput, SameFile);
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');

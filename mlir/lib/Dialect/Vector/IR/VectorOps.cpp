@@ -603,12 +603,13 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         OperationState &result, Value source,
                                         Value acc, ArrayRef<bool> reductionMask,
-                                        CombiningKind kind) {
+                                        CombiningKind kind,
+                                        arith::FastMathFlags fastMathFlags) {
   SmallVector<int64_t> reductionDims;
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  build(builder, result, kind, source, acc, reductionDims);
+  build(builder, result, kind, source, acc, reductionDims, fastMathFlags);
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
@@ -719,7 +720,7 @@ struct ElideUnitDimsInMultiDimReduction
 
     Value result =
         vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), acc,
-                                   cast, /*fastmath=*/nullptr, mask);
+                                   cast, reductionOp.getFastmathAttr(), mask);
     rewriter.replaceOp(rootOp, result);
     return success();
   }
@@ -8699,6 +8700,22 @@ DeinterleaveOp::getIterationShapeToUnroll() {
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// A broadcast of a scalar condition selects the same arm in every lane.
+struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto broadcast = select.getCondition().getDefiningOp<BroadcastOp>();
+    if (!broadcast || !broadcast.getSourceType().isSignlessInteger(1))
+      return failure();
+    rewriter.modifyOpInPlace(select, [&] {
+      select.getConditionMutable().assign(broadcast.getSource());
+    });
+    return success();
+  }
+};
+
 /// Conservatively compute the regions reachable from an operation entry.
 /// Region-to-region edges are included: an entry-only check is insufficient for
 /// loops and operations that enter one region through another.
@@ -8793,7 +8810,7 @@ struct SelectReductionBranch : OpRewritePattern<arith::SelectOp> {
 
 void VectorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<SelectReductionBranch>(getContext());
+  results.add<SelectBroadcastCondition, SelectReductionBranch>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
