@@ -4,21 +4,22 @@
 define i64 @select_or_reduce_v2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: select_or_reduce_v2i1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    ldr q0, [x0, x9]
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-NEXT:    umaxv s0, v0.4s
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    tbnz w9, #0, .LBB0_3
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cset w8, ne
+; CHECK-NEXT:    b.ne .LBB0_3
 ; CHECK-NEXT:  // %bb.2: // %vector.body
 ; CHECK-NEXT:    // in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    cmp x8, #16
-; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x9, #16
+; CHECK-NEXT:    add x9, x9, #16
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: // %middle.split
-; CHECK-NEXT:    and x0, x9, #0x1
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -42,14 +43,15 @@ middle.split:
 define i64 @br_or_reduce_v2i1(ptr nocapture noundef readonly %src, ptr noundef readnone %p) {
 ; CHECK-LABEL: br_or_reduce_v2i1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q0, [x0, x8]
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-NEXT:    umaxv s0, v0.4s
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    tbnz w9, #0, .LBB1_3
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    b.ne .LBB1_3
 ; CHECK-NEXT:  // %bb.2: // %vector.body
 ; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    cmp x8, #16

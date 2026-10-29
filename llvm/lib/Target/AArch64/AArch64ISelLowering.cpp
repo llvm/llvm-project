@@ -22886,6 +22886,33 @@ perfomPextFirstTrueVectorCombine(SDNode *N,
   return getSETCC(AArch64CC::CondCode::FIRST_ACTIVE, Flags, SDLoc(N), DCI.DAG);
 }
 
+/// extract(orv_pred(Pg, M), 0) -> ptest_any(Pg, M)
+static SDValue performExtractORVPredCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  SDValue Pg, Src;
+  if (!sd_match(N, m_ExtractElt(
+                       m_Node(AArch64ISD::ORV_PRED, m_Value(Pg), m_Value(Src)),
+                       m_Zero())))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  SDValue Mask = Src, SubVec;
+  // Look through the undefs to get sign bits.
+  if (sd_match(Src, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
+    Mask = SubVec;
+  // Check if we actually have a predicate.
+  if (DAG.ComputeNumSignBits(Mask) != Mask.getScalarValueSizeInBits())
+    return SDValue();
+
+  // Convert the mask vector to a predicate.
+  SDValue Pred = DAG.getNode(
+      AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(), Pg, Src,
+      DAG.getConstant(0, DL, Src.getValueType()), DAG.getCondCode(ISD::SETNE));
+  return getPTest(DAG, VT, Pg, Pred, AArch64CC::ANY_ACTIVE);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
@@ -22900,6 +22927,10 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
+
+  if (SDValue Res = performExtractORVPredCombine(N, DAG))
+    return Res;
+
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
 
   EVT VT = N->getValueType(0);
@@ -24206,9 +24237,20 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace llvm::SDPatternMatch;
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
+
+  // trunc(csel(C0, C1, cc, flags)) -> csel(trunc(C0), trunc(C1), cc, flags)
+  SDValue T, F, CC, Flags;
+  if (VT == MVT::i32 &&
+      sd_match(N0, m_OneUse(m_Node(AArch64ISD::CSEL, m_Value(T, m_ConstInt()),
+                                   m_Value(F, m_ConstInt()), m_Value(CC),
+                                   m_Value(Flags)))))
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT,
+                       DAG.getNode(ISD::TRUNCATE, DL, VT, T),
+                       DAG.getNode(ISD::TRUNCATE, DL, VT, F), CC, Flags);
 
   if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::OR && N0.hasOneUse()) {
     EVT SrcVT = N0.getValueType();
@@ -29824,9 +29866,32 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Vec.getValueType().getVectorElementType() == MVT::i1 &&
       Vec.getValueType().isFixedLengthVector() &&
       Vec.getValueType().isPow2VectorType()) {
+    const auto &TLI =
+        static_cast<const AArch64TargetLowering &>(DAG.getTargetLoweringInfo());
+    std::optional<Intrinsic::ID> PairwiseOpIID;
+    // With SVE, leave i1 reductions to type legalization.
+    if (TLI.shouldLowerReductionToSVE(SDValue(N, 0), PairwiseOpIID))
+      return SDValue();
+
     SDLoc DL(N);
     return getVectorBitwiseReduce(N->getOpcode(), Vec, N->getValueType(0), DL,
                                   DAG);
+  }
+
+  // The bits above the original vector element type are undefined for
+  // reductions. Do this after legaliztion?
+  if (Vec.getOpcode() == ISD::TRUNCATE) {
+    SDValue X = Vec.getOperand(0);
+    if (N->getValueSizeInBits(0) >= X.getScalarValueSizeInBits()) {
+      // reduce(trunc(X)) -> reduce(X).
+      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), X);
+    } else {
+      // reduce(trunc(X)) -> trunc(reduce(X)).
+      SDLoc DL(N);
+      return DAG.getNode(
+          ISD::TRUNCATE, DL, N->getValueType(0),
+          DAG.getNode(N->getOpcode(), DL, X.getValueType().getScalarType(), X));
+    }
   }
 
   return SDValue();
@@ -30098,6 +30163,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == AArch64ISD::SETCC_MERGE_ZERO &&
          "Unexpected opcode!");
 
+  using namespace llvm::SDPatternMatch;
   SelectionDAG &DAG = DCI.DAG;
   SDValue Pred = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
@@ -30159,6 +30225,34 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, N->getValueType(0),
                          Pred, NewLHS, RHS, N->getOperand(3));
     }
+  }
+
+  //    setcc_merge_zero(
+  //       pred, insert_subvector(undef, not(setcc(x, y, cc)), 0), != splat(0))
+  // => setcc_merge_zero(
+  //       pred, insert_subvector(undef, x, 0), insert_subvector(undef, y, 0),
+  //       inverse(cc))
+  // SVE can compare with any condition code, so there is no need to go through
+  // the inverted NEON compare.
+  SDValue X, Y;
+  ISD::CondCode SetCCCond;
+  if (Cond == ISD::SETNE && isZerosVector(RHS.getNode()) && LHS.hasOneUse() &&
+      sd_match(LHS,
+               m_InsertSubvector(
+                   m_Undef(), m_Not(m_SetCC(SetCCCond, m_Value(X), m_Value(Y))),
+                   m_Zero())) &&
+      X.getValueType().isInteger()) {
+    SDLoc DL(N);
+    EVT VT = LHS.getValueType();
+    ISD::CondCode InvCC = ISD::getSetCCInverse(SetCCCond, X.getValueType());
+    SDValue Base = LHS.getOperand(0), Idx = LHS.getOperand(2);
+    SDValue NewX = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Base, X, Idx);
+    SDValue NewY =
+        isZerosVector(Y.getNode())
+            ? RHS
+            : DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Base, Y, Idx);
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, N->getValueType(0),
+                       Pred, NewX, NewY, DAG.getCondCode(InvCC));
   }
 
   return SDValue();
@@ -35184,6 +35278,8 @@ static unsigned getPredicatedReductionOpcode(unsigned Op) {
 
 bool AArch64TargetLowering::shouldLowerReductionToSVE(
     SDValue RdxOp, std::optional<Intrinsic::ID> &PairwiseOpIID) const {
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return false;
   EVT SrcVT = RdxOp.getOperand(0).getValueType();
   if (SrcVT.isScalableVector())
     return true;
@@ -35196,7 +35292,8 @@ bool AArch64TargetLowering::shouldLowerReductionToSVE(
                       (RdxOp.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
 
-  bool UseSVE = useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON);
+  bool UseSVE = useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON) ||
+                SrcVT.getVectorElementType() == MVT::i1;
 
   // Always lower v2i64 vectors to pairwise SVE2 operations when possible as
   // NEON does not natively support reductions on v2i64. Lower v2i32 to pairwise
