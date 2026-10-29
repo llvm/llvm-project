@@ -1,5 +1,5 @@
 // RUN: cir-opt %s -cir-eh-abi-lowering -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
+// RUN: FileCheck --input-file=%t.cir %s --implicit-check-not='!cir.eh_token'
 
 // Test Itanium ABI lowering of flattened CIR exception handling operations.
 // The input is the form produced by cir-flatten-cfg, and the output should
@@ -548,6 +548,52 @@ cir.func @test_eh_terminate() {
 // CHECK:         %[[T_EXN:.*]], %{{.*}} = cir.eh.inflight_exception
 // CHECK:         cir.call @__clang_call_terminate(%[[T_EXN]]) nothrow {noreturn}
 // CHECK:         cir.unreachable
+
+// Test: catch (...) inside omp.parallel. The EH token arguments in nested
+// blocks must be replaced by (ptr, u32) pairs, just like top-level blocks.
+
+cir.func @test_catch_all_in_parallel() {
+  omp.parallel {
+    cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+  ^bb1:
+    cir.br ^bb5
+  ^bb2:
+    %0 = cir.eh.initiate : !cir.eh_token
+    cir.br ^bb3(%0 : !cir.eh_token)
+  ^bb3(%eh_token: !cir.eh_token):
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch_all : ^bb4
+    ]
+  ^bb4(%eh_token.1: !cir.eh_token):
+    %ct, %exn = cir.begin_catch %eh_token.1
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    cir.br ^bb5
+  ^bb5:
+    omp.terminator
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_catch_all_in_parallel()
+// CHECK-SAME:    personality(@__gxx_personality_v0)
+// CHECK:         omp.parallel {
+// CHECK:           cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:         ^[[NORMAL]]:
+// CHECK:           cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:         ^[[UNWIND]]:
+// CHECK:           %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception catch_all
+// CHECK:           cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:         ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:           cir.br ^[[CATCH:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:         ^[[CATCH]](%[[C_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:           cir.call @__cxa_begin_catch(%[[C_EXN]])
+// CHECK:           cir.call @__cxa_end_catch()
+// CHECK:           cir.br ^[[EXIT]]
+// CHECK:         ^[[EXIT]]:
+// CHECK-NEXT:      omp.terminator
+// CHECK-NEXT:    }
+// CHECK-NEXT:    cir.return
 
 // Verify that runtime function declarations are added.
 // CHECK: cir.func private @__gxx_personality_v0(...)
