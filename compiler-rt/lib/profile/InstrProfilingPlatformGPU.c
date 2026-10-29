@@ -30,10 +30,9 @@ static int is_uniform(uint64_t mask) {
 // Wave-cooperative counter increment. The instrumentation pass emits calls to
 // this in place of the default non-atomic load/add/store or atomicrmw sequence.
 // The optional uniform counter records contributions from full active waves.
-// Inline during IR optimization so constant steps simplify before GPU codegen.
-COMPILER_RT_VISIBILITY __attribute__((always_inline)) void
-INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter, uint64_t *uniform,
-                               uint64_t step) {
+COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
+                                                           uint64_t *uniform,
+                                                           uint64_t step) {
   uint64_t mask = __gpu_lane_mask();
   // Block and select increments are zero or one, so combine those updates
   // with a ballot. General increments need each active lane's value.
