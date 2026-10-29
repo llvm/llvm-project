@@ -33,11 +33,11 @@ public:
   using Word = IntegerValue;
 
   RealValue();
-  ~RealValue();
-  RealValue(const RealValue &);
-  RealValue(RealValue &&);
-  RealValue &operator=(const RealValue &);
-  RealValue &operator=(RealValue &&);
+  ~RealValue() = default;
+  RealValue(const RealValue &) = default;
+  RealValue(RealValue &&) = default;
+  RealValue &operator=(const RealValue &) = default;
+  RealValue &operator=(RealValue &&) = default;
 
   RealValue(int kind, const RealValue &v) : RealValue(v) {
     CHECK(kind == v.kind());

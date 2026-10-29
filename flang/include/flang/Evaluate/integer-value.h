@@ -42,11 +42,11 @@ public:
   struct PowerWithErrors;
 
   IntegerValue();
-  ~IntegerValue();
-  IntegerValue(const IntegerValue &);
-  IntegerValue(IntegerValue &&);
-  IntegerValue &operator=(const IntegerValue &);
-  IntegerValue &operator=(IntegerValue &&);
+  ~IntegerValue() = default;
+  IntegerValue(const IntegerValue &) = default;
+  IntegerValue(IntegerValue &&) = default;
+  IntegerValue &operator=(const IntegerValue &) = default;
+  IntegerValue &operator=(IntegerValue &&) = default;
 
   IntegerValue(int kind, const IntegerValue &x) : IntegerValue(x) {
     CHECK(x.kind() == kind);

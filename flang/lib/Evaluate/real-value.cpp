@@ -18,25 +18,9 @@ static_assert(alignof(RealValueImpl) == detail::kRealObjectAlign);
 static_assert(sizeof(RealValue) == sizeof(RealValueImpl));
 static_assert(alignof(RealValue) == alignof(RealValueImpl));
 
+static_assert(std::is_trivially_copyable_v<RealValueImpl>);
+
 RealValue::RealValue() { new (this) RealValueImpl(); }
-
-RealValue::~RealValue() { impl().~RealValueImpl(); }
-
-RealValue::RealValue(const RealValue &x) { new (this) RealValueImpl(x.impl()); }
-
-RealValue::RealValue(RealValue &&x) {
-  new (this) RealValueImpl(std::move(x.impl()));
-}
-
-RealValue &RealValue::operator=(const RealValue &x) {
-  impl() = x.impl();
-  return *this;
-}
-
-RealValue &RealValue::operator=(RealValue &&x) {
-  impl() = std::move(x.impl());
-  return *this;
-}
 
 RealValue::RealValue(int kind, const Word &w) {
   new (this) RealValueImpl(kind, w);
