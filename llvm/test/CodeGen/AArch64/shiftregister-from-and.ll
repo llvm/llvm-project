@@ -244,14 +244,13 @@ define i64 @shiftedreg_from_and_negative_andc3(i64 %a, i64 %b) {
   ret i64 %xor
 }
 
-; negative test: shl with and c is not legal mask
+; Use ubfx when shl with and c is not legal mask
 
-define i64 @shiftedreg_from_and_negative_andc4(i64 %a, i64 %b) {
-; CHECK-LABEL: shiftedreg_from_and_negative_andc4:
+define i64 @shiftedreg_from_lsl_ubfx(i64 %a, i64 %b) {
+; CHECK-LABEL: shiftedreg_from_lsl_ubfx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x0, #36
-; CHECK-NEXT:    and x8, x8, #0x7fe0000000000000
-; CHECK-NEXT:    eor x0, x8, x1
+; CHECK-NEXT:    ubfx x8, x0, #17, #10
+; CHECK-NEXT:    eor x0, x1, x8, lsl #53
 ; CHECK-NEXT:    ret
   %shl = shl i64 %a, 36
   %and = and i64 %shl, 9214364837600034816
@@ -274,15 +273,13 @@ define i32 @shiftedreg_from_and_negative_andc5(i32 %a, i32 %b) {
   ret i32 %add
 }
 
-; negative test: srl with and c is not legal mask
-; srl constant bitwidth > (lowbits + masklen + shiftamt)
+; Use ubfx when srl with and c is not legal mask
 
-define i64 @shiftedreg_from_and_negative_andc6(i64 %a, i64 %b) {
-; CHECK-LABEL: shiftedreg_from_and_negative_andc6:
+define i64 @shiftedreg_from_lsr_ubfx(i64 %a, i64 %b) {
+; CHECK-LABEL: shiftedreg_from_lsr_ubfx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #2
-; CHECK-NEXT:    and x8, x8, #0x6
-; CHECK-NEXT:    add x0, x8, x1
+; CHECK-NEXT:    ubfx x8, x0, #3, #2
+; CHECK-NEXT:    add x0, x1, x8, lsl #1
 ; CHECK-NEXT:    ret
   %lshr = lshr i64 %a, 2
   %and = and i64 %lshr, 6
