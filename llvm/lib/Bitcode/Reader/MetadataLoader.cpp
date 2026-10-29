@@ -2690,7 +2690,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     (void)Version;
     // FLMD comprises 3 arrays with a leading length field.
     uint64_t CurrentRecord = 1;
-    MDFunctionLocalContext *NewFLMD = MDFunctionLocalContext::getDistinct(Context, IsNonDebug);
+    MDFunctionLocalContext *NewFLMD =
+        MDFunctionLocalContext::getDistinct(Context, IsNonDebug);
     // Assign the metadata number now, so that we don't have to use forward
     // references for ourself.
     MetadataList.assignValue(NewFLMD, NextMetadataNo);
@@ -2729,8 +2730,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       uint32_t Line = Record[CurrentRecord++];
       uint16_t Column = Record[CurrentRecord++];
       uint16_t RawScopeIdx = Record[CurrentRecord++];
-      NewFLMD->SrcLocs.push_back(FLSrcLoc(
-        Line, Column, FLIndex<FLScope>::fromRaw(RawScopeIdx)));
+      NewFLMD->SrcLocs.push_back(
+          FLSrcLoc(Line, Column, FLIndex<FLScope>::fromRaw(RawScopeIdx)));
     }
     // InlinedCalls
     uint64_t NumInlinedCalls = Record[CurrentRecord++];
@@ -2741,7 +2742,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // function recurses from here or if the root array otherwise ends up being
     // written to.
     SmallVectorImpl<uint64_t> *InlinedCallFwdRefs = nullptr;
-    for (uint64_t InlinedCallIdx = 0; InlinedCallIdx < NumInlinedCalls; ++InlinedCallIdx) {
+    for (uint64_t InlinedCallIdx = 0; InlinedCallIdx < NumInlinedCalls;
+         ++InlinedCallIdx) {
       uint32_t RawSrcLocIdx = Record[CurrentRecord++];
       uint16_t RawInlinedAtIdx = Record[CurrentRecord++];
       bool Uniquable = Record[CurrentRecord++];
