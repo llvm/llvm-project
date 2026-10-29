@@ -15,9 +15,6 @@
 // https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.
 // UNSUPPORTED: android && arm-target-arch
 
-// FIXME: Fails after #196388 because libclang_rt.asan links static libc++abi.a.
-// XFAIL: android
-
 #include "defines.h"
 #include <assert.h>
 #include <exception>
