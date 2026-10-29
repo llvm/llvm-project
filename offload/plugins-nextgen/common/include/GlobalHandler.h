@@ -165,11 +165,6 @@ public:
   Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
                                    DeviceImageTy &Image, GlobalTy &ImageGlobal);
 
-  /// Read the memory associated with a global from the image and store it on
-  /// the host. The name, size, and destination are defined by \p HostGlobal.
-  Error readGlobalFromImage(GenericDeviceTy &Device, DeviceImageTy &Image,
-                            const GlobalTy &HostGlobal);
-
   /// Get the address and size of a global from the device. Address is
   /// returned in \p ImageGlobal and the global name is passed in \p
   /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the

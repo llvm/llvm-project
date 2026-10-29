@@ -173,14 +173,16 @@ struct ol_program_impl_t {
   llvm::MemoryBufferRef DeviceImage;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> KernelSymbols;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> GlobalSymbols;
+  llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> ImageSymbols;
 };
 
 struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
         Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
-      : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
+  ol_symbol_impl_t(GlobalTy &&Global,
+                   ol_symbol_kind_t Kind = OL_SYMBOL_KIND_GLOBAL_VARIABLE)
+      : PluginImpl(std::move(Global)), Kind(Kind),
         Name(std::get<GlobalTy>(PluginImpl).getName()) {}
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
@@ -1438,13 +1440,44 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       GlobalTy GlobalObj{Name};
       if (auto Res =
               Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-                  Device, *Program->Image, GlobalObj))
+                  Device, *Program->Image, GlobalObj)) {
+        Program->GlobalSymbols.erase(Name);
         return Res;
+      }
 
       Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
     }
 
     return Global.get();
+  }
+  case OL_SYMBOL_KIND_IMAGE_VARIABLE: {
+    auto &Image = Program->ImageSymbols[Name];
+    if (!Image) {
+      GlobalTy GlobalObj{Name};
+      if (auto Res =
+              Device.Plugin.getGlobalHandler().getGlobalMetadataFromImage(
+                  Device, *Program->Image, GlobalObj)) {
+        Program->ImageSymbols.erase(Name);
+        return Res;
+      }
+
+      // The address is a host pointer; make sure it lies inside the image.
+      uintptr_t Start = (uintptr_t)Program->Image->getStart();
+      uintptr_t End = Start + Program->Image->getSize();
+      uintptr_t Ptr = (uintptr_t)GlobalObj.getPtr();
+      if (Ptr < Start || Ptr > End || GlobalObj.getSize() > End - Ptr) {
+        Program->ImageSymbols.erase(Name);
+        return createOffloadError(
+            ErrorCode::INVALID_BINARY,
+            "image variable '%s' lies outside of the program image",
+            Name.str().c_str());
+      }
+
+      Image = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj),
+                                                 OL_SYMBOL_KIND_IMAGE_VARIABLE);
+    }
+
+    return Image.get();
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -1501,12 +1534,15 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  auto CheckKind = [&](ol_symbol_kind_t Required) {
-    if (Symbol->Kind != Required) {
+  auto CheckKind = [&](std::initializer_list<ol_symbol_kind_t> Allowed) {
+    if (!llvm::is_contained(Allowed, Symbol->Kind)) {
       std::string ErrBuffer;
-      raw_string_ostream(ErrBuffer)
-          << PropName << ": Expected a symbol of Kind " << Required
-          << " but given a symbol of Kind " << Symbol->Kind;
+      raw_string_ostream OS(ErrBuffer);
+      OS << PropName << ": Expected a symbol of Kind ";
+      ListSeparator LS(" or ");
+      for (ol_symbol_kind_t Kind : Allowed)
+        OS << LS << Kind;
+      OS << " but given a symbol of Kind " << Symbol->Kind;
       return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
     }
     return Plugin::success();
@@ -1518,11 +1554,13 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   case OL_SYMBOL_INFO_NAME:
     return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind(
+            {OL_SYMBOL_KIND_GLOBAL_VARIABLE, OL_SYMBOL_KIND_IMAGE_VARIABLE}))
       return Err;
     return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind(
+            {OL_SYMBOL_KIND_GLOBAL_VARIABLE, OL_SYMBOL_KIND_IMAGE_VARIABLE}))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
   default:

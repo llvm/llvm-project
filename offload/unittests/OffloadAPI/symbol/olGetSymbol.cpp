@@ -109,3 +109,30 @@ TEST_P(olGetSymbolGlobalTest, InvalidGlobalName) {
                olGetSymbol(Program, "invalid_global",
                            OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
 }
+
+using olGetSymbolImageVariableTest = OffloadImageVariableTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolImageVariableTest);
+
+TEST_P(olGetSymbolImageVariableTest, Success) { ASSERT_NE(Image, nullptr); }
+
+TEST_P(olGetSymbolImageVariableTest, SuccessSamePtr) {
+  ol_symbol_handle_t ImageB = nullptr;
+  ASSERT_SUCCESS(olGetSymbol(Program, "global_init",
+                             OL_SYMBOL_KIND_IMAGE_VARIABLE, &ImageB));
+  ASSERT_EQ(Image, ImageB);
+}
+
+TEST_P(olGetSymbolImageVariableTest, InvalidName) {
+  ol_symbol_handle_t Missing = nullptr;
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olGetSymbol(Program, "invalid_global",
+                           OL_SYMBOL_KIND_IMAGE_VARIABLE, &Missing));
+}
+
+// Zero-initialized globals live in `.bss` and have no contents in the image.
+TEST_P(olGetSymbolGlobalTest, InvalidImageVariableNoContents) {
+  ol_symbol_handle_t Image = nullptr;
+  ASSERT_ERROR(
+      OL_ERRC_NOT_FOUND,
+      olGetSymbol(Program, "global", OL_SYMBOL_KIND_IMAGE_VARIABLE, &Image));
+}
