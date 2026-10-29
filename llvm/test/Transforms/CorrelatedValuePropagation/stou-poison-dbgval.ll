@@ -62,3 +62,10 @@ attributes #1 = { nocreateundeforpoison }
 !25 = !{!14, !14}
 !27 = !DILocation(line: 0, scope: !23)
 !29 = !DILocalVariable(name: "minimum", scope: !23, file: !1, line: 7, type: !14)
+
+; CHECK: [[META3:![0-9]+]] = distinct !DISubprogram(name: "sitofp_to_uitofp"
+; CHECK: [[META1]] = !DILocalVariable(name: "converted", scope: [[META3]]
+; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
+; CHECK: [[META6:![0-9]+]] = distinct !DISubprogram(name: "smin_to_umin"
+; CHECK: [[META4]] = !DILocalVariable(name: "minimum", scope: [[META6]]
+; CHECK: [[META5]] = !DILocation(line: 0, scope: [[META6]])
