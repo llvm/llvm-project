@@ -14024,9 +14024,9 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   // Contraction here does not affect the correctness of the final result.
   SDNodeFlags ContractFlags = Op->getFlags() | SDNodeFlags::AllowContract;
   Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, ContractFlags);
-  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
-                             DAG.getTargetConstant(0, SL, MVT::i32),
-                             ContractFlags);
+  SDValue RDst =
+      DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
+                  DAG.getTargetConstant(0, SL, MVT::i32), ContractFlags);
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
                      Op->getFlags());
 }
