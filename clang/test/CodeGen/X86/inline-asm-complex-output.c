@@ -203,6 +203,146 @@ label:
   return -c;
 }
 
+// CHECK-LABEL: define dso_local <2 x float> @test_complex_float_inout_goto(
+// CHECK-SAME: <2 x float> noundef [[C_COERCE:%.*]]) #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    [[C:%.*]] = alloca { float, float }, align 4
+// CHECK-NEXT:    store <2 x float> [[C_COERCE]], ptr [[C]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[C]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = callbr i64 asm "", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(i64 [[TMP0]]) #[[ATTR2]]
+// CHECK-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[LABEL_SPLIT:.*]]], !srcloc [[META10:![0-9]+]]
+// CHECK:       [[ASM_FALLTHROUGH]]:
+// CHECK-NEXT:    store i64 [[TMP1]], ptr [[C]], align 4
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REAL:%.*]] = load float, ptr [[C_REALP]], align 4
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
+// CHECK-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// CHECK-NEXT:    store float [[C_REAL]], ptr [[RETVAL_REALP]], align 4
+// CHECK-NEXT:    store float [[C_IMAG]], ptr [[RETVAL_IMAGP]], align 4
+// CHECK-NEXT:    br label %[[RETURN:.*]]
+// CHECK:       [[LABEL_SPLIT]]:
+// CHECK-NEXT:    store i64 [[TMP1]], ptr [[C]], align 4
+// CHECK-NEXT:    br label %[[LABEL:.*]]
+// CHECK:       [[LABEL]]:
+// CHECK-NEXT:    [[C_REALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REAL2:%.*]] = load float, ptr [[C_REALP1]], align 4
+// CHECK-NEXT:    [[C_IMAGP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAG4:%.*]] = load float, ptr [[C_IMAGP3]], align 4
+// CHECK-NEXT:    [[NEG_R:%.*]] = fneg float [[C_REAL2]]
+// CHECK-NEXT:    [[NEG_I:%.*]] = fneg float [[C_IMAG4]]
+// CHECK-NEXT:    [[RETVAL_REALP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[RETVAL_IMAGP6:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// CHECK-NEXT:    store float [[NEG_R]], ptr [[RETVAL_REALP5]], align 4
+// CHECK-NEXT:    store float [[NEG_I]], ptr [[RETVAL_IMAGP6]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[RETURN]]:
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret <2 x float> [[TMP2]]
+//
+_Complex float test_complex_float_inout_goto(_Complex float c) {
+  asm goto("" : "+r"(c) : : : label);
+  return c;
+label:
+  return -c;
+}
+
+// The asm returns both outputs in one struct, and each path stores both.
+// CHECK-LABEL: define dso_local i32 @test_complex_float_and_int_goto(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = callbr { i64, i32 } asm "", "=r,=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]]
+// CHECK-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[LABEL_SPLIT:.*]]], !srcloc [[META11:![0-9]+]]
+// CHECK:       [[ASM_FALLTHROUGH]]:
+// CHECK-NEXT:    [[ASMRESULT:%.*]] = extractvalue { i64, i32 } [[TMP1]], 0
+// CHECK-NEXT:    [[ASMRESULT1:%.*]] = extractvalue { i64, i32 } [[TMP1]], 1
+// CHECK-NEXT:    store i64 [[ASMRESULT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    store i32 [[ASMRESULT1]], ptr [[I]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN:.*]]
+// CHECK:       [[LABEL_SPLIT]]:
+// CHECK-NEXT:    [[ASMRESULT2:%.*]] = extractvalue { i64, i32 } [[TMP1]], 0
+// CHECK-NEXT:    [[ASMRESULT3:%.*]] = extractvalue { i64, i32 } [[TMP1]], 1
+// CHECK-NEXT:    store i64 [[ASMRESULT2]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    store i32 [[ASMRESULT3]], ptr [[I]], align 4
+// CHECK-NEXT:    br label %[[LABEL:.*]]
+// CHECK:       [[LABEL]]:
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[TMP3]]
+// CHECK-NEXT:    store i32 [[SUB]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label %[[RETURN]]
+// CHECK:       [[RETURN]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP4]]
+//
+int test_complex_float_and_int_goto(_Complex float *p) {
+  int i;
+  asm goto("" : "=r"(*p), "=r"(i) : : : label);
+  return i;
+label:
+  return -i;
+}
+
+// CHECK-LABEL: define dso_local void @test_complex_float_volatile(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = call i64 asm "", "=r,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]], !srcloc [[META12:![0-9]+]]
+// CHECK-NEXT:    store volatile i64 [[TMP1]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_complex_float_volatile(volatile _Complex float *p) {
+  asm("" : "=r"(*p));
+}
+
+// An output tied to a larger input makes the asm return the input's type, but
+// only the destination's bits are stored.
+// CHECK-LABEL: define dso_local void @test_complex_char_tied_int(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 [[TMP1]]) #[[ATTR2]], !srcloc [[META13:![0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 1
+// CHECK-NEXT:    ret void
+//
+void test_complex_char_tied_int(_Complex char *p, int x) {
+  asm("" : "=r"(*p) : "0"(x));
+}
+
+// CHECK-LABEL: define dso_local void @test_complex_char_tied_pointer(
+// CHECK-SAME: ptr noundef [[P:%.*]], ptr noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call ptr asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(ptr [[TMP1]]) #[[ATTR2]], !srcloc [[META14:![0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i16
+// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 1
+// CHECK-NEXT:    ret void
+//
+void test_complex_char_tied_pointer(_Complex char *p, void *x) {
+  asm("" : "=r"(*p) : "0"(x));
+}
+
 #else
 
 // No integer type is 256 bits wide.
