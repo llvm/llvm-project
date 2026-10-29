@@ -511,6 +511,96 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
     }
     return {Fast, Ok};
   };
+  // fma of bfloats in float, where it is exact: the product of two bfloats
+  // is exact in float, TwoSum gives the sum's error; to nearest, the sum
+  // rounded to odd (the odd one of the two floats around the exact value
+  // where it is inexact) then to nearest bfloat rounds once (float keeps 16
+  // more bits); directed, the float fast path's result rounded to bfloat in
+  // the same direction. Operands that are bfloat (float) subnormals, and
+  // products, addends and sums outside [2^-70, 2^126), which hardware
+  // flushing float subnormals could break, take the double precision path,
+  // as do infinities and NaNs.
+  if (ST->isBFloatTy() && (Base == "fma" || Base == "fmuladd")) {
+    Type *F32 = B.getFloatTy();
+    auto NotSubnormal = [&](Value *V) {
+      Value *I = B.CreateBitCast(V, I16);
+      return B.CreateOr(
+          B.CreateICmpNE(B.CreateAnd(I, B.getInt16(0x7f80)), B.getInt16(0)),
+          B.CreateICmpEQ(B.CreateAnd(I, B.getInt16(0x7f)), B.getInt16(0)));
+    };
+    Value *Zero = ConstantFP::get(F32, 0.0);
+    auto InRange = [&](Value *V) {
+      Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, V);
+      return B.CreateOr(
+          B.CreateFCmpOEQ(V, Zero),
+          B.CreateAnd(B.CreateFCmpOGE(Abs, ConstantFP::get(F32, 0x1p-70)),
+                      B.CreateFCmpOLT(Abs, ConstantFP::get(F32, 0x1p126))));
+    };
+    Value *X = bf16ToF32(B, A[0]), *Y = bf16ToF32(B, A[1]),
+          *Z = bf16ToF32(B, A[2]);
+    Value *P = B.CreateFMul(X, Y); // exact
+    // a product that flushed to zero is not one
+    Value *PZero = B.CreateOr(B.CreateFCmpOEQ(X, Zero), B.CreateFCmpOEQ(Y, Zero));
+    Value *POk = B.CreateAnd(InRange(P),
+                             B.CreateOr(PZero, B.CreateFCmpUNE(P, Zero)));
+    auto [Dir, DirOk] = TwoFold(P, Z, /*Mul=*/false);
+    Value *S = B.CreateFAdd(P, Z);
+    Value *BV = B.CreateFSub(S, P);
+    Value *AV = B.CreateFSub(S, BV);
+    Value *Err = B.CreateFAdd(B.CreateFSub(P, AV), B.CreateFSub(Z, BV));
+    Value *Ok = B.CreateAnd(
+        B.CreateAnd(B.CreateAnd(NotSubnormal(A[0]), NotSubnormal(A[1])),
+                    B.CreateAnd(NotSubnormal(A[2]), POk)),
+        B.CreateAnd(B.CreateAnd(InRange(Z), InRange(S)), DirOk));
+    // to odd: one unit toward the exact value where S is inexact and even
+    Value *SBits = B.CreateBitCast(S, I32);
+    Value *Inexact = B.CreateFCmpUNE(Err, Zero);
+    Value *Even = B.CreateICmpEQ(B.CreateAnd(SBits, 1), B.getInt32(0));
+    Value *Away = B.CreateICmpEQ(B.CreateICmpSLT(SBits, B.getInt32(0)),
+                                 B.CreateFCmpOLT(Err, Zero));
+    Value *Odd = B.CreateSelect(
+        B.CreateAnd(Inexact, Even),
+        B.CreateSelect(Away, B.CreateAdd(SBits, B.getInt32(1)),
+                       B.CreateSub(SBits, B.getInt32(1))),
+        SBits);
+    Value *Nearest = f32ToBF16(B, B.CreateBitCast(Odd, F32));
+    Value *R = B.CreateSelect(Is(1), Nearest, TruncDirected(Dir, ST));
+    BasicBlock *Here = B.GetInsertBlock();
+    Function *Fn = Here->getParent();
+    BasicBlock *Slow = BasicBlock::Create(B.getContext(), "bf16.fma.slow", Fn);
+    BasicBlock *Done = BasicBlock::Create(B.getContext(), "bf16.fma.join", Fn);
+    B.CreateCondBr(Ok, Done, Slow);
+    B.SetInsertPoint(Slow);
+    SmallVector<Value *, 4> Args;
+    for (Value *V : {X, Y, Z})
+      Args.push_back(
+          Lib("__air_f64_from_f32", I64, {B.CreateBitCast(V, I32)}));
+    // to nearest, the double rounded to odd (toward zero, the last bit set
+    // where it is inexact: where rounding away from zero differs; a result
+    // toward zero of zero is exact, as no product of bfloats is below the
+    // doubles), as rounding twice to nearest is not rounding once; directed,
+    // in the direction
+    SmallVector<Value *, 4> TZ(Args), AwayArgs(Args);
+    TZ.push_back(B.getInt32(0));
+    Value *DTZ = Lib("__air_f64_fma_r", I64, TZ);
+    AwayArgs.push_back(B.CreateSelect(B.CreateICmpSLT(DTZ, B.getInt64(0)),
+                                  B.getInt32(3), B.getInt32(2)));
+    Value *SlowInexact =
+        B.CreateICmpNE(DTZ, Lib("__air_f64_fma_r", I64, AwayArgs));
+    Value *DOdd = B.CreateOr(DTZ, B.CreateZExt(SlowInexact, I64));
+    Args.push_back(Rounding);
+    Value *D = B.CreateSelect(Is(1), DOdd, Lib("__air_f64_fma_r", I64, Args));
+    Value *SlowR = B.CreateBitCast(
+        B.CreateTrunc(Lib("__air_f64_to_bf16_r", I32, {D, Rounding}), I16),
+        ST);
+    BasicBlock *SlowEnd = B.GetInsertBlock();
+    B.CreateBr(Done);
+    B.SetInsertPoint(Done);
+    PHINode *Phi = B.CreatePHI(ST, 2);
+    Phi->addIncoming(R, Here);
+    Phi->addIncoming(SlowR, SlowEnd);
+    return Phi;
+  }
   // add, sub and mul of halves: the float fast path, exact for any halves
   // (their magnitudes and the results' are within its range), rounded in the
   // same direction to half; twice in one direction rounds once. bfloats the

@@ -67,7 +67,11 @@ define void @directed(ptr addrspace(1) %p, float %x, float %y, half %h, i64 %i) 
 ; CHECK-NOT: {{(fadd|fmul|fma|fpext|fptrunc).*bfloat}}
 ; CHECK: %[[X:[0-9]+]] = bitcast bfloat %x to i16
 ; CHECK: fadd float
-; CHECK: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 1)
+; fma in float where exact (rounded to odd, then to nearest bfloat), else
+; soft-f64 rounded to odd (toward zero, odd where rounding away differs)
+; CHECK: bf16.fma.slow
+; CHECK: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 0)
+; CHECK: call i64 @__air_f64_fma_r(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 %{{[0-9]+}})
 ; CHECK: call i32 @__air_f64_to_bf16_r(i64 %{{[0-9]+}}, i32 1)
 ; CHECK: fmul <2 x float>
 ; CHECK: bitcast <2 x i16> %{{[0-9]+}} to <2 x bfloat>
