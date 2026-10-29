@@ -110,7 +110,7 @@ DATA_ARRAY_TEMPLATE = r"""
 /// - U+1F900 - U+1F9FF (Supplemental Symbols and Pictographs)
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt
+/// - https://www.unicode.org/Public/18.0.0/ucd/EastAsianWidth.txt
 /// - The "overrides" in [format.string.std]/12
 ///
 /// The format of EastAsianWidth.txt is two fields separated by a semicolon.
