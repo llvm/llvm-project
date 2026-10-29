@@ -678,6 +678,7 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
                                                                RRange)) {
     ++NumSMinMax;
     IRBuilder<> B(MM);
+    salvageDebugInfo(*MM);
     MM->replaceAllUsesWith(B.CreateBinaryIntrinsic(
         MM->getIntrinsicID() == Intrinsic::smin ? Intrinsic::umin
                                                 : Intrinsic::umax,
@@ -1225,6 +1226,7 @@ bool CVPImpl::processSIToFP(SIToFPInst *SIToFP) {
   UIToFP->takeName(SIToFP);
   UIToFP->setDebugLoc(SIToFP->getDebugLoc());
   UIToFP->setNonNeg();
+  salvageDebugInfo(*SIToFP);
   SIToFP->replaceAllUsesWith(UIToFP);
   SIToFP->eraseFromParent();
 
