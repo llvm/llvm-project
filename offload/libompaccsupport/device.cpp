@@ -1073,8 +1073,8 @@ static void adjustEffectiveGeometry(const DeviceGeometryPropsTy &Props,
         getEffectiveNumThreads(Props, EffectiveNumThreads, KernelEnv);
 
   if (!StrictBlocks)
-    LaunchArgs.UserNumBlocks[0] = getEffectiveNumBlocks(
-        Props, Config.Size.NumGroups.x, LaunchArgs.Tripcount,
+    Config.Size.NumGroups.x = getEffectiveNumBlocks(
+        Props, Config.Size.NumGroups.x, KernelArgs.Tripcount,
         EffectiveNumThreads, StrictThreads, ThreadLimitFromUser, KernelEnv);
 
   Config.Size.GroupSize.x = EffectiveNumThreads;
