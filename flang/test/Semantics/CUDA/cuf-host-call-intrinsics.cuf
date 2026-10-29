@@ -1,0 +1,70 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module intrinsic_host_calls
+  use cudadevice, only: atomicadd, add_again => atomicadd, atomicaddi, atomiccas
+  procedure(atomicaddi), pointer :: module_pointer
+  type holder
+  contains
+    procedure, nopass :: add_value => atomicaddi
+  end type
+contains
+  attributes(device) integer function device_value(n)
+    integer, value :: n
+    device_value = n
+  end function
+
+  subroutine host_caller(n)
+    integer :: n, old
+    type(holder) :: object
+    old = atomicadd(n, 1)
+    old = add_again(n, 1)
+    old = atomicaddi(n, 1)
+    old = atomiccas(n, 1, 2)
+    old = object%add_value(n, 1)
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    old = atomicadd(n, device_value(1))
+  end subroutine
+
+  subroutine dynamic_caller(object, n)
+    class(holder) :: object
+    integer :: n, old
+    !ERROR: 'add_value', a procedure with the DEVICE attribute, may not be called from host code
+    old = object%add_value(n, 1)
+  end subroutine
+
+  subroutine dummy_caller(p, n)
+    procedure(atomicaddi) :: p
+    integer :: n, old
+    !ERROR: 'p', a procedure with the DEVICE attribute, may not be called from host code
+    old = p(n, 1)
+  end subroutine
+
+  subroutine pointer_caller(p, n)
+    integer :: n, old
+    procedure(atomicaddi), pointer :: p
+    !ERROR: 'p', a procedure with the DEVICE attribute, may not be called from host code
+    old = p(n, 1)
+    !ERROR: 'module_pointer', a procedure with the DEVICE attribute, may not be called from host code
+    old = module_pointer(n, 1)
+  end subroutine
+
+  attributes(host,device) subroutine both_caller(n)
+    integer :: n, old
+    !ERROR: 'atomicadd' (specific procedure 'atomicaddi'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+    old = atomicadd(n, 1)
+  end subroutine
+end module
+
+module user_intrinsics
+contains
+  attributes(device) integer function atomicaddi(n, increment)
+    integer, value :: n, increment
+    atomicaddi = n
+  end function
+
+  subroutine host_caller(n)
+    integer :: n, old
+    !ERROR: 'atomicaddi', a procedure with the DEVICE attribute, may not be called from host code
+    old = atomicaddi(n, 1)
+  end subroutine
+end module

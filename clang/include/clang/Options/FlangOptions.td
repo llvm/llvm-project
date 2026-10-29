@@ -438,6 +438,13 @@ def fcoarray : Flag<["-"], "fcoarray">,
 
 let Visibility = [FC1Option] in {
 
+def fdoconcurrent_offload : Flag<["-"], "fdoconcurrent-offload">,
+  Group<f_Group>,
+  HelpText<"Enable DO CONCURRENT offload semantics">;
+def fno_doconcurrent_offload : Flag<["-"], "fno-doconcurrent-offload">,
+  Group<f_Group>,
+  HelpText<"Disable DO CONCURRENT offload semantics (default)">;
+
 def ffp_maxmin_behavior_EQ
     : Joined<["-"], "ffp-maxmin-behavior=">,
       Flags<[HelpHidden]>,

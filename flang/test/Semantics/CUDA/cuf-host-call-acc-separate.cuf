@@ -1,0 +1,38 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenacc
+
+module acc_separate_targets
+  interface
+    module subroutine implementation_routine(n)
+      integer, intent(inout) :: n
+    end subroutine
+    module subroutine interface_routine(n)
+      !$acc routine seq nohost
+      integer, intent(inout) :: n
+    end subroutine
+    module subroutine ordinary_host(n)
+      integer, intent(inout) :: n
+    end subroutine
+  end interface
+contains
+  attributes(device) integer function device_value(n)
+    integer, value :: n
+    device_value = n + 1
+  end function
+end module
+
+submodule(acc_separate_targets) implementation
+contains
+  module procedure implementation_routine
+    !$acc routine seq nohost
+    n = device_value(n)
+  end procedure
+
+  module procedure interface_routine
+    n = device_value(n)
+  end procedure
+
+  module procedure ordinary_host
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(n)
+  end procedure
+end submodule

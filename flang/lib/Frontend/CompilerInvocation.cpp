@@ -910,6 +910,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
           << arg->getAsString(args) << argValue;
   }
 
+  // -f{no-}doconcurrent-offload
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::DoConcurrentOffload,
+      args.hasFlag(clang::options::OPT_fdoconcurrent_offload,
+                   clang::options::OPT_fno_doconcurrent_offload, false));
+
   // -f{no-}implicit-none
   opts.features.Enable(Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
                        args.hasFlag(clang::options::OPT_fimplicit_none,

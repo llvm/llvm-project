@@ -1,0 +1,49 @@
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=HOST
+! RUN: not %flang_fc1 -fsyntax-only -fdoconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=OFFLOAD
+! RUN: not %flang_fc1 -fsyntax-only -fno-doconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=HOST
+! RUN: not %flang_fc1 -fsyntax-only -fno-doconcurrent-offload -fdoconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=OFFLOAD
+! RUN: not %flang_fc1 -fsyntax-only -fdoconcurrent-offload -fno-doconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=HOST
+! RUN: not %flang -fsyntax-only -fdoconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=DRIVER
+! RUN: not %flang -fsyntax-only -fno-doconcurrent-offload %s 2>&1 | FileCheck %s --check-prefix=DRIVER
+
+! OFFLOAD-NOT: error: 'device_value'
+! OFFLOAD: error: 'host_value', a procedure with the HOST attribute, may not be called from device code
+! OFFLOAD-NOT: error: 'device_value'
+
+! HOST: error: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+! HOST-NOT: error: 'device_value'
+! HOST: error: 'host_value', a procedure with the HOST attribute, may not be called from device code
+! HOST-NOT: error: 'device_value'
+
+! DRIVER: error: unknown argument '-f{{(no-)?}}doconcurrent-offload'
+
+module do_concurrent_offload
+contains
+  attributes(device) pure integer function device_value(n)
+    integer, value :: n
+    device_value = n + 1
+  end function
+
+  pure integer function host_value(n)
+    integer, value :: n
+    host_value = n + 1
+  end function
+
+  subroutine host_caller(a, n)
+    integer, value :: n
+    integer :: a(n), i
+    do concurrent (i = 1:n)
+      a(i) = device_value(i)
+    end do
+  end subroutine
+
+  attributes(device) subroutine device_caller(a, n)
+    integer, value :: n
+    integer, device :: a(n)
+    integer :: i
+    do concurrent (i = 1:n)
+      a(i) = device_value(i)
+      a(i) = host_value(i)
+    end do
+  end subroutine
+end module
