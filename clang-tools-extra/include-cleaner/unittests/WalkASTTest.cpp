@@ -472,6 +472,22 @@ TEST(WalkAST, MemberExprs) {
       namespace ns { template<typename> struct Foo { int a; }; }
       using ns::$implicit^Foo;)cpp",
            "void k(Foo<int> b) { b.^a; }");
+  // If the alias points to an incomplete forward declaration, look through to
+  // the underlying record declaration.
+  testWalk(R"cpp(
+      typedef struct $implicit^Foo Bar;
+      struct Foo { int a; };)cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      typedef struct $implicit^Foo Bar;
+      typedef Bar Baz;
+      struct Foo { int a; };)cpp",
+           "void test(Baz b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct $implicit^Foo; }
+      using Bar = ns::Foo;
+      namespace ns { struct Foo { int a; }; })cpp",
+           "void test(Bar b) { b.^a; }");
   // Test the dependent-type case (CXXDependentScopeMemberExpr)
   testWalk("template<typename T> struct $implicit^Base { void method(); };",
            "template<typename T> void k(Base<T> t) { t.^method(); }");
@@ -487,6 +503,31 @@ TEST(WalkAST, ConstructExprs) {
   testWalk("struct $implicit^S { S(int); };", "S ^t(42);");
   testWalk("struct $implicit^S { S(int); };", "S t = ^42;");
   testWalk("namespace ns { struct S{}; } using ns::$implicit^S;", "S ^t;");
+  testWalk("typedef struct $implicit^S T; struct S {};", "T ^t;");
+}
+
+TEST(WalkAST, InitListExprs) {
+  testWalk("struct $implicit^S { int a; };", "S s = ^{1};");
+  testWalk("struct $implicit^S { int a; };", "S s^(1);");
+  testWalk("struct S { int $implicit^a; };", "S s = {.^a = 1};");
+  testWalk("struct S { int a; }; using $implicit^T = S;", "T s = ^{1};");
+  testWalk(R"cpp(
+      typedef struct $implicit^Foo Bar;
+      struct Foo { int a; };)cpp",
+           "Bar b = ^{1};");
+  testWalk(R"cpp(
+      typedef struct $implicit^Foo Bar;
+      using Baz = Bar;
+      struct Foo { int a; };)cpp",
+           "Baz b = ^{1};");
+  testWalk(R"cpp(
+      typedef struct $implicit^Foo Bar;
+      struct Foo { int a; };)cpp",
+           "Bar b = ^{.a = 1};");
+  testWalk(R"cpp(
+      typedef struct Foo Bar;
+      struct Foo { int $implicit^a; };)cpp",
+           "Bar b = {.^a = 1};");
 }
 
 TEST(WalkAST, Operator) {
