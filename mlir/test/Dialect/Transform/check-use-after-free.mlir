@@ -117,7 +117,7 @@ func.func @use_after_free() {
 // precede the one that frees it in the same block. Both operations should
 // be reported as use-after-free.
 func.func @use_after_free_self_cycle() {
-  // expected-note @below {{allocated here}}
+  // expected-note @below 2 {{allocated here}}
   %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   transform.test_transform_op_with_regions {
     "transform.test_branching_transform_op_terminator"() : () -> ()
@@ -131,7 +131,7 @@ func.func @use_after_free_self_cycle() {
     ^bb0(%arg0: !transform.any_op):
     }
     // expected-warning @below {{operand #0 may be used after free}}
-    // expected-note @below {{freed here}}
+    // expected-note @below 2 {{freed here}}
     transform.test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
     "transform.test_branching_transform_op_terminator"()[^bb1, ^bb2] : () -> ()
   ^bb2:

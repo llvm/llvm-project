@@ -58,7 +58,7 @@ func.func @copy_with_down_cast(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf16>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{failed to apply}}
+    // expected-error @below 4 {{failed to apply}}
     %1 = transform.structured.specialize %0 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

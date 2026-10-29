@@ -2,10 +2,7 @@
 // RUN:     debug-bind-trailing-args=^test.some_returning_op,^test.some_other_returning_op})' \
 // RUN:             --split-input-file --verify-diagnostics
 
-// Note that diagnostic checker will merge two diagnostics with the same message
-// at the same location, so only check the remark once.
-// 
-// expected-remark @below {{first extra}}
+// expected-remark @below 2 {{first extra}}
 // expected-note @below {{value handle points to an op result #0}}
 // expected-note @below {{value handle points to an op result #1}}
 %0:2 = "test.some_returning_op"() : () -> (i32, i64)
@@ -14,10 +11,7 @@
 // expected-note @below {{value handle points to an op result #0}}
 %1 = "test.some_returning_op"() : () -> index
 
-// Note that diagnostic checker will merge two diagnostics with the same message
-// at the same location, so only check the remark once.
-// 
-// expected-remark @below {{second extra}}
+// expected-remark @below 2 {{second extra}}
 // expected-note @below {{value handle points to an op result #0}}
 // expected-note @below {{value handle points to an op result #1}}
 %2:2 = "test.some_other_returning_op"() : () -> (f32, f64)

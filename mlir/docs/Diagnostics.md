@@ -318,15 +318,16 @@ This handler is a wrapper around a llvm::SourceMgr that is used to verify that
 certain diagnostics have been emitted to the context. To use this handler,
 annotate your source file with expected diagnostics in the form of:
 
-*   `expected-(error|note|remark|warning)(-re)? {{ message }}`
+*   `expected-(error|note|remark|warning)(-re)?(@([+-][0-9]+|above|below|unknown))?( [0-9]+)? {{ message }}`
 
 The provided `message` is a string expected to be contained within the generated
 diagnostic. The `-re` suffix may be used to enable regex matching within the
 `message`. When present, the `message` may define regex match sequences within
 `{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
-expressions (ERE). `expected-` must not be preceded by an alphanumeric
-character, hyphen, or underscore (so e.g. `unexpected-error` is ignored). A few
-examples are shown below:
+expressions (ERE). An optional positive integer count before `{{` specifies how
+many diagnostics the directive must match (default: 1). `expected-` must not be
+preceded by an alphanumeric character, hyphen, or underscore (so e.g.
+`unexpected-error` is ignored). A few examples are shown below:
 
 ```mlir
 // Expect an error on the same line.

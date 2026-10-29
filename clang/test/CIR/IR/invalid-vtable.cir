@@ -60,7 +60,7 @@ module {
 !u64i = !cir.int<u, 64>
 !rec_anon_struct = !cir.struct<{data !cir.array<!u64i x 4>}>
 module {
-  // expected-error @below {{expected GlobalViewAttr or ConstPtrAttr}}
+  // expected-error @below 3 {{expected GlobalViewAttr or ConstPtrAttr}}
   cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.int<1> : !u64i, #cir.int<1> : !u64i, #cir.int<3> : !u64i, #cir.int<4> : !u64i]> : !cir.array<!u64i x 4>}> : !rec_anon_struct align(8)
   cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
   cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)

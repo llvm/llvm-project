@@ -29,6 +29,19 @@
 .qux_directive # expected-error {{unknown directive}}
 .quux_directive // expected-error {{unknown directive}}
 
+## A diagnostic that is reported twice on a line needs two directives or a count.
+.dup_directive; .dup_directive
+# expected-error@-1 {{unknown directive}}
+# expected-error@-2 {{unknown directive}}
+.dup_directive; .dup_directive
+# expected-error@-1 2 {{unknown directive}}
+
+## A directive that was already matched does not steal a later diagnostic from
+## a second directive on the same line.
+movl $1, %eax, %ebx; movl $1, %eax, %ebx
+# expected-error@-1 {{operand}}
+# expected-error@-2 {{invalid operand}}
+
 movl $1, %eax, %ebx
 # expected-error@-1 {{invalid operand for instruction}}
 
@@ -84,6 +97,28 @@ nop
 nop
 # expected-error@-1 {{this will never happen}}
 # CHECK: error: expected error "this will never happen" was not produced
+
+#--- duplicate.s
+## Each directive matches only one diagnostic, and an already-matched
+## directive is not reported as a near miss for a later diagnostic.
+# RUN: not llvm-mc --triple=x86_64 --verify duplicate.s 2>&1 \
+# RUN:   | FileCheck duplicate.s --implicit-check-not=error:
+.dup_directive; .dup_directive
+# expected-error@-1 {{unknown directive}}
+# CHECK: duplicate.s:[[#@LINE-2]]:17: error: unexpected error: unknown directive
+.foo_directive; .warning "unknown directive"
+# expected-error@-1 {{unknown directive}}
+# CHECK: duplicate.s:[[#@LINE-2]]:17: error: unexpected warning: unknown directive
+
+#--- too-few.s
+## Directives with an invalid count or a count that is matched fewer times fail.
+# RUN: not llvm-mc --triple=x86_64 --verify too-few.s 2>&1 \
+# RUN:   | FileCheck too-few.s --implicit-check-not=error:
+.foo_directive
+# expected-error@-1 2 {{unknown directive}}
+# expected-warning@-2 0 {{zero count}}
+# CHECK: too-few.s:[[#@LINE-1]]:3: error: invalid count '0'
+# CHECK: too-few.s:[[#@LINE-3]]:3: error: expected error "unknown directive" was produced 1 of 2 times
 
 #--- no-diagnostics.s
 ## A file without diagnostics or directives passes.
