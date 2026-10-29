@@ -417,8 +417,7 @@ static int getJumpTableIndexFromReg(const MachineRegisterInfo &MRI,
   return -1;
 }
 
-// LA32 do not support register offset load instrunctions (LDX),
-// so add another layer to get jump table address.
+// Follow the address computation of an immediate-offset jump-table load.
 static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
                                          Register Reg) {
   if (!Reg.isVirtual())
@@ -430,6 +429,7 @@ static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
   int JTI;
   switch (MI->getOpcode()) {
   case LoongArch::ADD_W:
+  case LoongArch::ADD_D:
     JTI = getJumpTableIndexFromReg(MRI, MI->getOperand(1).getReg());
     if (JTI >= 0)
       return JTI;
@@ -438,7 +438,8 @@ static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
       return JTI;
     break;
   case LoongArch::ALSL_W:
-    // For la32s, address could only stores in register $rk.
+  case LoongArch::ALSL_D:
+    // ALSL takes the unshifted base address as its second register operand.
     return getJumpTableIndexFromReg(MRI, MI->getOperand(2).getReg());
   }
 
@@ -471,6 +472,7 @@ int LoongArchInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   int JTI;
   switch (Def->getOpcode()) {
   case LoongArch::LD_W:
+  case LoongArch::LD_D:
     if (!isJumpTableLoad(*Def))
       return -1;
 

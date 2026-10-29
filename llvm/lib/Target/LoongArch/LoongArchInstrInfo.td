@@ -2108,6 +2108,51 @@ defm : LdPat<zextloadi32, LD_WU, i64>;
 defm : LdPat<load, LD_D, i64>;
 } // Predicates = [IsLA64]
 
+// Prefer ALSL.D + base-offset loads over shift + register-indexed loads
+// for addresses of the form base + (index << scale). Preserve the original
+// sign/zero extension semantics of each load.
+let Predicates = [IsLA64] in {
+def : Pat<(i64 (sextloadi8
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_B (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (extloadi8
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_B (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (zextloadi8
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_BU (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (sextloadi16
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_H (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (extloadi16
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_H (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (zextloadi16
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_HU (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (sextloadi32
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_W (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (extloadi32
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_W (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (zextloadi32
+                    (add GPR:$rk,
+                         (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_WU (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(i64 (load (add GPR:$rk,
+                           (shl GPR:$rj, uimm2_plus1:$imm2)))),
+          (LD_D (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+} // Predicates = [IsLA64]
+
 // LA64 register-register-addressed loads
 let Predicates = [IsLA64] in {
 class RegRegLdPat<PatFrag LoadOp, LAInst Inst, ValueType vt>
@@ -2144,6 +2189,31 @@ defm : StPat<store, ST_W, GPR, i32>, Requires<[IsLA32]>;
 let Predicates = [IsLA64] in {
 defm : StPat<truncstorei32, ST_W, GPR, i64>;
 defm : StPat<store, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+// Use the same explicit scaled-address form for stores. TableGen keeps the
+// store's memory operand while selecting the new address computation.
+let Predicates = [IsLA64] in {
+def : Pat<(truncstorei8 (i64 GPR:$rd),
+                         (add GPR:$rk,
+                              (shl GPR:$rj, uimm2_plus1:$imm2))),
+          (ST_B GPR:$rd,
+                (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(truncstorei16 (i64 GPR:$rd),
+                          (add GPR:$rk,
+                               (shl GPR:$rj, uimm2_plus1:$imm2))),
+          (ST_H GPR:$rd,
+                (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(truncstorei32 (i64 GPR:$rd),
+                          (add GPR:$rk,
+                               (shl GPR:$rj, uimm2_plus1:$imm2))),
+          (ST_W GPR:$rd,
+                (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
+def : Pat<(store (i64 GPR:$rd),
+                 (add GPR:$rk,
+                      (shl GPR:$rj, uimm2_plus1:$imm2))),
+          (ST_D GPR:$rd,
+                (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2), 0)>;
 } // Predicates = [IsLA64]
 
 let Predicates = [IsLA64] in {
