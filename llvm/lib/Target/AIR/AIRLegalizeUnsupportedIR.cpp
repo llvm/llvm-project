@@ -1386,6 +1386,29 @@ void gepsOfIntToPtrAsIntegers(Module &M) {
         Changed = true;
       }
     }
+    // The same address used with different pointees (a memset of it and an
+    // i32 store to it, Cycles' intersect_volume_stack): an inttoptr of its
+    // own for each use other than the first.
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      auto *ITP = dyn_cast<IntToPtrInst>(&I);
+      if (!ITP || ITP->getType()->isVectorTy() || ITP->hasOneUse())
+        continue;
+      SmallVector<Use *, 8> Uses;
+      for (Use &U : ITP->uses())
+        Uses.push_back(&U);
+      for (Use *U : drop_begin(Uses)) {
+        auto *User = cast<Instruction>(U->getUser());
+        // a phi's incoming value at the end of its block
+        Instruction *At = isa<PHINode>(User)
+                              ? cast<PHINode>(User)
+                                    ->getIncomingBlock(*U)
+                                    ->getTerminator()
+                              : User;
+        auto *Copy = cast<Instruction>(ITP->clone());
+        Copy->insertBefore(At->getIterator());
+        U->set(Copy);
+      }
+    }
   }
 }
 
