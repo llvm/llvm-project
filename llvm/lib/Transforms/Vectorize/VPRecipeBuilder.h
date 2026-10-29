@@ -80,8 +80,7 @@ public:
   const CompressedPtrInfo *getCompressedPtrInfo(VPInstruction *VPI);
 
   /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
-  /// \p VPI. \p VPI must be a predicated memory operation. Legality should be
-  /// first checked with isCompressedLoadOrStore.
+  /// \p VPI. \p VPI must be a compressed memory operation.
   VPWidenMemIntrinsicRecipe *handleCompressedLoadOrStore(VPInstruction *VPI);
 
   /// If \p VPI is a store of a reduction into an invariant address, delete it.

@@ -272,8 +272,9 @@ struct VPlanTransforms {
   /// the block mask.
   /// Returns false if any memory operation could not be updated (e.g., due to
   /// having a mask that does not match the PHI).
-  static bool handleCompressingPatterns(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                        VPRecipeBuilder &RecipeBuilder);
+  static bool handleCompressingPatterns(VPlan &Plan,
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        ScalarEvolution &SE);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);

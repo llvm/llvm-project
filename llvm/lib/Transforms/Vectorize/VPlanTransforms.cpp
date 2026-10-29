@@ -305,12 +305,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
-static Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
-  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
-  return (IsLoad ? R : R->getOperand(0))->getScalarType();
-}
-
 /// Collect either replicated Loads or Stores grouped by their address SCEV and
 /// their load-store type, in a deep-traversal of the vector loop region in \p
 /// Plan.
@@ -333,7 +327,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR.getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = getLoadStoreValueType(&RepR);
+      const Type *LoadStoreTy = vputils::getLoadStoreValueType(&RepR);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(&RepR);
@@ -4129,7 +4123,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
-    assert(all_equal(map_range(Recipes, getLoadStoreValueType)) &&
+    assert(all_equal(map_range(Recipes, vputils::getLoadStoreValueType)) &&
            "Expected all recipes in group to have the same load-store type");
 
     // Collect groups with the same or complementary masks.
@@ -6454,12 +6448,13 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
   }
 }
 
-bool VPlanTransforms::handleCompressingPatterns(
-    VPlan &Plan, VPBasicBlock *HeaderVPBB, VPRecipeBuilder &RecipeBuilder) {
+bool VPlanTransforms::handleCompressingPatterns(VPlan &Plan,
+                                                VPRecipeBuilder &RecipeBuilder,
+                                                ScalarEvolution &SE) {
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallDenseMap<PHINode *, SmallVector<VPInstruction *>> CondIndToMemOps;
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
-           Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(HeaderVPBB))) {
     for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
       if (const CompressedPtrInfo *Info =
               RecipeBuilder.getCompressedPtrInfo(&VPI))
@@ -6493,8 +6488,7 @@ bool VPlanTransforms::handleCompressingPatterns(
       auto *CompressedMemOp =
           Builder.insert(RecipeBuilder.handleCompressedLoadOrStore(VPI));
 
-      if (VPI->getOpcode() == Instruction::Load)
-        VPI->replaceAllUsesWith(CompressedMemOp->getVPSingleValue());
+      VPI->replaceAllUsesWith(CompressedMemOp->getVPSingleValue());
       VPI->eraseFromParent();
     }
 
@@ -6507,16 +6501,18 @@ bool VPlanTransforms::handleCompressingPatterns(
     Type *UpdateType = CondIndPhi.getScalarType();
     assert(!UpdateType->isPointerTy() && "ptr types are not supported yet");
 
+    DebugLoc DL = CondIndPhi.getDebugLoc();
     auto &CondID = CondIndPhi.getConditionalInductionDescriptor();
-    VPValue *HandledLanes = Builder.createNaryOp(
-        VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
-        DebugLoc::getUnknown(), "handled.lanes", UpdateType);
+
+    VPValue *HandledLanes =
+        Builder.createNaryOp(VPInstruction::NumActiveLanes, Mask, UpdateType,
+                             {}, DL, "handled.lanes");
     VPValue *Step =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
-    VPValue *Offset =
-        Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
+        VPSCEVExpander(Builder, SE, DL).expand(CondID.getStepSCEV());
+    VPValue *Offset = Builder.createOverflowingOp(
+        Instruction::Mul, {Step, HandledLanes}, {false, false}, DL);
     VPValue *Update =
-        Builder.createAdd(&CondIndPhi, Offset, {}, "conditional.step");
+        Builder.createAdd(&CondIndPhi, Offset, DL, "conditional.step");
     BackedgeValue->replaceAllUsesWith(Update);
   }
 
