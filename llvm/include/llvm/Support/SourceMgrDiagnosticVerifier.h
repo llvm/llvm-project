@@ -74,6 +74,9 @@ public:
     SourceMgr::DiagKind kind;
     /// The line number the expected diagnostic should be on.
     unsigned lineNo;
+    /// The column the expected diagnostic should be at, or 0 if any column
+    /// matches.
+    unsigned colNo = 0;
     /// The location of the expected diagnostic within the input file.
     SMLoc fileLoc;
     /// The number of times this diagnostic is expected.
@@ -104,18 +107,20 @@ public:
   }
 
   /// Matches a single actual diagnostic against the expected diagnostics
-  /// recorded for \p buf / \p lineNo, computing them first via \p
-  /// computeExpectedDiags if they haven't been already. If \p hasLoc is
-  /// false, the diagnostic has no location and is matched against the
-  /// '@unknown' list instead (\p buf / \p lineNo are ignored). If \p hasLoc
-  /// is true but \p buf is null (e.g. the diagnostic's file isn't a known
-  /// buffer), the diagnostic is matched against an empty list, i.e. it can
-  /// never match and is always unexpected. On a near miss, prints a message
-  /// through \p mgr. \p reportUnexpected controls whether near misses /
-  /// unexpected diagnostics are reported at all.
+  /// recorded for \p buf / \p lineNo / \p colNo (1-based), computing them
+  /// first via \p computeExpectedDiags if they haven't been already. If \p
+  /// hasLoc is false, the diagnostic has no location and is matched against
+  /// the '@unknown' list instead (\p buf / \p lineNo / \p colNo are
+  /// ignored). If \p hasLoc is true but \p buf is null (e.g. the
+  /// diagnostic's file isn't a known buffer), the diagnostic is matched
+  /// against an empty list, i.e. it can never match and is always unexpected.
+  /// On a near miss, prints a message through \p mgr. \p reportUnexpected
+  /// controls whether near misses / unexpected diagnostics are reported at
+  /// all.
   MatchResult process(raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind,
                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
-                      StringRef message, bool reportUnexpected = true);
+                      unsigned colNo, StringRef message,
+                      bool reportUnexpected = true);
 
   /// Like the overload above, but takes the kind, location and message from
   /// \p diag, and reports an unexpected \p diag as an error prefixed with
