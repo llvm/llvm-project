@@ -918,6 +918,7 @@ void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {
   // Emit aliasing label for function entry point label.
   for (const GlobalAlias *Alias : GOAliasMap[F]) {
     MCSymbol *Sym = getSymbol(Alias);
+    ZOS->emitADA(Sym, getObjFileLowering().getADASection());
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     emitVisibility(Sym, Alias->getVisibility());
     emitLinkage(Alias, Sym);

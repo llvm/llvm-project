@@ -263,6 +263,9 @@ static void copyMetadataForAtomic(Instruction &Dest,
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
 
+      if (ID == Ctx.getMDKindID("amdgpu.cfs"))
+        Dest.setMetadata(ID, N);
+
       // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
       // uses.
       break;
@@ -1675,7 +1678,11 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
+  // A fence between the LL and SC may clear the reservation on some targets.
+  // Strong cmpxchg retries, but weak cmpxchg cannot recover.
+  bool UseUnconditionalReleaseBarrier =
+      (F->hasMinSize() && !CI->isWeak()) ||
+      (CI->isWeak() && TLI->fenceClearsLoadLinkedReservation());
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //

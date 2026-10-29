@@ -1243,41 +1243,45 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
 
   if (AnyScalable)
     return OW_Unknown;
-  // Query the alias information
-  AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
+  // Only query AA if the constant offsets cannot be compared.
+  auto CheckAA = [&]() {
+    // Query the alias information
+    AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 
-  // If the start pointers are the same, we just have to compare sizes to see if
-  // the killing store was larger than the dead store.
-  if (AAR == AliasResult::MustAlias) {
-    // Make sure that the KillingSize size is >= the DeadSize size.
-    if (KillingSize >= DeadSize)
-      return OW_Complete;
-  }
+    // If the start pointers are the same, we just have to compare sizes to see
+    // if the killing store was larger than the dead store.
+    if (AAR == AliasResult::MustAlias) {
+      // Make sure that the KillingSize size is >= the DeadSize size.
+      if (KillingSize >= DeadSize)
+        return OW_Complete;
+    }
 
-  // If we hit a partial alias we may have a full overwrite
-  if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
-    int32_t Off = AAR.getOffset();
-    if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
-      return OW_Complete;
-  }
+    // If we hit a partial alias we may have a full overwrite
+    if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
+      int32_t Off = AAR.getOffset();
+      if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
+        return OW_Complete;
+    }
 
-  // If we can't resolve the same pointers to the same object, then we can't
-  // analyze them at all.
-  if (DeadUndObj != KillingUndObj) {
     // Non aliasing stores to different objects don't overlap. Note that
     // if the killing store is known to overwrite whole object (out of
     // bounds access overwrites whole object as well) then it is assumed to
     // completely overwrite any store to the same object even if they don't
     // actually alias (see next check).
-    if (AAR == AliasResult::NoAlias)
+    if (DeadUndObj != KillingUndObj && AAR == AliasResult::NoAlias)
       return OW_None;
     return OW_Unknown;
-  }
+  };
+
+  // If we can't resolve the same pointers to the same object, then we can't
+  // analyze them at all.
+  if (DeadUndObj != KillingUndObj)
+    return CheckAA();
 
   // Offsets in different address spaces may wrap at different widths.
   unsigned IdxWidth = DL.getIndexTypeSizeInBits(DeadPtr->getType());
   if (IdxWidth != DL.getIndexTypeSizeInBits(KillingPtr->getType()))
-    return OW_Unknown;
+    return CheckAA();
 
   // Okay, we have stores to two completely different pointers.  Try to
   // decompose the pointer into a "base + constant_offset" form.  If the base
@@ -1294,7 +1298,7 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   // If the base pointers still differ, we have two completely different
   // stores.
   if (DeadBasePtr != KillingBasePtr)
-    return OW_Unknown;
+    return CheckAA();
 
   // The killing access completely overlaps the dead store if and only if
   // both start and end of the dead one is "inside" the killing one:
@@ -2728,8 +2732,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
                                 const CycleInfo &CI) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
   DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, CI);
   // For each store:

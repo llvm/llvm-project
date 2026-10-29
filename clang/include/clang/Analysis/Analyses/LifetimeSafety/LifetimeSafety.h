@@ -75,6 +75,13 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // Overload for a use with only a location and no expression (e.g. a borrow
+  // captured into the object and still held at the capturing method's exit).
+  virtual void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
+
   // TODO: Report where the object was destroyed when that happens before the
   // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
@@ -102,6 +109,14 @@ public:
                              llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void
   reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
                              const Expr *InvalidationExpr,
                              llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,

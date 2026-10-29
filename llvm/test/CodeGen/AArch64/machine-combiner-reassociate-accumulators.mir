@@ -8,26 +8,26 @@
 # CHECK:          [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
 # CHECK:          [[START2:%.*]]:fpr128 = UABDLv4i16_v4i32
 # CHECK:          [[START3:%.*]]:fpr128 = UABDLv4i16_v4i32
-# CHECK:          [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]] 
-# CHECK:          [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START2]] 
-# CHECK:          [[C1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START3]] 
-# CHECK:          [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A1]] 
-# CHECK:          [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B1]] 
-# CHECK:          [[C2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[C1]] 
-# CHECK:          [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[A2]], killed [[B2]]
-# CHECK:          [[TOTAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[PARTIAL_SUM]], killed [[C2]]
+# CHECK:          [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START1]] 
+# CHECK:          [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START2]] 
+# CHECK:          [[C1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START3]] 
+# CHECK:          [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 [[A1]] 
+# CHECK:          [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 [[B1]] 
+# CHECK:          [[C2:%.*]]:fpr128 = UABALv4i16_v4i32 [[C1]] 
+# CHECK:          [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 [[A2]], [[B2]]
+# CHECK:          [[TOTAL_SUM:%.*]]:fpr128 = ADDv4i32 [[PARTIAL_SUM]], [[C2]]
 # CHECK:          [[END:%.*]]:fpr32 = ADDVv4i32v killed [[TOTAL_SUM]]
 
 # NARROW-TREE:    [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
 # NARROW-TREE:    [[START2:%.*]]:fpr128 = UABDLv4i16_v4i32          
-# NARROW-TREE:    [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]]
-# NARROW-TREE:    [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START2]]
-# NARROW-TREE:    [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A1]]              
-# NARROW-TREE:    [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B1]]
-# NARROW-TREE:    [[A3:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A2]]
-# NARROW-TREE:    [[B3:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B2]]
-# NARROW-TREE:    [[A4:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A3]]
-# NARROW-TREE:    [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[B3]], killed [[A4]]
+# NARROW-TREE:    [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START1]]
+# NARROW-TREE:    [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START2]]
+# NARROW-TREE:    [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 [[A1]]              
+# NARROW-TREE:    [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 [[B1]]
+# NARROW-TREE:    [[A3:%.*]]:fpr128 = UABALv4i16_v4i32 [[A2]]
+# NARROW-TREE:    [[B3:%.*]]:fpr128 = UABALv4i16_v4i32 [[B2]]
+# NARROW-TREE:    [[A4:%.*]]:fpr128 = UABALv4i16_v4i32 [[A3]]
+# NARROW-TREE:    [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 [[B3]], [[A4]]
 # NARROW-TREE:    [[END:%.*]]:fpr32 = ADDVv4i32v killed [[PARTIAL_SUM]]  
 
 # NO-TREE:        [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
@@ -108,14 +108,14 @@ body:             |
 # CHECK:          [[START1:%.*]]:fpr128 = ADDv4i32
 # CHECK:          [[START2:%.*]]:fpr128 = UABDLv4i16_v4i32
 # CHECK:          [[START3:%.*]]:fpr128 = UABDLv4i16_v4i32
-# CHECK:          [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]]
-# CHECK:          [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START2]]
-# CHECK:          [[C1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START3]]
-# CHECK:          [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A1]]
-# CHECK:          [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B1]]
-# CHECK:          [[C2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[C1]]
-# CHECK:          [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[A2]], killed [[B2]]
-# CHECK:          [[TOTAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[PARTIAL_SUM]], killed [[C2]]
+# CHECK:          [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START1]]
+# CHECK:          [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START2]]
+# CHECK:          [[C1:%.*]]:fpr128 = UABALv4i16_v4i32 [[START3]]
+# CHECK:          [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 [[A1]]
+# CHECK:          [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 [[B1]]
+# CHECK:          [[C2:%.*]]:fpr128 = UABALv4i16_v4i32 [[C1]]
+# CHECK:          [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 [[A2]], [[B2]]
+# CHECK:          [[TOTAL_SUM:%.*]]:fpr128 = ADDv4i32 [[PARTIAL_SUM]], [[C2]]
 # CHECK:          [[END:%.*]]:fpr32 = ADDVv4i32v killed [[TOTAL_SUM]]
 
 ---

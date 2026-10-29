@@ -55,8 +55,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     lldbPluginScriptInterpreterPython
     ${python_plugin_sources}
     LINK_LIBS
-      liblldb
       ${LLDB_LIBEDIT_LIBS}
+      liblldb
   )
   add_python_wrapper(lldbPluginScriptInterpreterPython)
 

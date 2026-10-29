@@ -226,6 +226,101 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32
 
 // -----
 
+// CHECK-LABEL: func.func @extract_after_insert_dynamic(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic(%value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_rank2(
+// CHECK-SAME: %[[VALUE:.*]]: i32,
+// CHECK-NEXT: return %[[VALUE]] : i32
+func.func @extract_after_insert_dynamic_rank2(%value: i32, %tensor: tensor<4x8xi32>, %i: index, %j: index) -> i32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<4x8xi32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<4x8xi32>
+  return %extracted : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_mixed_indices(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_mixed_indices(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c2] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_shape(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic_shape(%value: f32, %tensor: tensor<?x?xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<?x?xf32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<?x?xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_index(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_index(%value: f32, %tensor: tensor<8xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%j] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_constant(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_constant(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c1] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_shared_tensor(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK: %[[INSERTED:.*]] = tensor.insert %[[VALUE]]
+// CHECK-NEXT: return %[[INSERTED]], %[[VALUE]] : tensor<8xf32>, f32
+func.func @extract_after_insert_shared_tensor(%value: f32, %tensor: tensor<8xf32>, %i: index) -> (tensor<8xf32>, f32) {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %inserted, %extracted : tensor<8xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_chain(
+// CHECK-SAME: %{{.*}}: f32, %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_chain(%first: f32, %value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %first_insert = tensor.insert %first into %tensor[%i] : tensor<8xf32>
+  %inserted = tensor.insert %value into %first_insert[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
 // Ensure extract dense resource elements not crash.
 
 // CHECK-LABEL: func @extract_dense_resource_nofold
@@ -2972,4 +3067,203 @@ func.func @sink_expand_of_cast_preserves_sparse_encoding(
   %e = tensor.expand_shape %c [[0, 1]] output_shape [%c8a, %c8b]
       : tensor<?xf32, #sparse_v> into tensor<?x?xf32, #sparse_m>
   return %e : tensor<?x?xf32, #sparse_m>
+}
+
+// -----
+
+// A negative constant in `output_shape` proves the op has no valid execution
+// (a dimension cannot be negative). `ConvertToStaticExpandShape` must decline
+// instead of building a RankedTensorType with a negative dimension.
+// CHECK-LABEL:  func.func @expand_shape_negative_output_shape
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg = arith.constant -5 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// `-1` used to be ShapedType::kDynamic; it is now an ordinary invalid
+// dimension (kDynamic == INT64_MIN), so it must take the same path.
+// CHECK-LABEL:  func.func @expand_shape_minus_one_output_shape
+//  CHECK-DAG:      %[[CNEG1:.*]] = arith.constant -1 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG1]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_minus_one_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg1 = arith.constant -1 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg1, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// INT64_MIN is the dynamic sentinel value itself; it must not be mistaken
+// for a valid static dimension either.
+// CHECK-LABEL:  func.func @expand_shape_int64_min_output_shape
+//  CHECK-DAG:      %[[CMIN:.*]] = arith.constant -9223372036854775808 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CMIN]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_int64_min_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cmin = arith.constant -9223372036854775808 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cmin, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// The negative value is produced by canonicalization itself (arith folding),
+// which is why the verifier cannot catch it: the value only becomes a
+// constant inside the very pass that runs this pattern.
+// CHECK-LABEL:  func.func @expand_shape_folded_negative_output_shape
+//  CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -6 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C1]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_folded_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %c1 = arith.constant 1 : index
+  %c7 = arith.constant 7 : index
+  %cneg = arith.subi %c1, %c7 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c1]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// Issue-shaped case: the non-negative entries (10, 7) are staticizable on
+// their own, but bail-out must happen before any mutation, so nothing is
+// staticized at all. This distinguishes "decline the rewrite" from "staticize
+// what we can and keep the negative entry dynamic".
+// CHECK-LABEL:  func.func @expand_shape_no_partial_staticization
+//  CHECK-DAG:      %[[C7:.*]] = arith.constant 7 : index
+//  CHECK-DAG:      %[[C10:.*]] = arith.constant 10 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] output_shape [%[[C10]], %[[C7]], %[[CNEG]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_no_partial_staticization(%arg0: tensor<10x10xf32>)
+    -> tensor<?x?x?xf32> {
+  %c7 = arith.constant 7 : index
+  %c10 = arith.constant 10 : index
+  %cneg = arith.constant -5 : index
+  %cast = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %e = tensor.expand_shape %cast [[0, 1], [2]] output_shape [%c10, %c7, %cneg]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %e : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xf32>, %[[B:[^:]+]]: tensor<4xf32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_condition(%p: i1, %a: tensor<4xf32>, %b: tensor<4xf32>) -> tensor<4xf32> {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xf32>
+  return %x : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<2x4xi32>, %[[B:[^:]+]]: tensor<2x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_multidimensional(%p: i1, %a: tensor<2x4xi32>, %b: tensor<2x4xi32>) -> tensor<2x4xi32> {
+  %m = tensor.splat %p : tensor<2x4xi1>
+  %x = arith.select %m, %a, %b : tensor<2x4xi1>, tensor<2x4xi32>
+  return %x : tensor<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_dynamic(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<?x4xi32>, %[[B:[^:]+]]: tensor<?x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<?x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_dynamic(%p: i1, %a: tensor<?x4xi32>, %b: tensor<?x4xi32>, %n: index) -> tensor<?x4xi32> {
+  %m = tensor.splat %p[%n] : tensor<?x4xi1>
+  %x = arith.select %m, %a, %b : tensor<?x4xi1>, tensor<?x4xi32>
+  return %x : tensor<?x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<i32>, %[[B:[^:]+]]: tensor<i32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_rank_zero(%p: i1, %a: tensor<i32>, %b: tensor<i32>) -> tensor<i32> {
+  %m = tensor.splat %p : tensor<i1>
+  %x = arith.select %m, %a, %b : tensor<i1>, tensor<i32>
+  return %x : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xi32>, %[[B:[^:]+]]: tensor<4xi32>
+// CHECK: %[[M:.*]] = tensor.splat %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_splat_shared_mask(%p: i1, %a: tensor<4xi32>, %b: tensor<4xi32>) -> (tensor<4xi32>, tensor<4xi1>) {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x, %m : tensor<4xi32>, tensor<4xi1>
+}
+
+// -----
+
+// An arbitrary tensor mask is not known to be a splat.
+// CHECK-LABEL: func.func @select_nonuniform_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: tensor<4xi1>
+// CHECK: arith.select %[[P]], %{{.*}}, %{{.*}} : tensor<4xi1>, tensor<4xi32>
+func.func @select_nonuniform_tensor(%p: tensor<4xi1>, %a: tensor<4xi32>, %b: tensor<4xi32>) -> tensor<4xi32> {
+  %x = arith.select %p, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: tensor<4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : tensor<4xi32>
+func.func @select_uniform_unselected_poison_tensor(%p: i1, %a: tensor<4xi32>) -> tensor<4xi32> {
+  %bad = ub.poison : tensor<4xi32>
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %bad : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
 }

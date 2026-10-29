@@ -56,6 +56,7 @@ class GlobalValue;
 class InstCombiner;
 class OptimizationRemarkEmitter;
 class InterleavedAccessInfo;
+class ICmpInst;
 class IntrinsicInst;
 class LoadInst;
 class Loop;
@@ -871,6 +872,12 @@ public:
   /// against the immediate without having to materialize the immediate into a
   /// register.
   LLVM_ABI bool isLegalICmpImmediate(int64_t Imm) const;
+
+  /// Return true if replacing the relational loop exit comparison \p Cond
+  /// with an equality comparison against \p PostIncExitValue is profitable.
+  LLVM_ABI bool
+  preferLoopExitWithEqualityComparison(const ICmpInst &Cond,
+                                       const APInt &PostIncExitValue) const;
 
   /// Return true if the addressing mode represented by AM is legal for
   /// this target, for a load/store of the specified type.

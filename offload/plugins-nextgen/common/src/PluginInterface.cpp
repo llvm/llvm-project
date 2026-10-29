@@ -92,6 +92,20 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                               AsyncInfoWrapperTy &AsyncInfoWrapper,
                               GenericProfilerTy *ProfilerPtr) const {
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
+
+  {
+    std::string StackTrace;
+    if (GenericDevice.OMPX_TrackNumKernelLaunches) {
+      llvm::raw_string_ostream OS(StackTrace);
+      llvm::sys::PrintStackTrace(OS);
+    }
+
+    auto KernelTraceInfoRecord =
+        GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    (*KernelTraceInfoRecord)
+        .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+  }
+
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
                                      LaunchArgs.UserThreadLimit[1],
                                      LaunchArgs.UserThreadLimit[2]};
@@ -119,7 +133,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                                  AsyncInfoWrapper);
 
   return launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper);
+                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper,
+                    ProfilerPtr);
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
@@ -671,19 +686,23 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
 }
 
 Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
-                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+                                  int64_t Size, __tgt_async_info *AsyncInfo,
+                                  GenericProfilerTy *ProfilerPtr) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
+  auto Err =
+      dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper, ProfilerPtr);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
 Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
-                                    int64_t Size, __tgt_async_info *AsyncInfo) {
+                                    int64_t Size, __tgt_async_info *AsyncInfo,
+                                    GenericProfilerTy *ProfilerPtr) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
+  auto Err =
+      dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper, ProfilerPtr);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -702,10 +721,12 @@ Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
 
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
-                                    __tgt_async_info *AsyncInfo) {
+                                    __tgt_async_info *AsyncInfo,
+                                    GenericProfilerTy *ProfilerPtr) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper);
+  auto Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper,
+                              ProfilerPtr);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -726,35 +747,6 @@ Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
   auto Err = dataPrefetchImpl(Count, Mems, Sizes, ToHost, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
-  return Err;
-}
-
-Error GenericDeviceTy::launchKernel(void *EntryPtr,
-                                    KernelLaunchArgsTy &LaunchArgs,
-                                    __tgt_async_info *AsyncInfo,
-                                    GenericProfilerTy *ProfilerPtr) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
-
-  GenericKernelTy &GenericKernel =
-      *reinterpret_cast<GenericKernelTy *>(EntryPtr);
-
-  {
-    std::string StackTrace;
-    if (OMPX_TrackNumKernelLaunches) {
-      llvm::raw_string_ostream OS(StackTrace);
-      llvm::sys::PrintStackTrace(OS);
-    }
-
-    auto KernelTraceInfoRecord = KernelLaunchTraces.getExclusiveAccessor();
-    (*KernelTraceInfoRecord)
-        .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
-  }
-
-  auto Err =
-      GenericKernel.launch(*this, LaunchArgs, AsyncInfoWrapper, ProfilerPtr);
-
-  AsyncInfoWrapper.finalize(Err);
-
   return Err;
 }
 
@@ -1216,21 +1208,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                                       KernelLaunchArgsTy &LaunchArgs,
-                                       __tgt_async_info *AsyncInfoPtr,
-                                       GenericProfilerTy *ProfilerPtr) {
-  auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs,
-                                              AsyncInfoPtr, ProfilerPtr);
-  if (Err) {
-    REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
-             << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
 }
@@ -1300,17 +1277,5 @@ int32_t GenericPluginTy::async_barrier(omp_interop_val_t *Interop) {
              << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_fence(int32_t DeviceId,
-                                    __tgt_async_info *AsyncInfo) {
-  auto Err = getDevice(DeviceId).dataFence(AsyncInfo);
-  if (Err) {
-    REPORT() << "Failure to place data fence on device " << DeviceId << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
   return OFFLOAD_SUCCESS;
 }

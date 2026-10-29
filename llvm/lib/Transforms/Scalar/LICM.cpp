@@ -184,10 +184,6 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
     ICFLoopSafetyInfo *SafetyInfo,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L);
 
-static const ScalarOptions &getScalarOptions(const Loop &L) {
-  return L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
-}
-
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
@@ -230,8 +226,7 @@ struct LegacyLICMPass : public LoopPass {
     // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
-    const ScalarOptions &Opts =
-        F->getContext().getLibraryOptions().get<ScalarOptions>();
+    const ScalarOptions &Opts = getScalarOptions(*F);
     LoopInvariantCodeMotion LICM(Opts, LICMOptions());
     return LICM.runOnLoop(
         L, &getAnalysis<AAResultsWrapperPass>().getAAResults(),
@@ -838,8 +833,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   if (isa<Constant>(Addr))
     return false;
 
-  const ScalarOptions &Opts =
-      LI->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*LI->getFunction());
   unsigned UsesVisited = 0;
   // Traverse all uses of the load operand value, to see if invariant.start is
   // one of the uses, and whether it dominates the load instruction.

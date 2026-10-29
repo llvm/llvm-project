@@ -1186,9 +1186,6 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
-
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -5062,10 +5059,15 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
+  /// \param AfterInitStmt Whether an init-statement has already been parsed
+  /// for this condition, so a null \p InitStmt means "the init-statement slot
+  /// is used up" rather than "no init-statement is permitted here".
+  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
                                        Sema::ConditionKind CK, bool MissingOK,
-                                       ForRangeInfo *FRI = nullptr);
+                                       ForRangeInfo *FRI = nullptr,
+                                       bool AfterInitStmt = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -7094,10 +7096,22 @@ public:
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
                                   SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
+
+  /// Parses one bound of an OpenMP 6.0 'adjust_args' parameter range, which may
+  /// be 'omp_num_args' with an optional logical offset, or the whole
+  /// parameter-list item when no range colon follows it.
+  bool ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound);
+
+  /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
+  /// parameter names, positions, or ranges with optional bounds.
+  /// Returns true on error.
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<OMPAdjustArgsItem> &Items);
+
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          SemaOpenMP::OpenMPVarListDataTy &Data);
+                          SemaOpenMP::OpenMPVarListDataTy &Data,
+                          SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);

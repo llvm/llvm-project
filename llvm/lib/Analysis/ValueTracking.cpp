@@ -307,21 +307,24 @@ bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
-bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
+bool llvm::isKnownPositive(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
     return CI->getValue().isStrictlyPositive();
 
   // If `isKnownNonNegative` ever becomes more sophisticated, make sure to keep
   // this updated.
-  KnownBits Known = computeKnownBits(V, SQ, Depth);
+  KnownBits Known = Depth == 0 ? V.getKnownBits(SQ)
+                               : computeKnownBits(V.getValue(), SQ, Depth);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
+         (Known.isNonZero() || isKnownNonZero(V.getValue(), SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (Depth == 0)
+    return V.getKnownBits(SQ).isNegative();
+  return computeKnownBits(V.getValue(), SQ, Depth).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
@@ -5249,7 +5252,19 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstTy = Op->getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const auto *I = dyn_cast<Instruction>(Op);
+  const Function *F = I ? I->getFunction() : nullptr;
+  DenormalMode DstMode =
+      F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -6289,7 +6304,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    const auto *I = dyn_cast<Instruction>(Op);
+    const Function *F = I ? I->getFunction() : nullptr;
+    DenormalMode DstMode =
+        F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+    DenormalMode SrcMode =
+        F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     break;
   }
   case Instruction::FPTrunc: {
@@ -6722,6 +6744,9 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   case Instruction::FPToSI:
   case Instruction::FPToUI:
     return true;
+  case Instruction::FRem:
+    // frem(x, +-0.0) == NaN, and more generally frem(x, y) == frem(x, -y).
+    return U.getOperandNo() == 1;
   case Instruction::FCmp:
     // fcmp treats both positive and negative zero as equal.
     return true;
@@ -6729,9 +6754,27 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
     if (auto *II = dyn_cast<IntrinsicInst>(User)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::fabs:
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::exp10:
+      case Intrinsic::log:
+      case Intrinsic::log2:
+      case Intrinsic::log10:
+      case Intrinsic::cos:
+      case Intrinsic::acos:
+      case Intrinsic::cosh:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::lround:
+      case Intrinsic::llround:
+      case Intrinsic::lrint:
+      case Intrinsic::llrint:
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
+      case Intrinsic::pow:
+        // pow(x, +-0.0) == +1.0 or NaN
+        return U.getOperandNo() == 1;
       case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
@@ -7660,33 +7703,6 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
   } while (!Worklist.empty());
 
   return Result;
-}
-
-static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-    const Value *V, bool AllowLifetime, bool AllowDroppable) {
-  for (const User *U : V->users()) {
-    const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II)
-      return false;
-
-    if (AllowLifetime && II->isLifetimeStartOrEnd())
-      continue;
-
-    if (AllowDroppable && II->isDroppable())
-      continue;
-
-    return false;
-  }
-  return true;
-}
-
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
-}
-bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
@@ -11082,6 +11098,14 @@ const Value *llvm::stripNullTest(const Value *V) {
         return X;
     }
   }
+
+  // select(cond, X, -X)
+  {
+    const Value *X;
+    if (match(V, m_c_Select(m_Value(X), m_Neg(m_Deferred(X)))))
+      return X;
+  }
+
   return nullptr;
 }
 

@@ -199,3 +199,16 @@ class WatchpointPythonCommandTestCase(TestBase):
             "frame variable --show-globals cookie",
             substrs=["(int32_t)", "cookie = 999"],
         )
+
+    def test_watchpoint_command_syntax_error(self):
+        """Test that a malformed one-liner reports the Python error."""
+        self.build(dictionary=self.d)
+        lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, exe_name=self.exe_name
+        )
+        self.runCmd("watchpoint set variable -w write global")
+        self.expect(
+            "watchpoint command add -s python 1 -o 'def ('",
+            error=True,
+            substrs=["SyntaxError"],
+        )

@@ -36,7 +36,7 @@ class DominatorTree;
 class GEPOperator;
 class WithOverflowInst;
 struct KnownBits;
-struct KnownFPClass;
+class KnownFPClass;
 class Loop;
 class LoopInfo;
 class MDNode;
@@ -186,13 +186,13 @@ LLVM_ABI bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be positive (i.e. non-negative
 /// and non-zero).
-LLVM_ABI bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth = 0);
+LLVM_ABI bool isKnownPositive(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-LLVM_ABI bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth = 0);
+LLVM_ABI bool isKnownNegative(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
@@ -536,13 +536,6 @@ inline const AllocaInst *findAllocaForValue(const Value *V,
                                             bool OffsetZero = false) {
   return findAllocaForValue(const_cast<Value *>(V), OffsetZero);
 }
-
-/// Return true if the only users of this pointer are lifetime markers.
-LLVM_ABI bool onlyUsedByLifetimeMarkers(const Value *V);
-
-/// Return true if the only users of this pointer are lifetime markers or
-/// droppable instructions.
-LLVM_ABI bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
 /// Return true if the instruction doesn't potentially cross vector lanes. This
 /// condition is weaker than checking that the instruction is lanewise: lanewise

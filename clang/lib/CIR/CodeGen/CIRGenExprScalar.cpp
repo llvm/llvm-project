@@ -360,7 +360,8 @@ public:
       const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       const mlir::Value vecValue = Visit(e->getBase());
       const mlir::Value indexValue = Visit(e->getIdx());
-      return cir::VecExtractOp::create(cgf.builder, loc, vecValue, indexValue);
+      return cir::VecExtractOp::create(cgf.getBuilder(), loc, vecValue,
+                                       indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -371,8 +372,9 @@ public:
       // The undocumented form of __builtin_shufflevector.
       mlir::Value inputVec = Visit(e->getExpr(0));
       mlir::Value indexVec = Visit(e->getExpr(1));
-      return cir::VecShuffleDynamicOp::create(
-          cgf.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+      return cir::VecShuffleDynamicOp::create(cgf.getBuilder(),
+                                              cgf.getLoc(e->getSourceRange()),
+                                              inputVec, indexVec);
     }
 
     mlir::Value vec1 = Visit(e->getExpr(0));
@@ -384,16 +386,16 @@ public:
     SmallVector<mlir::Attribute, 8> indices;
     for (unsigned i = 2; i < e->getNumSubExprs(); ++i) {
       indices.push_back(
-          cir::IntAttr::get(cgf.builder.getSInt64Ty(),
+          cir::IntAttr::get(cgf.getBuilder().getSInt64Ty(),
                             e->getExpr(i)
                                 ->EvaluateKnownConstInt(cgf.getContext())
                                 .getSExtValue()));
     }
 
-    return cir::VecShuffleOp::create(cgf.builder,
+    return cir::VecShuffleOp::create(cgf.getBuilder(),
                                      cgf.getLoc(e->getSourceRange()),
                                      cgf.convertType(e->getType()), vec1, vec2,
-                                     cgf.builder.getArrayAttr(indices));
+                                     cgf.getBuilder().getArrayAttr(indices));
   }
 
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
@@ -632,8 +634,7 @@ public:
   mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value,
                                    QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
-    if (cgf.getLangOpts().OpenMP)
-      cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     QualType type = e->getSubExpr()->getType();
 
@@ -1736,8 +1737,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "openmp");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lhsLV;
 }

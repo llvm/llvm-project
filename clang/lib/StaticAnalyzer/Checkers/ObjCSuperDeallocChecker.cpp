@@ -179,7 +179,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
   // We have a use of self after free.
   // This likely causes a crash, so stop exploring the
   // path by generating a sink.
-  ExplodedNode *ErrNode = C.generateErrorNode();
+  ExplodedNode *ErrNode = C.addSink();
   // If we've already reached this node on another path, return.
   if (!ErrNode)
     return;

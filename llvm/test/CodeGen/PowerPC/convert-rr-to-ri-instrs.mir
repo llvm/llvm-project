@@ -5039,7 +5039,7 @@ body:             |
     ; CHECK:      %6:g8rc = IMPLICIT_DEF
     ; CHECK-NEXT: %7:g8rc = INSERT_SUBREG %6, %3, %subreg.sub_32
     ; CHECK-NEXT: %8:g8rc = SRAWI8 killed %7, 15, implicit-def dead $carry
-    ; CHECK-NEXT: %4:gprc = COPY killed %8.sub_32
+    ; CHECK-NEXT: %4:gprc = COPY %8.sub_32
     ; CHECK-LATE: srawi 3, 3, 15
     %5 = EXTSW_32_64 killed %4
     $x3 = COPY %5

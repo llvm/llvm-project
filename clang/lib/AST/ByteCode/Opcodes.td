@@ -967,6 +967,10 @@ def InvalidShuffleVectorIndex : Opcode {
   let Args = [ArgUint32];
 }
 
+def InvalidTargetLabel : Opcode {
+  let Args = [ArgBool];
+}
+
 def Assume : Opcode;
 
 def ArrayDecay : Opcode;
