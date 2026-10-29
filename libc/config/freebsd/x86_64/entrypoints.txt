@@ -320,6 +320,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
+    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.trunc
     libc.src.math.truncf
