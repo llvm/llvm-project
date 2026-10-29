@@ -991,9 +991,9 @@ define i8 @udiv_shl_shl_nuw_nsw(i8 %x, i8 %y, i8 %z) {
 
 define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nsw_nuw(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[Y1:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[YZ:%.*]] = shl nuw i8 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nsw i8 %x, %z
