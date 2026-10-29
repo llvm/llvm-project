@@ -55,7 +55,7 @@ static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
     "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
     cl::desc("Assume the non latch exit block to be predictable"));
 static cl::opt<unsigned> UnrollRuntimeMultiExitMinBodies(
-    "unroll-runtime-multi-exit-min-bodies", cl::init(1), cl::Hidden,
+    "unroll-runtime-multi-exit-min-bodies", cl::init(2), cl::Hidden,
     cl::desc("Minimum number of complete unrolled bodies a multi-exit loop is "
              "expected to run before taking a non-latch exit, for runtime "
              "unrolling to kick in"));
@@ -540,6 +540,53 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
   return NewLoop;
 }
 
+std::optional<unsigned> llvm::getRuntimeUnrollMultiExitMaxCount(Loop *L) {
+  unsigned MinBodies = UnrollRuntimeMultiExitMinBodies;
+  if (!MinBodies || UnrollRuntimeOtherExitPredictable ||
+      UnrollRuntimeMultiExit.getNumOccurrences())
+    return std::nullopt;
+
+  BasicBlock *Latch = L->getLoopLatch();
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  if (!Latch || ExitingBlocks.size() != 2 ||
+      !is_contained(ExitingBlocks, Latch))
+    return std::nullopt;
+
+  SmallVector<BasicBlock *, 4> OtherExits;
+  L->getUniqueNonLatchExitBlocks(OtherExits);
+  if (OtherExits.size() != 1)
+    return std::nullopt;
+
+  BasicBlock *NonLatchExitingBlock =
+      (ExitingBlocks[0] == Latch) ? ExitingBlocks[1] : ExitingBlocks[0];
+  BranchProbability BranchProb =
+      llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
+  if (BranchProb.isUnknown())
+    return std::nullopt;
+  if (BranchProb.isZero())
+    return std::numeric_limits<unsigned>::max();
+
+  // The largest Count with BranchProb <= 1 / (MinBodies * Count). Start from
+  // the exact quotient and correct for the rounding done by BranchProbability.
+  auto Fits = [&](uint64_t Count) {
+    return BranchProb <=
+           BranchProbability::getBranchProbability(1, MinBodies * Count);
+  };
+
+  uint64_t MaxCount =
+      BranchProbability::getDenominator() /
+      (static_cast<uint64_t>(BranchProb.getNumerator()) * MinBodies);
+  // Beyond any unroll count - no limit.
+  if (MaxCount >= std::numeric_limits<uint16_t>::max())
+    return std::numeric_limits<unsigned>::max();
+  while (MaxCount > 0 && !Fits(MaxCount))
+    --MaxCount;
+  while (Fits(MaxCount + 1))
+    ++MaxCount;
+  return MaxCount;
+}
+
 /// Returns true if we can profitably unroll the multi-exit loop L by \p Count.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
     Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
@@ -581,21 +628,8 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
   // leaving through the non-latch exit.
   // If UnrollRuntimeMultiExitMinBodies is set to 0, then fall through to the
   // deopt block check.
-  if (unsigned MinBodies = UnrollRuntimeMultiExitMinBodies) {
-    BasicBlock *LatchBB = L->getLoopLatch();
-    assert(LatchBB && "Expected loop to have a latch");
-    BasicBlock *NonLatchExitingBlock =
-        (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
-    auto BranchProb =
-        llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
-    // If BranchProbability could not be extracted (returns unknown), then
-    // don't return and do the check for deopt block.
-    if (!BranchProb.isUnknown()) {
-      uint64_t MinIterations = static_cast<uint64_t>(MinBodies) * Count;
-      return BranchProb <=
-             BranchProbability::getBranchProbability(1, MinIterations);
-    }
-  }
+  if (std::optional<unsigned> MaxCount = getRuntimeUnrollMultiExitMaxCount(L))
+    return Count <= *MaxCount;
 
   // We know that deoptimize blocks are rarely taken, which also implies the
   // branch leading to the deoptimize block is highly unlikely.

@@ -262,25 +262,21 @@ found:
 !0 = !{!"branch_weights", i32 1, i32 96}
 
 ; size=20: expected scan of ~10 elements, P = 1/11 = 0.0909.
-;
-; The marginal case. 1/P = 11 clears the default requirement of 8 but only just,
-; so the unrolled body runs about once before control falls into the epilogue.
-; Requiring four bodies (1/32) rejects it.
 define i32 @scan_p11_size_20(ptr nocapture %a, i64 %n, i32 %key) {
 ; CHECK-LABEL: define i32 @scan_p11_size_20(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], i64 [[N:%.*]], i32 [[KEY:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[N]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[HEADER_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CHECK:       [[ENTRY_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[I_NEXT_7:%.*]], %[[LATCH_7:.*]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], %[[LATCH_7]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[I_NEXT_3:%.*]], %[[LATCH_3:.*]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], %[[LATCH_3]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i32 [[V]], [[KEY]]
@@ -302,38 +298,14 @@ define i32 @scan_p11_size_20(ptr nocapture %a, i64 %n, i32 %key) {
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT_2]]
 ; CHECK-NEXT:    [[V_3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[MATCH_3:%.*]] = icmp eq i32 [[V_3]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH_3]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_3:.*]], !prof [[PROF3]]
+; CHECK-NEXT:    br i1 [[MATCH_3]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_3]], !prof [[PROF3]]
 ; CHECK:       [[LATCH_3]]:
-; CHECK-NEXT:    [[I_NEXT_3:%.*]] = add nuw nsw i64 [[I]], 4
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT_3]]
-; CHECK-NEXT:    [[V_4:%.*]] = load i32, ptr [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[MATCH_4:%.*]] = icmp eq i32 [[V_4]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH_4]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_4:.*]], !prof [[PROF3]]
-; CHECK:       [[LATCH_4]]:
-; CHECK-NEXT:    [[I_NEXT_4:%.*]] = add nuw nsw i64 [[I]], 5
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT_4]]
-; CHECK-NEXT:    [[V_5:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
-; CHECK-NEXT:    [[MATCH_5:%.*]] = icmp eq i32 [[V_5]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH_5]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_5:.*]], !prof [[PROF3]]
-; CHECK:       [[LATCH_5]]:
-; CHECK-NEXT:    [[I_NEXT_5:%.*]] = add nuw nsw i64 [[I]], 6
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT_5]]
-; CHECK-NEXT:    [[V_6:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
-; CHECK-NEXT:    [[MATCH_6:%.*]] = icmp eq i32 [[V_6]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH_6]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_6:.*]], !prof [[PROF3]]
-; CHECK:       [[LATCH_6]]:
-; CHECK-NEXT:    [[I_NEXT_6:%.*]] = add nuw nsw i64 [[I]], 7
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT_6]]
-; CHECK-NEXT:    [[V_7:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
-; CHECK-NEXT:    [[MATCH_7:%.*]] = icmp eq i32 [[V_7]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH_7]], label %[[FOUND_LOOPEXIT]], label %[[LATCH_7]], !prof [[PROF3]]
-; CHECK:       [[LATCH_7]]:
-; CHECK-NEXT:    [[I_NEXT_7]] = add nuw nsw i64 [[I]], 8
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[I_NEXT_3]] = add nuw nsw i64 [[I]], 4
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[NOTFOUND_UNR_LCSSA:.*]], label %[[HEADER]]
 ; CHECK:       [[NOTFOUND_UNR_LCSSA]]:
-; CHECK-NEXT:    [[I_UNR:%.*]] = phi i64 [ [[I_NEXT_7]], %[[LATCH_7]] ]
+; CHECK-NEXT:    [[I_UNR:%.*]] = phi i64 [ [[I_NEXT_3]], %[[LATCH_3]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[HEADER_EPIL_PREHEADER]], label %[[NOTFOUND:.*]]
 ; CHECK:       [[HEADER_EPIL_PREHEADER]]:
@@ -359,7 +331,7 @@ define i32 @scan_p11_size_20(ptr nocapture %a, i64 %n, i32 %key) {
 ; CHECK:       [[NOTFOUND]]:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       [[FOUND_LOOPEXIT]]:
-; CHECK-NEXT:    [[I_LCSSA_PH:%.*]] = phi i64 [ [[I]], %[[HEADER]] ], [ [[I_NEXT]], %[[LATCH]] ], [ [[I_NEXT_1]], %[[LATCH_1]] ], [ [[I_NEXT_2]], %[[LATCH_2]] ], [ [[I_NEXT_3]], %[[LATCH_3]] ], [ [[I_NEXT_4]], %[[LATCH_4]] ], [ [[I_NEXT_5]], %[[LATCH_5]] ], [ [[I_NEXT_6]], %[[LATCH_6]] ]
+; CHECK-NEXT:    [[I_LCSSA_PH:%.*]] = phi i64 [ [[I]], %[[HEADER]] ], [ [[I_NEXT]], %[[LATCH]] ], [ [[I_NEXT_1]], %[[LATCH_1]] ], [ [[I_NEXT_2]], %[[LATCH_2]] ]
 ; CHECK-NEXT:    br label %[[FOUND:.*]]
 ; CHECK:       [[FOUND_LOOPEXIT3]]:
 ; CHECK-NEXT:    [[I_LCSSA_PH4:%.*]] = phi i64 [ [[I_EPIL]], %[[HEADER_EPIL]] ]
@@ -372,21 +344,55 @@ define i32 @scan_p11_size_20(ptr nocapture %a, i64 %n, i32 %key) {
 ; MINBODIES4-LABEL: define i32 @scan_p11_size_20(
 ; MINBODIES4-SAME: ptr captures(none) [[A:%.*]], i64 [[N:%.*]], i32 [[KEY:%.*]]) {
 ; MINBODIES4-NEXT:  [[ENTRY:.*]]:
+; MINBODIES4-NEXT:    [[TMP0:%.*]] = freeze i64 [[N]]
+; MINBODIES4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
+; MINBODIES4-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 1
+; MINBODIES4-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 1
+; MINBODIES4-NEXT:    br i1 [[TMP2]], label %[[HEADER_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; MINBODIES4:       [[ENTRY_NEW]]:
+; MINBODIES4-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; MINBODIES4-NEXT:    br label %[[HEADER:.*]]
 ; MINBODIES4:       [[HEADER]]:
-; MINBODIES4-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; MINBODIES4-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[I_NEXT_1:%.*]], %[[LATCH_1:.*]] ]
+; MINBODIES4-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LATCH_1]] ]
 ; MINBODIES4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; MINBODIES4-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; MINBODIES4-NEXT:    [[MATCH:%.*]] = icmp eq i32 [[V]], [[KEY]]
-; MINBODIES4-NEXT:    br i1 [[MATCH]], label %[[FOUND:.*]], label %[[LATCH]], !prof [[PROF3:![0-9]+]]
+; MINBODIES4-NEXT:    br i1 [[MATCH]], label %[[FOUND:.*]], label %[[LATCH:.*]], !prof [[PROF3:![0-9]+]]
 ; MINBODIES4:       [[LATCH]]:
-; MINBODIES4-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; MINBODIES4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; MINBODIES4-NEXT:    [[I_NEXT:%.*]] = add nuw nsw i64 [[I]], 1
+; MINBODIES4-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT]]
+; MINBODIES4-NEXT:    [[V_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
+; MINBODIES4-NEXT:    [[MATCH_1:%.*]] = icmp eq i32 [[V_1]], [[KEY]]
+; MINBODIES4-NEXT:    br i1 [[MATCH_1]], label %[[FOUND]], label %[[LATCH_1]], !prof [[PROF3]]
+; MINBODIES4:       [[LATCH_1]]:
+; MINBODIES4-NEXT:    [[I_NEXT_1]] = add nuw nsw i64 [[I]], 2
+; MINBODIES4-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; MINBODIES4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; MINBODIES4-NEXT:    br i1 [[EXITCOND]], label %[[NOTFOUND:.*]], label %[[HEADER]]
 ; MINBODIES4:       [[NOTFOUND]]:
+; MINBODIES4-NEXT:    [[I_UNR:%.*]] = phi i64 [ [[I_NEXT_1]], %[[LATCH_1]] ]
+; MINBODIES4-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; MINBODIES4-NEXT:    br i1 [[LCMP_MOD]], label %[[HEADER_EPIL_PREHEADER]], label %[[NOTFOUND1:.*]]
+; MINBODIES4:       [[HEADER_EPIL_PREHEADER]]:
+; MINBODIES4-NEXT:    [[I_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_UNR]], %[[NOTFOUND]] ]
+; MINBODIES4-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; MINBODIES4-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; MINBODIES4-NEXT:    br label %[[HEADER_EPIL:.*]]
+; MINBODIES4:       [[HEADER_EPIL]]:
+; MINBODIES4-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_EPIL_INIT]]
+; MINBODIES4-NEXT:    [[V_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
+; MINBODIES4-NEXT:    [[MATCH_EPIL:%.*]] = icmp eq i32 [[V_EPIL]], [[KEY]]
+; MINBODIES4-NEXT:    br i1 [[MATCH_EPIL]], label %[[FOUND1:.*]], label %[[LATCH_EPIL:.*]], !prof [[PROF3]]
+; MINBODIES4:       [[LATCH_EPIL]]:
+; MINBODIES4-NEXT:    br label %[[NOTFOUND1]]
+; MINBODIES4:       [[NOTFOUND1]]:
 ; MINBODIES4-NEXT:    ret i32 -1
 ; MINBODIES4:       [[FOUND]]:
-; MINBODIES4-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I]], %[[HEADER]] ]
+; MINBODIES4-NEXT:    [[I_LCSSA_PH:%.*]] = phi i64 [ [[I]], %[[HEADER]] ], [ [[I_NEXT]], %[[LATCH]] ]
+; MINBODIES4-NEXT:    br label %[[FOUND1]]
+; MINBODIES4:       [[FOUND1]]:
+; MINBODIES4-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I_EPIL_INIT]], %[[HEADER_EPIL]] ], [ [[I_LCSSA_PH]], %[[FOUND]] ]
 ; MINBODIES4-NEXT:    [[IDX:%.*]] = trunc i64 [[I_LCSSA]] to i32
 ; MINBODIES4-NEXT:    ret i32 [[IDX]]
 ;
@@ -438,26 +444,60 @@ found:
 
 ; size=10: expected scan of ~5 elements, P = 1/6 = 0.167.
 ;
-; Deliberately still rejected, at every setting.
+; 2x body fits. Requiring 4 gets rejected.
 define i32 @scan_p6_size_10(ptr nocapture %a, i64 %n, i32 %key) {
 ; CHECK-LABEL: define i32 @scan_p6_size_10(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], i64 [[N:%.*]], i32 [[KEY:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 1
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[HEADER_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK:       [[ENTRY_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[I_NEXT_1:%.*]], %[[LATCH_1:.*]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LATCH_1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i32 [[V]], [[KEY]]
-; CHECK-NEXT:    br i1 [[MATCH]], label %[[FOUND:.*]], label %[[LATCH]], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MATCH]], label %[[FOUND:.*]], label %[[LATCH:.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[I_NEXT:%.*]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT]]
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[MATCH_1:%.*]] = icmp eq i32 [[V_1]], [[KEY]]
+; CHECK-NEXT:    br i1 [[MATCH_1]], label %[[FOUND]], label %[[LATCH_1]], !prof [[PROF5]]
+; CHECK:       [[LATCH_1]]:
+; CHECK-NEXT:    [[I_NEXT_1]] = add nuw nsw i64 [[I]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[NOTFOUND:.*]], label %[[HEADER]]
 ; CHECK:       [[NOTFOUND]]:
+; CHECK-NEXT:    [[I_UNR:%.*]] = phi i64 [ [[I_NEXT_1]], %[[LATCH_1]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[HEADER_EPIL_PREHEADER]], label %[[NOTFOUND1:.*]]
+; CHECK:       [[HEADER_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[I_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_UNR]], %[[NOTFOUND]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label %[[HEADER_EPIL:.*]]
+; CHECK:       [[HEADER_EPIL]]:
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_EPIL_INIT]]
+; CHECK-NEXT:    [[V_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    [[MATCH_EPIL:%.*]] = icmp eq i32 [[V_EPIL]], [[KEY]]
+; CHECK-NEXT:    br i1 [[MATCH_EPIL]], label %[[FOUND1:.*]], label %[[LATCH_EPIL:.*]], !prof [[PROF5]]
+; CHECK:       [[LATCH_EPIL]]:
+; CHECK-NEXT:    br label %[[NOTFOUND1]]
+; CHECK:       [[NOTFOUND1]]:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       [[FOUND]]:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I]], %[[HEADER]] ]
+; CHECK-NEXT:    [[I_LCSSA_PH:%.*]] = phi i64 [ [[I]], %[[HEADER]] ], [ [[I_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    br label %[[FOUND1]]
+; CHECK:       [[FOUND1]]:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I_EPIL_INIT]], %[[HEADER_EPIL]] ], [ [[I_LCSSA_PH]], %[[FOUND]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[I_LCSSA]] to i32
 ; CHECK-NEXT:    ret i32 [[IDX]]
 ;
@@ -528,11 +568,7 @@ found:
 
 !2 = !{!"branch_weights", i32 1, i32 5}
 
-; size=20 scan again, but forced to unroll by 16 instead of 8.
-;
-; Identical profile to @scan_p11_size_20, opposite decision. The requirement
-; is now 1/P >= 16 and 1/P = 11. This is the property a fixed probability
-; threshold cannot express at all.
+; size=20 scan again
 define i32 @scan_p11_unroll_16(ptr nocapture %a, i64 %n, i32 %key) {
 ; CHECK-LABEL: define i32 @scan_p11_unroll_16(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], i64 [[N:%.*]], i32 [[KEY:%.*]]) {

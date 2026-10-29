@@ -101,6 +101,8 @@ LLVM_ABI bool UnrollRuntimeLoopRemainder(
     std::optional<unsigned> OriginalTripCount = std::nullopt,
     BranchProbability OriginalLoopProb = BranchProbability::getUnknown());
 
+LLVM_ABI std::optional<unsigned> getRuntimeUnrollMultiExitMaxCount(Loop *L);
+
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
