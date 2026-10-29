@@ -13,21 +13,123 @@ define void @interleave_rows(ptr %dst, ptr %src0, ptr %src1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds [64 x i8], ptr [[SRC0:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [64 x i8], ptr [[SRC1:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[A:%.*]] = load <64 x i8>, ptr [[P0]], align 64
-; CHECK-NEXT:    [[B:%.*]] = load <64 x i8>, ptr [[P1]], align 64
+; CHECK-NEXT:    [[A:%.*]] = load <64 x i8>, ptr [[P0:%.*]], align 64
+; CHECK-NEXT:    [[B:%.*]] = load <64 x i8>, ptr [[P1:%.*]], align 64
 ; CHECK-NEXT:    [[LO:%.*]] = shufflevector <64 x i8> [[A]], <64 x i8> [[B]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
 ; CHECK-NEXT:    [[HI:%.*]] = shufflevector <64 x i8> [[A]], <64 x i8> [[B]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
-; CHECK-NEXT:    [[D_LO:%.*]] = getelementptr inbounds [128 x i8], ptr [[DST:%.*]], i64 [[I]]
-; CHECK-NEXT:    [[D_HI:%.*]] = getelementptr inbounds i8, ptr [[D_LO]], i64 64
+; CHECK-NEXT:    [[D_HI:%.*]] = getelementptr inbounds i8, ptr [[D_LO:%.*]], i64 64
 ; CHECK-NEXT:    store <64 x i8> [[LO]], ptr [[D_LO]], align 64
 ; CHECK-NEXT:    store <64 x i8> [[HI]], ptr [[D_HI]], align 64
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], 12
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
-; CHECK:       exit:
+; CHECK-NEXT:    [[P0_1:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 1
+; CHECK-NEXT:    [[P1_1:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 1
+; CHECK-NEXT:    [[A_1:%.*]] = load <64 x i8>, ptr [[P0_1]], align 64
+; CHECK-NEXT:    [[B_1:%.*]] = load <64 x i8>, ptr [[P1_1]], align 64
+; CHECK-NEXT:    [[LO_1:%.*]] = shufflevector <64 x i8> [[A_1]], <64 x i8> [[B_1]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_1:%.*]] = shufflevector <64 x i8> [[A_1]], <64 x i8> [[B_1]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_1:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 1
+; CHECK-NEXT:    [[D_HI_1:%.*]] = getelementptr inbounds i8, ptr [[D_LO_1]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_1]], ptr [[D_LO_1]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_1]], ptr [[D_HI_1]], align 64
+; CHECK-NEXT:    [[P0_2:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 2
+; CHECK-NEXT:    [[P1_2:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 2
+; CHECK-NEXT:    [[A_2:%.*]] = load <64 x i8>, ptr [[P0_2]], align 64
+; CHECK-NEXT:    [[B_2:%.*]] = load <64 x i8>, ptr [[P1_2]], align 64
+; CHECK-NEXT:    [[LO_2:%.*]] = shufflevector <64 x i8> [[A_2]], <64 x i8> [[B_2]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_2:%.*]] = shufflevector <64 x i8> [[A_2]], <64 x i8> [[B_2]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_2:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 2
+; CHECK-NEXT:    [[D_HI_2:%.*]] = getelementptr inbounds i8, ptr [[D_LO_2]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_2]], ptr [[D_LO_2]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_2]], ptr [[D_HI_2]], align 64
+; CHECK-NEXT:    [[P0_3:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 3
+; CHECK-NEXT:    [[P1_3:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 3
+; CHECK-NEXT:    [[A_3:%.*]] = load <64 x i8>, ptr [[P0_3]], align 64
+; CHECK-NEXT:    [[B_3:%.*]] = load <64 x i8>, ptr [[P1_3]], align 64
+; CHECK-NEXT:    [[LO_3:%.*]] = shufflevector <64 x i8> [[A_3]], <64 x i8> [[B_3]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_3:%.*]] = shufflevector <64 x i8> [[A_3]], <64 x i8> [[B_3]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_3:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 3
+; CHECK-NEXT:    [[D_HI_3:%.*]] = getelementptr inbounds i8, ptr [[D_LO_3]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_3]], ptr [[D_LO_3]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_3]], ptr [[D_HI_3]], align 64
+; CHECK-NEXT:    [[P0_4:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 4
+; CHECK-NEXT:    [[P1_4:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 4
+; CHECK-NEXT:    [[A_4:%.*]] = load <64 x i8>, ptr [[P0_4]], align 64
+; CHECK-NEXT:    [[B_4:%.*]] = load <64 x i8>, ptr [[P1_4]], align 64
+; CHECK-NEXT:    [[LO_4:%.*]] = shufflevector <64 x i8> [[A_4]], <64 x i8> [[B_4]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_4:%.*]] = shufflevector <64 x i8> [[A_4]], <64 x i8> [[B_4]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_4:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 4
+; CHECK-NEXT:    [[D_HI_4:%.*]] = getelementptr inbounds i8, ptr [[D_LO_4]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_4]], ptr [[D_LO_4]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_4]], ptr [[D_HI_4]], align 64
+; CHECK-NEXT:    [[P0_5:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 5
+; CHECK-NEXT:    [[P1_5:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 5
+; CHECK-NEXT:    [[A_5:%.*]] = load <64 x i8>, ptr [[P0_5]], align 64
+; CHECK-NEXT:    [[B_5:%.*]] = load <64 x i8>, ptr [[P1_5]], align 64
+; CHECK-NEXT:    [[LO_5:%.*]] = shufflevector <64 x i8> [[A_5]], <64 x i8> [[B_5]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_5:%.*]] = shufflevector <64 x i8> [[A_5]], <64 x i8> [[B_5]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_5:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 5
+; CHECK-NEXT:    [[D_HI_5:%.*]] = getelementptr inbounds i8, ptr [[D_LO_5]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_5]], ptr [[D_LO_5]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_5]], ptr [[D_HI_5]], align 64
+; CHECK-NEXT:    [[P0_6:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 6
+; CHECK-NEXT:    [[P1_6:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 6
+; CHECK-NEXT:    [[A_6:%.*]] = load <64 x i8>, ptr [[P0_6]], align 64
+; CHECK-NEXT:    [[B_6:%.*]] = load <64 x i8>, ptr [[P1_6]], align 64
+; CHECK-NEXT:    [[LO_6:%.*]] = shufflevector <64 x i8> [[A_6]], <64 x i8> [[B_6]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_6:%.*]] = shufflevector <64 x i8> [[A_6]], <64 x i8> [[B_6]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_6:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 6
+; CHECK-NEXT:    [[D_HI_6:%.*]] = getelementptr inbounds i8, ptr [[D_LO_6]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_6]], ptr [[D_LO_6]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_6]], ptr [[D_HI_6]], align 64
+; CHECK-NEXT:    [[P0_7:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 7
+; CHECK-NEXT:    [[P1_7:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 7
+; CHECK-NEXT:    [[A_7:%.*]] = load <64 x i8>, ptr [[P0_7]], align 64
+; CHECK-NEXT:    [[B_7:%.*]] = load <64 x i8>, ptr [[P1_7]], align 64
+; CHECK-NEXT:    [[LO_7:%.*]] = shufflevector <64 x i8> [[A_7]], <64 x i8> [[B_7]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_7:%.*]] = shufflevector <64 x i8> [[A_7]], <64 x i8> [[B_7]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_7:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 7
+; CHECK-NEXT:    [[D_HI_7:%.*]] = getelementptr inbounds i8, ptr [[D_LO_7]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_7]], ptr [[D_LO_7]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_7]], ptr [[D_HI_7]], align 64
+; CHECK-NEXT:    [[P0_8:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 8
+; CHECK-NEXT:    [[P1_8:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 8
+; CHECK-NEXT:    [[A_8:%.*]] = load <64 x i8>, ptr [[P0_8]], align 64
+; CHECK-NEXT:    [[B_8:%.*]] = load <64 x i8>, ptr [[P1_8]], align 64
+; CHECK-NEXT:    [[LO_8:%.*]] = shufflevector <64 x i8> [[A_8]], <64 x i8> [[B_8]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_8:%.*]] = shufflevector <64 x i8> [[A_8]], <64 x i8> [[B_8]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_8:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 8
+; CHECK-NEXT:    [[D_HI_8:%.*]] = getelementptr inbounds i8, ptr [[D_LO_8]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_8]], ptr [[D_LO_8]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_8]], ptr [[D_HI_8]], align 64
+; CHECK-NEXT:    [[P0_9:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 9
+; CHECK-NEXT:    [[P1_9:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 9
+; CHECK-NEXT:    [[A_9:%.*]] = load <64 x i8>, ptr [[P0_9]], align 64
+; CHECK-NEXT:    [[B_9:%.*]] = load <64 x i8>, ptr [[P1_9]], align 64
+; CHECK-NEXT:    [[LO_9:%.*]] = shufflevector <64 x i8> [[A_9]], <64 x i8> [[B_9]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_9:%.*]] = shufflevector <64 x i8> [[A_9]], <64 x i8> [[B_9]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_9:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 9
+; CHECK-NEXT:    [[D_HI_9:%.*]] = getelementptr inbounds i8, ptr [[D_LO_9]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_9]], ptr [[D_LO_9]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_9]], ptr [[D_HI_9]], align 64
+; CHECK-NEXT:    [[P0_10:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 10
+; CHECK-NEXT:    [[P1_10:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 10
+; CHECK-NEXT:    [[A_10:%.*]] = load <64 x i8>, ptr [[P0_10]], align 64
+; CHECK-NEXT:    [[B_10:%.*]] = load <64 x i8>, ptr [[P1_10]], align 64
+; CHECK-NEXT:    [[LO_10:%.*]] = shufflevector <64 x i8> [[A_10]], <64 x i8> [[B_10]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_10:%.*]] = shufflevector <64 x i8> [[A_10]], <64 x i8> [[B_10]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_10:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 10
+; CHECK-NEXT:    [[D_HI_10:%.*]] = getelementptr inbounds i8, ptr [[D_LO_10]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_10]], ptr [[D_LO_10]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_10]], ptr [[D_HI_10]], align 64
+; CHECK-NEXT:    [[P0_11:%.*]] = getelementptr inbounds [64 x i8], ptr [[P0]], i64 11
+; CHECK-NEXT:    [[P1_11:%.*]] = getelementptr inbounds [64 x i8], ptr [[P1]], i64 11
+; CHECK-NEXT:    [[A_11:%.*]] = load <64 x i8>, ptr [[P0_11]], align 64
+; CHECK-NEXT:    [[B_11:%.*]] = load <64 x i8>, ptr [[P1_11]], align 64
+; CHECK-NEXT:    [[LO_11:%.*]] = shufflevector <64 x i8> [[A_11]], <64 x i8> [[B_11]], <64 x i32> <i32 0, i32 64, i32 1, i32 65, i32 2, i32 66, i32 3, i32 67, i32 4, i32 68, i32 5, i32 69, i32 6, i32 70, i32 7, i32 71, i32 16, i32 80, i32 17, i32 81, i32 18, i32 82, i32 19, i32 83, i32 20, i32 84, i32 21, i32 85, i32 22, i32 86, i32 23, i32 87, i32 32, i32 96, i32 33, i32 97, i32 34, i32 98, i32 35, i32 99, i32 36, i32 100, i32 37, i32 101, i32 38, i32 102, i32 39, i32 103, i32 48, i32 112, i32 49, i32 113, i32 50, i32 114, i32 51, i32 115, i32 52, i32 116, i32 53, i32 117, i32 54, i32 118, i32 55, i32 119>
+; CHECK-NEXT:    [[HI_11:%.*]] = shufflevector <64 x i8> [[A_11]], <64 x i8> [[B_11]], <64 x i32> <i32 8, i32 72, i32 9, i32 73, i32 10, i32 74, i32 11, i32 75, i32 12, i32 76, i32 13, i32 77, i32 14, i32 78, i32 15, i32 79, i32 24, i32 88, i32 25, i32 89, i32 26, i32 90, i32 27, i32 91, i32 28, i32 92, i32 29, i32 93, i32 30, i32 94, i32 31, i32 95, i32 40, i32 104, i32 41, i32 105, i32 42, i32 106, i32 43, i32 107, i32 44, i32 108, i32 45, i32 109, i32 46, i32 110, i32 47, i32 111, i32 56, i32 120, i32 57, i32 121, i32 58, i32 122, i32 59, i32 123, i32 60, i32 124, i32 61, i32 125, i32 62, i32 126, i32 63, i32 127>
+; CHECK-NEXT:    [[D_LO_11:%.*]] = getelementptr inbounds [128 x i8], ptr [[D_LO]], i64 11
+; CHECK-NEXT:    [[D_HI_11:%.*]] = getelementptr inbounds i8, ptr [[D_LO_11]], i64 64
+; CHECK-NEXT:    store <64 x i8> [[LO_11]], ptr [[D_LO_11]], align 64
+; CHECK-NEXT:    store <64 x i8> [[HI_11]], ptr [[D_HI_11]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
