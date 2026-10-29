@@ -156,35 +156,35 @@ define amdgpu_kernel void @load_v4f16_arg(ptr addrspace(1) %out, <4 x half> %arg
 define amdgpu_kernel void @load_v8f16_arg(ptr addrspace(1) %out, <8 x half> %arg) #0 {
 ; CI-LABEL: load_v8f16_arg:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x4
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CI-NEXT:    s_add_i32 s12, s12, s17
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v4, s4
-; CI-NEXT:    v_mov_b32_e32 v5, s5
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s2
 ; CI-NEXT:    v_mov_b32_e32 v3, s3
+; CI-NEXT:    v_mov_b32_e32 v4, s4
+; CI-NEXT:    v_mov_b32_e32 v5, s5
 ; CI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; CI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: load_v8f16_arg:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x10
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; VI-NEXT:    s_add_i32 s12, s12, s17
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v4, s4
-; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
@@ -193,10 +193,10 @@ define amdgpu_kernel void @load_v8f16_arg(ptr addrspace(1) %out, <8 x half> %arg
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
 ; GFX11-NEXT:    s_endpgm
   store <8 x half> %arg, ptr addrspace(1) %out

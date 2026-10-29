@@ -1537,6 +1537,33 @@ public:
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
   }
 
+  /// Return the size in bytes of the operand OpNo on the given
+  // instruction opcode.
+  unsigned getOpSizeCeil(uint32_t Opcode, unsigned OpNo) const {
+    const MCOperandInfo &OpInfo = get(Opcode).operands()[OpNo];
+
+    if (OpInfo.RegClass == -1) {
+      // If this is an immediate operand, this must be a 32-bit literal.
+      assert(OpInfo.OperandType == MCOI::OPERAND_IMMEDIATE);
+      return 4;
+    }
+
+    return divideCeil(
+        RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))), 8);
+  }
+
+  /// This form should usually be preferred since it handles operands
+  /// with unknown register classes.
+  unsigned getOpSizeCeil(const MachineInstr &MI, unsigned OpNo) const {
+    const MachineOperand &MO = MI.getOperand(OpNo);
+    if (MO.isReg()) {
+      if (unsigned SubReg = MO.getSubReg()) {
+        return divideCeil(RI.getSubRegIdxSize(SubReg), 8);
+      }
+    }
+    return divideCeil(RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)), 8);
+  }
+
   /// Legalize the \p OpIndex operand of this instruction by inserting
   /// a MOV.  For example:
   /// ADD_I32_e32 VGPR0, 15
@@ -1826,9 +1853,14 @@ public:
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
+  // Silence a hidden overloaded virtual function warning.
+  using TargetInstrInfo::getInstrLatency;
+
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getIssueCyclesForCopy(const MachineInstr &MI) const override;
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
 

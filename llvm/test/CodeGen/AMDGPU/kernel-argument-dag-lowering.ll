@@ -297,16 +297,16 @@ define amdgpu_kernel void @struct_argument_alignment_after({i32, i64} %arg0, i8,
 ; GCN-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s11
+; GCN-NEXT:    v_mov_b32_e32 v6, s6
+; GCN-NEXT:    v_mov_b32_e32 v7, s7
 ; GCN-NEXT:    global_store_dword v[4:5], v0, off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
+; GCN-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dwordx4 v[4:5], v[0:3], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_endpgm

@@ -942,13 +942,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) #0 {
 ; GISEL-GFX11-NEXT:    s_mov_b32 s2, 3
 ; GISEL-GFX11-NEXT:    s_mov_b32 s1, 2
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, 1
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_lshlrev_b32 v0, 4, v8
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_lshlrev_b32 v4, 4, v8
 ; GISEL-GFX11-NEXT:    s_add_i32 s33, s32, 31
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX11-NEXT:    s_and_not1_b32 s33, s33, 31
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_add_nc_u32 v4, s33, v0
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v4, s33, v4
 ; GISEL-GFX11-NEXT:    s_mov_b32 s34, s32
 ; GISEL-GFX11-NEXT:    s_addk_i32 s32, 0xc0
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v4, v[0:3], off dlc

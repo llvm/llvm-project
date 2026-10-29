@@ -2120,11 +2120,11 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_non_inlineable(<16
 ; GISEL-NEXT:    s_mov_b32 s5, s0
 ; GISEL-NEXT:    s_mov_b32 s6, s0
 ; GISEL-NEXT:    s_mov_b32 s7, s0
-; GISEL-NEXT:    v_mov_b64_e32 v[44:45], 0x65
-; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[6:7]
 ; GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[4:5]
+; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[6:7]
 ; GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
+; GISEL-NEXT:    v_mov_b64_e32 v[44:45], 0x65
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[34:41], v[0:15], v[16:31], v[34:41], v[42:43], v[44:45] matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
