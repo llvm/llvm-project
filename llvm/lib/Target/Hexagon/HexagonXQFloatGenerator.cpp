@@ -851,9 +851,7 @@ bool HexagonXQFloatGenerator::convertIfInputToNonHVX(MachineInstr &MI,
     // Omit for use in PHI instructions since PHI result can be used as a qf
     // operand.
     if (UseMI->getOpcode() == TargetOpcode::REG_SEQUENCE ||
-        UseMI->getOpcode() == TargetOpcode::DBG_VALUE ||
-        UseMI->getOpcode() == TargetOpcode::DBG_LABEL ||
-        UseMI->getOpcode() == TargetOpcode::PHI)
+        UseMI->isDebugInstr() || UseMI->getOpcode() == TargetOpcode::PHI)
       continue;
 
     // If 32-bit operand
