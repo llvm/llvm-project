@@ -3543,11 +3543,39 @@ SparcTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'e':
       return C_RegisterClass;
     case 'I': // SIMM13
+    case 'J': // Zero
+    case 'K': // 32-bit constant with the low 10 bits clear (sethi)
+    case 'L': // SIMM11
+    case 'M': // SIMM10
+    case 'N': // Unsigned 32-bit constant with the low 10 bits clear (sethi)
+    case 'O': // The constant 4096
       return C_Immediate;
     }
   }
 
   return TargetLowering::getConstraintType(Constraint);
+}
+
+/// isValidImmForConstraint - Return true if constraint is satisfied
+static bool isValidImmForConstraint(char Constraint, int64_t Val) {
+  switch (Constraint) {
+  case 'I':
+    return isInt<13>(Val);
+  case 'J':
+    return Val == 0;
+  case 'K':
+    return (isInt<32>(Val) || isUInt<32>(Val)) && (Val & 0x3ff) == 0;
+  case 'L':
+    return isInt<11>(Val);
+  case 'M':
+    return isInt<10>(Val);
+  case 'N':
+    return isUInt<32>(Val) && (Val & 0x3ff) == 0;
+  case 'O':
+    return Val == 4096;
+  default:
+    return false;
+  }
 }
 
 TargetLowering::ConstraintWeight SparcTargetLowering::
@@ -3566,8 +3594,14 @@ getSingleConstraintMatchWeight(AsmOperandInfo &info,
     weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
     break;
   case 'I': // SIMM13
+  case 'J':
+  case 'K':
+  case 'L':
+  case 'M':
+  case 'N':
+  case 'O':
     if (ConstantInt *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
-      if (isInt<13>(C->getSExtValue()))
+      if (isValidImmForConstraint(*constraint, C->getSExtValue()))
         weight = CW_Constant;
     }
     break;
@@ -3590,8 +3624,14 @@ void SparcTargetLowering::LowerAsmOperandForConstraint(
   switch (ConstraintLetter) {
   default: break;
   case 'I':
+  case 'J':
+  case 'K':
+  case 'L':
+  case 'M':
+  case 'N':
+  case 'O':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-      if (isInt<13>(C->getSExtValue())) {
+      if (isValidImmForConstraint(ConstraintLetter, C->getSExtValue())) {
         Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
                                              Op.getValueType());
         break;

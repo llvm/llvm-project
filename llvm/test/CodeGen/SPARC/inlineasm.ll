@@ -153,3 +153,74 @@ Entry:
 }
 
 declare void @brtarget()
+
+; CHECK-LABEL: test_constraint_J:
+; CHECK:       add %i0, 0, %i0
+define i32 @test_constraint_J(i32 %a) {
+entry:
+  %0 = tail call i32 asm sideeffect "add $1, $2, $0", "=r,r,J"(i32 %a, i32 0)
+  ret i32 %0
+}
+
+;; The 'r' modifier prints %g0 for a constant zero.
+; CHECK-LABEL: test_modifier_r_zero:
+; CHECK:       addcc %g0, %i0, %i0
+define i32 @test_modifier_r_zero(i32 %a) {
+entry:
+  %0 = tail call i32 asm sideeffect "addcc ${1:r}, $2, $0", "=r,rJ,rI"(i32 0, i32 %a)
+  ret i32 %0
+}
+
+; CHECK-LABEL: test_modifier_r_reg:
+; CHECK:       addcc %i0, %i1, %i0
+define i32 @test_modifier_r_reg(i32 %a, i32 %b) {
+entry:
+  %0 = tail call i32 asm sideeffect "addcc ${1:r}, $2, $0", "=r,rJ,rI"(i32 %a, i32 %b)
+  ret i32 %0
+}
+
+; CHECK-LABEL: test_constraint_K:
+; CHECK:       sethi %hi(305418240), %i0
+; CHECK:       sethi %hi(-1024), %i0
+define void @test_constraint_K() {
+entry:
+  tail call void asm sideeffect "sethi %hi($0), %i0", "K"(i32 305418240)
+  tail call void asm sideeffect "sethi %hi($0), %i0", "K"(i32 -1024)
+  ret void
+}
+
+; CHECK-LABEL: test_constraint_L:
+; CHECK:       mov 1023, %i0
+; CHECK:       mov -1024, %i0
+define void @test_constraint_L() {
+entry:
+  tail call void asm sideeffect "mov $0, %i0", "L"(i32 1023)
+  tail call void asm sideeffect "mov $0, %i0", "L"(i32 -1024)
+  ret void
+}
+
+; CHECK-LABEL: test_constraint_M:
+; CHECK:       mov 511, %i0
+; CHECK:       mov -512, %i0
+define void @test_constraint_M() {
+entry:
+  tail call void asm sideeffect "mov $0, %i0", "M"(i32 511)
+  tail call void asm sideeffect "mov $0, %i0", "M"(i32 -512)
+  ret void
+}
+
+; CHECK-LABEL: test_constraint_N:
+; CHECK:       sethi %hi(2147482624), %i0
+define void @test_constraint_N() {
+entry:
+  tail call void asm sideeffect "sethi %hi($0), %i0", "N"(i32 2147482624)
+  ret void
+}
+
+; CHECK-LABEL: test_constraint_O:
+; CHECK:       sub %i0, -4096, %i0
+define void @test_constraint_O() {
+entry:
+  tail call void asm sideeffect "sub %i0, -$0, %i0", "O"(i32 4096)
+  ret void
+}

@@ -500,9 +500,16 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       O << '%' << SparcInstPrinter::getRegisterName(Reg);
       return false;
     }
+    case 'r': {
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      if (MO.isImm() && MO.getImm() == 0) {
+        O << "%g0";
+        return false;
+      }
+      break;
+    }
     case 'f':
-    case 'r':
-     break;
+      break;
     }
   }
 
