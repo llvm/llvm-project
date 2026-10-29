@@ -1,10 +1,9 @@
-; RUN: opt -disable-output -passes='print<dxil-signature>' %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 ; RUN: llc -filetype=obj %s -o %t.dxbc
-; RUN: obj2yaml %t.dxbc | FileCheck %s --check-prefix=PARTS
-; RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
-; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefixes=MD,DXIL
+; RUN: obj2yaml %t.dxbc | FileCheck %s
 
-; SV_PrimitiveID is a system-generated pixel input, read with loadInput.
+; SV_PrimitiveID is written to the ISG1 and PSV0 parts as an allocated input
+; element with the PrimitiveID system value. Packing is covered by
+; Metadata/semantic-signatures-primitive-id.ll.
 target triple = "dxil-pc-shadermodel6.0-pixel"
 
 define void @main() #0 {
@@ -28,30 +27,23 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !6 = !{i32 0, !"SV_Target", i32 9, i32 16, !7, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !7 = !{i32 0}
 
-; ANALYSIS:      Inputs: 2 elements, 2 vectors
-; ANALYSIS-NEXT: 0: A rows=1 cols=1 at 0:0 usage=1 dynamic=0
-; ANALYSIS-NEXT: 1: SV_PrimitiveID rows=1 cols=1 at 1:0 usage=1 dynamic=0
-
-; DXIL: call i32 @dx.op.loadInput.i32(i32 4, i32 1, i32 0, i8 0, i32 {{.*}})
-; MD-DAG: !{i32 1, !"SV_PrimitiveID", i8 5, i8 10, !{{[0-9]+}}, i8 1, i32 1, i8 1, i32 1, i8 0, !{{[0-9]+}}}
-
-; PARTS: Name: ISG1
-; PARTS:      Name: SV_PrimitiveID
-; PARTS-NEXT: Index: 0
-; PARTS-NEXT: SystemValue: PrimitiveID
-; PARTS-NEXT: CompType: UInt32
-; PARTS-NEXT: Register: 1
-; PARTS-NEXT: Mask: 1
-; PARTS-NEXT: ExclusiveMask: 1
-; PARTS: Name: PSV0
-; PARTS: SampleFrequency: 0
-; PARTS: SigInputElements:
-; PARTS:      Kind: Arbitrary
-; PARTS:      Indices: [ 0 ]
-; PARTS-NEXT: StartRow: 1
-; PARTS-NEXT: Cols: 1
-; PARTS-NEXT: StartCol: 0
-; PARTS-NEXT: Allocated: true
-; PARTS-NEXT: Kind: PrimitiveID
-; PARTS-NEXT: ComponentType: UInt32
-; PARTS-NEXT: Interpolation: Constant
+; CHECK: Name: ISG1
+; CHECK:      Name: SV_PrimitiveID
+; CHECK-NEXT: Index: 0
+; CHECK-NEXT: SystemValue: PrimitiveID
+; CHECK-NEXT: CompType: UInt32
+; CHECK-NEXT: Register: 1
+; CHECK-NEXT: Mask: 1
+; CHECK-NEXT: ExclusiveMask: 1
+; CHECK: Name: PSV0
+; CHECK: SampleFrequency: 0
+; CHECK: SigInputElements:
+; CHECK:      Kind: Arbitrary
+; CHECK:      Indices: [ 0 ]
+; CHECK-NEXT: StartRow: 1
+; CHECK-NEXT: Cols: 1
+; CHECK-NEXT: StartCol: 0
+; CHECK-NEXT: Allocated: true
+; CHECK-NEXT: Kind: PrimitiveID
+; CHECK-NEXT: ComponentType: UInt32
+; CHECK-NEXT: Interpolation: Constant
