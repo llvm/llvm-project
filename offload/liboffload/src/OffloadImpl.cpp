@@ -1525,6 +1525,16 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
     if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
+                                    ->getStaticBlockMemSize());
+  case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(
+        std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
@@ -1628,10 +1638,6 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
 
 __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue ? Queue->AsyncInfo : nullptr;
-}
-
-GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
-  return std::get<GenericKernelTy *>(Symbol->PluginImpl);
 }
 
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
