@@ -48,3 +48,9 @@ entry:
 !26 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !28 = !DILocation(line: 0, scope: !23)
 !30 = !DILocalVariable(name: "quotient", scope: !23, file: !1, line: 10, type: !26)
+; CHECK: [[META3:![0-9]+]] = distinct !DISubprogram(name: "sdiv_elide"
+; CHECK: [[META1]] = !DILocalVariable(name: "quotient", scope: [[META3]]
+; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
+; CHECK: [[META6:![0-9]+]] = distinct !DISubprogram(name: "udiv_elide"
+; CHECK: [[META4]] = !DILocalVariable(name: "quotient", scope: [[META6]]
+; CHECK: [[META5]] = !DILocation(line: 0, scope: [[META6]])
