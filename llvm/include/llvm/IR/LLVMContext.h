@@ -15,6 +15,7 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +44,10 @@ class LLVMRemarkStreamer;
 
 namespace remarks {
 class RemarkStreamer;
+}
+
+namespace vfs {
+class FileSystem;
 }
 
 namespace SyncScope {
@@ -269,6 +274,12 @@ public:
   LLVM_ABI const LLVMRemarkStreamer *getLLVMRemarkStreamer() const;
   LLVM_ABI void
   setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer);
+
+  /// The virtual filesystem used for inputs.
+  /// Clients that enable the IO sandbox must set one to prevent violations.
+  LLVM_ABI vfs::FileSystem &getVirtualFileSystem() const;
+  LLVM_ABI IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity

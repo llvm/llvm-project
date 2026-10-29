@@ -640,18 +640,21 @@ class CLASS_RINT_DESC_BASE<string instr_asm, RegisterOperand FGROpnd> {
   list<dag> Pattern = [];
 }
 
-class RINT_S_DESC : CLASS_RINT_DESC_BASE<"rint.s", FGR32Opnd>;
-class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd>;
+class RINT_S_DESC : CLASS_RINT_DESC_BASE<"rint.s", FGR32Opnd> {
+  let Pattern = [(set FGR32Opnd:$fd, (any_frint FGR32Opnd:$fs))];
+}
+class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd> {
+  let Pattern = [(set FGR64Opnd:$fd, (any_frint FGR64Opnd:$fs))];
+}
 class CLASS_S_DESC : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd>;
 class CLASS_D_DESC : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd>;
 
 class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd>
                      : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins MemOpnd:$addr, uimm5:$hint);
-  string AsmString = !strconcat(instr_asm, "\t$hint, $addr");
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset, uimm5:$hint);
+  string AsmString = !strconcat(instr_asm, "\t$hint, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeCacheeOp_CacheOpR6";
 }
 
 class CACHE_DESC : CACHE_HINT_DESC<"cache", mem_simm9>;
@@ -659,11 +662,10 @@ class PREF_DESC : CACHE_HINT_DESC<"pref", mem_simm9>;
 
 class COP2LD_DESC_BASE<string instr_asm, RegisterOperand COPOpnd> {
   dag OutOperandList = (outs COPOpnd:$rt);
-  dag InOperandList = (ins mem_simm11:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, mem_simm11:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   bit mayLoad = 1;
-  string DecoderMethod = "DecodeFMemCop2R6";
 }
 
 class LDC2_R6_DESC : COP2LD_DESC_BASE<"ldc2", COP2Opnd>;
@@ -671,11 +673,10 @@ class LWC2_R6_DESC : COP2LD_DESC_BASE<"lwc2", COP2Opnd>;
 
 class COP2ST_DESC_BASE<string instr_asm, RegisterOperand COPOpnd> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins COPOpnd:$rt, mem_simm11:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins COPOpnd:$rt, MemBase:$base, mem_simm11:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   bit mayStore = 1;
-  string DecoderMethod = "DecodeFMemCop2R6";
 }
 
 class SDC2_R6_DESC : COP2ST_DESC_BASE<"sdc2", COP2Opnd>;
@@ -696,8 +697,8 @@ class LL_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                       Operand MemOpnd>
       : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   bit mayLoad = 1;
 }
@@ -706,8 +707,8 @@ class LL_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp>;
 
 class SC_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$dst);
-  dag InOperandList = (ins GPROpnd:$rt, mem_simm9_exp:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins GPROpnd:$rt, MemBase:$base, mem_simm9_exp:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   bit mayStore = 1;
   string Constraints = "$rt = $dst";

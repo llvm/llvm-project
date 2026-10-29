@@ -40,7 +40,7 @@ class OpenACCSupport;
 struct ACCDataRuntimeArgs {
   /// Source position and enclosing function name of the directive.
   Value ident;
-  /// Reserved for per-call runtime flags; no flag is defined yet.
+  /// Region flags, in the encoding of `ACCDataRegionFlags`.
   Value flags;
   /// Device type the directive applies to, in the runtime encoding.
   Value deviceType;
@@ -64,6 +64,10 @@ struct ACCDataRuntimeArgs {
   /// a known size.
   Value argDescs;
 
+  /// The `argBasePtrs` slot the entry point writes the device address of each
+  /// requested operand into, in the order the operands were requested.
+  SmallVector<unsigned> returnAddressSlots;
+
   /// Returns the fields above in the order the entry points take them, so that
   /// a caller only appends the arguments specific to the one it calls.
   SmallVector<Value> getCallArgs() const;
@@ -75,9 +79,78 @@ enum class ACCDataCallKind {
   DataExit,
 };
 
+/// Flags of `__tgt_acc_data_begin` and `__tgt_acc_data_end`. They describe the
+/// data region.
+enum class ACCDataRegionFlags : int64_t {
+  /// An explicit data construct.
+  None = 0,
+  /// The implicit data region of a compute construct.
+  Implicit = 1,
+  /// The region of a structured declare directive in a local scope, which
+  /// lasts until that scope ends.
+  Declare = 2,
+};
+
+/// What a data runtime call is asked for besides mapping its operands.
+struct ACCDataCallOptions {
+  ACCDataCallKind callKind = ACCDataCallKind::DataEnter;
+  /// Region flags, in the encoding of `ACCDataRegionFlags`.
+  int64_t flags = static_cast<int64_t>(ACCDataRegionFlags::None);
+  /// Mapping operands whose device address the entry point returns.
+  ValueRange returnAddressOperands;
+};
+
+/// The values that describe one object to the runtime, one for each argument
+/// array.
+struct ACCMappedObjectArgs {
+  Value base;
+  Value pointer;
+  Value size;
+  Value type;
+  Value name;
+  Value descriptor;
+};
+
 /// Materialize \p values as a stack-allocated LLVM array.
 Value createACCDataArray(Location loc, Type elementType, ArrayRef<Value> values,
                          RewriterBase &rewriter);
+
+/// Materialize the argument arrays of \p objects into the `argNum` through
+/// `argDescs` fields of \p runtimeArgs. An `argNum` the caller already set is
+/// kept, so the count can be emitted before the object values.
+void createACCMappedObjectArrays(Location loc,
+                                 ArrayRef<ACCMappedObjectArgs> objects,
+                                 ACCDataRuntimeArgs &runtimeArgs,
+                                 RewriterBase &rewriter);
+
+/// The address of \p operand as the runtime expects to receive it, given its
+/// type converted value \p converted and its \p mapFlags.
+Value createACCMappedObjectPointer(Location loc, Value operand, Value converted,
+                                   acc::MapFlags mapFlags,
+                                   ConversionPatternRewriter &rewriter);
+
+/// The host pointer slot the object \p mapOp maps is attached to, or a null
+/// pointer when it is not attached. \p mapOp may be null.
+Value createACCMappedObjectBase(Location loc, Operation *mapOp,
+                                acc::MapFlags mapFlags,
+                                ConversionPatternRewriter &rewriter);
+
+/// The size in bytes of \p operand, or zero where its descriptor or bounds
+/// state the extent instead. Fails, after reporting it, when \p operand is
+/// passed by value and the size of what is passed is not known.
+FailureOr<Value> createACCMappedObjectSize(Location loc, Value operand,
+                                           Value converted,
+                                           acc::MapFlags mapFlags,
+                                           acc::OpenACCSupport &accSupport,
+                                           ConversionPatternRewriter &rewriter);
+
+/// The name of \p operand for runtime diagnostics, or a null pointer when it
+/// has none. The name global is created as in acc::getOrCreateGlobalString.
+Value createACCMappedObjectName(Location loc, Value operand,
+                                acc::OpenACCSupport &accSupport,
+                                Region &globalSymbolRegion,
+                                SymbolTable *symbolTable,
+                                ConversionPatternRewriter &rewriter);
 
 /// Wrap \p baseDescriptor in the OpenACC overlay that carries \p bounds.
 /// Field zero of \p baseDescriptor is set to \p version with the OpenACC
@@ -107,15 +180,26 @@ Value createACCArgumentDescriptor(Operation *mapOp, Value convertedOperand,
 /// operands may be `acc.map_info` or the data-clause operations it replaces.
 /// The emitted arrays name globals after the mapped objects and the position
 /// of the directive; they are created in \p globalSymbolRegion, with \p
-/// symbolTable as in acc::getOrCreateGlobalString.
+/// symbolTable as in acc::getOrCreateGlobalString. \p options gives the region
+/// flags and the kind of call. Each of `options.returnAddressOperands` has
+/// `acc::MapFlags::return_param` set, and its slot is recorded in
+/// `returnAddressSlots`.
 LogicalResult emitACCDataRuntimeArgs(
     Location loc, ValueRange mappingOperands, ValueRange convertedOperands,
     ConversionPatternRewriter &rewriter, Region &globalSymbolRegion,
     acc::OpenACCSupport &accSupport, const acc::ACCRuntimeCallConfig &config,
-    ACCDataRuntimeArgs &runtimeArgs,
-    ACCDataCallKind callKind = ACCDataCallKind::DataEnter,
+    ACCDataRuntimeArgs &runtimeArgs, const ACCDataCallOptions &options = {},
     SymbolTable *symbolTable = nullptr);
 
+/// Emit the call to the mapping entry point \p fn for \p mappingOperands,
+/// followed by \p trailingArguments. Emits nothing when there is no operand.
+/// Returns the device address of each of `options.returnAddressOperands`.
+FailureOr<SmallVector<Value>> emitACCDataRuntimeCall(
+    Location loc, acc::RuntimeFunction fn, ValueRange mappingOperands,
+    ValueRange convertedOperands, ConversionPatternRewriter &rewriter,
+    acc::OpenACCSupport &accSupport, Region &globalSymbolRegion,
+    SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config,
+    ArrayRef<Value> trailingArguments, const ACCDataCallOptions &options = {});
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_OPENACCTOLLVM_ACCDATARUNTIME_H

@@ -671,38 +671,6 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   if (closeP) O << ")";
 }
 
-void MipsAsmPrinter::
-printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O) {
-  // Load/Store memory operands -- imm($reg)
-  // If PIC target the target is loaded as the
-  // pattern lw $25,%call16($28)
-
-  // opNum can be invalid if instruction has reglist as operand.
-  // MemOperand is always last operand of instruction (base + offset).
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case Mips::SWM32_MM:
-  case Mips::LWM32_MM:
-    opNum = MI->getNumOperands() - 2;
-    break;
-  }
-
-  printOperand(MI, opNum+1, O);
-  O << "(";
-  printOperand(MI, opNum, O);
-  O << ")";
-}
-
-void MipsAsmPrinter::
-printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
-  // when using stack locations for not load/store instructions
-  // print the same way as all normal 3 operand instructions.
-  printOperand(MI, opNum, O);
-  O << ", ";
-  printOperand(MI, opNum+1, O);
-}
-
 void MipsAsmPrinter::printFCCOperand(const MachineInstr *MI, int opNum,
                                      raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(opNum);
@@ -776,7 +744,9 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     // We should always emit a '.module fp=...' but binutils 2.24 does not
     // accept it. We therefore emit it when it contradicts the ABI defaults
     // (-mfpxx or -mfp64) and omit it otherwise.
-    if ((ABI.IsO32() && (STI.isABI_FPXX() || STI.isFP64bit())) ||
+    // Single-float uses its own ABI even when 64-bit FPRs are enabled.
+    if ((ABI.IsO32() && !STI.isSingleFloat() &&
+         (STI.isABI_FPXX() || STI.isFP64bit())) ||
         STI.useSoftFloat())
       TS.emitDirectiveModuleFP();
 

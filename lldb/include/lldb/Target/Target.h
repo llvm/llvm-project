@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -35,6 +36,7 @@
 #include "lldb/Target/Statistics.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/TargetAPIMutex.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -47,6 +49,7 @@
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
@@ -2073,7 +2076,30 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+  /// Return the target groups this target belongs to.
+  std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
+
+  /// Return the first target group that can be cast to GroupT.
+  template <typename GroupT>
+  std::shared_ptr<GroupT> GetFirstTargetGroupOfType() const {
+    static_assert(std::is_base_of_v<TargetGroup, GroupT>,
+                  "GroupT must derive from TargetGroup");
+    for (const lldb::TargetGroupSP &group_sp : GetTargetGroups()) {
+      if (GroupT *group = llvm::dyn_cast<GroupT>(group_sp.get()))
+        return std::shared_ptr<GroupT>(group_sp, group);
+    }
+    return {};
+  }
+
 protected:
+  friend class TargetGroup;
+  friend class TargetGroupList;
+
+  /// Called only by TargetGroup::AddTarget to record group membership.
+  void AddTargetGroup(const lldb::TargetGroupSP &group_sp);
+  /// Called only by TargetGroup::RemoveTarget to remove group membership.
+  void RemoveTargetGroup(const TargetGroup *group);
+
   /// The mutex the calling thread must serialize on for its current policy, or
   /// nullptr when that policy bypasses the API mutex entirely.
   std::recursive_mutex *GetAPIMutexForCurrentPolicy();
@@ -2191,6 +2217,9 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  /// Every target group this target belongs to.
+  TargetGroupList m_target_groups;
 
   lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 

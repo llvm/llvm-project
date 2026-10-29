@@ -868,7 +868,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                  isa<IndirectBrInst>(Pred->getTerminator())))
     return true;
 
-  if (BB->getTerminator() != &*BB->getFirstNonPHIOrDbg())
+  if (BB->getTerminator() != &*BB->getFirstNonPHIOrPseudoProbe())
     return true;
 
   // We use a simple cost heuristic which determine skipping merging is
@@ -1201,46 +1201,10 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
     IRBuilder<> Builder(RelocatedBase->getNextNode());
     Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
 
-    // If gc_relocate does not match the actual type, cast it to the right type.
-    // In theory, there must be a bitcast after gc_relocate if the type does not
-    // match, and we should reuse it to get the derived pointer. But it could be
-    // cases like this:
-    // bb1:
-    //  ...
-    //  %g1 = call coldcc i8 addrspace(1)*
-    //  @llvm.experimental.gc.relocate.p1i8(...) br label %merge
-    //
-    // bb2:
-    //  ...
-    //  %g2 = call coldcc i8 addrspace(1)*
-    //  @llvm.experimental.gc.relocate.p1i8(...) br label %merge
-    //
-    // merge:
-    //  %p1 = phi i8 addrspace(1)* [ %g1, %bb1 ], [ %g2, %bb2 ]
-    //  %cast = bitcast i8 addrspace(1)* %p1 in to i32 addrspace(1)*
-    //
-    // In this case, we can not find the bitcast any more. So we insert a new
-    // bitcast no matter there is already one or not. In this way, we can handle
-    // all cases, and the extra bitcast should be optimized away in later
-    // passes.
-    Value *ActualRelocatedBase = RelocatedBase;
-    if (RelocatedBase->getType() != Base->getType()) {
-      ActualRelocatedBase =
-          Builder.CreateBitCast(RelocatedBase, Base->getType());
-    }
-    Value *Replacement =
-        Builder.CreateGEP(Derived->getSourceElementType(), ActualRelocatedBase,
-                          ArrayRef(OffsetV));
+    Value *Replacement = Builder.CreateGEP(Derived->getSourceElementType(),
+                                           RelocatedBase, ArrayRef(OffsetV));
     Replacement->takeName(ToReplace);
-    // If the newly generated derived pointer's type does not match the original
-    // derived pointer's type, cast the new derived pointer to match it. Same
-    // reasoning as above.
-    Value *ActualReplacement = Replacement;
-    if (Replacement->getType() != ToReplace->getType()) {
-      ActualReplacement =
-          Builder.CreateBitCast(Replacement, ToReplace->getType());
-    }
-    ToReplace->replaceAllUsesWith(ActualReplacement);
+    ToReplace->replaceAllUsesWith(Replacement);
     ToReplace->eraseFromParent();
 
     MadeChange = true;
@@ -2874,9 +2838,6 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 /// @endcode
 bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
                                                 ModifyDT &ModifiedDT) {
-  if (!BB->getTerminator())
-    return false;
-
   ReturnInst *RetI = dyn_cast<ReturnInst>(BB->getTerminator());
   if (!RetI)
     return false;
@@ -2905,16 +2866,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   if (PN && PN->getParent() != BB)
     return false;
 
-  auto isLifetimeEndOrBitCastFor = [](const Instruction *Inst) {
-    const BitCastInst *BC = dyn_cast<BitCastInst>(Inst);
-    if (BC && BC->hasOneUse())
-      Inst = BC->user_back();
-
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
-      return II->getIntrinsicID() == Intrinsic::lifetime_end;
-    return false;
-  };
-
   SmallVector<const IntrinsicInst *, 4> FakeUses;
 
   auto isFakeUse = [&FakeUses](const Instruction *Inst) {
@@ -2941,7 +2892,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
   // Skip over pseudo-probes and the bitcast.
   while (&*BI == BCI || &*BI == EVI || isa<PseudoProbeInst>(BI) ||
-         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI))
+         match(&*BI, m_Intrinsic<Intrinsic::lifetime_end>()) || isFakeUse(&*BI))
     BI = std::next(BI);
   if (&*BI != RetI)
     return false;
@@ -3503,8 +3454,6 @@ class TypePromotionTransaction {
     /// instances of the new value with the original value.
     Value *New;
 
-    using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
-
   public:
     /// Replace all the use of \p Inst by \p New.
     UsesReplacer(Instruction *Inst, Value *New)
@@ -3634,9 +3583,6 @@ public:
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
-
-  using CommitPt =
-      SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator;
 
   SetOfInstrs &RemovedInsts;
 };
@@ -4584,6 +4530,8 @@ static bool MightBeFoldableInst(Instruction *I) {
     return true;
   case Instruction::Add:
     return true;
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(I)->isDisjoint();
   case Instruction::Mul:
   case Instruction::Shl:
     // Can only handle X*C and X << C.
@@ -5094,6 +5042,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(AddrInst)->isDisjoint())
+      return false;
+    [[fallthrough]];
   case Instruction::Add: {
     // Check to see if we can merge in one operand, then the other.  If so, we
     // win.
@@ -5134,9 +5086,6 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TPT.rollback(LastKnownGood);
     break;
   }
-  // case Instruction::Or:
-  //  TODO: We can handle "Or Val, Imm" iff this OR is equivalent to an ADD.
-  // break;
   case Instruction::Mul:
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
@@ -7278,6 +7227,12 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     MadeChange = true;
   }
 
+  // The uses rewritten above read trunc(I), which equals Src only where I isn't
+  // poison. A poison-generating flag such as zext nneg can only hold under a
+  // guard, such as a sign check of Src, that itself is one of those uses.
+  if (MadeChange)
+    I->dropPoisonGeneratingFlags();
+
   return MadeChange;
 }
 
@@ -8956,6 +8911,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     }
     return AnyChange;
   }
+
+  // Try to fold some cross-lane vector operations if in a loop.
+  if (I->getType()->isVectorTy() &&
+      TLI->optimizeVectorCrossLaneOperation(I, LI->getLoopFor(I->getParent())))
+    return true;
 
   if (tryToSinkFreeOperands(I))
     return true;

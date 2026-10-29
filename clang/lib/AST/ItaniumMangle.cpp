@@ -462,7 +462,7 @@ private:
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
 
-  void mangleExistingSubstitution(TemplateName name);
+  TemplateName mangleExistingSubstitution(TemplateName name);
 
   bool mangleStandardSubstitution(const NamedDecl *ND);
 
@@ -2644,7 +2644,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *TST =
         cast<TemplateSpecializationType>(Ty);
-    TemplateName TN = TST->getTemplateName();
+    TemplateName TN = mangleExistingSubstitution(TST->getTemplateName());
     switch (TN.getKind()) {
     case TemplateName::Template:
     case TemplateName::QualifiedTemplate: {
@@ -2670,12 +2670,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
-    case TemplateName::SubstTemplateTemplateParm: {
-      SubstTemplateTemplateParmStorage *subst =
-          TN.getAsSubstTemplateTemplateParm();
-      mangleExistingSubstitution(subst->getReplacement());
+    case TemplateName::SubstTemplateTemplateParm:
+      // mangleExistingSubstitution already mangled a substitution for it.
       break;
-    }
 
     case TemplateName::SubstTemplateTemplateParmPack: {
       // FIXME: not clear how to mangle this!
@@ -4945,7 +4942,13 @@ void CXXNameMangler::mangleCastExpression(const Expr *E, StringRef CastEncoding)
   const ExplicitCastExpr *ECE = cast<ExplicitCastExpr>(E);
   Out << CastEncoding;
   mangleType(ECE->getType());
-  mangleExpression(ECE->getSubExpr());
+  if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(ECE->getSubExpr())) {
+    ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+    assert(Inits.size() == 1 && "cast must have exactly one operand");
+    mangleExpression(Inits.front());
+  } else {
+    mangleExpression(ECE->getSubExpr());
+  }
 }
 
 void CXXNameMangler::mangleInitListElements(const InitListExpr *InitList) {
@@ -5344,6 +5347,9 @@ recurse:
                                                   E = CCE->arg_end();
              I != E; ++I)
           mangleExpression(*I);
+      } else if (const auto *PLE = dyn_cast<CXXParenListInitExpr>(Init)) {
+        for (const Expr *Arg : PLE->getUserSpecifiedInitExprs())
+          mangleExpression(Arg);
       } else if (const ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init)) {
         for (unsigned i = 0, e = PLE->getNumExprs(); i != e; ++i)
           mangleExpression(PLE->getExpr(i));
@@ -5770,7 +5776,17 @@ recurse:
         Sub = CCE->getArg(0)->IgnoreImplicit();
     if (auto *StdInitList = dyn_cast<CXXStdInitializerListExpr>(Sub))
       Sub = StdInitList->getSubExpr()->IgnoreImplicit();
-    if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
+    if (auto *PLIE = dyn_cast<CXXParenListInitExpr>(Sub)) {
+      ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+      Out << "cv";
+      mangleType(E->getType());
+      if (Inits.size() != 1)
+        Out << '_';
+      for (const Expr *Init : Inits)
+        mangleExpression(Init);
+      if (Inits.size() != 1)
+        Out << 'E';
+    } else if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
       Out << "tl";
       mangleType(E->getType());
       mangleInitListElements(IL);
@@ -7171,10 +7187,16 @@ void CXXNameMangler::mangleSeqID(unsigned SeqID) {
   Out << '_';
 }
 
-void CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
-  bool result = mangleSubstitution(tname);
-  assert(result && "no existing substitution for template name");
-  (void) result;
+TemplateName CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
+  while (SubstTemplateTemplateParmStorage *subst =
+             tname.getAsSubstTemplateTemplateParm()) {
+    if (mangleSubstitution(subst->getReplacement()))
+      return tname;
+    if (isCompatibleWith(LangOptions::ClangABI::Ver23))
+      return tname;
+    tname = subst->getReplacement();
+  }
+  return tname;
 }
 
 // <substitution> ::= S <seq-id> _

@@ -380,12 +380,15 @@ static void emitOptionsStruct(const Record &Struct,
     OS << "\nprivate:\n  friend class llvm::cl::LibraryOptionsContext;\n"
           "  friend class llvm::opt::LibraryOptionsParser;\n";
   OS << "\n  static " << Name << " Global;\n";
+  OS << "  static const " << Name << " Default;\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
   std::string Qualified = (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
-  OS << Qualified << " " << Qualified << "::Global;\n\n";
+  OS << Qualified << " " << Qualified << "::Global;\n";
+  OS << "LLVM_REQUIRE_CONSTANT_INITIALIZATION const " << Qualified << " "
+     << Qualified << "::Default;\n\n";
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
   OS << "  return T;\n}\n\n";

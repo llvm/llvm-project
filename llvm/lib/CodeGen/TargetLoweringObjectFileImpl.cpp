@@ -133,10 +133,11 @@ void TargetLoweringObjectFileELF::initialize(MCContext &Ctx,
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Ctx.getAsmInfo().getExceptionHandlingType() == ExceptionHandling::ARM)
+    if (M.getExceptionModel() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
     [[fallthrough]];
+  case Triple::m68k:
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::x86:

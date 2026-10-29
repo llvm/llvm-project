@@ -304,15 +304,12 @@ define <2 x i16> @test_smulh(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_smulh(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<7>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.b32 %r2, [test_smulh_param_1];
-; COMMON-NEXT:    ld.param.b32 %r1, [test_smulh_param_0];
-; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; COMMON-NEXT:    mul.hi.s16 %rs5, %rs4, %rs2;
-; COMMON-NEXT:    mul.hi.s16 %rs6, %rs3, %rs1;
+; COMMON-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_smulh_param_0];
+; COMMON-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_smulh_param_1];
+; COMMON-NEXT:    mul.hi.s16 %rs5, %rs2, %rs4;
+; COMMON-NEXT:    mul.hi.s16 %rs6, %rs1, %rs3;
 ; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; COMMON-NEXT:    ret;
   %r = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> %a, <2 x i16> %b)
@@ -323,15 +320,12 @@ define <2 x i16> @test_umulh(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_umulh(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<7>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.b32 %r2, [test_umulh_param_1];
-; COMMON-NEXT:    ld.param.b32 %r1, [test_umulh_param_0];
-; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; COMMON-NEXT:    mul.hi.u16 %rs5, %rs4, %rs2;
-; COMMON-NEXT:    mul.hi.u16 %rs6, %rs3, %rs1;
+; COMMON-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_umulh_param_0];
+; COMMON-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_umulh_param_1];
+; COMMON-NEXT:    mul.hi.u16 %rs5, %rs2, %rs4;
+; COMMON-NEXT:    mul.hi.u16 %rs6, %rs1, %rs3;
 ; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; COMMON-NEXT:    ret;
   %r = call <2 x i16> @llvm.umulh.v2i16(<2 x i16> %a, <2 x i16> %b)
@@ -418,15 +412,13 @@ define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_xor_computed(i16 %a) {
 ; COMMON-LABEL: test_xor_computed(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<4>;
+; COMMON-NEXT:    .reg .b16 %rs<2>;
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b16 %rs1, [test_xor_computed_param_0];
-; COMMON-NEXT:    mov.b16 %rs2, 0;
-; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; COMMON-NEXT:    mov.b16 %rs3, 5;
-; COMMON-NEXT:    mov.b32 %r2, {%rs1, %rs3};
+; COMMON-NEXT:    mov.b32 %r1, {%rs1, 0};
+; COMMON-NEXT:    mov.b32 %r2, {%rs1, 5};
 ; COMMON-NEXT:    xor.b32 %r3, %r2, %r1;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;

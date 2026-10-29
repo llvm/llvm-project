@@ -52,7 +52,6 @@ class ObjCProtocolDecl;
 class Selector;
 class ObjCIvarDecl;
 class ObjCStringLiteral;
-class BlockDeclRefExpr;
 
 namespace CodeGen {
 class CodeGenModule;

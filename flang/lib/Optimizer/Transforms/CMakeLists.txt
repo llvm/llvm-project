@@ -45,6 +45,7 @@ add_flang_library(FIRTransforms
   FunctionAttr.cpp
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp
+  LoopTripCountVersioning.cpp
   LoopVersioning.cpp
   SelectOpsConversion.cpp
   MIFOpConversion.cpp
@@ -86,7 +87,7 @@ add_flang_library(FIRTransforms
 
   MLIR_LIBS
   MLIRAffineUtils
-  MLIRAnalysis
+  MLIRAnalysisDataFlow
   MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect

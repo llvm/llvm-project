@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <array>
@@ -218,7 +219,7 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 /// of an Expand argument an empty dict.  Direct and Extend slots keep their
 /// other existing attributes.  \p origArgTypes provides the pre-rewrite type
 /// for each arg slot.
-mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
+mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
                                const FunctionClassification &fc,
@@ -279,12 +280,19 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       } else {
         // llvm.nofreeobj says the object cannot be freed while the callee
         // runs, which holds because the caller owns it across the call.
-        // Classic adds llvm.dead_on_return when the object's lifetime ends in
-        // the callee, which needs the destructor's triviality from
-        // cir.record_layout's has_trivial_dtor.
-        assert(!cir::MissingFeatures::deadOnReturnAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getNoFreeObjAttrName(),
                   builder.getUnitAttr());
+        // llvm.dead_on_return says the object's lifetime ends in the callee,
+        // which holds unless the caller still has a destructor to run on it.
+        // A record with no layout entry has no destructor.
+        auto recTy = mlir::dyn_cast<cir::RecordType>(pointeeTy);
+        cir::RecordLayoutAttr layout =
+            recTy ? cir::tryGetRecordLayout(module, recTy.getName())
+                  : cir::RecordLayoutAttr();
+        if (!layout || layout.getHasTrivialDtor())
+          attrs.set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
+                    builder.getI64IntegerAttr(static_cast<int64_t>(
+                        llvm::DeadOnReturnInfo().toIntValue())));
         attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                   builder.getI64IntegerAttr(
                       dl.getTypeSize(pointeeTy).getFixedValue()));
@@ -484,14 +492,39 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
                           dstTy == slotTy ? 0 : offset);
 }
 
+/// Cast \p src to \p dstTy when both are pointers to the same pointee, so only
+/// the address space changes.  Returns null when a real coercion is needed.
+static mlir::Value
+emitAddrSpaceCoercion(mlir::OpBuilder &builder, mlir::Location loc,
+                      mlir::Type dstTy, mlir::Value src,
+                      SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                      unsigned offset) {
+  auto srcPtrTy = dyn_cast<cir::PointerType>(src.getType());
+  auto dstPtrTy = dyn_cast<cir::PointerType>(dstTy);
+  if (offset || !srcPtrTy || !dstPtrTy ||
+      srcPtrTy.getPointee() != dstPtrTy.getPointee())
+    return {};
+  assert(srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace() &&
+         "pointers to the same pointee must differ in address space");
+  auto cast = cir::CastOp::create(builder, loc, dstTy,
+                                  cir::CastKind::address_space, src);
+  createdOps.insert(cast);
+  return cast;
+}
+
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
 /// coerced value back out.  Builds on emitCoercionToMemory, adding the final
-/// load of the destination-typed view.
+/// load of the destination-typed view.  A pointer that only changes address
+/// space is cast instead.
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
                          SmallPtrSetImpl<mlir::Operation *> &createdOps,
                          unsigned offset) {
+  if (mlir::Value cast =
+          emitAddrSpaceCoercion(builder, loc, dstTy, src, createdOps, offset))
+    return cast;
+
   mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
                                              slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);
@@ -794,14 +827,20 @@ replaceUsesFromSlot(mlir::OpBuilder &builder, mlir::Location loc,
 /// \p origTy through a coercion slot at the start of \p slotBlock, and point
 /// the uses of \p val outside \p createdOps at the result with
 /// replaceUsesFromSlot.  A direct \p offset lands on the coerced side, so the
-/// view of \p origTy starts at the slot.  The coercion's operations are added
-/// to \p createdOps.
+/// view of \p origTy starts at the slot.  A pointer that only changes address
+/// space is cast instead.  The coercion's operations are added to
+/// \p createdOps.
 static mlir::LogicalResult
 emitCoercionAndReplaceUses(mlir::OpBuilder &builder, mlir::Location loc,
                            mlir::Type origTy, mlir::Value src, mlir::Value val,
                            mlir::Block *slotBlock, const mlir::DataLayout &dl,
                            SmallPtrSetImpl<mlir::Operation *> &createdOps,
                            unsigned offset) {
+  if (mlir::Value cast = emitAddrSpaceCoercion(builder, loc, origTy, src,
+                                               createdOps, offset)) {
+    val.replaceAllUsesExcept(cast, createdOps);
+    return mlir::success();
+  }
   mlir::Value view = emitCoercionToMemory(builder, loc, origTy, src, slotBlock,
                                           dl, createdOps, offset);
   return replaceUsesFromSlot(builder, loc, val, view, dl, createdOps);
@@ -1537,7 +1576,8 @@ mlir::LogicalResult rewriteIndirectReturnCall(
   // every argument classification.
   mlir::ArrayAttr argAttrs = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
   if (needsArgAttrUpdate(fc))
-    argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc, dl);
+    argAttrs = updateArgAttrs(ctx, call->getParentOfType<mlir::ModuleOp>(),
+                              origCallArgTypes, argAttrs, fc, dl);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
   if (reuseStore) {
@@ -1889,7 +1929,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   if (hasSRet || needsArgAttrUpdate(fc)) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     mlir::ArrayAttr updated =
-        updateArgAttrs(ctx, oldArgTypes, existing, fc, dl);
+        updateArgAttrs(ctx, module, oldArgTypes, existing, fc, dl);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
@@ -2196,8 +2236,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
 
   if (needsArgAttrUpdate(fc)) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    newCall->setAttr("arg_attrs",
-                     updateArgAttrs(ctx, origCallArgTypes, existing, fc, dl));
+    newCall->setAttr("arg_attrs", updateArgAttrs(ctx, module, origCallArgTypes,
+                                                 existing, fc, dl));
   }
   // Add llvm.signext / llvm.zeroext to an Extend return, and drop llvm.noundef
   // from a coerced Direct return that passes undefined bits.

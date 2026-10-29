@@ -620,10 +620,14 @@ class Saa<string opstr>:
 def SAA  : Saa<"saa">,  SAA_FM<0x18>, ASE_CNMIPSP;
 def SAAD : Saa<"saad">, SAA_FM<0x19>, ASE_CNMIPSP;
 
-def SaaAddr  : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rt, mem:$addr),
-                                 "saa\t$rt, $addr">, ASE_CNMIPSP;
-def SaadAddr : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rt, mem:$addr),
-                                 "saad\t$rt, $addr">, ASE_CNMIPSP;
+def SaaAddr  : MipsAsmPseudoInst<(outs),
+                                 (ins GPR64Opnd:$rt, MemBase:$base,
+                                      imm_offset:$offset),
+                                 "saa\t$rt, ${offset}(${base})">, ASE_CNMIPSP;
+def SaadAddr : MipsAsmPseudoInst<(outs),
+                                 (ins GPR64Opnd:$rt, MemBase:$base,
+                                      imm_offset:$offset),
+                                 "saad\t$rt, ${offset}(${base})">, ASE_CNMIPSP;
 }
 
 }
@@ -666,14 +670,14 @@ def : MipsPat<(i64 immZExt32:$imm),
                      (LO16 imm:$imm))>, ISA_MIPS3, GPR_64;
 
 // extended loads
-def : MipsPat<(i64 (extloadi1  addr:$src)), (LB64 addr:$src)>, ISA_MIPS3,
-      GPR_64;
-def : MipsPat<(i64 (extloadi8  addr:$src)), (LB64 addr:$src)>, ISA_MIPS3,
-      GPR_64;
-def : MipsPat<(i64 (extloadi16 addr:$src)), (LH64 addr:$src)>, ISA_MIPS3,
-      GPR_64;
-def : MipsPat<(i64 (extloadi32 addr:$src)), (LW64 addr:$src)>, ISA_MIPS3,
-      GPR_64;
+def : MipsPat<(i64 (extloadi1  (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LB64 $src_base, $src_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(i64 (extloadi8  (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LB64 $src_base, $src_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(i64 (extloadi16 (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LH64 $src_base, $src_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(i64 (extloadi32 (addr MemBase:$src_base, iPTR:$src_offset))),
+              (LW64 $src_base, $src_offset)>, ISA_MIPS3, GPR_64;
 
 // hi/lo relocs
 let AdditionalPredicates = [NotInMicroMips] in
@@ -910,20 +914,27 @@ def : MipsPat<(brcond (i32 (setne (and i32:$lhs, PowerOf2LO_i32:$mask), 0)), bb:
       ASE_MIPS64_CNMIPS;
 
 // Atomic load patterns.
-def : MipsPat<(atomic_load_asext_8 addr:$a), (LB64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_asext_16 addr:$a), (LH64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_asext_32 addr:$a), (LW64 addr:$a)>, ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_load_nonext_64 addr:$a), (LD addr:$a)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_8 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LB64 $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_16 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LH64 $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_asext_32 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LW64 $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_load_nonext_64 (addr MemBase:$a_base, iPTR:$a_offset)),
+              (LD $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
 
 // Atomic store patterns.
-def : MipsPat<(atomic_store_8 GPR64:$v, addr:$a), (SB64 GPR64:$v, addr:$a)>,
-      ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_16 GPR64:$v, addr:$a), (SH64 GPR64:$v, addr:$a)>,
-      ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_32 GPR64:$v, addr:$a), (SW64 GPR64:$v, addr:$a)>,
-      ISA_MIPS3, GPR_64;
-def : MipsPat<(atomic_store_64 GPR64:$v, addr:$a), (SD GPR64:$v, addr:$a)>,
-      ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_store_8 GPR64:$v, (addr MemBase:$a_base, iPTR:$a_offset)),
+              (SB64 GPR64:$v, $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_store_16 GPR64:$v,
+                               (addr MemBase:$a_base, iPTR:$a_offset)),
+              (SH64 GPR64:$v, $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_store_32 GPR64:$v,
+                               (addr MemBase:$a_base, iPTR:$a_offset)),
+              (SW64 GPR64:$v, $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
+def : MipsPat<(atomic_store_64 GPR64:$v,
+                               (addr MemBase:$a_base, iPTR:$a_offset)),
+              (SD GPR64:$v, $a_base, $a_offset)>, ISA_MIPS3, GPR_64;
 
 // Patterns used for matching away redundant sign extensions.
 // MIPS32 arithmetic instructions sign extend their result implicitly.

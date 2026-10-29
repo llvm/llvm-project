@@ -819,17 +819,26 @@ func.func @insert_extract_transpose_3d(
 
 // CHECK-LABEL: fold_extracts
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
-func.func @fold_extracts(%a : vector<3x4x5x6xf32>) -> (f32, vector<4x5x6xf32>) {
-  %b = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %c = vector.extract %b[1, 2] : vector<6xf32> from vector<4x5x6xf32>
-  //  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : f32 from vector<3x4x5x6xf32>
-  %d = vector.extract %c[3] : f32 from vector<6xf32>
+//  CHECK-SAME:   %[[I:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:   %[[J:[a-zA-Z0-9]*]]: index
+func.func @fold_extracts(%a : vector<3x4x5x6xf32>, %i : index, %j : index) -> (f32, f32, f32) {
+  // Dynamic position (%i) in the inner extract.
+  %b = vector.extract %a[%i] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, 2, 3] : f32 from vector<3x4x5x6xf32>
+  %c = vector.extract %b[1, 2, 3] : f32 from vector<4x5x6xf32>
 
-  //  CHECK-NEXT: vector.extract %[[A]][0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %e = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  // Dynamic position (%j) in the outer extract.
+  %d = vector.extract %a[0, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][0, 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %e = vector.extract %d[%j, 3] : f32 from vector<5x6xf32>
+
+  // Dynamic positions (%i, %j) in both extracts.
+  %f = vector.extract %a[%i, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %g = vector.extract %f[%j, 3] : f32 from vector<5x6xf32>
 
   //  CHECK-NEXT: return
-  return %d, %e : f32, vector<4x5x6xf32>
+  return %c, %e, %g : f32, f32, f32
 }
 
 // -----
@@ -2782,18 +2791,6 @@ func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %
 
 // -----
 
-// CHECK-LABEL: extract_from_extract_chain_should_not_fold_dynamic_extracts
-//  CHECK-SAME: (%[[VEC:.*]]: vector<2x4xf32>, %[[IDX:.*]]: index)
-//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]]] : vector<4xf32> from vector<2x4xf32>
-//       CHECK: %[[B:.*]] = vector.extract %[[A]][1] : f32 from vector<4xf32>
-func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vector<2x4xf32>, %index: index) -> f32 {
-  %0 = vector.extract %v[%index] : vector<4xf32> from vector<2x4xf32>
-  %1 = vector.extract %0[1] : f32 from vector<4xf32>
-  return %1 : f32
-}
-
-// -----
-
 // CHECK-LABEL: extract_extract_strided2
 //  CHECK-SAME: %[[A:.*]]: vector<2x4xf32>
 //       CHECK: %[[V:.*]] = vector.extract %[[A]][1] : vector<4xf32> from vector<2x4xf32>
@@ -4679,4 +4676,102 @@ func.func @interleave_splat() -> vector<[4]xf32> {
   %cst = arith.constant dense<0.0> : vector<[2]xf32>
   %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
   return %0 : vector<[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xf32>, %[[B:[^:]+]]: vector<4xf32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_condition(%p: i1, %a: vector<4xf32>, %b: vector<4xf32>) -> vector<4xf32> {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xf32>
+  return %x : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<2x4xi32>, %[[B:[^:]+]]: vector<2x4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_multidimensional(%p: i1, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : i1 to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_scalable(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<[4]xi32>, %[[B:[^:]+]]: vector<[4]xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<[4]xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_scalable(%p: i1, %a: vector<[4]xi32>, %b: vector<[4]xi32>) -> vector<[4]xi32> {
+  %m = vector.broadcast %p : i1 to vector<[4]xi1>
+  %x = arith.select %m, %a, %b : vector<[4]xi1>, vector<[4]xi32>
+  return %x : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<i32>, %[[B:[^:]+]]: vector<i32>
+// CHECK-NOT: vector.broadcast
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_broadcast_rank_zero(%p: i1, %a: vector<i32>, %b: vector<i32>) -> vector<i32> {
+  %m = vector.broadcast %p : i1 to vector<i1>
+  %x = arith.select %m, %a, %b : vector<i1>, vector<i32>
+  return %x : vector<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_broadcast_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[M:.*]] = vector.broadcast %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : vector<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_broadcast_shared_mask(%p: i1, %a: vector<4xi32>, %b: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  return %x, %m : vector<4xi32>, vector<4xi1>
+}
+
+// -----
+
+// A vector source need not be uniform; do not replace its broadcast mask.
+// CHECK-LABEL: func.func @select_nonuniform_broadcast(
+// CHECK: %[[M:.*]] = vector.broadcast %{{.*}} : vector<4xi1> to vector<2x4xi1>
+// CHECK: arith.select %[[M]], %{{.*}}, %{{.*}} : vector<2x4xi1>, vector<2x4xi32>
+func.func @select_nonuniform_broadcast(%p: vector<4xi1>, %a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %m = vector.broadcast %p : vector<4xi1> to vector<2x4xi1>
+  %x = arith.select %m, %a, %b : vector<2x4xi1>, vector<2x4xi32>
+  return %x : vector<2x4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_vector(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: vector<4xi32>
+// CHECK-NOT: vector.broadcast
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : vector<4xi32>
+func.func @select_uniform_unselected_poison_vector(%p: i1, %a: vector<4xi32>) -> vector<4xi32> {
+  %bad = ub.poison : vector<4xi32>
+  %m = vector.broadcast %p : i1 to vector<4xi1>
+  %x = arith.select %m, %a, %bad : vector<4xi1>, vector<4xi32>
+  return %x : vector<4xi32>
 }

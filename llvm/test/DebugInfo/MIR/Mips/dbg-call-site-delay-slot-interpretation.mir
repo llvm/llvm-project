@@ -89,7 +89,7 @@ stack:
       stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 16, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 16, fwdArgRegs:
       - { arg: 0, reg: '$r4' }
       - { arg: 1, reg: '$r5' } }
 body:             |

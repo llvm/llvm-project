@@ -351,7 +351,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   const Triple &TargetTriple = M.getTargetTriple();
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (shouldUseStackSafetyAnalysis(Opts, TargetTriple,
                                    Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
@@ -1462,6 +1462,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (F.hasFnAttribute(Attribute::Naked))
     return;
 
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return;
+
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
 
@@ -1538,19 +1541,21 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag = getStackBaseTag(EntryIRB);
     Value *UARTag = getUARTag(EntryIRB);
+    // instrumentStack may replace allocas, invalidating EntryIRB's insert
+    // point. Save the insert block before calling it.
+    BasicBlock *EntryBB = EntryIRB.GetInsertBlock();
     instrumentStack(ORE, SInfo, StackTag, UARTag, DT, PDT, LI);
-  }
 
-  // If we split the entry block, move any allocas that were originally in the
-  // entry block back into the entry block so that they aren't treated as
-  // dynamic allocas.
-  if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
-    InsertPt = F.getEntryBlock().begin();
-    for (Instruction &I :
-         llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
-      if (auto *AI = dyn_cast<AllocaInst>(&I))
-        if (isa<ConstantInt>(AI->getArraySize()))
-          I.moveBefore(F.getEntryBlock(), InsertPt);
+    // If we split the entry block, move any allocas that were originally in the
+    // entry block back into the entry block so that they aren't treated as
+    // dynamic allocas.
+    if (EntryBB != &F.getEntryBlock()) {
+      InsertPt = F.getEntryBlock().begin();
+      for (Instruction &I : llvm::make_early_inc_range(*EntryBB)) {
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          if (isa<ConstantInt>(AI->getArraySize()))
+            I.moveBefore(F.getEntryBlock(), InsertPt);
+      }
     }
   }
 
@@ -1706,7 +1711,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   // function wrapper in the runtime.
   MapVector<Constant *, std::vector<Function *>> PersonalityFns;
   for (Function &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress))
+    if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+        F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
       continue;
 
     if (F.hasPersonalityFn()) {

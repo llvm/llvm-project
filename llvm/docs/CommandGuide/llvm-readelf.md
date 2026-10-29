@@ -41,7 +41,8 @@ Display the call graph section entries i.e. for each function
 its identifying information, each of its direct callees' information
 and for each indirect callee a 64-bit number representing the callee's
 function signature. This information can be used to reconstruct
-the program call graph.
+the program call graph. The output format is described in
+{doc}`/CallGraphSection`.
 :::
 
 :::{option} --cg-profile
@@ -199,8 +200,9 @@ Display contents of the stackmap section.
 
 :::{option} --stack-sizes
 Display the contents of the stack sizes section(s), i.e. pairs of function
-names and the size of their stack frames. Currently only implemented for GNU
-style output.
+names and the size of their stack frames. In `LLVM` and `JSON` output (see
+{option}`--elf-output-style`), each entry in a linked file also includes the
+function's address.
 :::
 
 :::{option} --string-dump=<section[,section,...]>, -p

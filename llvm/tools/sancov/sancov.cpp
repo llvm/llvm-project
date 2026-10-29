@@ -540,9 +540,9 @@ private:
 static std::vector<CoveragePoint>
 getCoveragePoints(const std::string &ObjectFile,
                   const std::set<uint64_t> &Addrs,
-                  const std::set<uint64_t> &CoveredAddrs) {
+                  const std::set<uint64_t> &CoveredAddrs,
+                  symbolize::LLVMSymbolizer &Symbolizer) {
   std::vector<CoveragePoint> Result;
-  auto Symbolizer(createSymbolizer());
   Ignorelists Ig;
 
   std::set<std::string> CoveredFiles;
@@ -554,11 +554,11 @@ getCoveragePoints(const std::string &ObjectFile,
       object::SectionedAddress ModuleAddress = {
           Addr, object::SectionedAddress::UndefSection};
 
-      auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, ModuleAddress);
+      auto LineInfo = Symbolizer.symbolizeCode(ObjectFile, ModuleAddress);
       failIfError(LineInfo);
       CoveredFiles.insert(LineInfo->FileName);
       auto InliningInfo =
-          Symbolizer->symbolizeInlinedCode(ObjectFile, ModuleAddress);
+          Symbolizer.symbolizeInlinedCode(ObjectFile, ModuleAddress);
       failIfError(InliningInfo);
       for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
         auto FrameInfo = InliningInfo->getFrame(I);
@@ -575,7 +575,7 @@ getCoveragePoints(const std::string &ObjectFile,
     object::SectionedAddress ModuleAddress = {
         Addr, object::SectionedAddress::UndefSection};
 
-    auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, ModuleAddress);
+    auto LineInfo = Symbolizer.symbolizeCode(ObjectFile, ModuleAddress);
     failIfError(LineInfo);
     if (ClSkipDeadFiles &&
         CoveredFiles.find(LineInfo->FileName) == CoveredFiles.end())
@@ -590,7 +590,7 @@ getCoveragePoints(const std::string &ObjectFile,
     Point.Locs.push_back(*LineInfo);
 
     auto InliningInfo =
-        Symbolizer->symbolizeInlinedCode(ObjectFile, ModuleAddress);
+        Symbolizer.symbolizeInlinedCode(ObjectFile, ModuleAddress);
     failIfError(InliningInfo);
     for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
       auto FrameInfo = InliningInfo->getFrame(I);
@@ -906,19 +906,23 @@ static std::unique_ptr<SymbolizedCoverage>
 symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   auto Coverage = std::make_unique<SymbolizedCoverage>();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(ObjectFile);
-  failIfError(BufOrErr);
-  SHA1 Hasher;
-  Hasher.update((*BufOrErr)->getBuffer());
-  Coverage->BinaryHash = toHex(Hasher.final());
+  // Release the mapped file before symbolizing.
+  {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(ObjectFile);
+    failIfError(BufOrErr);
+    SHA1 Hasher;
+    Hasher.update((*BufOrErr)->getBuffer());
+    Coverage->BinaryHash = toHex(Hasher.final());
+  }
 
   Ignorelists Ig;
   auto Symbolizer(createSymbolizer());
 
   for (uint64_t Addr : *Data.Addrs) {
     // TODO: it would be neccessary to set proper section index here.
-    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    // object::SectionedAddress::UndefSection works for only absolute
+    // addresses.
     auto LineInfo = Symbolizer->symbolizeCode(
         ObjectFile, {Addr, object::SectionedAddress::UndefSection});
     failIfError(LineInfo);
@@ -932,7 +936,8 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   if (!llvm::includes(AllAddrs, *Data.Addrs)) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
-  Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs);
+  Coverage->Points =
+      getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs, *Symbolizer);
   return Coverage;
 }
 

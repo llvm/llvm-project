@@ -537,10 +537,21 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
+/// RTTI is not available in CUDA/HIP device code, so typeid can't be used
+/// there. A dependent operand is checked once the template is instantiated.
+static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
+                                     bool IsDependent) {
+  if (S.getLangOpts().CUDA && !IsDependent)
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
+}
+
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc,
+                           Operand->getType()->isDependentType());
+
   // C++ [expr.typeid]p4:
   //   The top-level cv-qualifiers of the lvalue expression or the type-id
   //   that is the operand of typeid are always ignored.
@@ -568,6 +579,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc, E && E->isTypeDependent());
+
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
     if (E->hasPlaceholderType()) {
@@ -858,23 +871,7 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
 
 ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
-
-  // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
   // Exceptions that escape a compute construct are ill-formed.
   if (getLangOpts().OpenACC && getCurScope() &&
@@ -6930,6 +6927,10 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
+  // Give up here so we don't try to evaluate it later.
+  if (isa<RecoveryExpr>(E))
+    return ExprError();
+
   ExprResult Result = CheckPlaceholderExpr(E);
   if (Result.isInvalid())
     return ExprError();
@@ -8120,7 +8121,7 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =

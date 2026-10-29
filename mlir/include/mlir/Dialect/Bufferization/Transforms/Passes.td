@@ -306,13 +306,15 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
 
-    `memref.alloc` operations directly in the `before` region of `scf.while`
-    may also be hoisted when their buffers are forwarded through loop results.
+    Allocations directly in the `before` region of `scf.while` may also be
+    hoisted when their buffers are forwarded through loop results. They must
+    advertise `HoistingKind::Loop` through `AllocationOpInterface`.
     This extension requires a loop strictly inside the transformation target.
     Its parent must stop further loop hoisting: it must either be a non-loop
     operation or have the `HasParallelRegion` trait. No alias may be carried
     back to `before`, and all alias uses, including uses of loop results, must
-    permit reusing the allocation across iterations.
+    permit reusing the allocation across iterations. Stack allocations remain
+    within their original automatic allocation scope.
   }];
 }
 

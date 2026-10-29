@@ -617,7 +617,7 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
 }
 
 std::optional<SmallVector<int64_t, 4>>
-MultiDimReductionOp::getShapeForUnroll() {
+MultiDimReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
 }
 
@@ -825,7 +825,8 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   return nullptr;
 }
 
-std::optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
 }
 
@@ -1330,7 +1331,8 @@ std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
                    getContext());
 }
 
-std::optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ContractionOp::getIterationShapeToUnroll() {
   SmallVector<int64_t, 4> shape;
   getIterationBounds(shape);
   return shape;
@@ -1501,32 +1503,34 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 }
 
 /// Fold the result of chains of ExtractOp in place by simply concatenating the
-/// positions.
+/// positions. Both static and dynamic positions are supported.
+///
+/// BEFORE:
+/// ```mlir
+/// %0 = vector.extract %v[1, 2] : vector<3x4x5xf32>
+/// %1 = vector.extract %0[%idx, 3] : vector<5xf32>
+/// ```
+///
+/// AFTER:
+/// ```mlir
+/// %1 = vector.extract %v[1, 2, %idx, 3] : vector<3x4x5xf32>
+/// ```
 static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   if (!extractOp.getSource().getDefiningOp<ExtractOp>())
     return failure();
 
-  // TODO: Canonicalization for dynamic position not implemented yet.
-  if (extractOp.hasDynamicPosition())
-    return failure();
-
-  SmallVector<int64_t> globalPosition;
+  SmallVector<OpFoldResult> globalPosition = extractOp.getMixedPosition();
   ExtractOp currentOp = extractOp;
-  ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-  globalPosition.append(extrPos.rbegin(), extrPos.rend());
   while (ExtractOp nextOp = currentOp.getSource().getDefiningOp<ExtractOp>()) {
     currentOp = nextOp;
-    // TODO: Canonicalization for dynamic position not implemented yet.
-    if (currentOp.hasDynamicPosition())
-      return failure();
-    ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-    globalPosition.append(extrPos.rbegin(), extrPos.rend());
+    SmallVector<OpFoldResult> pos = currentOp.getMixedPosition();
+    globalPosition.insert(globalPosition.begin(), pos.begin(), pos.end());
   }
-  extractOp.setOperand(0, currentOp.getSource());
-  // OpBuilder is only used as a helper to build an I64ArrayAttr.
-  OpBuilder b(extractOp.getContext());
-  std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp.setStaticPosition(globalPosition);
+  auto [staticPos, dynPos] = decomposeMixedValues(globalPosition);
+  Value source = currentOp.getSource();
+  extractOp->setOperands(
+      llvm::to_vector(llvm::concat<Value>(ValueRange(source), dynPos)));
+  extractOp.setStaticPosition(staticPos);
   return success();
 }
 
@@ -2639,7 +2643,7 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 // FmaOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> FMAOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -3050,7 +3054,8 @@ void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+BroadcastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -5580,7 +5585,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransferReadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6035,7 +6041,8 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 // TransferWriteOp: other methods.
 //===----------------------------------------------------------------------===//
-std::optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransferWriteOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6301,7 +6308,7 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> LoadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6352,7 +6359,7 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
-std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> StoreOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6547,7 +6554,7 @@ Type GatherOp::getExpectedMaskType() {
                          vecType.getScalableDims());
 }
 
-std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6858,7 +6865,8 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>> ShapeCastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ShapeCastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -7363,7 +7371,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-std::optional<SmallVector<int64_t, 4>> BitCastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> BitCastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -7489,7 +7497,8 @@ LogicalResult vector::TransposeOp::verify() {
   return success();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransposeOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -8669,7 +8678,8 @@ OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
                                 splat.getSplatValue<Attribute>());
 }
 
-std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+InterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -8677,8 +8687,36 @@ std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
 // DeinterleaveOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> DeinterleaveOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+DeinterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorDialect canonicalization
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A broadcast of a scalar condition selects the same arm in every lane.
+struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto broadcast = select.getCondition().getDefiningOp<BroadcastOp>();
+    if (!broadcast || !broadcast.getSourceType().isSignlessInteger(1))
+      return failure();
+    rewriter.modifyOpInPlace(select, [&] {
+      select.getConditionMutable().assign(broadcast.getSource());
+    });
+    return success();
+  }
+};
+} // namespace
+
+void VectorDialect::getCanonicalizationPatterns(
+    RewritePatternSet &results) const {
+  results.add<SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

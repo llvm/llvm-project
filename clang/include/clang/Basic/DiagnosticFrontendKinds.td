@@ -146,8 +146,6 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
-def err_fe_cir_input_unsupported : Error<
-    "support for ClangIR input is not yet implemented">;
 def err_invalid_cir : Error<"invalid ClangIR input">;
 def err_cir_input_missing_triple : Error<
     "missing target triple in ClangIR input">;
@@ -514,6 +512,9 @@ def warn_hlsl_signature_packing_ignored : Warning<
 def warn_hlsl_failed_to_embed_source
     : Warning<"failed to embed source for '%0' into dx.source.contents">,
       InGroup<HLSLDXCCompat>;
+def warn_hlsl_bool_from_mem
+    : Warning<"-load-bool-from-mem=%0 ignored for HLSL (always nonzero)">,
+      InGroup<OptionIgnored>, DefaultWarn;
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;

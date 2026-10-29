@@ -1958,23 +1958,23 @@ val incoming : llvalue -> (llvalue * llbasicblock) list
 
 (** {6 Instruction builders} *)
 
-(** [builder context] creates an instruction builder with no position in
-    the context [context]. It is invalid to use this builder until its position
+(** [builder module] creates an instruction builder with no position in
+    the module [module]. It is invalid to use this builder until its position
     is set with {!position_before} or {!position_at_end}. See the constructor
     for [llvm::LLVMBuilder]. *)
-val builder : llcontext -> llbuilder
+val builder : llmodule -> llbuilder
 
 (** [builder_at ip] creates an instruction builder positioned at [ip].
     See the constructor for [llvm::LLVMBuilder]. *)
-val builder_at : llcontext -> (llbasicblock, llvalue) llpos -> llbuilder
+val builder_at : (llbasicblock, llvalue) llpos -> llbuilder
 
 (** [builder_before ins] creates an instruction builder positioned before the
     instruction [isn]. See the constructor for [llvm::LLVMBuilder]. *)
-val builder_before : llcontext -> llvalue -> llbuilder
+val builder_before : llvalue -> llbuilder
 
 (** [builder_at_end bb] creates an instruction builder positioned at the end of
     the basic block [bb]. See the constructor for [llvm::LLVMBuilder]. *)
-val builder_at_end : llcontext -> llbasicblock -> llbuilder
+val builder_at_end : llbasicblock -> llbuilder
 
 (** [position_builder ip bb] moves the instruction builder [bb] to the position
     [ip].

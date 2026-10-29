@@ -381,6 +381,19 @@ from being added to the worklist throughout the rewrite process:
 *   `GreedyRewriteStrictness::ExistingOps`: Only pre-existing ops (with which
     the worklist was initialized) are added to the worklist.
 
+Both drivers skip operations in blocks that are unreachable from their region's
+entry block, including operations nested within such blocks. Unreachable code
+can contain SSA cycles that cause folds or patterns to crash or loop indefinitely.
+Reachability is checked between rewrites, so a block connected before a rewrite
+returns can be processed. If an operation is skipped, reconnecting its block in a
+later rewrite does not automatically add it back to the worklist. It may remain
+unprocessed even if the driver returns success, regardless of strictness.
+
+The region-based driver erases unreachable blocks at the start of worklist
+processing in each iteration. The op-based driver leaves unreachable blocks and
+their operations in place, even if those operations were explicitly provided to
+the driver.
+
 Note: This driver listens for IR changes via the callbacks provided by
 `RewriterBase`. It is important that patterns announce all IR changes to the
 rewriter and do not bypass the rewriter API by modifying ops directly.

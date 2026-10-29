@@ -2,13 +2,13 @@
 
 # CHECK: [[IN:%.*]]:gprnopc = COPY $r0
 # CHECK: [[SUM1TMP:%.*]]:rgpr = ADDri [[IN]], 133
-# CHECK: [[SUM1:%.*]]:rgpr = ADDri killed [[SUM1TMP]], 25600
+# CHECK: [[SUM1:%.*]]:rgpr = ADDri [[SUM1TMP]], 25600
 
 # CHECK: [[SUM2TMP:%.*]]:rgpr = SUBri [[IN]], 133
-# CHECK: [[SUM2:%.*]]:rgpr = SUBri killed [[SUM2TMP]], 25600
+# CHECK: [[SUM2:%.*]]:rgpr = SUBri [[SUM2TMP]], 25600
 
 # CHECK: [[SUM3TMP:%.*]]:rgpr = SUBri [[IN]], 133
-# CHECK: [[SUM3:%.*]]:rgpr = SUBri killed [[SUM3TMP]], 25600
+# CHECK: [[SUM3:%.*]]:rgpr = SUBri [[SUM3TMP]], 25600
 
 # CHECK: [[SUM4TMP:%.*]]:rgpr = ADDri killed [[IN]], 133
 # CHECK: [[SUM4:%.*]]:rgpr = ADDri killed [[SUM4TMP]], 25600

@@ -334,6 +334,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
+  bool foldStaticArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -474,7 +475,7 @@ static bool isSpvAggrPlaceholder(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -584,6 +585,15 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
   return Ty;
 }
 
+// Return the pointee type of the pointer member of AggrTy selected by Indices.
+// Untyped pointer members are lowered as pointers to i8.
+static Type *getMemberPointeeType(Type *AggrTy, ArrayRef<unsigned> Indices) {
+  Type *MemberTy = ExtractValueInst::getIndexedType(AggrTy, Indices);
+  if (Type *ElemTy = getPointeeType(MemberTy))
+    return ElemTy;
+  return IntegerType::getInt8Ty(AggrTy->getContext());
+}
+
 // Reconstruct type with nested element types according to deduced type info.
 // Return nullptr if no detailed type info is available.
 Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
@@ -626,7 +636,7 @@ CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
     B.SetInsertPointPastAllocas(OpA->getParent());
     B.SetCurrentDebugLocation(DebugLoc());
   } else {
-    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrAlloca());
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
@@ -761,8 +771,12 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
-  if (OpIdx == 0 && SPIRV::lookupBuiltinNameHelper(DemangledName) == "printf")
-    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpenCL get_fence only has void* overloads.
+  if (OpIdx == 0) {
+    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
+    if (Name == "printf" || Name == "get_fence")
+      return IntegerType::getInt8Ty(CalledF->getContext());
+  }
   return nullptr;
 }
 
@@ -1022,6 +1036,12 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         isPointerTy(Src) && isPointerTy(Dest))
       Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
                                    UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<ExtractValueInst>(I)) {
+    // An extracted pointer has the type of its aggregate member.
+    if (isPointerTy(I->getType()))
+      Ty = getMemberPointeeType(
+          reconstructType(Ref->getAggregateOperand(), false, false),
+          Ref->getIndices());
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
     Value *Op = Ref->getNewValOperand();
     if (isPointerTy(Op->getType()))
@@ -1143,7 +1163,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(User *U,
 Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
     User *U, Type *OrigTy, SmallPtrSetImpl<Value *> &Visited,
     bool UnknownElemTypeI8) {
-  if (!U)
+  // Only constant aggregate operands map to aggregate elements.
+  if (!isa_and_nonnull<ConstantAggregate>(U))
     return OrigTy;
 
   // maybe already known
@@ -2358,6 +2379,16 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
     if (isNestedPointer(OpTy))
       insertTodoType(Pointer);
+    return;
+  }
+
+  // An inserted pointer must have the type of its aggregate member.
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    Value *Op = IVI->getInsertedValueOperand();
+    if (isPointerTy(Op->getType()))
+      replacePointerOperandWithPtrCast(
+          I, Op, getMemberPointeeType(IVI->getType(), IVI->getIndices()),
+          InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
 
@@ -3661,7 +3692,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
           B.SetInsertPoint(CI->getParent()
                                ->getParent()
                                ->getEntryBlock()
-                               .getFirstNonPHIOrDbgOrAlloca());
+                               .getFirstNonPHIOrAlloca());
           GR->buildAssignPtr(B, ElemTy, Param);
         }
         CallInst *Ref = dyn_cast<CallInst>(Param);
@@ -4280,9 +4311,37 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
   bool Changed = false;
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // Only entry-block allocations execute once per call, so a single array
+    // object has the same meaning as the counted allocation. Allocations in
+    // other blocks keep their lowering.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
+        continue;
+      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
+      if (Count->isZero() || !Count->getValue().isIntN(32))
+        continue;
+      AI->setAllocatedType(
+          ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
+      AI->setOperand(0, ConstantInt::get(I32Ty, 1));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
 
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  // Fold static allocation counts before pointer type inference.
+  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);

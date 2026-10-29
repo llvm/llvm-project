@@ -27,7 +27,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsLegacyPass(Registry);
-  initializeCFGuardLongjmpPass(Registry);
+  initializeCFGuardLongjmpLegacyPass(Registry);
   initializeCFIFixupLegacyPass(Registry);
   initializeCFIInstrInserterLegacyPass(Registry);
   initializeCheckDebugMachineModuleLegacyPass(Registry);
@@ -127,7 +127,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeProcessImplicitDefsLegacyPass(Registry);
-  initializePseudoProbeInserterPass(Registry);
+  initializePseudoProbeInserterLegacyPass(Registry);
   initializeRABasicPass(Registry);
   initializeRAGreedyLegacyPass(Registry);
   initializeReachingDefInfoWrapperPassPass(Registry);
