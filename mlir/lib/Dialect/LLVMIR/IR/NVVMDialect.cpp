@@ -6227,6 +6227,94 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma target requirements
+//===----------------------------------------------------------------------===//
+
+// Full SM versions as encoded by NVVMCheckSMVersion: the SM version times 10,
+// plus 2 for the family-specific ('f') and 3 for the architecture-specific
+// ('a') variant.
+static constexpr unsigned kSM100a = 1003, kSM100f = 1002, kSM101f = 1012,
+                          kSM103a = 1033, kSM107a = 1073, kSM107f = 1072,
+                          kSM110a = 1103, kSM110f = 1102;
+
+// The requirements below mirror the predicates of the tcgen05.mma instructions
+// in the NVPTX backend.
+static constexpr unsigned kTcgen05MMABaseSM[] = {kSM100f, kSM101f, kSM110f};
+
+static NVVMCheckSMVersion makeSMRequirement(ArrayRef<unsigned> versions) {
+  NVVMCheckSMVersion requirement;
+  requirement.fullSmVersionList.assign(versions.begin(), versions.end());
+  return requirement;
+}
+
+static ArrayRef<unsigned> getTcgen05MMAKindRequiredSM(Tcgen05MMAKind kind,
+                                                      bool hasScaleInputD) {
+  static constexpr unsigned kRubin[] = {kSM107f};
+  static constexpr unsigned kScaleInputD[] = {kSM100f};
+  static constexpr unsigned kI8[] = {kSM100a, kSM110a};
+  if (kind == Tcgen05MMAKind::TI16)
+    return kRubin;
+  if (hasScaleInputD)
+    return kScaleInputD;
+  if (kind == Tcgen05MMAKind::I8)
+    return kI8;
+  return kTcgen05MMABaseSM;
+}
+
+// A collector_b qualifier other than discard is a Rubin (sm_107f) extension.
+// Keep the part of `kindRequirement` that a Rubin target also satisfies. An
+// empty result rejects every target.
+static NVVMCheckSMVersion
+getTcgen05MMARequiredSM(Tcgen05MMACollectorOp collectorOpB,
+                        ArrayRef<unsigned> kindRequirement) {
+  NVVMCheckSMVersion requirement = makeSMRequirement(kindRequirement);
+  if (collectorOpB == Tcgen05MMACollectorOp::DISCARD)
+    return requirement;
+  if (requirement.isCompatibleWith(kSM107f))
+    return NVVMCheckSMVersion(kSM107f);
+  if (requirement.isCompatibleWith(kSM107a))
+    return NVVMCheckSMVersion(kSM107a);
+  return NVVMCheckSMVersion();
+}
+
+NVVMCheckSMVersion Tcgen05MMAOp::getRequiredMinSMVersion() {
+  return getTcgen05MMARequiredSM(
+      getCollectorOpB(), getTcgen05MMAKindRequiredSM(
+                             getKind(), static_cast<bool>(getScaleInputD())));
+}
+
+NVVMCheckSMVersion Tcgen05MMASparseOp::getRequiredMinSMVersion() {
+  return getTcgen05MMARequiredSM(
+      getCollectorOpB(), getTcgen05MMAKindRequiredSM(
+                             getKind(), static_cast<bool>(getScaleInputD())));
+}
+
+NVVMCheckSMVersion Tcgen05MMABlockScaleOp::getRequiredMinSMVersion() {
+  return getTcgen05MMARequiredSM(getCollectorOpB(), kTcgen05MMABaseSM);
+}
+
+NVVMCheckSMVersion Tcgen05MMASparseBlockScaleOp::getRequiredMinSMVersion() {
+  static constexpr unsigned kSparseMxf4[] = {kSM100a, kSM103a, kSM110a,
+                                             kSM107a};
+  Tcgen05MMAKind kind = getKind();
+  bool isMxf4 =
+      kind == Tcgen05MMAKind::MXF4 || kind == Tcgen05MMAKind::MXF4NVF4;
+  return getTcgen05MMARequiredSM(
+      getCollectorOpB(), isMxf4 ? ArrayRef<unsigned>(kSparseMxf4)
+                                : ArrayRef<unsigned>(kTcgen05MMABaseSM));
+}
+
+NVVMCheckSMVersion Tcgen05MMAWsOp::getRequiredMinSMVersion() {
+  return makeSMRequirement(
+      getTcgen05MMAKindRequiredSM(getKind(), /*hasScaleInputD=*/false));
+}
+
+NVVMCheckSMVersion Tcgen05MMAWsSparseOp::getRequiredMinSMVersion() {
+  return makeSMRequirement(
+      getTcgen05MMAKindRequiredSM(getKind(), /*hasScaleInputD=*/false));
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.mma functions
 //===----------------------------------------------------------------------===//
 
