@@ -887,9 +887,9 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
   static UInt32Envar OMPX_TeamsReductionWavesPerCU(
       "LIBOMPTARGET_TEAMS_REDUCTION_WAVES_PER_CU", 0);
   uint32_t ScalarWavesPerCU = OMPX_TeamsReductionWavesPerCU.get();
-  // Measured on MI210, MI300A, MI300X, MI350X, and MI450: scalar reductions
-  // with many iterations prefer more waves, ones with fewer iterations or more
-  // memory traffic prefer less waves. 16 waves were never far from the best.
+  // Scalar reductions with many iterations prefer more waves, ones with fewer
+  // iterations or more memory traffic prefer less waves. 16 waves were never
+  // far from the best.
   if (!ScalarWavesPerCU && Props.Backend == OL_PLATFORM_BACKEND_AMDGPU)
     ScalarWavesPerCU = 16;
   uint64_t NumCUs = Props.NumComputeUnits;
