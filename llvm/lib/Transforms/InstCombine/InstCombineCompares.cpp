@@ -4498,6 +4498,25 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     return nullptr;
 
   switch (LHSI->getOpcode()) {
+  case Instruction::Select: {
+    // umax(X, Y) == null -> (X == null) && (Y == null).
+    if (I.getPredicate() != ICmpInst::ICMP_EQ ||
+        !match(RHSC, m_Isa<ConstantPointerNull>()) ||
+        !DL.getNullPtrValue(RHSC->getType()->getPointerAddressSpace()).isZero())
+      break;
+    auto *SI = cast<SelectInst>(LHSI);
+    // Both the select and its comparison must die to avoid adding instructions.
+    if (!SI->hasOneUse() || !SI->getCondition()->hasOneUse())
+      break;
+    Value *A, *B;
+    if (matchSelectPattern(SI, A, B).Flavor != SPF_UMAX)
+      break;
+    Value *ACmp = Builder.CreateICmpEQ(A, RHSC);
+    Value *BCmp = Builder.CreateICmpEQ(B, RHSC);
+    // The original pointer comparison propagates poison from either operand.
+    return BinaryOperator::CreateAnd(ACmp, BCmp);
+  }
+
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
     if (isa<ConstantPointerNull>(RHSC)) {
