@@ -30,10 +30,19 @@ add_header_library(
 )
 
 add_header_library(
+  nullptr_t
+  HDRS
+    cstddef/nullptr_t.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   cstddef
   HDRS
     cstddef.h
   DEPENDS
+    .nullptr_t
     .type_traits
 )
 
@@ -186,6 +195,7 @@ add_header_library(
     type_traits/type_identity.h
     type_traits/void_t.h
   DEPENDS
+    .nullptr_t
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
@@ -229,6 +239,7 @@ add_header_library(
     unique_ptr.h
   DEPENDS
     .new
+    .nullptr_t
     .type_traits
     .utility
     libc.hdr.types.size_t

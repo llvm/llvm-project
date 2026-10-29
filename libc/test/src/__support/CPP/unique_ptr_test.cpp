@@ -12,12 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/alloc-checker.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::AllocChecker;
+using LIBC_NAMESPACE::cpp::nullptr_t;
 using LIBC_NAMESPACE::cpp::unique_ptr;
 
 struct DestructTracker {
@@ -48,6 +50,19 @@ TEST(LlvmLibcUniquePtrTest, Nullptr) {
   unique_ptr<int> ptr(nullptr);
   ASSERT_FALSE(static_cast<bool>(ptr));
   ASSERT_EQ(ptr.get(), nullptr);
+
+  constexpr nullptr_t null{};
+  unique_ptr<int> ptr2(null);
+  ASSERT_FALSE(static_cast<bool>(ptr2));
+  ASSERT_EQ(ptr2.get(), nullptr);
+
+  unique_ptr<int[]> arr(nullptr);
+  ASSERT_FALSE(static_cast<bool>(arr));
+  ASSERT_EQ(arr.get(), nullptr);
+
+  unique_ptr<int[]> arr2(null);
+  ASSERT_FALSE(static_cast<bool>(arr2));
+  ASSERT_EQ(arr2.get(), nullptr);
 }
 
 // Test move construction transferring ownership.
