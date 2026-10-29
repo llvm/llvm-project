@@ -9977,8 +9977,9 @@ Example:
 ```
 
 Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
-a target-specific named data section. Targets that do not support arbitrary
-named sections silently skip `!llvm.raw.sections` metadata nodes.
+a target-specific named data section. It is an error to use
+`!llvm.raw.sections` on a target that does not support arbitrary named
+sections.
 
 (summary)=
 

@@ -3028,14 +3028,19 @@ bool AsmPrinter::doFinalization(Module &M) {
       auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
       auto *Data = cast<MDString>(Op->getOperand(3));
 
-      if (MCSection *Section = TLOF.getNamedSection(
-              SectionName->getString(), SectionKind::getMetadata())) {
-        OutStreamer->pushSection();
-        OutStreamer->switchSection(Section);
-        OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
-        OutStreamer->emitBytes(Data->getString());
-        OutStreamer->popSection();
+      MCSection *Section = TLOF.getNamedSection(SectionName->getString(),
+                                                SectionKind::getMetadata());
+      if (!Section) {
+        M.getContext().emitError("llvm.raw.sections entry '" +
+                                 SectionName->getString() +
+                                 "' is not supported on this target");
+        continue;
       }
+      OutStreamer->pushSection();
+      OutStreamer->switchSection(Section);
+      OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
+      OutStreamer->emitBytes(Data->getString());
+      OutStreamer->popSection();
     }
   }
 
