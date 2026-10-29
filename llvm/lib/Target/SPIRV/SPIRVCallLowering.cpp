@@ -68,7 +68,7 @@ static uint32_t getFunctionControl(const Function &F,
 
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
 
-  if (F.hasFnAttribute(Attribute::AttrKind::NoInline))
+  if (F.isNoInline())
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::DontInline);
   else if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);

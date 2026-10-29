@@ -412,7 +412,7 @@ PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    if (F.hasFnAttribute(Attribute::NoInline))
+    if (F.isNoInline())
       continue;
     if (!F.isWeakForLinker())
       continue;
