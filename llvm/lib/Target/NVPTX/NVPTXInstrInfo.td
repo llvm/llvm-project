@@ -1964,22 +1964,7 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 let mayLoad=1, hasSideEffects=0, Predicates=[hasLdStB128] in
-def LD_i128
-  : NVPTXInst<
-    (outs B64:$dst0, B64:$dst1),
-    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-         AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-         ADDR:$addr, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
-         CachePolicy:$policy),
-    "${usedBytes}"
-    "{{\n\t"
-    ".reg .b128 dst;\n\t"
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}"
-    "${evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}."
-    "${Sign:sign}$fromWidth "
-    "dst, [$addr]${policy};\n\t"
-    "mov.b128 {$dst0, $dst1}, dst;\n\t"
-    "}}">;
+  def LD_i128 : LD<B128>;
 
 class ST<DAGOperand O>
     : NVPTXInst<
@@ -1999,20 +1984,7 @@ let mayStore=1, hasSideEffects=0 in {
 }
 
 let mayStore=1, hasSideEffects=0, Predicates=[hasLdStB128] in
-def ST_i128
-  : NVPTXInst<
-    (outs),
-    (ins B64:$src0, B64:$src1,
-         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$toWidth,
-         ADDR:$addr, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
-         CachePolicy:$policy),
-    "{{\n\t"
-    ".reg .b128 src;\n\t"
-    "mov.b128 src, {$src0, $src1};\n\t"
-    "st${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}"
-    "${evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.b$toWidth"
-    " [$addr], src${policy};\n\t"
-    "}}">;
+  def ST_i128 : ST<B128>;
 
 // The following is used only in and after vector elementizations.  Vector
 // elementization happens at the machine instruction level, so the following

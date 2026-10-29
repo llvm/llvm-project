@@ -1452,22 +1452,30 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   // The result of an i128 load is a pair of i64s, so TargetVT is i64 and would
   // otherwise select LD_i64.
+  const bool IsB128 = N->getOpcode() == NVPTXISD::ATOMIC_LOAD_B128;
   const std::optional<unsigned> Opcode =
-      N->getOpcode() == NVPTXISD::ATOMIC_LOAD_B128
-          ? NVPTX::LD_i128
-          : pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32,
-                            NVPTX::LD_i64);
+      IsB128 ? NVPTX::LD_i128
+             : pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32,
+                               NVPTX::LD_i64);
   if (!Opcode)
     return false;
 
-  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, LD->getVTList(), Ops);
+  SDVTList VTs =
+      IsB128 ? CurDAG->getVTList(MVT::i128, MVT::Other) : LD->getVTList();
+  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, VTs, Ops);
   if (!NVPTXLD)
     return false;
 
   MachineMemOperand *MemRef = LD->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(NVPTXLD), {MemRef});
 
-  ReplaceNode(LD, NVPTXLD);
+  SDNode *Result = NVPTXLD;
+  if (IsB128)
+    Result =
+        CurDAG->getMachineNode(NVPTX::I128toV2I64, DL, LD->getVTList(),
+                               {SDValue(NVPTXLD, 0), SDValue(NVPTXLD, 1)});
+
+  ReplaceNode(LD, Result);
   return true;
 }
 
@@ -1702,9 +1710,16 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
-  SDValue Value =
-      IsB128 ? SDValue()
-             : (PlainStore ? PlainStore->getValue() : AtomicStore->getVal());
+  SDValue Value;
+  if (IsB128) {
+    SDNode *Packed =
+        CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128,
+                               {selectPossiblyImm(N->getOperand(2)),
+                                selectPossiblyImm(N->getOperand(3))});
+    Value = SDValue(Packed, 0);
+  } else {
+    Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
+  }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          "Invalid width for store");
@@ -1718,36 +1733,25 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
        /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
       DL);
 
-  SDNode *NVPTXST = nullptr;
-  if (IsB128) {
-    SDValue Ops[] = {N->getOperand(2),
-                     N->getOperand(3),
-                     getI32Imm(Ordering, DL),
-                     getI32Imm(Scope, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(ToTypeWidth, DL),
-                     Base,
-                     Offset,
-                     EvictionAndPrefetchHint,
-                     PolicyReg,
-                     Chain};
-    NVPTXST = CurDAG->getMachineNode(NVPTX::ST_i128, DL, MVT::Other, Ops);
-  } else {
-    SDValue Ops[] = {selectPossiblyImm(Value),
-                     getI32Imm(Ordering, DL),
-                     getI32Imm(Scope, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(ToTypeWidth, DL),
-                     Base,
-                     Offset,
-                     EvictionAndPrefetchHint,
-                     PolicyReg,
-                     Chain};
-    if (auto Opcode =
-            pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i16,
-                            NVPTX::ST_i32, NVPTX::ST_i64))
-      NVPTXST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
-  }
+  SDValue Ops[] = {selectPossiblyImm(Value),
+                   getI32Imm(Ordering, DL),
+                   getI32Imm(Scope, DL),
+                   getI32Imm(CodeAddrSpace, DL),
+                   getI32Imm(ToTypeWidth, DL),
+                   Base,
+                   Offset,
+                   EvictionAndPrefetchHint,
+                   PolicyReg,
+                   Chain};
+
+  const std::optional<unsigned> Opcode =
+      IsB128 ? NVPTX::ST_i128
+             : pickOpcodeForVT(Value.getSimpleValueType().SimpleTy,
+                               NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
+  if (!Opcode)
+    return false;
+
+  SDNode *NVPTXST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
   if (!NVPTXST)
     return false;
