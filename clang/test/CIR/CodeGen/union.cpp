@@ -13,7 +13,7 @@ union U {
   float f;
   double d;
 };
-// CIR: !rec_U = !cir.union<"U" {!cir.bool, !s16i, !s32i, !cir.float, !cir.double}>
+// CIR: !rec_U = !cir.union<"U" {data !cir.bool, data !s16i, data !s32i, data !cir.float, data !cir.double}>
 // LLVM: %union.U = type { double }
 // OGCG: %union.U = type { double }
 
@@ -27,23 +27,26 @@ void shouldGenerateUnionAccess(union U u) {
   u.d = 0.1;
   u.d;
 }
-// CIR: cir.func {{.*}}shouldGenerateUnionAccess
-// CIR:   %[[#BASE:]] = cir.get_member %0[0] {name = "b"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.bool>
+// CIR: cir.func {{.*}}shouldGenerateUnionAccess1U(%arg0: !u64i{{.*}})
+// CIR:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_U>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.bool>
 // CIR:   cir.store{{.*}} %{{.+}}, %[[#BASE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:   cir.get_member %0[0] {name = "b"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.bool>
-// CIR:   %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
+// CIR:   cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.bool>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][2] {name = "i"} : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %{{.+}}, %[[#BASE]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
-// CIR:   %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.float>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][2] {name = "i"} : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][3] {name = "f"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.float>
 // CIR:   cir.store{{.*}} %{{.+}}, %[[#BASE]] : !cir.float, !cir.ptr<!cir.float>
-// CIR:   %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.float>
-// CIR:   %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.double>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][3] {name = "f"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.float>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][4] {name = "d"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.double>
 // CIR:   cir.store{{.*}} %{{.+}}, %[[#BASE]] : !cir.double, !cir.ptr<!cir.double>
-// CIR:   %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.double>
+// CIR:   %[[#BASE:]] = cir.get_member %[[U]][4] {name = "d"} : !cir.ptr<!rec_U> -> !cir.ptr<!cir.double>
 
-// LLVM: define {{.*}}shouldGenerateUnionAccess
-// LLVM:   %[[BASE:.*]] = alloca %union.U
-// LLVM:   store %union.U %{{.*}}, ptr %[[BASE]]
+// LLVM: define {{.*}}shouldGenerateUnionAccess1U(i64 %[[ARG:[^,)]+]])
+// LLVM:   %[[SLOT:.*]] = alloca i64, align 8
+// LLVM:   store i64 %[[ARG]], ptr %[[SLOT]], align 8
+// LLVM:   %[[BASE:.*]] = alloca %union.U, align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[BASE]], ptr align 8 %[[SLOT]], i64 8, i1 false)
 // LLVM:   store i8 1, ptr %[[BASE]]
 // LLVM:   store i32 1, ptr %[[BASE]]
 // LLVM:   store float 1.000000e-01, ptr %[[BASE]]

@@ -617,11 +617,11 @@ std::string ManualDWARFIndex::GetCacheKey() {
 }
 
 bool ManualDWARFIndex::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return false;
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
+    return false;
+  DataFileCache *cache = Module::GetIndexCache(objfile->IsInMemory());
+  if (!cache)
     return false;
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
       cache->GetCachedData(GetCacheKey());
@@ -640,12 +640,12 @@ bool ManualDWARFIndex::LoadFromCache() {
 }
 
 void ManualDWARFIndex::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return; // Caching is not enabled.
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
     return;
+  DataFileCache *cache = Module::GetIndexCache(objfile->IsInMemory());
+  if (!cache)
+    return; // Caching is not enabled.
   DataEncoder file(endian::InlHostByteOrder(), objfile->GetAddressByteSize());
   // Encode will return false if the object file doesn't have anything to make
   // a signature from.

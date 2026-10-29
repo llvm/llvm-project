@@ -92,10 +92,6 @@ char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
-  return new SIFormMemoryClausesLegacy();
-}
-
 static bool isVMEMClauseInst(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI);
 }

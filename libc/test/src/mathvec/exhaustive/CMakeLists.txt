@@ -226,8 +226,8 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.exp2f
     libc.src.mathvec.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -258,8 +258,8 @@ add_fp_unittest(
     exp10f_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.exp10f
     libc.src.mathvec.exp10f
+    libc.src.__support.math.exp10f_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -290,8 +290,8 @@ add_fp_unittest(
     expf_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.math.expf_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread

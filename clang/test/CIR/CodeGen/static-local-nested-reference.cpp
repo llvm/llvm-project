@@ -15,9 +15,9 @@ inline int outer() {
 
 // CIR: cir.global linkonce_odr comdat @_ZZ5outervE1s = #cir.int<123> : !s32i
 // CIR-NOT: @_ZZ5outervE1s.1
-// CIR: cir.func{{.*}}@_Z5outerv()
-// CIR: cir.get_global @_ZZ5outervE1s
 // CIR: cir.func{{.*}}@_ZZ5outervEN1L3getEv()
+// CIR: cir.get_global @_ZZ5outervE1s
+// CIR: cir.func{{.*}}@_Z5outerv()
 // CIR: cir.get_global @_ZZ5outervE1s
 
 // LLVM: @_ZZ5outervE1s = linkonce_odr global i32 123, comdat, align 4

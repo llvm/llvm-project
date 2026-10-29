@@ -38,7 +38,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"

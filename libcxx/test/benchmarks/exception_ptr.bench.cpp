@@ -10,15 +10,16 @@
 
 #include <benchmark/benchmark.h>
 #include <exception>
+#include "test_macros.h"
 
-void bm_make_exception_ptr(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_make_exception_ptr(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(std::make_exception_ptr(42));
   }
 }
 BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
 
-void bm_exception_ptr_copy_ctor_nonnull(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_copy_ctor_nonnull(benchmark::State& state) {
   std::exception_ptr excptr = std::make_exception_ptr(42);
   for (auto _ : state) {
     benchmark::DoNotOptimize(std::exception_ptr(excptr));
@@ -26,7 +27,7 @@ void bm_exception_ptr_copy_ctor_nonnull(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_copy_ctor_nonnull);
 
-void bm_exception_ptr_copy_ctor_null(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_copy_ctor_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr excptr_copy(excptr);
@@ -37,7 +38,7 @@ void bm_exception_ptr_copy_ctor_null(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_copy_ctor_null);
 
-void bm_exception_ptr_move_ctor_nonnull(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_move_ctor_nonnull(benchmark::State& state) {
   std::exception_ptr excptr = std::make_exception_ptr(42);
   for (auto _ : state) {
     // Need to copy, such that the `excptr` is not moved from and
@@ -48,7 +49,7 @@ void bm_exception_ptr_move_ctor_nonnull(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_move_ctor_nonnull);
 
-void bm_exception_ptr_move_ctor_null(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_move_ctor_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr new_excptr(std::move(excptr));
@@ -59,7 +60,7 @@ void bm_exception_ptr_move_ctor_null(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_move_ctor_null);
 
-void bm_exception_ptr_copy_assign_nonnull(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_copy_assign_nonnull(benchmark::State& state) {
   std::exception_ptr excptr = std::make_exception_ptr(42);
   for (auto _ : state) {
     std::exception_ptr new_excptr;
@@ -69,7 +70,7 @@ void bm_exception_ptr_copy_assign_nonnull(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_copy_assign_nonnull);
 
-void bm_exception_ptr_copy_assign_null(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_copy_assign_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr new_excptr;
@@ -81,7 +82,7 @@ void bm_exception_ptr_copy_assign_null(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_copy_assign_null);
 
-void bm_exception_ptr_move_assign_nonnull(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_move_assign_nonnull(benchmark::State& state) {
   std::exception_ptr excptr = std::make_exception_ptr(42);
   for (auto _ : state) {
     // Need to copy, such that the `excptr` is not moved from and
@@ -94,7 +95,7 @@ void bm_exception_ptr_move_assign_nonnull(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_move_assign_nonnull);
 
-void bm_exception_ptr_move_assign_null(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_move_assign_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr new_excptr;
@@ -106,7 +107,7 @@ void bm_exception_ptr_move_assign_null(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_move_assign_null);
 
-void bm_exception_ptr_swap_nonnull(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_swap_nonnull(benchmark::State& state) {
   std::exception_ptr excptr1 = std::make_exception_ptr(41);
   std::exception_ptr excptr2 = std::make_exception_ptr(42);
   for (auto _ : state) {
@@ -117,7 +118,7 @@ void bm_exception_ptr_swap_nonnull(benchmark::State& state) {
 }
 BENCHMARK(bm_exception_ptr_swap_nonnull);
 
-void bm_exception_ptr_swap_null(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void bm_exception_ptr_swap_null(benchmark::State& state) {
   std::exception_ptr excptr1 = nullptr;
   std::exception_ptr excptr2 = nullptr;
   for (auto _ : state) {

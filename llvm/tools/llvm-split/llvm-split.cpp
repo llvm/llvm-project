@@ -87,7 +87,7 @@ static cl::opt<SplitByCategoryType> SplitByCategory(
     "split-by-category",
     cl::desc("Split by category. If present, splitting by category is used "
              "with the specified categorization type."),
-    cl::Optional, cl::init(SplitByCategoryType::SBCT_None),
+    cl::init(SplitByCategoryType::SBCT_None),
     cl::values(clEnumValN(SplitByCategoryType::SBCT_ByAttribute, "attribute",
                           "one output module per unique value of the function "
                           "attribute named by --category-attribute"),
@@ -116,7 +116,7 @@ void writeStringToFile(StringRef Content, StringRef Path) {
   OS << Content << "\n";
 }
 
-void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
+void writeModuleToFile(Module &M, StringRef Path, bool OutputAssembly) {
   int FD = -1;
   if (std::error_code EC = sys::fs::openFileForWrite(Path, FD)) {
     errs() << formatv("error opening file: {0}, error: {1}", Path, EC.message())
@@ -125,9 +125,10 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
   }
 
   raw_fd_ostream OS(FD, /*ShouldClose*/ true);
-  if (OutputAssembly)
+  if (OutputAssembly) {
+    M.renumberMetadataForAssembly();
     M.print(OS, /*AssemblyAnnotationWriter*/ nullptr);
-  else
+  } else
     WriteBitcodeToFile(M, OS);
 }
 

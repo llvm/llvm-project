@@ -6,7 +6,7 @@
 ;; %ir.arg4.
 ;; Check that the merged store has dependency with %ir.arg4.
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK-LABEL: f:%bb.0 bb
 ; CHECK:       SU([[ARG4:[0-9]+]]):{{.*}}MOV32rm{{.*}}load (s32) from %ir.arg4
 ; CHECK:       SU([[#WIDEN:]]):{{.*}}MOVUPSmr{{.*}}store (s128) into

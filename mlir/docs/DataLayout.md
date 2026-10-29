@@ -75,6 +75,7 @@ public:
 
   llvm::TypeSize getTypeSize(Type type) const;
   llvm::TypeSize getTypeSizeInBits(Type type) const;
+  llvm::TypeSize getTypeAllocSize(Type type) const;
   uint64_t getTypeABIAlignment(Type type) const;
   uint64_t getTypePreferredAlignment(Type type) const;
   std::optional<uint64_t> getTypeIndexBitwidth(Type type) const;

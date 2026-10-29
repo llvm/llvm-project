@@ -180,6 +180,12 @@ private:
   std::mutex ServerStateMutex;
   std::condition_variable ShutdownCV;
   enum { ServerRunning, ServerShuttingDown, ServerShutDown } RunState;
+
+  // Whether the controller announced the end of the session. The server never
+  // initiates a disconnection, so a transport disconnection without this is the
+  // controller going away unexpectedly: see handleDisconnect.
+  bool RemoteHangup = false;
+
   Error ShutdownErr = Error::success();
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<Dispatcher> D;

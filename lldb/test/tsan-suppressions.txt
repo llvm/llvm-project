@@ -1,0 +1,6 @@
+# ThreadSanitizer suppressions for the LLDB test suite. Added suppressions
+# should have a description whether they are a real bug or a false-positive.
+
+# Likely a real race. See issue #232224
+race:lldb_private::Process::PrivateStateThread::IsRunning
+

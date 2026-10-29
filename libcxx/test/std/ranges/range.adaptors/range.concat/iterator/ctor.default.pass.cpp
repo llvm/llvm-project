@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-fblocks
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // constexpr iterator() = default;
 

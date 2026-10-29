@@ -674,9 +674,9 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [9,1,2,10,4,5,6,7]
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [9,1,2,10,4,5,6,7]
+; AVX512F-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vptestmq %zmm2, %zmm2, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def $al killed $al killed $eax

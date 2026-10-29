@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "ValueProfileCollector.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -20,10 +21,6 @@
 
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
-
-namespace llvm {
-extern cl::opt<bool> MemOPOptMemcmpBcmp;
-} // end namespace llvm
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
@@ -53,14 +50,13 @@ public:
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});
   }
   void visitCallInst(CallInst &CI) {
-    if (!MemOPOptMemcmpBcmp)
+    if (!InstrumentationOptions::Global.pgo_memop_optimize_memcmp_bcmp)
       return;
     auto *F = CI.getCalledFunction();
     if (!F)
       return;
-    LibFunc Func;
-    if (TLI.getLibFunc(CI, Func) &&
-        (Func == LibFunc_memcmp || Func == LibFunc_bcmp)) {
+    LibFunc Func = TLI.getLibFunc(CI);
+    if (Func == LibFunc_memcmp || Func == LibFunc_bcmp) {
       Value *Length = CI.getArgOperand(2);
       // Not instrument constant length calls.
       if (isa<ConstantInt>(Length))

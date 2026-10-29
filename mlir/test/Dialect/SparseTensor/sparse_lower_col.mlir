@@ -29,8 +29,8 @@
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-HIR:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]]
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[DEMAP]] {level = 1 : index}
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[DEMAP]] {level = 1 : index}
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[DEMAP]] level = 1
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[DEMAP]] level = 1
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[DEMAP]]
 // CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
 // CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32xf64> to memref<32xf64>

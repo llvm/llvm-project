@@ -248,6 +248,8 @@ void ARR38_C_F(FILE *file) {
   // report-warning{{The 1st argument to 'fread' is a buffer with size 4096 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 4096)}} \
   // bugpath-warning{{The 1st argument to 'fread' is a buffer with size 4096 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 4096)}} \
   // bugpath-note{{The 1st argument to 'fread' is a buffer with size 4096 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 4096)}}
+  // report-warning@-4{{'fread' will always overflow; destination buffer has size 4096, but size argument is 16384}}
+  // bugpath-warning@-5{{'fread' will always overflow; destination buffer has size 4096, but size argument is 16384}}
 }
 
 int __two_constrained_args(int, int);

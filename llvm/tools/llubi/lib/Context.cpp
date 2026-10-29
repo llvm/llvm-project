@@ -27,7 +27,9 @@ bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
   for (Function &F : M) {
-    if (F.hasAddressTaken()) {
+    if (F.hasAddressTaken(nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false)) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
@@ -561,7 +563,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   assert(Ty->isPointerTy() && "Expect a pointer type");
   // Try to recover provenance from the tag.
   if (IsTagValid) {
-    APInt Tag(NumBitsToExtract, RawTagBits);
+    APInt Tag(NumBits, RawTagBits);
     if (auto Prov = TaggedProvenances.lookup(Tag))
       return Pointer(std::move(Prov), Bits);
   }
@@ -701,11 +703,12 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   };
   if (Val.isPoison()) {
     for (uint32_t I = 0, E = NewOffsetInBits - OffsetInBits; I < E;) {
-      uint32_t NumBitsInByte = std::min(8 - (OffsetInBits + I) % 8, E - I);
-      assert(((OffsetInBits ^ (OffsetInBits + NumBitsInByte - 1)) & ~7) == 0 &&
+      uint32_t BitsStart = OffsetInBits + I;
+      uint32_t NumBitsInByte = std::min(8 - BitsStart % 8, E - I);
+      assert(((BitsStart ^ (BitsStart + NumBitsInByte - 1)) & ~7) == 0 &&
              "Across byte boundary.");
-      Bytes[(OffsetInBits + I) / 8].poisonBits(static_cast<uint8_t>(
-          ((1U << NumBitsInByte) - 1) << ((OffsetInBits + I) % 8)));
+      Bytes[BitsStart / 8].poisonBits(
+          static_cast<uint8_t>(((1U << NumBitsInByte) - 1) << (BitsStart % 8)));
       I += NumBitsInByte;
     }
   } else if (Ty->isIntegerTy()) {
@@ -1011,12 +1014,8 @@ Context::computeGEP(GEPOperator &GEP,
     AccumulatedOffset =
         AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
   auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-    if (Index.isAggregate() && !Res.isAggregate()) {
-      Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-      AccumulatedOffset = AnyValue::getVectorSplat(AccumulatedOffset,
-                                                   Index.asAggregate().size());
-    }
-    if (Index.isAggregate() && Res.isAggregate()) {
+    if (Index.isAggregate()) {
+      assert(Res.isAggregate() && "Res must be splatted before.");
       for (auto &&[ResElem, IndexElem, OffsetElem] :
            zip(Res.asAggregate(), Index.asAggregate(),
                AccumulatedOffset.asAggregate()))
@@ -1041,6 +1040,16 @@ Context::computeGEP(GEPOperator &GEP,
        GTI != GTE; ++GTI) {
     Value *V = GTI.getOperand();
 
+    // If the index is a vector, make sure the accumulated pointer is also a
+    // vector. Otherwise, make it a vector splat.
+    if (auto *VTy = dyn_cast<VectorType>(V->getType());
+        VTy && !Res.isAggregate()) {
+      uint32_t NumElements = getEVL(VTy->getElementCount());
+      Res = AnyValue::getVectorSplat(Res, NumElements);
+      AccumulatedOffset =
+          AnyValue::getVectorSplat(AccumulatedOffset, NumElements);
+    }
+
     // Fast path for zero offsets.
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->isZero())
@@ -1051,7 +1060,8 @@ Context::computeGEP(GEPOperator &GEP,
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+      unsigned ElementIdx =
+          cast<Constant>(V)->getUniqueInteger().getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
       ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
@@ -1100,9 +1110,13 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
-  if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
+  if (SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
+  unsigned AddressBW = DL.getAddressSizeInBits(AS);
+  // Make sure the address can be represented.
+  if (!isUIntN(AddressBW, AlignedAddr))
+    return nullptr;
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;

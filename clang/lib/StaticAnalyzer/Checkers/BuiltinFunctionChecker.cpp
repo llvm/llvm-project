@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include <algorithm>
 
 using namespace clang;
 using namespace ento;
@@ -31,13 +32,29 @@ using namespace taint;
 
 namespace {
 
-QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
-  // Calling a builtin with a non-integer type result produces compiler error.
-  assert(T->isIntegerType());
+/// \return an integer type that is large enough for the binary operation on the
+/// operands of \p Arg1Ty and \p Arg2Ty, respectively.
+QualType getSufficientTypeForOverflowOp(CheckerContext &C,
+                                        BinaryOperator::Opcode Op,
+                                        QualType Arg1Ty, QualType Arg2Ty) {
+  assert(Arg1Ty->isIntegerType() && Arg2Ty->isIntegerType());
 
   ASTContext &ACtx = C.getASTContext();
-  unsigned BitWidth = ACtx.getIntWidth(T);
-  return ACtx.getBitIntType(T->isUnsignedIntegerType(), BitWidth * 2);
+  unsigned BitWidth =
+      std::max(ACtx.getIntWidth(Arg1Ty), ACtx.getIntWidth(Arg2Ty));
+
+  // A signed type with doubled bits may not be large enough to hold the
+  // multiplication result when both operands are unsigned. In other
+  // words, if either operand is signed, a signed type with twice the bits is
+  // sufficient.
+  //
+  // Additionally, subtraction always needs a signed result. Note that
+  // subtracting a negative operand falls into the prior case, so it is still
+  // safe with a signed result type. A signed 1-bit integer is not allowed in
+  // Clang.
+  bool UseSigned = Op == BO_Sub || Arg1Ty->isSignedIntegerType() ||
+                   Arg2Ty->isSignedIntegerType();
+  return ACtx.getBitIntType(/*Unsigned=*/!UseSigned, BitWidth * 2);
 }
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
@@ -206,8 +223,11 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
+  QualType Arg1Ty = Call.getArgExpr(0)->getType();
+  QualType Arg2Ty = Call.getArgExpr(1)->getType();
 
-  QualType SufficientlyWideTy = getSufficientTypeForOverflowOp(C, ResultType);
+  QualType SufficientlyWideTy =
+      getSufficientTypeForOverflowOp(C, Op, Arg1Ty, Arg2Ty);
   assert(!SufficientlyWideTy.isNull());
 
   SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2, SufficientlyWideTy);

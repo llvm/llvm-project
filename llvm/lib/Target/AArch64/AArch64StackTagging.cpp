@@ -52,42 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-stack-tagging"
 
-static cl::opt<bool> ClMergeInit(
-    "stack-tagging-merge-init", cl::Hidden, cl::init(true),
-    cl::desc("merge stack variable initializers with tagging when possible"));
-
-static cl::opt<bool>
-    ClUseStackSafety("stack-tagging-use-stack-safety", cl::Hidden,
-                     cl::init(true),
-                     cl::desc("Use Stack Safety analysis results"));
-
-static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
-                                     cl::init(40), cl::Hidden);
-
-static cl::opt<unsigned>
-    ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
-                         cl::Hidden);
-
-// Mode for selecting how to insert frame record info into the stack ring
-// buffer.
-enum StackTaggingRecordStackHistoryMode {
-  // Do not record frame record info.
-  none,
-
-  // Insert instructions into the prologue for storing into the stack ring
-  // buffer directly.
-  instr,
-};
-
-static cl::opt<StackTaggingRecordStackHistoryMode> ClRecordStackHistory(
-    "stack-tagging-record-stack-history",
-    cl::desc("Record stack frames with tagged allocations in a thread-local "
-             "ring buffer"),
-    cl::values(clEnumVal(none, "Do not record stack ring history"),
-               clEnumVal(instr, "Insert instructions into the prologue for "
-                                "storing into the stack ring buffer")),
-    cl::Hidden, cl::init(none));
-
 static const Align kTagGranuleSize = Align(16);
 
 namespace {
@@ -301,9 +265,11 @@ public:
 
   AArch64StackTagging(bool IsOptNone = false)
       : FunctionPass(ID),
-        MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
-        UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                                            : !IsOptNone) {}
+        MergeInit(valueOr(AArch64Options::Global.stack_tagging_merge_init,
+                          !IsOptNone)),
+        UseStackSafety(
+            valueOr(AArch64Options::Global.stack_tagging_use_stack_safety,
+                    !IsOptNone)) {}
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -362,7 +328,9 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
   BasicBlock::iterator BI(StartInst);
 
   unsigned Count = 0;
-  for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
+  for (; Count < AArch64Options::Global.stack_tagging_merge_init_scan_limit &&
+         !BI->isTerminator();
+       ++BI) {
     ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
@@ -424,7 +392,7 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
   bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
   if (MergeInit && !F->hasOptNone() && LittleEndian &&
-      Size < ClMergeInitSizeLimit) {
+      Size < AArch64Options::Global.stack_tagging_merge_init_size_limit) {
     LLVM_DEBUG(dbgs() << "collecting initializers for " << *AI
                       << ", size = " << Size << "\n");
     InsertBefore = collectInitializers(InsertBefore, Ptr, Size, IB);
@@ -446,9 +414,9 @@ static Value *getSlotPtr(IRBuilder<> &IRB, const Triple &TargetTriple,
   if (!HasInstrumentedAllocas)
     return nullptr;
 
-  if (ClRecordStackHistory == instr ||
-      (!ClRecordStackHistory.getNumOccurrences() &&
-       TargetTriple.isOSDarwin())) {
+  auto Mode = AArch64Options::Global.stack_tagging_record_stack_history;
+  if (Mode == AArch64::StackTaggingRecordStackHistoryMode::Instr ||
+      (!Mode && TargetTriple.isOSDarwin())) {
     if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
         !TargetTriple.isAndroidVersionLT(35))
       return memtag::getAndroidSlotPtr(IRB, -3);

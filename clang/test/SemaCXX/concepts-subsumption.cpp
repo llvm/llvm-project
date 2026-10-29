@@ -147,6 +147,22 @@ constexpr int foo(Z auto y) { return 30; }
 static_assert(foo(0) == 30);
 }
 
+namespace GH106182 {
+template <class Fn> struct A {
+  constexpr A(Fn) {};
+};
+
+template <template <class> class S>
+void create_unique()
+  requires (S{0}, true);
+
+template <template <class> class S>
+void create_unique()
+  requires (S{0}, true) {}
+
+template void create_unique<A>();
+}
+
 namespace WhateverThisIs {
 template <typename T> concept C0 = true;
 template <typename T> concept C1 = true;

@@ -44,5 +44,6 @@ end program
 ! DATA-PLAIN: .data
 ! DATA-PLAIN-NOT: .section{{.*}}.data.
 
+! Module PARAMETERs are linkonce_odr, so they always get a comdat section.
 ! RODATA-SECT: .section{{.*}}.rodata._QMparam_modECn
-! RODATA-PLAIN-NOT: .section{{.*}}.rodata._QMparam_modECn
+! RODATA-PLAIN: .section{{.*}}.rodata._QMparam_modECn{{.*}}comdat

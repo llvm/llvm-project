@@ -10,4 +10,4 @@
 
 #include "src/math/issignalingf16.h"
 
-LIST_ISSIGNALING_TESTS(float16, LIBC_NAMESPACE::issignalingf16)
+LIST_ISSIGNALING_TESTS(Issignalingf16, float16, LIBC_NAMESPACE::issignalingf16)

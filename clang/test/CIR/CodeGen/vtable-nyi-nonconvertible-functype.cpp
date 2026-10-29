@@ -7,8 +7,8 @@
 
 // CIR-DAG: !rec_Param2 = !cir.struct<"Param2" incomplete>
 // CIR-DAG: !rec_Ret1 = !cir.struct<"Ret1" incomplete>
-// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!cir.vptr}>
-// CIR-DAG: !rec_S2 = !cir.struct<"S2" {!cir.vptr}>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {data !cir.vptr}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {data !cir.vptr}>
 // LLVMCIR-DAG: %struct.Ret1 = type {}
 // LLVMCIR-DAG: %struct.Param2 = type {}
 

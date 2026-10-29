@@ -542,11 +542,11 @@ void MacroToEnumCheck::check(
     return;
 
   SourceRange Range = TLDecl->getSourceRange();
-  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top")) {
-    if (TemplateFn->isThisDeclarationADefinition() && TemplateFn->hasBody())
-      Range = SourceRange{TemplateFn->getBeginLoc(),
-                          TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
-  }
+  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top");
+      TemplateFn && TemplateFn->isThisDeclarationADefinition() &&
+      TemplateFn->hasBody())
+    Range = SourceRange{TemplateFn->getBeginLoc(),
+                        TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
 
   if (isValid(Range) && !empty(Range))
     PPCallback->invalidateRange(Range);

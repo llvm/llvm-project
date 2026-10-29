@@ -135,8 +135,9 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
     return Visitor.TraverseTemplateArgumentLoc(ArgLoc);
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
-    return Visitor.TraverseTemplateName(Template);
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return Visitor.TraverseTemplateName(Template, TraverseQualifier);
   }
 
   bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
@@ -325,8 +326,15 @@ FORWARD_TO_BASE_EXACT(TraverseDeclarationNameInfo, DeclarationNameInfo)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgument, const TemplateArgument &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArguments, ArrayRef<TemplateArgument>)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgumentLoc, const TemplateArgumentLoc &)
-FORWARD_TO_BASE_EXACT(TraverseTemplateName, TemplateName)
 FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifier, NestedNameSpecifier)
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::TraverseTemplateName(
+    TemplateName Template, bool TraverseQualifier) {
+  return Impl<Const>(*this)
+      .RecursiveASTVisitor<Impl<Const>>::TraverseTemplateName(
+          Template, TraverseQualifier);
+}
 
 template <bool Const>
 bool DynamicRecursiveASTVisitorBase<Const>::TraverseType(

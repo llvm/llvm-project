@@ -71,7 +71,10 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit _BMSkipTable(size_t, value_type __default_value, _Hash, _BinaryPredicate) {
+    _LIBCPP_DIAGNOSTIC_PUSH
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wmaybe-uninitialized")
     std::fill_n(__table_.data(), __table_.size(), __default_value);
+    _LIBCPP_DIAGNOSTIC_POP
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(key_type __key, value_type __val) {

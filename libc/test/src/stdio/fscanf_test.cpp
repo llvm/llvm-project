@@ -36,7 +36,7 @@ using ::fwrite;
 } // namespace scanf_test
 
 TEST(LlvmLibcFScanfTest, WriteToFile) {
-  const char *FILENAME = APPEND_LIBC_TEST("fscanf_output.test");
+  const char *FILENAME = "fscanf_output.test";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
@@ -92,7 +92,7 @@ TEST(LlvmLibcFScanfTest, WriteToFile) {
 }
 
 TEST(LlvmLibcFScanfTest, ProcNetIfInet6Sample) {
-  const char *FILENAME = APPEND_LIBC_TEST("proc_net_if_inet6.txt");
+  const char *FILENAME = "proc_net_if_inet6.txt";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
@@ -164,7 +164,7 @@ TEST(LlvmLibcFScanfTest, ProcNetIfInet6Sample) {
 }
 
 TEST(LlvmLibcFScanfTest, EofPartialMatch) {
-  const char *FILENAME = APPEND_LIBC_TEST("eof_partial_match.txt");
+  const char *FILENAME = "eof_partial_match.txt";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
@@ -193,7 +193,7 @@ TEST(LlvmLibcFScanfTest, EofPartialMatch) {
 }
 
 TEST(LlvmLibcFScanfTest, MatchingErrors) {
-  const char *FILENAME = APPEND_LIBC_TEST("matching_error_partial_match.txt");
+  const char *FILENAME = "matching_error_partial_match.txt";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
   ::FILE *file = scanf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);

@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_DEVICE_BINARY_STRUCTURES
-#define _LIBSYCL_DEVICE_BINARY_STRUCTURES
+#ifndef _LIBSYCL_SRC_DETAIL_DEVICE_BINARY_STRUCTURES_HPP
+#define _LIBSYCL_SRC_DETAIL_DEVICE_BINARY_STRUCTURES_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -33,4 +33,4 @@ static constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64-unknown-unknown";
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_DEVICE_BINARY_STRUCTURES
+#endif // _LIBSYCL_SRC_DETAIL_DEVICE_BINARY_STRUCTURES_HPP

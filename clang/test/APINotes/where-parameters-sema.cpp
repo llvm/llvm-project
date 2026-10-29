@@ -10,6 +10,14 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABILITY %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter rawIntGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-RAW-INT %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter constValueGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-CONST %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter volatileValueGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-VOLATILE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter pointerVolatileGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-POINTER-VOLATILE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter pointeeVolatileMismatchGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-POINTEE-VOLATILE-MISMATCH %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nestedNullableGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NESTED-NULLABILITY %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableArrayGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABLE-ARRAY %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableFunctionPointerItselfGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER-ITSELF %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableFunctionPointerGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableNonnullFunctionPointerGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABLE-NONNULL-FUNCTION-POINTER %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorNamespace::makeNamespaced -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NAMESPACE %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::setValue -x c++ | FileCheck --check-prefix=CHECK-METHOD-OVERLOADS %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::broad -x c++ | FileCheck --check-prefix=CHECK-METHOD-BROAD %s
@@ -26,6 +34,30 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::operator+ -x c++ | FileCheck --check-prefix=CHECK-METHOD-OPERATOR %s
 
 #include "WhereParametersSema.h"
+
+// CHECK-GLOBAL-VOLATILE: FunctionDecl {{.+}} volatileValueGlobal 'void (volatile int)'
+// CHECK-GLOBAL-VOLATILE: SwiftNameAttr {{.+}} "volatileValueGlobal(_:)"
+
+// CHECK-GLOBAL-POINTER-VOLATILE: FunctionDecl {{.+}} pointerVolatileGlobal 'void (int *volatile)'
+// CHECK-GLOBAL-POINTER-VOLATILE: SwiftNameAttr {{.+}} "pointerVolatileGlobal(_:)"
+
+// CHECK-GLOBAL-POINTEE-VOLATILE-MISMATCH: FunctionDecl {{.+}} pointeeVolatileMismatchGlobal 'void (volatile int *)'
+// CHECK-GLOBAL-POINTEE-VOLATILE-MISMATCH-NOT: SwiftNameAttr
+
+// CHECK-GLOBAL-NESTED-NULLABILITY: FunctionDecl {{.+}} nestedNullableGlobal 'void (int * _Nullable * _Nullable)'
+// CHECK-GLOBAL-NESTED-NULLABILITY: SwiftNameAttr {{.+}} "nestedNullableGlobal(_:)"
+
+// CHECK-GLOBAL-NULLABLE-ARRAY: FunctionDecl {{.+}} nullableArrayGlobal 'void (int * _Nullable *)'
+// CHECK-GLOBAL-NULLABLE-ARRAY: SwiftNameAttr {{.+}} "nullableArrayGlobal(_:)"
+
+// CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER-ITSELF: FunctionDecl {{.+}} nullableFunctionPointerItselfGlobal 'void (void (* _Nullable)(int *))'
+// CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER-ITSELF: SwiftNameAttr {{.+}} "nullableFunctionPointerItselfGlobal(_:)"
+
+// CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER: FunctionDecl {{.+}} nullableFunctionPointerGlobal 'void (void (*)(int * _Nullable))'
+// CHECK-GLOBAL-NULLABLE-FUNCTION-POINTER: SwiftNameAttr {{.+}} "nullableFunctionPointerGlobal(_:)"
+
+// CHECK-GLOBAL-NULLABLE-NONNULL-FUNCTION-POINTER: FunctionDecl {{.+}} nullableNonnullFunctionPointerGlobal 'void (void (*)(int * _Nullable, int * _Nonnull))'
+// CHECK-GLOBAL-NULLABLE-NONNULL-FUNCTION-POINTER: SwiftNameAttr {{.+}} "nullableNonnullFunctionPointerGlobal(_:)"
 
 // CHECK-GLOBAL-OVERLOADS: FunctionDecl {{.+}} makeWidget 'void (int)'
 // CHECK-GLOBAL-OVERLOADS-NEXT: ParmVarDecl {{.+}} 'int'

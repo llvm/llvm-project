@@ -1,0 +1,10 @@
+# Verify that an IR value whose name starts with a '.' is still renamed to
+# derive a FileCheck variable name, while a '%.' inside a quoted metadata
+# string is left alone.
+# RUN: cp -f %S/Inputs/dot_value_in_metadata_string.ll %t.ll && %update_test_checks %t.ll --check-globals all
+# RUN: diff -u %t.ll %S/Inputs/dot_value_in_metadata_string.ll.expected
+# Verify that the generated check lines match the input they were taken from.
+# RUN: opt < %t.ll -passes=instsimplify -S | FileCheck %t.ll
+# RUN: %update_test_checks %t.ll --check-globals all
+# Verify script is idempotent
+# RUN: diff -u %t.ll %S/Inputs/dot_value_in_metadata_string.ll.expected

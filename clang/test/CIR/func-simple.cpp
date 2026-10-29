@@ -68,7 +68,7 @@ unsigned long long ullfunc() { return 42ull; }
 // CHECK: }
 
 bool boolfunc() { return true; }
-// CHECK: cir.func{{.*}} @_Z8boolfuncv() -> (!cir.bool {llvm.noundef})
+// CHECK: cir.func{{.*}} @_Z8boolfuncv() -> (!cir.bool {llvm.noundef, llvm.zeroext})
 // CHECK:   %0 = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CHECK:   %1 = cir.const #true
 // CHECK:   cir.store %1, %0 : !cir.bool, !cir.ptr<!cir.bool>

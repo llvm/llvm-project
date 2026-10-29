@@ -46,15 +46,17 @@
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_reference"
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:ORCRetain"
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
-// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
+// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.*}}"release:ORCRelease"
 
+// The redeclaration inherits the annotations rather than having API notes
+// applied a second time, so it carries one copy of each, marked Inherited.
 // CHECK-OPAQUE-REF-COUNTED: Dumping OpaqueRefCountedType:
 // CHECK-OPAQUE-REF-COUNTED-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs{{.*}}struct OpaqueRefCountedType
-// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_reference"
-// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:ORCRetain"
-// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> Inherited "import_reference"
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> Inherited "retain:ORCRetain"
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> Inherited "release:ORCRelease"
 
-// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:
+// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.*}}"release:
 // CHECK-NON-COPYABLE: Dumping NonCopyableType:
 // CHECK-NON-COPYABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct NonCopyableType
 // CHECK-NON-COPYABLE: SwiftAttrAttr {{.+}} <<invalid sloc>> "~Copyable"

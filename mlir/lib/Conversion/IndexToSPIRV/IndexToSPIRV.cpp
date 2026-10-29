@@ -228,7 +228,7 @@ struct ConvertIndexFloorDivSPattern final : OpConversionPattern<FloorDivSOp> {
     Value nNonZero = spirv::INotEqualOp::create(rewriter, loc, n, zero);
 
     Value cmp = spirv::LogicalAndOp::create(rewriter, loc, diffSign, nNonZero);
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, posRes, negRes);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, negRes, posRes);
     return success();
   }
 };

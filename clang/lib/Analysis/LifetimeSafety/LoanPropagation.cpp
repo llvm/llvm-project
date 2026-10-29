@@ -5,10 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include <algorithm>
 #include <cassert>
 #include <memory>
 
 #include "Dataflow.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -18,6 +20,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -175,12 +178,14 @@ public:
     using SearchState = std::pair<const CFGBlock *, OriginID>;
     struct DFSNode {
       SearchState CurrState;
-      llvm::SmallVector<OriginID> OriginFlowChain;
+      llvm::ImmutableList<OriginID> OriginFlowChain;
     };
 
     llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
-    PendingStates.push_back({{EndBlock, StartOID}, {}});
+    llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
+    PendingStates.push_back(
+        {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
 
     // DFS loop to trace loan backwards through CFG
     while (!PendingStates.empty()) {
@@ -191,13 +196,19 @@ public:
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
       if (!BuildResult.empty()) {
-        CurrNode.OriginFlowChain.append(BuildResult);
+        for (OriginID OID : BuildResult)
+          CurrNode.OriginFlowChain =
+              OriginFlowChainFactory.add(OID, CurrNode.OriginFlowChain);
         CurrOID = BuildResult.back();
       }
 
       // If we found the IssueFact, we're done
-      if (Complete)
-        return CurrNode.OriginFlowChain;
+      if (Complete) {
+        llvm::SmallVector<OriginID> Result(CurrNode.OriginFlowChain.begin(),
+                                           CurrNode.OriginFlowChain.end());
+        std::reverse(Result.begin(), Result.end());
+        return Result;
+      }
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
@@ -209,8 +220,8 @@ public:
       }
     }
 
-    llvm_unreachable(
-        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
+    llvm_unreachable("Could not reconstruct origin flow. Search finished "
+                     "without reaching IssueFact");
   }
 
   llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
@@ -219,13 +230,39 @@ public:
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg);
+        return dropLeadingLoads(
+            buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan, Cfg));
 
     return {};
   }
 
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const OriginEscapesFact *OEF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
+    OriginID OID = OEF->getEscapedOriginID();
+    if (!getLoans(OID, OEF).contains(TargetLoan))
+      return {};
+    return dropLeadingLoads(buildOriginFlowChain(OEF, OID, TargetLoan, Cfg));
+  }
+
 private:
+  /// An expression's origin only receives loans from its subexpressions, so
+  /// until the chain reaches a declaration it is inside the expression the
+  /// chain starts from. Casts there just load its variable, so drop them.
+  llvm::SmallVector<OriginID>
+  dropLeadingLoads(llvm::SmallVector<OriginID> Chain) const {
+    const OriginManager &OM = FactMgr.getOriginMgr();
+    auto FirstDecl = llvm::find_if(
+        Chain, [&](OriginID OID) { return !OM.getOrigin(OID).getExpr(); });
+    Chain.erase(std::remove_if(Chain.begin(), FirstDecl,
+                               [&](OriginID OID) {
+                                 return isa<ImplicitCastExpr>(
+                                     OM.getOrigin(OID).getExpr());
+                               }),
+                FirstDecl);
+    return Chain;
+  }
+
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
     return PersistentOrigins.test(OID.Value);
@@ -317,5 +354,11 @@ llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
 llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
     const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
   return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
+}
+llvm::SmallVector<OriginID>
+LoanPropagationAnalysis::buildOriginFlowChain(const OriginEscapesFact *OEF,
+                                              const LoanID TargetLoan,
+                                              const CFG *Cfg) const {
+  return PImpl->buildOriginFlowChain(OEF, TargetLoan, Cfg);
 }
 } // namespace clang::lifetimes::internal

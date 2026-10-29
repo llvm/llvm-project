@@ -35,8 +35,10 @@ static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
-static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
-cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    EnablePPCConstHoist("ppc-constant-hoisting",
+                        cl::desc("enable constant hoisting on PPC"),
+                        cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
@@ -49,10 +51,10 @@ LsrNoInsnsCost("ppc-lsr-no-insns-cost", cl::Hidden, cl::init(false),
 
 // The latency of mtctr is only justified if there are more than 4
 // comparisons that will be removed as a result.
-static cl::opt<unsigned>
-SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
-                      cl::desc("Loops with a constant trip count smaller than "
-                               "this value will not use the count register."));
+static cl::opt<unsigned> SmallCTRLoopThreshold(
+    "ppc-min-ctr-loop-threshold", cl::init(4), cl::Hidden,
+    cl::desc("Loops with a constant trip count smaller than "
+             "this value will not use the count register."));
 
 //===----------------------------------------------------------------------===//
 //
@@ -170,7 +172,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
 InstructionCost PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                           TTI::TargetCostKind CostKind) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCost(Imm, Ty, CostKind);
 
   assert(Ty->isIntegerTy());
@@ -202,7 +204,7 @@ InstructionCost
 PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                 const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
 
   assert(Ty->isIntegerTy());
@@ -238,7 +240,7 @@ InstructionCost PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
                                               Instruction *Inst) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
 
   assert(Ty->isIntegerTy());
@@ -599,7 +601,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Ty, nullptr);
@@ -609,7 +611,7 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   // Fallback to the default implementation.
   InstructionCost Cost = BaseT::getArithmeticInstrCost(
@@ -617,13 +619,11 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   return Cost * CostFactor;
 }
 
-InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
-                                           TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost PPCTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, SrcTy, nullptr);
@@ -983,9 +983,8 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() const { return false; }
 
 bool PPCTTIImpl::shouldBuildRelLookupTables() const {
-  const PPCTargetMachine &TM = ST->getTargetMachine();
   // XCOFF hasn't implemented lowerRelativeReference, disable non-ELF for now.
-  if (!TM.isELFv2ABI())
+  if (!ST->isELFv2ABI())
     return false;
   return BaseT::shouldBuildRelLookupTables();
 }
@@ -1159,4 +1158,56 @@ PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
       VecTy->getScalarSizeInBits() != 8)
     Cost += 1; // need shift for length
   return Cost;
+}
+
+InstructionCost PPCTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (!getST()->hasAltivec())
+    return Invalid;
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  EVT AccVT = TLI->getValueType(DL, AccumType, true);
+  if (AccVT != MVT::i32)
+    return Invalid;
+
+  Type *ATy = VectorType::get(InputTypeA, VF);
+  EVT AVT = TLI->getValueType(DL, ATy, true);
+
+  if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (!BinOp) {
+    // It's just an add, so only the LHS type matters. RHS is just 1s.
+    if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
+      return Invalid;
+    // We can do either (sext/-) or (zext/-) for v16i8 and v8i16
+    return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
+  }
+
+  if (BinOp.value() != Instruction::Mul)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+  if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (AVT == MVT::v16i8) {
+    // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
+    if (OpBExtend != TTI::PR_ZeroExtend)
+      return Invalid;
+  } else if (AVT == MVT::v8i16) {
+    // For v8i16 PPC supports vmsumuhm (zext/zext) and vmsumshm (sext/sext)
+    if (OpAExtend != OpBExtend)
+      return Invalid;
+  } else {
+    return Invalid;
+  }
+
+  return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
 }

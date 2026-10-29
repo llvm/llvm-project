@@ -693,6 +693,7 @@ using MaskVec = SmallVector<LaneBitmask, 4>;
 // Fills V with differentials between every two consecutive elements of List.
 static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
+  V.reserve(List.count());
   SparseBitVector<>::iterator I = List.begin(), E = List.end();
   unsigned Val = *I;
   while (++I != E) {
@@ -706,6 +707,7 @@ static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
 template <typename Iter>
 static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
+  V.reserve(std::distance(Begin, End));
   unsigned Val = InitVal;
   for (Iter I = Begin; I != End; ++I) {
     unsigned Cur = (*I)->EnumValue;
@@ -1004,12 +1006,14 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister *> SR;
+    SR.reserve(Reg.getSubRegs().size());
     Reg.addSubRegsPreOrder(SR, RegBank);
     diffEncode(SubRegLists[i], Reg.EnumValue, SR.begin(), SR.end());
     DiffSeqs.add(SubRegLists[i]);
 
     // Compute the corresponding sub-register indexes.
     SubRegIdxVec &SRIs = SubRegIdxLists[i];
+    SRIs.reserve(SR.size());
     for (const CodeGenRegister *S : SR)
       SRIs.push_back(Reg.getSubRegIndex(S));
     SubRegIdxSeqs.add(SRIs);
@@ -1145,10 +1149,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     unsigned BitSetIdx;
     unsigned SubClassMaskIdx;
     unsigned SuperClassIdx;
+    // Not strictly an index, but to avoid recomputation: cache reg set range.
+    unsigned MinRegVal;
+    unsigned RegSetSize;
   };
   SmallVector<StartIndex> StartIndices;
   StartIndices.reserve(RegisterClasses.size() + 1);
-  StartIndices.push_back(StartIndex{0, 0, 0, 0});
+  StartIndices.push_back(StartIndex{0, 0, 0, 0, 0, 0});
 
   // For compressing the sub-reg index lists.
   using IdxList = std::vector<const CodeGenSubRegIndex *>;
@@ -1159,9 +1166,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     ArrayRef<const Record *> Order = RC.getOrder();
     RegClassStrings.add(RC.getName());
 
-    unsigned MaxRegVal = 0;
-    for (const Record *Reg : Order)
+    unsigned MinRegVal = UINT_MAX, MaxRegVal = 0;
+    for (const Record *Reg : Order) {
+      MinRegVal = std::min(MinRegVal, RegBank.getReg(Reg)->EnumValue);
       MaxRegVal = std::max(MaxRegVal, RegBank.getReg(Reg)->EnumValue);
+    }
 
     unsigned SubClassMaskSize = (RC.getSubClasses().size() + 31) / 32;
     IdxList &SRIList = SuperRegIdxLists[RC.EnumValue];
@@ -1175,13 +1184,18 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
     SuperRegIdxSeqs.add(SRIList);
 
-    const auto &Last = StartIndices.back();
+    auto &Last = StartIndices.back();
+    Last.MinRegVal = Order.empty() ? 0 : MinRegVal;
+    Last.RegSetSize = Order.empty() ? 0 : MaxRegVal - MinRegVal + 1;
     StartIndices.push_back(StartIndex{
         Last.RegIdx + unsigned(Order.size()),
         // Round to next byte size.
-        Last.BitSetIdx + (Order.empty() ? 0 : (MaxRegVal / 8) + 1),
+        Last.BitSetIdx +
+            (Order.empty() ? 0 : ((MaxRegVal - MinRegVal) / 8) + 1),
         Last.SubClassMaskIdx + SubClassMaskSize,
         Last.SuperClassIdx + unsigned(RC.getSuperClasses().size()),
+        0, // MinRegVal for next RegClass.
+        0, // RegSetSize for next RegClass.
     });
   }
 
@@ -1219,13 +1233,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
           .str();
     };
 
-    unsigned BitSetSize =
-        StartIndices[It.index() + 1].BitSetIdx - RCIndices.BitSetIdx;
     OS << "    {\n      " << GetOff("Regs", RCIndices.RegIdx) << ",\n      "
        << GetOff("BitSets", RCIndices.BitSetIdx) << ",\n      "
        << RegClassStrings.get(RC.getName()) << ",\n      " << RegSize
-       << ",\n      " << RC.getOrder().size() << ",\n      " << BitSetSize
-       << ",\n      " << RC.getQualifiedIdName() << ",\n      "
+       << ",\n      " << RC.getOrder().size() << ",\n      "
+       << RCIndices.MinRegVal << ", /* MinRegVal */\n      "
+       << RCIndices.RegSetSize << ", /* RegSetSize */\n      "
+       << RC.getQualifiedIdName() << ",\n      "
        << static_cast<unsigned>(RC.CopyCost) << ", /* CopyCost */\n      "
        << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
        << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
@@ -1269,7 +1283,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       OS << "    /* " << StartIndices[Idx].BitSetIdx << " */ ";
       BitVectorEmitter BVE;
       for (const Record *Reg : Order)
-        BVE.add(RegBank.getReg(Reg)->EnumValue);
+        BVE.add(RegBank.getReg(Reg)->EnumValue - StartIndices[Idx].MinRegVal);
       BVE.print(OS);
       OS << "\n";
     }

@@ -90,9 +90,9 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; V8-OPT-NEXT:    ld [%fp+-20], %o0
 ; V8-OPT-NEXT:    unimp 16
 ; V8-OPT-NEXT:    ldd [%fp+-8], %f0
-; V8-OPT-NEXT:    ldd [%fp+-16], %f4
+; V8-OPT-NEXT:    ldd [%fp+-16], %f2
 ; V8-OPT-NEXT:    std %f0, [%i1+8]
-; V8-OPT-NEXT:    std %f4, [%i1]
+; V8-OPT-NEXT:    std %f2, [%i1]
 ; V8-OPT-NEXT:    ret
 ; V8-OPT-NEXT:    restore
 ;
@@ -134,9 +134,9 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; V9-NEXT:    ld [%fp+-20], %o0
 ; V9-NEXT:    unimp 16
 ; V9-NEXT:    ldd [%fp+-8], %f0
-; V9-NEXT:    ldd [%fp+-16], %f4
+; V9-NEXT:    ldd [%fp+-16], %f2
 ; V9-NEXT:    std %f0, [%i1+8]
-; V9-NEXT:    std %f4, [%i1]
+; V9-NEXT:    std %f2, [%i1]
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
 ;
@@ -150,9 +150,9 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 ; SPARC64-NEXT:    call _Qp_stoq
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ldd [%fp+2039], %f0
-; SPARC64-NEXT:    ldd [%fp+2031], %f4
+; SPARC64-NEXT:    ldd [%fp+2031], %f2
 ; SPARC64-NEXT:    std %f0, [%i1+8]
-; SPARC64-NEXT:    std %f4, [%i1]
+; SPARC64-NEXT:    std %f2, [%i1]
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
   %a = load half, ptr %p
@@ -162,25 +162,14 @@ define void @test_fpextend_fp128(ptr %p, ptr %out) nounwind {
 }
 
 define void @test_fptrunc_float(float %f, ptr %p) nounwind {
-; V8-OPT-LABEL: test_fptrunc_float:
-; V8-OPT:       ! %bb.0:
-; V8-OPT-NEXT:    save %sp, -96, %sp
-; V8-OPT-NEXT:    call __truncsfhf2
-; V8-OPT-NEXT:    mov %i0, %o0
-; V8-OPT-NEXT:    sth %o0, [%i1]
-; V8-OPT-NEXT:    ret
-; V8-OPT-NEXT:    restore
-;
-; V8-UNOPT-LABEL: test_fptrunc_float:
-; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -96, %sp
-; V8-UNOPT-NEXT:    mov %i0, %o0
-; V8-UNOPT-NEXT:    st %o0, [%fp+-4]
-; V8-UNOPT-NEXT:    call __truncsfhf2
-; V8-UNOPT-NEXT:    ld [%fp+-4], %f0
-; V8-UNOPT-NEXT:    sth %o0, [%i1]
-; V8-UNOPT-NEXT:    ret
-; V8-UNOPT-NEXT:    restore
+; V8-LABEL: test_fptrunc_float:
+; V8:       ! %bb.0:
+; V8-NEXT:    save %sp, -96, %sp
+; V8-NEXT:    call __truncsfhf2
+; V8-NEXT:    mov %i0, %o0
+; V8-NEXT:    sth %o0, [%i1]
+; V8-NEXT:    ret
+; V8-NEXT:    restore
 ;
 ; V9-LABEL: test_fptrunc_float:
 ; V9:       ! %bb.0:
@@ -270,8 +259,8 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V8-OPT:       ! %bb.0:
 ; V8-OPT-NEXT:    save %sp, -112, %sp
 ; V8-OPT-NEXT:    ldd [%i0], %f0
-; V8-OPT-NEXT:    ldd [%i0+8], %f4
-; V8-OPT-NEXT:    std %f4, [%fp+-8]
+; V8-OPT-NEXT:    ldd [%i0+8], %f2
+; V8-OPT-NEXT:    std %f2, [%fp+-8]
 ; V8-OPT-NEXT:    add %fp, -16, %o0
 ; V8-OPT-NEXT:    call __trunctfhf2
 ; V8-OPT-NEXT:    std %f0, [%fp+-16]
@@ -304,8 +293,8 @@ define void @test_fptrunc_fp128(ptr %dp, ptr %p) nounwind {
 ; V9:       ! %bb.0:
 ; V9-NEXT:    save %sp, -112, %sp
 ; V9-NEXT:    ldd [%i0], %f0
-; V9-NEXT:    ldd [%i0+8], %f4
-; V9-NEXT:    std %f4, [%fp+-8]
+; V9-NEXT:    ldd [%i0+8], %f2
+; V9-NEXT:    std %f2, [%fp+-8]
 ; V9-NEXT:    add %fp, -16, %o0
 ; V9-NEXT:    call __trunctfhf2
 ; V9-NEXT:    std %f0, [%fp+-16]

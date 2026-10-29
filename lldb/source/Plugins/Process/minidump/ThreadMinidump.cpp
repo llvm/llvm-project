@@ -15,8 +15,8 @@
 #include "RegisterContextMinidump_x86_32.h"
 #include "RegisterContextMinidump_x86_64.h"
 
-#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
@@ -69,7 +69,7 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
     // TODO write other register contexts and add them here
     switch (arch.GetMachine()) {
     case llvm::Triple::x86: {
-      reg_interface = new RegisterContextLinux_i386(arch);
+      reg_interface = new RegisterInfoLinux_i386(arch);
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_32(m_gpregset_data, reg_interface);
       DataExtractor gpregset(buf, lldb::eByteOrderLittle, 4);
@@ -79,7 +79,7 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     }
     case llvm::Triple::x86_64: {
-      reg_interface = new RegisterContextLinux_x86_64(arch);
+      reg_interface = new RegisterInfoLinux_x86_64(arch);
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_64(m_gpregset_data, reg_interface);
       DataExtractor gpregset(buf, lldb::eByteOrderLittle, 8);

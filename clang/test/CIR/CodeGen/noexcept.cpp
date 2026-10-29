@@ -25,9 +25,9 @@ void no_except() {
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[C_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
-// LLVM: %[[C_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca i8, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, align 1
+// LLVM: %[[C_ADDR:.*]] = alloca i8, align 1
 // LLVM: store i8 1, ptr %[[A_ADDR]], align 1
 // LLVM: store i8 0, ptr %[[B_ADDR]], align 1
 // LLVM: store i8 1, ptr %[[C_ADDR]], align 1

@@ -16,8 +16,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_private_pair
 ! x is privatized exactly once.
-! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
-! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
+! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
 
 ! -----------------------------------------------------------------------
 ! private(x, x, x) -- two duplicates (from the triple-occurrence review note)
@@ -31,8 +31,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_private_triple
 ! x is privatized exactly once even with three source occurrences.
-! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
-! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
+! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
 
 ! -----------------------------------------------------------------------
 ! private(x) private(x) -- duplicate across two separate clauses
@@ -45,8 +45,8 @@ subroutine test_private_two_clauses(i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_private_two_clauses
-! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
-! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
+! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
 
 ! -----------------------------------------------------------------------
 ! firstprivate(x, x)
@@ -59,5 +59,5 @@ subroutine test_firstprivate_pair(i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_firstprivate_pair
-! CHECK: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) -> !fir.ref<i32> {name = "x"}
-! CHECK-NOT: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) name("x") -> !fir.ref<i32>
+! CHECK-NOT: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) name("x") -> !fir.ref<i32>

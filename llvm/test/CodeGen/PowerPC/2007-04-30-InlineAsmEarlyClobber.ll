@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -regalloc=fast -optimize-regalloc=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -regalloc=fast | FileCheck %s
 ; The first argument of subfc must not be the same as any other register.
 
 ; CHECK: APP

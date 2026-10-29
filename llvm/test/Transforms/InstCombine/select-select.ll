@@ -16,19 +16,19 @@ define float @foo1(float %a) {
   ret float %f
 }
 
-define float @foo2(float %a) {
+define float @foo2(float %a) !prof !0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:    [[B:%.*]] = fcmp ule float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], float [[A]], float 1.000000e+00
-; CHECK-NEXT:    [[F:%.*]] = select i1 [[B]], float 0.000000e+00, float [[E]]
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], float [[A]], float 1.000000e+00, !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[B]], float 0.000000e+00, float [[E]], !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %b = fcmp ogt float %a, 0.0
-  %c = select i1 %b, float %a, float 0.0
+  %c = select i1 %b, float %a, float 0.0, !prof !1
   %d = fcmp olt float %c, 1.0
-  %e = select i1 %b, float %a, float 0.0
-  %f = select i1 %d, float %e, float 1.0
+  %e = select i1 %b, float %a, float 0.0, !prof !2
+  %f = select i1 %d, float %e, float 1.0, !prof !3
   ret float %f
 }
 
@@ -535,8 +535,8 @@ define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison3(<2 x i32> %a, <2 x i32> 
 
 define i32 @selectSelect11(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !prof !0 {
 ; CHECK-LABEL: @selectSelect11(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[COND1:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[COND1:%.*]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %defaultVal, i32 %var, !prof !1
@@ -546,8 +546,8 @@ define i32 @selectSelect11(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !pro
 
 define i32 @selectSelect22(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !prof !0 {
 ; CHECK-LABEL: @selectSelect22(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 [[COND1:%.*]], i1 false, !prof [[PROF1]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 [[COND1:%.*]], i1 false, !prof [[PROF3]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal, !prof !1
@@ -558,8 +558,8 @@ define i32 @selectSelect22(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !pro
 define i32 @selectSelect12(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !prof !0 {
 ; CHECK-LABEL: @selectSelect12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[COND1:%.*]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND2:%.*]], i1 [[TMP1]], i1 false, !prof [[PROF1]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP2]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND2:%.*]], i1 [[TMP1]], i1 false, !prof [[PROF3]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP2]], i32 [[VAR:%.*]], i32 [[DEFAULTVAL:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %defaultVal,i32 %var, !prof !1
@@ -570,8 +570,8 @@ define i32 @selectSelect12(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !pro
 define i32 @selectSelect21(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !prof !0 {
 ; CHECK-LABEL: @selectSelect21(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[COND1:%.*]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[TMP1]], !prof [[PROF1]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP2]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[TMP1]], !prof [[PROF3]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP2]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %var, i32 %defaultVal, !prof !1
@@ -693,10 +693,12 @@ declare void @use32(i32)
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 3}
+!3 = !{!"branch_weights", i32 7, i32 11}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 5, i32 3}
-; CHECK: [[PROF2]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 5}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 3}
 ;.

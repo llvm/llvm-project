@@ -23,6 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -75,6 +76,19 @@ void loadPlugins(llvm::ArrayRef<std::string> Paths);
 /// command-line options, and parses arguments. Must be called after InitLLVM.
 void initTool(int argc, const char **argv, llvm::StringRef Version,
               llvm::cl::OptionCategory &Category, llvm::StringRef ToolHeading);
+
+//===----------------------------------------------------------------------===//
+// Target Triples
+//===----------------------------------------------------------------------===//
+
+/// Parses and validates a target triple supplied on the command line.
+///
+/// \param FlagName The option supplying \p Value, named in the diagnostic.
+/// \param Value The triple as spelled by the user. Must not be empty.
+/// \returns The parsed triple. Calls fail() and exits if the architecture is
+///          unrecognized.
+llvm::Triple parseTargetTripleOrFail(llvm::StringRef FlagName,
+                                     llvm::StringRef Value);
 
 //===----------------------------------------------------------------------===//
 // Data Structures

@@ -468,7 +468,7 @@ set(LLVM_RUNTIME_TARGETS "${RUNTIME_TARGETS}" CACHE STRING "")
 
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
-set(LLVM_TOOLCHAIN_TOOLS
+set(TOOLCHAIN_TOOLS
   dsymutil
   llvm-ar
   llvm-cov
@@ -485,7 +485,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-libtool-darwin
   llvm-lipo
   llvm-ml
-  llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump
@@ -505,8 +504,13 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-xray
   opt-viewer
   sancov
-  scan-build-py
-  CACHE STRING "")
+  scan-build-py)
+
+if(LLVM_ENABLE_LIBXML2)
+  list(APPEND TOOLCHAIN_TOOLS llvm-mt)
+endif()
+
+set(LLVM_TOOLCHAIN_TOOLS "${TOOLCHAIN_TOOLS}" CACHE STRING "")
 
 set(LLVM_Toolchain_DISTRIBUTION_COMPONENTS
   bolt

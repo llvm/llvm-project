@@ -89,13 +89,10 @@ define void @test_supernode_addsub_alt(ptr %Aarray, ptr %Barray, ptr %Carray, pt
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP6]], [[TMP7]]
-; ENABLED-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP7]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP8:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP9:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP5]], [[TMP2]]
 ; ENABLED-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
 ; ENABLED-NEXT:    store <2 x double> [[TMP10]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
@@ -119,6 +116,57 @@ entry:
   %addB1C1 = fadd fast double %B1, %C1
   %sub0 = fsub fast double %subA0B0, %C0
   %add1 = fadd fast double %addB1C1, %A1
+  store double %sub0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; S[0] = ((A[0] - B[0]) - D[0]) - C[0]
+; S[1] = ((B[1] + C[1]) + D[1]) + A[1]
+define void @test_addsub_alt_commuted(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; ENABLED-LABEL: @test_addsub_alt_commuted(
+; ENABLED-NEXT:  entry:
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP4:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP5:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP3]]
+; ENABLED-NEXT:    [[TMP6:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP5]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP7:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP8:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP7]], [[TMP3]]
+; ENABLED-NEXT:    [[TMP9:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP8]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    store <2 x double> [[TMP10]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %subA0B0 = fsub fast double %A0, %B0
+  %addB1C1 = fadd fast double %B1, %C1
+
+  %subA0B0D0 = fsub fast double %subA0B0, %D0
+  %addB1C1D1 = fadd fast double %D1, %addB1C1
+
+  %sub0 = fsub fast double %subA0B0D0, %C0
+  %add1 = fadd fast double %addB1C1D1, %A1
   store double %sub0, ptr %Sarray, align 8
   store double %add1, ptr %idxS1, align 8
   ret void

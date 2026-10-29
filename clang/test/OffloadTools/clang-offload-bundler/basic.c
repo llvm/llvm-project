@@ -535,6 +535,17 @@
 // RUN: not clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgpu9.06-amd-amdhsa--gfx906,openmp-amdgpu9.06-amd-amdhsa--gfx906:sramecc+ -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bad.bundle 2>&1 | FileCheck %s -check-prefix=BADTARGETS
 // BADTARGETS: error: Cannot bundle inputs with conflicting targets: 'openmp-amdgpu9.06-amd-amdhsa--gfx906' and 'openmp-amdgpu9.06-amd-amdhsa--gfx906:sramecc+'
 
+// Check the per-member TargetID conflict detection performed by
+// -check-input-archive. The bundle-time conflict check groups by offload kind
+// and triple, so "gfx906" and "gfx906:xnack+" placed under different offload
+// kinds (hip vs hipv4) bundle successfully. The archive check instead groups by
+// resolved processor and must flag them as conflicting for the same gfx906.
+
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx906:xnack+ -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.conflict.bundle
+// RUN: llvm-ar cr %t.conflict-archive.a %t.conflict.bundle
+// RUN: not clang-offload-bundler -unbundle -type=a -check-input-archive -targets=hip-amdgcn-amd-amdhsa--gfx906 -input=%t.conflict-archive.a -output=%t.conflict-out.a 2>&1 | FileCheck %s -check-prefix=CONFLICTARCHIVE
+// CONFLICTARCHIVE: error: conflicting TargetIDs [gfx906, gfx906:xnack+] found in {{.*}}conflict.bundle of {{.*}}conflict-archive.a
+
 // Check for error if no compatible code object is found in the heterogeneous archive library
 // RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu8.03-amd-amdhsa--gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-incompatible.a 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLEARCHIVE
 // INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgpu8.03-amd-amdhsa--gfx803' in heterogeneous archive library

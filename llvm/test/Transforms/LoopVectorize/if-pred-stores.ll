@@ -161,7 +161,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 2
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL:       [[VECTOR_PH]]:
-; UNROLL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 2
+; UNROLL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 1
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; UNROLL-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -238,7 +238,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NOSIMPLIFY:       [[VECTOR_PH]]:
-; UNROLL-NOSIMPLIFY-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -315,10 +315,10 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 2
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 1
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[N_VEC]]
-; VEC-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2]], i32 0
+; VEC-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2]], i64 0
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]

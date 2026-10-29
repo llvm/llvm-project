@@ -659,7 +659,7 @@ bail:
 // CHECK-NEXT:    5: [B1.3]{{\[\[}}B1.4]]
 // CHECK-NEXT:    6: [B1.5] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:    7: {{\{}}[B1.6]{{(\})}}
-// CHECK-NEXT:    8: auto = {{\{}}arr[*]{{(\})}};
+// CHECK-NEXT:    8: auto{{.*}} = {{\{}}arr[*]{{(\})}};
 void DecompositionDecl() {
   int arr[2];
 

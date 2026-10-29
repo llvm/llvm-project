@@ -807,8 +807,11 @@ void MCObjectStreamer::finishImpl() {
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);
 
-  // Dump out the dwarf file & directory tables and line tables.
-  MCDwarfLineTable::emit(this, getAssembler().getDWARFLinetableParams());
+  // Dump out the dwarf file & directory tables and line tables. Suppress in
+  // case of errors (e.g. an unassigned file number in inline asm may leave hole
+  // in the file table).
+  if (!getContext().hadError())
+    MCDwarfLineTable::emit(this, getAssembler().getDWARFLinetableParams());
 
   // Emit pseudo probes for the current module.
   MCPseudoProbeTable::emit(this);

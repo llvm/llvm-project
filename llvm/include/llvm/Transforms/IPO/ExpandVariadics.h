@@ -22,7 +22,7 @@ enum class ExpandVariadicsMode {
   Lowering,    // Change variadic calling convention
 };
 
-class ExpandVariadicsPass : public OptionalPassInfoMixin<ExpandVariadicsPass> {
+class ExpandVariadicsPass : public RequiredPassInfoMixin<ExpandVariadicsPass> {
   const ExpandVariadicsMode Mode;
 
 public:

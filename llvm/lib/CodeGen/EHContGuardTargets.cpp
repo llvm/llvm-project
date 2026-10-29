@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -29,36 +30,7 @@ using namespace llvm;
 
 STATISTIC(EHContGuardTargetsFound, "Number of EHCont Guard targets");
 
-namespace {
-
-/// MachineFunction pass to insert a symbol before each valid catchret target
-/// and store these in the MachineFunction's CatchRetTargets vector.
-class EHContGuardTargets : public MachineFunctionPass {
-public:
-  static char ID;
-
-  EHContGuardTargets() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "EH Cont Guard catchret targets";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-};
-
-} // end anonymous namespace
-
-char EHContGuardTargets::ID = 0;
-
-INITIALIZE_PASS(EHContGuardTargets, "EHContGuardTargets",
-                "Insert symbols at valid targets for /guard:ehcont", false,
-                false)
-FunctionPass *llvm::createEHContGuardTargetsPass() {
-  return new EHContGuardTargets();
-}
-
-bool EHContGuardTargets::runOnMachineFunction(MachineFunction &MF) {
-
+static bool runEHContGuardTargets(MachineFunction &MF) {
   // Skip modules for which the ehcontguard flag is not set.
   if (!MF.getFunction().getParent()->getModuleFlag("ehcontguard"))
     return false;
@@ -78,4 +50,48 @@ bool EHContGuardTargets::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Result;
+}
+
+namespace {
+
+/// MachineFunction pass to insert a symbol before each valid catchret target
+/// and store these in the MachineFunction's CatchRetTargets vector.
+class EHContGuardTargetsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  EHContGuardTargetsLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "EH Cont Guard catchret targets";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return runEHContGuardTargets(MF);
+  }
+};
+
+} // end anonymous namespace
+
+char EHContGuardTargetsLegacy::ID = 0;
+
+INITIALIZE_PASS(EHContGuardTargetsLegacy, "EHContGuardTargets",
+                "Insert symbols at valid targets for /guard:ehcont", false,
+                false)
+FunctionPass *llvm::createEHContGuardTargetsLegacy() {
+  return new EHContGuardTargetsLegacy();
+}
+
+PreservedAnalyses
+EHContGuardTargetsPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  if (!runEHContGuardTargets(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

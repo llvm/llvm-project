@@ -835,7 +835,10 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
     // Add a field to store the suspend index.  This doesn't need to
     // be in the header.
     unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-    SwitchIndexType = Type::getIntNTy(F.getContext(), IndexBits);
+    Type *LegalTy =
+        F.getDataLayout().getSmallestLegalIntType(F.getContext(), IndexBits);
+    SwitchIndexType = LegalTy ? cast<IntegerType>(LegalTy)
+                              : Type::getIntNTy(F.getContext(), IndexBits);
 
     SwitchIndexFieldId = B.addField(SwitchIndexType, MaybeAlign());
   } else {
@@ -852,7 +855,7 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
   if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
     // We assume that no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
+        PromiseAlloca, SmallMapVector<Instruction *, std::optional<APInt>, 4>{},
         hasAccessingPromiseBeforeCB(DT, Shape));
   }
   // Create an entry for every spilled value.
@@ -953,7 +956,7 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 
   // For byval arguments, copy the pointed-to value to the frame.
   if (ByValTy) {
-    auto &DL = Builder.GetInsertBlock()->getDataLayout();
+    auto &DL = Builder.getDataLayout();
     auto Size = DL.getTypeStoreSize(ByValTy);
     // Def is a pointer to the byval argument
     Builder.CreateMemCpy(G, SpillAlignment, Def, SpillAlignment, Size);
@@ -1062,7 +1065,7 @@ static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
 static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(*F->getParent());
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
@@ -1095,8 +1098,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // reference provided with the frame GEP.
       if (CurrentBlock != U->getParent()) {
         CurrentBlock = U->getParent();
-        Builder.SetInsertPoint(CurrentBlock,
-                               CurrentBlock->getFirstInsertionPt());
+        Builder.SetInsertPoint(CurrentBlock->getFirstInsertionPt());
 
         auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
@@ -1191,7 +1193,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
       Shape.ABI == coro::ABI::Async) {
     // If we found any allocas, replace all of their remaining uses with Geps.
-    Builder.SetInsertPoint(SpillBlock, SpillBlock->begin());
+    Builder.SetInsertPoint(SpillBlock->begin());
     for (const auto &P : FrameData.Allocas) {
       AllocaInst *Alloca = P.Alloca;
       auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
@@ -1217,8 +1219,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   // dbg.declares and dbg.values with the reload from the frame.
   // Note: We cannot replace the alloca with GEP instructions indiscriminately,
   // as some of the uses may not be dominated by CoroBegin.
-  Builder.SetInsertPoint(Shape.AllocaSpillBlock,
-                         Shape.AllocaSpillBlock->begin());
+  Builder.SetInsertPoint(Shape.AllocaSpillBlock->begin());
   SmallVector<Instruction *, 4> UsersToUpdate;
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
@@ -1677,8 +1678,7 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(&F.getEntryBlock(),
-                      F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());
@@ -1830,11 +1830,10 @@ static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
                      bool UseEntryValue, Function *F, Value *Storage,
                      DIExpression *Expr, bool SkipOutermostLoad) {
-  IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
     ++InsertPt;
-  Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
 
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {

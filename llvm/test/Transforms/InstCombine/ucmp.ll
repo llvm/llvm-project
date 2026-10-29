@@ -622,3 +622,152 @@ define i8 @trunc_ucmp_multiuse(i32 %x, i32 %y) {
   %tr = trunc i32 %cmp to i8
   ret i8 %tr
 }
+
+; ucmp(zext(X), zext(Y)) -> ucmp(X, Y): zero extension preserves the unsigned
+; order, so the compare can be done in the narrower type.
+define i8 @ucmp_of_zexts(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_of_zexts(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %zy = zext i32 %y to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 %zy)
+  ret i8 %r
+}
+
+; ucmp(sext(X), sext(Y)) -> ucmp(X, Y): sign extension is monotonic with
+; respect to the unsigned order too.
+define i8 @ucmp_of_sexts(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_of_sexts(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = sext i32 %x to i64
+  %sy = sext i32 %y to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %sx, i64 %sy)
+  ret i8 %r
+}
+
+define <4 x i8> @ucmp_of_zexts_vec(<4 x i16> %x, <4 x i16> %y) {
+; CHECK-LABEL: define <4 x i8> @ucmp_of_zexts_vec(
+; CHECK-SAME: <4 x i16> [[X:%.*]], <4 x i16> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i8> @llvm.ucmp.v4i8.v4i16(<4 x i16> [[X]], <4 x i16> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %zx = zext <4 x i16> %x to <4 x i32>
+  %zy = zext <4 x i16> %y to <4 x i32>
+  %r = call <4 x i8> @llvm.ucmp.v4i8.v4i32(<4 x i32> %zx, <4 x i32> %zy)
+  ret <4 x i8> %r
+}
+
+define i8 @ucmp_of_zexts_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_of_zexts_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[ZY:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    call void @use64(i64 [[ZX]])
+; CHECK-NEXT:    call void @use64(i64 [[ZY]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %zy = zext i32 %y to i64
+  call void @use64(i64 %zx)
+  call void @use64(i64 %zy)
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 %zy)
+  ret i8 %r
+}
+
+; Negative test: the extends use different opcodes.
+define i8 @ucmp_of_zext_sext(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_of_zext_sext(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[SY:%.*]] = sext i32 [[Y]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i64(i64 [[ZX]], i64 [[SY]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %sy = sext i32 %y to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 %sy)
+  ret i8 %r
+}
+
+; Negative test: the extends have different source types.
+define i8 @ucmp_of_zexts_different_src_ty(i32 %x, i16 %y) {
+; CHECK-LABEL: define i8 @ucmp_of_zexts_different_src_ty(
+; CHECK-SAME: i32 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[ZY:%.*]] = zext i16 [[Y]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i64(i64 [[ZX]], i64 [[ZY]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %zy = zext i16 %y to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 %zy)
+  ret i8 %r
+}
+
+define i8 @ucmp_zext_const(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_zext_const(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 42)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 42)
+  ret i8 %r
+}
+
+define i8 @ucmp_const_zext(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_const_zext(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 42, i32 [[X]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %zx = zext i32 %x to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 42, i64 %zx)
+  ret i8 %r
+}
+
+define i8 @ucmp_sext_const(i32 %x) {
+; CHECK-LABEL: define i8 @ucmp_sext_const(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 -42)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = sext i32 %x to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %sx, i64 -42)
+  ret i8 %r
+}
+
+; The constant is not representable in the narrow type, so the extend is not
+; dropped; the compare is resolved by range analysis instead.
+define i8 @ucmp_zext_const_not_narrowable(i8 %x) {
+; CHECK-LABEL: define i8 @ucmp_zext_const_not_narrowable(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 -1
+;
+  %zx = zext i8 %x to i64
+  %r = call i8 @llvm.ucmp.i8.i64(i64 %zx, i64 1000)
+  ret i8 %r
+}
+
+; Negative test: one of the constant lanes is not representable in the narrow
+; type, so the whole constant cannot be narrowed.
+define <2 x i8> @ucmp_zext_const_vec_not_narrowable(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @ucmp_zext_const_vec_not_narrowable(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i8> [[X]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ucmp.v2i8.v2i16(<2 x i16> [[ZX]], <2 x i16> <i16 5, i16 300>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %zx = zext <2 x i8> %x to <2 x i16>
+  %r = call <2 x i8> @llvm.ucmp.v2i8.v2i16(<2 x i16> %zx, <2 x i16> <i16 5, i16 300>)
+  ret <2 x i8> %r
+}
+
+declare void @use64(i64 %value)

@@ -1041,6 +1041,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       IsCXXModuleDirective = false;
       IsStartOfLine = true;
       *Callbacks->OS << ';';
+      Callbacks->setEmittedTokensOnThisLine();
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {

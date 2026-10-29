@@ -92,23 +92,10 @@ class AArch64LinuxAArch32Compat(TestBase):
 
         fpr = registers[1]
 
-        # FIXME: there is a bug with fpr register indexes where it seems to be
-        # counting the GPRs as part of itself:
-        # (Pdb) fpr.GetChildAtIndex(0)
-        # (float) s0 = 1.40129846E-45
-        # (Pdb) fpr.GetIndexOfChildWithName("s0")
-        # 17
-        # (Pdb) fpr.GetChildAtIndex(17)
-        # (float) s17 = 2.52233724E-44
-        #
-        # See https://github.com/llvm/llvm-project/issues/211787.
-        #
-        # So we will assume that index 0 is s0 and not go via name lookup for
-        # fpr.
-
-        expected_fpr = {}
+        # Check s0-s31.
         for n in range(32):
-            reg = fpr.GetChildAtIndex(n)
+            reg = fpr.GetChildMemberWithName(f"s{n}")
+            self.assertTrue(reg.IsValid())
             # We cannot call GetValueAsUnsigned on the value directly, as these
             # are floating point registers.
             error = lldb.SBError()

@@ -161,7 +161,7 @@ void computeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
                           SmallVectorImpl<MVT> &ValueVTs);
 
 // Compute the signature for a given FunctionType (Ty). Note that it's not the
-// signature for ContextFunc (ContextFunc is just used to get varous context)
+// signature for ContextFunc (ContextFunc is just used to get various context)
 void computeSignatureVTs(const FunctionType *Ty, const Function *TargetFunc,
                          const Function &ContextFunc, const TargetMachine &TM,
                          SmallVectorImpl<MVT> &Params,

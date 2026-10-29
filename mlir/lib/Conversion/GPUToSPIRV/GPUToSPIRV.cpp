@@ -294,12 +294,32 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   auto newFuncOp = spirv::FuncOp::create(
       rewriter, funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
-  for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
-        namedAttr.getName() == SymbolTable::getSymbolAttrName())
-      continue;
-    newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-  }
+  newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+  newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+  cast<SymbolOpInterface>(newFuncOp.getOperation())
+      .setVisibility(
+          cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
+  auto copyGPUProperty = [&](StringAttr name, Attribute value) {
+    if (value)
+      newFuncOp->setDiscardableAttr(name, value);
+  };
+  copyGPUProperty(funcOp.getWorkgroupAttribAttrsAttrName(),
+                  funcOp.getWorkgroupAttribAttrsAttr());
+  copyGPUProperty(funcOp.getPrivateAttribAttrsAttrName(),
+                  funcOp.getPrivateAttribAttrsAttr());
+  copyGPUProperty(funcOp.getKnownBlockSizeAttrName(),
+                  funcOp.getKnownBlockSizeAttr());
+  copyGPUProperty(funcOp.getKnownGridSizeAttrName(),
+                  funcOp.getKnownGridSizeAttr());
+  copyGPUProperty(funcOp.getKnownClusterSizeAttrName(),
+                  funcOp.getKnownClusterSizeAttr());
+  copyGPUProperty(funcOp.getWorkgroupAttributionsAttrName(),
+                  funcOp.getWorkgroupAttributionsAttr());
+  for (const auto &discardableAttr :
+       funcOp->getDiscardableAttrDictionary().getValue())
+    newFuncOp->setDiscardableAttr(discardableAttr.getName(),
+                                  discardableAttr.getValue());
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
@@ -313,7 +333,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   for (auto argIndex : llvm::seq<unsigned>(0, argABIInfo.size())) {
     newFuncOp.setArgAttr(argIndex, argABIAttrName, argABIInfo[argIndex]);
   }
-  newFuncOp->setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);
+  newFuncOp->setDiscardableAttr(spirv::getEntryPointABIAttrName(),
+                                entryPointInfo);
 
   return newFuncOp;
 }
@@ -378,7 +399,7 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
       funcOp, *getTypeConverter(), rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return failure();
-  newFuncOp->removeAttr(
+  newFuncOp->removeDiscardableAttr(
       rewriter.getStringAttr(gpu::GPUDialect::getKernelFuncAttrName()));
   return success();
 }
@@ -416,14 +437,15 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   // will fail if called after GPUModuleConversion and we don't preserve
   // `TargetEnv` attribute.
   // Copy TargetEnvAttr only if it is attached directly to the GPUModuleOp.
-  if (auto attr = moduleOp->getAttrOfType<spirv::TargetEnvAttr>(
+  if (auto attr = moduleOp->getDiscardableAttrOfType<spirv::TargetEnvAttr>(
           spirv::getTargetEnvAttrName()))
-    spvModule->setAttr(spirv::getTargetEnvAttrName(), attr);
+    spvModule->setDiscardableAttr(spirv::getTargetEnvAttrName(), attr);
   if (ArrayAttr targets = moduleOp.getTargetsAttr()) {
     for (Attribute targetAttr : targets)
       if (auto spirvTargetEnvAttr =
               dyn_cast<spirv::TargetEnvAttr>(targetAttr)) {
-        spvModule->setAttr(spirv::getTargetEnvAttrName(), spirvTargetEnvAttr);
+        spvModule->setDiscardableAttr(spirv::getTargetEnvAttrName(),
+                                      spirvTargetEnvAttr);
         break;
       }
   }
@@ -515,7 +537,8 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   // Require the shuffle width to be the same as the target's subgroup size,
   // given that for SPIR-V non-uniform subgroup ops, we cannot select
   // participating invocations.
-  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;
@@ -938,7 +961,8 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
         makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
 
     return spirv::SpecConstantOp::create(
-        rewriter, loc, rewriter.getStringAttr(specCstName), attr);
+        rewriter, loc, rewriter.getStringAttr(specCstName), attr,
+        /*sym_visibility=*/nullptr);
   };
   {
     Operation *parent =
@@ -974,7 +998,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     specCstComposite = spirv::SpecConstantCompositeOp::create(
         rewriter, loc, TypeAttr::get(globalType),
         rewriter.getStringAttr(specCstCompositeName),
-        rewriter.getArrayAttr(constituents));
+        rewriter.getArrayAttr(constituents), /*sym_visibility=*/nullptr);
 
     auto ptrType = spirv::PointerType::get(
         globalType, spirv::StorageClass::UniformConstant);
@@ -986,7 +1010,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
         rewriter, loc, ptrType, globalVarName,
         FlatSymbolRefAttr::get(specCstComposite));
 
-    globalVar->setAttr("Constant", rewriter.getUnitAttr());
+    globalVar->setDiscardableAttr("Constant", rewriter.getUnitAttr());
   }
   // Get SSA value of Global variable and create pointer to i8 to point to
   // the format string.

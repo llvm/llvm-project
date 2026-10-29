@@ -158,7 +158,7 @@ void ExplodedGraph::collectNode(ExplodedNode *node) {
   pred->replaceSuccessor(succ);
   succ->replacePredecessor(pred);
   FreeNodes.push_back(node);
-  Nodes.RemoveNode(node);
+  Nodes.erase(node);
   --NumNodes;
   node->~ExplodedNode();
 }
@@ -393,10 +393,10 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
                                      bool* IsNew) {
   // Profile 'State' to determine if we already have an existing node.
   llvm::FoldingSetNodeID profile;
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
 
   NodeTy::Profile(profile, L, State, IsSink);
-  NodeTy* V = Nodes.FindNodeOrInsertPos(profile, InsertPos);
+  NodeTy *V = Nodes.lookup(profile, InsertToken);
 
   if (!V) {
     if (!FreeNodes.empty()) {
@@ -415,7 +415,7 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
       ChangedNodes.push_back(V);
 
     // Insert the node into the node set and return it.
-    Nodes.InsertNode(V, InsertPos);
+    Nodes.insert(V, InsertToken);
 
     if (IsNew) *IsNew = true;
   }

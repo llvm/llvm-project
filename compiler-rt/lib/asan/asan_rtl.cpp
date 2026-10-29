@@ -156,6 +156,22 @@ void __asan_report_ ## type ## _n_noabort(uptr addr, uptr size) {           \
 ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
 
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, true);
+  }
+}
+
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable_noabort(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, false);
+  }
+}
+
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
   uptr sp = MEM_TO_SHADOW(addr);                                               \
   uptr s = size <= ASAN_SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)       \
@@ -383,6 +399,7 @@ void PrintAddressSpaceLayout() {
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
   Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
+  Printf("kGaplessShadow: %d\n", kGaplessShadow);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&

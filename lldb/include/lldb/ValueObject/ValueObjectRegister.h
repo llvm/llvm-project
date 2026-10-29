@@ -75,6 +75,11 @@ private:
     return nullptr;
   }
 
+  std::optional<std::pair<size_t, const RegisterInfo *>>
+  LookupChildWithName(llvm::StringRef name);
+
+  static bool IsSameRegister(const RegisterInfo *a, const RegisterInfo *b);
+
   // For ValueObject only
   ValueObjectRegisterSet(const ValueObjectRegisterSet &) = delete;
   const ValueObjectRegisterSet &

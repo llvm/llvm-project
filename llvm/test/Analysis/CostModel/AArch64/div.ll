@@ -347,27 +347,27 @@ define void @udiv_const() {
 ; CHECK-LABEL: 'udiv_const'
 ; CHECK-NEXT:  Cost Model: Found costs of 12 for: %I128 = udiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, 7
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:20 Lat:32 SizeLat:32 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:40 Lat:64 SizeLat:64 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:80 Lat:128 SizeLat:128 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:24 Lat:36 SizeLat:36 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:46 Lat:70 SizeLat:70 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:138 CodeSize:90 Lat:138 SizeLat:138 for: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I32 = udiv i32 undef, 7
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i32 = udiv <2 x i32> undef, <i32 4, i32 5>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V16i32 = udiv <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i32 = udiv <2 x i32> undef, <i32 4, i32 5>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V16i32 = udiv <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I16 = udiv i16 undef, 7
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i16 = udiv <2 x i16> undef, <i16 4, i16 5>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V4i16 = udiv <4 x i16> undef, <i16 4, i16 5, i16 6, i16 7>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V8i16 = udiv <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V16i16 = udiv <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V32i16 = udiv <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i16 = udiv <2 x i16> undef, <i16 4, i16 5>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V4i16 = udiv <4 x i16> undef, <i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V8i16 = udiv <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V16i16 = udiv <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V32i16 = udiv <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I8 = udiv i8 undef, 7
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i8 = udiv <2 x i8> undef, <i8 4, i8 5>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V4i8 = udiv <4 x i8> undef, <i8 4, i8 5, i8 6, i8 7>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V8i8 = udiv <8 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V16i8 = udiv <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V32i8 = udiv <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V64i8 = udiv <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i8 = udiv <2 x i8> undef, <i8 4, i8 5>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V4i8 = udiv <4 x i8> undef, <i8 4, i8 5, i8 6, i8 7>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V8i8 = udiv <8 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V16i8 = udiv <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V32i8 = udiv <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V64i8 = udiv <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -580,27 +580,27 @@ define void @udiv_constpow2() {
 ; CHECK-LABEL: 'udiv_constpow2'
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %I128 = udiv i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %I64 = udiv i64 undef, 16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8i64 = udiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V8i64 = udiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %I32 = udiv i32 undef, 16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i32 = udiv <2 x i32> undef, <i32 2, i32 4>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8i32 = udiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16i32 = udiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V2i32 = udiv <2 x i32> undef, <i32 2, i32 4>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V8i32 = udiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V16i32 = udiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %I16 = udiv i16 undef, 16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i16 = udiv <2 x i16> undef, <i16 2, i16 4>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i16 = udiv <4 x i16> undef, <i16 2, i16 4, i16 8, i16 16>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i16 = udiv <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16i16 = udiv <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V32i16 = udiv <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V2i16 = udiv <2 x i16> undef, <i16 2, i16 4>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V4i16 = udiv <4 x i16> undef, <i16 2, i16 4, i16 8, i16 16>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V8i16 = udiv <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V16i16 = udiv <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V32i16 = udiv <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %I8 = udiv i8 undef, 16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2i8 = udiv <2 x i8> undef, <i8 2, i8 4>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4i8 = udiv <4 x i8> undef, <i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8i8 = udiv <8 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V16i8 = udiv <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V32i8 = udiv <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V64i8 = udiv <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V2i8 = udiv <2 x i8> undef, <i8 2, i8 4>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V4i8 = udiv <4 x i8> undef, <i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V8i8 = udiv <8 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %V16i8 = udiv <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V32i8 = udiv <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V64i8 = udiv <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I128 = udiv i128 undef, 16
@@ -812,27 +812,27 @@ define void @udiv_constnegpow2() {
 ; CHECK-LABEL: 'udiv_constnegpow2'
 ; CHECK-NEXT:  Cost Model: Found costs of 12 for: %I128 = udiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:20 Lat:32 SizeLat:32 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:40 Lat:64 SizeLat:64 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:80 Lat:128 SizeLat:128 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:24 Lat:36 SizeLat:36 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:46 Lat:70 SizeLat:70 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:138 CodeSize:90 Lat:138 SizeLat:138 for: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I32 = udiv i32 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i32 = udiv <2 x i32> undef, <i32 -2, i32 -4>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V16i32 = udiv <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i32 = udiv <2 x i32> undef, <i32 -2, i32 -4>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V16i32 = udiv <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I16 = udiv i16 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i16 = udiv <2 x i16> undef, <i16 -2, i16 -4>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V4i16 = udiv <4 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V8i16 = udiv <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V16i16 = udiv <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V32i16 = udiv <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i16 = udiv <2 x i16> undef, <i16 -2, i16 -4>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V4i16 = udiv <4 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V8i16 = udiv <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V16i16 = udiv <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V32i16 = udiv <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %I8 = udiv i8 undef, -16
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V2i8 = udiv <2 x i8> undef, <i8 -2, i8 -4>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V4i8 = udiv <4 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %V8i8 = udiv <8 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V16i8 = udiv <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V32i8 = udiv <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V64i8 = udiv <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V2i8 = udiv <2 x i8> undef, <i8 -2, i8 -4>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V4i8 = udiv <4 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %V8i8 = udiv <8 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %V16i8 = udiv <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V32i8 = udiv <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V64i8 = udiv <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I128 = udiv i128 undef, -16

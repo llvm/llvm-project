@@ -30,13 +30,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PEI.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -283,6 +281,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   // inserted.
   if (TRI->requiresRegisterScavenging(MF) && FrameIndexVirtualScavenging)
     scavengeFrameVirtualRegs(MF, *RS);
+
+  insertZeroCallUsedRegs(MF);
 
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1175,9 +1175,6 @@ void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
 
-  // Zero call used registers before restoring callee-saved registers.
-  insertZeroCallUsedRegs(MF);
-
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);
 
@@ -1427,6 +1424,16 @@ bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
       // location expression. Also after doing this we change the DBG_VALUE
       // to be direct.
       if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+        // DW_OP_deref_size may not read more than the size of an address.
+        if (Size > MF.getDataLayout().getPointerSize()) {
+          LLVM_DEBUG(dbgs() << "Dropping location of object larger than an "
+                               "address: "
+                            << MI);
+          MI.setDebugValueUndef();
+          return true;
+        }
+        assert(isUInt<8>(Size) &&
+               "DW_OP_deref_size operand must fit in a byte");
         SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
         bool WithStackValue = true;
         DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);

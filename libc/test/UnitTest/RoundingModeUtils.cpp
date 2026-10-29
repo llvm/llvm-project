@@ -28,7 +28,8 @@ int get_fe_rounding(RoundingMode mode) {
   case RoundingMode::Nearest:
     return FE_TONEAREST;
   }
-  __builtin_unreachable();
+
+  return -1;
 }
 
 ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
@@ -39,9 +40,14 @@ ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
 #else
   old_rounding_mode = quick_get_round();
   rounding_mode = get_fe_rounding(mode);
+
   if (old_rounding_mode != rounding_mode) {
-    int status = set_round(rounding_mode);
-    success = (status == 0);
+    if (rounding_mode == -1) {
+      success = false;
+    } else {
+      int status = set_round(rounding_mode);
+      success = (status == 0);
+    }
   } else {
     success = true;
   }

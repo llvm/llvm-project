@@ -295,6 +295,30 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
   use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
   use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
+  use_libc_builtin(GENERIC_SOURCES    fixdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixsfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfti)
+  use_libc_builtin(GENERIC_SOURCES    floatsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatdidf)
+  use_libc_builtin(GENERIC_SOURCES    floattidf)
+  use_libc_builtin(GENERIC_SOURCES    floatsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatdisf)
+  use_libc_builtin(GENERIC_SOURCES    floattisf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatundidf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntidf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatundisf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntisf)
   use_libc_builtin(GENERIC_SOURCES    muldf3)
   use_libc_builtin(GENERIC_SOURCES    mulsf3)
   use_libc_builtin(GENERIC_TF_SOURCES multf3)
@@ -585,8 +609,8 @@ set(thumb1_base_SOURCES
   arm/udivsi3.S
   ${GENERIC_SOURCES}
 )
-set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
-set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c arm/aeabi_frsub.c PROVIDES subsf3 aeabi_frsub)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c arm/aeabi_drsub.c PROVIDES subdf3 aeabi_drsub)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
 set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
@@ -607,7 +631,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     ${thumb1_base_SOURCES}
   )
   set_special_properties(arm/thumb1/addsf3fast.S
-    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
+    SUPERSEDES addsf3.c subsf3.c arm/aeabi_frsub.c PROVIDES addsf3 subsf3 aeabi_frsub)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
@@ -916,6 +940,14 @@ set(hexagon_SOURCES
   hexagon/udivsi3.S
   hexagon/umoddi3.S
   hexagon/umodsi3.S
+  hexagon/ieee_qfloat_conv_hf_to_b_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_b_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_h_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_h_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_uh_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_uh_rne.S
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
 )
@@ -1020,7 +1052,7 @@ set(ve_SOURCES
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
+set_target_properties(builtins PROPERTIES FOLDER "compiler-rt/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
@@ -1192,7 +1224,7 @@ else ()
           get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
           install(FILES "${SPIRV64_BC_OUTPUT}"
                   DESTINATION "${BUILTIN_INSTALL_DIR}"
-                  COMPONENT builtins)
+                  COMPONENT clang_rt.builtins-${arch})
         else()
           message(WARNING
             "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "

@@ -27,8 +27,8 @@ entry:
 ; CHECK:       OpBranchConditional %[[#cmplt]] %[[#truel:]] %[[#endl:]]
 ; CHECK:       %[[#truel]] = OpLabel
 ; SPIRV15:     OpKill
-; SPIRV16-NO:  OpKill
-; SPIRV15-NO:  OpBranch %[[#endl]]
+; SPIRV16-NOT:  OpKill
+; SPIRV15-NOT:  OpBranch %[[#endl]]
 ; SPIRV16:     OpDemoteToHelperInvocation
 ; SPIRV16:     OpBranch %[[#endl]]
 ; CHECK:       %[[#endl]] = OpLabel
@@ -47,6 +47,32 @@ end:                                              ; preds = %lt0, %entry
 }
 declare void @llvm.spv.discard()
 
+define void @test_scalar_multi_instr_after_discard(float noundef %Buf, ptr %Out) {
+entry:
+; CHECK-LABEL: ; -- Begin function test_scalar_multi_instr_after_discard
+; CHECK:       OpBranchConditional %[[#]] %[[#truel:]] %[[#endl:]]
+; CHECK:       %[[#truel]] = OpLabel
+; SPIRV15:     OpKill
+; SPIRV15-NOT: OpStore
+; SPIRV16:     OpDemoteToHelperInvocation
+; SPIRV16:     OpBranch %[[#endl]]
+; CHECK:       %[[#endl]] = OpLabel
+  %Buf.addr = alloca float, align 4
+  store float %Buf, ptr %Buf.addr, align 4
+  %1 = load float, ptr %Buf.addr, align 4
+  %2 = fcmp olt float %1, 0.000000e+00
+  br i1 %2, label %lt0, label %end
+
+lt0:                                              ; preds = %entry
+  call void @llvm.spv.discard()
+  store volatile float 1.0, ptr %Out, align 4
+  store volatile float 2.0, ptr %Out, align 4
+  br label %end
+
+end:                                              ; preds = %lt0, %entry
+  ret void
+}
+
 define void @test_vector(<4 x float> noundef %Buf) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_vector
@@ -56,8 +82,8 @@ entry:
 ; CHECK:       OpBranchConditional %[[#opany]]  %[[#truel:]] %[[#endl:]]
 ; CHECK:       %[[#truel]] = OpLabel
 ; SPIRV15:     OpKill
-; SPIRV16-NO:  OpKill
-; SPIRV15-NO:  OpBranch %[[#endl]]
+; SPIRV16-NOT:  OpKill
+; SPIRV15-NOT:  OpBranch %[[#endl]]
 ; SPIRV16:     OpDemoteToHelperInvocation
 ; SPIRV16:     OpBranch %[[#endl]]
 ; CHECK:       %[[#endl]] = OpLabel

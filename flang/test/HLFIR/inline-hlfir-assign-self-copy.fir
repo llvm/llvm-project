@@ -17,7 +17,7 @@
 // CHECK-LABEL: func.func @_QPself_copy_ew
 // CHECK-SAME: %[[ARGF:.*]]: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_name = "field"}
 
-// CHECK: hlfir.declare %[[ARGF]](%{{.*}}) {{.*}} uniq_name = "_QFself_copy_ewEfield"
+// CHECK: hlfir.declare %[[ARGF]](%{{.*}}) {{.*}} uniq_name("_QFself_copy_ewEfield")
 
 // Index-based runtime disjointness check:
 // CHECK: %[[RHS:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}}
@@ -46,7 +46,7 @@
 // CHECK:   }
 // CHECK: } else {
 // CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?x?xf32>{{.*}}
-// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
@@ -72,19 +72,19 @@
 
 func.func @_QPself_copy_ew(%arg0: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_name = "field"}, %arg1: !fir.ref<i32> {fir.bindc_name = "xm"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ym"}, %arg3: !fir.ref<i32> {fir.bindc_name = "levs"}, %arg4: !fir.ref<i32> {fir.bindc_name = "xh"}, %arg5: !fir.ref<i32> {fir.bindc_name = "yh"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFself_copy_ewExm"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFself_copy_ewExh"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFself_copy_ewEym"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFself_copy_ewEyh"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFself_copy_ewElevs"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFself_copy_ewExm") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 uniq_name("_QFself_copy_ewExh") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 uniq_name("_QFself_copy_ewEym") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 uniq_name("_QFself_copy_ewEyh") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 uniq_name("_QFself_copy_ewElevs") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %6 = fir.alloca i32 {bindc_name = "x1", uniq_name = "_QFself_copy_ewEx1"}
-  %7:2 = hlfir.declare %6 {uniq_name = "_QFself_copy_ewEx1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFself_copy_ewEx1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %8 = fir.alloca i32 {bindc_name = "x2", uniq_name = "_QFself_copy_ewEx2"}
-  %9:2 = hlfir.declare %8 {uniq_name = "_QFself_copy_ewEx2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %9:2 = hlfir.declare %8 uniq_name("_QFself_copy_ewEx2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %10 = fir.alloca i32 {bindc_name = "x5", uniq_name = "_QFself_copy_ewEx5"}
-  %11:2 = hlfir.declare %10 {uniq_name = "_QFself_copy_ewEx5"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %11:2 = hlfir.declare %10 uniq_name("_QFself_copy_ewEx5") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %12 = fir.alloca i32 {bindc_name = "x6", uniq_name = "_QFself_copy_ewEx6"}
-  %13:2 = hlfir.declare %12 {uniq_name = "_QFself_copy_ewEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %13:2 = hlfir.declare %12 uniq_name("_QFself_copy_ewEx6") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %14 = fir.load %1#0 : !fir.ref<i32>
   %c2_i32 = arith.constant 2 : i32
   %15 = fir.load %2#0 : !fir.ref<i32>
@@ -112,7 +112,7 @@ func.func @_QPself_copy_ew(%arg0: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_nam
   %33 = arith.cmpi sgt, %32, %c0_2 : index
   %34 = arith.select %33, %32, %c0_2 : index
   %35 = fir.shape %21, %29, %34 : (index, index, index) -> !fir.shape<3>
-  %36:2 = hlfir.declare %arg0(%35) dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFself_copy_ewEfield"} : (!fir.ref<!fir.array<?x?x?xf32>>, !fir.shape<3>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<?x?x?xf32>>)
+  %36:2 = hlfir.declare %arg0(%35) dummy_scope %0 arg 1 uniq_name("_QFself_copy_ewEfield") fortran_attrs<intent_inout> : (!fir.ref<!fir.array<?x?x?xf32>>, !fir.shape<3>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<?x?x?xf32>>)
   %c1_i32 = arith.constant 1 : i32
   hlfir.assign %c1_i32 to %7#0 : i32, !fir.ref<i32>
   %37 = fir.load %2#0 : !fir.ref<i32>

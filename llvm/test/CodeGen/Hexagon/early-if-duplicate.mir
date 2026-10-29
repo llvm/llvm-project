@@ -1,0 +1,32 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-early-if -o - %s | FileCheck %s
+
+# A PHI in the join block can have more than one operand for the same
+# incoming block. Such a pattern cannot be if-converted, because a single
+# MUX cannot represent the PHI. Check that the pass leaves it alone. With
+# assertions enabled the conversion used to fail an assertion in
+# computePhiCost, and without them it dropped one of the duplicated values.
+
+# CHECK-LABEL: name: foo
+# CHECK-NOT: C2_mux
+# CHECK: PHI %2, %bb.0, %2, %bb.0, %3, %bb.1
+
+---
+name: foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+    %0:intregs = COPY $r0
+    %1:predregs = C2_cmpeqi %0, 0
+    %2:intregs = A2_tfrsi 123
+    J2_jumpt %1, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    %3:intregs = A2_tfrsi 321
+
+  bb.2:
+    %4:intregs = PHI %2, %bb.0, %2, %bb.0, %3, %bb.1
+    $r0 = COPY %4
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

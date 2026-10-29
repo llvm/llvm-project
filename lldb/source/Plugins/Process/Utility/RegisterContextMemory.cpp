@@ -20,20 +20,21 @@ using namespace lldb_private;
 // RegisterContextMemory constructor
 RegisterContextMemory::RegisterContextMemory(Thread &thread,
                                              uint32_t concrete_frame_idx,
-                                             DynamicRegisterInfo &reg_infos,
+                                             DynamicRegisterInfoSP reg_infos_sp,
                                              addr_t reg_data_addr)
-    : RegisterContext(thread, concrete_frame_idx), m_reg_infos(reg_infos),
-      m_reg_valid(), m_reg_data(), m_reg_data_addr(reg_data_addr) {
+    : RegisterContext(thread, concrete_frame_idx),
+      m_reg_infos_sp(std::move(reg_infos_sp)), m_reg_valid(), m_reg_data(),
+      m_reg_data_addr(reg_data_addr) {
   // Resize our vector of bools to contain one bool for every register. We will
   // use these boolean values to know when a register value is valid in
   // m_reg_data.
-  const size_t num_regs = reg_infos.GetNumRegisters();
+  const size_t num_regs = m_reg_infos_sp->GetNumRegisters();
   assert(num_regs > 0);
   m_reg_valid.resize(num_regs);
 
   // Make a heap based buffer that is big enough to store all registers
-  m_data =
-      std::make_shared<DataBufferHeap>(reg_infos.GetRegisterDataByteSize(), 0);
+  m_data = std::make_shared<DataBufferHeap>(
+      m_reg_infos_sp->GetRegisterDataByteSize(), 0);
   m_reg_data.SetData(m_data);
 }
 
@@ -52,24 +53,24 @@ void RegisterContextMemory::SetAllRegisterValid(bool b) {
 }
 
 size_t RegisterContextMemory::GetRegisterCount() {
-  return m_reg_infos.GetNumRegisters();
+  return m_reg_infos_sp->GetNumRegisters();
 }
 
 const RegisterInfo *RegisterContextMemory::GetRegisterInfoAtIndex(size_t reg) {
-  return m_reg_infos.GetRegisterInfoAtIndex(reg);
+  return m_reg_infos_sp->GetRegisterInfoAtIndex(reg);
 }
 
 size_t RegisterContextMemory::GetRegisterSetCount() {
-  return m_reg_infos.GetNumRegisterSets();
+  return m_reg_infos_sp->GetNumRegisterSets();
 }
 
 const RegisterSet *RegisterContextMemory::GetRegisterSet(size_t reg_set) {
-  return m_reg_infos.GetRegisterSet(reg_set);
+  return m_reg_infos_sp->GetRegisterSet(reg_set);
 }
 
 uint32_t RegisterContextMemory::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
-  return m_reg_infos.ConvertRegisterKindToRegisterNumber(kind, num);
+  return m_reg_infos_sp->ConvertRegisterKindToRegisterNumber(kind, num);
 }
 
 bool RegisterContextMemory::ReadRegister(const RegisterInfo *reg_info,

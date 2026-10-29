@@ -45,7 +45,7 @@ public:
 /// Analysis pass which computes a \ref CycleInfo.
 class CycleAnalysis : public AnalysisInfoMixin<CycleAnalysis> {
   friend AnalysisInfoMixin<CycleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result typedef for this analysis pass.

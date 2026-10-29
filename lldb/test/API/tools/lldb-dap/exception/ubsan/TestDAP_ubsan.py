@@ -2,7 +2,7 @@
 Test that we stop at runtime instrumentation locations (ubsan).
 """
 
-from lldbsuite.test.decorators import skipUnlessUndefinedBehaviorSanitizer
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
@@ -17,7 +17,9 @@ class TestDAP_ubsan(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event, expected_description=r"Out of bounds index"
+            after=process_event,
+            expected_description=r"Out of bounds index",
+            expected_text=r"^UndefinedBehaviorSanitizer$",
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)
@@ -27,6 +29,11 @@ class TestDAP_ubsan(DAPTestCaseBase):
         description = self.expect_not_none(exception_info.description)
         self.assertRegex(description, r"Out of bounds index")
         self.assertEqual(exception_info.exceptionId, "runtime-instrumentation")
+
+        stop_info = self.expect_not_none(exception_info.lldb_stop_reason_extended_info)
+        self.assertEqual(
+            stop_info["instrumentation_class"], "UndefinedBehaviorSanitizer"
+        )
 
         # FIXME: Check on non macOS platform the stop information location heuristic
         # may be wrong. enable when we have updated Ubsan stopInfo heuristic.

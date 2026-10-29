@@ -116,17 +116,15 @@ static bool needsZeroComparison(const Expr *E) {
 }
 
 static bool needsStaticCast(const Expr *E) {
-  if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ImpCast->getCastKind() == CK_UserDefinedConversion &&
-        ImpCast->getSubExpr()->getType()->isBooleanType()) {
-      if (const auto *MemCall =
-              dyn_cast<CXXMemberCallExpr>(ImpCast->getSubExpr())) {
-        if (const auto *MemDecl =
-                dyn_cast<CXXConversionDecl>(MemCall->getMethodDecl())) {
-          if (MemDecl->isExplicit())
-            return true;
-        }
-      }
+  if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E);
+      ImpCast && ImpCast->getCastKind() == CK_UserDefinedConversion &&
+      ImpCast->getSubExpr()->getType()->isBooleanType()) {
+    if (const auto *MemCall =
+            dyn_cast<CXXMemberCallExpr>(ImpCast->getSubExpr())) {
+      if (const auto *MemDecl =
+              dyn_cast<CXXConversionDecl>(MemCall->getMethodDecl());
+          MemDecl && MemDecl->isExplicit())
+        return true;
     }
   }
 
@@ -165,16 +163,15 @@ static std::string replacementExpression(const ASTContext &Context,
   const bool NeedsStaticCast =
       Context.getLangOpts().CPlusPlus && needsStaticCast(E);
   if (Negated) {
-    if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
-      if (UnOp->getOpcode() == UO_LNot) {
-        if (needsNullPtrComparison(UnOp->getSubExpr()))
-          return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), true);
+    if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+        UnOp && UnOp->getOpcode() == UO_LNot) {
+      if (needsNullPtrComparison(UnOp->getSubExpr()))
+        return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), true);
 
-        if (needsZeroComparison(UnOp->getSubExpr()))
-          return compareExpressionToZero(Context, UnOp->getSubExpr(), true);
+      if (needsZeroComparison(UnOp->getSubExpr()))
+        return compareExpressionToZero(Context, UnOp->getSubExpr(), true);
 
-        return replacementExpression(Context, false, UnOp->getSubExpr());
-      }
+      return replacementExpression(Context, false, UnOp->getSubExpr());
     }
 
     if (needsNullPtrComparison(E))
@@ -190,13 +187,13 @@ static std::string replacementExpression(const ASTContext &Context,
       NegatedOperator = negatedOperator(BinOp);
       LHS = BinOp->getLHS();
       RHS = BinOp->getRHS();
-    } else if (const auto *OpExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
-      if (OpExpr->getNumArgs() == 2) {
-        NegatedOperator = negatedOperator(OpExpr);
-        LHS = OpExpr->getArg(0);
-        RHS = OpExpr->getArg(1);
-      }
+    } else if (const auto *OpExpr = dyn_cast<CXXOperatorCallExpr>(E);
+               OpExpr && OpExpr->getNumArgs() == 2) {
+      NegatedOperator = negatedOperator(OpExpr);
+      LHS = OpExpr->getArg(0);
+      RHS = OpExpr->getArg(1);
     }
+
     if (!NegatedOperator.empty() && LHS && RHS)
       return (asBool((getText(Context, *LHS) + " " + NegatedOperator + " " +
                       getText(Context, *RHS))
@@ -216,14 +213,13 @@ static std::string replacementExpression(const ASTContext &Context,
     return ("!" + asBool(Text, NeedsStaticCast));
   }
 
-  if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
-    if (UnOp->getOpcode() == UO_LNot) {
-      if (needsNullPtrComparison(UnOp->getSubExpr()))
-        return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), false);
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+      UnOp && UnOp->getOpcode() == UO_LNot) {
+    if (needsNullPtrComparison(UnOp->getSubExpr()))
+      return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), false);
 
-      if (needsZeroComparison(UnOp->getSubExpr()))
-        return compareExpressionToZero(Context, UnOp->getSubExpr(), false);
-    }
+    if (needsZeroComparison(UnOp->getSubExpr()))
+      return compareExpressionToZero(Context, UnOp->getSubExpr(), false);
   }
 
   if (needsNullPtrComparison(E))
@@ -252,6 +248,21 @@ static bool containsDiscardedTokens(const ASTContext &Context,
       return true;
 
   return false;
+}
+
+static std::optional<bool>
+tryFixCXXOperator(const Expr *E, SmallVectorImpl<FixItHint> &Fixes) {
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(E)) {
+    const StringRef NegatedOperator = negatedOperator(OpCall);
+    if (!NegatedOperator.empty()) {
+      if (OpCall->getOperatorLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateReplacement(OpCall->getOperatorLoc(),
+                                                   NegatedOperator));
+      return false;
+    }
+  }
+  return std::nullopt;
 }
 
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
@@ -421,12 +432,11 @@ public:
           const DeclAndBool ElseAssignment =
               checkSingleStatement(If->getElse(), VarBoolAssignmentMatcher);
           if (ElseAssignment.Item == ThenAssignment.Item &&
-              ElseAssignment.Bool != ThenAssignment.Bool) {
-            if (Check->ChainedConditionalAssignment ||
-                !isa_and_nonnull<IfStmt>(parent())) {
-              Check->replaceWithAssignment(Context, If, Var, Loc,
-                                           ElseAssignment.Bool);
-            }
+              ElseAssignment.Bool != ThenAssignment.Bool &&
+              (Check->ChainedConditionalAssignment ||
+               !isa_and_nonnull<IfStmt>(parent()))) {
+            Check->replaceWithAssignment(Context, If, Var, Loc,
+                                         ElseAssignment.Bool);
           }
         }
       }
@@ -563,19 +573,20 @@ public:
     if (!isExpectedBinaryOp(SubExpr))
       return Base::TraverseUnaryOperator(Op);
     const auto *BinaryOp = cast<BinaryOperator>(SubExpr);
-    if (Check->SimplifyDeMorganRelaxed ||
-        checkEitherSide(
-            BinaryOp,
-            [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
-        checkEitherSide(
-            BinaryOp, [this](const Expr *E) { return nestedDemorgan(E, 1); })) {
-      if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
-                                Parens) &&
-          !Check->areDiagsSelfContained()) {
-        const llvm::SaveAndRestore RAII(IsProcessing, true);
-        return Base::TraverseUnaryOperator(Op);
-      }
+    if ((Check->SimplifyDeMorganRelaxed ||
+         checkEitherSide(
+             BinaryOp,
+             [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+         checkEitherSide(
+             BinaryOp,
+             [this](const Expr *E) { return nestedDemorgan(E, 1); })) &&
+        Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
+                              Parens) &&
+        !Check->areDiagsSelfContained()) {
+      const llvm::SaveAndRestore RAII(IsProcessing, true);
+      return Base::TraverseUnaryOperator(Op);
     }
+
     return Base::TraverseUnaryOperator(Op);
   }
 
@@ -851,13 +862,12 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
       constexpr bool LogicalOpParentheses = true;
       if (((*OuterBO == NewOp) || (!LogicalOpParentheses &&
                                    (*OuterBO == BO_LOr && NewOp == BO_LAnd))) &&
-          Parens) {
-        if (!Parens->getLParen().isMacroID() &&
-            !Parens->getRParen().isMacroID()) {
-          Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
-          Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
-        }
+          Parens && !Parens->getLParen().isMacroID() &&
+          !Parens->getRParen().isMacroID()) {
+        Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
+        Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
       }
+
       if (*OuterBO == BO_LAnd && NewOp == BO_LOr && !Parens) {
         Fixes.push_back(FixItHint::CreateInsertion(BinOp->getBeginLoc(), "("));
         Fixes.push_back(FixItHint::CreateInsertion(
@@ -921,9 +931,17 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
   }
   if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  // Overloaded comparisons are represented as CXXOperatorCallExpr rather than
+  // BinaryOperator, so negate them by replacing their operator location.
+  if (auto Fixed = tryFixCXXOperator(E, Fixes))
+    return *Fixed;
+
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+    // Overloaded comparisons in parentheses, e.g. (T1 < T2).
+    if (auto Fixed = tryFixCXXOperator(Paren->getSubExpr(), Fixes))
+      return *Fixed;
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())

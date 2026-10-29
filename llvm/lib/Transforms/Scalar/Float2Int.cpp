@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/Float2Int.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -20,7 +21,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
@@ -39,12 +39,6 @@ using namespace llvm;
 // If a non-mappable instruction is seen, this entire def-use graph is marked
 // as non-transformable. If we see an instruction that converts from the
 // integer domain to FP domain (uitofp,sitofp), we terminate our walk.
-
-/// The largest integer type worth dealing with.
-static cl::opt<unsigned>
-MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
-             cl::desc("Max integer bitwidth to consider in float2int"
-                      "(default=64)"));
 
 // Given a FCmp predicate, return a matching ICmp predicate if one
 // exists, otherwise return BAD_ICMP_PREDICATE.
@@ -490,6 +484,7 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   ConvertedInsts.clear();
   Roots.clear();
 
+  MaxIntegerBW = ScalarOptions::Global.float2int_max_integer_bw;
   Ctx = &F.getParent()->getContext();
 
   findRoots(F, DT);

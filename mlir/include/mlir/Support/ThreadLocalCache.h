@@ -140,6 +140,9 @@ public:
     // scope and invalidate the weak pointers held by the thread_local caches.
   }
 
+  /// Invalidate and clear all thread-local cache entries for this instance.
+  void clear() { perInstanceState = std::make_shared<PerInstanceState>(); }
+
   /// Return an instance of the value type for the current thread.
   ValueT &get() {
     // Check for an already existing instance for this thread.

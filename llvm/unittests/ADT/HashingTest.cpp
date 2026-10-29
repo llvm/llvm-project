@@ -42,6 +42,12 @@ struct NonPOD {
 namespace hashing {
 namespace detail {
 template <> struct is_hashable_data<LargeTestInteger> : std::true_type {};
+
+// A specialization for T also covers const T.
+static_assert(is_hashable_data<const LargeTestInteger>::value);
+static_assert(!is_hashable_data<const NonPOD>::value);
+static_assert(is_hashable_data<const int>::value);
+static_assert(is_hashable_data<const int *>::value);
 } // namespace detail
 } // namespace hashing
 
@@ -390,9 +396,6 @@ TEST(HashingTest, HashWithHashBuilder) {
 struct StructWithHashBuilderAndHashValueSupport {
   char C;
   int I;
-  template <typename HasherT, llvm::endianness Endianness>
-  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
-                      const StructWithHashBuilderAndHashValueSupport &Value) {}
   friend hash_code
   hash_value(const StructWithHashBuilderAndHashValueSupport &Value) {
     return 0xbeef;

@@ -301,11 +301,10 @@ define <2 x i32> @test_sabd_v2i32_const() {
 ;
 ; CHECK-GI-LABEL: test_sabd_v2i32_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI30_0
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI30_1]
-; CHECK-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI30_0]
-; CHECK-GI-NEXT:    sabd v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi d0, #0x00ffffffff0000
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    sabd v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
   %1 = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(
     <2 x i32> <i32 -2147483648, i32 2147450880>,
@@ -503,27 +502,15 @@ define <4 x i32> @test_sabd_knownbits_vec4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 }
 
 define <4 x i32> @knownbits_sabd_and_mask(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-SD-LABEL: knownbits_sabd_and_mask:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI44_0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI44_0]
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    zip2 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: knownbits_sabd_and_mask:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI44_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI44_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: knownbits_sabd_and_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = and <4 x i32> %a1, <i32 -1, i32 -1, i32 255, i32 4085>
   %3 = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %1, <4 x i32> %2)
@@ -539,17 +526,15 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; CHECK-GI-LABEL: knownbits_sabd_and_or_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI45_1
-; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI45_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
+; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI45_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -561,33 +546,18 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <4 x i32> @knownbits_sabd_and_xor_mask(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-SD-LABEL: knownbits_sabd_and_xor_mask:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI46_0
-; CHECK-SD-NEXT:    movi v3.2d, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI46_0]
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    eor v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    zip2 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: knownbits_sabd_and_xor_mask:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI46_1
-; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: knownbits_sabd_and_xor_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI46_0
+; CHECK-NEXT:    movi v3.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    eor v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = xor <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
   %3 = and <4 x i32> %a1, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -605,16 +575,9 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; CHECK-GI-LABEL: knownbits_sabd_and_shl_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v0.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>

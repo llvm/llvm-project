@@ -41,6 +41,7 @@
 namespace mlir {
 namespace acc {
 #define GEN_PASS_DEF_ACCBINDROUTINE
+#define GEN_PASS_DEF_ACCMATERIALIZEROUTINEBINDTARGETS
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h.inc"
 } // namespace acc
 } // namespace mlir
@@ -53,18 +54,26 @@ using namespace mlir::acc;
 namespace {
 
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
-                                      const SymbolTable &symTab) {
+                                      const SymbolTable &fallbackSymTab) {
+  SymbolRefAttr routineRef;
   if (isSpecializedAccRoutine(funcOp)) {
-    auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
+    auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
         getSpecializedRoutineAttrName());
-    return symTab.lookup<RoutineOp>(attr.getRoutine().getLeafReference());
+    routineRef = attr.getRoutine();
+  } else {
+    auto routineInfo = funcOp->getDiscardableAttrOfType<RoutineInfoAttr>(
+        getRoutineInfoAttrName());
+    assert(routineInfo && "expected acc.routine_info for acc routine function");
+    auto accRoutines = routineInfo.getAccRoutines();
+    assert(!accRoutines.empty() && "expected at least one acc routine");
+    routineRef = accRoutines[0];
   }
-  auto routineInfo =
-      funcOp->getAttrOfType<RoutineInfoAttr>(getRoutineInfoAttrName());
-  assert(routineInfo && "expected acc.routine_info for acc routine function");
-  auto accRoutines = routineInfo.getAccRoutines();
-  assert(!accRoutines.empty() && "expected at least one acc routine");
-  return symTab.lookup<RoutineOp>(accRoutines[0].getLeafReference());
+
+  RoutineOp routine =
+      SymbolTable::lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
+  if (routine)
+    return routine;
+  return fallbackSymTab.lookup<RoutineOp>(routineRef.getLeafReference());
 }
 
 static bool isACCRoutineBindDefaultOrDeviceType(RoutineOp op,
@@ -74,6 +83,94 @@ static bool isACCRoutineBindDefaultOrDeviceType(RoutineOp op,
   return op.getBindNameValue().has_value() ||
          op.getBindNameValue(deviceType).has_value();
 }
+
+class ACCMaterializeRoutineBindTargets
+    : public acc::impl::ACCMaterializeRoutineBindTargetsBase<
+          ACCMaterializeRoutineBindTargets> {
+  using Base = acc::impl::ACCMaterializeRoutineBindTargetsBase<
+      ACCMaterializeRoutineBindTargets>;
+
+public:
+  using Base::Base;
+
+  void runOnOperation() override {
+    Operation *symbolTableOp = getOperation();
+    if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>()) {
+      symbolTableOp->emitError(
+          "root operation must have the SymbolTable trait");
+      signalPassFailure();
+      return;
+    }
+
+    ModuleOp mod = dyn_cast<ModuleOp>(symbolTableOp);
+    if (!mod)
+      mod = symbolTableOp->getParentOfType<ModuleOp>();
+    if (!mod) {
+      symbolTableOp->emitError(
+          "root operation must be a builtin.module or nested in one");
+      signalPassFailure();
+      return;
+    }
+
+    SymbolTable outerSymTab(mod);
+    SymbolTable insertSymTab(symbolTableOp);
+    Block *insertBlock = &symbolTableOp->getRegion(0).front();
+
+    symbolTableOp->walk<WalkOrder::PreOrder>([&](Operation *op) {
+      if (op != symbolTableOp && op->hasTrait<OpTrait::SymbolTable>())
+        return WalkResult::skip();
+
+      auto callOp = dyn_cast<CallOpInterface>(op);
+      if (!callOp || !callOp.getCallableForCallee())
+        return WalkResult::advance();
+      if (!callOp->getParentOfType<OffloadRegionOpInterface>() &&
+          !callOp->getParentOfType<gpu::GPUFuncOp>())
+        return WalkResult::advance();
+
+      auto calleeSymbolRef =
+          dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
+      if (!calleeSymbolRef)
+        return WalkResult::advance();
+      FunctionOpInterface callee =
+          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+              callOp, calleeSymbolRef);
+      if (!callee)
+        callee = outerSymTab.lookup<FunctionOpInterface>(
+            calleeSymbolRef.getLeafReference());
+      if (!callee || !(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
+        return WalkResult::advance();
+
+      if (auto routineInfo = callee->getDiscardableAttrOfType<RoutineInfoAttr>(
+              getRoutineInfoAttrName()))
+        if (routineInfo.getAccRoutines().size() > 1)
+          return WalkResult::advance();
+
+      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      if (!routine ||
+          !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+        return WalkResult::advance();
+
+      auto bindNameOpt = routine.getBindNameValue(this->deviceType);
+      if (!bindNameOpt)
+        bindNameOpt = routine.getBindNameValue();
+      if (!bindNameOpt || !std::holds_alternative<StringAttr>(*bindNameOpt))
+        return WalkResult::advance();
+
+      StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
+      if (insertSymTab.lookup(bindName))
+        return WalkResult::advance();
+
+      OpBuilder builder(mod.getContext());
+      builder.setInsertionPointToEnd(insertBlock);
+      auto funcType = cast<FunctionType>(callee.getFunctionType());
+      func::FuncOp bindFunc =
+          func::FuncOp::create(builder, callee.getLoc(), bindName, funcType);
+      bindFunc.setPrivate();
+      insertSymTab.insert(bindFunc);
+      return WalkResult::advance();
+    });
+  }
+};
 
 class ACCBindRoutine : public acc::impl::ACCBindRoutineBase<ACCBindRoutine> {
 public:
@@ -89,8 +186,7 @@ public:
         getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
     OpenACCSupport &accSupport =
         cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
-    SymbolTable symTab(module);
-
+    SymbolTable outerSymTab(module);
     bool failed = false;
 
     func.walk([&](CallOpInterface callOp) {
@@ -103,15 +199,19 @@ public:
           dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
       if (!calleeSymbolRef)
         return;
-      FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
-          calleeSymbolRef.getLeafReference());
+      FunctionOpInterface callee =
+          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+              callOp, calleeSymbolRef);
+      if (!callee)
+        callee = outerSymTab.lookup<FunctionOpInterface>(
+            calleeSymbolRef.getLeafReference());
       if (!callee)
         return;
 
       if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
         return;
 
-      if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
+      if (auto routineInfo = callee->getDiscardableAttrOfType<RoutineInfoAttr>(
               getRoutineInfoAttrName())) {
         if (routineInfo.getAccRoutines().size() > 1) {
           (void)accSupport.emitNYI(callOp.getLoc(), "multiple `acc routine`s");
@@ -120,8 +220,9 @@ public:
         }
       }
 
-      RoutineOp routine = getFirstAccRoutineOp(callee, symTab);
-      if (!isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      if (!routine ||
+          !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return;
 
       auto bindNameOpt = routine.getBindNameValue(this->deviceType);
@@ -137,16 +238,12 @@ public:
         auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
         Operation *symbolTableOp =
             gpuMod ? gpuMod.getOperation() : module.getOperation();
-        SymbolTable insertSymTab(symbolTableOp);
-        if (!insertSymTab.lookup(bindName)) {
-          OpBuilder builder(module.getContext());
-          Block *insertBlock = gpuMod ? gpuMod.getBody() : module.getBody();
-          builder.setInsertionPointToEnd(insertBlock);
-          auto funcType = cast<FunctionType>(callee.getFunctionType());
-          func::FuncOp bindFunc = func::FuncOp::create(builder, callee.getLoc(),
-                                                       bindName, funcType);
-          bindFunc.setPrivate();
-          insertSymTab.insert(bindFunc);
+        SymbolTable symbolTable(symbolTableOp);
+        if (!symbolTable.lookup(bindName)) {
+          callOp.emitError(
+              "string-bound ACC routine target was not materialized");
+          failed = true;
+          return;
         }
         calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
       }

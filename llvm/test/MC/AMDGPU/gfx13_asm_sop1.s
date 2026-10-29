@@ -78,7 +78,7 @@
 //      s_barrier_signal_isfirst <BARRIER-ID>
 //      s_get_barrier_state <SREG32>, m0
 //      s_get_barrier_state s0, 0
-//      s_get_barrier_state s0, 0.5
+//      s_get_barrier_state s0, 31
 //      s_barrier_init m0
 //      s_barrier_join <BARRIER-ID>
 //      s_wakeup_barrier 1
@@ -156,7 +156,7 @@
 //  <BARRIER-ID>=
 //      m0
 //      0
-//      0.5
+//      31
 //
 //  <OPS-32-64>=
 //      <SREG32>, s[0:1]
@@ -2448,8 +2448,8 @@ s_barrier_signal m0
 s_barrier_signal 0
 // GFX13: s_barrier_signal 0                      ; encoding: [0x80,0x4e,0x80,0xbe]
 
-s_barrier_signal 0.5
-// GFX13: s_barrier_signal 0.5                    ; encoding: [0xf0,0x4e,0x80,0xbe]
+s_barrier_signal 31
+// GFX13: s_barrier_signal 31                     ; encoding: [0x9f,0x4e,0x80,0xbe]
 
 s_barrier_signal_isfirst m0
 // GFX13: s_barrier_signal_isfirst m0             ; encoding: [0x7d,0x4f,0x80,0xbe]
@@ -2457,8 +2457,8 @@ s_barrier_signal_isfirst m0
 s_barrier_signal_isfirst 0
 // GFX13: s_barrier_signal_isfirst 0              ; encoding: [0x80,0x4f,0x80,0xbe]
 
-s_barrier_signal_isfirst 0.5
-// GFX13: s_barrier_signal_isfirst 0.5            ; encoding: [0xf0,0x4f,0x80,0xbe]
+s_barrier_signal_isfirst 31
+// GFX13: s_barrier_signal_isfirst 31             ; encoding: [0x9f,0x4f,0x80,0xbe]
 
 s_get_barrier_state s105, m0
 // GFX13: s_get_barrier_state s105, m0            ; encoding: [0x7d,0x50,0xe9,0xbe]
@@ -2478,8 +2478,8 @@ s_get_barrier_state null, m0
 s_get_barrier_state s0, 0
 // GFX13: s_get_barrier_state s0, 0               ; encoding: [0x80,0x50,0x80,0xbe]
 
-s_get_barrier_state s0, 0.5
-// GFX13: s_get_barrier_state s0, 0.5             ; encoding: [0xf0,0x50,0x80,0xbe]
+s_get_barrier_state s0, 31
+// GFX13: s_get_barrier_state s0, 31              ; encoding: [0x9f,0x50,0x80,0xbe]
 
 s_barrier_init m0
 // GFX13: s_barrier_init m0                       ; encoding: [0x7d,0x51,0x80,0xbe]
@@ -2490,8 +2490,8 @@ s_barrier_join m0
 s_barrier_join 0
 // GFX13: s_barrier_join 0                        ; encoding: [0x80,0x52,0x80,0xbe]
 
-s_barrier_join 0.5
-// GFX13: s_barrier_join 0.5                      ; encoding: [0xf0,0x52,0x80,0xbe]
+s_barrier_join 31
+// GFX13: s_barrier_join 31                       ; encoding: [0x9f,0x52,0x80,0xbe]
 
 s_wakeup_barrier 1
 // GFX13: s_wakeup_barrier 1                      ; encoding: [0x81,0x57,0x80,0xbe]

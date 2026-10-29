@@ -13,7 +13,7 @@ _Float16 cvt_from_long_double(long double x) {
   return static_cast<_Float16>(x);
 }
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 _Float16 cvt_from_float128(float128 x) { return static_cast<_Float16>(x); }
 #endif
 
@@ -23,7 +23,7 @@ double cvt_to_double(_Float16 x) { return x; }
 
 long double cvt_to_long_double(_Float16 x) { return x; }
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 float128 cvt_to_float128(_Float16 x) { return x; }
 #endif
 

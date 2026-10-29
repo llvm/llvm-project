@@ -676,6 +676,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xC084:  // 84 C0 : test al,al
     case 0xC984:  // 84 C9 : test cl,cl
     case 0xD284:  // 84 D2 : test dl,dl
+    case 0xD285:  // 85 D2 : test edx, edx
       return 2;
 
     case 0x3980:  // 80 39 XX : cmp BYTE PTR [rcx], XX
@@ -685,6 +686,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x758B:  // 8B 75 XX : mov XX(%ebp), esp
     case 0xE483:  // 83 E4 XX : and esp, XX
     case 0xEC83:  // 83 EC XX : sub esp, XX
+    case 0x458D:  // 8D 45 XX : lea eax, [ebp + XX]
     case 0xC1F6:  // F6 C1 XX : test cl, XX
       return 3;
 
@@ -698,11 +700,23 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 
   switch (0x00FFFFFF & *(u32 *)address) {
+    case 0x24448D:  // 8D 44 24 XX : lea eax, [esp + XX]
     case 0x244C8D:  // 8D 4C 24 XX : lea ecx, [esp + XX]
+    case 0x3A8366:  // 66 83 3A XX : cmp word ptr [rdx], XX
     case 0x2474FF:  // FF 74 24 XX : push qword ptr [rsp + XX]
       return 4;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
+  }
+
+  switch (*(u32*)(address)) {
+    case 0xc0ef0f66:  // 66 0f ef c0 : pxor xmm0, xmm0
+    case 0xFA1E0FF3:  // F3 0F 1E FA : endbr64
+    case 0xFB1E0FF3:  // F3 0F 1E FB : endbr32
+      return 4;
+    case 0x2444B60F:  // 0F B6 44 24 XX : movzx eax, byte ptr [esp + XX]
+    case 0x244CB60F:  // 0F B6 4C 24 XX : movzx ecx, byte ptr [esp + XX]
+      return 5;
   }
 
   switch (0x000000FF & *(u32 *)address) {
@@ -771,6 +785,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
         *rel_offset = 2;
       FALLTHROUGH;
     case 0xB841:  // 41 B8 XX XX XX XX : mov r8d, XX XX XX XX
+    case 0xB941:  // 41 B9 XX XX XX XX : mov r9d, XX XX XX XX
       return 6;
 
     case 0x7E81:  // 81 7E YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
@@ -844,6 +859,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd23345:    // 45 33 d2 : xor r10d, r10d
     case 0xdb3345:    // 45 33 db : xor r11d, r11d
     case 0xc08445:    // 45 84 c0 : test r8b,r8b
+    case 0xc98445:    // 45 84 c9 : test r9b,r9b
     case 0xd28445:    // 45 84 d2 : test r10b,r10b
     case 0xdb8548:    // 48 85 db : test rbx, rbx
     case 0xdb854d:    // 4d 85 db : test r11, r11
@@ -877,6 +893,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x488d49:    // 49 8d 48 XX : lea rcx, [...]
     case 0x048d4c:    // 4c 8d 04 XX : lea r8, [...]
     case 0x148d4e:    // 4e 8d 14 XX : lea r10, [...]
+    case 0x0C8D4F:    // 4F 8D 0C XX : lea r9, [...]
     case 0x398366:    // 66 83 39 XX : cmp WORD PTR [rcx], XX
       return 4;
 
@@ -995,11 +1012,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
-  }
-
-  switch (*(u32*)address) {
-    case 0x2444B60F:  // 0F B6 44 24 XX : movzx eax, byte ptr [esp + XX]
-      return 5;
   }
 #endif
 
@@ -1382,31 +1394,71 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
   return 0;
 }
 
-bool OverrideFunction(
-    const char *func_name, uptr new_func, uptr *orig_old_func) {
-  static const char *kNtDllIgnore[] = {
-    "memcmp", "memcpy", "memmove", "memset"
-  };
+static bool IgnoreFunctionInNtDll(const char* func_name) {
+  static const char* kNtDllIgnore[] = {"memcmp", "memcpy", "memmove", "memset"};
+  for (const char* ignored : kNtDllIgnore) {
+    if (_strcmp(func_name, ignored) == 0)
+      return true;
+  }
+  return false;
+}
 
+static bool OverrideFunctionByName(const char* func_name, uptr new_func,
+                                   uptr* orig_old_func,
+                                   const char* alias_name) {
   bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
   for (size_t i = 0; DLLs[i]; ++i) {
-    if (DLLs[i + 1] == nullptr) {
-      // This is the last DLL, i.e. NTDLL. It exports some functions that
-      // we only want to override in the CRT.
-      for (const char *ignored : kNtDllIgnore) {
-        if (_strcmp(func_name, ignored) == 0)
-          return hooked;
-      }
-    }
+    if (DLLs[i + 1] == nullptr && IgnoreFunctionInNtDll(func_name))
+      return hooked;
 
     uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
-    if (func_addr &&
-        OverrideFunction(func_addr, new_func, orig_old_func)) {
-      hooked = true;
+    if (!func_addr)
+      continue;
+
+    if (alias_name) {
+      uptr alias_addr = InternalGetProcAddress(DLLs[i], alias_name);
+      if (alias_addr) {
+        // Same export address: |func_name| aliases |alias_name| in this DLL,
+        // so patching |alias_name| already covers it.
+        if (func_addr == alias_addr)
+          continue;
+        // A distinct address is a separate entry point and must be patched.
+        // For instance, in vcruntime140.dll 14.38+, memcpy is a jmp-rel32
+        // stub to memmove; OverrideFunctionWithRedirectJump handles that
+        // shape. If this DLL ships a shape we cannot patch, report it (calls
+        // through this export will not be checked), but do not abort: the
+        // caller is expected to install a safe fallback for REAL().
+        if (OverrideFunction(func_addr, new_func, orig_old_func)) {
+          hooked = true;
+        } else {
+          u8* p = (u8*)func_addr;
+          ReportError(
+              "interception_win: failed to intercept %s (%p) (alias %s is "
+              "%p); first bytes %02X %02X %02X %02X %02X; out-of-bounds "
+              "accesses through this export will not be detected\n",
+              func_name, (void*)func_addr, alias_name, (void*)alias_addr, p[0],
+              p[1], p[2], p[3], p[4]);
+        }
+        continue;
+      }
+      // |alias_name| is not exported by this DLL: patch |func_name| normally.
     }
+
+    if (OverrideFunction(func_addr, new_func, orig_old_func))
+      hooked = true;
   }
   return hooked;
+}
+
+bool OverrideFunction(const char* func_name, uptr new_func,
+                      uptr* orig_old_func) {
+  return OverrideFunctionByName(func_name, new_func, orig_old_func, nullptr);
+}
+
+bool OverrideFunctionIfNotAliased(const char* func_name, uptr new_func,
+                                  uptr* orig_old_func, const char* alias_name) {
+  return OverrideFunctionByName(func_name, new_func, orig_old_func, alias_name);
 }
 
 bool OverrideImportedFunction(const char *module_to_patch,

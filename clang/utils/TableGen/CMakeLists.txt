@@ -10,6 +10,7 @@ add_tablegen(clang-tblgen CLANG
   ClangAttrEmitter.cpp
   ClangBuiltinsEmitter.cpp
   ClangBuiltinTemplatesEmitter.cpp
+  ClangBuiltinTraitsEmitter.cpp
   ClangCommentCommandInfoEmitter.cpp
   ClangCommentHTMLNamedCharacterReferenceEmitter.cpp
   ClangCommentHTMLTagsEmitter.cpp
@@ -21,7 +22,6 @@ add_tablegen(clang-tblgen CLANG
   ClangSACheckersEmitter.cpp
   ClangSyntaxEmitter.cpp
   ClangTypeNodesEmitter.cpp
-  ClangTraitsEmitter.cpp
   HLSLEmitter.cpp
   MveEmitter.cpp
   NeonEmitter.cpp

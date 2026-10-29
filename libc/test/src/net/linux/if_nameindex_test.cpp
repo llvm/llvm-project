@@ -314,6 +314,39 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, SingleInterface) {
   LIBC_NAMESPACE::if_freenameindex(list);
 }
 
+TEST_F(LlvmLibcIfNameIndexSocketTest, MultipleInterfaces) {
+  uint8_t pkt_buf[2048];
+  size_t len1 = build_ifinfomsg_packet(pkt_buf, 1, AttrName{"lo"});
+  size_t len2 = build_ifinfomsg_packet(pkt_buf + len1, 2, AttrName{"eth0"});
+  size_t len3 =
+      build_ifinfomsg_packet(pkt_buf + len1 + len2, 3, AttrName{"wlan0"});
+  size_t len4 = build_nlmsg_done_packet(pkt_buf + len1 + len2 + len3);
+
+  policy_data.recv_results.push_back(
+      span<const uint8_t>(pkt_buf, len1 + len2 + len3 + len4));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_TRUE(res.has_value());
+  struct if_nameindex *list = res.value();
+  ASSERT_NE(list, static_cast<struct if_nameindex *>(nullptr));
+
+  ASSERT_EQ(list[0].if_index, 1u);
+  ASSERT_STREQ(list[0].if_name, "lo");
+  ASSERT_EQ(list[1].if_index, 2u);
+  ASSERT_STREQ(list[1].if_name, "eth0");
+  ASSERT_EQ(list[2].if_index, 3u);
+  ASSERT_STREQ(list[2].if_name, "wlan0");
+  ASSERT_EQ(list[3].if_index, 0u);
+  ASSERT_EQ(list[3].if_name, static_cast<char *>(nullptr));
+
+  validate_dump_request();
+
+  ASSERT_EQ(policy_data.recv_calls.size(), size_t(1));
+  ASSERT_EQ(get<0>(policy_data.recv_calls[0]), FAKE_SOCKET);
+
+  LIBC_NAMESPACE::if_freenameindex(list);
+}
+
 TEST_F(LlvmLibcIfNameIndexSocketTest, RecvFailure) {
   policy_data.recv_results.push_back(Error(ETIMEDOUT));
 
@@ -504,6 +537,29 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, InterfaceNameWithoutNullTerminator) {
 
   ASSERT_EQ(list[0].if_index, 4u);
   ASSERT_STREQ(list[0].if_name, "docker0");
+  ASSERT_EQ(list[1].if_index, 0u);
+  ASSERT_EQ(list[1].if_name, static_cast<char *>(nullptr));
+
+  validate_dump_request();
+  LIBC_NAMESPACE::if_freenameindex(list);
+}
+
+TEST_F(LlvmLibcIfNameIndexSocketTest, InterfaceNameExceedingIfNamesize) {
+  uint8_t pkt_buf[1024];
+  size_t len1 = build_ifinfomsg_packet(
+      pkt_buf, 5,
+      AttrName{"this_interface_name_is_way_too_long_for_if_namesize"});
+  size_t len2 = build_nlmsg_done_packet(pkt_buf + len1);
+
+  policy_data.recv_results.push_back(span<const uint8_t>(pkt_buf, len1 + len2));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_TRUE(res.has_value());
+  struct if_nameindex *list = res.value();
+  ASSERT_NE(list, static_cast<struct if_nameindex *>(nullptr));
+
+  ASSERT_EQ(list[0].if_index, 5u);
+  ASSERT_STREQ(list[0].if_name, "this_interface_");
   ASSERT_EQ(list[1].if_index, 0u);
   ASSERT_EQ(list[1].if_name, static_cast<char *>(nullptr));
 

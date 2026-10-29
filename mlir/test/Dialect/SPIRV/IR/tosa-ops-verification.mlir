@@ -1604,42 +1604,42 @@ spirv.ARM.Graph @sub_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.a
 //===----------------------------------------------------------------------===//
 
 spirv.ARM.Graph @table_input_and_table_must_have_same_element_type(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm.tensor<3x2x15x7xi8>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<256xi16>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<256xi16>
   // expected-error @+1 {{op failed to verify that all of {input1, table} have same element type}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi16> -> !spirv.arm.tensor<3x2x15x7xi8>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi8>
 }
 
 spirv.ARM.Graph @table_input_output_shapes_must_match(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm.tensor<3x2x15x6xi8>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<256xi8>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<256xi8>
   // expected-error @+1 {{op failed to verify that all of {input1, output} have same shape}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2x15x6xi8>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x6xi8>
 }
 
 spirv.ARM.Graph @table_input_with_element_type_i8_requires_a_table_of_size_256(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm.tensor<3x2x15x7xi8>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<513xi8>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<513xi8>
   // expected-error @+1 {{op failed to verify that table must have size 256 if input1 has element type 8-bit signless integer}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<513xi8> -> !spirv.arm.tensor<3x2x15x7xi8>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi8>
 }
 
 spirv.ARM.Graph @table_input_with_element_type_i16_requires_a_table_of_size_513(%arg0: !spirv.arm.tensor<3x2x15x7xi16>) -> (!spirv.arm.tensor<3x2x15x7xi32>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<256xi16>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<256xi16>
   // expected-error @+1 {{op failed to verify that table must have size 513 if input1 has element type 16-bit signless integer}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi16>, !spirv.arm.tensor<256xi16> -> !spirv.arm.tensor<3x2x15x7xi32>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi32>
 }
 
 spirv.ARM.Graph @table_input_with_element_type_i8_requires_an_output_with_element_type_i8(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm.tensor<3x2x15x7xi32>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<256xi8>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<256xi8>
   // expected-error @+1 {{op failed to verify that if input1 has type 8-bit signless integer then output must have a type in [8-bit signless integer]}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2x15x7xi32>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi32>
 }
 
 spirv.ARM.Graph @table_input_with_element_type_i16_requires_an_output_with_element_type_i32(%arg0: !spirv.arm.tensor<3x2x15x7xi16>) -> (!spirv.arm.tensor<3x2x15x7xi8>) {
-  %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<513xi16>
+  %0 = spirv.ARM.GraphConstant id = 0 : !spirv.arm.tensor<513xi16>
   // expected-error @+1 {{op failed to verify that if input1 has type 16-bit signless integer then output must have a type in [32-bit signless integer]}}
   %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi16>, !spirv.arm.tensor<513xi16> -> !spirv.arm.tensor<3x2x15x7xi8>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi8>

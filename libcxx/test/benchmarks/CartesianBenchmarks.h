@@ -40,7 +40,9 @@ void makeBenchmarkFromValuesImpl(const Args& A, std::index_sequence<Is...>) {
   for (auto& V : A) {
     B Bench{std::get<Is>(V)...};
     if (!internal::skip(Bench, 0)) {
-      benchmark::RegisterBenchmark(Bench.name().c_str(), [=](benchmark::State& S) { Bench.run(S); });
+      benchmark::RegisterBenchmark(Bench.name().c_str(), [=](benchmark::State& S) TEST_ALIGN_BENCHMARK {
+        Bench.run(S);
+      });
     }
   }
 }

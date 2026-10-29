@@ -133,6 +133,12 @@ def loongarch_vftintrz_w_d: SDNode<"LoongArchISD::VFTINTRZ", SDT_LoongArchVFTINT
 // Vector 64-bit integer convert to single-precision
 def loongarch_vffint_s_l: SDNode<"LoongArchISD::VFFINT", SDT_LoongArchVFFINT_S_L>;
 
+// Whole-vector zero tests
+def loongarch_vanynonzero
+    : SDNode<"LoongArchISD::VANYNONZERO", SDT_LoongArchVMSKCOND>;
+def loongarch_vallzero
+    : SDNode<"LoongArchISD::VALLZERO", SDT_LoongArchVMSKCOND>;
+
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]>;
@@ -2328,6 +2334,19 @@ def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v4f32:$vj, uimm2:$imm)
 def : Pat<(i64 (bitconvert (f64 (vector_extract v2f64:$vj, uimm1:$imm)))),
           (VPICKVE2GR_D v2f64:$vj, uimm1:$imm)>;
 
+
+// Vector extraction with zero extension and constant index.
+def : Pat<(GRLenVT (and (vector_extract v16i8:$vj, uimm4:$imm), 255)),
+          (VPICKVE2GR_BU v16i8:$vj, uimm4:$imm)>;
+def : Pat<(GRLenVT (and (vector_extract v8i16:$vj, uimm3:$imm), 65535)),
+          (VPICKVE2GR_HU v8i16:$vj, uimm3:$imm)>;
+def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i16:$vj, uimm3:$imm),
+                                       (GRLenVT 15), (GRLenVT 0))),
+          (VPICKVE2GR_HU v8i16:$vj, uimm3:$imm)>;
+def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v4i32:$vj, uimm2:$imm),
+                                       (GRLenVT 31), (GRLenVT 0))),
+          (VPICKVE2GR_WU v4i32:$vj, uimm2:$imm)>;
+
 // Vector extraction with constant index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),
           (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
@@ -2448,6 +2467,21 @@ def : Pat<(loongarch_vmskltz (v2i64 LSX128:$vj)), (PseudoVMSKLTZ_D LSX128:$vj)>;
 def : Pat<(loongarch_vmskgez (v16i8 LSX128:$vj)), (PseudoVMSKGEZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmskeqz (v16i8 LSX128:$vj)), (PseudoVMSKEQZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmsknez (v16i8 LSX128:$vj)), (PseudoVMSKNEZ_B LSX128:$vj)>;
+
+// Whole-vector zero tests. The result lives in a condition flag register, so a
+// branch consumes it directly and only a materialization needs MOVCF2GR.
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
+def : Pat<(GRLenVT (loongarch_vanynonzero (vt LSX128:$vj))),
+          (MOVCF2GR (VSETNEZ_V LSX128:$vj))>;
+def : Pat<(GRLenVT (loongarch_vallzero (vt LSX128:$vj))),
+          (MOVCF2GR (VSETEQZ_V LSX128:$vj))>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LSX128:$vj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (VSETNEZ_V LSX128:$vj), bb:$imm21)>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LSX128:$vj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (VSETEQZ_V LSX128:$vj), bb:$imm21)>;
+}
 
 } // Predicates = [HasExtLSX]
 

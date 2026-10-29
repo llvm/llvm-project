@@ -90,7 +90,7 @@ public:
   /// Convert variable location debugging information stored in DbgMarkers and
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
-  LLVM_ABI void convertFromNewDbgValues();
+  LLVM_ABI bool convertFromNewDbgValues();
 
   unsigned getNumber() const {
     assert(getParent() && "only basic blocks in functions have valid numbers");
@@ -737,10 +737,6 @@ public:
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(BasicBlock, LLVMBasicBlockRef)
-
-/// Advance \p It while it points to a debug instruction and return the result.
-/// This assumes that \p It is not at the end of a block.
-LLVM_ABI BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 
 #ifdef NDEBUG
 /// In release builds, this is a no-op. For !NDEBUG builds, the checks are

@@ -61,9 +61,8 @@
 
 // RUN: %clang --target=i686-pc-windows-msvc -g -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LINK %s
 // RUN: %clang --target=i686-pc-windows-msvc -g -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LINK %s
-// DEBUG-LINK: link.exe"
+// DEBUG-LINK: "{{([^"]*[/\\])?}}link.exe"
 // DEBUG-LINK-SAME: "-debug"
-// DEBUG-LINK-NOT: lld
 
 // RUN: %clang --target=i686-pc-windows-msvc -g -fuse-ld=lld -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -g -fuse-ld=lld-link -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
@@ -73,6 +72,5 @@
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-4 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-5 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-6 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
-// DEBUG-LLD: lld-link{{(\.exe)?}}"
+// DEBUG-LLD: "{{([^"]*[/\\])?}}lld-link{{(\.exe)?}}"
 // DEBUG-LLD-SAME: "-debug"
-// DEBUG-LLD-NOT: link.exe

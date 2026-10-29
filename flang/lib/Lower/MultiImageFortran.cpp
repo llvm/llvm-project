@@ -263,6 +263,34 @@ void Fortran::lower::genFormTeamStatement(
 // COARRAY utils
 //===----------------------------------------------------------------------===//
 
+/// Generates a vector of cosubscripts from CoarrayRef
+mlir::SmallVector<mlir::Value>
+Fortran::lower::getCosubscripts(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc,
+                                const Fortran::evaluate::CoarrayRef &expr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::SmallVector<mlir::Value> cosubscripts;
+
+  // Creation of the cosubscripts vector
+  mlir::Type i64Ty = builder.getI64Type();
+  unsigned corank = expr.cosubscript().size();
+  for (unsigned dim = 0; dim < corank; ++dim) {
+    auto cosub = ToInt64(expr.cosubscript()[dim]);
+    mlir::Value idx;
+    if (cosub.has_value())
+      idx = builder.createIntegerConstant(loc, i64Ty, cosub.value());
+    else {
+      auto s = ignoreEvConvert(expr.cosubscript()[dim]);
+      idx = builder.createConvert(
+          loc, i64Ty, fir::getBase(converter.genExprValue(loc, s, stmtCtx)));
+    }
+
+    cosubscripts.push_back(idx);
+  }
+  return cosubscripts;
+}
+
 mlir::Value
 Fortran::lower::genLowerCoBounds(Fortran::lower::AbstractConverter &converter,
                                  mlir::Location loc,

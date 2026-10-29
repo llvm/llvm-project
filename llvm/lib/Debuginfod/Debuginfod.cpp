@@ -39,9 +39,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/xxhash.h"
 
-#include <atomic>
 #include <optional>
 #include <thread>
 

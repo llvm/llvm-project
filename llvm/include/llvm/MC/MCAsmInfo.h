@@ -669,13 +669,32 @@ public:
   bool usesCFIForEH() const {
     return (ExceptionsType == ExceptionHandling::DwarfCFI ||
             ExceptionsType == ExceptionHandling::ARM ||
-            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
+            ExceptionsType == ExceptionHandling::ZOS ||
+            (ExceptionsType == ExceptionHandling::WinEH && usesWindowsCFI()));
   }
 
+  /// Returns true if the object format describes unwind information with
+  /// Windows SEH unwind opcodes (.seh_* directives, .pdata and .xdata).
+  /// Whether a function uses that encoding also depends on the exception
+  /// model; see MachineFunction::usesWindowsUnwindInfo().
   bool usesWindowsCFI() const {
-    return ExceptionsType == ExceptionHandling::WinEH &&
-           (WinEHEncodingType != WinEH::EncodingType::Invalid &&
-            WinEHEncodingType != WinEH::EncodingType::X86);
+    return WinEHEncodingType != WinEH::EncodingType::Invalid &&
+           WinEHEncodingType != WinEH::EncodingType::X86;
+  }
+
+  /// Returns true if the exception tables reference the per-invoke EH labels
+  /// emitted around invokes. 32-bit x86 SEH and Wasm do not.
+  bool usesPerInvokeEHLabels() const {
+    switch (ExceptionsType) {
+    case ExceptionHandling::WinEH:
+      // 32-bit x86 SEH uses a state table, not per-invoke IP-to-state ranges.
+      return WinEHEncodingType != WinEH::EncodingType::X86;
+    case ExceptionHandling::None:
+    case ExceptionHandling::Wasm:
+      return false;
+    default:
+      return true;
+    }
   }
 
   bool doesDwarfUseRelocationsAcrossSections() const {

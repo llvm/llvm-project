@@ -10,11 +10,11 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcCbrtfTest = LIBC_NAMESPACE::testing::FPTest<float16>;
+using LlvmLibcCbrtf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 using LIBC_NAMESPACE::testing::tlog;
 
-TEST_F(LlvmLibcCbrtfTest, SpecialNumbers) {
+TEST_F(LlvmLibcCbrtf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cbrtf16(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::cbrtf16(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::cbrtf16(neg_inf));

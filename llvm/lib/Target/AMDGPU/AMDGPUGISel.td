@@ -217,6 +217,14 @@ def gi_vop3_mad_mix_mods_ext :
     GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExt">,
     GIComplexPatternEquiv<VOP3PMadMixModsExt>;
 
+def gi_vop3_mad_mix_mods_neg :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsNeg">,
+    GIComplexPatternEquiv<VOP3PMadMixModsNeg>;
+
+def gi_vop3_mad_mix_mods_ext_neg :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExtNeg">,
+    GIComplexPatternEquiv<VOP3PMadMixModsExtNeg>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before selecting a glue-less load, so hide this
@@ -296,6 +304,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE_TFE, SIbuffer_load_byte_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_TFE, SIbuffer_load_format_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE, SIbuffer_load_format_d16_tfe>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT, SItbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT_D16, SItbuffer_load_d16>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_STORE, SIbuffer_store>;

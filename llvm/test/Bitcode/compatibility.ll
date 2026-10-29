@@ -521,6 +521,10 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc99 void @f.cc99()
+; CHECK: declare wasm_emscripten_invokecc void @f.cc99()
+declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
+; CHECK: declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
 declare cc112 void @f.cc112()
 ; CHECK: declare riscv_vls_cc(32) void @f.cc112()
 declare cc113 void @f.cc113()
@@ -1043,6 +1047,12 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 
 ; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
   %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
+
+; CHECK: store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+  store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+
+; CHECK: store atomic volatile elementwise <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, ptr %word monotonic, align 4
+  store atomic volatile elementwise <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, ptr %word monotonic, align 4
 
   ret void
 }
@@ -1619,6 +1629,21 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   ret void
 }
 
+; Instructions -- Byte Operations
+define void @instructions.byteops(b32 %v32, b64 %v64, i8 %v8, i16 %v16, i32 %off) {
+  bitinsert b32 %v32, i8 %v8, i32 3
+  ; CHECK: bitinsert b32 %v32, i8 %v8, i32 3
+  bitinsert b32 %v32, i16 %v16, i32 %off
+  ; CHECK: bitinsert b32 %v32, i16 %v16, i32 %off
+  bitextract i8, b32 %v32, i32 24
+  ; CHECK: bitextract i8, b32 %v32, i32 24
+  bitextract i16, b32 %v32, i32 %off
+  ; CHECK: bitextract i16, b32 %v32, i32 %off
+  bitextract i8, b64 %v64, i32 0
+  ; CHECK: bitextract i8, b64 %v64, i32 0
+  ret void
+}
+
 ; Instructions -- Vector Operations
 define void @instructions.vectorops(<4 x float> %vec, <4 x float> %vec2) {
   extractelement <4 x float> %vec, i8 0
@@ -1706,7 +1731,7 @@ define void @instructions.memops(ptr %base) {
 }
 
 ; Instructions -- Conversion Operations
-define void @instructions.conversions() {
+define void @instructions.conversions(ptr %pop) {
   trunc i32 -1 to i1
   ; CHECK: trunc i32 -1 to i1
   zext i32 -1 to i64
@@ -1741,6 +1766,8 @@ define void @instructions.conversions() {
   ; CHECK: bitcast i32 0 to i32
   addrspacecast ptr null to ptr addrspace(1)
   ; CHECK: addrspacecast ptr null to ptr addrspace(1)
+  addrspacecast nonnull ptr %pop to ptr addrspace(1)
+  ; CHECK: addrspacecast nonnull ptr %pop to ptr addrspace(1)
 
   ret void
 }

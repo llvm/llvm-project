@@ -20,13 +20,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <vector>
 
 namespace llvm {
-
-namespace vfs {
-class FileSystem;
-} // end namespace vfs
 
 class raw_ostream;
 class SMDiagnostic;

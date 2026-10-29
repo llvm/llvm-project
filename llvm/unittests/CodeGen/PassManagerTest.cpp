@@ -179,7 +179,7 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM.get());
 
@@ -228,7 +228,7 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   if (!TM)
     GTEST_SKIP();
 
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM.get());
 

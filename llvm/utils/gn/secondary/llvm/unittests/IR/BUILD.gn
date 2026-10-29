@@ -8,6 +8,7 @@ unittest("IRTests") {
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
+    "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
@@ -36,6 +37,7 @@ unittest("IRTests") {
     "InstructionsTest.cpp",
     "IntrinsicsTest.cpp",
     "LegacyPassManagerTest.cpp",
+    "LibraryOptionsContextTest.cpp",
     "MDBuilderTest.cpp",
     "ManglerTest.cpp",
     "MemoryModelRelaxationAnnotationsTest.cpp",

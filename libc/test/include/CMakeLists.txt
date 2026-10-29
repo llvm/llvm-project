@@ -67,10 +67,10 @@ add_libc_test(
     libc.include.llvm-libc-macros.stdbit_macros
     libc.include.llvm_libc_common_h
     libc.include.stdbit
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 add_libc_test(
   stdbit_c_test
@@ -89,10 +89,10 @@ add_libc_test(
     libc.include.llvm_libc_common_h
     libc.include.stdbit
     libc.src.assert.__assert_fail
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 
 add_libc_test(
@@ -245,6 +245,8 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.netinet_in_macros
 )
+
+add_subdirectory(net)
 
 add_libc_test(
   signbit_test
@@ -441,6 +443,8 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(
@@ -538,19 +542,19 @@ function(add_header_test target_name source_file deps std_mode)
     add_libc_test(
       ${target_name}
       C_TEST
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
-	libc_include_tests
+        libc_include_tests
       SRCS
-	${source_file}
+        ${source_file}
       COMPILE_OPTIONS
-	-Werror
-	-Wsystem-headers
-	-Wall
-	-Wextra
-	-std=${std_mode}
+        -Werror
+        -Wsystem-headers
+        -Wall
+        -Wextra
+        -std=${std_mode}
       DEPENDS
-	${deps}
+        ${deps}
     )
   endif()
 endfunction()

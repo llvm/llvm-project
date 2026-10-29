@@ -818,4 +818,37 @@ TEST(Attributes, ListIntersect) {
   ASSERT_TRUE(Res->hasParamAttr(3, Attribute::ByVal));
 }
 
+TEST(Attributes, BuilderMerge) {
+  LLVMContext C;
+  AttrBuilder A(C), B(C);
+  A.addAttribute(Attribute::NoUnwind);
+  A.addAlignmentAttr(4);
+  A.addAttribute("a", "1");
+  A.addAttribute("c", "1");
+  B.addAttribute(Attribute::NoReturn);
+  B.addAlignmentAttr(8);
+  B.addAttribute("b", "2");
+  B.addAttribute("c", "2");
+  B.addAttribute("d", "2");
+  A.merge(B);
+
+  // Attributes of B replace those of the same kind in A, and the result stays
+  // sorted (AttrBuilder equality compares the sorted lists).
+  AttrBuilder Expected(C);
+  for (Attribute Attr :
+       {Attribute::get(C, Attribute::NoUnwind),
+        Attribute::get(C, Attribute::NoReturn),
+        Attribute::getWithAlignment(C, Align(8)), Attribute::get(C, "a", "1"),
+        Attribute::get(C, "b", "2"), Attribute::get(C, "c", "2"),
+        Attribute::get(C, "d", "2")})
+    Expected.addAttribute(Attr);
+  EXPECT_EQ(A, Expected);
+
+  AttrBuilder Empty(C);
+  Empty.merge(B);
+  EXPECT_EQ(Empty, B);
+  B.merge(AttrBuilder(C));
+  EXPECT_EQ(Empty, B);
+}
+
 } // end anonymous namespace

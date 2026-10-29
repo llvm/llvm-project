@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestFixture.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/SourceTransformation/Transformation.h"
 #include "clang/ScalableStaticAnalysis/SourceTransformation/TransformationRegistry.h"
 #include "llvm/ADT/STLExtras.h"
@@ -52,10 +53,11 @@ TEST_F(TransformationRegistryTest, isTransformationRegistered) {
 
 TEST_F(TransformationRegistryTest, makeTransformation) {
   WPASuite Suite = makeWPASuite();
+  SSAFOptions Opts;
   StubEditEmitter Edits;
   StubReportEmitter Report;
   std::unique_ptr<Transformation> T =
-      makeTransformation("stub-transformation", Suite, Edits, Report);
+      makeTransformation("stub-transformation", Suite, Opts, Edits, Report);
   EXPECT_NE(T, nullptr);
 }
 

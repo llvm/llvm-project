@@ -19,27 +19,13 @@ class TestWatchpointEvents(TestBase):
     def test_with_python_api(self):
         """Test that adding, deleting and modifying watchpoints sends the appropriate events."""
         self.build()
-        target = self.createTestTarget()
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-        break_in_main = target.BreakpointCreateBySourceRegex(
-            "// Put a breakpoint here.", self.main_source_spec
+        target, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Put a breakpoint here.", self.main_source_spec
         )
-        self.assertTrue(break_in_main, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_in_main)
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        thread = threads[0]
         frame = thread.GetFrameAtIndex(0)
         local_var = frame.FindVariable("local_var")
         self.assertTrue(local_var.IsValid())

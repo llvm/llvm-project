@@ -263,7 +263,7 @@ def SwitchOp : CF_Op<"switch",
   }];
 
   let arguments = (ins
-    AnyInteger:$flag,
+    AnySignlessInteger:$flag,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,

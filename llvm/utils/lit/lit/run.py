@@ -1,9 +1,10 @@
 import multiprocessing
 import os
 import platform
+import queue
 import sys
 import time
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import concurrent.futures.process
 
@@ -26,11 +27,12 @@ WINDOWS_MAX_WORKERS_PER_POOL = 60
 # The window must exceed workers + call-queue fetch (workers + 1) to keep
 # every worker busy.
 # TODO: Drop this workaround once lit's minimum Python version is >= 3.12
-SUBMISSION_WINDOW_PER_WORKER = 4
+SUBMISSION_WINDOW_PER_WORKER = 8
 
 
 def _ceilDiv(a, b):
     return (a + b - 1) // b
+
 
 class MaxFailuresError(Exception):
     pass
@@ -42,6 +44,7 @@ class TimeoutError(Exception):
 
 class WorkerCrashError(Exception):
     """A worker process died abrupty (segfault, OOM-kill, abort) instead of returning a result."""
+
     pass
 
 
@@ -235,45 +238,84 @@ class Run:
             pending = set()
             future_to_index = {}
 
-            def submit_next():
-                """Submits the next not-yet-submitted test, if any.
+            # Batch tests to reduce IPC traffic and events across workers.
+            default_batch = 2 if self.workers > 1 else 1
+            batch_size = int(os.getenv("LIT_BATCH_SIZE", default_batch))
 
-                Returns:
-                    True if a test was submitted, False if none remained.
-                """
-                for i, test in tests_iter:
-                    ex = executors[i % len(executors)]
-                    future = ex.submit(lit.worker.execute, test)
-                    future_to_test[future] = test
-                    future_to_index[future] = i
+            # Avoid overhead from concurrent.furtures.wait(), by using
+            # callbacks with a SimpleQueue. This removes many checks of futures
+            # from the scheduling thread, which adds severe overhead as core
+            # count increases.
+            completed = queue.SimpleQueue()
+
+            # Specialize submit_next() by batch_size:
+            # - batch_size <= 1: Avoids batch slicing and list-wrapping overhead.
+            # - batch_size > 1: Batches tests into groups of size batch_size per future.
+            if batch_size <= 1:
+
+                def submit_next():
+                    for i, test in tests_iter:
+                        ex = executors[i % len(executors)]
+                        future = ex.submit(lit.worker.execute, test)
+                        future_to_test[future] = test
+                        future_to_index[future] = i
+                        pending.add(future)
+                        future.add_done_callback(completed.put)
+                        return True
+                    return False
+
+            else:
+                import itertools
+
+                batch_index = 0
+
+                def submit_next():
+                    nonlocal batch_index
+                    batch = list(itertools.islice(tests_iter, batch_size))
+                    if not batch:
+                        return False
+                    indices, tests_batch = zip(*batch)
+                    ex = executors[batch_index % len(executors)]
+                    future = ex.submit(lit.worker.execute_batch, list(tests_batch))
+                    future_to_test[future] = list(tests_batch)
+                    future_to_index[future] = batch_index
+                    batch_index += 1
                     pending.add(future)
+                    future.add_done_callback(completed.put)
                     return True
-                return False
 
             while len(pending) < window and submit_next():
                 pass
 
             while pending:
-                done, pending = wait(
-                    pending,
-                    timeout=deadline - time.time(),
-                    return_when=FIRST_COMPLETED,
-                )
-                if not done:
+                try:
+                    done = [completed.get(timeout=max(0, deadline - time.time()))]
+                except queue.Empty:
                     raise TimeoutError()
+                while True:
+                    try:
+                        done.append(completed.get_nowait())
+                    except queue.Empty:
+                        break
                 for future in sorted(done, key=lambda f: future_to_index[f]):
+                    pending.discard(future)
                     del future_to_index[future]
-                    remote_test = future.result()
-                    local_test = future_to_test.pop(future)
-                    self._update_test(local_test, remote_test)
-                    self.progress_callback(remote_test)
-                    if remote_test.isFailure():
-                        self.failures += 1
-                        # max_failures is None or a positive int, never 0
-                        # (cl_arguments.py's _positive_int enforces i > 0),
-                        # so this equality check can't misfire on failures=0.
-                        if self.failures == self.max_failures:
-                            raise MaxFailuresError()
+                    res = future.result()
+                    local_res = future_to_test.pop(future)
+                    remote_tests = res if isinstance(res, list) else [res]
+                    local_tests = (
+                        local_res if isinstance(local_res, list) else [local_res]
+                    )
+                    for local_test, remote_test in zip(local_tests, remote_tests):
+                        self._update_test(local_test, remote_test)
+                        self.progress_callback(remote_test)
+                        if remote_test.isFailure():
+                            self.failures += 1
+                            # max_failures is None or a positive int, never 0
+                            # (cl_arguments.py's _positive_int enforces i > 0),
+                            # so this equality check can't misfire on failures=0.
+                            if self.failures == self.max_failures:
+                                raise MaxFailuresError()
                     submit_next()
 
         except BrokenProcessPool as e:

@@ -29,7 +29,7 @@ set(RTSAN_UNITTEST_HEADERS
     rtsan_test_utilities.h)
 
 add_custom_target(RtsanUnitTests)
-set_target_properties(RtsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(RtsanUnitTests PROPERTIES FOLDER "compiler-rt Tests")
 
 set(RTSAN_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
@@ -111,7 +111,7 @@ foreach(arch ${RTSAN_TEST_ARCH})
   add_library(${RTSAN_TEST_RUNTIME} STATIC ${RTSAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${RTSAN_TEST_RUNTIME} PROPERTIES
       ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      FOLDER "Compiler-RT Runtime tests")
+      FOLDER "compiler-rt Runtime tests")
 
   set(RtsanNoInstTestObjects)
   generate_compiler_rt_tests(RtsanNoInstTestObjects

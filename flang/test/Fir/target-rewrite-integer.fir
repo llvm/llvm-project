@@ -7,6 +7,7 @@
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparc64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparcv9-sun-solaris2.11" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=LOONGARCH64,ALL
+// RUN: fir-opt --split-input-file --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=SYSTEMZ,ALL
 
 // -----
 
@@ -23,6 +24,7 @@
 // PPC: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // LOONGARCH64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
+// SYSTEMZ: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 func.func @_QPtest_i1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %c3_i32 = arith.constant 3 : i32
   %c-1_i32 = arith.constant -1 : i32
@@ -56,6 +58,7 @@ func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fi
 // PPC: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // LOONGARCH64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
+// SYSTEMZ: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 func.func @_QPtest_si1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %0 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %1 = fir.convert %0 : (!fir.logical<4>) -> si1
@@ -77,6 +80,7 @@ func.func private @_SomeFunc_si1(si1) -> si1 attributes {fir.runtime}
 // PPC: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // LOONGARCH64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
+// SYSTEMZ: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 func.func @_QPtest_ui1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %0 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %1 = fir.convert %0 : (!fir.logical<4>) -> ui1
@@ -118,6 +122,8 @@ func.func private @_SomeFunc_ui1(ui1) -> ui1 attributes {fir.runtime}
 // SPARCV9: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
 // LOONGARCH64: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
 // LOONGARCH64: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// SYSTEMZ: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// SYSTEMZ: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
 func.func @_QPtest_bindc(%arg0: !fir.ref<i8> {fir.bindc_name = "x"}, %arg1: !fir.ref<i16> {fir.bindc_name = "y"}) {
   %0 = fir.load %arg0 : !fir.ref<i8>
   %1 = fir.call @cfun8(%0) fastmath<contract> : (i8) -> i8
@@ -129,3 +135,15 @@ func.func @_QPtest_bindc(%arg0: !fir.ref<i8> {fir.bindc_name = "x"}, %arg1: !fir
 }
 func.func private @cfun8(i8) -> i8 attributes {fir.bindc_name = "cfun8"}
 func.func private @cfun16(i16) -> i16 attributes {fir.bindc_name = "cfun16"}
+
+// -----
+
+// SYSTEMZ-LABEL: @_QPtest_bindc32
+// SYSTEMZ: func.func private @cfun32(i32 {llvm.signext}) -> (i32 {llvm.signext}) attributes {fir.bindc_name = "cfun32"}
+func.func @_QPtest_bindc32(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.call @cfun32(%0) fastmath<contract> : (i32) -> i32
+  fir.store %1 to %arg0 : !fir.ref<i32>
+  return
+}
+func.func private @cfun32(i32) -> i32 attributes {fir.bindc_name = "cfun32"}

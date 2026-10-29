@@ -307,7 +307,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
                   // Make sure you don't already have the right module loaded
                   // and they will be uniqued
                   if (exe_module_sp.get() != module_sp.get())
-                    target.SetExecutableModule(module_sp, eLoadDependentsNo);
+                    target.RebuildModuleListWithExecutable(module_sp,
+                                                           eLoadDependentsNo);
                 }
               }
             }
@@ -577,8 +578,9 @@ bool ProcessKDP::IsAlive() {
 }
 
 // Process Memory
-size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+size_t ProcessKDP::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   uint8_t *data_buffer = (uint8_t *)buf;
   if (m_comm.IsConnected()) {
     const size_t max_read_size = 512;

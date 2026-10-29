@@ -10,7 +10,7 @@
 ! XFAIL: *
 
 !CHECK:         module attributes {
-!CHECK-SAME:    omp.requires = #omp<clause_requires unified_shared_memory>
+!CHECK-SAME:    omp.requires = #omp.clause_requires<unified_shared_memory>
 block data
   !$omp requires unified_shared_memory
   integer :: x

@@ -92,9 +92,7 @@ private:
 
 public:
   // For memprof testing, random hotness can be assigned to the contexts if
-  // MemprofGenerateRandomHotness is enabled. The random seed can be either
-  // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
-  // generated in the writer using the current time.
+  // MemprofGenerateRandomHotness is enabled.
   LLVM_ABI InstrProfWriter(bool Sparse = false,
                            uint64_t TemporalProfTraceReservoirSize = 0,
                            uint64_t MaxTemporalProfTraceLength = 0,
@@ -104,7 +102,7 @@ public:
                                    memprof::MinimumSupportedVersion),
                            bool MemProfFullSchema = false,
                            bool MemprofGenerateRandomHotness = false,
-                           unsigned MemprofGenerateRandomHotnessSeed = 0);
+                           unsigned RandomSeed = 0);
   LLVM_ABI ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }

@@ -45,6 +45,22 @@ public:
       DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
       uint64_t EndOffset, bool Verbose) = 0;
 
+  /// Returns the relocation adjustment value for the .debug_addr entry that the
+  /// DW_OP_addrx or DW_OP_constx operation \p Op refers to, or std::nullopt if
+  /// there is no corresponding live address. The entry may name a different
+  /// symbol than whatever owns the expression, such as a variable in a location
+  /// list covering a function's code, and that symbol may have moved by a
+  /// different amount.
+  std::optional<int64_t> getAddrIndexRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, bool Verbose) {
+    std::optional<uint64_t> AddrOffset =
+        U.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (!AddrOffset)
+      return std::nullopt;
+    return getExprOpAddressRelocAdjustment(
+        U, Op, *AddrOffset, *AddrOffset + U.getAddressByteSize(), Verbose);
+  }
+
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked
   /// address this value might be added to the source subprogram address).
@@ -83,20 +99,50 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
-  /// This is used for assembly files where labels may not have high_pc
-  /// but the debug map has range information from symbols.
-  struct AssemblyRange {
-    AssemblyRange(uint64_t LowPC, uint64_t HighPC)
+  /// The extent the linker gave a symbol, in source address space.
+  struct SymbolRange {
+    SymbolRange(uint64_t LowPC, uint64_t HighPC)
         : LowPC(LowPC), HighPC(HighPC) {}
     uint64_t LowPC;
     uint64_t HighPC;
   };
 
-  /// Returns the address range containing \p Addr if available.
-  /// \returns the range [LowPC, HighPC) containing Addr.
-  virtual std::optional<AssemblyRange>
-  getAssemblyRangeForAddress(uint64_t Addr) {
+  /// Returns the symbol range [LowPC, HighPC) containing \p Addr, if known.
+  virtual std::optional<SymbolRange> getSymbolRangeForAddress(uint64_t Addr) {
     return std::nullopt;
+  }
+
+  /// Returns the linked address of the first symbol placed at or after
+  /// \p LinkedAddr, if one is known.
+  virtual std::optional<uint64_t>
+  getNextLinkedSymbolStart(uint64_t LinkedAddr) {
+    return std::nullopt;
+  }
+
+  /// Constrains the end of the code range starting at \p LowPC, whose addresses
+  /// shift by \p Adjustment in the output. \p HighPC is an address, not a
+  /// length.
+  ///
+  /// The linker places symbols independently, so a range overrunning the symbol
+  /// it starts in can cover a different one once linked. Only that overlap is
+  /// repaired.
+  uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
+                                    int64_t Adjustment) {
+    std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
+    if (!Symbol)
+      return HighPC;
+    assert(Symbol->LowPC <= LowPC && LowPC < Symbol->HighPC &&
+           "Symbol range must contain the address it was looked up for");
+    uint64_t LinkedSymbolHighPC = Symbol->HighPC + Adjustment;
+    assert(LinkedSymbolHighPC > Symbol->LowPC + Adjustment &&
+           "Adjusting a symbol range must preserve its order");
+    std::optional<uint64_t> NextStart =
+        getNextLinkedSymbolStart(LinkedSymbolHighPC);
+    if (!NextStart)
+      return HighPC;
+    assert(*NextStart >= LinkedSymbolHighPC &&
+           "A range must never be cut short of its own symbol");
+    return std::min(HighPC, *NextStart - Adjustment);
   }
 
   /// This function checks whether variable has DWARF expression containing

@@ -22,11 +22,8 @@
 #include "SIPeepholeSDWA.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <optional>
 
 using namespace llvm;
@@ -63,6 +60,9 @@ private:
   // value operand and the matching SDWA selector (WORD_0 / BYTE_0).
   std::optional<std::pair<MachineOperand *, AMDGPU::SDWA::SdwaSel>>
   matchAndMask(MachineInstr &MI) const;
+
+  // VOPC SDWA instructions carry the SDWA TSFlag but have no dst_sel operand.
+  bool isSDWAWithDstSel(const MachineInstr &Inst) const;
 
   void matchSDWAOperands(MachineBasicBlock &MBB);
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
@@ -160,8 +160,7 @@ public:
   bool getNeg() const { return Neg; }
   bool getSext() const { return Sext; }
 
-  uint64_t getSrcMods(const SIInstrInfo *TII,
-                      const MachineOperand *SrcOp) const;
+  uint64_t getSrcMods(uint64_t Mods, SdwaSel ExistingSel) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream& OS) const override;
@@ -222,10 +221,6 @@ INITIALIZE_PASS(SIPeepholeSDWALegacy, DEBUG_TYPE, "SI Peephole SDWA", false,
 char SIPeepholeSDWALegacy::ID = 0;
 
 char &llvm::SIPeepholeSDWALegacyID = SIPeepholeSDWALegacy::ID;
-
-FunctionPass *llvm::createSIPeepholeSDWALegacyPass() {
-  return new SIPeepholeSDWALegacy();
-}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static raw_ostream& operator<<(raw_ostream &OS, SdwaSel Sel) {
@@ -309,25 +304,35 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
   return MRI->getOneDef(Reg->getReg());
 }
 
-/// Combine an SDWA instruction's existing SDWA selection \p Sel with
-/// the SDWA selection \p OperandSel of its operand. If the selections
+/// Combine an SDWA source instruction's existing source selection \p Sel
+/// with the SDWA selection \p OperandSel of its operand. If the selections
 /// are compatible, return the combined selection, otherwise return a
 /// nullopt.
+/// This applies to src_sel only. Extracting from an already extracted field
+/// is again a single field, but dst_sel writes a field and leaves the rest to
+/// dst_unused, so two of them do not fold into one.
+/// See SDWADstOperand::canCombineSelections.
 /// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
 ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-static std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
+static std::optional<SdwaSel> combineSdwaSrcSel(SdwaSel Sel,
+                                                SdwaSel OperandSel) {
   if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (Sel == OperandSel || OperandSel == SdwaSel::DWORD)
+  if (OperandSel == SdwaSel::DWORD)
     return Sel;
 
   if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
       Sel == SdwaSel::BYTE_3)
     return {};
 
+  // WORD_0 wholly contains the BYTE_0, BYTE_1 and WORD_0 that Sel can be here.
   if (OperandSel == SdwaSel::WORD_0)
     return Sel;
+
+  // Reading BYTE_0 of a BYTE_0 field is that same byte.
+  if (OperandSel == SdwaSel::BYTE_0 && Sel == SdwaSel::BYTE_0)
+    return SdwaSel::BYTE_0;
 
   if (OperandSel == SdwaSel::WORD_1) {
     if (Sel == SdwaSel::BYTE_0)
@@ -341,26 +346,20 @@ static std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
   return {};
 }
 
-uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
-                                    const MachineOperand *SrcOp) const {
-  uint64_t Mods = 0;
-  const auto *MI = SrcOp->getParent();
-  if (TII->getNamedOperand(*MI, AMDGPU::OpName::src0) == SrcOp) {
-    if (auto *Mod = TII->getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers)) {
-      Mods = Mod->getImm();
-    }
-  } else if (TII->getNamedOperand(*MI, AMDGPU::OpName::src1) == SrcOp) {
-    if (auto *Mod = TII->getNamedOperand(*MI, AMDGPU::OpName::src1_modifiers)) {
-      Mods = Mod->getImm();
-    }
-  }
+uint64_t SDWASrcOperand::getSrcMods(uint64_t Mods, SdwaSel ExistingSel) const {
   if (Abs || Neg) {
     assert(!Sext &&
            "Float and integer src modifiers can't be set simultaneously");
     Mods |= Abs ? SISrcMods::ABS : 0u;
     Mods ^= Neg ? SISrcMods::NEG : 0u;
-  } else if (Sext) {
-    Mods |= SISrcMods::SEXT;
+  } else if (ExistingSel == SdwaSel::DWORD) {
+    // SEXT is a no-op for a DWORD selection, so MI may carry one that means
+    // nothing. The combined selection is the operand's field, so use the
+    // operand's SEXT and drop whatever MI had. When ExistingSel narrows the
+    // field instead, the operand's SEXT bits fall outside the combined
+    // field, so MI's own SEXT is kept as is.
+    Mods &= ~uint64_t(SISrcMods::SEXT);
+    Mods |= Sext ? SISrcMods::SEXT : 0u;
   }
 
   return Mods;
@@ -500,23 +499,11 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
-    SrcSel->setImm(*combineSdwaSel(ExistingSel, getSrcSel()));
-    SrcMods->setImm(getSrcMods(TII, Src));
+    SrcSel->setImm(*combineSdwaSrcSel(ExistingSel, getSrcSel()));
+    SrcMods->setImm(getSrcMods(SrcMods->getImm(), ExistingSel));
   }
   getTargetOperand()->setIsKill(false);
   return true;
-}
-
-/// Verify that the SDWA selection operand \p SrcSelOpName of the SDWA
-/// instruction \p MI can be combined with the selection \p OpSel.
-static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
-                            AMDGPU::OpName SrcSelOpName, SdwaSel OpSel) {
-  assert(TII->isSDWA(MI.getOpcode()));
-
-  const MachineOperand *SrcSelOp = TII->getNamedOperand(MI, SrcSelOpName);
-  SdwaSel SrcSel = static_cast<SdwaSel>(SrcSelOp->getImm());
-
-  return combineSdwaSel(SrcSel, OpSel).has_value();
 }
 
 /// Verify that \p Op is the same register as the operand of the SDWA
@@ -532,7 +519,8 @@ static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
   if (!Src || !isSameReg(*Src, *Op))
     return true;
 
-  return canCombineOpSel(MI, TII, SrcSelOpName, OpSel);
+  auto SrcSel = static_cast<SdwaSel>(TII->getNamedImmOperand(MI, SrcSelOpName));
+  return combineSdwaSrcSel(SrcSel, OpSel).has_value();
 }
 
 bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI,
@@ -590,8 +578,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
 
-  SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
-  DstSel->setImm(combineSdwaSel(ExistingSel, getDstSel()).value());
+  DstSel->setImm(getDstSel());
 
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
@@ -608,7 +595,9 @@ bool SDWADstOperand::canCombineSelections(const MachineInstr &MI,
   if (!TII->isSDWA(MI.getOpcode()))
     return true;
 
-  return canCombineOpSel(MI, TII, AMDGPU::OpName::dst_sel, getDstSel());
+  // Destination selections are never combined, so only fold into an MI that
+  // is not yet writing a sub-field of its destination.
+  return TII->getNamedImmOperand(MI, AMDGPU::OpName::dst_sel) == SdwaSel::DWORD;
 }
 
 bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
@@ -642,7 +631,9 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
 
 bool SDWADstPreserveOperand::canCombineSelections(const MachineInstr &MI,
                                                   const SIInstrInfo *TII) {
-  return SDWADstOperand::canCombineSelections(MI, TII);
+  // DstSel came from the dst_sel already on MI, only dst_unused changes here.
+  assert(TII->getNamedImmOperand(MI, AMDGPU::OpName::dst_sel) == getDstSel());
+  return true;
 }
 
 std::optional<int64_t>
@@ -691,6 +682,11 @@ SIPeepholeSDWA::matchAndMask(MachineInstr &MI) const {
     return std::nullopt;
 
   return std::make_pair(ValSrc, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
+}
+
+bool SIPeepholeSDWA::isSDWAWithDstSel(const MachineInstr &Inst) const {
+  return TII->isSDWA(Inst) &&
+         AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::dst_sel);
 }
 
 std::unique_ptr<SDWAOperand>
@@ -870,7 +866,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
           return CheckRetType(std::nullopt);
 
         MachineInstr *Op1Inst = Op1Def->getParent();
-        if (!TII->isSDWA(*Op1Inst))
+        if (!isSDWAWithDstSel(*Op1Inst))
           return CheckRetType(std::nullopt);
 
         MachineOperand *Op2Def = findSingleRegDef(Op2, MRI);
@@ -920,7 +916,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // For now this only works with SDWA instructions. For regular instructions
     // there is no way to determine if the instruction writes only 8/16/24-bit
     // out of full register size and all registers are at min 32-bit wide.
-    if (!TII->isSDWA(*OtherInst))
+    if (!isSDWAWithDstSel(*OtherInst))
       break;
 
     SdwaSel DstSel = static_cast<SdwaSel>(
@@ -1049,6 +1045,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
+  if (MISucc.getParent() != &MBB)
+    return; // Loop depends on MI and MISucc in same MBB.
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 25);
   if (Liveness != MachineBasicBlock::LQR_Dead)
@@ -1171,7 +1169,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
     return false;
 
   // Check if target supports this SDWA opcode
-  if (TII->pseudoToMCOpcode(Opc) == -1)
+  if (TII->pseudoToMCOpcode(Opc) == -1 ||
+      TII->pseudoToMCOpcode(AMDGPU::getSDWAOp(Opc)) == -1)
     return false;
 
   if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {

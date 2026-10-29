@@ -64,6 +64,18 @@ Policy Policy::CreatePublicStateRunningExpression() {
   return p;
 }
 
+// A scripted extension invoked by the debugger must not perturb the state it
+// was asked to describe, so an expression started from one stays on its own
+// thread. This scope is not pushed for scripted commands, which the user
+// invokes directly.
+Policy Policy::CreateScriptedExtensionCall() {
+  Policy p = PolicyStack::Get().Current();
+  p.capabilities.can_bypass_target_api_mutex = true;
+  p.capabilities.can_run_all_threads = false;
+  p.capabilities.can_try_all_threads = false;
+  return p;
+}
+
 PolicyStack::Guard::~Guard() {
   if (!m_active)
     return;
@@ -108,6 +120,7 @@ void Policy::Dump(Stream &s) const {
   s << " bp_actions=" << capabilities.can_run_breakpoint_actions;
   s << " frame_providers=" << capabilities.can_load_frame_providers;
   s << " frame_recognizers=" << capabilities.can_run_frame_recognizers;
+  s << " bypass_api_mutex=" << capabilities.can_bypass_target_api_mutex;
   s << '}';
 }
 

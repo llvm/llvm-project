@@ -443,7 +443,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     return NewGEP;
   }
 
-  IRBuilder IB(F->getContext());
+  IRBuilder IB(*F->getParent());
   if (Instruction *InsnPtr = dyn_cast<Instruction>(ToWrap))
     IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
   else

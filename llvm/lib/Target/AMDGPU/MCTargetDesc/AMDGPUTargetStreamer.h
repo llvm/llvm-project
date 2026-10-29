@@ -130,7 +130,6 @@ public:
 
   virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
 
-  static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
   const std::optional<AMDGPU::TargetID> &getTargetID() const {

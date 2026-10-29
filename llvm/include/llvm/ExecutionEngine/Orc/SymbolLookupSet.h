@@ -17,6 +17,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
 #include "llvm/Support/Error.h"
 
 #include <initializer_list>
@@ -225,12 +227,33 @@ public:
     });
   }
 
-  /// Remove any duplicate elements. If a SymbolLookupSet is not duplicate-free
-  /// by construction, this method can be used to turn it into a proper set.
-  void removeDuplicates() {
+  /// Merge entries that share a name, so that each name appears exactly once.
+  /// If a SymbolLookupSet is not duplicate-free by construction, this method
+  /// can be used to turn it into a proper set.
+  ///
+  /// Entries sharing a name need not agree on their flags. Where they differ
+  /// the strongest requirement wins: if any entry required the symbol then the
+  /// merged entry requires it too, so that a missing definition still fails the
+  /// lookup.
+  void mergeEntries() {
+    if (Symbols.size() < 2)
+      return;
     sortByAddress();
-    auto LastI = llvm::unique(Symbols);
-    Symbols.erase(LastI, Symbols.end());
+
+    auto Out = Symbols.begin();
+    for (auto In = Out + 1; In != Symbols.end(); ++In) {
+      if (In->first == Out->first) {
+        // Same name: keep the stronger requirement.
+        if (In->second == SymbolLookupFlags::RequiredSymbol)
+          Out->second = SymbolLookupFlags::RequiredSymbol;
+      } else {
+        // New name: compact it down next to the previous survivor.
+        ++Out;
+        if (Out != In)
+          *Out = std::move(*In);
+      }
+    }
+    Symbols.erase(std::next(Out), Symbols.end());
   }
 
 #ifndef NDEBUG
@@ -252,5 +275,37 @@ private:
 };
 
 } // namespace llvm::orc
+
+// SPS serialization for SymbolLookupSet. This lives here rather than in
+// Shared/SymbolLookupSetSPS.h because that header is shared with
+// OrcTargetProcess, which doesn't depend on ORC's core types.
+namespace llvm::orc::shared {
+
+// Serialize a SymbolLookupSet directly as an SPSSymbolLookupSet, avoiding a
+// std::string copy of each (potentially large) symbol name.
+template <>
+class SPSSerializationTraits<SPSSymbolLookupSetElement,
+                             SymbolLookupSet::value_type> {
+public:
+  static size_t size(const SymbolLookupSet::value_type &V) {
+    return SPSArgList<SPSString, bool>::size(
+        *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const SymbolLookupSet::value_type &V) {
+    return SPSArgList<SPSString, bool>::serialize(
+        OB, *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
+  }
+};
+
+template <>
+class TrivialSPSSequenceSerialization<SPSSymbolLookupSetElement,
+                                      SymbolLookupSet> {
+public:
+  static constexpr bool available = true;
+};
+
+} // namespace llvm::orc::shared
 
 #endif // LLVM_EXECUTIONENGINE_ORC_SYMBOLLOOKUPSET_H

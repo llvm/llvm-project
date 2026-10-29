@@ -42,12 +42,12 @@ let Attributes = [NoThrow] in {
   def writeeflags_u64 : X86Builtin<"void(unsigned long long int)">;
 }
 
-let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
   def cvttss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
   def cvttsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
 }
@@ -137,8 +137,6 @@ let Attributes = [NoThrow, Const, Constexpr] in {
 
 let Features = "bmi2", Attributes = [NoThrow, Const, Constexpr] in {
   def bzhi_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
-  def pdep_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
-  def pext_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
 let Features = "tbm", Attributes = [NoThrow, Const, Constexpr] in {

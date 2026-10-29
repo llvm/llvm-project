@@ -15,6 +15,24 @@
 using LlvmLibcAtan2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtan2fTest, SpecialNumbers) {
+  constexpr float PI = 0x1.921fb6p+1f;
+  constexpr float PI_OVER_2 = 0x1.921fb6p+0f;
+  constexpr float PI_OVER_4 = 0x1.921fb6p-1f;
+  constexpr float THREE_PI_OVER_4 = 0x1.2d97c8p+1f;
+
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f(zero, neg_zero));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f(neg_zero, neg_zero));
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f(zero, neg_inf));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f(neg_zero, neg_inf));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f(inf, zero));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f(inf, neg_zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f(neg_inf, zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f(neg_inf, neg_zero));
+  EXPECT_FP_EQ(PI_OVER_4, LIBC_NAMESPACE::atan2f(inf, inf));
+  EXPECT_FP_EQ(-PI_OVER_4, LIBC_NAMESPACE::atan2f(neg_inf, inf));
+  EXPECT_FP_EQ(THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f(inf, neg_inf));
+  EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f(neg_inf, neg_inf));
+
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(sNaN, sNaN),
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);

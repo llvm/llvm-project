@@ -8,7 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class CPPEnumLimitsTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
-    TEST_WITH_PDB_DEBUG_INFO = True
 
     def check_signed(self, ty: lldb.SBType, expected):
         self.assertEqual(
@@ -56,7 +55,7 @@ class CPPEnumLimitsTestCase(TestBase):
         self.build()
         self.check_all(self.dbg.CreateTarget(self.getBuildArtifact("a.out")))
 
-    @skipUnlessPlatform(["windows"])
+    @requireWindows
     @skipUnlessMSVC
     @no_debug_info_test  # We only test MSVC
     def test_msvc(self):

@@ -1,0 +1,46 @@
+#
+# This testing configuration runs the test suite against a libc++ that is already installed at
+# the given path.
+#
+# The additional '--param libcxx_installation=<PATH>' Lit parameter must be provided when invoking
+# Lit. It must point to the root of the installation, i.e. the directory containing 'include/c++/v1'
+# and 'lib'.
+#
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
+
+# Additional parameters for testing an installed libc++
+LIBCXX_INSTALLATION_PARAMETERS = [
+    libcxx.test.dsl.Parameter(name='libcxx_installation', type=str,
+        actions=lambda path: [libcxx.test.dsl.AddSubstitution('%{libcxx-installation}', os.path.abspath(path))],
+        help="""
+        The root of the libc++ installation to run the tests against. This is used to find the
+        headers and to link against the library.
+        """),
+]
+
+# Configure the compiler and flags
+config.substitutions.append(('%{flags}',
+    '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{libcxx-installation}/include/c++/v1 -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{libcxx-installation}/lib -Wl,-rpath,%{libcxx-installation}/lib -lc++'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %{temp} -- '
+))
+
+libcxx.test.config.configure(
+    # The installation parameters must be applied before the default ones: the default parameters
+    # probe the compiler (e.g. to select the default -std=), which is not usable until the substitutions
+    # above have been resolved.
+    LIBCXX_INSTALLATION_PARAMETERS + libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

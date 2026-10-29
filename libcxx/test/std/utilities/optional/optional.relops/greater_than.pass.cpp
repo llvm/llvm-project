@@ -6,27 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // template <class T, class U> constexpr bool operator> (const optional<T>& x, const optional<U>& y);
 
 #include <optional>
+#include <type_traits>
 
 #include "test_comparisons.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 26
+#  define STATIC_ASSERT_OPTIONAL_CMP static_assert
+#else
+#  define STATIC_ASSERT_OPTIONAL_CMP LIBCPP_STATIC_ASSERT
+#endif
 
 // Test SFINAE.
-static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>>);
-static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>, std::optional<int>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThan<std::optional<TotallyOrdered>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorGreaterThan<std::optional<TotallyOrdered>, std::optional<int>>);
 
-static_assert(!HasOperatorGreaterThan<std::optional<NonComparable>>);
-static_assert(!HasOperatorGreaterThan<std::optional<EqualityComparable>>);
-static_assert(!HasOperatorGreaterThan<std::optional<ThreeWayComparable>, std::optional<NonComparable>>);
-
-#endif
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThan<std::optional<NonComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThan<std::optional<EqualityComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorGreaterThan<std::optional<TotallyOrdered>, std::optional<NonComparable>>);
 
 using std::optional;
 

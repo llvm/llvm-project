@@ -19,7 +19,7 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_mmra
-    ; CHECK: ATOMIC_FENCE 5, 2, mmra !0
+    ; CHECK: ATOMIC_FENCE 5, 2, mmra !{{[0-9]+}}
     ATOMIC_FENCE 5, 2, mmra !0
     S_ENDPGM 0
 ...

@@ -64,6 +64,12 @@ _add_capi_test_executable(mlir-capi-llvm-test
     MLIRCAPIRegisterEverything
 )
 
+_add_capi_test_executable(mlir-capi-remarks-test
+  remarks.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+)
+
 _add_capi_test_executable(mlir-capi-pass-test
   pass.c
   LINK_LIBS PRIVATE
@@ -100,8 +106,9 @@ _add_capi_test_executable(mlir-capi-quant-test
 _add_capi_test_executable(mlir-capi-rewrite-test
   rewrite.c
   LINK_LIBS PRIVATE
+    MLIRCAPIArith
+    MLIRCAPIFunc
     MLIRCAPIIR
-    MLIRCAPIRegisterEverything
     MLIRCAPITransforms
 )
 
@@ -110,6 +117,7 @@ _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
+    MLIRCAPIInterfaces
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
 )

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
@@ -36,11 +37,6 @@ using namespace llvm;
 STATISTIC(NumDeleted, "Number of loops deleted");
 STATISTIC(NumBackedgesBroken,
           "Number of loops for which we managed to break the backedge");
-
-static cl::opt<bool> EnableSymbolicExecution(
-    "loop-deletion-enable-symbolic-execution", cl::Hidden, cl::init(true),
-    cl::desc("Break backedge through symbolic execution of 1st iteration "
-             "attempting to prove that the backedge is never taken"));
 
 enum class LoopDeletionResult {
   Unmodified,
@@ -216,7 +212,7 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
 static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
                                          LoopInfo &LI) {
   // Disabled by option.
-  if (!EnableSymbolicExecution)
+  if (!ScalarOptions::Global.loop_deletion_enable_symbolic_execution)
     return false;
 
   BasicBlock *Predecessor = L->getLoopPredecessor();

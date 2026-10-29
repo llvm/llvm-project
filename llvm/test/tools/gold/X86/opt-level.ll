@@ -1,13 +1,13 @@
 ; RUN: llvm-as -o %t.bc %s
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
 ; RUN:    -m elf_x86_64 --plugin-opt=new-pass-manager \
 ; RUN:    -plugin-opt=O0 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
 ; RUN:    -m elf_x86_64 --plugin-opt=new-pass-manager \
 ; RUN:    -plugin-opt=O1 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
 ; RUN:    -m elf_x86_64 --plugin-opt=new-pass-manager \
 ; RUN:    -plugin-opt=O2 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s

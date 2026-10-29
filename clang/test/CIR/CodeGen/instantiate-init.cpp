@@ -44,8 +44,12 @@ void init_vec_using_initalizer_list() {
 // CIR: %[[CONST_U64_3:.*]] = cir.const #cir.int<3> : !u64i
 // CIR: %[[SIZE_PTR:.*]] = cir.get_member %[[AGG_ADDR]][1] {name = "size"} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!u64i>
 // CIR: cir.store {{.*}} %[[CONST_U64_3]], %[[SIZE_PTR]] : !u64i, !cir.ptr<!u64i>
-// CIR: %[[TMP_AGG:.*]] = cir.load {{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, !rec_std3A3Ainitializer_list3Cint3E
-// CIR: cir.call @_ZN6VectorC1ESt16initializer_listIiE(%[[VEC_ADDR]], %[[TMP_AGG]]) : (!cir.ptr<!rec_Vector> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !rec_std3A3Ainitializer_list3Cint3E) -> ()
+// CIR: %[[AGG_REC:.*]] = cir.cast bitcast %[[AGG_ADDR]] : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E> -> !cir.ptr<!rec_anon_struct>
+// CIR: %[[DATA_SLOT:.*]] = cir.get_member %[[AGG_REC]][0] {name = ""} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.ptr<!void>>
+// CIR: %[[DATA_ARG:.*]] = cir.load align(8) %[[DATA_SLOT]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR: %[[SIZE_SLOT:.*]] = cir.get_member %[[AGG_REC]][1] {name = ""} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
+// CIR: %[[SIZE_ARG:.*]] = cir.load align(8) %[[SIZE_SLOT]] : !cir.ptr<!u64i>, !u64i
+// CIR: cir.call @_ZN6VectorC1ESt16initializer_listIiE(%[[VEC_ADDR]], %[[DATA_ARG]], %[[SIZE_ARG]]) : (!cir.ptr<!rec_Vector> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!void>, !u64i) -> ()
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
 // CIR: } cleanup normal {
@@ -53,9 +57,9 @@ void init_vec_using_initalizer_list() {
 // CIR:   cir.yield
 // CIR: }
 
-// LLVM:   %[[VEC_ADDR:.*]] = alloca %struct.Vector, i64 1, align 1
-// LLVM:   %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
-// LLVM:   %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
+// LLVM:   %[[VEC_ADDR:.*]] = alloca %struct.Vector, align 1
+// LLVM:   %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", align 8
+// LLVM:   %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], align 4
 // LLVM:   %[[INIT_LIST_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_ADDR]], i32 0
 // LLVM:   store i32 0, ptr %[[INIT_LIST_PTR]], align 4
 // LLVM:   %[[ELEM_1_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_PTR]], i64 1
@@ -66,8 +70,11 @@ void init_vec_using_initalizer_list() {
 // LLVM:   store ptr %[[INIT_LIST_ADDR]], ptr %[[DATA_PTR]], align 8
 // LLVM:   %[[SIZE_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM:   store i64 3, ptr %[[SIZE_PTR]], align 8
-// LLVM:   %[[TMP_AGG:.*]] = load %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], align 8
-// LLVM:   call void @_ZN6VectorC1ESt16initializer_listIiE(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]], %"class.std::initializer_list<int>" %[[TMP_AGG]])
+// LLVM:   %[[DATA_SLOT:.*]] = getelementptr inbounds nuw { ptr, i64 }, ptr %[[AGG_ADDR]], i32 0, i32 0
+// LLVM:   %[[DATA_ARG:.*]] = load ptr, ptr %[[DATA_SLOT]], align 8
+// LLVM:   %[[SIZE_SLOT:.*]] = getelementptr inbounds nuw { ptr, i64 }, ptr %[[AGG_ADDR]], i32 0, i32 1
+// LLVM:   %[[SIZE_ARG:.*]] = load i64, ptr %[[SIZE_SLOT]], align 8
+// LLVM:   call void @_ZN6VectorC1ESt16initializer_listIiE(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]], ptr %[[DATA_ARG]], i64 %[[SIZE_ARG]])
 // LLVM:   br label %[[SCOPE_CONT:.*]]
 // LLVM: [[SCOPE_CONT]]:
 // LLVM:   br label %[[CLEANUP_START:.*]]

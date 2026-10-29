@@ -56,8 +56,6 @@
 #include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -71,8 +69,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
-#include <limits>
 #include <string>
 
 using namespace llvm;
@@ -143,10 +139,6 @@ struct LiveRegUse : public UseDistancePair {
 
   Register getReg() const { return Use->getReg(); }
   unsigned getSubReg() const { return Use->getSubReg(); }
-  LaneBitmask getLaneMask(const SIRegisterInfo *TRI) const {
-    return TRI->getSubRegIndexLaneMask(Use->getSubReg());
-  }
-
   bool isCloserThan(const LiveRegUse &X) const {
     if (Dist < X.Dist)
       return true;
@@ -509,16 +501,6 @@ private:
     return NonConstThis->initializePathInfo(MutablePaths[P], P, EK, Reachable);
   }
 
-  std::pair<PathInfo *, bool> maybeInitializePathInfo(Path P, EdgeKind EK,
-                                                      bool Reachable) const {
-    auto *NonConstThis = const_cast<AMDGPUNextUseAnalysisImpl *>(this);
-    auto &MutablePaths = NonConstThis->Paths;
-    auto [I, Inserted] = MutablePaths.try_emplace(P);
-    if (Inserted)
-      NonConstThis->initializePathInfo(I->second, P, EK, Reachable);
-    return {&I->second, Inserted};
-  }
-
   bool initializePathInfoForwardReachable(const MachineBasicBlock *From,
                                           const MachineBasicBlock *To,
                                           bool Value) const {
@@ -677,12 +659,6 @@ private:
     if (!Cfg.CountPhis)
       Size -= std::distance(BB->begin(), BB->getFirstNonPHI());
     return Size;
-  }
-
-  NextUseDistance calcWeightedSize(const MachineBasicBlock *From,
-                                   const MachineBasicBlock *To) const {
-    return NextUseDistance::fromSize(getSize(From),
-                                     getRelativeLoopDepth(From, To));
   }
 
   // Return the loop depth of 'From' relative to 'To'.
@@ -1010,11 +986,6 @@ private:
         return false;
     }
     return false;
-  }
-
-  unsigned getRelativeLoopDepth(const MachineBasicBlock *From,
-                                const MachineBasicBlock *To) const {
-    return pathInfoFor(From, To).RelativeLoopDepth;
   }
 
   NextUseDistance getShortestPath(const MachineBasicBlock *From,
@@ -1610,18 +1581,6 @@ private:
   // Debug/Developer Helpers
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 private:
-  /// Goes over all MBB pairs in \p MF, calculates the shortest path between
-  /// them.
-  void populatePathTable() {
-    for (const MachineBasicBlock &MBB1 : *MF) {
-      for (const MachineBasicBlock &MBB2 : *MF) {
-        if (&MBB1 == &MBB2)
-          continue;
-        getShortestPath(&MBB1, &MBB2);
-      }
-    }
-  }
-
   void printPaths(raw_ostream &OS) const {
     OS << "\n---------------- Paths --------------- {\n";
     for (const auto &[P, PI] : Paths) {
@@ -1634,18 +1593,6 @@ private:
   }
 
   LLVM_DUMP_METHOD void dumpPaths() const { printPaths(dbgs()); }
-
-  // Legacy alias kept for existing call sites.
-  void dumpShortestPaths() const {
-    for (const auto &P : Paths) {
-      const MachineBasicBlock *From = P.first.src();
-      const MachineBasicBlock *To = P.first.dst();
-      std::optional<NextUseDistance> Dist = P.second.ShortestDistance;
-      dbgs() << "From: " << printMBBReference(*From)
-             << "-> To:" << printMBBReference(*To) << " = "
-             << Dist.value_or(-1).fmt() << "\n";
-    }
-  }
 
   void printInterBlockDistances(raw_ostream &OS) const {
     using MBBPair = std::pair<unsigned, unsigned>;
@@ -2302,10 +2249,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUNextUseAnalysisLegacyPass, DEBUG_TYPE,
                     "Next Use Analysis", false, true)
 
-FunctionPass *llvm::createAMDGPUNextUseAnalysisLegacyPass() {
-  return new AMDGPUNextUseAnalysisLegacyPass();
-}
-
 //------------------------------------------------------------------------------
 // New Pass Manager Analysis Pass
 //------------------------------------------------------------------------------
@@ -2418,7 +2361,7 @@ void printDistanceFromDefToUse(json::OStream &J, const MachineFunction &MF,
 void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
                                  const AMDGPUNextUseAnalysis &NUA,
                                  const AMDGPUNextUseAnalysisImpl &NUAImpl,
-                                 const LiveIntervals &LIS) {
+                                 LiveIntervals &LIS) {
   using UseDistancePair = AMDGPUNextUseAnalysis::UseDistancePair;
   const Function &F = MF.getFunction();
   const Module *M = F.getParent();
@@ -2505,8 +2448,7 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
 void printAsJson(raw_ostream &FallbackOS, TimerGroup &JsonTimerGroup,
                  Timer &JsonTimer, const MachineFunction &MF,
                  const AMDGPUNextUseAnalysis &NUA,
-                 const AMDGPUNextUseAnalysisImpl &NUAImpl,
-                 const LiveIntervals &LIS) {
+                 const AMDGPUNextUseAnalysisImpl &NUAImpl, LiveIntervals &LIS) {
   std::string FN = DumpNextUseDistanceAsJson;
 
   auto dump = [&](raw_ostream &OS) {
@@ -2555,7 +2497,7 @@ bool AMDGPUNextUseAnalysisPrinterLegacyPass::runOnMachineFunction(
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
   JsonTimer.startTimer();
 
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   const AMDGPUNextUseAnalysis &NUA =
       getAnalysis<AMDGPUNextUseAnalysisLegacyPass>().getNextUseAnalysis();
 
@@ -2588,10 +2530,6 @@ INITIALIZE_PASS_END(AMDGPUNextUseAnalysisPrinterLegacyPass,
                     "amdgpu-next-use-printer",
                     "AMDGPU Next Use Analysis Printer", false, false)
 
-FunctionPass *llvm::createAMDGPUNextUseAnalysisPrinterLegacyPass() {
-  return new AMDGPUNextUseAnalysisPrinterLegacyPass();
-}
-
 //------------------------------------------------------------------------------
 // New Pass Manager Printer Pass
 //------------------------------------------------------------------------------
@@ -2604,7 +2542,7 @@ AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
   JsonTimer.startTimer();
 
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const AMDGPUNextUseAnalysis &NUA =
       MFAM.getResult<AMDGPUNextUseAnalysisPass>(MF);
 

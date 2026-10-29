@@ -186,3 +186,115 @@ if.end:
   %shl = shl i32 %tmp, 1
   br label %common.ret
 }
+
+; Negative test: a second, non-eliminable return computed from a recursive call
+; must not be rewritten to return the accumulator.
+; int f6(int x) {
+;   if (x == 0) return 1;
+;   if (x == 5) return f6(x-1) - 3; // neither associative nor unary-composable
+;   return f6(x-1) << 1;
+; }
+define i32 @test_neg_other_recursive_ret(i32 %x) {
+; CHECK-LABEL: define i32 @test_neg_other_recursive_ret(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[BASE:.*]], label %[[IF_END:.*]]
+; CHECK:       [[BASE]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[OTHER:.*]], label %[[REC:.*]]
+; CHECK:       [[REC]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test_neg_other_recursive_ret(i32 [[SUB]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CALL]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    [[SUB2:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @test_neg_other_recursive_ret(i32 [[SUB2]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[CALL2]], 3
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 0
+  br i1 %cmp, label %base, label %if.end
+
+base:
+  ret i32 1
+
+if.end:
+  %cmp2 = icmp eq i32 %x, 5
+  br i1 %cmp2, label %other, label %rec
+
+rec:
+  %sub = add nsw i32 %x, -1
+  %call = tail call i32 @test_neg_other_recursive_ret(i32 %sub)
+  %shl = shl i32 %call, 1
+  ret i32 %shl
+
+other:
+  %sub2 = add nsw i32 %x, -1
+  %call2 = tail call i32 @test_neg_other_recursive_ret(i32 %sub2)
+  %res = sub i32 %call2, 3
+  ret i32 %res
+}
+
+; Negative test: a sibling call site that discards its own recursive call and
+; unconditionally returns a fixed constant must still agree with the shift
+; accumulator's base case.
+; int f(int x) {
+;   if (x == 0) return 1;
+;   if (x == 3) { f(x - 1); return 2; }
+;   return f(x - 1) << 1;
+; }
+define i32 @test_neg_discarded_call_conflicting_base(i32 %x) {
+; CHECK-LABEL: define i32 @test_neg_discarded_call_conflicting_base(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[TAILRECURSE:.*]]
+; CHECK:       [[TAILRECURSE]]:
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], %[[ENTRY]] ], [ [[D:%.*]], %[[DISCARD:.*]] ]
+; CHECK-NEXT:    [[RET_TR:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[CURRENT_RET_TR:%.*]], %[[DISCARD]] ]
+; CHECK-NEXT:    [[RET_KNOWN_TR:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[DISCARD]] ]
+; CHECK-NEXT:    [[ISBASE:%.*]] = icmp eq i32 [[X_TR]], 0
+; CHECK-NEXT:    br i1 [[ISBASE]], label %[[BASE:.*]], label %[[REC:.*]]
+; CHECK:       [[REC]]:
+; CHECK-NEXT:    [[ISSP:%.*]] = icmp eq i32 [[X_TR]], 3
+; CHECK-NEXT:    br i1 [[ISSP]], label %[[DISCARD]], label %[[NORMAL:.*]]
+; CHECK:       [[DISCARD]]:
+; CHECK-NEXT:    [[D]] = sub i32 [[X_TR]], 1
+; CHECK-NEXT:    [[CURRENT_RET_TR]] = select i1 [[RET_KNOWN_TR]], i32 [[RET_TR]], i32 2
+; CHECK-NEXT:    br label %[[TAILRECURSE]]
+; CHECK:       [[NORMAL]]:
+; CHECK-NEXT:    [[DEC:%.*]] = sub i32 [[X_TR]], 1
+; CHECK-NEXT:    [[C:%.*]] = tail call i32 @test_neg_discarded_call_conflicting_base(i32 [[DEC]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[C]], 1
+; CHECK-NEXT:    [[CURRENT_RET_TR1:%.*]] = select i1 [[RET_KNOWN_TR]], i32 [[RET_TR]], i32 [[SHL]]
+; CHECK-NEXT:    ret i32 [[CURRENT_RET_TR1]]
+; CHECK:       [[BASE]]:
+; CHECK-NEXT:    [[CURRENT_RET_TR2:%.*]] = select i1 [[RET_KNOWN_TR]], i32 [[RET_TR]], i32 1
+; CHECK-NEXT:    ret i32 [[CURRENT_RET_TR2]]
+;
+entry:
+  %isbase = icmp eq i32 %x, 0
+  br i1 %isbase, label %base, label %rec
+
+rec:
+  %issp = icmp eq i32 %x, 3
+  br i1 %issp, label %discard, label %normal
+
+discard:
+  %d = sub i32 %x, 1
+  %c1 = tail call i32 @test_neg_discarded_call_conflicting_base(i32 %d)
+  ret i32 2
+
+normal:
+  %dec = sub i32 %x, 1
+  %c = tail call i32 @test_neg_discarded_call_conflicting_base(i32 %dec)
+  %shl = shl i32 %c, 1
+  ret i32 %shl
+
+base:
+  ret i32 1
+}

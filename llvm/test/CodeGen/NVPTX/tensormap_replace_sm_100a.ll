@@ -8,9 +8,9 @@ define void @tensormap_replace_swizzle_atomicity(ptr addrspace(1) %global_addr, 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_swizzle_atomicity_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_swizzle_atomicity_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_atomicity.global.b1024.b32 [%rd1], 0;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_swizzle_atomicity_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_swizzle_atomicity_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_atomicity.shared::cta.b1024.b32 [%rd2], 0;
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_atomicity.global.b1024.b32 [%rd1], 1;
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_atomicity.shared::cta.b1024.b32 [%rd2], 1;
@@ -27,7 +27,7 @@ define void @tensormap_replace_swizzle_atomicity(ptr addrspace(1) %global_addr, 
 
   call void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p1(ptr addrspace(1) %global_addr, /* swizzle_atomicity=32B + 8B flip */ i32 2)
   call void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p3(ptr addrspace(3) %shared_addr, /* swizzle_atomicity=32B + 8B flip */ i32 2)
-  
+
   call void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p1(ptr addrspace(1) %global_addr, /* swizzle_atomicity=64B */ i32 3)
   call void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p3(ptr addrspace(3) %shared_addr, /* swizzle_atomicity=64B */ i32 3)
   ret void
@@ -39,9 +39,9 @@ define void @tensormap_replace_elemtype(ptr addrspace(1) %global_addr, ptr addrs
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_elemtype_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_elemtype_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.global.b1024.b32 [%rd1], 13;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_elemtype_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_elemtype_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.shared::cta.b1024.b32 [%rd2], 13;
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.global.b1024.b32 [%rd1], 14;
 ; CHECK-NEXT:    tensormap.replace.tile.elemtype.shared::cta.b1024.b32 [%rd2], 14;

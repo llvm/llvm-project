@@ -14,43 +14,42 @@ define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 ;
 ; NOSVE2BITPERM-LABEL: pext_i8:
 ; NOSVE2BITPERM:       // %bb.0:
-; NOSVE2BITPERM-NEXT:    mvn w9, w1
-; NOSVE2BITPERM-NEXT:    mov w8, #-1 // =0xffffffff
+; NOSVE2BITPERM-NEXT:    mvn w8, w1
+; NOSVE2BITPERM-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; NOSVE2BITPERM-NEXT:    and w10, w0, w1
-; NOSVE2BITPERM-NEXT:    lsl w9, w9, #1
-; NOSVE2BITPERM-NEXT:    fmov s0, w8
-; NOSVE2BITPERM-NEXT:    fmov s1, w9
+; NOSVE2BITPERM-NEXT:    lsl w8, w8, #1
+; NOSVE2BITPERM-NEXT:    fmov s1, w8
 ; NOSVE2BITPERM-NEXT:    pmul v1.8b, v1.8b, v0.8b
-; NOSVE2BITPERM-NEXT:    fmov w8, s1
-; NOSVE2BITPERM-NEXT:    bic w9, w9, w8
-; NOSVE2BITPERM-NEXT:    and w8, w8, w1
-; NOSVE2BITPERM-NEXT:    fmov s1, w9
-; NOSVE2BITPERM-NEXT:    and w11, w10, w8
-; NOSVE2BITPERM-NEXT:    eor w13, w1, w8
-; NOSVE2BITPERM-NEXT:    and w8, w8, #0xfe
+; NOSVE2BITPERM-NEXT:    fmov w9, s1
+; NOSVE2BITPERM-NEXT:    bic w8, w8, w9
+; NOSVE2BITPERM-NEXT:    and w9, w9, w1
+; NOSVE2BITPERM-NEXT:    fmov s1, w8
+; NOSVE2BITPERM-NEXT:    and w11, w10, w9
+; NOSVE2BITPERM-NEXT:    eor w13, w1, w9
+; NOSVE2BITPERM-NEXT:    and w9, w9, #0xfe
 ; NOSVE2BITPERM-NEXT:    eor w10, w10, w11
 ; NOSVE2BITPERM-NEXT:    and w11, w11, #0xfe
-; NOSVE2BITPERM-NEXT:    orr w8, w13, w8, lsr #1
+; NOSVE2BITPERM-NEXT:    orr w9, w13, w9, lsr #1
 ; NOSVE2BITPERM-NEXT:    pmul v1.8b, v1.8b, v0.8b
 ; NOSVE2BITPERM-NEXT:    fmov w12, s1
-; NOSVE2BITPERM-NEXT:    bic w9, w9, w12
-; NOSVE2BITPERM-NEXT:    fmov s1, w9
-; NOSVE2BITPERM-NEXT:    orr w9, w10, w11, lsr #1
-; NOSVE2BITPERM-NEXT:    and w10, w12, w8
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w10
-; NOSVE2BITPERM-NEXT:    and w11, w9, w10
+; NOSVE2BITPERM-NEXT:    bic w8, w8, w12
+; NOSVE2BITPERM-NEXT:    fmov s1, w8
+; NOSVE2BITPERM-NEXT:    orr w8, w10, w11, lsr #1
+; NOSVE2BITPERM-NEXT:    and w10, w12, w9
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w10
+; NOSVE2BITPERM-NEXT:    and w11, w8, w10
 ; NOSVE2BITPERM-NEXT:    and w10, w10, #0xfc
 ; NOSVE2BITPERM-NEXT:    pmul v0.8b, v1.8b, v0.8b
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w10, lsr #2
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w11
+; NOSVE2BITPERM-NEXT:    orr w9, w9, w10, lsr #2
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w11
 ; NOSVE2BITPERM-NEXT:    and w11, w11, #0xfc
-; NOSVE2BITPERM-NEXT:    orr w9, w9, w11, lsr #2
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w11, lsr #2
 ; NOSVE2BITPERM-NEXT:    fmov w10, s0
-; NOSVE2BITPERM-NEXT:    and w8, w10, w8
-; NOSVE2BITPERM-NEXT:    and w8, w9, w8
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w8
-; NOSVE2BITPERM-NEXT:    and w8, w8, #0xf0
-; NOSVE2BITPERM-NEXT:    orr w0, w9, w8, lsr #4
+; NOSVE2BITPERM-NEXT:    and w9, w10, w9
+; NOSVE2BITPERM-NEXT:    and w9, w8, w9
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w9
+; NOSVE2BITPERM-NEXT:    and w9, w9, #0xf0
+; NOSVE2BITPERM-NEXT:    orr w0, w8, w9, lsr #4
 ; NOSVE2BITPERM-NEXT:    ret
   %res = call i8 @llvm.pext.i8(i8 %val, i8 %mask)
   ret i8 %res

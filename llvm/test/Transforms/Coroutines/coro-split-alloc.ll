@@ -42,8 +42,7 @@ suspend:
 ; CHECK: %incremented = add i32 %argument, 1
 ; CHECK-NEXT: store i32 %incremented, ptr %argument.addr
 ; CHECK-LABEL: dyn.alloc:
-; CHECK: %allocator_argument = load i32, ptr %argument.addr
-; CHECK: %alloc = call ptr @custom_alloctor(i32 24, i32 %allocator_argument)
+; CHECK: %alloc = call ptr @custom_alloctor(i32 24, i32 %incremented)
 ; CHECK-LABEL: begin:
 ; CHECK: %print_argument = load i32, ptr %argument.addr
 ; CHECK: call void @print(i32 %print_argument)

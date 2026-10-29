@@ -11,7 +11,7 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[SIZE]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -21,9 +21,9 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 4, !tbaa [[CHAR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[WIDE_LOAD]], splat (double 9.900000e+01), !fpmath [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp oge <2 x double> [[TMP3]], splat (double 1.000000e+01)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <2 x double> [[TMP6]] to <2 x float>, !fpmath [[META3]]
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fptrunc <2 x double> [[TMP5]] to <2 x float>, !fpmath [[META3]]
+; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -55,7 +55,7 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 4
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = urem i64 [[SIZE]], 4
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 3
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
@@ -69,13 +69,13 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD1]], splat (double 9.900000e+01), !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = fcmp oge <2 x double> [[TMP4]], splat (double 1.000000e+01)
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fcmp oge <2 x double> [[TMP5]], splat (double 1.000000e+01)
-; INTERLEAVE-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP6]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x double> [[WIDE_LOAD1]], <2 x double> zeroinitializer, !fpmath [[META3]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = fptrunc <2 x double> [[TMP11]] to <2 x float>, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x double> [[WIDE_LOAD]], <2 x double> zeroinitializer, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP7]], <2 x double> [[WIDE_LOAD1]], <2 x double> zeroinitializer, !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = fptrunc <2 x double> [[TMP8]] to <2 x float>, !fpmath [[META3]]
+; INTERLEAVE-NEXT:    [[TMP11:%.*]] = fptrunc <2 x double> [[TMP9]] to <2 x float>, !fpmath [[META3]]
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 2
-; INTERLEAVE-NEXT:    store <2 x float> [[TMP9]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA0]]
-; INTERLEAVE-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP12]], align 4, !tbaa [[CHAR_TBAA0]]
+; INTERLEAVE-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP2]], align 4, !tbaa [[CHAR_TBAA0]]
+; INTERLEAVE-NEXT:    store <2 x float> [[TMP11]], ptr [[TMP12]], align 4, !tbaa [[CHAR_TBAA0]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -394,7 +394,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[SIZE]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -436,7 +436,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 4
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = urem i64 [[SIZE]], 4
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 3
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
@@ -501,8 +501,8 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK-LABEL: define void @noalias_metadata(
 ; CHECK-SAME: ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -518,7 +518,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = urem i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
@@ -552,8 +552,8 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE-LABEL: define void @noalias_metadata(
 ; INTERLEAVE-SAME: ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]]) {
 ; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
-; INTERLEAVE-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; INTERLEAVE-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; INTERLEAVE-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -569,7 +569,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTERLEAVE-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = urem i64 [[TMP2]], 4
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = and i64 [[TMP2]], 3
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP5]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 3
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
@@ -628,10 +628,11 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 !0 = !{ float 2.5 }
 !1 = !{ i64 0, i64 2 }
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"omnipotent char", !2, i64 0}
+!3 = !{!7, !7, i64 0, i64 0}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"g1"}
-!6 = distinct !{!6, !"t2"}
+!6 = distinct !{!6, i1 false, !"t2"}
+!7 = !{!"omnipotent char", !2}
 
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}
@@ -650,13 +651,13 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META5]]}
 ; CHECK: [[META14]] = !{[[META15:![0-9]+]]}
 ; CHECK: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]]}
-; CHECK: [[META16]] = distinct !{[[META16]], !"LVerDomain"}
+; CHECK: [[META16]] = distinct !{[[META16]], i1 false, !"LVerDomain"}
 ; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META5]], [[META6]]}
 ; CHECK: [[META18]] = !{[[META19:![0-9]+]]}
 ; CHECK: [[META19]] = distinct !{[[META19]], [[META16]]}
 ; CHECK: [[META20]] = !{[[META21:![0-9]+]], [[META15]]}
 ; CHECK: [[META21]] = distinct !{[[META21]], [[META22:![0-9]+]], !"g1"}
-; CHECK: [[META22]] = distinct !{[[META22]], !"t2"}
+; CHECK: [[META22]] = distinct !{[[META22]], i1 false, !"t2"}
 ; CHECK: [[META23]] = !{[[META21]]}
 ; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META5]]}
 ;.
@@ -676,13 +677,13 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; INTERLEAVE: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META5]]}
 ; INTERLEAVE: [[META14]] = !{[[META15:![0-9]+]]}
 ; INTERLEAVE: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]]}
-; INTERLEAVE: [[META16]] = distinct !{[[META16]], !"LVerDomain"}
+; INTERLEAVE: [[META16]] = distinct !{[[META16]], i1 false, !"LVerDomain"}
 ; INTERLEAVE: [[LOOP17]] = distinct !{[[LOOP17]], [[META5]], [[META6]]}
 ; INTERLEAVE: [[META18]] = !{[[META19:![0-9]+]]}
 ; INTERLEAVE: [[META19]] = distinct !{[[META19]], [[META16]]}
 ; INTERLEAVE: [[META20]] = !{[[META21:![0-9]+]], [[META15]]}
 ; INTERLEAVE: [[META21]] = distinct !{[[META21]], [[META22:![0-9]+]], !"g1"}
-; INTERLEAVE: [[META22]] = distinct !{[[META22]], !"t2"}
+; INTERLEAVE: [[META22]] = distinct !{[[META22]], i1 false, !"t2"}
 ; INTERLEAVE: [[META23]] = !{[[META21]]}
 ; INTERLEAVE: [[LOOP24]] = distinct !{[[LOOP24]], [[META5]]}
 ;.

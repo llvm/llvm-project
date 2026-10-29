@@ -18,7 +18,7 @@
 #include "include/llvm-libc-types/float128.h"
 #include "src/__support/macros/properties/types.h"
 
-#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128) &&                                 \
     defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
 #include "shared/libc_common.h"
@@ -32,6 +32,7 @@ using builtins::trunctfxf2;
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128 && LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128 &&
+       // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SHARED_BUILTINS_TRUNCTFXF2_H

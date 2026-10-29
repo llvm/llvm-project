@@ -1,3 +1,11 @@
+//===-- unittests/Evaluate/uint128.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #define AVOID_NATIVE_UINT128_T 1
 #include "flang/Common/uint128.h"
 #include "flang/Testing/testing.h"

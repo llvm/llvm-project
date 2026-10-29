@@ -273,3 +273,5 @@ __FRAME_END__:
 .section .rodata.str1.1,"aMS",@progbits,1
 str1:
   .asciz "str1"
+dead:
+  .asciz "dead"

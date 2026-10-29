@@ -1,10 +1,11 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR-CHECK
 
 subroutine trans_test(store, word)
     ! CHECK-LABEL: func @_QPtrans_test(
     ! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
-    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}{uniq_name = "_QFtrans_testEstore"}
-    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}}{uniq_name = "_QFtrans_testEword"}
+    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QFtrans_testEstore")
+    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}}uniq_name("_QFtrans_testEword")
     ! CHECK:         %[[LOADED:.*]] = fir.load %[[word]]#0 : !fir.ref<f32>
     ! CHECK:         %[[VAL:.*]] = arith.bitcast %[[LOADED]] : f32 to i32
     ! CHECK:         hlfir.assign %[[VAL]] to %[[store]]#0 : i32, !fir.ref<i32>
@@ -19,8 +20,8 @@ subroutine trans_test(store, word)
   ! CHECK-LABEL: func @_QPtrans_test2(
   subroutine trans_test2(store, word)
     ! CHECK-DAG:     %[[RESULT_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-    ! CHECK-DAG:     %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test2Estore"}
-    ! CHECK-DAG:     %[[wordDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test2Eword"}
+    ! CHECK-DAG:     %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtrans_test2Estore")
+    ! CHECK-DAG:     %[[wordDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtrans_test2Eword")
     ! CHECK:         fir.call @_FortranATransferSize({{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32, i64) -> ()
     ! CHECK:         hlfir.assign {{.*}} to %[[storeDecl]]#0
     ! CHECK:         hlfir.destroy {{.*}}
@@ -33,8 +34,8 @@ subroutine trans_test(store, word)
   integer function trans_test3(p)
     ! CHECK-LABEL: func @_QPtrans_test3(
     ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}) -> i32 {
-    ! CHECK-DAG:     %[[pDecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}{uniq_name = "_QFtrans_test3Ep"}
-    ! CHECK-DAG:     %[[tDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test3Et"}
+    ! CHECK-DAG:     %[[pDecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QFtrans_test3Ep")
+    ! CHECK-DAG:     %[[tDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtrans_test3Et")
     ! CHECK:         fir.call @_FortranATransfer({{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     ! CHECK:         hlfir.assign {{.*}} to %[[tDecl]]#0
     ! CHECK:         %[[x_field:.*]] = hlfir.designate %[[tDecl]]#0{"x"}
@@ -54,8 +55,8 @@ subroutine trans_test(store, word)
   subroutine trans_test_r8_to_i8(store, word)
     ! CHECK-LABEL: func @_QPtrans_test_r8_to_i8(
     ! CHECK-SAME:    %[[RES:.*]]: !fir.ref<i64>{{.*}}, %[[SRC:.*]]: !fir.ref<f64>{{.*}}) {
-    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[RES]] {{.*}}{uniq_name = "_QFtrans_test_r8_to_i8Estore"}
-    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[SRC]] {{.*}}{uniq_name = "_QFtrans_test_r8_to_i8Eword"}
+    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[RES]] {{.*}}uniq_name("_QFtrans_test_r8_to_i8Estore")
+    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[SRC]] {{.*}}uniq_name("_QFtrans_test_r8_to_i8Eword")
     ! CHECK:         %[[LOADED:.*]] = fir.load %[[word]]#0 : !fir.ref<f64>
     ! CHECK:         %[[VAL:.*]] = arith.bitcast %[[LOADED]] : f64 to i64
     ! CHECK:         hlfir.assign %[[VAL]] to %[[store]]#0 : i64, !fir.ref<i64>
@@ -71,8 +72,8 @@ subroutine trans_test(store, word)
   ! address-level reinterpret. Covers the c_devptr pattern on CUDA device code.
   subroutine trans_test_cptr_to_i8(store, src)
     ! CHECK-LABEL: func @_QPtrans_test_cptr_to_i8(
-    ! CHECK:         %[[srcDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test_cptr_to_i8Esrc"}
-    ! CHECK:         %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test_cptr_to_i8Estore"}
+    ! CHECK:         %[[srcDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtrans_test_cptr_to_i8Esrc")
+    ! CHECK:         %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtrans_test_cptr_to_i8Estore")
     ! CHECK:         %[[CAST:.*]] = fir.convert %[[srcDecl]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
     ! CHECK:         %[[VAL:.*]] = fir.load %[[CAST]] : !fir.ref<i64>
     ! CHECK:         hlfir.assign %[[VAL]] to %[[storeDecl]]#0 : i64, !fir.ref<i64>
@@ -150,4 +151,31 @@ subroutine trans_test(store, word)
     integer :: store
     real, allocatable :: src
     store = transfer(src, store)
+  end subroutine
+
+  ! TRANSFER into a SEQUENCE derived type with tail padding: the assignment back
+  ! to the derived-type variable must use fir.copy (full storage size including
+  ! tail padding) rather than a field-by-field copy that silently drops padding.
+  subroutine trans_test_seq_tail_pad(raw, x)
+    ! CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         hlfir.assign {{.*}} to %[[xDecl:.*]]#0
+    ! CHECK-NOT:     hlfir.assign
+    ! CHECK:         return
+    ! CHECK:       }
+    ! FIR-CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! FIR-CHECK:         fir.call @_FortranATransfer(
+    ! FIR-CHECK:         fir.copy {{.*}} no_overlap : !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>, !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>
+    ! FIR-CHECK-NOT:     fir.coordinate_of
+    ! FIR-CHECK:         return
+    ! FIR-CHECK:       }
+    use iso_c_binding, only: c_int, c_int8_t
+    type :: t
+      sequence
+      integer(c_int)    :: a
+      integer(c_int8_t) :: b
+    end type
+    character(len=8), intent(inout) :: raw
+    type(t), intent(out)            :: x
+    x = transfer(raw, x)
   end subroutine

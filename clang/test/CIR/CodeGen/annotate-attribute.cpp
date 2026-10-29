@@ -33,12 +33,6 @@ struct __attribute__((annotate("type_ann"))) Tagged {
   static int sget() { return 7; }
 };
 
-// CIR: cir.func {{.*}} @{{.*Tagged.*get.*}}({{.*}}) {{.*}}[#cir.annotation<"method_ann">]
-// CIR: cir.func {{.*}} @{{.*Tagged.*sget.*}}() {{.*}}[#cir.annotation<"static_method_ann">]
-
-// LLVM: define{{.*}} i32 @{{.*Tagged.*get.*}}
-// LLVM: define{{.*}} i32 @{{.*Tagged.*sget.*}}
-
 // OGCG-DAG: define{{.*}} i32 @{{.*Tagged.*get.*}}
 // OGCG-DAG: define{{.*}} i32 @{{.*Tagged.*sget.*}}
 
@@ -48,7 +42,13 @@ int use_tagged(Tagged *t) {
 }
 
 // CIR: cir.func {{.*}} @{{.*use_tagged.*}}({{.*}}) {{.*}}[#cir.annotation<"free_fn_ann">]
+// CIR: cir.func {{.*}} @{{.*Tagged.*get.*}}({{.*}}) {{.*}}[#cir.annotation<"method_ann">]
+// CIR: cir.func {{.*}} @{{.*Tagged.*sget.*}}() {{.*}}[#cir.annotation<"static_method_ann">]
+
 // LLVM: define{{.*}} i32 @{{.*use_tagged.*}}
+// LLVM: define{{.*}} i32 @{{.*Tagged.*get.*}}
+// LLVM: define{{.*}} i32 @{{.*Tagged.*sget.*}}
+
 // OGCG-DAG: define{{.*}} i32 @{{.*use_tagged.*}}
 
 // Annotated namespace-scope global (C++ name mangling exercises a different

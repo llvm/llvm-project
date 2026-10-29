@@ -3,7 +3,8 @@
 
 target triple = "aarch64-linux"
 
-; CHECK-LABEL: .LCPI0_0:
+; CHECK-LABEL: .type .LCPI0_0,@object
+; CHECK-NEXT: .LCPI0_0:
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
@@ -20,6 +21,9 @@ target triple = "aarch64-linux"
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    7
+; CHECK-NEXT:  .size .LCPI0_0, 16
+
+; CHECK-LABEL:  .type .LCPI0_1,@object
 ; CHECK-NEXT:  .LCPI0_1:
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
@@ -37,6 +41,7 @@ target triple = "aarch64-linux"
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    3
+; CHECK-NEXT:  .size .LCPI0_1, 16
 
 define void @sitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: sitofp_v8i8_to_v8f32:
@@ -78,7 +83,8 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: .LCPI1_0:
+; CHECK-LABEL: .type .LCPI1_0,@object
+; CHECK-NEXT: .LCPI1_0:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -95,6 +101,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    15
+; CHECK-NEXT: .size .LCPI1_0, 16
+
+; CHECK-LABEL: .type .LCPI1_1,@object
 ; CHECK-NEXT: .LCPI1_1:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -112,6 +121,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    11
+; CHECK-NEXT: .size .LCPI1_1, 16
+
+; CHECK-LABEL: .type .LCPI1_2,@object
 ; CHECK-NEXT: .LCPI1_2:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -129,6 +141,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    7
+; CHECK-NEXT: .size .LCPI1_2, 16
+
+; CHECK-LABEL: .type .LCPI1_3,@object
 ; CHECK-NEXT: .LCPI1_3:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -146,6 +161,7 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    3
+; CHECK-NEXT: .size .LCPI1_3, 16
 
 define void @sitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: sitofp_v16i8_to_v16f32:

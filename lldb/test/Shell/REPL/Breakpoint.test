@@ -1,0 +1,28 @@
+# Test that a REPL expression that hits a breakpoint drops into the command
+# interpreter and that lldb exits once its input is exhausted.
+
+# UNSUPPORTED: system-windows
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t.out
+
+# Disable the inferior's stdio so that it doesn't consume the REPL input from
+# stdin.
+# RUN: %lldb -o 'settings set target.disable-stdio true' -o 'b main' -o run \
+# RUN:   -o 'b foo' %t.out < %t/repl.input 2>&1 | FileCheck %s
+
+# The asynchronous stop notification can be printed at any point relative to
+# the other output. Only the command interpreter accepts `breakpoint list`, so
+# its output shows that the REPL handed control to the command interpreter.
+# CHECK-DAG: Execution stopped at breakpoint.
+# CHECK-DAG: stop reason = breakpoint 2.1
+# CHECK-DAG: Current breakpoints:
+
+#--- main.c
+int foo(void) { return 42; }
+int main(void) { return foo(); }
+
+#--- repl.input
+expression --repl -l c --
+foo()
+breakpoint list

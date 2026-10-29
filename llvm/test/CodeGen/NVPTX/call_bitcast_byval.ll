@@ -13,7 +13,8 @@ target triple = "nvptx64-nvidia-cuda"
 %"class.sycl::_V1::detail::half_impl::half" = type { half }
 %complex_half = type { half, half }
 
-; CHECK: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
+; CHECK: $L__prototype_0:
+; CHECK-NEXT: .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
 ; CHECK: .param .align 2 .b8 param2[4];
 ; CHECK: .param .align 2 .b8 retval0[4];
 ; CHECK-DAG: st.param.b16   [param2], %rs{{[0-9]+}};
@@ -39,7 +40,7 @@ define void @boom() {
   ; CHECK-DAG: .param .align 2 .b8 param0[4];
   ; CHECK-DAG: st.param.b16 [param0], %rs{{[0-9]+}};
   ; CHECK-DAG: st.param.b16 [param0+2], %rs{{[0-9]+}};
-  ; CHECK-DAG: .callprototype ()_ (.param .align 2 .b8 _[4]);
+  ; CHECK-DAG: .callprototype _ (.param .align 2 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)
   ret void
 }

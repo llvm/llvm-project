@@ -74,7 +74,7 @@ llvm::StringRef OperatingSystemPython::GetPluginDescriptionStatic() {
 
 OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
                                              const FileSpec &python_module_path)
-    : OperatingSystem(process), m_thread_list_valobj_sp(), m_register_info_up(),
+    : OperatingSystem(process), m_thread_list_valobj_sp(),
       m_interpreter(nullptr), m_script_object_sp() {
   if (!process)
     return;
@@ -142,29 +142,29 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
 
 OperatingSystemPython::~OperatingSystemPython() = default;
 
-DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
-  if (m_register_info_up == nullptr) {
-    if (!m_interpreter || !m_operating_system_interface_sp)
-      return nullptr;
-    Log *log = GetLog(LLDBLog::OS);
+DynamicRegisterInfoSP OperatingSystemPython::GetDynamicRegisterInfo() {
+  if (!m_interpreter || !m_operating_system_interface_sp)
+    return nullptr;
 
-    LLDB_LOGF(log,
-              "OperatingSystemPython::GetDynamicRegisterInfo() fetching "
-              "thread register definitions from python for pid %" PRIu64,
-              m_process->GetID());
+  Log *log = GetLog(LLDBLog::OS);
 
-    StructuredData::DictionarySP dictionary =
-        m_operating_system_interface_sp->GetRegisterInfo();
-    if (!dictionary)
-      return nullptr;
+  LLDB_LOGF(log,
+            "OperatingSystemPython::GetDynamicRegisterInfo() fetching "
+            "thread register definitions from python for pid %" PRIu64,
+            m_process->GetID());
 
-    m_register_info_up = DynamicRegisterInfo::Create(
-        *dictionary, m_process->GetTarget().GetArchitecture());
-    assert(m_register_info_up);
-    assert(m_register_info_up->GetNumRegisters() > 0);
-    assert(m_register_info_up->GetNumRegisterSets() > 0);
-  }
-  return m_register_info_up.get();
+  StructuredData::DictionarySP dictionary =
+      m_operating_system_interface_sp->GetRegisterInfo();
+  if (!dictionary)
+    return nullptr;
+
+  DynamicRegisterInfoSP register_info_sp = DynamicRegisterInfo::Create(
+      *dictionary, m_process->GetTarget().GetArchitecture());
+  assert(register_info_sp);
+  assert(register_info_sp->GetNumRegisters() > 0);
+  assert(register_info_sp->GetNumRegisterSets() > 0);
+
+  return register_info_sp;
 }
 
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
@@ -312,7 +312,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
               ") creating memory register context",
               thread->GetID(), thread->GetProtocolID(), reg_data_addr);
     reg_ctx_sp = std::make_shared<RegisterContextMemory>(
-        *thread, 0, *GetDynamicRegisterInfo(), reg_data_addr);
+        *thread, 0, GetDynamicRegisterInfo(), reg_data_addr);
   } else {
     // No register data address is provided, query the python plug-in to let it
     // make up the data as it sees fit
@@ -330,7 +330,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
       DataBufferSP data_sp(new DataBufferHeap(value.c_str(), value.length()));
       if (data_sp->GetByteSize()) {
         RegisterContextMemory *reg_ctx_memory = new RegisterContextMemory(
-            *thread, 0, *GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
+            *thread, 0, GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
         if (reg_ctx_memory) {
           reg_ctx_sp.reset(reg_ctx_memory);
           reg_ctx_memory->SetAllRegisterData(data_sp);

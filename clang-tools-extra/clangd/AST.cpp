@@ -531,7 +531,8 @@ public:
     if (CurLoc.isInvalid() && isa<CXXConversionDecl>(D))
       CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
     // Loc of "auto" in function with trailing return type (c++11).
-    if (CurLoc.isInvalid())
+    if (auto *FPT = D->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn())
       CurLoc = D->getSourceRange().getBegin();
     if (CurLoc != SearchedLocation)
       return true;
@@ -873,6 +874,14 @@ private:
     auto PackLocation = findPack(Args);
     if (!PackLocation)
       return;
+    // If the callee is a C-style variadic function, some of the arguments could
+    // be expanded into the variadic argument. In this case there are no names
+    // to forward. (Technically, we could handle the case where only *part* of
+    // the pack is expanded into the variadic argument, but we currently don't.)
+    if (Callee->parameters().size() < (*PackLocation + Parameters.size())) {
+      assert(Callee->isVariadic());
+      return;
+    }
     ArrayRef<ParmVarDecl *> MatchingParams =
         Callee->parameters().slice(*PackLocation, Parameters.size());
     // Check whether the function has a parameter pack as the last template

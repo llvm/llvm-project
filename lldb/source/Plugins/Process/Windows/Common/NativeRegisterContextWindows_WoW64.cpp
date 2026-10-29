@@ -11,7 +11,7 @@
 #include "NativeRegisterContextWindows_WoW64.h"
 
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterContextWindows_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoWindows_i386.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
@@ -53,7 +53,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   assert((target_arch.GetAddressByteSize() == 4 &&
           HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterContextWindows_i386(target_arch);
+  return new RegisterInfoWindows_i386(target_arch);
 }
 
 static Status

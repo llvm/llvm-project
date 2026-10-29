@@ -65,11 +65,69 @@ public:
       if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
                                                    moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() == cir::CIRDialect::getSrcLocAttrName()) {
+      if (mlir::failed(amendSrcLoc(instructions, attribute, moduleTranslation)))
+        return mlir::failure();
+    } else if (attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+      amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
     }
     return mlir::success();
   }
 
 private:
+  // Convert the raw-encoded clang::SourceLocation into !srcloc, so that
+  // dontcall-error/warn works.
+  mlir::LogicalResult
+  amendSrcLoc(llvm::ArrayRef<llvm::Instruction *> instructions,
+              mlir::NamedAttribute attribute,
+              mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto srcLoc = mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue());
+    if (!srcLoc)
+      return mlir::failure();
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::MDNode *node = llvm::MDNode::get(
+        llvmContext, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         llvm::Type::getInt64Ty(llvmContext),
+                         srcLoc.getValue().getZExtValue())));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("srcloc", node);
+    return mlir::success();
+  }
+
+  /// Attach the AMDGPU atomic metadata that lets the backend select a native
+  /// atomic instruction instead of expanding to a cmpxchg loop.
+  void amendAMDGPUAtomicMetadata(
+      llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    llvm::MDNode *empty =
+        llvm::MDNode::get(moduleTranslation.getLLVMContext(), {});
+    // !atomic.ignore.denormal.mode is a fixed metadata kind so it has to be
+    // attached via its enum rather than by name.
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                          empty);
+      return;
+    }
+    llvm::StringRef mdName;
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName())
+      mdName = "amdgpu.no.fine.grained.memory";
+    else if (attribute.getName() ==
+             cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName())
+      mdName = "amdgpu.no.remote.memory";
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(mdName, empty);
+  }
+
   mlir::LogicalResult amendRISCVNontemporalDomain(
       mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/BasicBlock.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
 #include <cmath>
@@ -41,23 +41,13 @@ STATISTIC(ExpectIntrinsicsHandled,
 // programmers may be using __builtin_expect() / llvm.expect to annotate that a
 // branch is likely or unlikely to be taken.
 
-// WARNING: these values are internal implementation detail of the pass.
-// They should not be exposed to the outside of the pass, front-end codegen
-// should emit @llvm.expect intrinsics instead of using these weights directly.
-// Transforms should use TargetTransformInfo's getPredictableBranchThreshold().
-static cl::opt<uint32_t> LikelyBranchWeight(
-    "likely-branch-weight", cl::Hidden, cl::init(2000),
-    cl::desc("Weight of the branch likely to be taken (default = 2000)"));
-static cl::opt<uint32_t> UnlikelyBranchWeight(
-    "unlikely-branch-weight", cl::Hidden, cl::init(1),
-    cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
-
 static std::tuple<uint32_t, uint32_t>
 getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
-    return std::make_tuple(LikelyBranchWeight.getValue(),
-                           UnlikelyBranchWeight.getValue());
+    return std::make_tuple(Opts.likely_branch_weight,
+                           Opts.unlikely_branch_weight);
   } else {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&

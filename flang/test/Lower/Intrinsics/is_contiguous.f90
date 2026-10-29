@@ -2,8 +2,8 @@
 
 ! CHECK-LABEL: func.func @_QPtest_is_contiguous(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
-! CHECK:         %[[ADECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_is_contiguousEa"}
-! CHECK:         %[[PDECL:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_is_contiguousEp"}
+! CHECK:         %[[ADECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFtest_is_contiguousEa")
+! CHECK:         %[[PDECL:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_is_contiguousEp") fortran_attrs<pointer>
 ! CHECK:         %[[VAL_42:.*]] = fir.convert %[[ADECL]]#1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_43:.*]] = fir.call @_FortranAIsContiguous(%[[VAL_42]]) {{.*}} : (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i1) -> !fir.logical<4>

@@ -55,19 +55,20 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Size = 4;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let SchedRW            = ps.SchedRW;
-  let mayLoad            = ps.mayLoad;
-  let mayStore           = ps.mayStore;
-  let isTerminator       = ps.isTerminator;
-  let isReturn           = ps.isReturn;
-  let isCall             = ps.isCall;
-  let isBranch           = ps.isBranch;
-  let isBarrier          = ps.isBarrier;
-  let Uses               = ps.Uses;
-  let Defs               = ps.Defs;
-  let isConvergent       = ps.isConvergent;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let isTerminator         = ps.isTerminator;
+  let isReturn             = ps.isReturn;
+  let isCall               = ps.isCall;
+  let isBranch             = ps.isBranch;
+  let isBarrier            = ps.isBarrier;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
 
   // encoding
   bits<7> sdst;
@@ -1622,6 +1623,7 @@ defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
 >;
 } // End Uses = [EXEC]
 
+let hasSideEffects = 1 in {
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
   "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
@@ -1641,6 +1643,7 @@ defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
   "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
+} // End hasSideEffects = 1
 
 } // End isBranch = 1
 } // End isTerminator = 1

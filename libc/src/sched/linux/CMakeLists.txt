@@ -1,4 +1,22 @@
 add_entrypoint_object(
+  clone
+  SRCS
+    clone.cpp
+  HDRS
+    ../clone.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sched_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.threads.identifier
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getcpu
   SRCS
     getcpu.cpp
@@ -46,7 +64,11 @@ add_entrypoint_object(
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
     libc.hdr.types.size_t
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setaffinity
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -68,8 +90,10 @@ add_entrypoint_object(
   HDRS
     ../sched_yield.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_yield
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -82,9 +106,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
-    libc.include.sys_syscall
-    libc.include.time
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setparam
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -112,9 +137,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
-    libc.include.sys_syscall
-    libc.include.time
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -164,8 +190,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_timespec
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_rr_get_interval
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

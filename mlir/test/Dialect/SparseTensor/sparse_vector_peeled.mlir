@@ -17,7 +17,7 @@
   doc = "x(i) = a(i) * b(i)"
 }
 
-// CHECK-DAG:   #[[$map0:.*]] = affine_map<()[s0, s1] -> (s0 + ((-s0 + s1) floordiv 16) * 16)>
+// CHECK-DAG:   #[[$map0:.*]] = affine_map<()[s0, s1] -> (s0 + ((-s0 + s1) floordiv 16) * 16, s0)>
 // CHECK-DAG:   #[[$map1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 // CHECK-LABEL: func @mul_s
 // CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
@@ -30,7 +30,7 @@
 // CHECK:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
 // CHECK:       %[[b:.*]] = arith.extui %[[r]] : i32 to i64
 // CHECK:       %[[s:.*]] = arith.index_cast %[[b]] : i64 to index
-// CHECK:       %[[boundary:.*]] = affine.apply #[[$map0]]()[%[[q]], %[[s]]]
+// CHECK:       %[[boundary:.*]] = affine.max #[[$map0]]()[%[[q]], %[[s]]]
 // CHECK:       scf.for %[[i:.*]] = %[[q]] to %[[boundary]] step %[[c16]] {
 // CHECK:         %[[li:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xi32>, vector<16xi32>
 // CHECK:         %[[zi:.*]] = arith.extui %[[li]] : vector<16xi32> to vector<16xi64>

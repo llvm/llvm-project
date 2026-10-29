@@ -238,3 +238,17 @@ static_assert([]() {
 
   return true;
 }());
+
+namespace GH185241 {
+struct S {
+  constexpr int func() {} // expected-note {{control reached end of constexpr function}}
+};
+
+static_assert([]() { // expected-error {{static assertion expression is not an integral constant expression}} \
+                        expected-note {{in call to '[]() {}.operator()()'}}
+  S s;
+  if (__builtin_invoke(&S::func, s)) // expected-note {{in call to 's.func()'}}
+    return false;
+  return true;
+}());
+} // namespace GH185241

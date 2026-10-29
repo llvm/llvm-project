@@ -4,7 +4,7 @@
 ; RUN: llvm-mc -I=%t -filetype=obj -triple=x86_64-unknown-unknown -o %t/bcsection.bco %p/Inputs/bcsection.s
 ; RUN: llc -filetype=obj -mtriple=x86_64-unknown-unknown -o %t/bcsection-lib.o %p/Inputs/bcsection-lib.ll
 
-; RUN: %gold -shared --no-undefined -o %t/bcsection.so -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t/bcsection.bco %t/bcsection-lib.o
+; RUN: %ld_bfd -shared --no-undefined -o %t/bcsection.so -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t/bcsection.bco %t/bcsection-lib.o
 
 ; This test checks that the gold plugin does not attempt to use the bitcode
 ; in the .llvmbc section for LTO.  bcsection-lib.o calls a function that is

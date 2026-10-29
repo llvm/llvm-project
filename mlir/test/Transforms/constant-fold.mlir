@@ -478,40 +478,109 @@ func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
-// CHECK-LABEL: func @simple_arith.ceildivsi_overflow
-func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
-  // The negative values below are MININTs for the corresponding bit-width. The
-  // folder will try to negate them (so that the division operates on two
-  // positive numbers), but that would cause overflow (negating MININT
-  // overflows). Hence folding should not happen and the original ceildivsi is
-  // preserved.
+// The dividends below are MININTs for the corresponding bit-width. Every
+// result is representable, so all of them fold.
 
-  // TODO: The folder should be able to fold the following by avoiding
-  // intermediate operations that overflow.
-
-  // CHECK-DAG: %[[C_1:.*]] = arith.constant 7 : i8
-  // CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
-  // CHECK-DAG: %[[C_2:.*]] = arith.constant 7 : i16
-  // CHECK-DAG: %[[MIN_I16:.*]] = arith.constant -32768 : i16
-  // CHECK-DAG: %[[C_3:.*]] = arith.constant 7 : i32
-  // CHECK-DAG: %[[MIN_I32:.*]] = arith.constant -2147483648 : i32
-
-  // CHECK-NEXT: %[[CEILDIV_1:.*]] = arith.ceildivsi %[[MIN_I8]], %[[C_1]]  : i8
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_dividend
+//   CHECK-DAG: %[[CEILDIV_1:.*]] = arith.constant -18 : i8
+//   CHECK-DAG: %[[CEILDIV_2:.*]] = arith.constant -4681 : i16
+//   CHECK-DAG: %[[CEILDIV_3:.*]] = arith.constant -306783378 : i32
+//       CHECK: return %[[CEILDIV_1]], %[[CEILDIV_2]], %[[CEILDIV_3]]
+func.func @simple_arith.ceildivsi_minint_dividend() -> (i8, i16, i32) {
+  // ceil(-128 / 7) = -18
   %0 = arith.constant 7 : i8
   %min_int_i8 = arith.constant -128 : i8
   %2 = arith.ceildivsi %min_int_i8, %0 : i8
 
-  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I16]], %[[C_2]]  : i16
+  // ceil(-32768 / 7) = -4681
   %3 = arith.constant 7 : i16
   %min_int_i16 = arith.constant -32768 : i16
   %5 = arith.ceildivsi %min_int_i16, %3 : i16
 
-  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I32]], %[[C_3]]  : i32
+  // ceil(-2147483648 / 7) = -306783378
   %6 = arith.constant 7 : i32
   %min_int_i32 = arith.constant -2147483648 : i32
   %8 = arith.ceildivsi %min_int_i32, %6 : i32
 
   return %2, %5, %8 : i8, i16, i32
+}
+
+// -----
+
+// The divisor, rather than the dividend, is MININT here.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_divisor
+//   CHECK-DAG: %[[C_0:.*]] = arith.constant 0 : i8
+//   CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i8
+//       CHECK: return %[[C_0]], %[[C_1]], %[[C_1]]
+func.func @simple_arith.ceildivsi_minint_divisor() -> (i8, i8, i8) {
+  %min_int_i8 = arith.constant -128 : i8
+  %0 = arith.constant 7 : i8
+  %1 = arith.constant -9 : i8
+
+  // ceil(7 / -128) = 0
+  %2 = arith.ceildivsi %0, %min_int_i8 : i8
+  // ceil(-9 / -128) = 1
+  %3 = arith.ceildivsi %1, %min_int_i8 : i8
+  // ceil(-128 / -128) = 1, already folded by the ceildivsi(x, x) -> 1 pattern.
+  %4 = arith.ceildivsi %min_int_i8, %min_int_i8 : i8
+
+  return %2, %3, %4 : i8, i8, i8
+}
+
+// -----
+
+// ceil(MININT / -1) is -MININT, which is not representable. Unlike the cases
+// above, these must never fold.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_div_minus_one
+//       CHECK: arith.ceildivsi
+//  CHECK-NEXT: arith.ceildivsi
+//  CHECK-NEXT: arith.ceildivsi
+func.func @simple_arith.ceildivsi_minint_div_minus_one() -> (i8, i16, i32) {
+  %min_int_i8 = arith.constant -128 : i8
+  %0 = arith.constant -1 : i8
+  %1 = arith.ceildivsi %min_int_i8, %0 : i8
+
+  %min_int_i16 = arith.constant -32768 : i16
+  %2 = arith.constant -1 : i16
+  %3 = arith.ceildivsi %min_int_i16, %2 : i16
+
+  %min_int_i32 = arith.constant -2147483648 : i32
+  %4 = arith.constant -1 : i32
+  %5 = arith.ceildivsi %min_int_i32, %4 : i32
+
+  return %1, %3, %5 : i8, i16, i32
+}
+
+// -----
+
+// One overflow flag is shared by every element of a vector fold, so a single
+// element whose result is not representable discards the whole fold, wherever
+// in the vector it sits.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_vector
+//   CHECK-DAG: %[[FOLDED:.*]] = arith.constant dense<[-18, 1, -1]> : vector<3xi8>
+//       CHECK: %[[LAST:.*]] = arith.ceildivsi
+//  CHECK-NEXT: %[[FIRST:.*]] = arith.ceildivsi
+//  CHECK-NEXT: return %[[FOLDED]], %[[LAST]], %[[FIRST]]
+func.func @simple_arith.ceildivsi_vector() -> (vector<3xi8>, vector<3xi8>, vector<3xi8>) {
+  // ceil(-128 / 7) = -18, ceil(-9 / -128) = 1, ceil(5 / -3) = -1
+  %0 = arith.constant dense<[-128, -9, 5]> : vector<3xi8>
+  %1 = arith.constant dense<[7, -128, -3]> : vector<3xi8>
+
+  // MININT / -1 as the last element, then as the first, so that the flag is
+  // set both after and before the representable elements are visited.
+  %2 = arith.constant dense<[-128, -9, -128]> : vector<3xi8>
+  %3 = arith.constant dense<[7, -128, -1]> : vector<3xi8>
+  %4 = arith.constant dense<[-128, -128, -9]> : vector<3xi8>
+  %5 = arith.constant dense<[-1, 7, -128]> : vector<3xi8>
+
+  %6 = arith.ceildivsi %0, %1 : vector<3xi8>
+  %7 = arith.ceildivsi %2, %3 : vector<3xi8>
+  %8 = arith.ceildivsi %4, %5 : vector<3xi8>
+
+  return %6, %7, %8 : vector<3xi8>, vector<3xi8>, vector<3xi8>
 }
 
 // -----

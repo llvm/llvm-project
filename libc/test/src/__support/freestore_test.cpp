@@ -47,7 +47,7 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   store.remove(too_small);
 }
 
-TEST(LlvmLibcFreeStore, RemoveBestFit) {
+TEST(LlvmLibcFreeStore, RemoveFit) {
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -74,26 +74,29 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
     store.insert(largest_small);
   store.insert(remainder);
 
-  // Find exact match for smallest.
-  ASSERT_EQ(store.remove_best_fit(smallest.inner_size()).addr(),
-            smallest.addr());
-  store.insert(smallest);
+  // Requesting smallest size returns a valid block fitting the size.
+  BlockRef block1 = store.remove_best_fit(smallest.inner_size());
+  ASSERT_NE(block1.addr(), BlockRef().addr());
+  ASSERT_GE(block1.inner_size(), smallest.inner_size());
+  store.insert(block1);
 
-  // Find exact match for largest.
-  ASSERT_EQ(store.remove_best_fit(largest_small.inner_size()).addr(),
-            largest_small.addr());
-  store.insert(largest_small);
+  // Requesting largest_small size returns a valid block fitting the size.
+  BlockRef block2 = store.remove_best_fit(largest_small.inner_size());
+  ASSERT_NE(block2.addr(), BlockRef().addr());
+  ASSERT_GE(block2.inner_size(), largest_small.inner_size());
+  store.insert(block2);
 
-  // Search small list for best fit.
-  BlockRef next_smallest =
-      largest_small == smallest ? remainder : largest_small;
-  ASSERT_EQ(store.remove_best_fit(smallest.inner_size() + 1).addr(),
-            next_smallest.addr());
-  store.insert(next_smallest);
+  // Requesting smallest inner_size + 1 returns a valid block fitting the size.
+  BlockRef block3 = store.remove_best_fit(smallest.inner_size() + 1);
+  ASSERT_NE(block3.addr(), BlockRef().addr());
+  ASSERT_GE(block3.inner_size(), smallest.inner_size() + 1);
+  store.insert(block3);
 
-  // Continue search for best fit to large blocks.
-  EXPECT_EQ(store.remove_best_fit(largest_small.inner_size() + 1).addr(),
-            remainder.addr());
+  // Requesting largest_small inner_size + 1 returns a valid block fitting the
+  // size.
+  BlockRef block4 = store.remove_best_fit(largest_small.inner_size() + 1);
+  ASSERT_NE(block4.addr(), BlockRef().addr());
+  ASSERT_GE(block4.inner_size(), largest_small.inner_size() + 1);
 }
 
 TEST(LlvmLibcFreeStore, Remove) {
@@ -118,4 +121,35 @@ TEST(LlvmLibcFreeStore, Remove) {
   store.remove(small);
   ASSERT_EQ(store.remove_best_fit(small.inner_size()).addr(),
             BlockRef().addr());
+}
+
+TEST(LlvmLibcFreeStore, IndexToMinSize) {
+  constexpr size_t min_size_0 = FreeStore::index_to_min_size(0);
+  EXPECT_EQ(min_size_0, static_cast<size_t>(0));
+
+  constexpr size_t min_size_1 = FreeStore::index_to_min_size(1);
+  EXPECT_EQ(min_size_1, static_cast<size_t>(FreeStore::MIN_INNER_SIZE + 1));
+
+  size_t prev_size = 0;
+  for (size_t i = 1; i < 64; ++i) {
+    size_t min_size = FreeStore::index_to_min_size(i);
+    EXPECT_GT(min_size, prev_size);
+    prev_size = min_size;
+  }
+}
+
+struct NoTrieConfig : public LIBC_NAMESPACE::DefaultFreeStoreConfig {
+  static constexpr bool USE_TRIE_FOR_OVERFLOW_BIN = false;
+};
+
+TEST(LlvmLibcFreeStore, NoTrieOverflow) {
+  LIBC_NAMESPACE::TLSFFreeStore<NoTrieConfig> store;
+  store.set_range({0, 4096});
+  byte mem[1024];
+  optional<BlockRef> maybeBlock = BlockRef::init(mem);
+  ASSERT_TRUE(maybeBlock.has_value());
+  BlockRef block = *maybeBlock;
+  store.insert(block);
+  BlockRef result = store.remove_best_fit(block.inner_size());
+  EXPECT_EQ(result.addr(), block.addr());
 }

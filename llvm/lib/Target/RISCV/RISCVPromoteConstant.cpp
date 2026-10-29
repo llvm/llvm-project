@@ -26,7 +26,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -63,6 +62,8 @@ public:
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
     bool Changed = false;
     for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
       const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(F);
       const RISCVTargetLowering *TLI = ST.getTargetLowering();
       Changed |= runOnFunction(F, TLI);
@@ -194,7 +195,7 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
         // Otherwise, create a new GEP and Load at the correct insertion point.
         // It is always safe to insert in the first insertion point in the BB,
         // so do that and let other passes reorder.
-        IRBuilder<> Builder(InsertionBB, InsertionBB->getFirstInsertionPt());
+        IRBuilder<> Builder(InsertionBB->getFirstInsertionPt());
         Value *ElementPtr = Builder.CreateConstInBoundsGEP2_64(
             GlobalArray->getValueType(), GlobalArray, 0, Idx, "double.addr");
         LoadedVal = Builder.CreateLoad(DoubleTy, ElementPtr, "double.val");

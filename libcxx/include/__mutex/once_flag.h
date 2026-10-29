@@ -47,12 +47,12 @@ _LIBCPP_HIDE_FROM_ABI void call_once(once_flag&, const _Callable&);
 
 #endif // _LIBCPP_CXX03_LANG
 
-struct once_flag {
+struct _LIBCPP_WARN_UNUSED once_flag {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR once_flag() _NOEXCEPT : __state_(_Unset) {}
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
+#ifdef _WIN32
   typedef uintptr_t _State_type;
 #else
   typedef unsigned long _State_type;

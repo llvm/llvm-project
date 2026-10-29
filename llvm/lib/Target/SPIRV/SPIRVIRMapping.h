@@ -66,6 +66,7 @@ enum SpecialTypeKind {
   STK_VkBuffer,
   STK_Padding,
   STK_ExplictLayoutType,
+  STK_UntypedPointer,
   STK_Last = -1
 };
 
@@ -152,6 +153,11 @@ inline IRHandle irhandle_vkbuffer(const Type *ElementType,
 
 inline IRHandle irhandle_padding() {
   return std::make_tuple(nullptr, 0, SpecialTypeKind::STK_Padding);
+}
+
+inline IRHandle irhandle_untyped_pointer(unsigned AddressSpace) {
+  return std::make_tuple(nullptr, AddressSpace,
+                         SpecialTypeKind::STK_UntypedPointer);
 }
 
 inline IRHandle irhandle_explict_layout_type(const Type *Ty) {

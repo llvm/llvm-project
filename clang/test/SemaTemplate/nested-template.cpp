@@ -168,3 +168,17 @@ namespace RefPack {
   int arr[10];
   void g() { A<k>().f(arr); }
 }
+
+namespace GH104057 {
+  template <class T>
+  struct A {
+    template <bool> struct B {};
+  };
+
+  template <class T>
+  struct C {
+    using type = typename A<T>::template B<true>;
+  };
+
+  A<int>::B<true> *p = (C<int>::type *)0;
+}

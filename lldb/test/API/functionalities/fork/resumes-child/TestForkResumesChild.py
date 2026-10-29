@@ -9,11 +9,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@skipIfWasm  # no fork() on WebAssembly
+@requireNotWasm("no fork() on WebAssembly")
 class TestForkResumesChild(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows
+    @requirePOSIX
     def test_step_over_fork(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

@@ -37,10 +37,16 @@ namespace clang::lifetimes {
 struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
-  size_t MaxCFGBlocks;
+  size_t MaxCFGBlocks = 0;
 
   /// Whether to suggest lifetime annotations.
-  bool SuggestAnnotations;
+  bool SuggestAnnotations = false;
+
+  bool CheckNoescapeViolations = false;
+  bool CheckLifetimeboundViolations = false;
+  bool CheckMisplacedLifetimebound = false;
+  bool CheckInapplicableLifetimebound = false;
+  bool CheckFieldOriginEscape = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -69,9 +75,12 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // TODO: Report where the object was destroyed when that happens before the
+  // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr) {}
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
@@ -82,7 +91,8 @@ public:
   virtual void reportDanglingGlobal(const Expr *IssueExpr,
                                     const VarDecl *DanglingGlobal,
                                     const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    SourceLocation ExpiryLoc,
+                                    bool IsMain = false) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
@@ -154,6 +164,11 @@ public:
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
+
+  // Reports when a member function returns an origin of a field.
+  virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
+                                       const FieldDecl *FD,
+                                       const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

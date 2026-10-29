@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -20,6 +21,7 @@
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -101,7 +103,6 @@ JumpTables("jump-tables",
       clEnumValN(JTS_AGGRESSIVE, "aggressive",
                  "aggressively split jump tables section based on usage "
                  "of the tables")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool> NoScan(
@@ -139,7 +140,7 @@ static cl::opt<bool> TrapOnAVX512(
     "trap-avx512",
     cl::desc("in relocation mode trap upon entry to any function that uses "
              "AVX-512 instructions"),
-    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   // PLT stubs are disassembled for BTI binaries, therefore they should be
@@ -167,10 +168,6 @@ bool shouldPrint(const BinaryFunction &Function) {
 
 namespace llvm {
 namespace bolt {
-
-template <typename R> static bool emptyRange(const R &Range) {
-  return Range.begin() == Range.end();
-}
 
 /// Gets debug line information for the instruction located at the given
 /// address in the original binary. Returns an optional DebugLineTableRowRef
@@ -705,7 +702,9 @@ void BinaryFunction::printRelocations(raw_ostream &OS, uint64_t Offset,
 
   auto RI = Relocations.lower_bound(Offset);
   while (RI != Relocations.end() && RI->first < Offset + Size) {
-    OS << Sep << "(R: " << RI->second << ")";
+    OS << Sep << "(R: ";
+    RI->second.print(OS, BC.getRelocationHandler());
+    OS << ")";
     Sep = ", ";
     ++RI;
   }
@@ -1329,13 +1328,6 @@ Error BinaryFunction::disassemble() {
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
-  // Map offsets in the function to a label that should always point to the
-  // corresponding instruction. This is used for labels that shouldn't point to
-  // the start of a basic block but always to a specific instruction. This is
-  // used, for example, on RISC-V where %pcrel_lo relocations point to the
-  // corresponding %pcrel_hi.
-  LabelsMapType InstructionLabels;
-
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
@@ -1422,7 +1414,8 @@ Error BinaryFunction::disassemble() {
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
-      if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
+      if (!MIB->isIndirectBranch(Instruction) &&
+          MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
         // Check if the target is within the same function. Otherwise it's
         // a call, possibly a tail call.
@@ -1448,9 +1441,11 @@ Error BinaryFunction::disassemble() {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);
           } else {
             if (TargetAddress == getAddress() + getSize() &&
-                TargetAddress < getAddress() + getMaxSize() &&
-                !(BC.isAArch64() &&
-                  BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
+                (!BC.getSectionForAddress(TargetAddress) ||
+                 (TargetAddress < getAddress() + getMaxSize() &&
+                  !(BC.isAArch64() &&
+                    BC.handleAArch64Veneer(TargetAddress,
+                                           /*MatchOnly*/ true))))) {
               // Result of __builtin_unreachable().
               errs() << "BOLT-WARNING: jump past end detected at 0x"
                      << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
@@ -1500,42 +1495,6 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isRISCV()) {
-      // Check if there's a relocation associated with this instruction.
-      for (auto Itr = Relocations.lower_bound(Offset),
-                ItrE = Relocations.lower_bound(Offset + Size);
-           Itr != ItrE; ++Itr) {
-        const Relocation &Relocation = Itr->second;
-        MCSymbol *Symbol = Relocation.Symbol;
-
-        if (Relocation::isInstructionReference(Relocation.Type)) {
-          uint64_t RefOffset = Relocation.Value - getAddress();
-          LabelsMapType::iterator LI = InstructionLabels.find(RefOffset);
-
-          if (LI == InstructionLabels.end()) {
-            Symbol = BC.Ctx->createNamedTempSymbol();
-            InstructionLabels.emplace(RefOffset, Symbol);
-          } else {
-            Symbol = LI->second;
-          }
-        }
-
-        uint64_t Addend = Relocation.Addend;
-
-        // For GOT relocations, create a reference against GOT entry ignoring
-        // the relocation symbol.
-        if (Relocation::isGOT(Relocation.Type)) {
-          assert(Relocation::isPCRelative(Relocation.Type) &&
-                 "GOT relocation must be PC-relative on RISC-V");
-          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-          Addend = Relocation.Value + Relocation.Offset + getAddress();
-        }
-        int64_t Value = Relocation.Value;
-        const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
-        (void)Result;
-        assert(Result && "cannot replace immediate with relocation");
-      }
     }
 
 add_instruction:
@@ -1577,13 +1536,6 @@ add_instruction:
   // Scope-boundary markers are only consulted while assigning offsets above.
   DebugScopeBoundaryOffsets.clear();
 
-  for (auto [Offset, Label] : InstructionLabels) {
-    InstrMapType::iterator II = Instructions.find(Offset);
-    assert(II != Instructions.end() && "reference to non-existing instruction");
-
-    BC.MIB->setInstLabel(II->second, Label);
-  }
-
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
 
@@ -1623,6 +1575,7 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
+  SmallPtrSet<BinaryFunction *, 4> InvalidTargets;
 
   // Ignore pseudo functions.
   if (isPseudo())
@@ -1731,8 +1684,10 @@ bool BinaryFunction::scanExternalRefs() {
       // reference.
       BranchTargetSymbol =
           BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
-      if (!BranchTargetSymbol)
+      if (!BranchTargetSymbol) {
+        InvalidTargets.insert(TargetFunction);
         continue;
+      }
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1841,22 +1796,10 @@ bool BinaryFunction::scanExternalRefs() {
     // On AArch64, we use instruction patches for fixing references. We make an
     // exception for branch instructions since they require optional
     // relocations.
-    if (BC.isAArch64()) {
-      if (!BranchTargetSymbol) {
-        LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
-        InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
-        continue;
-      }
-
-      // Conditional tail calls require new relocation types that are currently
-      // not supported. https://github.com/llvm/llvm-project/issues/138264
-      if (BC.MIB->isConditionalBranch(Instruction)) {
-        if (BinaryFunction *TargetBF =
-                BC.getFunctionForSymbol(BranchTargetSymbol)) {
-          TargetBF->setNeedsPatch(true);
-          continue;
-        }
-      }
+    if (BC.isAArch64() && !BranchTargetSymbol) {
+      LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
+      InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
+      continue;
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -1875,7 +1818,7 @@ bool BinaryFunction::scanExternalRefs() {
       if (ignoreReference(Rel->Symbol))
         continue;
 
-      if (Relocation::getSizeForType(Rel->Type) < 4) {
+      if (BC.getRelocationHandler().getSizeForType(Rel->Type) < 4) {
         // If the instruction uses a short form, then we might not be able
         // to handle the rewrite without relaxation, and hence cannot reliably
         // create an external reference relocation.
@@ -1888,7 +1831,11 @@ bool BinaryFunction::scanExternalRefs() {
         // relocation value encoding.
         Rel->setOptional();
 
-        if (!opts::CompactCodeModel)
+        // In compact code model, only CALL26/JUMP26 relocations are assumed to
+        // reach the moved target; patch the target for other branch types.
+        const bool IsBranch26 = Rel->Type == ELF::R_AARCH64_CALL26 ||
+                                Rel->Type == ELF::R_AARCH64_JUMP26;
+        if (!opts::CompactCodeModel || !IsBranch26)
           if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
             TargetBF->setNeedsPatch(true);
       }
@@ -1896,7 +1843,6 @@ bool BinaryFunction::scanExternalRefs() {
       Rel->Offset += getAddress() - getOriginSection()->getAddress() + Offset;
       FunctionRelocations.push_back(*Rel);
     }
-
     if (!Success)
       break;
   }
@@ -1934,6 +1880,12 @@ bool BinaryFunction::scanExternalRefs() {
 
   if (opts::Verbosity >= 1 && !Success)
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
+
+  // Apply target state only after the complete source has been scanned. The
+  // source is either already ignored or is marked ignored by the caller.
+  for (BinaryFunction *Target : InvalidTargets)
+    if (!Target->isIgnored())
+      Target->setIgnored();
 
   return Success;
 }
@@ -2140,7 +2092,7 @@ bool BinaryFunction::validateInternalRefDataRelocations() {
       const Relocation *Relocation = BC.getRelocationAt(RelocationAddress);
       BC.errs() << "  ";
       if (Relocation)
-        BC.errs() << *Relocation;
+        Relocation->print(BC.errs(), BC.getRelocationHandler());
       else
         BC.errs() << "<missing relocation>";
       BC.errs() << '\n';
@@ -3676,7 +3628,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches() {
+void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3735,7 +3687,8 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (!MIB->isReversibleBranch(*CondBranch)) {
+        bool PreserveFlags = BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
+        if (!MIB->isReversibleBranch(*CondBranch, PreserveFlags)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3745,7 +3698,11 @@ void BinaryFunction::fixBranches() {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
+        if (BLI)
+          BLI->removeAnnotation(*CondBranch);
+        InstructionListType Code = MIB->reverseBranchCondition(
+            *CondBranch, TSuccessor->getLabel(), Ctx, PreserveFlags);
+        BB->replaceInstruction(BB->findInstruction(CondBranch), Code);
         return true;
       };
 

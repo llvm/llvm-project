@@ -1,6 +1,10 @@
 add_custom_target(libc_stack_chk_guard_unittests)
 
-add_libc_unittest(
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  return()
+endif()
+
+add_libc_test(
   stack_chk_guard_test
   SUITE
     libc_stack_chk_guard_unittests
@@ -13,4 +17,4 @@ add_libc_unittest(
     libc.src.string.memset
   COMPILE_OPTIONS
     -fstack-protector-all
-  )
+)

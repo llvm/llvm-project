@@ -322,8 +322,9 @@ struct CallOpInterface
         auto memrefDstType = dyn_cast<MemRefType>(bufferType);
         assert(memrefDstType &&
                "buffer layout not supported on unranked tensors");
-        FailureOr<Value> replacement = bufferization::castOrReallocMemRefValue(
-            rewriter, buffer, memrefDstType, options);
+        FailureOr<Value> replacement =
+            bufferization::castOrReallocMemRefValue(rewriter, buffer,
+                                                    memrefDstType, options);
         if (failed(replacement))
           return failure();
         buffer = *replacement;
@@ -332,10 +333,10 @@ struct CallOpInterface
     }
 
     // 3. Create the new CallOp.
-    Operation *newCallOp =
-        func::CallOp::create(rewriter, callOp.getLoc(), funcOp.getSymName(),
-                             resultTypes, newOperands);
-    newCallOp->setAttrs(callOp->getAttrs());
+    func::CallOp newCallOp =
+        func::CallOp::create(rewriter, callOp.getLoc(), resultTypes,
+                             newOperands, callOp.getProperties(),
+                             callOp->getDiscardableAttrDictionary().getValue());
 
     // 4. Replace the old op with the new op.
     replaceOpWithBufferizedValues(rewriter, callOp, newCallOp->getResults());

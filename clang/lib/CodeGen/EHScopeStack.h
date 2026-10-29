@@ -95,6 +95,8 @@ enum CleanupKind : unsigned {
 
   SEHFinallyCleanup = 0x20,
   NormalAndEHSEHFinallyCleanup = SEHFinallyCleanup | NormalAndEHCleanup,
+
+  StackRestore = 0x40,
 };
 
 /// A stack of scopes which respond to exceptions, including cleanups
@@ -163,8 +165,6 @@ public:
     Cleanup &operator=(Cleanup &&) = delete;
 
     Cleanup() = default;
-
-    virtual bool isRedundantBeforeReturn() { return false; }
 
     /// Generation flags.
     class Flags {

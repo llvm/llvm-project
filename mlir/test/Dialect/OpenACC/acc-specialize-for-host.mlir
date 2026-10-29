@@ -167,7 +167,7 @@ func.func @loop_inside_parallel(%arg0 : memref<i32>) attributes {acc.routine_inf
       %c5 = arith.constant 5 : i32
       memref.store %c5, %arg0[] : memref<i32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) seq
     acc.yield
   }
   return
@@ -192,7 +192,7 @@ func.func @private_attached_to_loop(%arg0 : memref<i32>) attributes {acc.routine
     %c1_i32 = arith.constant 1 : i32
     memref.store %c1_i32, %0[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) seq
   return
 }
 
@@ -212,7 +212,7 @@ func.func @orphan_loop(%arg0 : memref<i32>) attributes {acc.routine_info = #acc.
   acc.loop control(%iv : i32) = (%c0 : i32) to (%c10 : i32) step (%c1 : i32) {
     memref.store %iv, %arg0[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) seq
   return
 }
 
@@ -230,7 +230,7 @@ func.func @nested_orphan_loop(%arg0 : memref<i32>) attributes {acc.routine_info 
     %sum = arith.addi %iv0, %iv1 : i32
     memref.store %sum, %arg0[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true, true>, seq = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true, true>) seq
   return
 }
 
@@ -275,7 +275,7 @@ func.func @orphan_unstructured_loop(%arg0 : memref<32xi32>) attributes {acc.rout
     cf.br ^bb1
   ^bb3:
     acc.yield
-  } attributes {independent = [#acc.device_type<none>], unstructured}
+  } independent unstructured
   return
 }
 
@@ -304,7 +304,7 @@ func.func @orphan_loop_with_reduction(%arg0 : memref<i32>, %arg1 : memref<100xi3
     %new_r = arith.addi %r_val, %elem : i32
     memref.store %new_r, %arg0[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   return
 }
 
@@ -325,7 +325,7 @@ func.func @orphan_loop_variable_bounds(%arg0 : memref<i32>, %arg1 : memref<i32>,
   acc.loop vector control(%iv : i32) = (%lb : i32) to (%ub : i32) step (%c1 : i32) {
     memref.store %iv, %arg2[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   return
 }
 
@@ -370,7 +370,7 @@ func.func @orphan_between_compute_regions(%arg0 : memref<i32>, %arg1 : memref<8x
       %idx = arith.index_cast %iv : i32 to index
       memref.store %c1_i32, %arg1[%idx] : memref<8xi32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
 
@@ -387,7 +387,7 @@ func.func @orphan_between_compute_regions(%arg0 : memref<i32>, %arg1 : memref<8x
     %mul = arith.muli %t, %c2_i32 : i32
     memref.store %mul, %arg0[] : memref<i32>
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
 
   // Second compute region - should NOT be converted
   acc.parallel combined(loop) {
@@ -397,7 +397,7 @@ func.func @orphan_between_compute_regions(%arg0 : memref<i32>, %arg1 : memref<8x
       %idx = arith.index_cast %iv : i32 to index
       memref.store %iv, %arg1[%idx] : memref<8xi32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return

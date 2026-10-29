@@ -31,6 +31,8 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
       TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
       InstrItins(getInstrItineraryForCPU(GPU)) {
   LocalMemorySize = AddressableLocalMemorySize;
+  // R600 has no MaxWavesPerEU subtarget feature.
+  MaxWavesPerEU = 10;
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 }
 

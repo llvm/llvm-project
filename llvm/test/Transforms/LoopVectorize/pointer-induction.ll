@@ -8,15 +8,15 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @a(ptr readnone %b) {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq ptr [[B:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP_NOT4]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[N_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
@@ -44,25 +44,25 @@ define void @a(ptr readnone %b) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; CHECK:       pred.store.if4:
+; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP1]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK:       pred.store.continue5:
+; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP10]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; CHECK:       pred.store.if6:
+; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP2]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP15]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; CHECK:       pred.store.continue7:
+; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; CHECK:       pred.store.if8:
+; CHECK:       pred.store.if9:
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP3]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; CHECK:       pred.store.continue9:
+; CHECK:       pred.store.continue10:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -129,7 +129,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP0]]
@@ -284,12 +284,11 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; DEFAULT:       vector.scevcheck:
-; DEFAULT-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; DEFAULT-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP4]]
@@ -338,12 +337,11 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; STRIDED-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; STRIDED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; STRIDED-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; STRIDED-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP4]]
@@ -435,7 +433,7 @@ define i64 @ivopt_widen_ptr_indvar_1(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[TMP0]]
 ; STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
@@ -520,7 +518,7 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[TMP0]]
 ; STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
@@ -625,7 +623,7 @@ define i64 @ivopt_widen_ptr_indvar_3(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[TMP0]]
 ; STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
@@ -702,14 +700,12 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoaddr ptr [[PIN:%.*]] to i64
 ; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoaddr ptr [[POUT:%.*]] to i64
-; STRIDED-NEXT:    [[TMP0:%.*]] = sext i32 [[STRIDE:%.*]] to i64
-; STRIDED-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
 ; STRIDED-NEXT:    [[TMP2:%.*]] = zext i32 [[NCOLS:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
+; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE:%.*]], 1
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.memcheck:
 ; STRIDED-NEXT:    [[TMP4:%.*]] = sub i64 [[POUT1]], [[PIN2]]
@@ -717,7 +713,7 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 15
 ; STRIDED-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; STRIDED-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 2

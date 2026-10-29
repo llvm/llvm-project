@@ -361,9 +361,9 @@ func.func @arbitrary_memory_space() {
 // CHECK-LABEL: zero_ranked
 func.func @zero_ranked(%3:memref<480xi1>) {
   %false = arith.constant false
-  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  %4 = memref.alloc() alignment = 128 : memref<i1>
   affine.store %false, %4[] : memref<i1>
-  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  %5 = memref.alloc() alignment = 128 : memref<i1>
   memref.copy %4, %5 : memref<i1> to memref<i1>
   affine.for %arg0 = 0 to 480 {
     %11 = affine.load %3[%arg0] : memref<480xi1>
@@ -378,11 +378,11 @@ func.func @zero_ranked(%3:memref<480xi1>) {
 // CHECK-LABEL: func @scalar_memref_copy_without_dma
 func.func @scalar_memref_copy_without_dma() {
     %false = arith.constant false
-    %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    %4 = memref.alloc() alignment = 128 : memref<i1>
     affine.store %false, %4[] : memref<i1>
 
     // CHECK: %[[FALSE:.*]] = arith.constant false
-    // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    // CHECK: %[[MEMREF:.*]] = memref.alloc() alignment = 128 : memref<i1>
     // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
     return
 }
@@ -390,9 +390,9 @@ func.func @scalar_memref_copy_without_dma() {
 // CHECK-LABEL: func @scalar_memref_copy_in_loop
 func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
   %false = arith.constant false
-  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  %4 = memref.alloc() alignment = 128 : memref<i1>
   affine.store %false, %4[] : memref<i1>
-  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  %5 = memref.alloc() alignment = 128 : memref<i1>
   memref.copy %4, %5 : memref<i1> to memref<i1>
   affine.for %arg0 = 0 to 480 {
     %11 = affine.load %3[%arg0] : memref<480xi1>
@@ -403,9 +403,9 @@ func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
   }
 
   // CHECK: %[[FALSE:.*]] = arith.constant false
-  // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: %[[MEMREF:.*]] = memref.alloc() alignment = 128 : memref<i1>
   // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
-  // CHECK: %[[TARGET:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: %[[TARGET:.*]] = memref.alloc() alignment = 128 : memref<i1>
   // CHECK: memref.copy %alloc, %[[TARGET]] : memref<i1> to memref<i1>
   // CHECK: %[[FAST_MEMREF:.*]] = memref.alloc() : memref<480xi1>
   // CHECK: affine.for %{{.*}} = 0 to 480 {
@@ -450,19 +450,19 @@ func.func @memref_def_inside(%arg0: index) {
 
 // Test with uses across multiple blocks.
 
-memref.global "private" constant @__constant_1x2x1xi32_1 : memref<1x2x1xi32> = dense<0> {alignment = 64 : i64}
+memref.global "private" constant @__constant_1x2x1xi32_1 : memref<1x2x1xi32> = dense<0> alignment = 64
 
 // CHECK-LABEL: func @multiple_blocks
 func.func @multiple_blocks(%arg0: index) -> memref<1x2x1xi32> {
   %c1_i32 = arith.constant 1 : i32
   %c3_i32 = arith.constant 3 : i32
   %0 = memref.get_global @__constant_1x2x1xi32_1 : memref<1x2x1xi32>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x2x1xi32>
+  %alloc = memref.alloc() alignment = 64 : memref<1x2x1xi32>
   memref.copy %0, %alloc : memref<1x2x1xi32> to memref<1x2x1xi32>
   cf.br ^bb1(%alloc : memref<1x2x1xi32>)
 ^bb1(%1: memref<1x2x1xi32>):  // 2 preds: ^bb0, ^bb2
 // CHECK: ^bb1(%[[MEM:.*]]: memref<1x2x1xi32>):
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<1x2x1xi1>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<1x2x1xi1>
   // CHECK: %[[BUF:.*]] = memref.alloc() : memref<1x2x1xi32>
   affine.for %arg1 = 0 to 1 {
     affine.for %arg2 = 0 to 2 {
@@ -479,7 +479,7 @@ func.func @multiple_blocks(%arg0: index) -> memref<1x2x1xi32> {
   cf.cond_br %2, ^bb2, ^bb3
 ^bb2:  // pred: ^bb1
 // CHECK: ^bb2
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x2x1xi32>
+  %alloc_1 = memref.alloc() alignment = 64 : memref<1x2x1xi32>
   affine.for %arg1 = 0 to 1 {
     affine.for %arg2 = 0 to 2 {
       affine.for %arg3 = 0 to 1 {

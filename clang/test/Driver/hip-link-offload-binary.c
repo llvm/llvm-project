@@ -26,7 +26,7 @@
 // RUN:   --offload-arch=gfx906 %t.x.bundle.bc -o %t.hipfb 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=VERBOSE
 // VERBOSE: "{{.*}}clang-linker-wrapper"
-// VERBOSE-SAME: "--device-compiler=amdgcn-amd-amdhsa=-v"
+// VERBOSE-SAME: "--device-compiler=amdgpu-amd-amdhsa=-v"
 // VERBOSE-SAME: "--wrapper-verbose"
 // VERBOSE-SAME: "--emit-fatbin-only"
 

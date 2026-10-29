@@ -19,7 +19,7 @@ class CXXModulesImportTestCase(TestBase):
             )
         super(CXXModulesImportTestCase, self).build()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(macos_version=["<", "10.12"])
     @skipIf(compiler="clang", compiler_version=["<", "14.0"])
     def test_expr(self):
@@ -34,7 +34,7 @@ class CXXModulesImportTestCase(TestBase):
             "expr -l Objective-C++ -- @import THIS_MODULE_DOES_NOT_EXIST", error=True
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(macos_version=["<", "10.12"])
     @skipIf(compiler="clang", compiler_version=["<", "14.0"])
     def test_expr_failing_import(self):

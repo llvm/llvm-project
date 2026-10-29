@@ -54,7 +54,7 @@
 # CHECK: bfmmla  v2.4s, v3.8h, v4.8h
 # CHECK: bfmmla  v3.4s, v4.8h, v5.8h
 # NOBF16: warning: invalid instruction encoding
-NOBF16-NEXT: [0x62,0xec,0x44,0x6e]
+# NOBF16-NEXT: [0x62,0xec,0x44,0x6e]
 # NOBF16: warning: invalid instruction encoding
 # NOBF16-NEXT: [0x83,0xec,0x45,0x6e]
 

@@ -118,8 +118,10 @@ class MinidumpSizeOfImageTestCase(TestBase):
 
         return total
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
+    # Building the shared library assumes we will run on the host.
+    @skipIfRemote
     def test_size_of_image_with_contiguous_segments(self):
         """Test SizeOfImage is correct for a module with contiguous segments."""
         self.build()

@@ -155,7 +155,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
 
       // Mark all symbols listed in the relocation table for this section.
       for (const Relocation &r : isec->relocs) {
-        if (auto *s = r.referent.dyn_cast<Symbol *>())
+        if (auto *s = dyn_cast<Symbol *>(r.referent))
           addSym(s, entry);
         else
           enqueue(cast<InputSection *>(r.referent), r.addend, entry);
@@ -173,7 +173,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
         continue;
 
       for (const Relocation &r : isec->relocs) {
-        if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *s = dyn_cast<Symbol *>(r.referent)) {
           if (s->isLive()) {
             InputSection *referentIsec = nullptr;
             if (auto *d = dyn_cast<Defined>(s))

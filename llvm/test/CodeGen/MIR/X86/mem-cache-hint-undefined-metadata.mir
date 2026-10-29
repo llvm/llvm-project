@@ -1,0 +1,29 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -filetype=null %s 2>&1 | FileCheck %s
+
+--- |
+  define i32 @undefined_metadata(ptr %p) {
+  entry:
+    %v = load i32, ptr %p, !mem.cache_hint !0
+    ret i32 %v
+  }
+
+  !0 = !{i32 0, !1}
+  !1 = !{!"nvvm.l2_cache_hint", i64 12345}
+
+...
+---
+name:            undefined_metadata
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr32 }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+
+    ; CHECK: use of undefined metadata '!3'
+    %0:gr64 = COPY $rdi
+    %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !mem.cache_hint !3)
+    $eax = COPY %1
+    RET64 $eax
+...
