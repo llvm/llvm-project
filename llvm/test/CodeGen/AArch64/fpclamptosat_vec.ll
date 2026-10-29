@@ -3448,41 +3448,14 @@ entry:
 ; i32 non saturate
 
 define <4 x i32> @ustest_f16i32_nsat(<4 x half> %x) {
-; CHECK-CVT-SD-LABEL: ustest_f16i32_nsat:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-CVT-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: ustest_f16i32_nsat:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-FP16-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: ustest_f16i32_nsat:
-; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    smin v0.4s, v1.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: ustest_f16i32_nsat:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    smin v0.4s, v1.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: ustest_f16i32_nsat:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i32>
   %spec.store.select = call <4 x i32> @llvm.smin.v4i32(<4 x i32> zeroinitializer, <4 x i32> %conv)

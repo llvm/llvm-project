@@ -7096,7 +7096,14 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
+  // Recognize scalar constants through casts and copies, as well as vector
+  // splats.
+  const auto IsConstant = [&](Register Reg) {
+    return getIConstantVRegValWithLookThrough(Reg, MRI) ||
+           getIConstantSplatVal(Reg, MRI);
+  };
+
+  if (!IsConstant(LHS)) {
     // Skip commuting if LHS is not a constant. But, LHS may be a
     // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
     // have a constant on the RHS.
@@ -7105,7 +7112,7 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
   }
   // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !IsConstant(RHS);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {

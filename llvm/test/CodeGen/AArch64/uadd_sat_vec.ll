@@ -322,7 +322,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v3.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
@@ -344,7 +344,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v3.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
