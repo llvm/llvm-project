@@ -1,0 +1,197 @@
+# NOTE: Do not autogenerate. Only spill positions matter; full MIR checks would obscure the cost-control comparison.
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=greedy -stress-regalloc=2 -verify-regalloc -o - %s | FileCheck %s --check-prefixes=COST,COMMON
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=greedy -stress-regalloc=2 -verify-regalloc -enable-wave-profiled-region-cost=false -o - %s | FileCheck %s --check-prefixes=NO-COST,COMMON
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=greedy -stress-regalloc=2 -verify-regalloc -enable-wave-profiled-spill=false -o - %s | FileCheck %s --check-prefixes=COST,COMMON
+
+# Each block executes 100 waves. The through block permits a compact region,
+# while clobbers inside the four use blocks make the best physical region more
+# expensive than block splitting. No input split ancestry is needed: greedy
+# creates the splits itself. With costs enabled, reject that region and spill
+# at the definition in entry. Without the bound, keep entry in a register and
+# spill at the first clobber instead.
+# COMMON-LABEL: name: wave_cost
+# COMMON: bb.0.entry:
+# COMMON: S_NOP 0, implicit-def %[[DEF:[0-9]+]]
+# COST-NEXT: SI_SPILL_V32_SAVE %[[DEF]],
+# COMMON-NEXT: S_BRANCH %bb.1
+# COMMON: bb.1.a:
+# COST: SI_SPILL_V32_RESTORE
+# NO-COST: S_NOP 0, implicit %[[DEF]]
+# NO-COST-NEXT: SI_SPILL_V32_SAVE %[[DEF]],
+# COMMON: S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+# COMMON-NEXT: {{%[0-9]+}}:vgpr_32 = SI_SPILL_V32_RESTORE
+
+# Moving b's clobber before its first use leaves the incoming compact bundle
+# outside the physical region. The physical cost alone cannot bound the union
+# used by doRegionSplit, so retain region splitting with costs on or off.
+# COMMON-LABEL: name: extra_compact
+# COMMON: bb.0.entry:
+# COMMON: S_NOP 0, implicit-def %[[DEF:[0-9]+]]
+# COMMON-NEXT: S_BRANCH %bb.1
+# COMMON: bb.1.a:
+# COMMON: S_NOP 0, implicit %[[DEF]]
+# COMMON-NEXT: SI_SPILL_V32_SAVE %[[DEF]],
+# COMMON: bb.2.b:
+# COMMON: = lr-split COPY
+# COMMON: S_BRANCH %bb.3
+
+--- |
+  define void @wave_cost(ptr addrspace(1) %out) !wave.profile !0 {
+  entry:
+    store volatile i32 0, ptr addrspace(1) %out, align 4
+    br label %a, !wave.profile.block !1
+
+  a:
+    store volatile i32 1, ptr addrspace(1) %out, align 4
+    br label %b, !wave.profile.block !2
+
+  b:
+    store volatile i32 2, ptr addrspace(1) %out, align 4
+    br label %c, !wave.profile.block !3
+
+  c:
+    store volatile i32 3, ptr addrspace(1) %out, align 4
+    br label %d, !wave.profile.block !4
+
+  d:
+    store volatile i32 4, ptr addrspace(1) %out, align 4
+    br label %through, !wave.profile.block !5
+
+  through:
+    store volatile i32 5, ptr addrspace(1) %out, align 4
+    br label %exit, !wave.profile.block !6
+
+  exit:
+    ret void, !wave.profile.block !7
+  }
+
+  define void @extra_compact(ptr addrspace(1) %out) !wave.profile !8 {
+  entry:
+    store volatile i32 0, ptr addrspace(1) %out, align 4
+    br label %a, !wave.profile.block !9
+
+  a:
+    store volatile i32 1, ptr addrspace(1) %out, align 4
+    br label %b, !wave.profile.block !10
+
+  b:
+    store volatile i32 2, ptr addrspace(1) %out, align 4
+    br label %c, !wave.profile.block !11
+
+  c:
+    store volatile i32 3, ptr addrspace(1) %out, align 4
+    br label %d, !wave.profile.block !12
+
+  d:
+    store volatile i32 4, ptr addrspace(1) %out, align 4
+    br label %through, !wave.profile.block !13
+
+  through:
+    store volatile i32 5, ptr addrspace(1) %out, align 4
+    br label %exit, !wave.profile.block !14
+
+  exit:
+    ret void, !wave.profile.block !15
+  }
+
+  !0 = distinct !{i64 2, i64 14260561443891338516, i64 100, i64 100, i64 100, i64 100, i64 100, i64 100, i64 100}
+  !1 = !{i64 2, i64 14260561443891338516, i64 0, i64 1, i64 1}
+  !2 = !{i64 2, i64 14260561443891338516, i64 1, i64 1, i64 2}
+  !3 = !{i64 2, i64 14260561443891338516, i64 2, i64 1, i64 3}
+  !4 = !{i64 2, i64 14260561443891338516, i64 3, i64 1, i64 4}
+  !5 = !{i64 2, i64 14260561443891338516, i64 4, i64 1, i64 5}
+  !6 = !{i64 2, i64 14260561443891338516, i64 5, i64 1, i64 6}
+  !7 = !{i64 2, i64 14260561443891338516, i64 6, i64 1}
+  !8 = distinct !{i64 2, i64 2091616729901823961, i64 100, i64 100, i64 100, i64 100, i64 100, i64 100, i64 100}
+  !9 = !{i64 2, i64 2091616729901823961, i64 0, i64 1, i64 1}
+  !10 = !{i64 2, i64 2091616729901823961, i64 1, i64 1, i64 2}
+  !11 = !{i64 2, i64 2091616729901823961, i64 2, i64 1, i64 3}
+  !12 = !{i64 2, i64 2091616729901823961, i64 3, i64 1, i64 4}
+  !13 = !{i64 2, i64 2091616729901823961, i64 4, i64 1, i64 5}
+  !14 = !{i64 2, i64 2091616729901823961, i64 5, i64 1, i64 6}
+  !15 = !{i64 2, i64 2091616729901823961, i64 6, i64 1}
+...
+---
+name: wave_cost
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    S_NOP 0, implicit-def %0:vgpr_32
+    S_BRANCH %bb.1
+  bb.1.a:
+    successors: %bb.2(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.2
+  bb.2.b:
+    successors: %bb.3(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.3
+  bb.3.c:
+    successors: %bb.4(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.4
+  bb.4.d:
+    successors: %bb.5(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.5
+  bb.5.through:
+    successors: %bb.6(0x80000000)
+    S_BRANCH %bb.6
+  bb.6.exit:
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+---
+name: extra_compact
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    S_NOP 0, implicit-def %0:vgpr_32
+    S_BRANCH %bb.1
+  bb.1.a:
+    successors: %bb.2(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.2
+  bb.2.b:
+    successors: %bb.3(0x80000000)
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.3
+  bb.3.c:
+    successors: %bb.4(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.4
+  bb.4.d:
+    successors: %bb.5(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.5
+  bb.5.through:
+    successors: %bb.6(0x80000000)
+    S_BRANCH %bb.6
+  bb.6.exit:
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
