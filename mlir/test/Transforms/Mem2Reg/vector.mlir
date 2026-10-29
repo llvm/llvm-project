@@ -692,52 +692,24 @@ func.func @negative_masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vecto
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_origin
+// CHECK-LABEL: func.func @partial_read_positions
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: vector.transfer
-// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [0], sizes = [4], strides = [1]
-// CHECK: return %[[R]] : vector<4xf32>
-func.func @partial_read_origin(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
-  %c0 = arith.constant 0 : index
-  %a = memref.alloca() : memref<8xf32>
-  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @partial_read_offset
-// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
-// CHECK-NOT: memref.alloca
-// CHECK-NOT: vector.transfer
-// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
-// CHECK: return %[[R]] : vector<4xf32>
-func.func @partial_read_offset(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+// CHECK: %[[ORIGIN:.*]] = vector.extract_strided_slice %[[V]] offsets = [0], sizes = [4], strides = [1]
+// CHECK: %[[MIDDLE:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
+// CHECK: %[[END:.*]] = vector.extract_strided_slice %[[V]] offsets = [4], sizes = [4], strides = [1]
+// CHECK: return %[[ORIGIN]], %[[MIDDLE]], %[[END]] : vector<4xf32>, vector<4xf32>, vector<4xf32>
+func.func @partial_read_positions(%v: vector<8xf32>, %pad: f32) -> (vector<4xf32>, vector<4xf32>, vector<4xf32>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
-  %a = memref.alloca() : memref<8xf32>
-  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @partial_read_at_end
-// CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
-// CHECK-NOT: memref.alloca
-// CHECK-NOT: vector.transfer
-// CHECK: %[[R:.*]] = vector.extract_strided_slice %[[V]] offsets = [4], sizes = [4], strides = [1]
-// CHECK: return %[[R]] : vector<4xf32>
-func.func @partial_read_at_end(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
-  %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %r = vector.transfer_read %a[%c4], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
-  return %r : vector<4xf32>
+  %origin = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  %middle = vector.transfer_read %a[%c2], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  %end = vector.transfer_read %a[%c4], %pad {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+  return %origin, %middle, %end : vector<4xf32>, vector<4xf32>, vector<4xf32>
 }
 
 // -----

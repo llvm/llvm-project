@@ -12,8 +12,8 @@
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
 //
-// A read uses the slot's current value or extracts an in-bounds sub-vector;
-// a write defines its next value.
+// A read uses the slot's current value or extracts a constant-offset sub-vector
+// from the slot vector; a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
 // sub-vector from the parent, and writes insert it back into the parent.
 // Dynamic subview slots hold the whole static parent vector. Reads
@@ -90,9 +90,17 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   return true;
 }
 
-/// Return constant offsets for a fixed-size read contained in the slot vector.
-/// Static slots must cover their memref extent. Dynamic subview slots hold the
-/// whole parent vector; reads use an extent mask to pad lanes outside the view.
+/// Return offsets for a constant-offset sub-vector read from the slot vector.
+/// Requires:
+/// - The transfer's only blocking use is its memref slot base.
+/// - Read and slot vectors have fixed sizes, equal ranks and element types.
+/// - The permutation map is identity and indices are constant and nonnegative.
+/// - The read slice is contained in the slot vector.
+/// - The memref shape matches the slot vector, or it is a zero-offset,
+///   unit-stride, same-rank dynamic subview of a static parent.
+///
+/// For dynamic subviews, containment is in the whole parent vector, not the
+/// runtime extent. Reads use an extent mask to select padding outside the view.
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
