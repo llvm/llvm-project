@@ -849,8 +849,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     // this result if necessary for performance. This does not appear to be
     // a common problem in practice.
     if ((GV1 || GV2) && GV1 != GV2 &&
-        getAnalysisOptions(UV1->getContext())
-            .enable_unsafe_globalsmodref_alias_results)
+        Opts.enable_unsafe_globalsmodref_alias_results)
       return AliasResult::NoAlias;
 
     // Check for a special case where a non-escaping global can be used to
@@ -896,8 +895,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
   // strictly safe but we can fake this result if necessary for performance.
   // This does not appear to be a common problem in practice.
   if ((GV1 || GV2) && GV1 != GV2 &&
-      getAnalysisOptions(UV1->getContext())
-          .enable_unsafe_globalsmodref_alias_results)
+      Opts.enable_unsafe_globalsmodref_alias_results)
     return AliasResult::NoAlias;
 
   return AliasResult::MayAlias;
@@ -957,12 +955,13 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
 }
 
 GlobalsAAResult::GlobalsAAResult(
-    const DataLayout &DL,
+    const AnalysisOptions &Opts, const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : DL(DL), GetTLI(std::move(GetTLI)) {}
+    : Opts(Opts), DL(DL), GetTLI(std::move(GetTLI)) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), DL(Arg.DL), GetTLI(std::move(Arg.GetTLI)),
+    : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL),
+      GetTLI(std::move(Arg.GetTLI)),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -980,7 +979,7 @@ GlobalsAAResult::~GlobalsAAResult() = default;
 /*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
     Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
     CallGraph &CG) {
-  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
+  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout(), GetTLI);
 
   // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
   Result.CollectSCCMembership(CG);

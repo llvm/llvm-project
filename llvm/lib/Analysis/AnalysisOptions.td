@@ -314,6 +314,10 @@ defm : ValueField<"memssa-check-limit", "unsigned", "100",
 // ModuleSummaryAnalysis.cpp
 defm : BoolField<"enable-memprof-indirect-call-support", "true",
   "Enable MemProf support for summarizing and cloning indirect calls">;
+// Force edges cold, which blocks importing when -import-cold-multiplier is 0.
+// Useful for debugging.
+defm : EnumField<"force-summary-edges-cold", "ForceSummaryHotness", "ForceSummaryHotness::None", "none,all-non-critical,all", ["ForceSummaryHotness::None", "ForceSummaryHotness::AllNonCritical", "ForceSummaryHotness::All"],
+  "Force all edges in the function summary to cold">;
 defm : ValueField<"module-summary-dot-file", "StringRef", "",
   "File to emit dot graph of new summary into">;
 
@@ -372,6 +376,7 @@ defm : BoolField<"verify-scev-strict", "false",
   "Enable stricter verification with -verify-scev is passed">;
 
 // StackSafetyAnalysis.cpp
+defm : ValueField<"stack-safety-max-iterations", "int", "20", "">;
 defm : BoolField<"stack-safety-print", "false", "">;
 defm : BoolField<"stack-safety-run", "false", "">;
 

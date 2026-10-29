@@ -38,6 +38,9 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+AssumptionCache::AssumptionCache(Function &F, TargetTransformInfo *TTI)
+    : Opts(getAnalysisOptions(F)), F(F), TTI(TTI) {}
+
 SmallVector<AssumptionCache::ResultElem, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
   // Try using find_as first to avoid creating extra value handles just for the
@@ -103,14 +106,13 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
-  unsigned MaxAssumesPerValue = getAnalysisOptions(F).max_assumes_per_value;
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV.Assume);
 
     // Callers walk every entry cached for a value, including the ones left
     // behind by erased assumptions, so cache no more of them than an analysis
     // should walk.
-    if (AVV.size() >= MaxAssumesPerValue)
+    if (AVV.size() >= Opts.max_assumes_per_value)
       continue;
 
     if (llvm::none_of(AVV, [&](ResultElem &Elem) {
@@ -175,9 +177,8 @@ void AssumptionCache::transferAffectedValuesInCache(Value *OV, Value *NV) {
   if (AVI == AffectedValues.end())
     return;
 
-  unsigned MaxAssumesPerValue = getAnalysisOptions(F).max_assumes_per_value;
   for (auto &A : AVI->second) {
-    if (NAVV.size() >= MaxAssumesPerValue)
+    if (NAVV.size() >= Opts.max_assumes_per_value)
       break;
     if (!llvm::is_contained(NAVV, A))
       NAVV.push_back(A);

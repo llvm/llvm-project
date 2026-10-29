@@ -65,20 +65,7 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "module-summary-analysis"
 
-// Option to force edges cold which will block importing when the
-// -import-cold-multiplier is set to 0. Useful for debugging.
 namespace llvm {
-FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
-    FunctionSummary::FSHT_None;
-
-static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
-    "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
-    cl::desc("Force all edges in the function summary to cold"),
-    cl::values(clEnumValN(FunctionSummary::FSHT_None, "none", "None."),
-               clEnumValN(FunctionSummary::FSHT_AllNonCritical,
-                          "all-non-critical", "All non-critical edges."),
-               clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
-
 // This can be used to override the number of callees created from VP metadata
 // normally taken from the -icp-max-prom option with a larger amount, if useful
 // for analysis. Use a separate option so that we can control the number of
@@ -473,7 +460,7 @@ static void computeFunctionSummary(
         auto ScaledCount = PSI->getProfileCount(*CB, BFI);
         auto Hotness = ScaledCount ? getHotness(*ScaledCount, PSI)
                                    : CalleeInfo::HotnessType::Unknown;
-        if (ForceSummaryEdgesCold != FunctionSummary::FSHT_None)
+        if (Opts.force_summary_edges_cold != ForceSummaryHotness::None)
           Hotness = CalleeInfo::HotnessType::Cold;
 
         // Use the original CalledValue, in case it was an alias. We want
@@ -709,7 +696,7 @@ static void computeFunctionSummary(
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
     CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        ForceSummaryEdgesCold == FunctionSummary::FSHT_All
+        Opts.force_summary_edges_cold == ForceSummaryHotness::All
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
 

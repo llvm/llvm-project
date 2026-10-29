@@ -42,6 +42,8 @@ enum class DependenceTestType {
   BanerjeeMIV,
 };
 
+enum class ForceSummaryHotness { None, AllNonCritical, All };
+
 enum class InlinePriorityMode : int { Size, Cost, CostBenefit, ML };
 
 enum class StencilMergePolicy { Off, Auto, Force };
