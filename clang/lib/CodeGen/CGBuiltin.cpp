@@ -272,9 +272,10 @@ Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-Value *MakeBinaryAtomicValue(
-    CodeGenFunction &CGF, llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
-    AtomicOrdering Ordering) {
+Value *MakeBinaryAtomicValue(CodeGenFunction &CGF,
+                             llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
+                             AtomicOrdering Ordering,
+                             llvm::SyncScope::ID SSID) {
 
   QualType T = E->getType();
   assert(E->getArg(0)->getType()->isPointerType());
@@ -292,7 +293,7 @@ Value *MakeBinaryAtomicValue(
   Val = EmitToInt(CGF, Val, T, IntType);
 
   llvm::Value *Result =
-      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering, SSID);
   // Consider atomics to be volatile in MS kernel mode.
   if (CGF.CGM.getLangOpts().Kernel)
     cast<llvm::AtomicRMWInst>(Result)->setVolatile(true);
@@ -375,7 +376,8 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                               bool ReturnBool,
                               llvm::AtomicOrdering SuccessOrdering,
-                              llvm::AtomicOrdering FailureOrdering) {
+                              llvm::AtomicOrdering FailureOrdering,
+                              llvm::SyncScope::ID SSID) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -388,7 +390,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering, SSID);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),

@@ -91,11 +91,12 @@ llvm::Value *EmitFromInt(clang::CodeGen::CodeGenFunction &CGF, llvm::Value *V,
 clang::CodeGen::Address CheckAtomicAlignment(clang::CodeGen::CodeGenFunction &CGF,
                                              const clang::CallExpr *E);
 
-llvm::Value *MakeBinaryAtomicValue(clang::CodeGen::CodeGenFunction &CGF,
-                                   llvm::AtomicRMWInst::BinOp Kind,
-                                   const clang::CallExpr *E,
-                                   llvm::AtomicOrdering Ordering =
-                                      llvm::AtomicOrdering::SequentiallyConsistent);
+llvm::Value *
+MakeBinaryAtomicValue(clang::CodeGen::CodeGenFunction &CGF,
+                      llvm::AtomicRMWInst::BinOp Kind, const clang::CallExpr *E,
+                      llvm::AtomicOrdering Ordering =
+                          llvm::AtomicOrdering::SequentiallyConsistent,
+                      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
 llvm::Value *EmitOverflowIntrinsic(clang::CodeGen::CodeGenFunction &CGF,
                                    const llvm::Intrinsic::ID IntrinsicID,
@@ -103,9 +104,11 @@ llvm::Value *EmitOverflowIntrinsic(clang::CodeGen::CodeGenFunction &CGF,
                                    llvm::Value *Y,
                                    llvm::Value *&Carry);
 
-llvm::Value *MakeAtomicCmpXchgValue(clang::CodeGen::CodeGenFunction &CGF,
-                                    const clang::CallExpr *E, bool ReturnBool,
-                                    llvm::AtomicOrdering SuccessOrdering,
-                                    llvm::AtomicOrdering FailureOrdering);
+llvm::Value *
+MakeAtomicCmpXchgValue(clang::CodeGen::CodeGenFunction &CGF,
+                       const clang::CallExpr *E, bool ReturnBool,
+                       llvm::AtomicOrdering SuccessOrdering,
+                       llvm::AtomicOrdering FailureOrdering,
+                       llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
 #endif
