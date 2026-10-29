@@ -55,7 +55,7 @@ enum class AsyncStages : uint32_t {
   RESERVED_10 = 1u << 10,
 
   RESERVED = RESERVED_4 | RESERVED_6 | RESERVED_7 | RESERVED_8 | RESERVED_9 |
-             RESERVED_10,
+      RESERVED_10,
 
   // Bits that a mask may legally set. Reserved stages are included: naming a
   // stage whose operations do not exist yet is harmless, and accepting the bit
