@@ -487,6 +487,27 @@ func.func @extSIOfExtSI(%arg0: i1) -> i64 {
   return %ext2 : i64
 }
 
+// CHECK-LABEL: @indexCastOfTruncINSW
+//       CHECK:   %[[index:.+]] = arith.index_cast %arg0 : i64 to index
+//       CHECK:   return %[[index]] : index
+func.func @indexCastOfTruncINSW(%arg0: i64) -> index {
+  %trunc = arith.trunci %arg0 overflow<nsw> : i64 to i32
+  %index = arith.index_cast %trunc : i32 to index
+  return %index : index
+}
+
+// CHECK-LABEL: @indexCastOfSubITruncINSW
+//       CHECK:   %[[offset:.+]] = arith.extsi %arg1 : i32 to i64
+//       CHECK:   %[[diff:.+]] = arith.subi %arg0, %[[offset]] overflow<nsw> : i64
+//       CHECK:   %[[index:.+]] = arith.index_cast %[[diff]] : i64 to index
+//       CHECK:   return %[[index]] : index
+func.func @indexCastOfSubITruncINSW(%arg0: i64, %arg1: i32) -> index {
+  %trunc = arith.trunci %arg0 overflow<nsw> : i64 to i32
+  %diff = arith.subi %trunc, %arg1 overflow<nsw> : i32
+  %index = arith.index_cast %diff : i32 to index
+  return %index : index
+}
+
 // -----
 
 // CHECK-LABEL: @cmpIExtSINE
