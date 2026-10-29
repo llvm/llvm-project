@@ -85,6 +85,10 @@ void SuppressionContext::ParseFromFile(const char *filename) {
     Die();
   }
 
+  // Sanity check: Ensure the file contents are null-terminated.
+  // Unlikely to fail because the buffer is intended to be an anonymous mmap
+  // which is zero-initialized.
+  CHECK(file_contents[contents_size] == '\0');
   Parse(file_contents);
   UnmapOrDie(file_contents, buffer_size);
 }
