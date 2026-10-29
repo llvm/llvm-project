@@ -5116,25 +5116,6 @@ template <class FieldTypeA, class FieldTypeB> struct MDEitherFieldImpl {
         WhatIs(IsInvalid) {}
 };
 
-/// The MDField base type does not play nice with this templated variation,
-/// so MDFLMDStorageField replicates the interface of MDField instead of
-/// inheriting from it.
-/// The underlying FLMD node parsers need a reference to the owning
-/// MDFunctionLocalContext so that we can store forward references as needed.
-template <class FLMDTy> struct MDFLMDStorageField {
-  SmallVector<FLMDTy> Val;
-  MDFunctionLocalContext *Context;
-  bool Seen;
-
-  void assign(SmallVectorImpl<FLMDTy> &&Val) {
-    Seen = true;
-    this->Val = std::move(Val);
-  }
-
-  explicit MDFLMDStorageField(MDFunctionLocalContext *Context)
-      : Val(), Context(Context), Seen(false) {}
-};
-
 struct MDUnsignedField : public MDFieldImpl<uint64_t> {
   uint64_t Max;
 
@@ -5924,28 +5905,6 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
-template <>
-bool LLParser::parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
-                              MDFunctionLocalContext *Context) {
-  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "srcLoc")
-    return tokError("expected !!srcLoc");
-  Lex.Lex();
-  // Parse !!srcLoc arguments.
-  if (parseToken(lltok::lparen, "expected '(' at start of !!srcLoc"))
-    return true;
-#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(line, LineField, );                                                 \
-  OPTIONAL(column, ColumnField, );                                             \
-  REQUIRED(scope, MDUnsignedField, (0, UINT16_MAX - 1));
-  PARSE_MD_FIELDS_CONTENTS();
-#undef VISIT_MD_FIELDS
-  if (parseToken(lltok::rparen, "expected ')' at end of !!srcLoc"))
-    return true;
-  Result = FLSrcLoc(line.Val, column.Val, scope.Val);
-  return false;
-}
-
-template <>
 bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
                               MDFunctionLocalContext *Context) {
   if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "scope")
@@ -5971,7 +5930,26 @@ bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
   return false;
 }
 
-template <>
+bool LLParser::parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "srcLoc")
+    return tokError("expected !!srcLoc");
+  Lex.Lex();
+  // Parse !!srcLoc arguments.
+  if (parseToken(lltok::lparen, "expected '(' at start of !!srcLoc"))
+    return true;
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  REQUIRED(scope, MDUnsignedField, (0, UINT16_MAX - 1));
+  PARSE_MD_FIELDS_CONTENTS();
+#undef VISIT_MD_FIELDS
+  if (parseToken(lltok::rparen, "expected ')' at end of !!srcLoc"))
+    return true;
+  Result = FLSrcLoc(line.Val, column.Val, scope.Val);
+  return false;
+}
+
 bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
                               MDFunctionLocalContext *Context) {
   if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "inlinedCall")
@@ -6029,40 +6007,12 @@ bool LLParser::parseFLMDStorage(LocTy Loc, SmallVectorImpl<FLMDTy> &Result,
       return true;
     // For ergonomic reasons, we allow a trailing comma in storage arrays.
     if (Lex.getKind() == lltok::rsquare)
-      continue;
+      break;
     if (parseFLMDEntry(Loc, NextEntry, EntryIndex++, Context))
       return true;
     Result.push_back(NextEntry);
   }
   Lex.Lex();
-  return false;
-}
-
-template <>
-bool LLParser::parseMDField(LocTy Loc, StringRef Name,
-                            MDFLMDStorageField<FLSrcLoc> &Result) {
-  SmallVector<FLSrcLoc> StorageArray;
-  if (parseFLMDStorage(Loc, StorageArray, Result.Context))
-    return true;
-  Result.assign(std::move(StorageArray));
-  return false;
-}
-template <>
-bool LLParser::parseMDField(LocTy Loc, StringRef Name,
-                            MDFLMDStorageField<FLScope> &Result) {
-  SmallVector<FLScope> StorageArray;
-  if (parseFLMDStorage(Loc, StorageArray, Result.Context))
-    return true;
-  Result.assign(std::move(StorageArray));
-  return false;
-}
-template <>
-bool LLParser::parseMDField(LocTy Loc, StringRef Name,
-                            MDFLMDStorageField<FLInlinedCall> &Result) {
-  SmallVector<FLInlinedCall> StorageArray;
-  if (parseFLMDStorage(Loc, StorageArray, Result.Context))
-    return true;
-  Result.assign(std::move(StorageArray));
   return false;
 }
 
@@ -6078,19 +6028,42 @@ bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
   // but the storage field parsing logic is much simpler if we can pass a valid
   // context to the parser, so we use a deferred approach.
   MDFunctionLocalContext *FLMD = MDFunctionLocalContext::getDistinct(Context);
-#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  OPTIONAL(nonDebug, MDBoolField, (false));                                    \
-  OPTIONAL(scopes, MDFLMDStorageField<FLScope>, (FLMD));                       \
-  OPTIONAL(srcLocs, MDFLMDStorageField<FLSrcLoc>, (FLMD));                     \
-  OPTIONAL(inlinedCalls, MDFLMDStorageField<FLInlinedCall>, (FLMD));
-  PARSE_MD_FIELDS();
-#undef VISIT_MD_FIELDS
+  MDBoolField NonDebug(false);
+  bool SeenScopes = false;
+  SmallVector<FLScope> ScopesStorage;
+  bool SeenSrcLocs = false;
+  SmallVector<FLSrcLoc> SrcLocsStorage;
+  bool SeenInlinedCalls = false;
+  SmallVector<FLInlinedCall> InlinedCallsStorage;
+  auto ParseStorageField = [&](StringRef Name, bool &Seen, auto &Storage) {
+    if (Seen)
+      return tokError("field '" + Name + "' cannot be specified more than once");
+    Seen = true;
+
+    LocTy Loc = Lex.getLoc();
+    Lex.Lex();
+    return parseFLMDStorage(Loc, Storage, FLMD);
+  };
+  LocTy ClosingLoc;
+  if (parseMDFieldsImpl([&]() {
+        StringRef Label = Lex.getStrVal();
+        if (Label == "nonDebug")
+          return parseMDField("nonDebug", NonDebug);
+        if (Label == "scopes")
+          return ParseStorageField("scopes", SeenScopes, ScopesStorage);
+        if (Label == "srcLocs")
+          return ParseStorageField("srcLocs", SeenSrcLocs, SrcLocsStorage);
+        if (Label == "inlinedCalls")
+          return ParseStorageField("inlinedCalls", SeenInlinedCalls, InlinedCallsStorage);
+        return tokError(Twine("invalid field '") + Label + "'");
+      }, ClosingLoc))
+    return true;
 
   // Write to FLMD fields directly to construct it efficiently.
-  FLMD->setNonDebug(nonDebug.Val);
-  FLMD->SrcLocs.append(srcLocs.Val);
-  FLMD->Scopes.append(scopes.Val);
-  FLMD->InlinedCalls.append(inlinedCalls.Val);
+  FLMD->setNonDebug(NonDebug.Val);
+  FLMD->SrcLocs.append(SrcLocsStorage);
+  FLMD->Scopes.append(ScopesStorage);
+  FLMD->InlinedCalls.append(InlinedCallsStorage);
   Result = FLMD;
   return false;
 }

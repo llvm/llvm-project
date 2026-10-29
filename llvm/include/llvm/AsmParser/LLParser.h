@@ -635,8 +635,11 @@ namespace llvm {
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);
 
-    template <class FLMDTy>
-    bool parseFLMDEntry(LocTy Loc, FLMDTy &Result, uint32_t Index,
+    bool parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
+                        MDFunctionLocalContext *Context);
+    bool parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
+                        MDFunctionLocalContext *Context);
+    bool parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
                         MDFunctionLocalContext *Context);
     template <class FLMDTy>
     bool parseFLMDStorage(LocTy Loc, SmallVectorImpl<FLMDTy> &Result,
