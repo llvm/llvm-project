@@ -62,6 +62,18 @@ public:
 
   llvm::DenseMap<llvm::FunctionType *, unsigned> funcTypeReturnIndex;
 
+  // Typed variants of a function type: an uncalled function (a kernel) whose
+  // pointer parameters have other pointees than the first function of its
+  // opaque type gets a type entry of its own, keyed by a placeholder type
+  // (never written) whose entry index typeIdx returns.
+  llvm::DenseMap<const llvm::Function *, llvm::Type *> funcVariant;
+  llvm::DenseMap<llvm::Type *, llvm::SmallVector<unsigned, 8>>
+      variantParamIndices;
+  llvm::DenseMap<llvm::Type *, unsigned> variantIndex;
+
+  // The type index of F's function type (its typed variant, if any).
+  unsigned functionTypeIdx(const llvm::Function *F);
+
   ValueEnumerator(llvm::Module &M, const PointeeTypeMap &PTM);
 
   bool frozen = false;
@@ -89,6 +101,8 @@ public:
 private:
   unsigned addType(llvm::Type *T);
   unsigned addFunctionType(llvm::FunctionType *FT, const llvm::Function *F);
+  llvm::SmallVector<unsigned, 8> paramIndices(llvm::FunctionType *FT,
+                                              const llvm::Function *F);
   unsigned addEntry(TypeEntry E);
   void collectMetadataConstants(const llvm::MDNode *N);
   void

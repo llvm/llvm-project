@@ -729,7 +729,7 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
         W.EmitRecord(bitc::MODULE_CODE_GLOBALVAR, Ops);
       } else if (auto *Fn = dyn_cast<Function>(V)) {
         SmallVector<uint64_t, 17> Ops;
-        Ops.push_back(E.typeIdx(Fn->getFunctionType()));
+        Ops.push_back(E.functionTypeIdx(Fn));
         Ops.push_back(Fn->getCallingConv());
         Ops.push_back(Fn->isDeclaration() ? 1 : 0);
         Ops.push_back(encodeLinkage(Fn->getLinkage()));

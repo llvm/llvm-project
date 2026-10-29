@@ -65,9 +65,15 @@ void emitTypeBlock(BitstreamWriter &W, ValueEnumerator &E) {
         V.push_back(RIt->second);
       else
         V.push_back(E.typeIdx(FT->getReturnType()));
-      // Use stored per-param indices for correct multi-pointee support
+      // Use stored per-param indices for correct multi-pointee support (a
+      // typed variant's own)
+      auto VIt = Entry.pointee ? E.variantParamIndices.find(Entry.pointee)
+                               : E.variantParamIndices.end();
       auto PIt = E.funcTypeParamIndices.find(FT);
-      if (PIt != E.funcTypeParamIndices.end()) {
+      if (VIt != E.variantParamIndices.end()) {
+        for (unsigned Idx : VIt->second)
+          V.push_back(Idx);
+      } else if (PIt != E.funcTypeParamIndices.end()) {
         for (unsigned Idx : PIt->second)
           V.push_back(Idx);
       } else {
