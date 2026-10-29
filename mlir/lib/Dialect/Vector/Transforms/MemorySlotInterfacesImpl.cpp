@@ -90,17 +90,13 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   return true;
 }
 
-/// Return offsets for a constant-offset sub-vector read from the slot vector.
-/// Requires:
-/// - The transfer's only blocking use is its memref slot base.
-/// - Read and slot vectors have fixed sizes, equal ranks and element types.
-/// - The permutation map is identity and indices are constant and nonnegative.
-/// - The read slice is contained in the slot vector.
-/// - The memref shape matches the slot vector, or it is a zero-offset,
-///   unit-stride, same-rank dynamic subview of a static parent.
+/// Return constant offsets for a slice contained in the slot vector. Requires:
+/// - Fixed-size vectors of equal rank and element type.
+/// - Identity map and constant nonnegative indices.
+/// - Matching memref/slot shapes, or a zero-offset, unit-stride, same-rank
+///   dynamic subview of a static parent.
 ///
-/// For dynamic subviews, containment is in the whole parent vector, not the
-/// runtime extent. Reads use an extent mask to select padding outside the view.
+/// Dynamic subview reads use an extent mask to pad outside the runtime extent.
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
