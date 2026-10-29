@@ -2,9 +2,9 @@
 
 ; The sign/zero extends feeding the multiply are folded into a single
 ; SMADDLrrr/UMADDLrrr (smull/umull). The extended value is described by a
-; dbg_value; once the dead G_SEXT/G_ZEXT is erased during instruction
-; selection the variable location is lost, even though it could be
-; expressed in terms of the 32-bit source register.
+; dbg_value; when the dead G_SEXT/G_ZEXT is erased during instruction
+; selection, the variable location must be salvaged in terms of the 32-bit
+; source register using a sign/zero extension DIExpression.
 
 ; CHECK-DAG: ![[WIDE_S:[0-9]+]] = !DILocalVariable(name: "wide_s"
 ; CHECK-DAG: ![[WIDE_U:[0-9]+]] = !DILocalVariable(name: "wide_u"
@@ -13,7 +13,7 @@ define i64 @smull_dbg(i32 %a, i32 %b) !dbg !5 {
 ; CHECK-LABEL: name: smull_dbg
 ; CHECK:       [[A:%[0-9]+]]:gpr32 = COPY $w0
 ; CHECK:       [[B:%[0-9]+]]:gpr32 = COPY $w1
-; CHECK:       DBG_VALUE $noreg, $noreg, ![[WIDE_S]], !DIExpression()
+; CHECK:       DBG_VALUE [[A]], $noreg, ![[WIDE_S]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value)
 ; CHECK-NEXT:  {{%[0-9]+}}:gpr64 = nsw SMADDLrrr [[A]], [[B]], $xzr
 entry:
   %ext.a = sext i32 %a to i64, !dbg !10
@@ -27,7 +27,7 @@ define i64 @umull_dbg(i32 %a, i32 %b) !dbg !15 {
 ; CHECK-LABEL: name: umull_dbg
 ; CHECK:       [[A:%[0-9]+]]:gpr32 = COPY $w0
 ; CHECK:       [[B:%[0-9]+]]:gpr32 = COPY $w1
-; CHECK:       DBG_VALUE $noreg, $noreg, ![[WIDE_U]], !DIExpression()
+; CHECK:       DBG_VALUE [[A]], $noreg, ![[WIDE_U]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_stack_value)
 ; CHECK-NEXT:  {{%[0-9]+}}:gpr64 = nuw UMADDLrrr [[A]], [[B]], $xzr
 entry:
   %ext.a = zext i32 %a to i64, !dbg !20
