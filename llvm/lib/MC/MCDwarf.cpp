@@ -1601,7 +1601,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     Offset = Offset / dataAlignmentFactor;
 
     if (Offset < 0) {
