@@ -230,7 +230,9 @@ struct HasPadding {
 // CIR:         cir.return
 
 // LLVM-LABEL: define {{.*}} @_Z11resetPaddedP10HasPadding(
-// LLVM:    call {{.*}} @_ZN10HasPaddingaSEOS_(ptr {{.*}} [[RP_P]], ptr {{.*}} [[RP_TMP]])
+// LLVM:         [[RP_TMP:%.*]] = alloca %struct.HasPadding, align 8
+// LLVM:         [[RP_P:%.*]] = load ptr, ptr {{.*}}
+// LLVM-NEXT:    call {{.*}} @_ZN10HasPaddingaSEOS_(ptr {{.*}} [[RP_P]], ptr {{.*}} [[RP_TMP]])
 
 // LLVM-LABEL: define {{.*}} @_ZN10HasPaddingaSEOS_(
 // LLVM:         [[HP_THIS:%.*]] = load ptr, ptr {{.*}}
