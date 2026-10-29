@@ -493,9 +493,6 @@ endfunction()
 #     will share nanobind types with other bindings packages. Expected to be unique
 #     per project (and per specific set of bindings, for projects with multiple
 #     bindings packages).
-#   MLIR_PYTHON_PACKAGE_PREFIX: Import name of the concrete package. Defaults to
-#     MLIR_PYTHON_PACKAGE_PREFIX; embedders must pass their own package name for
-#     stubgen, matching their C++ MLIR_PYTHON_PACKAGE_PREFIX definition.
 #   STUBGEN_DEPENDS_TARGETS: Extra package preparation targets needed before
 #     importing extensions (for example, colocating DLLs in the package).
 #   DECLARED_SOURCES: List of declared source groups to include. The entire
@@ -513,13 +510,10 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN;MLIR_PYTHON_PACKAGE_PREFIX"
+    "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES;STUBGEN_DEPENDS_TARGETS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS"
     ${ARGN})
 
-  if(NOT ARG_MLIR_PYTHON_PACKAGE_PREFIX)
-    set(ARG_MLIR_PYTHON_PACKAGE_PREFIX "${MLIR_PYTHON_PACKAGE_PREFIX}")
-  endif()
   if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) AND MLIR_BINDINGS_PYTHON_NB_DOMAIN)
     set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
   endif()
@@ -662,7 +656,7 @@ function(add_mlir_python_modules name)
         _mlir_python_add_extension_type_stub(${name} ${sources_target}
           ROOT_PREFIX "${ARG_ROOT_PREFIX}"
           INSTALL_PREFIX "${ARG_INSTALL_PREFIX}"
-          PACKAGE_PREFIX "${ARG_MLIR_PYTHON_PACKAGE_PREFIX}"
+          PACKAGE_PREFIX "${MLIR_PYTHON_PACKAGE_PREFIX}"
           DEPENDS_TARGETS ${_stubgen_inputs})
       endif()
     endforeach()
