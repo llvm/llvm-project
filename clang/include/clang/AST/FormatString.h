@@ -570,8 +570,6 @@ public:
         HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public"),
         IsSensitive("sensitive") {}
 
-  static PrintfSpecifier Parse(const char *beg, const char *end);
-
   // Methods for incrementally constructing the PrintfSpecifier.
   void setConversionSpecifier(const PrintfConversionSpecifier &cs) { CS = cs; }
   void setHasThousandsGrouping(const char *position) {
@@ -720,8 +718,6 @@ public:
                ASTContext &Ctx);
 
   void toString(raw_ostream &os) const;
-
-  static ScanfSpecifier Parse(const char *beg, const char *end);
 };
 
 } // namespace analyze_scanf
