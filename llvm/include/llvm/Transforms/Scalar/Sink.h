@@ -22,8 +22,20 @@ class Function;
 
 /// Move instructions into successor blocks when possible.
 class SinkingPass : public OptionalPassInfoMixin<SinkingPass> {
+  /// Do not sink an instruction into a block that postdominates it if that
+  /// would keep more operand bits live than it frees. Such a move saves no
+  /// execution and can only increase register pressure. On targets with
+  /// divergent branches, only divergent values are counted.
+  bool AvoidPostDominators;
+
 public:
+  explicit SinkingPass(bool AvoidPostDominators = false)
+      : AvoidPostDominators(AvoidPostDominators) {}
+
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 }
 

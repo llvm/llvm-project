@@ -1719,7 +1719,7 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None) {
-    addPass(createSinkingPass());
+    addPass(createSinkingPass(/*AvoidPostDominators=*/true));
     addPass(createAMDGPULateCodeGenPrepareLegacyPass());
   }
 
@@ -2486,7 +2486,7 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addFunctionPass(FlattenCFGPass(), PMW);
-    addFunctionPass(SinkingPass(), PMW);
+    addFunctionPass(SinkingPass(/*AvoidPostDominators=*/true), PMW);
     addFunctionPass(AMDGPULateCodeGenPreparePass(getTM()), PMW);
   }
 
