@@ -39,6 +39,24 @@ int __attribute__((target_clones("sse4.2", "default"))) redecl7(void);
 // expected-note@-2 {{previous declaration is here}}
 int __attribute__((target("sse4.2"))) redecl7(void) { return 1; }
 
+// GH149372
+int __attribute__((target_clones("sse4.2", "default"))) redecl8(void) { return 1; }
+int redecl8(void);
+int __attribute__((target_clones("sse4.2", "default"))) redecl8(void);
+
+int __attribute__((target_clones("sse4.2", "default"))) redecl9(void);
+int redecl9(void);
+int __attribute__((target_clones("sse4.2", "default"))) redecl9(void);
+int redecl9(void);
+int __attribute__((target_clones("sse4.2", "default"))) redecl9(void) { return 1; }
+int redecl9(void);
+
+int __attribute__((target_clones("sse4.2", "default"))) redecl10(void) { return 1; }
+int redecl10(void);
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
+// expected-note@-2 {{previous declaration is here}}
+int __attribute__((target_clones("arch=atom", "default"))) redecl10(void);
+
 int __attribute__((target("sse4.2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioning attributes cannot be combined}}
 // expected-note@-2 {{previous declaration is here}}
