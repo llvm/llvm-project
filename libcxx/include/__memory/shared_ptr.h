@@ -264,6 +264,21 @@ inline const bool __shared_ptr_nullptr_deleter_ctor_reqs_v =
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI
 #endif
 
+template <class _Tp, class _Yp>
+struct __copy_arrayness_to {
+  using type _LIBCPP_NODEBUG = _Yp;
+};
+
+template <class _Tp, class _Yp>
+struct __copy_arrayness_to<_Tp[], _Yp> {
+  using type _LIBCPP_NODEBUG = _Yp[];
+};
+
+template <class _Tp, size_t _Count, class _Yp>
+struct __copy_arrayness_to<_Tp[_Count], _Yp> {
+  using type _LIBCPP_NODEBUG = _Yp[];
+};
+
 template <class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI shared_ptr {
   struct __nullptr_sfinae_tag {};
@@ -300,11 +315,7 @@ public:
                               ,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
-#if _LIBCPP_STD_VER >= 17
-    unique_ptr<_If<is_array_v<_Tp>, _Yp[], _Yp>> __hold(__p);
-#else
-    unique_ptr<_Yp> __hold(__p);
-#endif
+    unique_ptr<typename __copy_arrayness_to<_Tp, _Yp>::type> __hold(__p);
     typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
     typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT> _CntrlBlk;
     __cntrl_ = new _CntrlBlk(__p, __shared_ptr_default_delete<_Tp, _Yp>(), _AllocT());
