@@ -70,6 +70,35 @@ static Type *getLanesTypeFor(Type *Ty, Type *LaneTy, const DataLayout &DL) {
   return NumLanes > 1 ? VecUtils::getWideType(LaneTy, NumLanes) : LaneTy;
 }
 
+bool LoadStoreVec::canUnpackLoads(BndlRef<Instruction *> Loads,
+                                  FixedVectorType *VecTy) {
+  Type *VecElemTy = VecTy->getElementType();
+  return all_of(Loads, [this, VecElemTy](Instruction *I) {
+    return Reinterpret::canReinterpret(
+        getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
+  });
+}
+
+void LoadStoreVec::unpackLoads(LoadInst *VecLoad,
+                               BndlRef<Instruction *> Loads) {
+  // Lanes are counted in units of the vector's element type, so a load wider
+  // than that spans several lanes.
+  Type *VecElemTy = cast<FixedVectorType>(VecLoad->getType())->getElementType();
+  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    auto *OrigLoad = cast<LoadInst>(I);
+    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
+    if (!OrigLoad->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
+      Unpacked = Reinterpret::reinterpretValue(Unpacked, OrigLoad->getType(),
+                                               WhereIt, *Ctx, *DL);
+      OrigLoad->replaceAllUsesWith(Unpacked);
+    }
+    Lane += VecUtils::getNumLanes(VecTy);
+  }
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   if (!canVectorize(Loads))
     return nullptr;
@@ -274,17 +303,9 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   BasicBlock *BB = Stores[0]->getParent();
   // TODO: For now we only support load operands.
   // TODO: For now we don't cross BBs.
-  // TODO: For now don't vectorize if the loads have external uses.
   bool AllLoads = all_of(Operands, [BB](Value *V) {
     auto *LI = dyn_cast<LoadInst>(V);
-    if (LI == nullptr)
-      return false;
-    // TODO: For now we don't cross BBs.
-    if (LI->getParent() != BB)
-      return false;
-    if (LI->hasNUsesOrMore(2))
-      return false;
-    return true;
+    return LI != nullptr && LI->getParent() == BB;
   });
   bool AllConstants =
       all_of(Operands, [](Value *V) { return isa<Constant>(V); });
@@ -300,6 +321,16 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
+    // Loads with uses other than the stores are unpacked from the vector load.
+    bool HasExternalUses =
+        any_of(Loads, [](Instruction *I) { return I->hasNUsesOrMore(2); });
+    if (HasExternalUses) {
+      auto LdVecTy = canVectorize(Loads);
+      if (!LdVecTy || !canUnpackLoads(Loads, cast<FixedVectorType>(*LdVecTy))) {
+        Ctx->accept();
+        return false;
+      }
+    }
     VecOp = createVectorLoad(Loads);
     if (VecOp == nullptr) {
       Ctx->accept();
@@ -325,9 +356,14 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
-  if (AllLoads)
-    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
+  if (AllLoads) {
+    // The scalar stores are gone, so any remaining uses of the loads are
+    // external.
+    unpackLoads(cast<LoadInst>(VecOp), Loads);
+    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
+    DeadInstrMorgue.tryEraseDeadInstrs();
+  }
 
   return acceptOrRevert();
 }
@@ -338,13 +374,7 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   if (!VecTy)
     return nullptr;
 
-  // Each load is unpacked from the lanes it occupies in the vector and, for a
-  // chain of mixed types, reinterpreted back as the type of the load.
-  Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (any_of(Loads, [this, VecElemTy](Instruction *I) {
-        return !Reinterpret::canReinterpret(
-            getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
-      }))
+  if (!canUnpackLoads(Loads, cast<FixedVectorType>(*VecTy)))
     return nullptr;
 
   saveIR(Rgn);
@@ -355,23 +385,7 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
     return nullptr;
   }
 
-  // Lanes are counted in units of LaneTy, so a load wider than LaneTy spans
-  // several lanes.
-  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  unsigned Lane = 0;
-  for (Instruction *I : Loads) {
-    auto *OrigLoad = cast<LoadInst>(I);
-    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
-    unsigned NumLanes = VecUtils::getNumLanes(VecTy);
-    if (!OrigLoad->hasNUses(0)) {
-      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
-      Unpacked = Reinterpret::reinterpretValue(Unpacked, OrigLoad->getType(),
-                                               WhereIt, *Ctx, *DL);
-      OrigLoad->replaceAllUsesWith(Unpacked);
-    }
-    Lane += NumLanes;
-  }
-
+  unpackLoads(VecLoad, Loads);
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
 
