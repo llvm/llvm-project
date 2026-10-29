@@ -32,7 +32,7 @@ using namespace llvm;
 
 static StringRef knownBundleName(unsigned BundleTagID) {
   switch (BundleTagID) {
-#define ATTR(Name, Str)                                                        \
+#define ATTR(Name, Str, IsValueAttr)                                           \
   case LLVMContext::OB_##Name:                                                 \
     return #Str;
 #include "llvm/IR/BundleAttributes.def"

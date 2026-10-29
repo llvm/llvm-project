@@ -3875,6 +3875,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
+    bool CanMoveWholeAssume = true;
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
       auto RemoveBundle = [&, Idx = Idx]() -> Instruction * {
         if (II->getNumOperandBundles() == 1)
@@ -3882,7 +3883,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CallBase::removeOperandBundleAt(II, Idx);
       };
 
-      switch (getBundleAttrFromOBU(OBU)) {
+      auto BA = getBundleAttrFromOBU(OBU);
+      CanMoveWholeAssume &= isValueAttr(BA);
+      switch (BA) {
       case BundleAttr::None:
         llvm_unreachable("Unexpected Attribute");
       case BundleAttr::Align: {
@@ -4051,6 +4054,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Builder.CreateAssumption(Bundles);
         eraseInstFromFunction(*PrevAI);
         return eraseInstFromFunction(*II);
+      }
+
+      if (CanMoveWholeAssume) {
+        Instruction *NewSucc = II;
+        while (true) {
+          Instruction *Prev = NewSucc->getPrevNode();
+
+          // We've reached the start of the basic block - there is nowhere else
+          // to go.
+          if (!Prev || isa<AllocaInst, LandingPadInst, PHINode>(Prev))
+            break;
+
+          // If the previous instruction is a bundle assume, merge the two
+          // instead of stepping past.
+          if (auto *AI = dyn_cast<AssumeInst>(Prev);
+              AI && AI->hasOperandBundles())
+            break;
+
+          // If the previous instruction isn't guaranteed to transfer the assume
+          // may not hold before it.
+          if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
+            break;
+
+          // We assert on the previous instruction, so we can't move past it.
+          if (any_of(II->operands(), equal_to(Prev)))
+            break;
+
+          NewSucc = Prev;
+        }
+
+        if (NewSucc != II) {
+          II->moveBefore(NewSucc->getIterator());
+          return II;
+        }
       }
 
       // If the assume has operand bundles, the folds below will never work, so
