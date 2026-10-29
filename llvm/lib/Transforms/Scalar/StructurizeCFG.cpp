@@ -66,7 +66,8 @@ using BBValuePair = std::pair<BasicBlock *, Value *>;
 
 using RNVector = SmallVector<RegionNode *, 8>;
 using BBVector = SmallVector<BasicBlock *, 8>;
-using BranchVector = SmallVector<CondBrInst *, 8>;
+// Branch paired with the block whose predicates define its condition.
+using BranchVector = SmallVector<std::pair<CondBrInst *, BasicBlock *>, 8>;
 using BBValueVector = SmallVector<BBValuePair, 2>;
 
 using BBSet = SmallPtrSet<BasicBlock *, 8>;
@@ -641,16 +642,15 @@ void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
   BranchVector &Conds = Loops ? LoopConds : Conditions;
   Value *Default = Loops ? BoolTrue : BoolFalse;
 
-  for (CondBrInst *Term : Conds) {
+  for (auto [Term, Target] : Conds) {
     BasicBlock *Parent = Term->getParent();
-    BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
     unsigned Variable = PhiInserter.AddVariable("", Boolean);
     PhiInserter.AddAvailableValue(Variable, Loops ? SuccFalse : Parent,
                                   Default);
 
-    BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
+    BBPredicates &Preds = Loops ? LoopPreds[Target] : Predicates[Target];
 
     NearestCommonDominator Dominator(DT);
     Dominator.addBlock(Parent);
@@ -1153,7 +1153,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     // let it point to entry and next block
     CondBrInst *Br = CondBrInst::Create(BoolPoison, Entry, Next, Flow);
     Br->setDebugLoc(DL);
-    Conditions.push_back(Br);
+    Conditions.push_back({Br, Entry});
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
 
@@ -1195,19 +1195,12 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   CondBrInst *Br = CondBrInst::Create(BoolPoison, Next, LoopStart, LoopEnd);
   Br->setDebugLoc(DL);
-  LoopConds.push_back(Br);
+  BasicBlock *Header = Node->getEntry();
+  LoopConds.push_back({Br, Header});
 
-  if (BasicBlock *Header = Node->getEntry(); LoopStart != Header) {
-    // The backedge now targets the prefix block, so re-key the header's
-    // predicates under it: insertConditions() looks them up by block.
-    auto It = LoopPreds.find(Header);
-    assert(It != LoopPreds.end() && !It->second.empty() &&
-           "loop header has no gathered loop predicates");
-    BBPredicates HeaderPreds = std::move(It->second);
-    LoopPreds.erase(It);
-    LoopPreds[LoopStart] = std::move(HeaderPreds);
+  // The backedge targets the prefix block, so it must always enter the header.
+  if (LoopStart != Header)
     Predicates[Header][LoopEnd] = {BoolTrue, std::nullopt};
-  }
 
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
