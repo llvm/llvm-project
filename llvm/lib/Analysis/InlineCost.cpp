@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <limits>
+#include <memory>
 #include <optional>
 
 using namespace llvm;
@@ -91,6 +93,12 @@ static cl::opt<int> LocallyHotCallSiteThreshold(
 static cl::opt<int>
     InstrCost("inline-instr-cost", cl::Hidden, cl::init(5),
               cl::desc("Cost of a single instruction when inlining"));
+
+static cl::opt<unsigned> CallBaseReachingStoreScanLimit(
+    "inline-reaching-store-scan-limit", cl::Hidden, cl::init(64),
+    cl::desc(
+        "Maximum number of instructions scanned backwards from a call site "
+        "to collect the stores that reach it"));
 
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
@@ -192,6 +200,9 @@ protected:
 
   /// Getter for the cache of ephemeral values.
   function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache = nullptr;
+
+  /// The stores that are still in effect at the candidate call site.
+  std::unique_ptr<CallBaseReachingStoreSummary> CallBaseReachingStores;
 
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
@@ -339,6 +350,10 @@ protected:
   /// loads.
   bool EnableLoadElimination = true;
 
+  /// Simplify callee loads using the stores the caller made before the call,
+  /// until a callee instruction may clobber them.
+  bool UseCallBaseReachingStores = true;
+
   /// Whether we allow inlining for recursive call.
   bool AllowRecursiveCall = false;
 
@@ -365,6 +380,8 @@ protected:
   void disableSROA(Value *V);
   void findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB);
   void disableLoadElimination();
+  void invalidateCallBaseReachingStores();
+  void buildCallBaseReachingStores();
   bool isGEPFree(GetElementPtrInst &GEP);
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
@@ -1436,6 +1453,123 @@ void CallAnalyzer::disableLoadElimination() {
   }
 }
 
+void CallAnalyzer::invalidateCallBaseReachingStores() {
+  UseCallBaseReachingStores = false;
+  CallBaseReachingStores.reset();
+}
+
+void CallAnalyzer::buildCallBaseReachingStores() {
+  if (!UseCallBaseReachingStores || CallBaseReachingStores != nullptr)
+    return;
+
+  enum class Check { Shadowed, Disjoint, Conflict };
+
+  CallBaseReachingStores = std::make_unique<CallBaseReachingStoreSummary>();
+  BasicBlock *BB = CandidateCall.getParent();
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  Visited.insert(BB);
+
+  auto It = CandidateCall.getIterator();
+  unsigned NumInstrsChecked = 0;
+
+  while (NumInstrsChecked < CallBaseReachingStoreScanLimit) {
+    if (It == BB->begin()) {
+      // Reached the start of BB: continue into the unique predecessor, unless
+      // this is a join, the entry block, or a cycle.
+      BasicBlock *Pred = BB->getUniquePredecessor();
+      if (!Pred || !Visited.insert(Pred).second)
+        break;
+      BB = Pred;
+      It = BB->end();
+    }
+
+    Instruction &I = *--It;
+    ++NumInstrsChecked;
+
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isSimple())
+        break;
+
+      Value *Val = SI->getValueOperand();
+      TypeSize TS = DL.getTypeStoreSize(Val->getType());
+      if (TS.isScalable())
+        break;
+      uint64_t Size = TS.getFixedValue();
+
+      int64_t Off = 0;
+      Value *Base =
+          GetPointerBaseWithConstantOffset(SI->getPointerOperand(), Off, DL);
+      if (!Base)
+        break;
+
+      Check C = Check::Disjoint;
+
+      // Stores on the same base decide Shadowed / overlap.
+      auto BaseIt = CallBaseReachingStores->StoresByBase.find(Base);
+      if (BaseIt != CallBaseReachingStores->StoresByBase.end()) {
+        for (const CallBaseReachingStore &S : BaseIt->second) {
+          if (S.Offset == Off && S.Size == Size) {
+            C = Check::Shadowed;
+            break;
+          }
+          if (Off < S.Offset + (int64_t)S.Size &&
+              S.Offset < Off + (int64_t)Size) {
+            C = Check::Conflict;
+            break;
+          }
+        }
+      }
+
+      // A store to a new base is only recorded if it cannot alias the bases
+      // recorded so far. Two identified objects never alias; an unidentified
+      // base may alias any other base.
+      if (C == Check::Disjoint) {
+        auto &UnidentifiedBase = CallBaseReachingStores->UnidentifiedBase;
+
+        if (UnidentifiedBase) {
+          // An unidentified base is recorded, so any other base might alias it.
+          if (Base != *UnidentifiedBase)
+            C = Check::Conflict;
+        } else if (!isIdentifiedObject(Base) &&
+                   !CallBaseReachingStores->StoresByBase.empty()) {
+          // This base is unidentified, so it might alias the bases already
+          // recorded.
+          C = Check::Conflict;
+        }
+      }
+
+      if (C == Check::Shadowed)
+        continue; // a newer store already recorded this location
+      if (C == Check::Conflict)
+        break;
+
+      if (!isIdentifiedObject(Base))
+        CallBaseReachingStores->UnidentifiedBase = Base;
+      CallBaseReachingStores->StoresByBase[Base].push_back({Off, Size, Val});
+      continue;
+    }
+
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isSimple())
+        break;
+      continue;
+    }
+
+    if (isAssumeLikeIntrinsic(&I))
+      continue;
+
+    if (I.mayWriteToMemory() || I.mayHaveSideEffects())
+      break;
+  }
+
+  LLVM_DEBUG({
+    for (const auto &[Base, Stores] : CallBaseReachingStores->StoresByBase)
+      for (const CallBaseReachingStore &Store : Stores)
+        dbgs() << "Reaching store: " << *Store.Val << " at " << *Base << " + "
+               << Store.Offset << ", size " << Store.Size << "\n";
+  });
+}
+
 /// Accumulate a constant GEP offset into an APInt if possible.
 ///
 /// Returns false if unable to compute the offset for any reason. Respects any
@@ -2253,6 +2387,37 @@ bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
 }
 
 bool CallAnalyzer::visitLoad(LoadInst &I) {
+  if (UseCallBaseReachingStores && I.getParent() == &F.getEntryBlock()) {
+    if (!I.isSimple()) {
+      invalidateCallBaseReachingStores();
+    } else {
+      auto [Base, Off] = ConstantOffsetPtrs.lookup(I.getPointerOperand());
+      TypeSize TS = DL.getTypeStoreSize(I.getType());
+
+      if (Base && Off.isSignedIntN(64) && !TS.isScalable()) {
+        buildCallBaseReachingStores();
+        auto It = CallBaseReachingStores->StoresByBase.find(Base);
+        if (It != CallBaseReachingStores->StoresByBase.end()) {
+          for (const CallBaseReachingStore &Store : It->second) {
+            if (Store.Offset != Off.getSExtValue() ||
+                Store.Size != TS.getFixedValue())
+              continue;
+            if (Store.Val->getType() != I.getType())
+              break;
+
+            // The caller stored this value right before the call, so the load
+            // goes away after inlining. Later loads of the address can reuse
+            // it through load elimination.
+            LoadAddrSet.insert(I.getPointerOperand());
+            if (auto *C = dyn_cast<Constant>(Store.Val))
+              SimplifiedValues[&I] = C;
+            return true;
+          }
+        }
+      }
+    }
+  }
+
   if (handleSROA(I.getPointerOperand(), I.isSimple()))
     return true;
 
@@ -2270,6 +2435,43 @@ bool CallAnalyzer::visitLoad(LoadInst &I) {
 }
 
 bool CallAnalyzer::visitStore(StoreInst &I) {
+  // This store may overwrite memory the caller stored to before the call, which
+  // would make the reaching stores stale. CallBaseReachingStores only simplify
+  // loads in the entry block as of now, so only stores there matter.
+  if (UseCallBaseReachingStores && I.getParent() == &F.getEntryBlock()) {
+    Value *Ptr = I.getPointerOperand();
+    Value *Base = ConstantOffsetPtrs.lookup(Ptr).first;
+
+    if (!I.isSimple()) {
+      invalidateCallBaseReachingStores();
+    } else if (!Base) {
+      // We don't know which caller object is written, unless it is the callee's
+      // own stack memory, which cannot collide with the caller's stores.
+      if (!isa<AllocaInst>(getUnderlyingObject(Ptr)))
+        invalidateCallBaseReachingStores();
+    } else {
+      buildCallBaseReachingStores();
+      auto &StoresByBase = CallBaseReachingStores->StoresByBase;
+      auto It = StoresByBase.find(Base);
+      if (It != StoresByBase.end()) {
+        // The callee overwrites a base we recorded.
+        StoresByBase.erase(It);
+        if (CallBaseReachingStores->UnidentifiedBase == Base)
+          CallBaseReachingStores->UnidentifiedBase.reset();
+      } else if (!isIdentifiedObject(Base)) {
+        // An unknown pointer may alias any recorded base.
+        invalidateCallBaseReachingStores();
+      } else {
+        // Base is a known object, so it can only alias a recorded base we know
+        // nothing about.
+        if (CallBaseReachingStores->UnidentifiedBase) {
+          StoresByBase.erase(*CallBaseReachingStores->UnidentifiedBase);
+          CallBaseReachingStores->UnidentifiedBase.reset();
+        }
+      }
+    }
+  }
+
   if (handleSROA(I.getPointerOperand(), I.isSimple()))
     return true;
 
@@ -2408,8 +2610,10 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     if (!F || F->getFunctionType() != Call.getFunctionType()) {
       onCallArgumentSetup(Call);
 
-      if (!Call.onlyReadsMemory())
+      if (!Call.onlyReadsMemory()) {
         disableLoadElimination();
+        invalidateCallBaseReachingStores();
+      }
       return Base::visitCallBase(Call);
     }
   }
@@ -2425,8 +2629,10 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Call)) {
     switch (II->getIntrinsicID()) {
     default:
-      if (!Call.onlyReadsMemory() && !isAssumeLikeIntrinsic(II))
+      if (!Call.onlyReadsMemory() && !isAssumeLikeIntrinsic(II)) {
         disableLoadElimination();
+        invalidateCallBaseReachingStores();
+      }
       return Base::visitCallBase(Call);
 
     case Intrinsic::load_relative:
@@ -2437,6 +2643,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
       disableLoadElimination();
+      invalidateCallBaseReachingStores();
       // SROA can usually chew through these intrinsics, but they aren't free.
       return false;
     case Intrinsic::icall_branch_funnel:
@@ -2469,8 +2676,10 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     onLoweredCall(F, Call, IsIndirectCall);
   }
 
-  if (!(Call.onlyReadsMemory() || (IsIndirectCall && F->onlyReadsMemory())))
+  if (!(Call.onlyReadsMemory() || (IsIndirectCall && F->onlyReadsMemory()))) {
     disableLoadElimination();
+    invalidateCallBaseReachingStores();
+  }
   return Base::visitCallBase(Call);
 }
 
@@ -2632,6 +2841,12 @@ bool CallAnalyzer::visitUnreachableInst(UnreachableInst &I) {
 }
 
 bool CallAnalyzer::visitInstruction(Instruction &I) {
+  // Anything that may write memory (atomics, fences, calls that reach here)
+  // can overwrite the caller's reaching stores. Stores are handled by
+  // visitStore.
+  if (I.mayWriteToMemory() && !isAssumeLikeIntrinsic(&I))
+    invalidateCallBaseReachingStores();
+
   // Some instructions are free. All of the free intrinsics can also be
   // handled by SROA, etc.
   if (TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==

@@ -14,7 +14,9 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -33,6 +35,7 @@ class ProfileSummaryInfo;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class EphemeralValuesCache;
+class Value;
 
 namespace InlineConstants {
 // Various thresholds used by inline cost analysis.
@@ -346,6 +349,23 @@ LLVM_ABI std::optional<InlineCostFeatures> getInliningCostFeatures(
 /// See also \p CanInlineCallSite as an additional precondition necessary to
 /// perform a valid inline in a particular use context.
 LLVM_ABI InlineResult isInlineViable(Function &Callee);
+
+/// A store of a value at a byte offset and size from its base pointer.
+struct CallBaseReachingStore {
+  int64_t Offset;
+  uint64_t Size;
+  Value *Val;
+};
+
+/// The stores that are still in effect at a program point, grouped by base
+/// pointer.
+struct CallBaseReachingStoreSummary {
+  DenseMap<Value *, SmallVector<CallBaseReachingStore, 2>> StoresByBase;
+  /// The recorded base that is not an identified object, if any. There is at
+  /// most one: it is only recorded when no other base is, and a store to a
+  /// different base after it ends the walk, since the two may alias.
+  std::optional<Value *> UnidentifiedBase;
+};
 
 // This pass is used to annotate instructions during the inline process for
 // debugging and analysis. The main purpose of the pass is to see and test
