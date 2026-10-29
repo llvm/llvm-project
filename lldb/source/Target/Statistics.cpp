@@ -360,7 +360,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     }
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
-      if (!summary_only) {
+      // Only record on include_modules, as `GetObjectFile` and
+      // `GetDebugInfoModules` may be expensive to parse.
+      if (!summary_only && include_modules) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
           module_stat.symfile_path =
               sym_file->GetObjectFile()->GetFileSpec().GetPath();

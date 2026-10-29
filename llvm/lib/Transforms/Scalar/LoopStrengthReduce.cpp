@@ -769,6 +769,10 @@ static bool isMulSExtable(const SCEVMulExpr *M, ScalarEvolution &SE) {
 static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
                                 ScalarEvolution &SE,
                                 bool IgnoreSignificantBits = false) {
+  // A stride can fold to zero once the callers sign-extend it.
+  if (RHS->isZero())
+    return nullptr;
+
   // Handle the trivial case, which works for any SCEV type.
   if (LHS == RHS)
     return SE.getConstant(LHS->getType(), 1);
@@ -1711,7 +1715,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key);
+  llvm::sort(Key, std::less<>());
 
   if (!Uniquifier.insert(Key).second)
     return false;
@@ -2495,8 +2499,7 @@ ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
 
   auto *TermBr = cast<CondBrInst>(ExitingBlock->getTerminator());
   bool TrueContinues = L->contains(TermBr->getSuccessor(0));
-  bool FalseContinues = L->contains(TermBr->getSuccessor(1));
-  assert(TrueContinues != FalseContinues &&
+  assert(TrueContinues != L->contains(TermBr->getSuccessor(1)) &&
          "Expected exactly one in-loop successor");
 
   auto Pred = TrueContinues ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
@@ -6070,7 +6073,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           } else {
             SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
+            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI,
+                                        MSSAU, ShouldPreserveLCSSA);
             NewBB = NewBBs[0];
           }
           // If NewBB==NULL, then SplitCriticalEdge refused to split because all

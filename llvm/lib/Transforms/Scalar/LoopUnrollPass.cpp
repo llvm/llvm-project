@@ -195,7 +195,6 @@ struct UnrolledInstState {
 
 /// Hashing and equality testing for a set of the instruction states.
 struct UnrolledInstStateKeyInfo {
-  using PtrInfo = DenseMapInfo<Instruction *>;
   using PairInfo = DenseMapInfo<std::pair<Instruction *, int>>;
 
   static inline unsigned getHashValue(const UnrolledInstState &S) {
@@ -414,7 +413,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
       Value *V = PHI->getIncomingValueForBlock(
           Iteration == 0 ? L->getLoopPreheader() : L->getLoopLatch());
-      if (Iteration != 0 && SimplifiedValues.count(V))
+      if (Iteration != 0 && SimplifiedValues.contains(V))
         V = SimplifiedValues.lookup(V);
       SimplifiedInputValues.push_back({PHI, V});
     }
@@ -438,7 +437,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       for (Instruction &I : *BB) {
         // These won't get into the final code - don't even try calculating the
         // cost for them.
-        if (EphValues.count(&I))
+        if (EphValues.contains(&I))
           continue;
 
         // Track this instruction's expected baseline cost when executing the
@@ -489,7 +488,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       Instruction *TI = BB->getTerminator();
 
       auto getSimplifiedConstant = [&](Value *V) -> Constant * {
-        if (SimplifiedValues.count(V))
+        if (SimplifiedValues.contains(V))
           V = SimplifiedValues.lookup(V);
         return dyn_cast<Constant>(V);
       };

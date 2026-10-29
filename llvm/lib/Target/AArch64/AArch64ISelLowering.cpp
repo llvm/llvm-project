@@ -1902,8 +1902,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
-      for (auto VT : {MVT::v4bf16, MVT::v8bf16, MVT::nxv2bf16, MVT::nxv4bf16,
-                      MVT::nxv8bf16}) {
+      for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+        setOperationAction({ISD::FADD, ISD::STRICT_FADD}, VT, Custom);
+        setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
+        setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
+        setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
+        setOperationAction({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT, Custom);
+        setOperationAction({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT, Custom);
+        setOperationAction({ISD::FMUL, ISD::STRICT_FMUL}, VT, Custom);
+        setOperationAction({ISD::FSUB, ISD::STRICT_FSUB}, VT, Custom);
+      }
+      // TODO: Add fixed-length strict-fp support to LowerToPredicatedOp.
+      for (auto VT : {MVT::v4bf16, MVT::v8bf16}) {
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -1915,11 +1925,30 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    for (auto Opcode :
-         {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC,
-          ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMAXIMUM,
-          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMINIMUM}) {
+    for (auto Opcode : {ISD::FCEIL,
+                        ISD::FDIV,
+                        ISD::FFLOOR,
+                        ISD::FNEARBYINT,
+                        ISD::FRINT,
+                        ISD::FROUND,
+                        ISD::FROUNDEVEN,
+                        ISD::FSQRT,
+                        ISD::FTRUNC,
+                        ISD::SETCC,
+                        ISD::STRICT_FCEIL,
+                        ISD::STRICT_FDIV,
+                        ISD::STRICT_FFLOOR,
+                        ISD::STRICT_FNEARBYINT,
+                        ISD::STRICT_FRINT,
+                        ISD::STRICT_FROUND,
+                        ISD::STRICT_FROUNDEVEN,
+                        ISD::STRICT_FSQRT,
+                        ISD::STRICT_FTRUNC,
+                        ISD::VECREDUCE_FADD,
+                        ISD::VECREDUCE_FMAX,
+                        ISD::VECREDUCE_FMAXIMUM,
+                        ISD::VECREDUCE_FMIN,
+                        ISD::VECREDUCE_FMINIMUM}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
@@ -1929,18 +1958,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
         MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
-        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FADD, ISD::STRICT_FADD}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMA, ISD::STRICT_FMA}, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FSUB, ISD::STRICT_FSUB}, VT,
+                                   PromotedVT);
 
         if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
           setOperationAction(ISD::FMUL, VT, Custom);
         else
           setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
+        setOperationPromotedToType(ISD::STRICT_FMUL, VT, PromotedVT);
       }
 
       if (Subtarget->hasBF16() && Subtarget->isNeonAvailable())
@@ -2129,10 +2165,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
-    if (Subtarget->hasSVEBitPerm() &&
-        (Subtarget->isSVEAvailable() ||
-         (Subtarget->isSVEorStreamingSVEAvailable() &&
-          Subtarget->hasSSVE_BitPerm()))) {
+    if (Subtarget->isSVEBitPermAvailable()) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
         setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
       }
@@ -4942,7 +4975,12 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     return SDValue();
   }
 
-  assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
+  assert(VT == MVT::f128 && "Expected fp128 result type");
+  if (!IsStrict && Op0VT == MVT::bf16) {
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Ext);
+  }
   return SDValue();
 }
 
@@ -4954,6 +4992,17 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
   SDNodeFlags Flags = Op->getFlags();
+
+  if (!IsStrict && SrcVT == MVT::f128 && VT == MVT::bf16) {
+    SDLoc DL(Op);
+    // Round inexact results to odd before rounding to bf16 to avoid double
+    // rounding through fp32. Exact conversions do not need the correction.
+    SDValue Narrow =
+        Trunc ? DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, SrcVal,
+                            DAG.getIntPtrConstant(0, DL, true), Flags)
+              : expandRoundInexactToOdd(MVT::f32, SrcVal, DL, DAG);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, Narrow, Op.getOperand(1), Flags);
+  }
 
   if (VT.isScalableVector()) {
     // Let common code split the operation.
@@ -6654,16 +6703,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
   }
-  case Intrinsic::aarch64_sme_za_enable:
-    return DAG.getNode(
-        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
-  case Intrinsic::aarch64_sme_za_disable:
-    return DAG.getNode(
-        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   }
 }
 
@@ -11156,6 +11195,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
                                 ? alignTo(NumBytes, StackAlign)
                                 : 0;
+
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget->isTargetWindows() && CalleePopBytes != 0)
+    FuncInfo->setHasWinCallToCalleePopFunction(true);
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
@@ -25842,8 +25885,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));

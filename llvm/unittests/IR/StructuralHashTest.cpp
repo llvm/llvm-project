@@ -338,7 +338,7 @@ TEST(StructuralHashTest, Differences) {
   ASSERT_THAT(*FuncHashInfo1.IndexOperandHashMap, Contains(Key(Pair(1, 1))));
   ASSERT_THAT(*FuncHashInfo2.IndexOperandHashMap, Contains(Key(Pair(1, 1))));
 
-  // The indexed instruciton must be the call instruction as shown in the
+  // The indexed instruction must be the call instruction as shown in the
   // IgnoreOp above.
   EXPECT_EQ(FuncHashInfo1.IndexInstruction->lookup(1)->getOpcode(),
             Instruction::Call);

@@ -36,7 +36,7 @@ using namespace llvm;
 #define DEBUG_TYPE "lrshrink"
 
 STATISTIC(NumInstrsHoistedToShrinkLiveRange,
-          "Number of insructions hoisted to shrink live range.");
+          "Number of instructions hoisted to shrink live range.");
 
 namespace {
 

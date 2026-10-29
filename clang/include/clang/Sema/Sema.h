@@ -188,7 +188,6 @@ class SemaX86;
 class StandardConversionSequence;
 class TemplateArgument;
 class TemplateArgumentLoc;
-class TemplateInstantiationCallback;
 class TemplatePartialOrderingContext;
 class TemplateSpecCandidateSet;
 class Token;
@@ -2474,6 +2473,8 @@ public:
   bool checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
 
   ///@}
@@ -4831,7 +4832,6 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
-  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.

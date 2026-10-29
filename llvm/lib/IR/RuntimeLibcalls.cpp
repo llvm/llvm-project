@@ -318,6 +318,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
   switch (LibcallImpl) {
+  // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
   case RTLIB::impl___sincosf_stret: {
     if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
@@ -335,8 +336,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
         TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
                           ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
 
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argumentOrErrnoMemOnly(
-        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef, ModRefInfo::Mod));
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
+        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef));
 
     AttributeList Attrs;
     Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
