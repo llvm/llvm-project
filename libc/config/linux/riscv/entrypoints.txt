@@ -73,6 +73,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.net.if.if_nametoindex
 
     # netinet/ether.h entrypoints
+    libc.src.netinet.ether.ether_aton
+    libc.src.netinet.ether.ether_aton_r
     libc.src.netinet.ether.ether_ntoa
     libc.src.netinet.ether.ether_ntoa_r
 
@@ -917,6 +919,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
+    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.tanpif
     libc.src.math.totalorder

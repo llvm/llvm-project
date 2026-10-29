@@ -369,8 +369,6 @@ struct KernelLaunchArgsTy {
   /// Size of the argument data in bytes, one entry per \p Args element,
   /// possibly null.
   int64_t *ArgSizes = nullptr;
-  /// Tripcount for the teams / distribute loop, 0 otherwise.
-  uint64_t Tripcount = 0;
   /// Amount of dynamic cgroup memory requested.
   uint32_t DynCGroupMem = 0;
   /// User-requested number of blocks (for x,y,z dimension).
@@ -512,7 +510,7 @@ struct AllocationTraceInfoTy {
 struct KernelTraceInfoTy {
 
   /// The launched kernel.
-  GenericKernelTy *Kernel;
+  const GenericKernelTy *Kernel;
 
   /// The stack trace of the launch itself.
   std::string LaunchTrace;
@@ -528,7 +526,7 @@ struct KernelTraceInfoRecordTy {
   auto size() const { return KTIs.size(); }
 
   /// Create a new kernel trace info and add it into the record.
-  void emplace(GenericKernelTy *Kernel, const std::string &&StackTrace,
+  void emplace(const GenericKernelTy *Kernel, const std::string &&StackTrace,
                __tgt_async_info *AsyncInfo) {
     KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
     Idx = (Idx + 1) % size();
@@ -1038,11 +1036,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
     return Plugin::success();
   }
-
-  /// Run the kernel associated with \p EntryPtr
-  Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
-                     __tgt_async_info *AsyncInfo,
-                     GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1569,12 +1562,6 @@ public:
   /// Deallocates memory on the given device.
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Begin executing a kernel on the given device.
-  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                        KernelLaunchArgsTy &LaunchArgs,
-                        __tgt_async_info *AsyncInfoPtr,
-                        GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
