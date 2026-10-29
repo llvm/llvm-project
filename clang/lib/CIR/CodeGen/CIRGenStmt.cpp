@@ -234,7 +234,11 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::ContinueStmtClass:
   case Stmt::DeclStmtClass:
   case Stmt::ReturnStmtClass:
-    llvm_unreachable("should have emitted these statements as simple");
+    // emitSimpleStmt handles all of these directly, except when there is a
+    // failure. That can happen for CompoundStmtClass when one of its children
+    // is e.g. a not-yet-implemented construct, so we need to propagate the
+    // error.
+    return mlir::failure();
 
 #define STMT(Type, Base)
 #define ABSTRACT_STMT(Op)

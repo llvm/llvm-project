@@ -29,4 +29,14 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+
+  // A not-yet-implemented construct nested one level inside another
+  // construct's body (rather than directly at the top level of a function)
+  // must be diagnosed cleanly.
+#pragma omp parallel
+  {
+    // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}
+#pragma omp critical
+    {}
+  }
 }
