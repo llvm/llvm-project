@@ -52,7 +52,7 @@ public:
 
   unsigned getFlatAddressSpace() const override {
     // Clang has 2 distinct address space maps. One where
-    // default=4=Generic, and one with default=0=Function. This depends on the
+    // default=Generic, and one with default=Function. This depends on the
     // environment.
     return ST->isShader() ? SPIRVAS::Function : SPIRVAS::Generic;
   }
