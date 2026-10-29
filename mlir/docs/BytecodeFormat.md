@@ -35,6 +35,30 @@ dialects can reject IR that cannot be represented without losing information.
 
 [TOC]
 
+## Operation Properties and Back-Deployment
+
+Bytecode version 5 introduced native operation property encoding. Versions 0
+through 4 store only the operation's legacy attribute dictionary, formed by
+combining its inherent and discardable attributes. When reading these versions,
+operation properties are initialized to their defaults and then populated using
+the legacy inherent-attribute setters.
+
+Inherent attributes stored in properties can therefore be preserved. ODS operand
+and result segment sizes are also exposed as inherent attributes, even though
+they are native properties. Other native properties are normally omitted from
+the legacy dictionary and retain their initialized defaults when read back.
+Omitting such a property is lossless only if its original value equals that
+default. For example, a native integer property initialized to zero can retain
+the value zero without being encoded, but a nonzero value would be lost.
+
+For versions 0 through 4, the writer rejects back-deployment when reconstructing
+properties from the legacy dictionary would produce property storage unequal to
+the original. This check is unnecessary for version 5 and later, which encode
+properties directly. Providing an attribute conversion for a native property
+alone does not make it available to the legacy reader: the legacy
+inherent-attribute hooks must expose and restore it. Use bytecode version 5 or
+later when the legacy representation cannot preserve the operation's properties.
+
 ## Magic Number
 
 MLIR uses the following four-byte magic number to

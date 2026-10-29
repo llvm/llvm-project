@@ -334,7 +334,7 @@ void Filler::insertDefsUses(MachineBasicBlock::iterator MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (Reg == 0)
+    if (Reg == 0 || Subtarget->getRegisterInfo()->isConstantPhysReg(Reg))
       continue;
     if (MO.isDef())
       RegDefs.insert(Reg);

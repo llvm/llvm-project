@@ -89,9 +89,11 @@ llvm::directive::VersionRange GetVersionRangeForElement(
     }
   }
   return llvm::directive::VersionRange{
-      static_cast<int>(static_cast<unsigned>(minVer)),
-      static_cast<int>(static_cast<unsigned>(maxVer))};
+      static_cast<int>(minVer.value()), static_cast<int>(maxVer.value())};
 }
+
+llvm::directive::VersionRange GetVersionRangeForDirective(
+    llvm::omp::Directive dirId);
 } // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);

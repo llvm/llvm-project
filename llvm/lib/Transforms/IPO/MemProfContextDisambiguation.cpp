@@ -93,6 +93,12 @@ STATISTIC(FoundProfiledCalleeMaxDepth,
           "Maximum depth of profiled callees found via tail calls");
 STATISTIC(FoundProfiledCalleeNonUniquelyCount,
           "Number of profiled callees found via multiple tail call chains");
+STATISTIC(FoundProfiledCalleeIndirectTailCallCount,
+          "Number of tail calls in chains to profiled callees that are "
+          "indirect (thin link)");
+STATISTIC(IndirectTailCallsRecordedForICPThinBackend,
+          "Number of indirect tail calls recorded for ICP for cloning during "
+          "ThinLTO backend");
 STATISTIC(DeferredBackedges, "Number of backedges with deferred cloning");
 STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
@@ -196,6 +202,14 @@ static cl::opt<unsigned>
                         cl::Hidden,
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
+
+// Whether the ThinLTO search for frames missing due to tail calls should look
+// through indirect tail calls, via the summary call edges to their profiled
+// targets.
+static cl::opt<bool> IndirectTailCallSearch(
+    "memprof-indirect-tail-call-search", cl::init(true), cl::Hidden,
+    cl::desc("Search for missing frames through indirect tail calls to their "
+             "profiled targets (ThinLTO)."));
 
 // Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
@@ -408,7 +422,7 @@ public:
 
     // List of other calls that can be treated the same as the primary call
     // through cloning. I.e. located in the same function and have the same
-    // (possibly pruned) stack ids. They will be updated the same way as the
+    // (possibly trimmed) stack ids. They will be updated the same way as the
     // primary call when assigning to function clones.
     SmallVector<CallInfo, 0> MatchingCalls;
 
@@ -2081,7 +2095,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // Map of stack id to all calls with that as the last (outermost caller)
-  // callsite id that has a context node (some might not due to pruning
+  // callsite id that has a context node (some might not due to trimming
   // performed during matching of the allocation profile contexts).
   // The CallContextInfo contains the Call and a list of its stack ids with
   // ContextNodes, the function containing Call, and the set of context ids
@@ -2096,7 +2110,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       auto StackIdsWithContextNodes =
           getStackIdsWithContextNodesForCall(Call.call());
       // If there were no nodes created for MIBs on allocs (maybe this was in
-      // the unambiguous part of the MIB stack that was pruned), ignore.
+      // the unambiguous part of the MIB stack that was trimmed), ignore.
       if (StackIdsWithContextNodes.empty())
         continue;
       // Otherwise, record this Call along with the list of ids for the last
@@ -2114,7 +2128,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // duplicated) context ids are saved in the StackIdToMatchingCalls map.
   DenseMap<uint32_t, DenseSet<uint32_t>> OldToNewContextIds;
   // Save a map from each call to any that are found to match it. I.e. located
-  // in the same function and have the same (possibly pruned) stack ids. We use
+  // in the same function and have the same (possibly trimmed) stack ids. We use
   // this to avoid creating extra graph nodes as they can be treated the same.
   DenseMap<CallInfo, CallInfo> CallToMatchingCall;
   for (auto &It : StackIdToMatchingCalls) {
@@ -2130,7 +2144,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // of length, and within each length, lexicographically by stack id. The
     // latter is so that we can specially handle calls that have identical stack
     // id sequences (either due to cloning or artificially because of the MIB
-    // context pruning). Those with the same Ids are then sorted by function to
+    // context trimming). Those with the same Ids are then sorted by function to
     // facilitate efficiently mapping them to the same context node.
     // Because the functions are pointers, to ensure a stable sort first assign
     // each function pointer to its first index in the Calls array, and then use
@@ -2237,7 +2251,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         continue;
 
       // If some of this call's stack ids did not have corresponding nodes (due
-      // to pruning), don't include any context ids for contexts that extend
+      // to trimming), don't include any context ids for contexts that extend
       // beyond these nodes. Otherwise we would be matching part of unrelated /
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
@@ -3206,6 +3220,11 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     for (auto &CallEdge : FS->calls()) {
       if (!CallEdge.second.hasTailCall())
         continue;
+      // Edges marked indirect are the profiled targets of indirect calls.
+      // If the tail call is indirect, the ThinLTO backend will perform
+      // ICP to the target in order to call a clone of it.
+      if (CallEdge.second.hasIndirectCall() && !IndirectTailCallSearch)
+        continue;
       if (CallEdge.first == ProfiledCallee) {
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
@@ -3216,6 +3235,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundProfiledCalleeDepth += Depth;
         if (Depth > FoundProfiledCalleeMaxDepth)
           FoundProfiledCalleeMaxDepth = Depth;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -3231,6 +3252,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           return false;
         }
         FoundSingleCalleeChain = true;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -5233,11 +5256,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
   // Map to keep track of information needed to update calls in function clones
   // when their corresponding callsite node was not itself cloned for that
-  // function clone. Because of call context pruning (i.e. we only keep as much
+  // function clone. Because of call context trimming (i.e. we only keep as much
   // caller information as needed to distinguish hot vs cold), we may not have
   // caller edges coming to each callsite node from all possible function
   // callers. A function clone may get created for other callsites in the
-  // function for which there are caller edges that were not pruned. Any other
+  // function for which there are caller edges that were not trimmed. Any other
   // callsites in that function clone, which were not themselved cloned for
   // that function clone, should get updated the same way as the corresponding
   // callsite in the original function (which may call a clone of its callee).
@@ -5309,7 +5332,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
-      // were either on inlined chains or pruned from the MIBs), or if we did
+      // were either on inlined chains or trimmed from the MIBs), or if we did
       // not create any clones for it.
       if (!Node || Node->Clones.empty())
         continue;
@@ -6177,6 +6200,62 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   return TheFnVI;
 }
 
+// Find the CallsiteInfo record synthesized by the thin link for profiled target
+// CandidateGUID of an indirect tail call, in MapTailCallCalleeVIToCallsite
+// (which maps each synthesized record's callee to the record). Returns null if
+// there is none. OrigNameGUIDToTailCallCallsite caches a map from the original
+// name GUID of each record's callee to the record, and is built on first use.
+static const CallsiteInfo *findIndirectTailCallCallsite(
+    uint64_t CandidateGUID,
+    const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
+    std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
+        &OrigNameGUIDToTailCallCallsite,
+    const ModuleSummaryIndex *ImportSummary, InstrProfSymtab &Symtab) {
+  auto End = MapTailCallCalleeVIToCallsite.end();
+  // The callee of the synthesized record is normally the VP metadata GUID, so
+  // check that first.
+  if (ValueInfo VI = ImportSummary->getValueInfo(CandidateGUID)) {
+    auto It = MapTailCallCalleeVIToCallsite.find(VI);
+    if (It != End)
+      return &It->second;
+  }
+  // For local targets the VP metadata may contain the GUID of the original
+  // name without the source file prefix, which the thin link translates to the
+  // actual GUID of the local function (see updateValueInfoForIndirectCalls).
+  if (auto LocalGUID = ImportSummary->getGUIDFromOriginalID(CandidateGUID)) {
+    if (ValueInfo LocalVI = ImportSummary->getValueInfo(LocalGUID)) {
+      auto It = MapTailCallCalleeVIToCallsite.find(LocalVI);
+      if (It != End)
+        return &It->second;
+    }
+  }
+  // The index for a distributed ThinLTO backend does not record the original
+  // names of local functions, in which case the above lookup via
+  // getGUIDFromOriginalID fails. Instead, compute the original name GUID of
+  // each record's callee from its function in this module, located via its
+  // GUID (which is recorded in the function's !guid metadata), using its name
+  // before any promotion.
+  if (!OrigNameGUIDToTailCallCallsite) {
+    // Construct the (initially empty) map so that it is marked as built, even
+    // if no entries are added below, to avoid rebuilding it on later calls.
+    OrigNameGUIDToTailCallCallsite.emplace();
+    for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
+      Function *Callee = Symtab.getFunction(CalleeVI.getGUID());
+      if (!Callee)
+        continue;
+      StringRef OrigName =
+          ModuleSummaryIndex::getOriginalNameBeforePromote(Callee->getName());
+      auto [It, Inserted] = OrigNameGUIDToTailCallCallsite->try_emplace(
+          GlobalValue::getGUIDAssumingExternalLinkage(OrigName), &Callsite);
+      // If multiple callees have the same original name, we can't tell which
+      // corresponds to the profiled target.
+      if (!Inserted && It->second != &Callsite)
+        It->second = nullptr;
+    }
+  }
+  return OrigNameGUIDToTailCallCallsite->lookup(CandidateGUID);
+}
+
 bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
     Module &M) {
   ICallAnalysis = std::make_unique<ICallPromotionAnalysis>();
@@ -6423,6 +6502,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         break;
       MapTailCallCalleeVIToCallsite.insert({Callsite.Callee, Callsite});
     }
+    // Maps the original name GUID of each synthesized callsite info's callee to
+    // the callsite info, built on first use by findIndirectTailCallCallsite.
+    std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
+        OrigNameGUIDToTailCallCallsite;
 
     // Keeps track of needed ICP for the function.
     SmallVector<ICallAnalysisData> ICallAnalysisInfo;
@@ -6558,9 +6641,29 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             // This is an indirect call, see if we have profile information and
             // whether any clones were recorded for the profiled targets (that
             // we synthesized CallsiteInfo summary records for when building the
-            // index).
-            auto NumClones =
-                recordICPInfo(CB, FS->callsites(), SI, ICallAnalysisInfo);
+            // index). These records are the next ones in the function's
+            // callsites, one per profiled target.
+            auto NumClones = recordICPInfo(
+                CB,
+                [&](const InstrProfValueData &Candidate) {
+                  assert(SI != FS->callsites().end());
+#ifndef NDEBUG
+                  auto CalleeValueInfo =
+                      ImportSummary->getValueInfo(Candidate.Value);
+                  auto LocalGUID =
+                      ImportSummary->getGUIDFromOriginalID(Candidate.Value);
+#endif
+                  // We might not have a ValueInfo if this is a distributed
+                  // ThinLTO backend and decided not to import that function.
+                  // The thin link may also have updated the callee from the
+                  // original name GUID recorded in the VP metadata to the GUID
+                  // of the local target function (see
+                  // updateValueInfoForIndirectCalls).
+                  assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo ||
+                         (SI->Callee && SI->Callee.getGUID() == LocalGUID));
+                  return &*(SI++);
+                },
+                ICallAnalysisInfo);
 
             // Perform cloning if not yet done. This is done here in case
             // we don't need to do ICP, but might need to clone this
@@ -6598,12 +6701,32 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());
             CloneCallsite(Callsite->second, CB, CalledFunction, FS);
           }
+        } else if (CB->isTailCall() && !CalledFunction &&
+                   !MapTailCallCalleeVIToCallsite.empty()) {
+          // An indirect tail call, which the thin link may have identified as
+          // being on profiled contexts with a missing frame, via the profiled
+          // targets in its VP metadata. If so, the callsite infos synthesized
+          // for those targets are used to perform ICP so that each clone of
+          // this function calls the assigned clone of the target.
+          auto PrevNumICallAnalysisInfo = ICallAnalysisInfo.size();
+          auto NumClones = recordICPInfo(
+              CB,
+              [&](const InstrProfValueData &Candidate) {
+                return findIndirectTailCallCallsite(
+                    Candidate.Value, MapTailCallCalleeVIToCallsite,
+                    OrigNameGUIDToTailCallCallsite, ImportSummary, *Symtab);
+              },
+              ICallAnalysisInfo);
+          if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
+            IndirectTailCallsRecordedForICPThinBackend++;
+          if (NumClones)
+            CloneFuncIfNeeded(NumClones, FS);
         }
       }
     }
 
     // Now do any promotion required for cloning.
-    performICP(M, FS->callsites(), VMaps, ICallAnalysisInfo, ORE);
+    performICP(M, VMaps, ICallAnalysisInfo, ORE);
   }
 
   // We skip some of the functions and instructions above, so remove all the
@@ -6627,8 +6750,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 }
 
 unsigned MemProfContextDisambiguation::recordICPInfo(
-    CallBase *CB, ArrayRef<CallsiteInfo> AllCallsites,
-    ArrayRef<CallsiteInfo>::iterator &SI,
+    CallBase *CB,
+    function_ref<const CallsiteInfo *(const InstrProfValueData &)> GetCallsite,
     SmallVector<ICallAnalysisData> &ICallAnalysisInfo) {
   // First see if we have profile information for this indirect call.
   uint32_t NumCandidates;
@@ -6640,49 +6763,37 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
     return 0;
 
   // Iterate through all of the candidate profiled targets along with the
-  // CallsiteInfo summary records synthesized for them when building the index,
-  // and see if any are cloned and/or refer to clones.
+  // CallsiteInfo summary records synthesized for them, and see if any are
+  // cloned and/or refer to clones.
   bool ICPNeeded = false;
   unsigned NumClones = 0;
-  size_t CallsiteInfoStartIndex = std::distance(AllCallsites.begin(), SI);
+  SmallVector<const CallsiteInfo *> Callsites;
   for (const auto &Candidate : CandidateProfileData) {
-#ifndef NDEBUG
-    auto CalleeValueInfo =
-#endif
-        ImportSummary->getValueInfo(Candidate.Value);
-    // We might not have a ValueInfo if this is a distributed
-    // ThinLTO backend and decided not to import that function. The thin link
-    // may also have updated the callee from the original name GUID recorded in
-    // the VP metadata to the GUID of the local target function (see
-    // updateValueInfoForIndirectCalls).
-    assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo ||
-           (SI->Callee &&
-            SI->Callee.getGUID() ==
-                ImportSummary->getGUIDFromOriginalID(Candidate.Value)));
-    assert(SI != AllCallsites.end());
-    auto &StackNode = *(SI++);
+    const CallsiteInfo *Callsite = GetCallsite(Candidate);
+    Callsites.push_back(Callsite);
+    if (!Callsite)
+      continue;
     // See if any of the clones of the indirect callsite for this
     // profiled target should call a cloned version of the profiled
     // target. We only need to do the ICP here if so.
-    ICPNeeded |= llvm::any_of(StackNode.Clones,
+    ICPNeeded |= llvm::any_of(Callsite->Clones,
                               [](unsigned CloneNo) { return CloneNo != 0; });
     // Every callsite in the same function should have been cloned the same
     // number of times.
-    assert(!NumClones || NumClones == StackNode.Clones.size());
-    NumClones = StackNode.Clones.size();
+    assert(!NumClones || NumClones == Callsite->Clones.size());
+    NumClones = Callsite->Clones.size();
   }
   if (!ICPNeeded)
     return NumClones;
   // Save information for ICP, which is performed later to avoid messing up the
   // current function traversal.
   ICallAnalysisInfo.push_back({CB, CandidateProfileData.vec(), NumCandidates,
-                               TotalCount, CallsiteInfoStartIndex});
+                               TotalCount, NumClones, std::move(Callsites)});
   return NumClones;
 }
 
 void MemProfContextDisambiguation::performICP(
-    Module &M, ArrayRef<CallsiteInfo> AllCallsites,
-    ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
+    Module &M, ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
     ArrayRef<ICallAnalysisData> ICallAnalysisInfo,
     OptimizationRemarkEmitter &ORE) {
   // Now do any promotion required for cloning. Specifically, for each
@@ -6693,17 +6804,16 @@ void MemProfContextDisambiguation::performICP(
   // version of the target, which is what is in the vtable.
   for (auto &Info : ICallAnalysisInfo) {
     auto *CB = Info.CB;
-    auto CallsiteIndex = Info.CallsiteInfoStartIndex;
     auto TotalCount = Info.TotalCount;
-    unsigned NumClones = 0;
+    unsigned NumClones = Info.NumClones;
     SmallVector<InstrProfValueData, 8> RemainingCandidates;
 
-    for (auto &Candidate : Info.CandidateProfileData) {
-      auto &StackNode = AllCallsites[CallsiteIndex++];
-
+    assert(Info.CandidateProfileData.size() == Info.Callsites.size());
+    for (unsigned I = 0; I < Info.CandidateProfileData.size(); I++) {
+      auto &Candidate = Info.CandidateProfileData[I];
+      const CallsiteInfo *StackNode = Info.Callsites[I];
       // All calls in the same function must have the same number of clones.
-      assert(!NumClones || NumClones == StackNode.Clones.size());
-      NumClones = StackNode.Clones.size();
+      assert(!StackNode || NumClones == StackNode->Clones.size());
 
       // See if the target is in the module. If it wasn't imported, it is
       // possible that this profile could have been collected on a different
@@ -6717,10 +6827,12 @@ void MemProfContextDisambiguation::performICP(
       // the thin link translates to the actual GUID of the local function
       // (see updateValueInfoForIndirectCalls). The latter is recorded in the
       // function's !guid metadata, which is preserved across promotion and
-      // importing, and is added to the Symtab.
-      if (!TargetFunction && StackNode.Callee &&
-          StackNode.Callee.getGUID() != Candidate.Value)
-        TargetFunction = Symtab->getFunction(StackNode.Callee.getGUID());
+      // importing, and is added to the Symtab. If there is no summary record,
+      // the target was not cloned, so we conservatively only promote it if
+      // found directly via the VP metadata GUID.
+      if (!TargetFunction && StackNode && StackNode->Callee &&
+          StackNode->Callee.getGUID() != Candidate.Value)
+        TargetFunction = Symtab->getFunction(StackNode->Callee.getGUID());
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a
@@ -6776,12 +6888,12 @@ void MemProfContextDisambiguation::performICP(
                                      TotalCount, isSamplePGO, &ORE);
         auto *TargetToUse = TargetFunction;
         // Call original if this version calls the original version of its
-        // callee.
-        if (StackNode.Clones[J]) {
+        // callee (always the case if there is no summary record).
+        if (StackNode && StackNode->Clones[J]) {
           TargetToUse =
               cast<Function>(M.getOrInsertFunction(
                                   getMemProfFuncName(TargetFunction->getName(),
-                                                     StackNode.Clones[J]),
+                                                     StackNode->Clones[J]),
                                   TargetFunction->getFunctionType())
                                  .getCallee());
         }

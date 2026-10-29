@@ -674,5 +674,67 @@ cont:
   ret i32 %ret
 }
 
+; cmp defines %g0, which must not keep the instructions before it that read %g0
+; out of the delay slot.
+define i32 @g0_use_before_cmp(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+; CHECK-LABEL: g0_use_before_cmp:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    cmp %o0, %o1
+; CHECK-NEXT:    bgu .LBB17_2
+; CHECK-NEXT:    nop
+; CHECK-NEXT:  ! %bb.1: ! %entry
+; CHECK-NEXT:    cmp %o2, %o3
+; CHECK-NEXT:    bne .LBB17_3
+; CHECK-NEXT:    mov %g0, %o0
+; CHECK-NEXT:    ba .LBB17_4
+; CHECK-NEXT:    nop
+; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:    cmp %o2, %o3
+; CHECK-NEXT:    be .LBB17_4
+; CHECK-NEXT:    mov 1, %o0
+; CHECK-NEXT:  .LBB17_3: ! %entry
+; CHECK-NEXT:    mov %g0, %o0
+; CHECK-NEXT:  .LBB17_4: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    nop
+;
+; UNOPT-LABEL: g0_use_before_cmp:
+; UNOPT:       ! %bb.0: ! %entry
+; UNOPT-NEXT:    add %sp, -112, %sp
+; UNOPT-NEXT:    st %o3, [%sp+96] ! 4-byte Folded Spill
+; UNOPT-NEXT:    st %o2, [%sp+100] ! 4-byte Folded Spill
+; UNOPT-NEXT:    mov %o1, %o2
+; UNOPT-NEXT:    mov %o0, %o1
+; UNOPT-NEXT:    mov %g0, %o0
+; UNOPT-NEXT:    st %o0, [%sp+104] ! 4-byte Folded Spill
+; UNOPT-NEXT:    mov 1, %o0
+; UNOPT-NEXT:    cmp %o1, %o2
+; UNOPT-NEXT:    bgu .LBB17_2
+; UNOPT-NEXT:    st %o0, [%sp+108]
+; UNOPT-NEXT:  ! %bb.1: ! %entry
+; UNOPT-NEXT:    ld [%sp+104], %o0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    st %o0, [%sp+108] ! 4-byte Folded Spill
+; UNOPT-NEXT:  .LBB17_2: ! %entry
+; UNOPT-NEXT:    ld [%sp+100], %o1 ! 4-byte Folded Reload
+; UNOPT-NEXT:    ld [%sp+96], %o2 ! 4-byte Folded Reload
+; UNOPT-NEXT:    ld [%sp+108], %o0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    cmp %o1, %o2
+; UNOPT-NEXT:    be .LBB17_4
+; UNOPT-NEXT:    st %o0, [%sp+92]
+; UNOPT-NEXT:  ! %bb.3: ! %entry
+; UNOPT-NEXT:    ld [%sp+104], %o0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    st %o0, [%sp+92] ! 4-byte Folded Spill
+; UNOPT-NEXT:  .LBB17_4: ! %entry
+; UNOPT-NEXT:    ld [%sp+92], %o0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    retl
+; UNOPT-NEXT:    add %sp, 112, %sp
+entry:
+  %c1 = icmp ugt i32 %a, %b
+  %s1 = select i1 %c1, i32 1, i32 0
+  %c2 = icmp eq i32 %c, %d
+  %s2 = select i1 %c2, i32 %s1, i32 0
+  ret i32 %s2
+}
+
 declare void @llvm.fake.use(...)
 attributes #0 = { nounwind "disable-tail-calls"="true" }

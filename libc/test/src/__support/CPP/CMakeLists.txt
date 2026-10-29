@@ -162,6 +162,7 @@ add_libc_test(
   SRCS
     unique_ptr_test.cpp
   DEPENDS
+    libc.hdr.signal_macros
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
 )

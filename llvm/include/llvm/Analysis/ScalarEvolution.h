@@ -815,10 +815,10 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
                                   ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI const SCEV *
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags BaseNW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags OffsetNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -1271,6 +1271,9 @@ public:
 
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  LLVM_ABI bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
@@ -2493,9 +2496,6 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
-
-  /// Returns true if \p Op is guaranteed not to cause immediate UB.
-  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since

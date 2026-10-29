@@ -11434,17 +11434,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
-    // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
-    // types.
-    if (getLangOpts().getOpenCLCompatibleVersion() >= 200) {
-      if(const PipeType *PipeTy = PT->getAs<PipeType>()) {
-        QualType ElemTy = PipeTy->getElementType();
-        if (ElemTy->isPointerOrReferenceType()) {
-          Diag(Param->getTypeSpecStartLoc(), diag::err_reference_pipe_type);
-          D.setInvalidType();
-        }
-      }
-    }
     // WebAssembly tables can't be used as function parameters.
     if (Context.getTargetInfo().getTriple().isWasm()) {
       if (PT->getUnqualifiedDesugaredType()->isWebAssemblyTableType()) {
@@ -15134,17 +15123,22 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
     TLB.pushFullCopy(TSI->getTypeLoc());
   } else {
     // The written type-source info can disagree with the method's type. For
-    // example, a deduced 'auto' return type in a template instantiation keeps
-    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
-    // already been resolved to the deduced type. Pushing the stale TypeLoc
-    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
-    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
-    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+    // example, a deduced 'auto' return type keeps the 'auto' placeholder in its
+    // TypeSourceInfo while the method's type has already been resolved to the
+    // deduced type. Pushing the stale TypeLoc would make the wrapping
+    // AttributedTypeLoc's inner type inconsistent with MethodType. Build a
+    // trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType,
+                    TSI ? TSI->getTypeLoc().getBeginLoc() : MD->getLocation());
   }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
+  // A trivial TypeLoc has no parameter decls, but AST visitors rely on them.
+  if (FunctionTypeLoc FTL = MD->getFunctionTypeLoc())
+    for (unsigned I = 0, E = MD->getNumParams(); I != E; ++I)
+      FTL.setParam(I, MD->getParamDecl(I));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {

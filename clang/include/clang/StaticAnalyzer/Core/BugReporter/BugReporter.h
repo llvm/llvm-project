@@ -17,7 +17,6 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -49,6 +48,7 @@ namespace clang {
 class AnalyzerOptions;
 class ASTContext;
 class Decl;
+class Preprocessor;
 class SourceManager;
 class Stmt;
 
