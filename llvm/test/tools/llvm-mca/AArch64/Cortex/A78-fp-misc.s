@@ -148,12 +148,12 @@ fmov	x0, d1
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        fcvt	d0, s1
-# CHECK-NEXT:  1      3     1.00                        fcvt	s0, d1
-# CHECK-NEXT:  1      3     1.00                        fcvt	h0, s1
-# CHECK-NEXT:  1      3     1.00                        fcvt	s0, h1
-# CHECK-NEXT:  1      3     1.00                        fcvt	h0, d1
-# CHECK-NEXT:  1      3     1.00                        fcvt	d0, h1
+# CHECK-NEXT:  1      2     1.00                        fcvt	d0, s1
+# CHECK-NEXT:  1      2     1.00                        fcvt	s0, d1
+# CHECK-NEXT:  1      2     1.00                        fcvt	h0, s1
+# CHECK-NEXT:  1      2     1.00                        fcvt	s0, h1
+# CHECK-NEXT:  1      2     1.00                        fcvt	h0, d1
+# CHECK-NEXT:  1      2     1.00                        fcvt	d0, h1
 # CHECK-NEXT:  1      2     0.50                        fcvtxn	s0, d1
 # CHECK-NEXT:  1      3     3.00                        scvtf	h0, w1
 # CHECK-NEXT:  1      3     3.00                        scvtf	h0, x1
