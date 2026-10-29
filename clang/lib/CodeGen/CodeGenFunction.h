@@ -4427,6 +4427,13 @@ public:
   /// that the address will be used to access the object.
   LValue EmitCheckedLValue(const Expr *E, TypeCheckKind TCK);
 
+  /// Same as EmitLValue, but for an l-value whose object will be read or
+  /// written (e.g. the operand of '++' or of an assignment), rather than one
+  /// whose address may only be formed. For an array subscript,
+  /// -fsanitize=array-bounds then requires the index to name an element of the
+  /// array, not one past its end.
+  LValue EmitAccessedLValue(const Expr *E);
+
   RValue convertTempToRValue(Address addr, QualType type, SourceLocation Loc);
 
   void EmitAtomicInit(Expr *E, LValue lvalue);
