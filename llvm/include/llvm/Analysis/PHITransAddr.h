@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_PHITRANSADDR_H
 #define LLVM_ANALYSIS_PHITRANSADDR_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -82,6 +83,11 @@ class PHITransAddr {
   /// InstInputs - The inputs for our symbolic address.
   SmallVector<Instruction*, 4> InstInputs;
 
+  /// Non-input instructions of the address expression at the start of the
+  /// current translation. A value produced by translating one operand may be
+  /// one of these, so InstInputs membership alone cannot classify them.
+  SmallPtrSet<Instruction *, 4> Intermediates;
+
 public:
   PHITransAddr(Value *Addr, const DataLayout &DL, AssumptionCache *AC)
       : Addr(Addr), DL(DL), AC(AC) {
@@ -147,6 +153,8 @@ public:
   LLVM_ABI bool verify() const;
 
 private:
+  void collectIntermediates();
+
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,
                           const DominatorTree *DT, Value *Cond = nullptr,
                           bool CondVal = false);
