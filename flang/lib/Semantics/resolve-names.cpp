@@ -1159,6 +1159,8 @@ public:
   bool Pre(const parser::SaveStmt &);
   bool Pre(const parser::BasedPointer &);
   void Post(const parser::BasedPointer &);
+  void RecordCUDAComputeHostLoops(
+      const std::optional<parser::DoConstruct> &, std::int64_t);
   bool Pre(const parser::CUFKernelDoConstruct &);
   void Post(const parser::CUFKernelDoConstruct &);
 
@@ -1683,6 +1685,19 @@ void AccVisitor::AddAccSourceRange(const parser::CharBlock &source) {
 bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
   if (NeedsScope(x)) {
     PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+    const auto &begin{std::get<parser::AccBeginBlockDirective>(x.t)};
+    switch (std::get<parser::AccBlockDirective>(begin.t).v) {
+    case llvm::acc::Directive::ACCD_parallel:
+    case llvm::acc::Directive::ACCD_serial:
+    case llvm::acc::Directive::ACCD_kernels:
+      currScope().MarkCUDACompute();
+      currScope().AddCUDAComputeHostSource(begin.source);
+      currScope().AddCUDAComputeHostSource(
+          std::get<parser::AccEndBlockDirective>(x.t).source);
+      break;
+    default:
+      break;
+    }
   }
   return true;
 }
@@ -1805,10 +1820,36 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
 bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   currScope().AddSourceRange(x.source);
+  currScope().MarkCUDACompute();
+  currScope().AddCUDAComputeHostSource(
+      std::get<parser::AccBeginCombinedDirective>(x.t).source);
+  if (const auto &end{
+          std::get<std::optional<parser::AccEndCombinedDirective>>(x.t)}) {
+    currScope().AddCUDAComputeHostSource(end->source);
+  }
   return true;
 }
 
-void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
+void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) {
+  std::int64_t depth{1};
+  for (const parser::AccClause &clause : std::get<parser::AccClauseList>(
+           std::get<parser::AccBeginCombinedDirective>(x.t).t)
+           .v) {
+    if (const auto *collapse{
+            std::get_if<parser::AccClause::Collapse>(&clause.u)}) {
+      if (auto n{EvaluateInt64(context(),
+              std::get<parser::ScalarIntConstantExpr>(collapse->v.t))}) {
+        depth = std::max(depth, *n);
+      }
+    } else if (const auto *tile{
+                   std::get_if<parser::AccClause::Tile>(&clause.u)}) {
+      depth = std::max(depth, static_cast<std::int64_t>(tile->v.v.size()));
+    }
+  }
+  RecordCUDAComputeHostLoops(
+      std::get<std::optional<parser::DoConstruct>>(x.t), depth);
+  PopScope();
+}
 
 // Create scopes for OpenMP constructs
 class OmpVisitor : public virtual DeclarationVisitor {
@@ -10375,11 +10416,60 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
 bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
   // Treat CUDA kernel do construct as OpenACC construct.
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  const auto &directive{std::get<parser::CUFKernelDoConstruct::Directive>(x.t)};
+  currScope().MarkCUDACompute();
+  currScope().AddCUDAComputeHostSource(directive.source);
   return true;
 }
 
 void DeclarationVisitor::Post(const parser::CUFKernelDoConstruct &x) {
+  const auto &directive{std::get<parser::CUFKernelDoConstruct::Directive>(x.t)};
+  std::int64_t depth{1};
+  if (const auto &n{std::get<std::optional<parser::ScalarIntConstantExpr>>(
+          directive.t)}) {
+    if (auto value{EvaluateInt64(context(), *n)}) {
+      depth = std::max(depth, *value);
+    }
+  }
+  RecordCUDAComputeHostLoops(
+      std::get<std::optional<parser::DoConstruct>>(x.t), depth);
   PopScope();
+}
+
+void DeclarationVisitor::RecordCUDAComputeHostLoops(
+    const std::optional<parser::DoConstruct> &loop, std::int64_t depth) {
+  for (const parser::DoConstruct *current{common::GetPtrFromOptional(loop)};
+      current && depth > 0; --depth) {
+    if (current->IsDoConcurrent()) {
+      // Only the bounds are evaluated before launch. The mask executes
+      // per iteration in the compute body.
+      const auto &concurrent{std::get<parser::LoopControl::Concurrent>(
+          current->GetLoopControl()->u)};
+      const auto &header{std::get<parser::ConcurrentHeader>(concurrent.t)};
+      for (const auto &control :
+          std::get<std::list<parser::ConcurrentControl>>(header.t)) {
+        currScope().AddCUDAComputeHostSource(
+            parser::Unwrap<parser::Expr>(std::get<1>(control.t))->source);
+        currScope().AddCUDAComputeHostSource(
+            parser::Unwrap<parser::Expr>(std::get<2>(control.t))->source);
+        if (const auto &step{std::get<3>(control.t)}) {
+          currScope().AddCUDAComputeHostSource(
+              parser::Unwrap<parser::Expr>(*step)->source);
+        }
+      }
+      break;
+    }
+    currScope().AddCUDAComputeHostSource(
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(current->t).source);
+    const parser::DoConstruct *nested{nullptr};
+    for (const auto &entry : std::get<parser::Block>(current->t)) {
+      if (!parser::Unwrap<parser::CompilerDirective>(entry)) {
+        nested = parser::Unwrap<parser::DoConstruct>(entry);
+        break;
+      }
+    }
+    current = nested;
+  }
 }
 
 void ResolveNamesVisitor::HandleCall(
