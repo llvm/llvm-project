@@ -6347,6 +6347,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else if (TC.getTriple().isPPC() &&
              (A->getOption().getID() != options::OPT_mlong_double_80))
       A->render(Args, CmdArgs);
+    else if (TC.getTriple().isWindowsArm64EC() &&
+             !TC.getTriple().isWindowsMSVCEnvironment())
+      A->render(Args, CmdArgs);
     else
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
