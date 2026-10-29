@@ -454,8 +454,8 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
-                                               mlir::Region &region) {
+mlir::ParseResult cir::parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
+                                                    mlir::Region &region) {
   auto regionLoc = parser.getCurrentLocation();
   if (parser.parseRegion(region))
     return failure();
@@ -464,8 +464,8 @@ mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
   return success();
 }
 
-void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer, cir::ScopeOp &op,
-                                  mlir::Region &region) {
+void cir::printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
+                                       cir::ScopeOp &op, mlir::Region &region) {
   printer.printRegion(region,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
@@ -582,9 +582,9 @@ LogicalResult cir::DeleteArrayOp::verify() {
 // AssumeOp
 //===----------------------------------------------------------------------===//
 
-void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
-                       cir::AssumeBundleKindAttr kindAttr,
-                       OperandRange bundleArgs, TypeRange bundleArgTypes) {
+void cir::printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
+                            cir::AssumeBundleKindAttr kindAttr,
+                            OperandRange bundleArgs, TypeRange bundleArgTypes) {
   cir::AssumeBundleKind kind = kindAttr.getValue();
   if (kind == cir::AssumeBundleKind::None)
     return;
@@ -600,7 +600,7 @@ void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
   p << ")";
 }
 
-ParseResult parseAssumeBundle(
+ParseResult cir::parseAssumeBundle(
     OpAsmParser &p, cir::AssumeBundleKindAttr &bundleKindAttr,
     llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> &bundleArgs,
     llvm::SmallVector<mlir::Type, 1> &bundleArgTypes) {
@@ -2184,7 +2184,7 @@ cir::IndirectBrOp::getSuccessorOperands(unsigned index) {
   return mlir::SuccessorOperands(getSuccOperandsMutable()[index]);
 }
 
-ParseResult parseIndirectBrOpSucessors(
+ParseResult cir::parseIndirectBrOpSucessors(
     OpAsmParser &parser, Type &flagType,
     SmallVectorImpl<Block *> &succOperandBlocks,
     SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
@@ -2216,10 +2216,10 @@ ParseResult parseIndirectBrOpSucessors(
   return success();
 }
 
-void printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
-                                Type flagType, SuccessorRange succs,
-                                OperandRangeRange succOperands,
-                                const TypeRangeRange &succOperandsTypes) {
+void cir::printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
+                                     Type flagType, SuccessorRange succs,
+                                     OperandRangeRange succOperands,
+                                     const TypeRangeRange &succOperandsTypes) {
   p << "[";
   llvm::interleave(
       llvm::zip(succs, succOperands),
@@ -2353,7 +2353,7 @@ cir::SwitchFlatOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
 /// <cases> ::= `[` (case (`,` case )* )? `]`
 /// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
-ParseResult parseSwitchFlatOpCases(
+ParseResult cir::parseSwitchFlatOpCases(
     OpAsmParser &parser, Type flagType, mlir::ArrayAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<llvm::SmallVector<OpAsmParser::UnresolvedOperand>>
@@ -2396,11 +2396,11 @@ ParseResult parseSwitchFlatOpCases(
   return parser.parseRSquare();
 }
 
-void printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
-                            Type flagType, mlir::ArrayAttr caseValues,
-                            SuccessorRange caseDestinations,
-                            OperandRangeRange caseOperands,
-                            const TypeRangeRange &caseOperandTypes) {
+void cir::printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
+                                 Type flagType, mlir::ArrayAttr caseValues,
+                                 SuccessorRange caseDestinations,
+                                 OperandRangeRange caseOperands,
+                                 const TypeRangeRange &caseOperandTypes) {
   p << '[';
   p.printNewline();
   if (!caseValues) {
@@ -2576,11 +2576,12 @@ static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
     p << "(\"" << comdat.getValue() << "\")";
 }
 
-void printComdatName(OpAsmPrinter &p, cir::GlobalOp op, StringAttr comdat) {
-  printComdatName(p, comdat);
+void cir::printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
+                          StringAttr comdat) {
+  ::printComdatName(p, comdat);
 }
 
-ParseResult parseComdatName(OpAsmParser &parser, StringAttr &comdatAttr) {
+ParseResult cir::parseComdatName(OpAsmParser &parser, StringAttr &comdatAttr) {
   if (parser.parseOptionalKeyword("comdat").failed())
     return success();
   std::string comdatKey;
@@ -2593,10 +2594,10 @@ ParseResult parseComdatName(OpAsmParser &parser, StringAttr &comdatAttr) {
   return success();
 }
 
-void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
-                                      TypeAttr type, Attribute initAttr,
-                                      mlir::Region &ctorRegion,
-                                      mlir::Region &dtorRegion) {
+void cir::printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
+                                           TypeAttr type, Attribute initAttr,
+                                           mlir::Region &ctorRegion,
+                                           mlir::Region &dtorRegion) {
   auto printType = [&]() { p << ": " << type; };
   // Aliases are definitions but they have no initial value or ctor/dtor; the
   // assembly prints them like declarations (`: type`).
@@ -2624,11 +2625,11 @@ void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
   }
 }
 
-ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
-                                             TypeAttr &typeAttr,
-                                             Attribute &initialValueAttr,
-                                             mlir::Region &ctorRegion,
-                                             mlir::Region &dtorRegion) {
+ParseResult cir::parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
+                                                  TypeAttr &typeAttr,
+                                                  Attribute &initialValueAttr,
+                                                  mlir::Region &ctorRegion,
+                                                  mlir::Region &dtorRegion) {
   mlir::Type opTy;
   if (parser.parseOptionalEqual().failed()) {
     // Absence of equal means a declaration, so we need to parse the type.
@@ -3226,7 +3227,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getComdatAttr()) {
     p << ' ';
-    printComdatName(p, getComdatAttr());
+    ::printComdatName(p, getComdatAttr());
   }
 
   if (getAlignment())
@@ -3962,8 +3963,8 @@ LogicalResult cir::CoroutineOp::verify() {
 // Prints the pointer type(s) for a `cir.copy`. `src` and `dst` share the same
 // pointee type but may differ in address space; a single type is printed when
 // they match, otherwise both are printed (`src` first).
-void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
-                    mlir::Type srcType, mlir::Type dstType) {
+void cir::printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                         mlir::Type srcType, mlir::Type dstType) {
   printer.printType(srcType);
   if (srcType != dstType) {
     printer << ", ";
@@ -3971,8 +3972,9 @@ void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
   }
 }
 
-mlir::ParseResult parseCopyTypes(mlir::OpAsmParser &parser, mlir::Type &srcType,
-                                 mlir::Type &dstType) {
+mlir::ParseResult cir::parseCopyTypes(mlir::OpAsmParser &parser,
+                                      mlir::Type &srcType,
+                                      mlir::Type &dstType) {
   if (parser.parseType(srcType))
     return mlir::failure();
   if (parser.parseOptionalComma().succeeded()) {
@@ -5257,9 +5259,10 @@ LogicalResult cir::TryOp::verifyRegions() {
   return success();
 }
 
-void printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
-                            mlir::MutableArrayRef<mlir::Region> handlerRegions,
-                            mlir::ArrayAttr handlerTypes) {
+void cir::printTryHandlerRegions(
+    mlir::OpAsmPrinter &printer, cir::TryOp op,
+    mlir::MutableArrayRef<mlir::Region> handlerRegions,
+    mlir::ArrayAttr handlerTypes) {
   if (!handlerTypes)
     return;
 
@@ -5299,7 +5302,7 @@ void printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
   }
 }
 
-mlir::ParseResult parseTryHandlerRegions(
+mlir::ParseResult cir::parseTryHandlerRegions(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &handlerRegions,
     mlir::ArrayAttr &handlerTypes) {
@@ -5598,11 +5601,10 @@ LogicalResult cir::EhDispatchOp::verify() {
   return success();
 }
 
-ParseResult
-parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
-                            SmallVectorImpl<Block *> &catchDestinations,
-                            Block *&defaultDestination,
-                            mlir::UnitAttr &defaultIsCatchAll) {
+ParseResult cir::parseEhDispatchDestinations(
+    OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
+    SmallVectorImpl<Block *> &catchDestinations, Block *&defaultDestination,
+    mlir::UnitAttr &defaultIsCatchAll) {
   // Parse: [ ... ]
   if (parser.parseLSquare())
     return failure();
@@ -5738,11 +5740,11 @@ parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
   return success();
 }
 
-void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
-                                 mlir::ArrayAttr catchTypes,
-                                 SuccessorRange catchDestinations,
-                                 Block *defaultDestination,
-                                 mlir::UnitAttr defaultIsCatchAll) {
+void cir::printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
+                                      mlir::ArrayAttr catchTypes,
+                                      SuccessorRange catchDestinations,
+                                      Block *defaultDestination,
+                                      mlir::UnitAttr defaultIsCatchAll) {
   p << " [";
   p.printNewline();
 

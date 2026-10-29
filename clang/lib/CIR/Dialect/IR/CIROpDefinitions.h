@@ -19,6 +19,8 @@
 
 #include "mlir/IR/OpImplementation.h"
 
+namespace cir {
+
 mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
                                                mlir::Region &region);
 void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer, cir::ScopeOp &op,
@@ -99,5 +101,7 @@ void printEhDispatchDestinations(mlir::OpAsmPrinter &p, cir::EhDispatchOp op,
                                  mlir::SuccessorRange catchDestinations,
                                  mlir::Block *defaultDestination,
                                  mlir::UnitAttr defaultIsCatchAll);
+
+} // namespace cir
 
 #endif // CLANG_LIB_CIR_DIALECT_IR_CIROPDEFINITIONS_H
