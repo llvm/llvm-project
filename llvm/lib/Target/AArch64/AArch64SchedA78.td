@@ -1345,7 +1345,7 @@ def : InstRW<[A78Write_4c_1V0], (instregex "^SQDMLALv", "^SQDMLSLv")>;
 def : InstRW<[A78Write_3c_1V0], (instregex "^PMULL?(v8i8|v16i8)$")>;
 
 // ASIMD multiply long
-def : InstRW<[A78Write_3c_1V], (instregex "^[SU]MULLv", "^SQDMULLv")>;
+def : InstRW<[A78Write_3c_1V0], (instregex "^[SU]MULLv", "^SQDMULLv")>;
 
 // ASIMD pairwise add and accumulate long
 def : InstRW<[A78Wr_VPA, A78Rd_VPA], (instregex "^[SU]ADALPv")>;

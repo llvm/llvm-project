@@ -1355,22 +1355,22 @@ uqshl	v0.8h, v1.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        pmull	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  1      3     1.00                        pmull2	v0.8h, v1.16b, v2.16b
 # CHECK-NEXT:  1      3     1.00                        pmul	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      3     0.50                        smull	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  1      3     0.50                        smull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  1      3     0.50                        smull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  1      3     0.50                        smull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  1      3     0.50                        smull2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  1      3     0.50                        smull2	v0.8h, v1.16b, v2.16b
-# CHECK-NEXT:  1      3     0.50                        umull	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  1      3     0.50                        umull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  1      3     0.50                        umull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  1      3     0.50                        umull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  1      3     0.50                        umull2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  1      3     0.50                        umull2	v0.8h, v1.16b, v2.16b
-# CHECK-NEXT:  1      3     0.50                        sqdmull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  1      3     0.50                        sqdmull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  1      3     0.50                        sqdmull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  1      3     0.50                        sqdmull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  1      3     1.00                        smull	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  1      3     1.00                        smull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  1      3     1.00                        smull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     1.00                        smull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     1.00                        smull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  1      3     1.00                        smull2	v0.8h, v1.16b, v2.16b
+# CHECK-NEXT:  1      3     1.00                        umull	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  1      3     1.00                        umull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  1      3     1.00                        umull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     1.00                        umull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     1.00                        umull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  1      3     1.00                        umull2	v0.8h, v1.16b, v2.16b
+# CHECK-NEXT:  1      3     1.00                        sqdmull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     1.00                        sqdmull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  1      3     1.00                        sqdmull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     1.00                        sqdmull2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        sadalp	v0.1d, v1.2s
 # CHECK-NEXT:  1      4     1.00                        sadalp	v0.2d, v1.4s
 # CHECK-NEXT:  1      4     1.00                        sadalp	v0.2s, v1.4h
@@ -1599,7 +1599,7 @@ uqshl	v0.8h, v1.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     264.00 442.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     272.00 434.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -2074,22 +2074,22 @@ uqshl	v0.8h, v1.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmull2	v0.8h, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     pmul	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   smull2	v0.8h, v1.16b, v2.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   umull2	v0.8h, v1.16b, v2.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqdmull	v0.2d, v1.2s, v2.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqdmull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqdmull2	v0.2d, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqdmull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     smull2	v0.8h, v1.16b, v2.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     umull2	v0.8h, v1.16b, v2.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sqdmull	v0.2d, v1.2s, v2.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sqdmull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sqdmull2	v0.2d, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sqdmull2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   sadalp	v0.1d, v1.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   sadalp	v0.2d, v1.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   sadalp	v0.2s, v1.4h
