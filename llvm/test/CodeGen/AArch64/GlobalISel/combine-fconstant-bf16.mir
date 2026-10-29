@@ -2,7 +2,8 @@
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 # FP constant matching must use the G_FCONSTANT's semantics: 0x3F80 is bf16 1.0
-# but half 1.875, and 0x3C00 is half 1.0 but bf16 0.0078125.
+# but half 1.875, and 0x3C00 is half 1.0 but bf16 0.0078125. After a
+# G_ZEXT/G_TRUNC round trip, use the queried register's FP type.
 
 ---
 name:            fmul_bf16_one
@@ -98,4 +99,72 @@ body:             |
     %r:_(<4 x bf16>) = G_FMUL %x, %c
     $d0 = COPY %r(<4 x bf16>)
     RET_ReallyLR implicit $d0
+...
+---
+name:            fmul_f16_zext_trunc_of_bf16_one
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name: fmul_f16_zext_trunc_of_bf16_one
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(f16) = COPY $h0
+    ; CHECK-NEXT: %c:_(bf16) = G_FCONSTANT bfloat 1.000000e+00
+    ; CHECK-NEXT: %z:_(s32) = G_ZEXT %c(bf16)
+    ; CHECK-NEXT: %t:_(f16) = G_TRUNC %z(s32)
+    ; CHECK-NEXT: %r:_(f16) = G_FMUL %x, %t
+    ; CHECK-NEXT: $h0 = COPY %r(f16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
+    %x:_(f16) = COPY $h0
+    %c:_(bf16) = G_FCONSTANT bfloat 0xR3F80
+    %z:_(s32) = G_ZEXT %c(bf16)
+    %t:_(f16) = G_TRUNC %z(s32)
+    %r:_(f16) = G_FMUL %x, %t
+    $h0 = COPY %r(f16)
+    RET_ReallyLR implicit $h0
+...
+---
+name:            fmul_bf16_zext_trunc_of_f16_one
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name: fmul_bf16_zext_trunc_of_f16_one
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(bf16) = COPY $h0
+    ; CHECK-NEXT: %c:_(f16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: %z:_(s32) = G_ZEXT %c(f16)
+    ; CHECK-NEXT: %t:_(bf16) = G_TRUNC %z(s32)
+    ; CHECK-NEXT: %r:_(bf16) = G_FMUL %x, %t
+    ; CHECK-NEXT: $h0 = COPY %r(bf16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
+    %x:_(bf16) = COPY $h0
+    %c:_(f16) = G_FCONSTANT half 0xH3C00
+    %z:_(s32) = G_ZEXT %c(f16)
+    %t:_(bf16) = G_TRUNC %z(s32)
+    %r:_(bf16) = G_FMUL %x, %t
+    $h0 = COPY %r(bf16)
+    RET_ReallyLR implicit $h0
+...
+---
+name:            fmul_bf16_zext_trunc_of_bf16_one
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name: fmul_bf16_zext_trunc_of_bf16_one
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(bf16) = COPY $h0
+    ; CHECK-NEXT: $h0 = COPY %x(bf16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
+    %x:_(bf16) = COPY $h0
+    %c:_(bf16) = G_FCONSTANT bfloat 0xR3F80
+    %z:_(s32) = G_ZEXT %c(bf16)
+    %t:_(bf16) = G_TRUNC %z(s32)
+    %r:_(bf16) = G_FMUL %x, %t
+    $h0 = COPY %r(bf16)
+    RET_ReallyLR implicit $h0
 ...
