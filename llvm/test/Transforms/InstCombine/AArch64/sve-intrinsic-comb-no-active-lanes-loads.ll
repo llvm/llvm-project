@@ -13,15 +13,15 @@ entry:
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 4 x i32> @test_ld1_gather(ptr %a, <vscale x 4 x i64> %b)  #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @test_ld1_gather(
-; CHECK-SAME: ptr [[A:%.*]], <vscale x 4 x i64> [[B:%.*]]) {
+define <vscale x 2 x i32> @test_ld1_gather(ptr %a, <vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define <vscale x 2 x i32> @test_ld1_gather(
+; CHECK-SAME: ptr [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> zeroinitializer
 ;
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i64> %b)
-  ret <vscale x 4 x i32> %0
+  %0 = tail call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.gather.nxv2i32(<vscale x 2 x i1> zeroinitializer, ptr %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i32> %0
 }
 
 define <vscale x 2 x i64> @test_ld1_gather_index(ptr %a, <vscale x 2 x i64> %b)  #0 {
@@ -251,15 +251,15 @@ entry:
   ret <vscale x 8 x i16> %0
 }
 
-define <vscale x 4 x i32> @test_ldff1_gather(ptr %a, <vscale x 4 x i64> %b)  #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @test_ldff1_gather(
-; CHECK-SAME: ptr [[A:%.*]], <vscale x 4 x i64> [[B:%.*]]) {
+define <vscale x 2 x i32> @test_ldff1_gather(ptr %a, <vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define <vscale x 2 x i32> @test_ldff1_gather(
+; CHECK-SAME: ptr [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> zeroinitializer
 ;
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i64> %b)
-  ret <vscale x 4 x i32> %0
+  %0 = tail call <vscale x 2 x i32> @llvm.aarch64.sve.ldff1.gather.nxv2i32(<vscale x 2 x i1> zeroinitializer, ptr %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i32> %0
 }
 
 define <vscale x 2 x i64> @test_ldff1_gather_index(ptr %a, <vscale x 2 x i64> %b)  #0 {
@@ -350,15 +350,15 @@ entry:
   ret <vscale x 8 x i16> %0
 }
 
-define <vscale x 4 x i32> @test_ldnt1_gather(ptr %a, <vscale x 4 x i64> %b)  #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @test_ldnt1_gather(
-; CHECK-SAME: ptr [[A:%.*]], <vscale x 4 x i64> [[B:%.*]]) {
+define <vscale x 2 x i32> @test_ldnt1_gather(ptr %a, <vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define <vscale x 2 x i32> @test_ldnt1_gather(
+; CHECK-SAME: ptr [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> zeroinitializer
 ;
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.gather.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i64> %b)
-  ret <vscale x 4 x i32> %0
+  %0 = tail call <vscale x 2 x i32> @llvm.aarch64.sve.ldnt1.gather.nxv2i32(<vscale x 2 x i1> zeroinitializer, ptr %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i32> %0
 }
 
 define <vscale x 2 x i64> @test_ldnt1_gather_index(ptr %a, <vscale x 2 x i64> %b)  #0 {
