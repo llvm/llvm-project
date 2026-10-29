@@ -874,16 +874,14 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
   unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
   for (Argument *PtrArg : PointerArgs) {
-    // Replace sret attribute with noalias. This reduces register pressure by
-    // avoiding a register copy.
+    // Remove sret to reduce register pressure by avoiding a register copy.
+    // This does not imply noalias: other arguments may alias the return buffer.
     if (PtrArg->hasStructRetAttr()) {
       unsigned ArgNo = PtrArg->getArgNo();
       F->removeParamAttr(ArgNo, Attribute::StructRet);
-      F->addParamAttr(ArgNo, Attribute::NoAlias);
       for (Use &U : F->uses()) {
         CallBase &CB = cast<CallBase>(*U.getUser());
         CB.removeParamAttr(ArgNo, Attribute::StructRet);
-        CB.addParamAttr(ArgNo, Attribute::NoAlias);
       }
     }
 
