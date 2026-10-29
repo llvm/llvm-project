@@ -364,9 +364,11 @@ struct VPlanTransforms {
   /// Transform widen memory recipes into strided access recipes when legal
   /// and profitable. Clamps \p Range to maintain consistency with widen
   /// decisions of \p Plan, and uses \p Ctx to evaluate the cost.
-  static void convertToStridedAccesses(VPlan &Plan,
-                                       PredicatedScalarEvolution &PSE, Loop &L,
-                                       VPCostContext &Ctx, VFRange &Range);
+  static void convertToStridedAccesses(
+      VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
+      VFRange &Range,
+      SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+      bool EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);

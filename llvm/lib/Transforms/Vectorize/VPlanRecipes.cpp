@@ -5122,6 +5122,34 @@ void VPInterleaveEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+InstructionCost VPInterleaveBase::computeInterleaveGroupCost(
+    const InterleaveGroup<Instruction> *IG, Type *ValTy, ElementCount VF,
+    unsigned AddressSpace, VPValue *Mask, bool NeedsMaskForGaps,
+    VPCostContext &Ctx) {
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+  unsigned InterleaveFactor = IG->getFactor();
+  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+
+  // Holds the indices of existing members in the interleaved group.
+  SmallVector<unsigned, 4> Indices;
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (IG->getMember(IF))
+      Indices.push_back(IF);
+
+  // Calculate the cost of the whole interleaved group.
+  InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
+      IG->getInsertPos()->getOpcode(), WideVecTy, IG->getFactor(), Indices,
+      IG->getAlign(), AddressSpace, Ctx.CostKind, Mask, NeedsMaskForGaps);
+
+  if (!IG->isReverse())
+    return Cost;
+
+  return Cost + IG->getNumMembers() *
+                    Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                           VectorTy, VectorTy, Ctx.CostKind, {},
+                                           0);
+}
+
 InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                               VPCostContext &Ctx) const {
   Instruction *InsertPos = getInsertPos();
@@ -5137,31 +5165,11 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                             ? getVPValue(InsertPosIdx)
                             : getStoredValues()[InsertPosIdx];
   Type *ValTy = ValV->getScalarType();
-  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   unsigned AS =
       cast<PointerType>(getAddr()->getScalarType())->getAddressSpace();
 
-  unsigned InterleaveFactor = IG->getFactor();
-  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
-
-  // Holds the indices of existing members in the interleaved group.
-  SmallVector<unsigned, 4> Indices;
-  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
-    if (IG->getMember(IF))
-      Indices.push_back(IF);
-
-  // Calculate the cost of the whole interleaved group.
-  InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
-      InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
-      IG->getAlign(), AS, Ctx.CostKind, getMask(), NeedsMaskForGaps);
-
-  if (!IG->isReverse())
-    return Cost;
-
-  return Cost + IG->getNumMembers() *
-                    Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, VectorTy, Ctx.CostKind, {},
-                                           0);
+  return computeInterleaveGroupCost(IG, ValTy, VF, AS, getMask(),
+                                    NeedsMaskForGaps, Ctx);
 }
 
 InstructionCost

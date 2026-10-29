@@ -3176,6 +3176,16 @@ public:
     llvm_unreachable("VPInterleaveBase should not be instantiated.");
   }
 
+  /// Helper function for computing the cost of an interleaved memory access
+  /// for interleave group \p IG, accessing elements of type \p ValTy via
+  /// address space \p AddressSpace, where \p Mask and \p NeedsMaskForGaps
+  /// indicate the group's masking requirements.
+  static InstructionCost
+  computeInterleaveGroupCost(const InterleaveGroup<Instruction> *IG,
+                             Type *ValTy, ElementCount VF,
+                             unsigned AddressSpace, VPValue *Mask,
+                             bool NeedsMaskForGaps, VPCostContext &Ctx);
+
   /// Return the cost of this recipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
