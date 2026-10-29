@@ -1039,6 +1039,50 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return IsStore ? AnyValue() : Data;
   }
 
+  /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
+  /// as a <Rows x ElemTy> vector at an inbounds nuw GEP of C * \p Stride
+  /// elements from \p Ptr.
+  AnyValue callMatrixColumnMajorStoreIntrinsic(CallBase &CB,
+                                               const AnyValue &Ptr,
+                                               const AnyValue &Stride,
+                                               const AnyValue &Data) {
+    // TODO: Handle isvolatile argument.
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    const unsigned Rows =
+        cast<ConstantInt>(CB.getArgOperand(4))->getZExtValue();
+    const unsigned Cols =
+        cast<ConstantInt>(CB.getArgOperand(5))->getZExtValue();
+    if (Stride.isPoison()) {
+      reportImmediateUB() << IntrinsicName << " with poison stride.";
+      return AnyValue();
+    }
+    const APInt &StrideInt = Stride.asInteger();
+    if (StrideInt.ult(Rows)) {
+      reportImmediateUB() << IntrinsicName << " with stride "
+                          << StrideInt.getZExtValue()
+                          << " less than the number of rows " << Rows << '.';
+      return AnyValue();
+    }
+
+    Type *ElemTy = CB.getArgOperand(0)->getType()->getScalarType();
+    auto *ColTy = FixedVectorType::get(ElemTy, Rows);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(1)->getType());
+    const APInt StrideIdx = StrideInt.zextOrTrunc(IndexBW);
+    const APInt ElemSize(IndexBW, Ctx.getEffectiveTypeAllocSize(ElemTy),
+                         /*isSigned=*/false, /*implicitTrunc=*/true);
+    ArrayRef<AnyValue> Elems = Data.asAggregate();
+    for (unsigned C = 0; C != Cols; ++C) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      AnyValue ColPtr = Ctx.computeScaledPtrAdd(
+          Ptr, StrideIdx * C, ElemSize,
+          GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap(),
+          AccumulatedOffset);
+      store(ColPtr, Align(1), Elems.slice(C * Rows, Rows).vec(), ColTy);
+    }
+    return AnyValue();
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -1983,6 +2027,8 @@ public:
           Res.push_back(Vec[J * Rows + I]);
       return std::move(Res);
     }
+    case Intrinsic::matrix_column_major_store:
+      return callMatrixColumnMajorStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
