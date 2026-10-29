@@ -941,8 +941,8 @@ static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
 
   if (uint64_t NumBlocks = getXTeamReductionNumBlocks(
           Props, EffectiveNumThreads, LoopTripCount, KernelEnv))
-    return std::min(NumBlocks, uint64_t(getDeviceBlockLimit(
-                                   GenericDevice, EffectiveNumThreads)));
+    return std::min(NumBlocks,
+                    uint64_t(getDeviceBlockLimit(Props, EffectiveNumThreads)));
 
   uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
                                   ? getDefaultNumBlocksGenericSPMD(Props)
