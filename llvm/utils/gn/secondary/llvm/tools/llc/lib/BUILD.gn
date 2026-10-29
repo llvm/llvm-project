@@ -1,20 +1,8 @@
 static_library("lib") {
   output_name = "LLVMLlcDriver"
   deps = [
-    "//llvm/lib/Analysis",
-    "//llvm/lib/CodeGen",
-    "//llvm/lib/CodeGen/MIRParser",
-    "//llvm/lib/IR",
-    "//llvm/lib/IRReader",
-    "//llvm/lib/MC",
-    "//llvm/lib/Passes",
-    "//llvm/lib/Plugins",
-    "//llvm/lib/Remarks",
-    "//llvm/lib/Support",
-    "//llvm/lib/Target",
-    "//llvm/lib/TargetParser",
-    "//llvm/lib/Transforms/Scalar",
-    "//llvm/lib/Transforms/Utils",
+    "//llvm/include/llvm/Analysis:TargetLibraryInfo",
+    "//llvm/include/llvm/IR:public_tablegen",
   ]
   sources = [
     "NewPMDriver.cpp",
