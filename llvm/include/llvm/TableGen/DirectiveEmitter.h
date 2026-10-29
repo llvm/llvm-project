@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Directive/Spelling.h"
+#include "llvm/Frontend/Directive/Version.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
@@ -131,8 +132,9 @@ public:
 
   StringRef getText() const { return Def->getValueAsString("spelling"); }
   llvm::directive::VersionRange getVersions() const {
-    return llvm::directive::VersionRange{getMinVersion(Def),
-                                         getMaxVersion(Def)};
+    return llvm::directive::VersionRange{
+        llvm::directive::Version(getMinVersion(Def)),
+        llvm::directive::Version(getMaxVersion(Def))};
   }
 
   Value get() const { return Value{getText(), getVersions()}; }
@@ -175,7 +177,8 @@ public:
     // This is a suitable spelling for generating an identifier name,
     // since it will remain unchanged when any potential new spellings
     // are added.
-    Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
+    using Version = directive::Version;
+    Spelling::Value Oldest{"not found", {/*Min=*/Version::Max(), Version(0)}};
     for (auto V : getSpellings())
       if (V.Versions.Min < Oldest.Versions.Min)
         Oldest = V;
