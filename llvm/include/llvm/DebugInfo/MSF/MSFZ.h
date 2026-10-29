@@ -132,10 +132,13 @@ public:
   /// Create a writer using \p CompressionLevel.
   ///
   /// The level must be within the range accepted by LLVM's zstd support.
+  /// \p ChunkSize limits the uncompressed size of each compression chunk,
+  /// between 4096 and 1073741824 bytes. Writes are split at chunk boundaries.
   /// Invalid levels, invalid layouts, and output-file failures are returned as
   /// errors.
   static Expected<std::unique_ptr<MSFZWriter>>
-  create(StringRef Path, const MSFLayout &Layout, int CompressionLevel);
+  create(StringRef Path, const MSFLayout &Layout, int CompressionLevel,
+         uint32_t ChunkSize = 1024 * 1024);
   ~MSFZWriter() override;
 
   MSFZWriter(const MSFZWriter &) = delete;

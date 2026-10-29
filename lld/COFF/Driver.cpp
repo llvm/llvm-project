@@ -1891,9 +1891,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           config->pdbMSFZCompressionLevel = level;
       }
     }
+    if (auto *arg = args.getLastArg(OPT_pdbmsfzchunksize)) {
+      uint32_t size;
+      StringRef value = arg->getValue();
+      if (!config->pdbMSFZCompressionLevel)
+        Err(ctx) << "/pdbmsfzchunksize requires /pdbmsfz";
+      else if (value.getAsInteger(10, size) || size < 4096 ||
+               size > (1U << 30))
+        Err(ctx) << arg->getSpelling()
+                 << " chunk size must be between 4096 and 1073741824 bytes, "
+                    "but got "
+                 << value;
+      else
+        config->pdbMSFZChunkSize = size;
+    }
 #else
     if (args.hasArg(OPT_pdbmsfz))
       Err(ctx) << "/pdbmsfz requires lld to be built with zstd support";
+    if (args.hasArg(OPT_pdbmsfzchunksize))
+      Err(ctx) << "/pdbmsfzchunksize requires lld to be built with zstd support";
 #endif
     if (auto *arg = args.getLastArg(OPT_pdbpagesize))
       parsePDBPageSize(arg->getValue());

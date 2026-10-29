@@ -37,6 +37,8 @@ COFF Improvements
 
 * Added ``/pdbmsfz:<level>`` to write PDB files using the MSFZ compressed
   container format. The compression level is passed to Zstandard.
+  ``/pdbmsfzchunksize:<bytes>`` sets the maximum uncompressed chunk size from
+  4096 to 1073741824 bytes (default: 1048576).
 
 MinGW Improvements
 ------------------

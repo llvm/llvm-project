@@ -63,7 +63,8 @@ public:
   // Write the same PDB streams using an MSFZ container.
   LLVM_ABI Error commitMSFZ(StringRef Filename, codeview::GUID *Guid);
   LLVM_ABI Error commitMSFZ(StringRef Filename, codeview::GUID *Guid,
-                            int CompressionLevel);
+                            int CompressionLevel,
+                            uint32_t ChunkSize = 1024 * 1024);
 #endif
 
   LLVM_ABI Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
@@ -97,7 +98,8 @@ private:
 
   Error finalizeMsfLayout();
   Error commitImpl(StringRef Filename, codeview::GUID *Guid,
-                   ContainerType Container, int CompressionLevel);
+                   ContainerType Container, int CompressionLevel,
+                   uint32_t ChunkSize = 1024 * 1024);
   Expected<uint32_t> allocateNamedStream(StringRef Name, uint32_t Size);
 
   Error commitInjectedSources(WritableBinaryStream &MsfBuffer,

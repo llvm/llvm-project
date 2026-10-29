@@ -106,6 +106,8 @@ def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
 def pdbmsfz : P<"pdbmsfz",
     "Write the PDB using MSFZ with the specified Zstd compression level "
     "(requires zstd support)">, MetaVarName<"<level>">;
+def pdbmsfzchunksize : P<"pdbmsfzchunksize",
+    "MSFZ uncompressed chunk size in bytes (4096 to 1073741824, default 1048576)">;
 def pdbpagesize : P<"pdbpagesize", "PDB page size">;
 def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,

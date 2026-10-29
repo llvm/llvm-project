@@ -37,7 +37,6 @@ using namespace llvm::msf;
 
 namespace {
 
-constexpr uint32_t ChunkSize = 1024 * 1024;
 constexpr uint32_t NilStreamMarker = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t InvalidStreamIndex = std::numeric_limits<uint32_t>::max();
 constexpr uint64_t MaxChunks = uint64_t{1} << 31;
@@ -624,11 +623,12 @@ class MSFZWriter::Impl {
   };
 
 public:
-  Impl(sys::fs::TempFile Temp, StringRef Path, int CompressionLevel)
+  Impl(sys::fs::TempFile Temp, StringRef Path, int CompressionLevel,
+       uint32_t ChunkSize)
       : Temp(std::move(Temp)), Path(Path), OS(this->Temp.FD,
                                               /*shouldClose=*/false,
                                               /*unbuffered=*/true),
-        CompressionLevel(CompressionLevel) {
+        CompressionLevel(CompressionLevel), ChunkSize(ChunkSize) {
     unsigned ThreadCount = parallel::strategy.compute_thread_count();
     if (ThreadCount > 1) {
       CompressionPool = std::make_unique<DefaultThreadPool>(parallel::strategy);
@@ -1066,6 +1066,7 @@ private:
   std::string Path;
   raw_fd_ostream OS;
   int CompressionLevel;
+  uint32_t ChunkSize;
   std::unique_ptr<DefaultThreadPool> CompressionPool;
   std::deque<PendingChunk> PendingChunks;
   size_t QueuedCompressionBytes = 0;
@@ -1093,20 +1094,24 @@ MSFZWriter::create(StringRef Path, const MSFLayout &Layout) {
 
 Expected<std::unique_ptr<MSFZWriter>>
 MSFZWriter::create(StringRef Path, const MSFLayout &Layout,
-                   int CompressionLevel) {
+                   int CompressionLevel, uint32_t ChunkSize) {
   int MinLevel = compression::zstd::getMinCompressionLevel();
   int MaxLevel = compression::zstd::getMaxCompressionLevel();
   if (CompressionLevel < MinLevel || CompressionLevel > MaxLevel)
     return streamError(
         Twine("MSFZ output: compression level must be between ") +
         Twine(MinLevel) + " and " + Twine(MaxLevel));
+  if (ChunkSize < 4096 || ChunkSize > MaxCompressedChunkSize)
+    return streamError(
+        "MSFZ output: chunk size must be between 4096 and 1073741824 bytes");
 
   Expected<sys::fs::TempFile> TempOrErr =
       sys::fs::TempFile::create(Path + ".tmp%%%%%%%");
   if (!TempOrErr)
     return TempOrErr.takeError();
   std::unique_ptr<MSFZWriter> Result(new MSFZWriter(
-      std::make_unique<Impl>(std::move(*TempOrErr), Path, CompressionLevel)));
+      std::make_unique<Impl>(std::move(*TempOrErr), Path, CompressionLevel,
+                             ChunkSize)));
   if (Error E = Result->PImpl->initialize(Layout))
     return std::move(E);
   return Result;

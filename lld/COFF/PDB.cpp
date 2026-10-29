@@ -1711,7 +1711,8 @@ void PDBLinker::commit(codeview::GUID *guid) {
 #if LLVM_ENABLE_ZSTD
   Error e = ctx.config.pdbMSFZCompressionLevel
                 ? builder.commitMSFZ(ctx.config.pdbPath, guid,
-                                     *ctx.config.pdbMSFZCompressionLevel)
+                                     *ctx.config.pdbMSFZCompressionLevel,
+                                     ctx.config.pdbMSFZChunkSize)
                 : builder.commit(ctx.config.pdbPath, guid);
 #else
   Error e = builder.commit(ctx.config.pdbPath, guid);

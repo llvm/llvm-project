@@ -288,6 +288,62 @@ TEST(MSFZTest, ReadsAcrossManyFragments) {
   }
 }
 
+TEST(MSFZTest, ConfigurableChunkSize) {
+  constexpr uint32_t StreamSize = 16385;
+  SuperBlock SB = {};
+  SB.BlockSize = StreamSize;
+  SB.NumBlocks = 2;
+  support::ulittle32_t Sizes[2];
+  Sizes[0] = 0;
+  Sizes[1] = StreamSize;
+  support::ulittle32_t Block;
+  Block = 1;
+  MSFLayout Layout;
+  Layout.SB = &SB;
+  Layout.StreamSizes = Sizes;
+  Layout.StreamMap = {{}, {&Block, 1}};
+  SmallVector<uint8_t, 0> Data(StreamSize, 'x');
+  unittest::TempDir TestDirectory("msfz-chunk-size", /*Unique=*/true);
+  SmallString<128> Path = TestDirectory.path("test.pdz");
+  for (uint32_t ChunkSize : {4096u, 8192u, 1u << 30}) {
+    auto Writer = MSFZWriter::create(
+        Path, Layout, compression::zstd::BestSpeedCompression, ChunkSize);
+    ASSERT_THAT_EXPECTED(Writer, Succeeded());
+    ASSERT_THAT_ERROR((*Writer)->writeBytes(StreamSize, Data), Succeeded());
+    ASSERT_THAT_ERROR((*Writer)->finalize(), Succeeded());
+    auto Buffer = MemoryBuffer::getFile(Path, /*IsText=*/false);
+    ASSERT_TRUE(Buffer);
+    ArrayRef<uint8_t> File(
+        reinterpret_cast<const uint8_t *>((*Buffer)->getBufferStart()),
+        (*Buffer)->getBufferSize());
+    MSFZHeader Header;
+    std::memcpy(&Header, File.data(), sizeof(Header));
+    ASSERT_EQ(Header.NumChunks, (StreamSize + ChunkSize - 1) / ChunkSize);
+    for (uint32_t I = 0; I != Header.NumChunks; ++I) {
+      MSFZChunkEntry Chunk;
+      std::memcpy(&Chunk, File.data() + Header.ChunkTableOffset +
+                              I * sizeof(Chunk), sizeof(Chunk));
+      EXPECT_EQ(Chunk.UncompressedSize,
+                std::min(ChunkSize, StreamSize - I * ChunkSize));
+    }
+    BumpPtrAllocator Allocator;
+    BinaryByteStream Input(File, llvm::endianness::little);
+    auto Reader = MSFZFile::create(Input, Allocator);
+    ASSERT_THAT_EXPECTED(Reader, Succeeded());
+    auto Stream = (*Reader)->createStream(1);
+    ASSERT_THAT_EXPECTED(Stream, Succeeded());
+    ArrayRef<uint8_t> ReadData;
+    ASSERT_THAT_ERROR((*Stream)->readBytes(0, StreamSize, ReadData), Succeeded());
+    EXPECT_EQ(ReadData, ArrayRef(Data));
+  }
+  for (uint32_t ChunkSize : {0u, 4095u, (1u << 30) + 1, UINT32_MAX})
+    EXPECT_THAT_EXPECTED(
+        MSFZWriter::create(Path, Layout,
+                           compression::zstd::BestSpeedCompression, ChunkSize),
+        FailedWithMessage(
+            "MSFZ output: chunk size must be between 4096 and 1073741824 bytes"));
+}
+
 TEST(MSFZTest, ParallelCompressionIsDeterministic) {
   ThreadPoolStrategy SavedStrategy = parallel::strategy;
   scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });

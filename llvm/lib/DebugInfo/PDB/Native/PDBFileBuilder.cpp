@@ -307,14 +307,15 @@ Error PDBFileBuilder::commitMSFZ(StringRef Filename, codeview::GUID *Guid) {
 }
 
 Error PDBFileBuilder::commitMSFZ(StringRef Filename, codeview::GUID *Guid,
-                                 int CompressionLevel) {
-  return commitImpl(Filename, Guid, ContainerType::MSFZ, CompressionLevel);
+                                 int CompressionLevel, uint32_t ChunkSize) {
+  return commitImpl(Filename, Guid, ContainerType::MSFZ, CompressionLevel,
+                    ChunkSize);
 }
 #endif
 
 Error PDBFileBuilder::commitImpl(StringRef Filename, codeview::GUID *Guid,
                                  ContainerType Container,
-                                 int CompressionLevel) {
+                                 int CompressionLevel, uint32_t ChunkSize) {
   assert(!Filename.empty());
   if (auto EC = finalizeMsfLayout())
     return EC;
@@ -345,7 +346,7 @@ Error PDBFileBuilder::commitImpl(StringRef Filename, codeview::GUID *Guid,
     Layout = std::move(*ExpectedLayout);
 
     Expected<std::unique_ptr<MSFZWriter>> ExpectedMSFZBuffer =
-        MSFZWriter::create(Filename, Layout, CompressionLevel);
+        MSFZWriter::create(Filename, Layout, CompressionLevel, ChunkSize);
     if (!ExpectedMSFZBuffer)
       return ExpectedMSFZBuffer.takeError();
     MSFZBuffer = std::move(*ExpectedMSFZBuffer);
