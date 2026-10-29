@@ -6667,16 +6667,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
   }
-  case Intrinsic::aarch64_sme_za_enable:
-    return DAG.getNode(
-        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
-  case Intrinsic::aarch64_sme_za_disable:
-    return DAG.getNode(
-        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   }
 }
 
