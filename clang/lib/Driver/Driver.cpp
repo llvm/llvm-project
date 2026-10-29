@@ -5787,8 +5787,13 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         Output += "-";
         Output.append(BoundArchStr);
       }
-      if (UseOutExtension)
-        Output += ".out";
+      if (UseOutExtension) {
+        const ToolChain *OffloadTC = JA.getOffloadingToolChain();
+        // HIP SPIR-V is emitted by a device link job.
+        const bool IsHIPSPIRV = IsHIPNoRDC && isa<LinkJobAction>(JA) &&
+                                OffloadTC && OffloadTC->getTriple().isSPIRV();
+        Output += IsHIPSPIRV ? ".spv" : ".out";
+      }
       NamedOutput = C.getArgs().MakeArgString(Output.c_str());
     }
   } else if (JA.getType() == types::TY_PCH && IsCLMode()) {
