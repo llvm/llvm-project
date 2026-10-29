@@ -505,14 +505,14 @@ module  {
       : !cir.float, #cir.fp<3.000000e+00> : !cir.float, #cir.fp<1.000000e+00> : !cir.float]> : !cir.vector<4 x !cir.float>
     %new_vec = cir.vec.fcmp(olt, %vec_1, %vec_2) :
         !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-        fenv<strict_except = true>
+        fenv<strict = true>
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
   // CHECK-LABEL: cir.func{{.*}} @no_fold_fcmp_vector_with_fenv
   // CHECK: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) :
   // CHECK-SAME: !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CHECK-SAME: fenv<strict_except = true>
+  // CHECK-SAME: fenv<strict = true>
 }
 
 // -----
@@ -535,7 +535,7 @@ module  {
     ]> : !cir.vector<4 x !cir.float>
     %new_vec = cir.vec.fcmp(olt, %vec_1, %vec_2) :
         !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-        fenv<dynamic_rounding_mode = upward, except_mode = masked>
+        fenv<rounding = upward, except = masked>
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
@@ -566,7 +566,7 @@ module  {
     ]> : !cir.vector<4 x !cir.float>
     %new_vec = cir.vec.fcmp(olt, %vec_1, %vec_2) :
         !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-        fenv<except_mode = unknown>
+        fenv<except = unknown>
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
@@ -574,5 +574,5 @@ module  {
   // CHECK-LABEL: cir.func{{.*}} @no_fold_fcmp_vector_with_unknown_exceptions
   // CHECK: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) :
   // CHECK-SAME: !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CHECK-SAME: fenv<except_mode = unknown>
+  // CHECK-SAME: fenv<except = unknown>
 }

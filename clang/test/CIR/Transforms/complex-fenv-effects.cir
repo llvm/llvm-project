@@ -17,10 +17,10 @@ cir.func @dead_unconstrained_is_removed(%a: !complex_f32, %b: !complex_f32) {
 }
 
 // CHECK-LABEL: @dead_constrained_is_not_removed
-// CHECK:         cir.complex.fadd %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict_except = true>
-// CHECK:         cir.complex.fsub %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict_except = true>
+// CHECK:         cir.complex.fadd %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict = true>
+// CHECK:         cir.complex.fsub %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict = true>
 cir.func @dead_constrained_is_not_removed(%a: !complex_f32, %b: !complex_f32) {
-  %0 = cir.complex.fadd %a, %b : !complex_f32 fenv<strict_except = true>
-  %1 = cir.complex.fsub %a, %b : !complex_f32 fenv<strict_except = true>
+  %0 = cir.complex.fadd %a, %b : !complex_f32 fenv<strict = true>
+  %1 = cir.complex.fsub %a, %b : !complex_f32 fenv<strict = true>
   cir.return
 }

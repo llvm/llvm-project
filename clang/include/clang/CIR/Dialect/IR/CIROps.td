@@ -379,7 +379,7 @@ def CIR_CastOp : CIR_FenvOp<"cast", [
     %x = cir.cast array_to_ptrdecay %0 
        : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
     %y = cir.cast floating %f : !cir.double -> !cir.float
-       fenv<except_mode = unknown, strict_except = true>
+       fenv<except = unknown, strict = true>
     ```
   }];
 
@@ -2736,7 +2736,7 @@ def CIR_CmpOp : CIR_FenvOp<"cmp", [SameTypeOperands]> {
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
     %2 = cir.cmp lt %x, %y : !cir.float
-         fenv<except_mode = unknown, strict_except = true>
+         fenv<except = unknown, strict = true>
     ```
   }];
 
@@ -2828,7 +2828,7 @@ def CIR_FCmpOp : CIR_FenvOp<"fcmp", [SameTypeOperands]> {
     attribute is present.
 
     ```
-    %0 = cir.fcmp olt %x, %y : !cir.float fenv<strict_except = true>
+    %0 = cir.fcmp olt %x, %y : !cir.float fenv<strict = true>
     ```
   }];
 
@@ -7012,7 +7012,7 @@ def CIR_VecFCmpOp : CIR_FenvOp<"vec.fcmp", [SameTypeOperands]> {
 
     ```
     %ogt = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>,
-        !cir.vector<4 x !s32i> signaling fenv<strict_except = true>
+        !cir.vector<4 x !s32i> signaling fenv<strict = true>
     ```
   }];
 

@@ -18,7 +18,7 @@ __m128 test_cmp_ps_eq_oq(__m128 a, __m128 b) {
   // CIR: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_eq_oq
-  // CIR-STRICT: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict = true>
 
   // CHECK-LABEL: @test_cmp_ps_eq_oq
   // CHECK: %[[CMP:.*]] = fcmp oeq <4 x float> %{{.*}}, %{{.*}}
@@ -33,7 +33,7 @@ __m128 test_cmp_ps_eq_oq(__m128 a, __m128 b) {
 // EQ_OS is signaling although eq is quiet by default.
 __m128 test_cmp_ps_eq_os(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_eq_os
-  // CIR-STRICT: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict = true>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_eq_os
   // CHECK-STRICT: call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
@@ -43,7 +43,7 @@ __m128 test_cmp_ps_eq_os(__m128 a, __m128 b) {
 // LT_OQ is quiet although lt is signaling by default.
 __m256d test_cmp_pd_lt_oq(__m256d a, __m256d b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_pd_lt_oq
-  // CIR-STRICT: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.double>, !cir.vector<4 x !s64i> fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.double>, !cir.vector<4 x !s64i> fenv<{{.*}}strict = true>
 
   // CHECK-STRICT-LABEL: @test_cmp_pd_lt_oq
   // CHECK-STRICT: call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, metadata !"olt", metadata !"fpexcept.strict")
@@ -233,7 +233,7 @@ __m128 test_cmp_ps_gt_os(__m128 a, __m128 b) {
 // Predicates 16-31 flip the signaling behavior of predicates 0-15.
 __m128 test_cmp_ps_neq_us(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_neq_us
-  // CIR-STRICT: cir.vec.fcmp(une, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(une, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict = true>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_neq_us
   // CHECK-STRICT: call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"une", metadata !"fpexcept.strict")
@@ -242,7 +242,7 @@ __m128 test_cmp_ps_neq_us(__m128 a, __m128 b) {
 
 __m128 test_cmp_ps_unord_s(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_unord_s
-  // CIR-STRICT: cir.vec.fcmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict = true>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_unord_s
   // CHECK-STRICT: call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"uno", metadata !"fpexcept.strict")
@@ -251,7 +251,7 @@ __m128 test_cmp_ps_unord_s(__m128 a, __m128 b) {
 
 __m128 test_cmp_ps_ge_oq(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_ge_oq
-  // CIR-STRICT: cir.vec.fcmp(oge, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: cir.vec.fcmp(oge, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict = true>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_ge_oq
   // CHECK-STRICT: call <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"oge", metadata !"fpexcept.strict")
@@ -260,7 +260,7 @@ __m128 test_cmp_ps_ge_oq(__m128 a, __m128 b) {
 
 __m128 test_cmp_ps_nge_uq(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_nge_uq
-  // CIR-STRICT: %[[CMP:.*]] = cir.vec.fcmp(ult, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: %[[CMP:.*]] = cir.vec.fcmp(ult, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<{{.*}}strict = true>
   // CIR-STRICT: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_nge_uq
@@ -270,7 +270,7 @@ __m128 test_cmp_ps_nge_uq(__m128 a, __m128 b) {
 
 __m128 test_cmp_ps_ord_s(__m128 a, __m128 b) {
   // CIR-STRICT-LABEL: cir.func {{.*}}@test_cmp_ps_ord_s
-  // CIR-STRICT: %[[CMP:.*]] = cir.vec.fcmp(ord, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict_except = true>
+  // CIR-STRICT: %[[CMP:.*]] = cir.vec.fcmp(ord, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<{{.*}}strict = true>
   // CIR-STRICT: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-STRICT-LABEL: @test_cmp_ps_ord_s

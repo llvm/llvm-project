@@ -5,8 +5,8 @@
 // CHECK-LABEL: cir.func @fadd_fenv
 cir.func @fadd_fenv(%a: !cir.float, %b: !cir.float) {
   // All fields present.
-  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
-  %0 = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<rounding = tonearest, except = unknown, strict = true>
+  %0 = cir.fadd %a, %b : !cir.float fenv<rounding = tonearest, except = unknown, strict = true>
 
   // No fenv attribute at all.
   // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float
@@ -14,53 +14,53 @@ cir.func @fadd_fenv(%a: !cir.float, %b: !cir.float) {
   %1 = cir.fadd %a, %b : !cir.float
 
   // Fields set to their default value are kept.
-  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
-  %2 = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<rounding = tonearest, except = masked, strict = false>
+  %2 = cir.fadd %a, %b : !cir.float fenv<rounding = tonearest, except = masked, strict = false>
   cir.return
 }
 
 // Roundtrip each binary floating-point op with a fenv attribute.
 // CHECK-LABEL: cir.func @fp_binops_fenv
 cir.func @fp_binops_fenv(%a: !cir.double, %b: !cir.double) {
-  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = tonearest>
-  %0 = cir.fadd %a, %b : !cir.double fenv<dynamic_rounding_mode = tonearest>
-  // CHECK: cir.fsub %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = downward>
-  %1 = cir.fsub %a, %b : !cir.double fenv<dynamic_rounding_mode = downward>
-  // CHECK: cir.fmul %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = upward>
-  %2 = cir.fmul %a, %b : !cir.double fenv<dynamic_rounding_mode = upward>
-  // CHECK: cir.fdiv %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = upwardzero>
-  %3 = cir.fdiv %a, %b : !cir.double fenv<dynamic_rounding_mode = upwardzero>
-  // CHECK: cir.frem %{{.*}}, %{{.*}} : !cir.double fenv<dynamic_rounding_mode = tonearestaway>
-  %4 = cir.frem %a, %b : !cir.double fenv<dynamic_rounding_mode = tonearestaway>
+  // CHECK: cir.fadd %{{.*}}, %{{.*}} : !cir.double fenv<rounding = tonearest>
+  %0 = cir.fadd %a, %b : !cir.double fenv<rounding = tonearest>
+  // CHECK: cir.fsub %{{.*}}, %{{.*}} : !cir.double fenv<rounding = downward>
+  %1 = cir.fsub %a, %b : !cir.double fenv<rounding = downward>
+  // CHECK: cir.fmul %{{.*}}, %{{.*}} : !cir.double fenv<rounding = upward>
+  %2 = cir.fmul %a, %b : !cir.double fenv<rounding = upward>
+  // CHECK: cir.fdiv %{{.*}}, %{{.*}} : !cir.double fenv<rounding = upwardzero>
+  %3 = cir.fdiv %a, %b : !cir.double fenv<rounding = upwardzero>
+  // CHECK: cir.frem %{{.*}}, %{{.*}} : !cir.double fenv<rounding = tonearestaway>
+  %4 = cir.frem %a, %b : !cir.double fenv<rounding = tonearestaway>
   cir.return
 }
 
 // CHECK-LABEL: cir.func @fneg_fenv
 cir.func @fneg_fenv(%a: !cir.float, %v: !cir.vector<4 x !cir.float>) {
-  // CHECK: cir.fneg %{{.*}} : !cir.float {fenv = #cir.fenv<except_mode = masked>}
-  %0 = cir.fneg %a : !cir.float {fenv = #cir.fenv<except_mode = masked>}
-  // CHECK: cir.fneg %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<except_mode = unmasked, strict_except = false>}
-  %1 = cir.fneg %v : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<except_mode = unmasked, strict_except = false>}
+  // CHECK: cir.fneg %{{.*}} : !cir.float {fenv = #cir.fenv<except = masked>}
+  %0 = cir.fneg %a : !cir.float {fenv = #cir.fenv<except = masked>}
+  // CHECK: cir.fneg %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<except = unmasked, strict = false>}
+  %1 = cir.fneg %v : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<except = unmasked, strict = false>}
   cir.return
 }
 
 // CHECK-LABEL: cir.func @unary_fp_builtin_fenv
 cir.func @unary_fp_builtin_fenv(%a: !cir.float) {
-  // CHECK: cir.sqrt %{{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown>
-  %0 = cir.sqrt %a : !cir.float fenv<dynamic_rounding_mode = unknown>
-  // CHECK: cir.cos %{{.*}} : !cir.float fenv<dynamic_rounding_mode = downward>
-  %1 = cir.cos %a : !cir.float fenv<dynamic_rounding_mode = downward>
-  // CHECK: cir.floor %{{.*}} : !cir.float fenv<dynamic_rounding_mode = upwardzero>
-  %2 = cir.floor %a : !cir.float fenv<dynamic_rounding_mode = upwardzero>
+  // CHECK: cir.sqrt %{{.*}} : !cir.float fenv<rounding = unknown>
+  %0 = cir.sqrt %a : !cir.float fenv<rounding = unknown>
+  // CHECK: cir.cos %{{.*}} : !cir.float fenv<rounding = downward>
+  %1 = cir.cos %a : !cir.float fenv<rounding = downward>
+  // CHECK: cir.floor %{{.*}} : !cir.float fenv<rounding = upwardzero>
+  %2 = cir.floor %a : !cir.float fenv<rounding = upwardzero>
   cir.return
 }
 
 // CHECK-LABEL: cir.func @binary_fp_builtin_fenv
 cir.func @binary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float) {
-  // CHECK: cir.copysign %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
-  %0 = cir.copysign %a, %b : !cir.float fenv<strict_except = true>
-  // CHECK: cir.pow %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, strict_except = true>
-  %1 = cir.pow %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest, strict_except = true>
+  // CHECK: cir.copysign %{{.*}}, %{{.*}} : !cir.float fenv<strict = true>
+  %0 = cir.copysign %a, %b : !cir.float fenv<strict = true>
+  // CHECK: cir.pow %{{.*}}, %{{.*}} : !cir.float fenv<rounding = tonearest, strict = true>
+  %1 = cir.pow %a, %b : !cir.float fenv<rounding = tonearest, strict = true>
   // CHECK: cir.atan2 %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %2 = cir.atan2 %a, %b : !cir.float
@@ -69,12 +69,12 @@ cir.func @binary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float) {
 
 // CHECK-LABEL: cir.func @unary_fp_to_int_builtin_fenv
 cir.func @unary_fp_to_int_builtin_fenv(%a: !cir.float) -> !s32i {
-  // CHECK: cir.lround %{{.*}} : !cir.float -> !s32i fenv<dynamic_rounding_mode = tonearest>
-  %0 = cir.lround %a : !cir.float -> !s32i fenv<dynamic_rounding_mode = tonearest>
-  // CHECK: cir.llround %{{.*}} : !cir.float -> !s32i fenv<except_mode = unmasked>
-  %1 = cir.llround %a : !cir.float -> !s32i fenv<except_mode = unmasked>
-  // CHECK: cir.lrint %{{.*}} : !cir.float -> !s32i fenv<except_mode = unknown>
-  %2 = cir.lrint %a : !cir.float -> !s32i fenv<except_mode = unknown>
+  // CHECK: cir.lround %{{.*}} : !cir.float -> !s32i fenv<rounding = tonearest>
+  %0 = cir.lround %a : !cir.float -> !s32i fenv<rounding = tonearest>
+  // CHECK: cir.llround %{{.*}} : !cir.float -> !s32i fenv<except = unmasked>
+  %1 = cir.llround %a : !cir.float -> !s32i fenv<except = unmasked>
+  // CHECK: cir.lrint %{{.*}} : !cir.float -> !s32i fenv<except = unknown>
+  %2 = cir.lrint %a : !cir.float -> !s32i fenv<except = unknown>
   // CHECK: cir.llrint %{{.*}} : !cir.float -> !s32i
   // CHECK-NOT: fenv
   %3 = cir.llrint %a : !cir.float -> !s32i
@@ -86,20 +86,20 @@ cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float
                                   %va: !cir.vector<4 x !cir.float>,
                                   %vb: !cir.vector<4 x !cir.float>,
                                   %vc: !cir.vector<4 x !cir.float>) {
-  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = downward, strict_except = true>
-  %0 = cir.fma %a, %b, %c : !cir.float fenv<dynamic_rounding_mode = downward, strict_except = true>
+  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<rounding = downward, strict = true>
+  %0 = cir.fma %a, %b, %c : !cir.float fenv<rounding = downward, strict = true>
   // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %1 = cir.fma %a, %b, %c : !cir.float
-  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = downward, strict_except = true>
-  %2 = cir.fmuladd %a, %b, %c : !cir.float fenv<dynamic_rounding_mode = downward, strict_except = true>
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<rounding = downward, strict = true>
+  %2 = cir.fmuladd %a, %b, %c : !cir.float fenv<rounding = downward, strict = true>
   // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %3 = cir.fmuladd %a, %b, %c : !cir.float
-  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<strict_except = true>
-  %4 = cir.fma %va, %vb, %vc : !cir.vector<4 x !cir.float> fenv<strict_except = true>
-  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<strict_except = true>
-  %5 = cir.fmuladd %va, %vb, %vc : !cir.vector<4 x !cir.float> fenv<strict_except = true>
+  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<strict = true>
+  %4 = cir.fma %va, %vb, %vc : !cir.vector<4 x !cir.float> fenv<strict = true>
+  // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<strict = true>
+  %5 = cir.fmuladd %va, %vb, %vc : !cir.vector<4 x !cir.float> fenv<strict = true>
   // CHECK: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
   // CHECK-NOT: fenv
   %6 = cir.fmuladd %va, %vb, %vc : !cir.vector<4 x !cir.float>
@@ -108,12 +108,12 @@ cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float
 
 // CHECK-LABEL: cir.func @cast_fenv
 cir.func @cast_fenv(%a: !cir.float, %b: !cir.double, %i: !s32i) {
-  // CHECK: cir.cast floating %{{.*}} : !cir.double -> !cir.float fenv<dynamic_rounding_mode = tonearest>
-  %0 = cir.cast floating %b : !cir.double -> !cir.float fenv<dynamic_rounding_mode = tonearest>
-  // CHECK: cir.cast int_to_float %{{.*}} : !s32i -> !cir.float fenv<except_mode = unknown>
-  %1 = cir.cast int_to_float %i : !s32i -> !cir.float fenv<except_mode = unknown>
-  // CHECK: cir.cast float_to_int %{{.*}} : !cir.float -> !s32i fenv<except_mode = unmasked, strict_except = true>
-  %2 = cir.cast float_to_int %a : !cir.float -> !s32i fenv<except_mode = unmasked, strict_except = true>
+  // CHECK: cir.cast floating %{{.*}} : !cir.double -> !cir.float fenv<rounding = tonearest>
+  %0 = cir.cast floating %b : !cir.double -> !cir.float fenv<rounding = tonearest>
+  // CHECK: cir.cast int_to_float %{{.*}} : !s32i -> !cir.float fenv<except = unknown>
+  %1 = cir.cast int_to_float %i : !s32i -> !cir.float fenv<except = unknown>
+  // CHECK: cir.cast float_to_int %{{.*}} : !cir.float -> !s32i fenv<except = unmasked, strict = true>
+  %2 = cir.cast float_to_int %a : !cir.float -> !s32i fenv<except = unmasked, strict = true>
   // CHECK: cir.cast float_to_bool %{{.*}} : !cir.float -> !cir.bool
   // CHECK-NOT: fenv
   %3 = cir.cast float_to_bool %a : !cir.float -> !cir.bool
@@ -124,13 +124,13 @@ cir.func @cast_fenv(%a: !cir.float, %b: !cir.double, %i: !s32i) {
 cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
                     %va: !cir.vector<4 x !cir.float>,
                     %vb: !cir.vector<4 x !cir.float>) {
-  // CHECK: cir.cmp lt %{{.*}}, %{{.*}} : !cir.float fenv<except_mode = unmasked>
-  %0 = cir.cmp lt %a, %b : !cir.float fenv<except_mode = unmasked>
-  // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float fenv<except_mode = unknown>
-  %1 = cir.cmp eq %a, %b : !cir.float fenv<except_mode = unknown>
-  // CHECK: cir.vec.fcmp(ogt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<strict_except = true>
+  // CHECK: cir.cmp lt %{{.*}}, %{{.*}} : !cir.float fenv<except = unmasked>
+  %0 = cir.cmp lt %a, %b : !cir.float fenv<except = unmasked>
+  // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float fenv<except = unknown>
+  %1 = cir.cmp eq %a, %b : !cir.float fenv<except = unknown>
+  // CHECK: cir.vec.fcmp(ogt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<strict = true>
   %2 = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-       signaling fenv<strict_except = true>
+       signaling fenv<strict = true>
   // CHECK: cir.cmp ne %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %3 = cir.cmp ne %a, %b : !cir.float
