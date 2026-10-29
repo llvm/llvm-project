@@ -1,6 +1,9 @@
 // Test that Thread objects are reused.
 // RUN: %clangxx_hwasan -mllvm -hwasan-globals=0 -mllvm -hwasan-instrument-stack=0 %s -o %t && %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s
 
+// https://github.com/llvm/llvm-project/issues/236812
+// XFAIL: android && android-34
+
 #include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
