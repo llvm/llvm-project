@@ -82,10 +82,16 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     $<TARGET_OBJECTS:default_gtest>
   )
 
-  # Link against the default GTest which at this point primarily pulls in the
-  # include directories and compile definitions. It is important to make these
-  # available to dependant targets, e.g. for unit tests.
-  target_link_libraries(omptest PUBLIC default_gtest)
+  # Take GTest's include directories and compile definitions, and make them
+  # available to dependent targets such as the unit tests. BUILD_INTERFACE
+  # keeps default_gtest out of the link interface, which install(EXPORT)
+  # would otherwise require to be in an export set.
+  target_include_directories(omptest PUBLIC
+    $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,INCLUDE_DIRECTORIES>>
+  )
+  target_compile_definitions(omptest PUBLIC
+    $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,COMPILE_DEFINITIONS>>
+  )
 
   # Link against Threads, which may be required for GTest.
   # But keep it out of the link interface to avoid transitive dependencies.
