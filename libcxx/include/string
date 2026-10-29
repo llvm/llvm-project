@@ -797,12 +797,19 @@ private:
     __long() = default;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(__alloc_result __alloc, size_type __size)
-        : __data_(__alloc.ptr), __size_(__size), __cap_(__alloc.count / __endian_factor), __is_long_(true) {
+        : __data_(__alloc.ptr),
+          __size_(__size),
+          __padding_(),
+          __cap_(__alloc.count / __endian_factor),
+          __is_long_(true) {
       _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__alloc.count), "Long capacity should always be larger than the SSO");
     }
 
     pointer __data_;
     size_type __size_;
+    _LIBCPP_NO_UNIQUE_ADDRESS
+    __padding<((2 * sizeof(size_type) + alignof(pointer) - 1) & ~(alignof(pointer) - 1)) - 2 * sizeof(size_type)>
+        __padding_;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
   };
