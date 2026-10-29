@@ -20,6 +20,7 @@ class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
 class LiveIntervals;
+class LiveDebugVariables;
 class LiveRegMatrix;
 class LiveStacks;
 class MachineDominatorTree;
@@ -53,6 +54,7 @@ public:
     LiveStacks &LSS;
     MachineDominatorTree &MDT;
     const MachineBlockFrequencyInfo &MBFI;
+    LiveDebugVariables *DebugVars = nullptr;
   };
 };
 
