@@ -272,9 +272,6 @@ exit.done:
 }
 
 ; Reverse loop from a symbolic start; the last iteration accesses A itself.
-; Blocked: the start, A + 4 * n, is not known to be u>= A.
-;
-; TODO: LAA should use A as the low bound.
 ;
 ; Pseudocode:
 ;   // A, B: at least 8 i32s dereferenceable each, n in [0, 7]
@@ -297,10 +294,10 @@ define void @reverse_symbolic_start(ptr dereferenceable(32) %A, ptr dereferencea
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %B))
+; CHECK-NEXT:          (Low: %B High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %B))
 ; CHECK-NEXT:            Member: {((4 * (zext i3 %n to i64))<nuw><nsw> + %B),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: null High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:          (Low: %A High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {((4 * (zext i3 %n to i64))<nuw><nsw> + %A),+,-4}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -334,8 +331,8 @@ exit.done:
 }
 
 ; As above, but n is bounded only by the loop guard n u< 8.
-; Blocked: as above, and for a negative step LAA does not apply the loop guards
-; to the start offset.
+; Blocked: for a negative step LAA does not apply the loop guards to the start
+; offset.
 ;
 ; TODO: LAA should use A as the low bound.
 ;
@@ -400,7 +397,7 @@ exit.done:
 ; Reverse loop over an array with a 16-byte header. The deref size,
 ; 16 + 4 * len, and the start offset, 12 + 4 * n, are related only through the
 ; loop guards.
-; Blocked: as above, and SCEV does not prove 12 + 4 * n u<= 16 + 4 * len.
+; Blocked: SCEV does not prove 12 + 4 * n u<= 16 + 4 * len.
 ;
 ; TODO: LAA should use A + 16 as the low bound.
 ;
