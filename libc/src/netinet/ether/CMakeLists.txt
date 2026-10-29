@@ -11,7 +11,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.macros.config
-    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(

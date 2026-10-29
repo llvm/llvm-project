@@ -22,7 +22,6 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/str_to_integer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace net {
@@ -46,6 +45,15 @@ LIBC_INLINE char *ether_ntoa_r(const struct ether_addr &addr,
   return buf.data();
 }
 
+/// Returns the value of the hexadecimal digit \p ch, or -1 if \p ch is not a
+/// hexadecimal digit.
+LIBC_INLINE constexpr int hex_digit_value(char ch) {
+  if (!internal::isalnum(ch))
+    return -1;
+  int val = internal::b36_char_to_int(ch);
+  return val < 16 ? val : -1;
+}
+
 /// Parses \p str as an Ethernet address in the colon-separated hexadecimal
 /// notation ("xx:xx:xx:xx:xx:xx"), where each octet consists of one or two
 /// hexadecimal digits. Like musl (but unlike glibc), trailing characters are
@@ -53,17 +61,21 @@ LIBC_INLINE char *ether_ntoa_r(const struct ether_addr &addr,
 LIBC_INLINE cpp::optional<struct ether_addr> ether_aton(const char *str) {
   struct ether_addr addr;
   for (size_t i = 0; i < 6; ++i) {
-    if (i > 0 && *str++ != ':')
+    if (i > 0) {
+      if (*str != ':')
+        return cpp::nullopt;
+      ++str;
+    }
+    int val = hex_digit_value(*str);
+    if (val < 0)
       return cpp::nullopt;
-    // strtointeger skips leading whitespace and accepts a sign. We don't.
-    // subtle: "0xff" passes this check, but gets rejected by src_len=2.
-    if (!internal::isalnum(*str))
-      return cpp::nullopt;
-    auto result = internal::strtointeger<uint8_t>(str, 16, /*src_len=*/2);
-    if (result.parsed_len == 0)
-      return cpp::nullopt;
-    addr.ether_addr_octet[i] = result.value;
-    str += result.parsed_len;
+    ++str;
+    int low = hex_digit_value(*str);
+    if (low >= 0) {
+      val = val << 4 | low;
+      ++str;
+    }
+    addr.ether_addr_octet[i] = static_cast<uint8_t>(val);
   }
   if (*str != '\0')
     return cpp::nullopt;
