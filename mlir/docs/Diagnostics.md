@@ -372,7 +372,7 @@ func.func @foo() -> (index, ind) {
 
 /tmp/test.mlir:15:4: error: expected remark "expected some remark" was not produced
 // expected-remark {{expected some remark}}
-   ^~~~~~~~~~~~~~~~~~~~~~~~~~
+   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
 Similarly to the [SourceMgr Diagnostic Handler](#sourcemgr-diagnostic-handler),
