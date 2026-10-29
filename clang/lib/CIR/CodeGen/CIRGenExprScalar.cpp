@@ -890,6 +890,20 @@ public:
     if (cir::isFPOrVectorOfFPType(operand.getType()))
       return builder.createOrFold<cir::FNegOp>(loc, operand);
 
+    // Emit saturating fixed-point negation as a saturating 0 - x, like classic
+    // codegen does.
+    if (e->getType()->isSaturatedFixedPointType()) {
+      BinOpInfo ops;
+      ops.lhs = builder.getNullValue(operand.getType(), loc);
+      ops.rhs = operand;
+      ops.loc = e->getSourceRange();
+      ops.fullType = ops.compType = e->getType();
+      ops.opcode = BO_Sub;
+      ops.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+      ops.e = e;
+      return emitFixedPointBinOp(ops);
+    }
+
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.

@@ -70,8 +70,11 @@ struct CIRGenFixedPointBuilder {
     cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
     result = builder.createFMul(loc, result, fpConst);
 
-    cir::IntType resultTy = cir::IntType::get(
-        builder.getContext(), dstSema.getWidth(), dstSema.isSigned());
+    // Convert through a signed type when useSigned is set, so that padded
+    // unsigned destinations get a signed conversion and clamp like classic
+    // codegen.
+    cir::IntType resultTy =
+        cir::IntType::get(builder.getContext(), dstSema.getWidth(), useSigned);
 
     if (dstSema.isSaturated()) {
       result = builder.emitIntrinsicCallOp(
@@ -90,7 +93,9 @@ struct CIRGenFixedPointBuilder {
       result = builder.createSelect(loc, isNeg, zero, result);
     }
 
-    return result;
+    return builder.createIntCast(result, cir::IntType::get(builder.getContext(),
+                                                           dstSema.getWidth(),
+                                                           dstSema.isSigned()));
   }
 
   mlir::Value createFixedToInteger(mlir::Value src,
@@ -368,9 +373,10 @@ private:
         result = builder.createSelect(loc, tooLow, min, result);
       }
 
-      // Resize the integer part to get the final destination size.
-      if (resultWidth != dstWidth)
-        result = builder.createIntCast(result, dstIntTy);
+      // Resize the integer part to get the final destination size. Unlike
+      // LLVM integers, CIR integers carry signedness, so also cast when only
+      // the signedness differs.
+      result = builder.createIntCast(result, dstIntTy);
     }
     return result;
   }
