@@ -69,8 +69,8 @@
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -256,8 +256,7 @@ static bool isSGPRConstrainedInlineAsmInput(Register Reg,
       const InlineAsm::Flag Flag(FlagMO.getImm());
       const unsigned NumRegs = Flag.getNumOperandRegisters();
       unsigned RCID;
-      if (Flag.isRegUseKind() && NumRegs &&
-          Flag.hasRegClassConstraint(RCID) &&
+      if (Flag.isRegUseKind() && NumRegs && Flag.hasRegClassConstraint(RCID) &&
           TRI.isSGPRClass(TRI.getRegClass(RCID))) {
         // Check every register in this input group; operands may span multiple
         // registers, such as a 64-bit value.
