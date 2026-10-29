@@ -710,7 +710,7 @@ LogicalResult PermuteOp::verify() {
 static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
                                                   FPRoundingMode rnd,
                                                   bool hasRandomBits,
-                                                  Operation *op) {
+                                                  bool hasPzo, Operation *op) {
   static constexpr FPRoundingMode validRndModes[] = {
       FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
 
@@ -725,6 +725,9 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
     if (!hasRandomBits) {
       return op->emitOpError("random_bits is required for RS rounding mode.");
     }
+    if (hasPzo) {
+      return op->emitOpError("pzo not supported for RS rounding mode.");
+    }
   } else {
     if (hasRandomBits) {
       return op->emitOpError(
@@ -736,13 +739,13 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
 }
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "f16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "bf16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -5750,10 +5753,8 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // The PZO modifier is not supported with the RS rounding mode.
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5803,9 +5804,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
