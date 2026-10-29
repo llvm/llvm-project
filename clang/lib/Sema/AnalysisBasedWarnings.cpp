@@ -1276,12 +1276,12 @@ public:
         continue; // Switch statement, good.
 
       const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
-      if (SW && stripAttributedStmts(SW->getSubStmt()) == B.getLabel() &&
+      if (SW && stripAttributedStmt(SW->getSubStmt()) == B.getLabel() &&
           P->begin() == P->end())
         continue; // Previous case label has no statements, good.
 
       const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
-      if (L && stripAttributedStmts(L->getSubStmt()) == B.getLabel() &&
+      if (L && stripAttributedStmt(L->getSubStmt()) == B.getLabel() &&
           P->begin() == P->end())
         continue; // Case label is preceded with a normal label, good.
 
@@ -1356,10 +1356,11 @@ public:
     }
 
   private:
-
-    static const Stmt *stripAttributedStmts(const Stmt *S) {
-      while (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
-        S = AS->getSubStmt();
+    static const Stmt *stripAttributedStmt(const Stmt *S) {
+      if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
+        assert(!isa<AttributedStmt>(AS->getSubStmt()));
+        return AS->getSubStmt();
+      }
       return S;
     }
 
