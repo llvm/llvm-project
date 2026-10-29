@@ -3389,7 +3389,11 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      Dest = CGF.MakeAddrLValue(A, Ty);
+      // The integer isn't the destination's type, so a TBAA tag for it would
+      // claim that the store doesn't alias accesses to the destination's
+      // members.
+      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
+                                TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
