@@ -524,7 +524,7 @@ static bool canUseSExt(ConstantInt *CI) {
 /// `Op >= MinVal + Slack` holds, using rows of the form `W - Op <= -Slack`.
 static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
                             const APInt &Slack, bool Signed, bool Upper) {
-  if (Slack.getActiveBits() > 63)
+  if (!Slack.isIntN(63))
     return false;
   int64_t RequiredOffset = -static_cast<int64_t>(Slack.getZExtValue());
 
@@ -532,7 +532,9 @@ static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
   unsigned OpIdx = Value2Index.lookup(Op);
   if (!OpIdx)
     return false;
+
   int64_t OpCoefficient = Upper ? 1 : -1;
+  unsigned OpSize = Op->getType()->getScalarSizeInBits();
 
   for (ArrayRef<Entry> Row : Info.getCS(Signed).getConstraints()) {
     // Match `OpCoefficient * (Op - W) <= C` with C <= -Slack.
@@ -550,8 +552,7 @@ static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
         Value2Index, [&](const auto &KV) { return KV.second == WitnessE.Id; });
     assert(Witness != Value2Index.end() && "row variables must be mapped");
     Type *WitnessTy = Witness->first->getType();
-    if (WitnessTy->isIntegerTy() &&
-        WitnessTy->getIntegerBitWidth() <= Op->getType()->getScalarSizeInBits())
+    if (WitnessTy->isIntegerTy() && WitnessTy->getIntegerBitWidth() <= OpSize)
       return true;
   }
   return false;
