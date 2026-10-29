@@ -823,6 +823,11 @@ m_Cmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
       Pred, Op0, Op1);
 }
 
+inline auto m_Cmp() {
+  return m_CombineOr(m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()),
+                     m_Binary<Instruction::FCmp>(m_VPValue(), m_VPValue()));
+}
+
 template <typename Op0_t, typename Op1_t>
 inline SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
 m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
@@ -1240,22 +1245,24 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
                       /*Commutative*/ false, VPInstruction>({Op0, Op1});
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+/// Return the sole user of \p V matching pattern \p P, casting it to \p
+/// RecipeTy, or nullptr.
+template <typename RecipeTy, typename MatchT>
+RecipeTy *findSingletonUser(VPValue *V, const MatchT &P) {
+  return find_singleton<RecipeTy>(V->users(), [&P](VPUser *U, bool) {
+    return match(U, P) ? cast<RecipeTy>(U) : nullptr;
+  });
 }
 
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> VPInstruction *findUserOf(VPValue *V) {
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+/// Return the sole user of \p V that is a VPInstruction with \p Opcode, or
+/// nullptr.
+template <unsigned Opcode> VPInstruction *findSingletonUser(VPValue *V) {
+  return findSingletonUser<VPInstruction>(V, m_VPInstruction<Opcode>());
 }
 
-template <typename RecipeTy> RecipeTy *findUserOf(VPValue *V) {
-  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
+/// Return the sole user of \p V that is a \p RecipeTy, or nullptr.
+template <typename RecipeTy> RecipeTy *findSingletonUser(VPValue *V) {
+  return findSingletonUser<RecipeTy>(V, m_Isa<RecipeTy>());
 }
 } // namespace llvm::VPlanPatternMatch
 

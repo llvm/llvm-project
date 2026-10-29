@@ -1737,8 +1737,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
     auto *Phi = cast<VPPhi>(X);
     // If Phi has a second user (besides IVInc's defining recipe), it must be
     // Inc = Phi + Y for the fold to apply.
-    auto *Inc = dyn_cast_if_present<VPSingleDefRecipe>(
-        findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+    auto *Inc = findSingletonUser<VPSingleDefRecipe>(
+        Phi, m_Add(m_Specific(Phi), m_Specific(Y)));
     if ((Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) &&
         isAvailableAtEndOf(Y, Phi->getIncomingBlock(0))) {
       Def->replaceAllUsesWith(IVInc);
@@ -4766,7 +4766,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
     auto *RecurSplice =
-        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(&FOR);
+        findSingletonUser<VPInstruction::FirstOrderRecurrenceSplice>(&FOR);
     assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
@@ -5381,9 +5381,9 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
       Link.Blend ? cast<VPValue>(Link.Blend) : cast<VPValue>(WidenRecipe);
 
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(
-      findUserOf(ExitSearch, m_Select(m_VPValue(Cond), m_Specific(ExitSearch),
-                                      m_Specific(RdxPhi))));
+  VPValue *ExitValue = findSingletonUser<VPInstruction>(
+      ExitSearch,
+      m_Select(m_VPValue(Cond), m_Specific(ExitSearch), m_Specific(RdxPhi)));
 
   if (Link.Blend) {
     std::optional<unsigned> BlendReductionIdx =

@@ -589,9 +589,9 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  if (auto *CanIVInc = findUserOf(
+  if (auto *CanIVInc = findSingletonUser<VPInstruction>(
           CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
-    cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
+    CanIVInc->replaceAllUsesWith(CurrentIterationIncr);
     CanIVInc->eraseFromParent();
   }
 }

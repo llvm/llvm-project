@@ -5895,10 +5895,11 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend =
+              VPlanPatternMatch::findSingletonUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingletonUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6555,7 +6556,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
+          *find_if(PhiR->users(),
+                   match_fn(m_CombineOr(
+                       m_Select(m_Cmp(), m_VPValue(), m_Specific(PhiR)),
+                       m_Select(m_Cmp(), m_Specific(PhiR), m_VPValue())))));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
