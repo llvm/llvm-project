@@ -916,7 +916,7 @@ void FunctionInstrumenter::instrument() {
   // Preserve the sparse block/select prefix. A zero lane step still records
   // one wave visit in the GPU runtime, without affecting lane-flow counts.
   for (BasicBlock *BB : ExtraWaveBBs) {
-    IRBuilder<> Builder(BB, BB->getFirstNonPHIOrAlloca());
+    IRBuilder<> Builder(BB->getFirstNonPHIOrAlloca());
     Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step,
                             {NormalizedNamePtr, CFGHash,
                              Builder.getInt32(NumCounters),
