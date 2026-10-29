@@ -1054,7 +1054,6 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
              "only the Microsoft ABI passes an implicit deleting dtor param");
       cgm.errorNYI(dd->getSourceRange(),
                    "deleting destructor with conditional delete: MSVC ABI");
-
     } else {
       assert(!dd->getOperatorDelete()->isDestroyingOperatorDelete() &&
              "destroying operator delete is handled by emitDestructorBody");

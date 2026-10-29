@@ -163,8 +163,16 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
 
   // For MSVC compatibility, treat declarations of static data members with
   // inline initializers as definitions.
-  if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
+  if (astContext->getTargetInfo().getCXXABI().isMicrosoft()) {
+    for (Decl *member : d->decls()) {
+      if (auto *vd = dyn_cast<VarDecl>(member)) {
+        if (astContext->isMSStaticDataMemberInlineDefinition(vd) &&
+            astContext->DeclMustBeEmitted(vd)) {
+          cgm->emitGlobal(vd);
+        }
+      }
+    }
+  }
 
   // For OpenMP emit declare reduction functions or declare mapper, if
   // required.
