@@ -5979,7 +5979,7 @@ mlir::LogicalResult CIRToLLVMComplexFAddOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::fastMathFlags());
   mlir::Value newReal;
   mlir::Value newImag;
-  if (cir::FenvAttr fenv = op.getFenv(); !fenv.isEmpty()) {
+  if (cir::FenvAttr fenv = op.getConstrainedFenv()) {
     newReal = createConstrainedFPIntrinsicCall(
         rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
         /*constrainedMnemonic=*/"fadd",
@@ -6032,7 +6032,7 @@ mlir::LogicalResult CIRToLLVMComplexFSubOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::fastMathFlags());
   mlir::Value newReal;
   mlir::Value newImag;
-  if (cir::FenvAttr fenv = op.getFenv(); !fenv.isEmpty()) {
+  if (cir::FenvAttr fenv = op.getConstrainedFenv()) {
     newReal = createConstrainedFPIntrinsicCall(
         rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
         /*constrainedMnemonic=*/"fsub",

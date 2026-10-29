@@ -7440,7 +7440,8 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 }
 
 class CIR_ComplexFPBinOp<string mnemonic>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType,
+                        CIR_FPEnvConstrainedOpInterface]> {
   let arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
     CIR_ComplexOfFloatType:$rhs,

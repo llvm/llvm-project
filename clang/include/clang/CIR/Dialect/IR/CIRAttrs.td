@@ -929,12 +929,6 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
   }];
 
-  let builders = [
-    AttrBuilder<(ins), [{
-      return $_get($_ctxt, std::nullopt, std::nullopt, mlir::BoolAttr{});
-    }]>
-  ];
-
   let extraClassDeclaration = [{
     /// Whether this is the empty attribute, which does not constrain the
     /// operation that carries it.
@@ -972,9 +966,8 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
   let canHaveIllegalCXXABIType = 0;
 }
 
-def CIR_DefaultValuedFenvAttr
-    : DefaultValuedAttr<CIR_FenvAttr,
-                        "cir::FenvAttr::get($_builder.getContext())">;
+def CIR_DefaultValuedFenvAttr : DefaultValuedAttr<CIR_FenvAttr,
+    "cir::FenvAttr::get($_builder.getContext(), {}, {}, {})">;
 
 //===----------------------------------------------------------------------===//
 // CIR_FlagParam
