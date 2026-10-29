@@ -10,6 +10,8 @@
 // the result will depend on the OS version and settings...
 //
 // REQUIRES: x86_64-target-arch, shadow-scale-3
+// On Android, VMA naming splits the high shadow region in /proc/self/smaps.
+// UNSUPPORTED: android
 //
 // WARNING: this test is very subtle and may nto work on some systems.
 // If this is the case we'll need to futher improve it or disable it.

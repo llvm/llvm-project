@@ -228,7 +228,7 @@ def EnvOpenCL : Environment<0>;
 def EnvVulkan : Environment<1>;
 
 //===----------------------------------------------------------------------===//
-// Multiclass used to define Extesions enum values and at the same time
+// Multiclass used to define Extension enum values and at the same time
 // SymbolicOperand entries.
 //===----------------------------------------------------------------------===//
 
@@ -565,7 +565,7 @@ defm GroupNonUniformPartitionedNV : CapabilityOperand<5297, 0, 0, [], []>;
 defm VulkanMemoryModelKHR : CapabilityOperand<5345, 0, 0, [], []>;
 defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
 defm ImageFootprintNV : CapabilityOperand<5282, 0, 0, [], []>;
-defm FragmentBarycentricNV : CapabilityOperand<5284, 0, 0, [], []>;
+defm FragmentBarycentricKHR : CapabilityOperand<5284, 0, 0, [SPV_KHR_fragment_shader_barycentric], [Shader]>;
 defm ComputeDerivativeGroupQuadsNV : CapabilityOperand<5288, 0, 0, [], []>;
 defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
 defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
@@ -1424,7 +1424,7 @@ defm ViewportRelativeNV : DecorationOperand<5252, 0, 0, [], [ShaderViewportMaskN
 defm SecondaryViewportRelativeNV : DecorationOperand<5256, 0, 0, [], [ShaderStereoViewNV]>;
 defm PerPrimitiveNV : DecorationOperand<5271, 0, 0, [], [MeshShadingNV]>;
 defm PerViewNV : DecorationOperand<5272, 0, 0, [], [MeshShadingNV]>;
-defm PerVertexNV : DecorationOperand<5273, 0, 0, [], [FragmentBarycentricNV]>;
+defm PerVertexNV : DecorationOperand<5273, 0, 0, [], [FragmentBarycentricKHR]>;
 defm NonUniformEXT : DecorationOperand<5300, 0, 0, [], [ShaderNonUniformEXT]>;
 defm CountBuffer : DecorationOperand<5634, 0, 0, [], []>;
 defm UserSemantic : DecorationOperand<5635, 0, 0, [], []>;
@@ -1548,8 +1548,12 @@ defm CullDistancePerViewNV : BuiltInOperand<5278, 0, 0, [], [MeshShadingNV]>;
 defm LayerPerViewNV : BuiltInOperand<5279, 0, 0, [], [MeshShadingNV]>;
 defm MeshViewCountNV : BuiltInOperand<5280, 0, 0, [], [MeshShadingNV]>;
 defm MeshViewIndices : BuiltInOperand<5281, 0, 0, [], [MeshShadingNV]>;
-defm BaryCoordNV : BuiltInOperand<5286, 0, 0, [], [FragmentBarycentricNV]>;
-defm BaryCoordNoPerspNV : BuiltInOperand<5287, 0, 0, [], [FragmentBarycentricNV]>;
+defm BaryCoordKHR : BuiltInOperand<5286, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
+defm BaryCoordNoPerspKHR : BuiltInOperand<5287, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
+// NV aliases keep their names recognized. Requirements are looked up by value,
+// so they come from the KHR records above.
+defm BaryCoordNV : BuiltInOperand<5286, 0, 0, [], []>;
+defm BaryCoordNoPerspNV : BuiltInOperand<5287, 0, 0, [], []>;
 defm FragSizeEXT : BuiltInOperand<5292, 0, 0, [], [FragmentDensityEXT]>;
 defm FragInvocationCountEXT : BuiltInOperand<5293, 0, 0, [], [FragmentDensityEXT]>;
 defm LaunchIdNV : BuiltInOperand<5319, 0, 0, [], [RayTracingNV]>;

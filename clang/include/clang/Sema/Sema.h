@@ -188,7 +188,6 @@ class SemaX86;
 class StandardConversionSequence;
 class TemplateArgument;
 class TemplateArgumentLoc;
-class TemplateInstantiationCallback;
 class TemplatePartialOrderingContext;
 class TemplateSpecCandidateSet;
 class Token;
@@ -2474,6 +2473,8 @@ public:
   bool checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
 
   ///@}
@@ -4831,7 +4832,6 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
-  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -9187,6 +9187,11 @@ public:
       AggregateDeductionCandidates;
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
+
+  /// The initializers of \p ILE with each multi-element EmbedExpr split into
+  /// one EmbedExpr per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
 
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.

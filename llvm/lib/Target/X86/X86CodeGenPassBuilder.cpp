@@ -112,6 +112,8 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     flushFPMsToMPM(PMW);
     addModulePass(JMCInstrumenterPass(), PMW);
   }
+
+  addFunctionPass(X86FenceNonTemporalStoresPass(&getTM()), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {

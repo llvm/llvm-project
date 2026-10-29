@@ -167,7 +167,7 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
 
 static std::pair<Type *, Attribute>
 convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
-                       unsigned IntBits, Type *LongDoubleTy) {
+                       unsigned IntBits, LongDoubleFormat LdblFormat) {
 
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
@@ -175,6 +175,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
     return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
     return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int8:
+    return {IntegerType::get(Ctx, 8), Attribute()};
   case Int16:
   case UInt16:
     return {IntegerType::get(Ctx, 16), Attribute()};
@@ -195,6 +197,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case LLong:
   case ULLong:
     return {IntegerType::get(Ctx, 64), Attribute()};
+  case Int128:
+    return {IntegerType::get(Ctx, 128), Attribute()};
   case SizeT:
   case SSizeT:
     return {getSizeTType(Ctx, DL), Attribute()};
@@ -204,7 +208,7 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case Dbl:
     return {Type::getDoubleTy(Ctx), Attribute()};
   case LDbl:
-    return {LongDoubleTy, Attribute()};
+    return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
   case Ptr:
     return {PointerType::get(Ctx, 0), Attribute()};
   case V2F32:
@@ -257,11 +261,10 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     return {};
 
   unsigned IntBits = getIntSize(TT);
-  Type *LongDoubleTy = getLongDoubleType(Ctx, LongDoubleFmt);
   AttributeList Attrs;
 
   auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleTy);
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleFmt);
   if (RetAttr.isValid())
     Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
 
@@ -285,7 +288,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       ArgAttr = LastAttr;
     } else {
       std::tie(ArgTy, ArgAttr) = convertToIRTypeAndAttr(
-          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleTy);
+          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleFmt);
       LastTy = ArgTy;
       LastAttr = ArgAttr;
     }
@@ -315,6 +318,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
   switch (LibcallImpl) {
+  // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
   case RTLIB::impl___sincosf_stret: {
     if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
@@ -332,8 +336,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
         TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
                           ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
 
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argumentOrErrnoMemOnly(
-        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef, ModRefInfo::Mod));
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
+        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef));
 
     AttributeList Attrs;
     Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);

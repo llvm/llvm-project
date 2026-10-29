@@ -608,6 +608,14 @@ private:
       const int64_t scaleYD = scale[1];
       const int64_t scaleXN = scale[2];
       const int64_t scaleXD = scale[3];
+
+      // Invalid (non-positive) scale values are reported by the ERROR_IF
+      // check in applyErrorIfCheck(). Skip the level ratio check here to
+      // avoid dividing by a non-positive value and reporting a misleading
+      // level error for an already-invalid scale.
+      if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+        return success();
+
       if (failed(
               levelCheckScale(op, scaleYN / scaleYD, "scale_y_n/scale_y_d")) ||
           failed(
@@ -1130,6 +1138,10 @@ LogicalResult checkErrorIfResize(Operation *op) {
   if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(), scale))
     return failure();
 
+  // ERROR_IF(scale <= 0)
+  if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+    return op->emitOpError("expect all scale values to be > 0, got ") << scale;
+
   const int64_t scaleYN = scale[0];
   const int64_t scaleYD = scale[1];
   const int64_t scaleXN = scale[2];
@@ -1176,16 +1188,8 @@ LogicalResult checkErrorIfResize(Operation *op) {
                "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
            << borderX << "/" << scaleXN;
 
-  // The following section of code is mostly duplicated with ResizeOp::verify().
-  //
-  // In TOSA specification, we do not support broadcast behavior.
-  // However, there is a rewrite pattern to materialize broadcast ResizeOp.
-  // It makes invalid TOSA ResizeOp into valid one. To avoid breaking
-  // existing code, we keep the rewrite pattern untouched. So, we need
-  // loose the checking in ResizeOp::verify() to support broadcast ResizeOp.
-  //
-  // Here is a strict checking to conform TOSA specification.
-  // FIXME: Remove the duplicated checkings when broadcast ResizeOp is removed.
+  // In TOSA specification, we do not support broadcast behavior. Here is a
+  // strict check to conform to the specification.
   auto idivCheck = [](const int64_t lhs,
                       const int64_t rhs) -> std::optional<int64_t> {
     if (lhs % rhs != 0)
@@ -1344,6 +1348,16 @@ LogicalResult checkErrorIfRescale(Operation *op) {
   // ERROR_IF(is_same<out_t, i32_t> && output_unsigned)
   if (outWidth == 32 && outputUnsigned)
     return op->emitOpError() << "i32 output type cannot be unsigned.";
+
+  // ERROR_IF(zp != 0 && !is_same<in_t, i8_t>)
+  // ERROR_IF(zp != 0 && zp != 32768 && is_same<in_t, u16_t>)
+  if (FailureOr<int64_t> maybeIZp = rescale.getInputZeroPoint();
+      succeeded(maybeIZp) && rescale.verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  if (FailureOr<int64_t> maybeOZp = rescale.getOutputZeroPoint();
+      succeeded(maybeOZp) && rescale.verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
 
   return success();
 }

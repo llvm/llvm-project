@@ -25,7 +25,6 @@ LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple & /*TheTriple*/,
   IsLittleEndian = false;
   InternalSymbolPrefix = ".L";
   WeakRefDirective = "\t.weak\t";
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   // Lanai assembly requires ".section" before ".bss"
   UsesELFSectionDirectiveForBSS = true;

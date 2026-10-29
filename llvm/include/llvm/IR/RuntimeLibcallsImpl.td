@@ -63,6 +63,7 @@ class FuncArgType {
 def NoneType : FuncArgType; // dummy
 def Void : FuncArgType;
 def Bool : FuncArgType;     // 8 bits on all targets
+def Int8 : FuncArgType;
 def Int16 : FuncArgType;
 def Int32 : FuncArgType;
 def Int : FuncArgType;
@@ -70,6 +71,7 @@ def IntPlus : FuncArgType;  // Int or bigger.
 def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
+def Int128 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
 def UInt16 : FuncArgType;
 def UInt32 : FuncArgType;

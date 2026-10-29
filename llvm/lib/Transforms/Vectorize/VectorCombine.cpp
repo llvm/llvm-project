@@ -1330,7 +1330,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  // We need to pass the flags during the creation of instrucitons. Constant
+  // We need to pass the flags during the creation of instructions. Constant
   // folding might remove the instructions, so post setting the flags might
   // pollute the later instructions.
   if (CI) {
@@ -7240,9 +7240,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(
-      F.getContext().getLibraryOptions().get<VectorizeOptions>(), F, TTI, DT,
-      AA, AC, DL, CostKind, TryEarlyFoldsOnly);
+  VectorCombine Combiner(getVectorizeOptions(F), F, TTI, DT, AA, AC, DL,
+                         CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
