@@ -157,6 +157,27 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- On 32-bit x86 excluding Darwin and Playstation and 64-bit x86 excluding
+  Darwin, Playstation and Windows, small integer arguments are now passed in
+  a way that is compatible with both the platform ABI and old Clang versions,
+  by extending them in the caller, but not assuming extension in the callee.
+  On affected targets, the behavior can be controlled using the new
+  `-msmall-int-abi-compat` option:
+
+  * `-msmall-int-abi-compat=platform`: Compatible with platform ABI (and thus
+    other compilers such as GCC), but not with old Clang-built objects. Does
+    not extend in the caller and does not assume extension in the callee.
+  * `-msmall-int-abi-compat=clang`: Compatible with old Clang objects, but
+    potentially not the platform ABI. Extends in the caller and assumes
+    extension in the callee.
+  * `-msmall-int-abi-compat=both` (default): Compatible with both the platform
+    ABI and old Clang-built objects. Extends in the caller and does not assume
+    extension in the callee.
+
+  The default has the widest compatibility, but the other options can be used
+  to generate more efficient code, if compatibility with either the platform
+  ABI or old Clang-built objects is not necessary. (#GH236450)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
