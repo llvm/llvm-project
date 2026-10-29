@@ -39,6 +39,9 @@ private:
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> symbolsUsingEnclosingStorage;
+  // Only symbols for which this DataSharingProcessor creates storage.
+  llvm::SmallVector<const semantics::Symbol *> locallyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
   // When true, conditional-lastprivate list items get an ordinary private copy
   // (their in-loop working value) plus a separate reduction struct as the
@@ -133,6 +136,9 @@ public:
     forceHeapAllocationForPrivateDynamicArrays = value;
   }
 
+  void setSymbolsUsingEnclosingStorage(
+      llvm::ArrayRef<const semantics::Symbol *> symbols);
+
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
@@ -140,7 +146,8 @@ public:
 
   llvm::ArrayRef<const semantics::Symbol *> getDelayedPrivSymbols() const {
     return useDelayedPrivatization
-               ? allPrivatizedSymbols.getArrayRef()
+               ? llvm::ArrayRef<const semantics::Symbol *>(
+                     locallyPrivatizedSymbols)
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
 

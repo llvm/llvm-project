@@ -2,6 +2,7 @@
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefix=COPYBACK
 
 ! CHECK-LABEL: func.func @_QPdo_simd_aligned(
 subroutine do_simd_aligned(A)
@@ -108,18 +109,85 @@ subroutine do_simd_private()
 end subroutine do_simd_private
 
 ! CHECK-LABEL: func.func @_QPdo_simd_lastprivate_firstprivate(
+! Ensure each lastprivatised variable has exactly one lastprivate copyback.
+! COPYBACK-LABEL: func.func @_QPdo_simd_lastprivate_firstprivate(
+! COPYBACK: %[[ORIGINAL_A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simd_lastprivate_firstprivateEa")
+! COPYBACK-NOT: return
+! COPYBACK-COUNT-1: hlfir.assign %{{.*}} to %[[ORIGINAL_A]]#0
+! COPYBACK-NOT: hlfir.assign %{{.*}} to %[[ORIGINAL_A]]#0
+! COPYBACK: return
 subroutine do_simd_lastprivate_firstprivate()
   integer :: a
+  ! CHECK: %[[ORIGINAL_A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simd_lastprivate_firstprivateEa")
   ! CHECK:      omp.wsloop
-  ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %{{.*}} -> %[[FIRSTPRIVATE_A:.*]] : !fir.ref<i32>)
+  ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %[[ORIGINAL_A]]#0 -> %[[FIRSTPRIVATE_A:.*]] : !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
   ! CHECK-SAME: linear(@{{.*}}#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{[^:]*}} : i32)
-  ! CHECK-SAME: private(@[[PRIVATE_A_SYM:.*]] %{{.*}} -> %[[PRIVATE_A:.*]] : !fir.ref<i32>)
+  ! CHECK-NOT: private(
+  ! CHECK-NEXT: omp.loop_nest
   !$omp do simd lastprivate(a) firstprivate(a)
   do i = 1, 10
     ! CHECK: %[[FIRSTPRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_A]]
-    ! CHECK: %[[PRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_A]]
+    ! CHECK: %[[A_VALUE:.*]] = fir.load %[[FIRSTPRIVATE_A_DECL]]#0
+    ! CHECK: %[[A_UPDATED:.*]] = arith.addi %[[A_VALUE]], %{{.*}}
+    ! CHECK: hlfir.assign %[[A_UPDATED]] to %[[FIRSTPRIVATE_A_DECL]]#0
     a = a + 1
+    ! CHECK: fir.if %{{.*}} {
+    ! CHECK: %[[A_LAST:.*]] = fir.load %[[FIRSTPRIVATE_A_DECL]]#0
+    ! CHECK: hlfir.assign %[[A_LAST]] to %[[ORIGINAL_A]]#0
   end do
   !$omp end do simd
 end subroutine do_simd_lastprivate_firstprivate
+
+! Firstprivate initialization must finish before any lastprivate copy-back,
+! even with nowait. Hence the wsloop which owns the storage and requests
+! the barrier. The simd reuses that storage and must not request another
+! barrier.
+! CHECK-LABEL: func.func @_QPdo_simd_first_lastprivate_barrier(
+subroutine do_simd_first_lastprivate_barrier(a)
+  integer :: a, i
+  ! CHECK: omp.wsloop nowait private(@{{.*}}firstprivate{{.*}}) private_barrier {
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-NOT: {{[ ]}}private_barrier
+  ! CHECK-NEXT: omp.loop_nest
+  !$omp do simd firstprivate(a) lastprivate(a)
+  do i = 1, 10
+    a = a + i
+  end do
+  !$omp end do simd nowait
+end subroutine do_simd_first_lastprivate_barrier
+
+! Reusing storage must preserve SIMD-only privates and collapsed loop bounds.
+! CHECK-LABEL: func.func @_QPdo_simd_first_lastprivate_collapse(
+! Ensure exactly one lastprivate copyback is produced
+! COPYBACK-LABEL: func.func @_QPdo_simd_first_lastprivate_collapse(
+! COPYBACK: %[[COLLAPSE_ORIGINAL_A:.*]]:2 = hlfir.declare %arg0
+! COPYBACK-NOT: return
+! COPYBACK-COUNT-1: hlfir.assign %{{.*}} to %[[COLLAPSE_ORIGINAL_A]]#0
+! COPYBACK-NOT: hlfir.assign %{{.*}} to %[[COLLAPSE_ORIGINAL_A]]#0
+! COPYBACK: return
+subroutine do_simd_first_lastprivate_collapse(a)
+  integer :: a, b, i, j
+  ! CHECK: %[[COLLAPSE_ORIGINAL_A:.*]]:2 = hlfir.declare %arg0
+  ! CHECK: omp.parallel {
+  ! CHECK: omp.wsloop private(@{{.*}}firstprivate{{.*}} %[[COLLAPSE_ORIGINAL_A]]#0 -> %[[COLLAPSE_A:.*]] : !fir.ref<i32>)
+  ! CHECK-SAME private_barrier
+  ! CHECK-NEXT: omp.simd private(
+  ! CHECK-SAME: -> %[[COLLAPSE_B:[^, ]+]],
+  ! CHECK-NEXT: omp.loop_nest (%{{.*}}, %{{.*}}) : i32
+  !$omp parallel do simd collapse(2) firstprivate(a) lastprivate(a) private(b)
+  do i = 1, 2
+    do j = 1, 2
+      ! CHECK: %[[COLLAPSE_A_DECL:.*]]:2 = hlfir.declare %[[COLLAPSE_A]]
+      ! CHECK: %[[COLLAPSE_B_DECL:.*]]:2 = hlfir.declare %[[COLLAPSE_B]]
+      ! CHECK: %[[COLLAPSE_A_VALUE:.*]] = fir.load %[[COLLAPSE_A_DECL]]#0
+      ! CHECK: hlfir.assign %[[COLLAPSE_A_VALUE]] to %[[COLLAPSE_B_DECL]]#0
+      b = a
+      a = b + i + j
+      ! CHECK: fir.if %{{.*}} {
+      ! CHECK: %[[COLLAPSE_A_LAST:.*]] = fir.load %[[COLLAPSE_A_DECL]]#0
+      ! CHECK: hlfir.assign %[[COLLAPSE_A_LAST]] to %[[COLLAPSE_ORIGINAL_A]]#0
+    end do
+  end do
+  !$omp end parallel do simd
+end subroutine
