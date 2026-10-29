@@ -2485,7 +2485,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim))
       return Err;
 
-    GridValues.GV_Max_Teams = GridMaxDim.x / GridValues.GV_Max_WG_Size;
+    // The HSA grid is expressed in work items, so it limits blocks * threads
+    // rather than blocks alone. A block has at least one thread.
+    GridValues.GV_Max_Teams = GridMaxDim.x;
+    MaxGridSize = GridMaxDim.x;
     if (GridValues.GV_Max_Teams == 0)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "maximum number of teams cannot be zero");
@@ -2754,18 +2757,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
-
-  /// See GenericDeviceTy::getBlockLimit(uint32_t). The HSA launch configuration
-  /// is an int32_t grid representing blocks * threads. This means the block
-  /// limit depends on the user's requested thread count.
-  uint32_t getBlockLimit(uint32_t NumThreads) const override {
-    if (NumThreads == 0)
-      return GridValues.GV_Max_Teams;
-    uint64_t MaxGridItems =
-        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
-    uint64_t MaxBlocks = MaxGridItems / NumThreads;
-    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
-  }
 
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
@@ -4649,7 +4640,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
 
   // Kernel Arguments Info
   auto ArgNum = LaunchArgs.NumArgs;
-  auto LoopTripCount = LaunchArgs.Tripcount;
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
@@ -4669,15 +4659,13 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
   // LDS Usage: Amount of bytes used in LDS storage
   // S/VGPR Count: the number of S/V GPRs occupied by the kernel
   // S/VGPR Spill Count: how many S/VGPRs are spilled by the kernel
-  // Tripcount: loop tripcount for the kernel
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "#Args: %d Teams x Thrds: %4ux%4u (MaxFlatWorkGroupSize: %u) LDS "
-       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u Tripcount: "
-       "%lu\n",
+       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u\n",
        ArgNum, NumGroups[0] * NumGroups[1] * NumGroups[2],
        ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2],
        MaxFlatWorkgroupSize, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount, LoopTripCount);
+       SGPRSpillCount, VGPRSpillCount);
 
   return Plugin::success();
 }

@@ -179,6 +179,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   // Adjust the static SPIR-V grid values based on the device's reported limits.
   if (uint32_t MaxGroupSize = std::min(getMaxGroupSizeX(), getMaxGroupSize()))
     GridValues.GV_Max_WG_Size = MaxGroupSize;
+  if (uint32_t MaxGroupCount = getMaxGroupCountX())
+    GridValues.GV_Max_Teams = MaxGroupCount;
   if (uint32_t SIMDWidth = getSIMDWidth())
     GridValues.GV_Warp_Size = SIMDWidth;
 

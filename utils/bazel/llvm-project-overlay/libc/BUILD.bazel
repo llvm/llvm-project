@@ -632,6 +632,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_netinet_tcp_macros",
+    hdrs = [
+        "include/llvm-libc-macros/linux/netinet-tcp-macros.h",
+        "include/llvm-libc-macros/netinet-tcp-macros.h",
+    ],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_sys_wait_macros",
     hdrs = [
         "include/llvm-libc-macros/linux/sys-wait-macros.h",
@@ -816,6 +824,17 @@ libc_support_library(
 libc_support_library(
     name = "hdr_netinet_in_macros",
     hdrs = ["hdr/netinet_in_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_netinet_tcp_macros",
+    hdrs = ["hdr/netinet_tcp_macros.h"],
+    deps = select({
+        ":full_build": [
+            ":llvm_libc_macros_netinet_tcp_macros",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(
@@ -2579,6 +2598,24 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+        ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_pwait",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_signal_macros",
+        ":types_sigset_t",
         ":types_struct_epoll_event",
     ],
 )
@@ -12191,6 +12228,57 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_tanh_accurate_128",
+    hdrs = ["src/__support/math/tanh_accurate_128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_frac128",
+        ":__support_frac64",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_exp2_accurate_128",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_tanh_double_eval",
+    hdrs = ["src/__support/math/tanh_double_eval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_fputil_double_double",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_fp_bitwise",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_exp_utils",
+        ":__support_math_tanh_accurate_128",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_tanh",
+    hdrs = ["src/__support/math/tanh.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_tanh_double_eval",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_tanhf",
     hdrs = ["src/__support/math/tanhf.h"],
     deps = [
@@ -15761,6 +15849,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_tanf16",
     ],
+)
+
+libc_math_function(
+    name = "tanh",
+    additional_deps = [":__support_math_tanh"],
 )
 
 libc_math_function(
@@ -19671,10 +19764,8 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_pwait",
         ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_epoll_macros",
         ":types_sigset_t",
         ":types_struct_epoll_event",
     ],

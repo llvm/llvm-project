@@ -15,7 +15,9 @@
 // https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.
 // UNSUPPORTED: android && arm-target-arch
 
-// FIXME: Fails after #196388 because libclang_rt.asan links static libc++abi.a.
+// FIXME: Fails on Android: the stack is still poisoned after
+// std::rethrow_exception, so the __cxa_rethrow_primary_exception
+// interceptor does not run.
 // XFAIL: android
 
 #include "defines.h"
