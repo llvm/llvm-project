@@ -213,10 +213,8 @@ define void @different_large_bitwidths(ptr %a, i64 %i, i128 %j) {
   ret void
 }
 
-; FIXME: The following are miscompilation issues (https://alive2.llvm.org/ce/z/PLgCaW)
-
 ; CHECK-LABEL: constant_offset_heuristic_wrapping_scale
-; CHECK: NoAlias:	i64* %p, i64* %q
+; CHECK: MayAlias:	i64* %p, i64* %q
 ; Pointer arithmetic is computed in the 32‑bit index width, as per datalayout.
 ; The index difference between %p and %q is 2, though, 2 * 2147483647 wraps to -2.
 ; For %idx = 0, %q is %base - 2 and the two accesses overlap.
@@ -230,7 +228,7 @@ define void @constant_offset_heuristic_wrapping_scale(ptr %base, i16 %idx) {
 }
 
 ; CHECK-LABEL: constant_offset_heuristic_wrapping_scale_one_nusw
-; CHECK: NoAlias:	i64* %p, i64* %q
+; CHECK: MayAlias:	i64* %p, i64* %q
 ; Same as above, with %p index being nusw. %q index may still wrap, so both indices
 ; need to be checked.
 define void @constant_offset_heuristic_wrapping_scale_one_nusw(ptr %base, i16 %idx) {
