@@ -65,6 +65,14 @@ on:
         type: boolean
         default: true
         description: "Build PyTorch wheels"
+      enable_llvm_assertions:
+        type: choice
+        description: "LLVM assertions. auto enables them for a wave-transform ROCm LLVM PR. on always enables them. off leaves them off."
+        options:
+          - auto
+          - "on"
+          - "off"
+        default: auto
 
 permissions:
   contents: read
@@ -88,6 +96,7 @@ jobs:
           LLVM_ROCm_PR_URL=${{ github.event.inputs.LLVM_ROCm_PR_URL }}
           SPIRV_PR_URL=${{ github.event.inputs.SPIRV_PR_URL }}
           HIPIFY_PR_URL=${{ github.event.inputs.HIPIFY_PR_URL }}
+          LLVM_ASSERTIONS_MODE=${{ github.event.inputs.enable_llvm_assertions }}
           EOF
 
       - name: Upload stored file of PR URls

@@ -138,6 +138,7 @@ runs:
         echo "LLVM_ROCm_PR_URL=$LLVM_ROCm_PR_URL" >> "$GITHUB_ENV"
         echo "SPIRV_PR_URL=$SPIRV_PR_URL" >> "$GITHUB_ENV"
         echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
+        echo "LLVM_ASSERTIONS_MODE=${LLVM_ASSERTIONS_MODE:-auto}" >> "$GITHUB_ENV"
 
     - name: Update submodule pointers from provided parameter PR values
       if: github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true'
@@ -271,6 +272,35 @@ runs:
       if: github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true'
       shell: bash
       run: |
+        enable_assertions() {
+          cat > BRANCH_CONFIG.json <<'EOF'
+        {
+          "flags": {
+            "LLVM_ENABLE_ASSERTIONS": "ON"
+          }
+        }
+        EOF
+          echo "LLVM_ASSERTIONS=1" >> "$GITHUB_ENV"
+          echo "LLVM assertions enabled ($1)."
+        }
+
+        mode="$(printf '%s' "${LLVM_ASSERTIONS_MODE:-auto}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+        case "$mode" in
+          off|false|0|no)
+            echo "LLVM assertions disabled by workflow input."
+            exit 0
+            ;;
+          on|true|1|yes)
+            enable_assertions "workflow input"
+            exit 0
+            ;;
+          auto|"")
+            ;;
+          *)
+            echo "::warning::Unknown LLVM_ASSERTIONS_MODE '${mode}'; using auto."
+            ;;
+        esac
+
         if [[ -z "${LLVM_ROCm_PR_URL:-}" ]]; then
           echo "No LLVM_ROCm_PR_URL; leaving LLVM assertions off."
           exit 0
@@ -284,14 +314,6 @@ runs:
 
         # Ignore case and separators: wave-transform == wave_transform.
         if echo "${title} ${base}" | tr -d ' _-' | grep -qi wavetransform; then
-          cat > BRANCH_CONFIG.json <<'EOF'
-        {
-          "flags": {
-            "LLVM_ENABLE_ASSERTIONS": "ON"
-          }
-        }
-        EOF
-          echo "LLVM_ASSERTIONS=1" >> "$GITHUB_ENV"
-          echo "Wave-transform PR: building with LLVM assertions."
+          enable_assertions "wave-transform PR"
         fi
 
