@@ -3374,6 +3374,10 @@ let append Predicates = [IsRV64] in {
   // prefer plain mul when both operands are known to be sign/zero-extended.
   def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
             (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W01 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sra GPR:$rs1, (XLenVT 32)), (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
             (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),

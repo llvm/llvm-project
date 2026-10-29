@@ -1495,7 +1495,6 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   llvm::SmallVector<void *> Args, Ptrs;
   llvm::SmallVector<int64_t> ArgSizes;
 
-  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
   KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs, KernelLaunchInfo);
