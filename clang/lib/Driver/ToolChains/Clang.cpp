@@ -9929,7 +9929,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // image labels and --no-offload-arch is applied.
       if (ToolChainArgs.hasArg(OPT_offload_arch_EQ))
         for (const BoundArch &BA :
-             C.getDriver().getOffloadArchs(C, ToolChainArgs, Kind, *TC))
+             C.getDriver().getOffloadArchs(C, C.getArgs(), Kind, *TC))
           if (!BA.ArchName.empty())
             CmdArgs.emplace_back(
                 Args.MakeArgString("--should-extract=" + BA.ArchName));
