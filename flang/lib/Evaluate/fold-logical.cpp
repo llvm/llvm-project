@@ -1016,7 +1016,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   if (auto value{GetScalarConstantValue<Ty>(operand)}) {
     return Expr<Ty>{Constant<Ty>{!value->IsTrue()}};
   }
-  return Expr<Ty>{x};
+  return Expr<Ty>{std::move(x)};
 }
 
 template <int KIND>
