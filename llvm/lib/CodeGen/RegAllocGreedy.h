@@ -313,12 +313,16 @@ private:
 
   bool hasVirtRegAlloc();
   BlockFrequency calcBlockSplitCost();
+  bool calcSplitConstraints(InterferenceCache::Cursor, BlockFrequency *,
+                            BlockFrequency MaxCost,
+                            SmallVectorImpl<int64_t> *CostDifference = nullptr);
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &,
                            BlockFrequency MaxCost);
+  bool isWaveRegionCostHigher(GlobalSplitCandidate &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
-  BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
-                                     const AllocationOrder &Order);
+  void addGlobalSplitCost(GlobalSplitCandidate &, BlockFrequency *,
+                          SmallVectorImpl<int64_t> *CostDifference = nullptr);
   bool calcCompactRegion(GlobalSplitCandidate &);
   void splitAroundRegion(LiveRangeEdit &, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
@@ -338,7 +342,6 @@ private:
                             SmallVectorImpl<Register> &);
   /// Calculate cost of region splitting around the specified register.
   unsigned calculateRegionSplitCostAroundReg(MCRegister PhysReg,
-                                             AllocationOrder &Order,
                                              BlockFrequency &BestCost,
                                              unsigned &NumCands,
                                              unsigned &BestCand);
@@ -353,8 +356,7 @@ private:
                            SmallVectorImpl<Register> &NewVRegs);
   /// Try to split VirtReg around physical Hint register.
   bool trySplitAroundHintReg(MCRegister Hint, const LiveInterval &VirtReg,
-                             SmallVectorImpl<Register> &NewVRegs,
-                             AllocationOrder &Order);
+                             SmallVectorImpl<Register> &NewVRegs);
   /// Check other options before using a callee-saved register for the first
   /// time.
   MCRegister tryAssignCSRFirstTime(const LiveInterval &VirtReg,
