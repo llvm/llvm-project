@@ -1282,7 +1282,7 @@ static bool IsAtProcess(const char *p) {
 
 bool Prescanner::IsFixedFormCommentLine(const char *start) const {
   const char *p{start};
-  // The @process directive must start in column 1.
+  // The @process directive can start in column 1.
   if (*p == '@' && IsAtProcess(p)) {
     return true;
   }
@@ -1308,6 +1308,10 @@ bool Prescanner::IsFixedFormCommentLine(const char *start) const {
     return true;
   }
   if (*p == '!' && !inCharLiteral_ && (anyTabs || p != start + 5)) {
+    return true;
+  }
+  // The @process directive can start after column 6.
+  if (*p == '@' && (anyTabs || p >= start + 6) && IsAtProcess(p)) {
     return true;
   }
   return *p == '\n';
