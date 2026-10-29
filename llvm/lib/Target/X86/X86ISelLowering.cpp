@@ -49995,7 +49995,8 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
       if (Carry.getOpcode() == X86ISD::SETCC ||
           Carry.getOpcode() == X86ISD::SETCC_CARRY) {
         // TODO: Merge this code with equivalent in combineAddOrSubToADCOrSBB?
-        uint64_t CarryCC = Carry.getConstantOperandVal(0);
+        auto CarryCC =
+            static_cast<X86::CondCode>(Carry.getConstantOperandVal(0));
         SDValue CarryOp1 = Carry.getOperand(1);
         if (CarryCC == X86::COND_B)
           return CarryOp1;
