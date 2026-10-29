@@ -673,9 +673,6 @@ define i5 @udiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
-; X u/ (Y << Z) --> (X >> Z) u/ Y  when shl is nuw
-; https://alive2.llvm.org/ce/z/FjoN_A
-
 define i8 @udiv_shl_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], [[Z:%.*]]
