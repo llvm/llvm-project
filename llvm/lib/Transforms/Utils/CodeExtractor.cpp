@@ -2086,8 +2086,8 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
         continue;
       if (AffectedCI->getFunction() != &OldFunc)
         return true;
-      auto *AssumedInst = cast<Instruction>(AffectedCI->getOperand(0));
-      if (AssumedInst->getFunction() != &OldFunc)
+      auto *AssumedInst = dyn_cast<Instruction>(AffectedCI->getOperand(0));
+      if (AssumedInst && AssumedInst->getFunction() != &OldFunc)
         return true;
     }
   }
