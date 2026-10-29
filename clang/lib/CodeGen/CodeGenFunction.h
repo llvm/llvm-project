@@ -2746,10 +2746,6 @@ public:
     return getEvaluationKind(T) == TEK_Aggregate;
   }
 
-  static bool hasComplexEvaluationKind(QualType T) {
-    return getEvaluationKind(T) == TEK_Complex;
-  }
-
   /// createBasicBlock - Create an LLVM basic block.
   llvm::BasicBlock *createBasicBlock(const Twine &name = "",
                                      llvm::Function *parent = nullptr,

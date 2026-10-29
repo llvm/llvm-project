@@ -2939,12 +2939,7 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
     // If this is a register output, then make the inline asm return it
     // by-value.  If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
-    const bool IsScalarOrAggregate =
-        CodeGenFunction::hasScalarEvaluationKind(QTy) ||
-        CodeGenFunction::hasAggregateEvaluationKind(QTy) ||
-        CodeGenFunction::hasComplexEvaluationKind(QTy);
-
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    if (!Info.allowsMemory()) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
