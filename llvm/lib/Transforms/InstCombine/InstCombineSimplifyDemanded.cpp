@@ -3270,18 +3270,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      // Infer the source cannot be negative if the result cannot be nan. A
-      // negative subnormal that flushes to zero does not produce a nan, so do
-      // not rule out any source class that was demanded above.
-      if ((DemandedMask & fcNan) == fcNone)
-        KnownSrc.knownNot(((fcNegative & ~fcNegZero) | fcNan) &
-                          ~DemandedSrcMask);
-
-      // Infer the source cannot be +inf if the result is not +nf
-      if ((DemandedMask & fcPosInf) == fcNone)
-        KnownSrc.knownNot(fcPosInf);
+      KnownSrc.knownNot(~DemandedSrcMask);
 
       // sqrt(-x) = nan, but be careful of negative subnormals flushed to 0.
+      // TODO: This becomes redundant if KnownFPClass::sqrt rules out
+      // fcPosNormal.
       if (KnownSrc.isKnownNever(fcPositive) &&
           KnownSrc.isKnownNeverLogicalZero(Mode))
         return ConstantFP::getQNaN(VTy);
