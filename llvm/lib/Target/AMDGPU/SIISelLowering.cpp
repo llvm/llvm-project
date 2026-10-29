@@ -20665,6 +20665,27 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
                               Depth + 1);
       break;
     }
+    case Intrinsic::amdgcn_mul_u24:
+    case Intrinsic::amdgcn_mul_i24: {
+      KnownBits LHSKnown, RHSKnown;
+      VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), LHSKnown,
+                              DemandedElts, Depth + 1);
+      VT.computeKnownBitsImpl(MI->getOperand(3).getReg(), RHSKnown,
+                              DemandedElts, Depth + 1);
+      unsigned BitWidth = Known.getBitWidth();
+
+      // Sign/Zero extend from 24 bits.
+      if (IID == Intrinsic::amdgcn_mul_i24) {
+        LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
+        RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
+      } else {
+        LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
+        RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
+      }
+
+      Known = KnownBits::mul(LHSKnown, RHSKnown);
+      break;
+    }
     }
     break;
   }
