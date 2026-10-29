@@ -227,8 +227,9 @@ struct FPValueAndVReg {
 };
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
-/// on a G_FCONSTANT returns its APFloat value and def register. The value keeps
-/// the G_FCONSTANT's FP semantics unless the chain changes its bit width.
+/// on a G_FCONSTANT returns its APFloat value and def register. The value uses
+/// \p VReg's FP semantics when it has a known FP type, otherwise the
+/// G_FCONSTANT's unless the chain changed the bit width.
 LLVM_ABI std::optional<FPValueAndVReg>
 getFConstantVRegValWithLookThrough(Register VReg,
                                    const MachineRegisterInfo &MRI,
