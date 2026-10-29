@@ -461,34 +461,18 @@ function(_mlir_python_add_extension_type_stub modules_target sources_target)
   foreach(_component IN LISTS _package_components)
     cmake_path(GET _import_root PARENT_PATH _import_root)
   endforeach()
-  set(_raw_dir "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/${modules_target}/_mlir_libs/nonfixup")
+  set(_stub_dir "${ARG_ROOT_PREFIX}/_mlir_libs")
   mlir_generate_type_stubs(
     TARGET_NAME ${modules_target}.generate_type_stubs.${_module_name}
     MODULE_NAME ${ARG_PACKAGE_PREFIX}._mlir_libs.${_module_name}
     DEPENDS_TARGETS ${ARG_DEPENDS_TARGETS}
-    OUTPUT_DIR "${_raw_dir}"
+    OUTPUT_DIR "${_stub_dir}"
     OUTPUTS ${_module_name}.pyi
     DEPENDS_TARGET_SRC_DEPS "${_extension_srcs}"
     IMPORT_PATHS "${_import_root}"
   )
-  set(_raw_stub "${_raw_dir}/${_module_name}.pyi")
-  set(_stub "${ARG_ROOT_PREFIX}/_mlir_libs/${_module_name}.pyi")
-  set(_fixup "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/MLIRPythonTypeStubFixup.cmake")
-  add_custom_command(
-    OUTPUT "${_stub}"
-    COMMAND ${CMAKE_COMMAND}
-      "-DINPUT_FILE=${_raw_stub}"
-      "-DOUTPUT_FILE=${_stub}"
-      "-DMLIR_PYTHON_PACKAGE_PREFIX=${ARG_PACKAGE_PREFIX}"
-      -P "${_fixup}"
-    DEPENDS "${_raw_stub}" "${_fixup}"
-    COMMENT "Generating ${ARG_PACKAGE_PREFIX}._mlir_libs.${_module_name} type stub"
-    VERBATIM
-  )
-  set(_stub_target "${modules_target}.type_stubs.${_module_name}")
-  add_custom_target(${_stub_target} DEPENDS "${_stub}")
-  add_dependencies(${modules_target} ${_stub_target})
-  install(FILES "${_stub}"
+  add_dependencies(${modules_target} ${NB_STUBGEN_CUSTOM_TARGET})
+  install(FILES "${_stub_dir}/${_module_name}.pyi"
     DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
     COMPONENT ${modules_target})
 endfunction()
