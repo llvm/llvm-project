@@ -409,10 +409,6 @@ public:
   bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                            unsigned DestAS) const override;
 
-  // Sinking a noop flat->global cast into a PHI predecessor makes isel drop
-  // one incoming base on the divergent skip edge.
-  bool shouldSinkAddrSpaceCastForPHI() const override { return false; }
-
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
