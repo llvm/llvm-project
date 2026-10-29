@@ -1692,12 +1692,10 @@ public:
   /// declaration processed in this translation unit.
   void DiagnoseUnusedAPINotesSelectors();
 
-  /// Whether APINotes should be gathered for all applicable Swift language
-  /// versions, without being applied. Leaving clients of the current module
-  /// to select and apply the correct version.
-  bool captureSwiftVersionIndependentAPINotes() {
-    return APINotes.captureVersionIndependentSwift();
-  }
+  /// Whether API notes should be gathered for all applicable Swift language
+  /// versions, without being applied, leaving clients of the current module to
+  /// select and apply the correct version.
+  bool captureSwiftVersionIndependentAPINotes();
   ///@}
 
   //
@@ -15600,28 +15598,13 @@ public:
   // one that came from a typedef.
   bool hasExplicitCallingConv(QualType T);
 
-  /// Check whether a nullability type specifier can be added to the given
-  /// type through some means not written in source (e.g. API notes).
-  ///
-  /// \param Type The type to which the nullability specifier will be
-  /// added. On success, this type will be updated appropriately.
-  ///
-  /// \param Nullability The nullability specifier to add.
-  ///
-  /// \param DiagLoc The location to use for diagnostics.
-  ///
-  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
-  /// array type (e.g., because it will decay to a pointer).
-  ///
-  /// \param OverrideExisting Whether to override an existing, locally-specified
-  /// nullability specifier rather than complaining about the conflict.
+  /// Apply \p Nullability to \p Type, overriding any existing local
+  /// nullability specifier without emitting diagnostics.
   ///
   /// \returns true if nullability cannot be applied, false otherwise.
-  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
-                                             NullabilityKind Nullability,
-                                             SourceLocation DiagLoc,
-                                             bool AllowArrayTypes,
-                                             bool OverrideExisting);
+  static bool OverrideImplicitNullability(ASTContext &Context, QualType &Type,
+                                          NullabilityKind Nullability,
+                                          bool AllowArrayTypes);
 
   /// Check whether the given variable declaration has a size that fits within
   /// the address space it is declared in. This issues a diagnostic if not.
