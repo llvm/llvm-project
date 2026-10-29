@@ -3003,6 +3003,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "clang-ssaf-analyzer",
+    srcs = ["tools/clang-ssaf-analyzer/SSAFAnalyzer.cpp"],
+    deps = [
+        ":basic",
+        ":scalable_static_analysis_analyses",
+        ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
+        ":scalable_static_analysis_tool",        
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "clang-ssaf-linker",
     srcs = glob([
         "tools/clang-ssaf-linker/*.cpp",
