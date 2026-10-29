@@ -2038,6 +2038,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FACOS;
   case Intrinsic::asin:
     return ISD::FASIN;
+  case Intrinsic::hypot:
+    return ISD::FHYPOT;
   case Intrinsic::atan:
     return ISD::FATAN;
   case Intrinsic::cos:
