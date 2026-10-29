@@ -269,39 +269,22 @@ let cppNamespace = "::cir" in {
     let description = [{
       Interface for floating-point operations that carry a `#cir.fenv`
       attribute. The attribute defaults to the empty `#cir.fenv<>`, which does
-      not constrain the operation. The interface provides effective values for
-      each field, substituting the floating-point environment defaults for
-      absent fields.
+      not constrain the operation.
     }];
 
     let methods = [
-      InterfaceMethod<
-        "Return the `#cir.fenv` attribute if it constrains the operation, or "
-        "a null attribute if it is the empty `#cir.fenv<>`.",
-        "cir::FenvAttr", "getConstrainedFenv", (ins), [{}],
-        /*defaultImplementation=*/[{
-          cir::FenvAttr fenv = $_op.getFenv();
-          return fenv.isEmpty() ? cir::FenvAttr{} : fenv;
-        }]>,
-      InterfaceMethod<
-        "Return the effective dynamic rounding mode.",
-        "cir::FPDynamicRoundingMode", "getFenvDynamicRoundingMode", (ins),
-        [{}], /*defaultImplementation=*/[{
-          return $_op.getFenv().getDynamicRoundingModeOrDefault();
-        }]>,
-      InterfaceMethod<
-        "Return the effective floating-point exception mode.",
-        "cir::FPExceptionMode", "getFenvExceptionMode", (ins), [{}],
-        /*defaultImplementation=*/[{
-          return $_op.getFenv().getExceptionModeOrDefault();
-        }]>,
-      InterfaceMethod<
-        "Return the effective strict-exception flag.",
-        "bool", "getFenvStrictExcept", (ins), [{}],
-        /*defaultImplementation=*/[{
-          return $_op.getFenv().getStrictExceptOrDefault();
-        }]>,
+      InterfaceMethod<"Return the `#cir.fenv` attribute.",
+        "cir::FenvAttr", "getFenv">,
     ];
+
+    let extraSharedClassDeclaration = [{
+      /// Return the `#cir.fenv` attribute if it constrains the operation, or
+      /// a null attribute if it is the empty `#cir.fenv<>`.
+      cir::FenvAttr getConstrainedFenv() {
+        cir::FenvAttr fenv = $_op.getFenv();
+        return fenv.isEmpty() ? cir::FenvAttr{} : fenv;
+      }
+    }];
   }
 
   def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {

@@ -961,13 +961,13 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     }
   }];
 
-  let constBuilderCall = "$0";
-
   let canHaveIllegalCXXABIType = 0;
 }
 
 def CIR_DefaultValuedFenvAttr : DefaultValuedAttr<CIR_FenvAttr,
-    "cir::FenvAttr::get($_builder.getContext(), {}, {}, {})">;
+    "cir::FenvAttr::get($_builder.getContext(), {}, {}, {})"> {
+  let constBuilderCall = "$0";
+}
 
 //===----------------------------------------------------------------------===//
 // CIR_FlagParam
