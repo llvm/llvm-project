@@ -24,7 +24,7 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
 )
 
-list(APPEND compile_options -flto)
+list(APPEND compile_options ${RUNTIMES_LTO_FLAG})
 list(APPEND compile_options -fvisibility=hidden)
 list(APPEND compile_options -nogpulib)
 list(APPEND compile_options -nostdlibinc)

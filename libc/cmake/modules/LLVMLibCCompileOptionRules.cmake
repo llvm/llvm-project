@@ -352,7 +352,7 @@ function(_get_common_compile_options_impl output_var)
     list(APPEND compile_options "-nogpulib")
     list(APPEND compile_options "-fvisibility=hidden")
     list(APPEND compile_options "-fconvergent-functions")
-    list(APPEND compile_options "-flto")
+    list(APPEND compile_options "${RUNTIMES_LTO_FLAG}")
     list(APPEND compile_options "-Wno-multi-gpu")
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

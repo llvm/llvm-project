@@ -28,7 +28,7 @@ endif ()
 
 if (LIBOMP_TARGET_IS_GPU)
   target_compile_options(libomp-mod PRIVATE
-    $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
+    $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib ${RUNTIMES_LTO_FLAG}>
   )
 endif ()
 
