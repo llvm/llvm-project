@@ -2091,12 +2091,15 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Currently only handle cases where the single user is a header-mask
-    // comparison with the backedge-taken-count.
+    // comparison with the backedge-taken-count, TC - 1.
     VPUser *SingleUser = WideIV->getSingleUser();
+    VPValue *BTC;
     if (!SingleUser ||
-        !match(SingleUser,
-               m_ICmp(m_Specific(WideIV),
-                      m_Broadcast(m_Specific(Plan.getBackedgeTakenCount())))))
+        !match(
+            SingleUser,
+            m_ICmp(m_Specific(WideIV),
+                   m_Broadcast(m_VPValue(
+                       BTC, m_Sub(m_Specific(Plan.getTripCount()), m_One()))))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -2108,9 +2111,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
         WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
-    auto *NewBTC = new VPWidenCastRecipe(
-        Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy,
-        nullptr, VPIRFlags::getDefaultFlags(Instruction::Trunc));
+    auto *NewBTC =
+        new VPWidenCastRecipe(Instruction::Trunc, BTC, NewIVTy, nullptr,
+                              VPIRFlags::getDefaultFlags(Instruction::Trunc));
     Plan.getVectorPreheader()->appendRecipe(NewBTC);
     auto *Cmp = cast<VPInstruction>(WideIV->getSingleUser());
     Cmp->replaceAllUsesWith(
