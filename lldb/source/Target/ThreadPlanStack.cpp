@@ -13,8 +13,6 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Log.h"
 
-#include <unordered_set>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -426,24 +424,19 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
     }
   }
 
-  // If we aren't reaping missing threads or have no plans, we are done.
-  if (!delete_missing || m_plans_list.empty())
+  // If we aren't reaping missing threads at this point,
+  // we are done.
+  if (!delete_missing)
     return;
-
-  // Index the already-current thread list rather than searching it separately
-  // for every plan. Repeated linear searches become prohibitively expensive
-  // for targets with large thread counts.
-  std::unordered_set<lldb::tid_t> live_tids;
-  live_tids.reserve(current_threads.GetSize(/*can_update=*/false));
-  for (const auto &thread : current_threads.Threads())
-    live_tids.insert(thread->GetID());
-
+  // Otherwise scan for absent TID's.
   std::vector<lldb::tid_t> missing_threads;
   // If we are going to delete plans from the plan stack,
   // then scan for absent TID's:
   for (auto &thread_plans : m_plans_list) {
     lldb::tid_t cur_tid = thread_plans.first;
-    if (live_tids.find(cur_tid) == live_tids.end())
+    ThreadSP thread_sp =
+        current_threads.FindThreadByID(cur_tid, /*can_update=*/false);
+    if (!thread_sp)
       missing_threads.push_back(cur_tid);
   }
   for (lldb::tid_t tid : missing_threads) {

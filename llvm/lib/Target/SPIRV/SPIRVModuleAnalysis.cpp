@@ -94,9 +94,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  // A met minimum version makes the extension unnecessary.
+  if (VerOK && !ReqMinVer.empty())
+    ReqExts.clear();
   if (ReqCaps.empty()) {
-    // A met minimum version makes the extension unnecessary.
-    if (ReqExts.empty() || (VerOK && !ReqMinVer.empty())) {
+    if (ReqExts.empty()) {
       if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
