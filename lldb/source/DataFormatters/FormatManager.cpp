@@ -659,7 +659,7 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   llvm::StringRef match_data_name(match_data.GetTypeForCache());
   if (!match_data_name.empty()) {
     LLDB_LOG(log, "\n\n" FORMAT_LOG("Looking into cache for type {1}"),
-              match_data_name.nonEmptyOr("<invalid>"));
+             match_data_name.nonEmptyOr("<invalid>"));
     if (m_format_cache.Get(match_data_name, retval_sp)) {
       LLDB_LOG(log, FORMAT_LOG("Cache search success. Returning."));
       LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
@@ -673,8 +673,8 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   m_categories_map.Get(match_data, retval_sp);
   if (!match_data_name.empty() && (!retval_sp || !retval_sp->NonCacheable())) {
     LLDB_LOG(log, FORMAT_LOG("Caching {1} for type {2}"),
-              static_cast<void *>(retval_sp.get()),
-              match_data_name.nonEmptyOr("<invalid>"));
+             static_cast<void *>(retval_sp.get()),
+             match_data_name.nonEmptyOr("<invalid>"));
     m_format_cache.Set(match_data_name, retval_sp);
   }
   LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
