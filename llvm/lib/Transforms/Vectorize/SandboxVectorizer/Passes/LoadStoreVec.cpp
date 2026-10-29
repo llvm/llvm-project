@@ -291,8 +291,39 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   return ConstantVector::get(LaneTyConstants);
 }
 
+Value *LoadStoreVec::createPack(BndlRef<Value *> Operands,
+                                FixedVectorType *VecTy,
+                                BasicBlock::iterator WhereIt) {
+  Type *LaneTy = VecTy->getElementType();
+  Type *Int32Ty = Type::getInt32Ty(*Ctx);
+  Value *Vec = PoisonValue::get(VecTy);
+  unsigned Lane = 0;
+  for (Value *Op : Operands) {
+    Type *LanesTy = getLanesTypeFor(Op->getType(), LaneTy, *DL);
+    Value *Elms =
+        Reinterpret::reinterpretValue(Op, LanesTy, WhereIt, *Ctx, *DL);
+    assert(Elms != nullptr && "Expected the caller to check canReinterpret()");
+    // An operand that spans several lanes is inserted lane by lane. Like
+    // all the other instructions created here, these may fold to constants.
+    auto *LanesVecTy = dyn_cast<FixedVectorType>(LanesTy);
+    if (LanesVecTy == nullptr) {
+      Vec = InsertElementInst::create(
+          Vec, Elms, ConstantInt::get(Int32Ty, Lane++), WhereIt, *Ctx, "VPack");
+      continue;
+    }
+    for (unsigned Idx : seq<unsigned>(LanesVecTy->getNumElements())) {
+      Value *Elm = ExtractElementInst::create(
+          Elms, ConstantInt::get(Int32Ty, Idx), WhereIt, *Ctx, "VPack");
+      Vec = InsertElementInst::create(
+          Vec, Elm, ConstantInt::get(Int32Ty, Lane++), WhereIt, *Ctx, "VPack");
+    }
+  }
+  return Vec;
+}
+
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!canVectorize(Stores))
+  auto VecTy = canVectorize(Stores);
+  if (!VecTy)
     return false;
   SmallVector<Value *, 4> Operands;
   Operands.reserve(Stores.size());
@@ -301,7 +332,6 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Operands.push_back(Op);
   }
   BasicBlock *BB = Stores[0]->getParent();
-  // TODO: For now we only support load operands.
   // TODO: For now we don't cross BBs.
   bool AllLoads = all_of(Operands, [BB](Value *V) {
     auto *LI = dyn_cast<LoadInst>(V);
@@ -309,12 +339,19 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   });
   bool AllConstants =
       all_of(Operands, [](Value *V) { return isa<Constant>(V); });
-  if (!AllLoads && !AllConstants)
+  // Any other operands are packed into a vector one by one, after
+  // reinterpreting each of them as the lanes it occupies.
+  auto *LaneTy = cast<FixedVectorType>(*VecTy)->getElementType();
+  if (!AllLoads && !AllConstants && any_of(Operands, [this, LaneTy](Value *Op) {
+        return !Reinterpret::canReinterpret(
+            Op->getType(), getLanesTypeFor(Op->getType(), LaneTy, *DL), *DL);
+      }))
     return false;
 
-  // Vectorizing mixed floats and integers with external uses may not be
+  // Packing operands, or vectorizing mixed floats and integers, may not be
   // profitable on some targets, so save state here.
   saveIR(Rgn);
+  auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
   Value *VecOp = nullptr;
   SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
@@ -346,12 +383,15 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
       Ctx->accept();
       return false;
     }
+  } else {
+    // All operands dominate their stores, so they are available right
+    // before the vector store.
+    VecOp = createPack(Operands, cast<FixedVectorType>(*VecTy), StWhereIt);
   }
 
   // Generate vector store.
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
-  auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
   auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
   Utils::propagateMetadata(VecS, Stores);
 
