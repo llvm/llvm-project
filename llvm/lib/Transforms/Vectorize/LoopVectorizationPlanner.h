@@ -668,12 +668,17 @@ class VFSelectionContext {
   /// user options, for the given register kind (scalable or fixed-width).
   bool useMaxBandwidth(bool IsScalable) const;
 
+  struct VFSelectionTypeWidths {
+    unsigned SmallestTypeForMaxBandwidth;
+    unsigned SmallestType;
+    unsigned WidestType;
+  };
+
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
-                                       unsigned SmallestType,
-                                       unsigned WidestType,
+                                       const VFSelectionTypeWidths &TypeWidths,
                                        ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
@@ -786,11 +791,6 @@ public:
   /// Collect element types in the loop that need widening.
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
-
-  struct VFSelectionTypeWidths {
-    unsigned SmallestTypeForMaxBandwidth;
-    unsigned WidestType;
-  };
 
   /// \return The size (in bits) of the of the types used to determine the
   /// possible VFs. That is the widest type in the loop and the smallest type

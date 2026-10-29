@@ -188,7 +188,7 @@ ElementCount VFSelectionContext::clampVFByMaxTripCount(
 }
 
 ElementCount VFSelectionContext::getMaximizedVFForTarget(
-    unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
+    unsigned MaxTripCount, const VFSelectionTypeWidths &TypeWidths,
     ElementCount MaxSafeVF, unsigned UserIC, bool FoldTailByMasking,
     bool RequiresScalarEpilogue) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
@@ -205,12 +205,14 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
 
   // Ensure MaxVF is a power of 2; the dependence distance bound may not be.
   // Note that both WidestRegister and WidestType may not be a powers of 2.
-  auto MaxVectorElementCount = ElementCount::get(
-      llvm::bit_floor(WidestRegister.getKnownMinValue() / WidestType),
-      ComputeScalableMaxVF);
+  auto MaxVectorElementCount =
+      ElementCount::get(llvm::bit_floor(WidestRegister.getKnownMinValue() /
+                                        TypeWidths.WidestType),
+                        ComputeScalableMaxVF);
   MaxVectorElementCount = MinVF(MaxVectorElementCount, MaxSafeVF);
   LLVM_DEBUG(dbgs() << "LV: The Widest register safe to use is: "
-                    << (MaxVectorElementCount * WidestType) << " bits.\n");
+                    << (MaxVectorElementCount * TypeWidths.WidestType)
+                    << " bits.\n");
 
   if (!MaxVectorElementCount) {
     LLVM_DEBUG(dbgs() << "LV: The target has no "
@@ -234,12 +236,13 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
 
   if (useMaxBandwidth(ComputeScalableMaxVF)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
-        llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
+        llvm::bit_floor(WidestRegister.getKnownMinValue() /
+                        TypeWidths.SmallestTypeForMaxBandwidth),
         ComputeScalableMaxVF);
     MaxVF = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
 
     if (ElementCount MinVF =
-            TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
+            TTI.getMinimumVF(TypeWidths.SmallestType, ComputeScalableMaxVF)) {
       if (ElementCount::isKnownLT(MaxVF, MinVF)) {
         LLVM_DEBUG(dbgs() << "LV: Overriding calculated MaxVF(" << MaxVF
                           << ") with target's minimum: " << MinVF << '\n');
@@ -355,19 +358,18 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
     bool FoldTailByMasking, bool RequiresScalarEpilogue) {
-  auto [SmallestTypeForMaxBandwidth, WidestType] =
-      getTypeWidthsForVFSelection();
+  VFSelectionTypeWidths TypeWidths = getTypeWidthsForVFSelection();
 
   // Get the maximum safe dependence distance in bits computed by LAA.
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
-  unsigned MaxSafeElementsPowerOf2 =
-      llvm::bit_floor(Legal->getMaxSafeVectorWidthInBits() / WidestType);
+  unsigned MaxSafeElementsPowerOf2 = llvm::bit_floor(
+      Legal->getMaxSafeVectorWidthInBits() / TypeWidths.WidestType);
   if (!Legal->isSafeForAnyStoreLoadForwardDistances()) {
     unsigned SLDist = Legal->getMaxStoreLoadForwardSafeDistanceInBits();
     MaxSafeElementsPowerOf2 =
-        std::min(MaxSafeElementsPowerOf2, SLDist / WidestType);
+        std::min(MaxSafeElementsPowerOf2, SLDist / TypeWidths.WidestType);
   }
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
@@ -443,20 +445,21 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "LV: The Smallest and Widest types: "
-                    << SmallestTypeForMaxBandwidth << " / " << WidestType
-                    << " bits.\n");
+  LLVM_DEBUG(dbgs() << "LV: The smallest and widest types: "
+                    << TypeWidths.SmallestType << " / " << TypeWidths.WidestType
+                    << " bits (smallest type for maximizing bandwidth: "
+                    << TypeWidths.SmallestTypeForMaxBandwidth << " bits)\n");
 
   FixedScalableVFPair Result(ElementCount::getFixed(1),
                              ElementCount::getScalable(0));
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestTypeForMaxBandwidth, WidestType, MaxSafeFixedVF,
-          UserIC, FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, TypeWidths, MaxSafeFixedVF, UserIC, FoldTailByMasking,
+          RequiresScalarEpilogue))
     Result.FixedVF = MaxVF;
 
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestTypeForMaxBandwidth, WidestType,
-          MaxSafeScalableVF, UserIC, FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, TypeWidths, MaxSafeScalableVF, UserIC,
+          FoldTailByMasking, RequiresScalarEpilogue))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -468,13 +471,16 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
 
 VFSelectionContext::VFSelectionTypeWidths
 VFSelectionContext::getTypeWidthsForVFSelection() const {
+  unsigned MinWidth = -1;
   unsigned MinWidthForMaxBandwidth = -1U;
   unsigned MaxWidth = 8;
   const DataLayout &DL = F.getDataLayout();
 
   auto UpdateSmallestAndWidestSizes = [&](Type *T) {
-    MaxWidth = std::max<unsigned>(
-        MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+    unsigned TySize = DL.getTypeSizeInBits(T->getScalarType()).getFixedValue();
+
+    MinWidth = std::min<unsigned>(MinWidth, TySize);
+    MaxWidth = std::max<unsigned>(MaxWidth, TySize);
 
     // Note: -vectorizer-maximize-bandwidth overrides the target preference.
     if (!valueOr(Opts.vectorizer_maximize_bandwidth,
@@ -482,9 +488,8 @@ VFSelectionContext::getTypeWidthsForVFSelection() const {
                      TargetTransformInfo::VectorKind::FixedOrScalable, T)))
       return;
 
-    MinWidthForMaxBandwidth = std::min<unsigned>(
-        MinWidthForMaxBandwidth,
-        DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+    MinWidthForMaxBandwidth =
+        std::min<unsigned>(MinWidthForMaxBandwidth, TySize);
   };
 
   // For in-loop reductions, no element types are added to ElementTypesInLoop
@@ -506,14 +511,16 @@ VFSelectionContext::getTypeWidthsForVFSelection() const {
   }
 
   // If the loop has no loads/stores or reductions (e.g. a search loop with an
-  // early exit), MinWidthForMaxBandwidth is never updated and is left at its
+  // early exit), Min[WidthForMaxBandwidth] is never updated and is left at its
   // sentinel value. Fall back to MaxWidth to keep the SmallestType <=
   // WidestType invariant, so callers such as the max-bandwidth VF computation
   // don't divide by the sentinel and collapse the VF to zero.
   if (MinWidthForMaxBandwidth == -1U)
     MinWidthForMaxBandwidth = MaxWidth;
+  if (MinWidth == -1U)
+    MinWidth = MaxWidth;
 
-  return {MinWidthForMaxBandwidth, MaxWidth};
+  return {MinWidthForMaxBandwidth, MinWidth, MaxWidth};
 }
 
 void VFSelectionContext::collectElementTypesForWidening(
@@ -793,7 +800,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
 
   ElementCount VF = UserVF;
   if (VF.isZero()) {
-    auto [_, WidestType] = getTypeWidthsForVFSelection();
+    unsigned WidestType = getTypeWidthsForVFSelection().WidestType;
 
     auto RegKind = TTI.enableScalableVectorization()
                        ? TargetTransformInfo::RGK_ScalableVector
