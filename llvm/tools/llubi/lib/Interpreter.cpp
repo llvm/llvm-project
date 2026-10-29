@@ -976,14 +976,15 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     PerLane,
   };
 
-  /// Implements llvm.masked.load, llvm.masked.expandload, llvm.masked.store
-  /// and llvm.masked.gather. For loads, \p Data holds the pass-through values
-  /// and is updated with the loaded lanes; for stores, it holds the values to
-  /// store. Lane addresses are computed according to \p Mode.
+  /// Implements the masked intrinsic family. For loads, \p Data holds the
+  /// pass-through values and is updated with the loaded lanes; for stores, it
+  /// holds the values to store. Lane addresses are computed according to \p
+  /// Mode.
   AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &Mask, AnyValue Data,
                                         MaskedAddrMode Mode) {
-    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1921,7 +1922,6 @@ public:
                                           MaskedAddrMode::PerLane);
     case Intrinsic::masked_scatter:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
-                                          /*IsStore=*/true,
                                           MaskedAddrMode::PerLane);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
