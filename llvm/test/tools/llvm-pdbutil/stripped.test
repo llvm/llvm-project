@@ -3,6 +3,7 @@
 
 ; CHECK: Summary
 ; CHECK-NEXT: ============================================================
+; CHECK-NEXT:  Container: MSF
 ; CHECK-NEXT:  Block Size: 4096
 ; CHECK-NEXT:  Number of blocks: 17
 ; CHECK-NEXT:  Number of streams: 12
@@ -105,5 +106,4 @@
 
 ; CHECK: Section Map
 ; CHECK-NEXT: ============================================================
-
 
