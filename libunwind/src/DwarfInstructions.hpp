@@ -236,6 +236,10 @@ int DwarfInstructions<A, R>::stepWithDwarf(
     PrologInfo prolog;
     if (CFI_Parser<A>::template parseFDEInstructions<R>(
             addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
+      if (prolog.savedRegisters[cieInfo.returnAddressRegister].location ==
+          CFI_Parser<A>::kRegisterUndefined)
+        return UNW_STEP_END;
+
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
