@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c++26 -freflection -fsyntax-only -verify=expected,std
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify=expected,std
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c++26 -freflection -fsyntax-only -verify=expected,builtin -DUSE_BUILTIN
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify=expected,builtin -DUSE_BUILTIN
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux -std=c++26 -freflection -fsyntax-only -verify=expected,std
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify=expected,std
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux -std=c++26 -freflection -fsyntax-only -verify=expected,builtin -DUSE_BUILTIN
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify=expected,builtin -DUSE_BUILTIN
 
 #include <meta>
 #include <stdint.h>
