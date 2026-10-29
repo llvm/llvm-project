@@ -998,7 +998,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
     const unsigned IndexBW =
         DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
-    AnyValue LanePtr = Ptr;
+    AnyValue LanePtr;
+    if (Mode != MaskedAddrMode::PerLane)
+      LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
 
     bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
@@ -1028,9 +1030,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (Mode == MaskedAddrMode::Consecutive &&
           (!IsExpandLoad || MaskLane == BooleanKind::True)) {
         AnyValue AccumulatedOffset = AnyValue::poison();
-        LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, 1),
-                                          APInt(IndexBW, AccessSize), Flags,
-                                          AccumulatedOffset);
+        LanePtr = Ctx.computePtrAdd(LanePtr, APInt(IndexBW, AccessSize), Flags,
+                                    AccumulatedOffset);
       }
     }
 
