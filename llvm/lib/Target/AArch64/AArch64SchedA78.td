@@ -336,6 +336,11 @@ def A78Write_2c_1L01_1V_1I : SchedWriteRes<[A78UnitL01, A78UnitV, A78UnitI]> {
   let NumMicroOps = 3;
 }
 
+def A78Write_2c_1I_1L01_1V : SchedWriteRes<[A78UnitI, A78UnitL01, A78UnitV]> {
+  let Latency     = 2;
+  let NumMicroOps = 3;
+}
+
 def A78Write_2c_1L01_2V : SchedWriteRes<[A78UnitL01, A78UnitV, A78UnitV]> {
   let Latency     = 2;
   let NumMicroOps = 3;
@@ -1238,11 +1243,18 @@ def : InstRW<[A78Write_2c_1L01_1V, ReadAdrBase],
              (instregex "^STR[BSD]ro[WX]$")>;
 
 // Store vector reg, register offset, scale, H-form
-// Store vector reg, register offset, scale, Q-form
 // Store vector reg, register offset, extend, scale, H-form
+def A78Write_ScaledSTRH : SchedWriteVariant<[
+  SchedVar<A78IsScaledLoadStore, [A78Write_2c_1I_1L01_1V]>,
+  SchedVar<NoSchedPred,          [A78Write_2c_1L01_1V]>]>;
+
+def : InstRW<[A78Write_ScaledSTRH, ReadAdrBase],
+             (instregex "^STRHro[WX]$")>;
+
+// Store vector reg, register offset, scale, Q-form
 // Store vector reg, register offset, extend, scale, Q-form
 def : InstRW<[A78Write_2c_1L01_1V, ReadAdrBase],
-             (instregex "^STR[HQ]ro[WX]$")>;
+             (instregex "^STRQro[WX]$")>;
 
 // Store vector pair, immed offset, S-form
 // Store vector pair, immed offset, D-form
