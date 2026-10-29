@@ -1354,8 +1354,10 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   llvm::dxbc::PSV::SemanticKind Kind = llvm::hlsl::getSemanticKind(Name);
   llvm::dxil::ElementType CompType =
       getSignatureComponentType(CGM, Shape.RowType);
-  // These system values may be declared as int or uint, but DXIL signatures
-  // require an unsigned component type.
+  // SV_SampleIndex may be declared as int or uint, as in DXC. The value is an
+  // index in [0, sample count), so it is never negative and a signed
+  // declaration reads the same value. DXIL signatures require an unsigned
+  // component type.
   if (Kind == llvm::dxbc::PSV::SemanticKind::SampleIndex) {
     if (CompType == llvm::dxil::ElementType::I16)
       CompType = llvm::dxil::ElementType::U16;
@@ -1725,7 +1727,11 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
           CGM, Signature.size(), Semantic, Index, Shape));
       llvm::Value *SampleIndex =
           B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_sample_index));
-      return B.CreateTrunc(SampleIndex, Type);
+      // dx.op.sampleIndex only has an i32 overload, so a 16-bit declaration
+      // narrows the result. The sample index always fits in 16 bits.
+      if (Type->getIntegerBitWidth() < 32)
+        SampleIndex = B.CreateTrunc(SampleIndex, Type);
+      return SampleIndex;
     }
     break;
   case llvm::dxbc::PSV::SemanticKind::StartInstanceLocation:
