@@ -898,6 +898,16 @@ void EmulateF64::replaceOperations(Function &F) {
     // call of doubles).
     if (isa<FPMathOperator>(&I) && hasDouble(I.getType()) && !isDoubleOp(I))
       I.copyFastMathFlags(FastMathFlags());
+    if (StringRef Name = ieeeF32Op(I); !Name.empty() && ieeeF32(F)) {
+      // "ieee32:<op>" (before the calls below: fma and sqrt are intrinsic calls): the f32 operation with denormal operands and results
+      SmallVector<Value *, 3> Ops;
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        Ops.append(II->arg_begin(), II->arg_end());
+      else
+        Ops.append(I.op_begin(), I.op_end());
+      replaceWithEmulation(I, ("ieee32:" + Name).str(), Ops);
+      continue;
+    }
     if (auto *CI = dyn_cast<CallInst>(&I)) {
       Function *Callee = CI->getCalledFunction();
       if (!Callee)
@@ -953,16 +963,6 @@ void EmulateF64::replaceOperations(Function &F) {
               .str();
       replaceWithEmulation(*RMW, Key,
                            {RMW->getPointerOperand(), RMW->getValOperand()});
-      continue;
-    }
-    if (StringRef Name = ieeeF32Op(I); !Name.empty() && ieeeF32(F)) {
-      // "ieee32:<op>": the f32 operation with denormal operands and results
-      SmallVector<Value *, 3> Ops;
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        Ops.append(II->arg_begin(), II->arg_end());
-      else
-        Ops.append(I.op_begin(), I.op_end());
-      replaceWithEmulation(I, ("ieee32:" + Name).str(), Ops);
       continue;
     }
     if (isDoubleOp(I)) {
