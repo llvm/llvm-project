@@ -117,6 +117,17 @@ module {
     cir.return
   }
 
+  // CHECK-LABEL: llvm.func @ldexp_variants
+  cir.func @ldexp_variants(%a: !cir.double, %e: !s32i) {
+    // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    %0 = cir.ldexp %a, %e : !cir.double, !s32i
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.ldexp"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f64, i32, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.ldexp %a, %e : !cir.double, !s32i fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+    cir.return
+  }
+
   // CHECK-LABEL: llvm.func @ternary_fp_builtins
   cir.func @ternary_fp_builtins(%a: !cir.double, %b: !cir.double,
                                 %c: !cir.double) {

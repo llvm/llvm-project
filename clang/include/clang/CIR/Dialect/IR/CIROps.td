@@ -8761,6 +8761,42 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   let constrainedLLVMIntrinsic = "atan2";
 }
 
+def CIR_LdexpOp : CIR_Op<"ldexp",
+    !listconcat([AllTypesMatch<["src", "result"]>], CIR_FenvOpTraits)> {
+  let summary = "Multiplies a floating-point value by an integral power of two";
+  let description = [{
+    `cir.ldexp` computes `src * 2^exp`.
+
+    Lowers to `llvm.ldexp`, or to `llvm.experimental.constrained.ldexp` when
+    the `fenv` attribute is present.
+
+    Example:
+      %r = cir.ldexp %x, %e : !cir.float, !s32i
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatType:$src,
+    CIR_AnyIntType:$exp,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    $src `,` $exp `:` qualified(type($src)) `,` qualified(type($exp))
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src, "mlir::Value":$exp), [{
+      build($_builder, $_state, src, exp, cir::FenvAttr{});
+    }]>
+  ];
+
+  let llvmOp = "LoadExpOp";
+  let constrainedLLVMIntrinsic = "ldexp";
+}
+
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
   let summary = "Decomposes a floating-point value into significand and exponent";
   let description = [{
