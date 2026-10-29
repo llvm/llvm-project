@@ -967,8 +967,6 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     }
   }];
 
-  // Used by `CIR_DefaultValuedFenvAttr`, whose default value is a full builder
-  // expression.
   let constBuilderCall = "$0";
 
   let canHaveIllegalCXXABIType = 0;
