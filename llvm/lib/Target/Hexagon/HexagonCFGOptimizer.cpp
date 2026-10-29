@@ -102,6 +102,35 @@ bool HexagonCFGOptimizer::isOnFallThroughPath(MachineBasicBlock *MBB) {
   return false;
 }
 
+static void moveOrUndefDebugInstrs(MachineFunction &Fn, MachineBasicBlock &From,
+                                   MachineBasicBlock &To, bool Preserve) {
+  if (From.empty())
+    return;
+
+  auto InsertBefore = To.SkipPHIsAndLabels(To.begin());
+  auto FirstDebug = From.begin();
+  To.splice(InsertBefore, &From, From.begin(), From.end());
+  if (Preserve)
+    return;
+
+  const TargetInstrInfo *TII = Fn.getSubtarget().getInstrInfo();
+  while (FirstDebug != InsertBefore) {
+    MachineInstr &DebugMI = *FirstDebug++;
+    assert(DebugMI.isDebugInstr() && "expected only debug instructions");
+    if (DebugMI.isDebugValueLike()) {
+      if (DebugMI.isDebugRef())
+        DebugMI.setDesc(TII->get(TargetOpcode::DBG_VALUE_LIST));
+      for (MachineOperand &MO : DebugMI.debug_operands())
+        MO.ChangeToRegister(0, false);
+    } else {
+      // Erasing a DBG_PHI makes its users unavailable. A DBG_LABEL cannot be
+      // moved to a join without attributing it to paths that did not execute
+      // it.
+      DebugMI.eraseFromParent();
+    }
+  }
+}
+
 bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
@@ -171,12 +200,17 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
         }
 
         if ((NumSuccs == 2) && LayoutSucc && (LayoutSucc->pred_size() == 1)) {
-          // Ensure that BB2 has one instruction -- an unconditional jump.
-          if ((LayoutSucc->size() == 1) &&
-              IsUnconditionalJump(LayoutSucc->front().getOpcode())) {
+          MachineBasicBlock::iterator UncondJump =
+              LayoutSucc->getFirstNonDebugInstr(false);
+          // Ensure that BB2 has one non-debug instruction -- an unconditional
+          // jump.
+          if (UncondJump != LayoutSucc->end() &&
+              next_nodbg(UncondJump, LayoutSucc->end(), false) ==
+                  LayoutSucc->end() &&
+              IsUnconditionalJump(UncondJump->getOpcode())) {
             assert(JumpAroundTarget && "jump target is needed to process second basic block");
-            MachineBasicBlock* UncondTarget =
-              LayoutSucc->front().getOperand(0).getMBB();
+            MachineBasicBlock *UncondTarget =
+                UncondJump->getOperand(0).getMBB();
             // Check if the layout successor of BB2 is BB3.
             bool case1 = LayoutSucc->isLayoutSuccessor(JumpAroundTarget);
             bool case2 = JumpAroundTarget->isSuccessor(UncondTarget) &&
@@ -190,8 +224,18 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
               MBB.replaceSuccessor(JumpAroundTarget, UncondTarget);
 
               // Remove the unconditional branch in LayoutSucc.
-              LayoutSucc->erase(LayoutSucc->begin());
+              LayoutSucc->erase(UncondJump);
               LayoutSucc->replaceSuccessor(UncondTarget, JumpAroundTarget);
+
+              // The transform makes LayoutSucc part of the opposite path, so
+              // move its debug instructions to their original target. Keep
+              // their locations only when that target is reached solely from
+              // MBB; otherwise make the locations unavailable.
+              bool CanPreserve = !UncondTarget->isEntryBlock() &&
+                                 UncondTarget->pred_size() == 1 &&
+                                 *UncondTarget->pred_begin() == &MBB;
+              moveOrUndefDebugInstrs(Fn, *LayoutSucc, *UncondTarget,
+                                     CanPreserve);
 
               // This code performs the conversion for case 2, which moves
               // the block to the fall-thru case (BB3 in the code above).
