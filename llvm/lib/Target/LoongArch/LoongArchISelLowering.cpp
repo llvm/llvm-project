@@ -11080,14 +11080,17 @@ bool LoongArchTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
   return FPVT == MVT::f64 && Subtarget.hasBasicD();
 }
 
-bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                           bool ForCodeSize) const {
+TargetLowering::FPImmAction
+LoongArchTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   // TODO: Maybe need more checks here after vector extension is supported.
   if (VT == MVT::f32 && !Subtarget.hasBasicF())
-    return false;
+    return FPImmAction::ConstantPool;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
-    return false;
-  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT));
+    return FPImmAction::ConstantPool;
+  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT))
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
@@ -11451,7 +11454,7 @@ Register LoongArchTargetLowering::getExceptionSelectorRegister(
 
 static int getEstimateRefinementSteps(EVT VT,
                                       const LoongArchSubtarget &Subtarget) {
-  // Feature FRECIPE instrucions relative accuracy is 2^-14.
+  // Feature FRECIPE instructions relative accuracy is 2^-14.
   // IEEE float has 23 digits and double has 52 digits.
   int RefinementSteps = VT.getScalarType() == MVT::f64 ? 2 : 1;
   return RefinementSteps;
@@ -12011,7 +12014,48 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setBitsFrom(VTBits);
     break;
   }
+  case LoongArchISD::BSTRINS: {
+    // BSTRINS X, Y, msb, lsb: replace X[msb:lsb] with Y[msb-lsb:0].
+    unsigned Msb = Op.getConstantOperandVal(2);
+    unsigned Lsb = Op.getConstantOperandVal(3);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known.insertBits(Known2.trunc(Msb - Lsb + 1), Lsb);
+    break;
   }
+  case LoongArchISD::BSTRPICK: {
+    // BSTRPICK X, msb, lsb: zero-extend X[msb:lsb].
+    unsigned BitWidth = Known.getBitWidth();
+    unsigned Msb = Op.getConstantOperandVal(1);
+    unsigned Lsb = Op.getConstantOperandVal(2);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known = Known.extractBits(Msb - Lsb + 1, Lsb).zext(BitWidth);
+    break;
+  }
+  }
+}
+
+unsigned LoongArchTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case LoongArchISD::BSTRINS: {
+    unsigned BitWidth = Op.getScalarValueSizeInBits();
+    unsigned Msb = Op.getConstantOperandVal(2);
+    unsigned Lsb = Op.getConstantOperandVal(3);
+    // The bits above msb come from X.
+    if (Msb != BitWidth - 1) {
+      unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+      return std::min(Tmp, BitWidth - 1 - Msb);
+    }
+    // The high bits come from Y shifted left by lsb.
+    unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    return Tmp > Lsb ? Tmp - Lsb : 1;
+  }
+  }
+  return 1;
 }
 
 bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(

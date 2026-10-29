@@ -1324,7 +1324,15 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   KnownFPClass KnownSrc;
   computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                       Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstSem = getFltSemanticForLLT(
+      MRI.getType(MI.getOperand(0).getReg()).getScalarType());
+  const fltSemantics &SrcSem =
+      getFltSemanticForLLT(MRI.getType(Val).getScalarType());
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+                                MF.getDenormalMode(DstSem),
+                                MF.getDenormalMode(SrcSem));
 }
 
 void GISelValueTracking::computeKnownFPClass(Register R,
@@ -1485,7 +1493,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD: {
-    if ((InterestedClasses & fcNegative) == fcNone)
+    if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
       break;
 
     const bool IsFMA = Opcode == TargetOpcode::G_FMA;
@@ -2148,7 +2156,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT SrcTy = MRI.getType(Src).getScalarType();
     const fltSemantics &SrcSem = getFltSemanticForLLT(SrcTy);
 
-    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem);
+    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem,
+                                MF->getDenormalMode(DstSem),
+                                MF->getDenormalMode(SrcSem));
     break;
   }
   case TargetOpcode::G_FPTRUNC:

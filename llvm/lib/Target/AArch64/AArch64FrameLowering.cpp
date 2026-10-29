@@ -293,6 +293,21 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
   return ArgumentPopSize;
 }
 
+bool AArch64FrameLowering::authenticatesReturnAddressEarly(
+    MachineFunction &MF, MachineBasicBlock &MBB) const {
+  if (!MF.needsWinCFI() ||
+      !MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddress(MF))
+    return false;
+
+  // Funclets don't tail call, and are not what the unwind info is about.
+  MachineBasicBlock::iterator LastI = MBB.getLastNonDebugInstr();
+  if (LastI != MBB.end() && (LastI->getOpcode() == AArch64::CATCHRET ||
+                             LastI->getOpcode() == AArch64::CLEANUPRET))
+    return false;
+
+  return getArgumentStackToRestore(MF, MBB) != 0;
+}
+
 static bool produceCompactUnwindFrame(const AArch64FrameLowering &,
                                       MachineFunction &MF);
 
@@ -463,13 +478,13 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
                                          bool IsWin64, bool IsFunclet) const {
   assert(AFI->getTailCallReservedStack() % 16 == 0 &&
          "Tail call reserved stack must be aligned to 16 bytes");
-  if (!IsWin64 || IsFunclet) {
+  if (!IsWin64) {
     return AFI->getTailCallReservedStack();
+  } else if (IsFunclet) {
+    // A funclet has its own frame; the tail call reserve belongs to the parent
+    // function's incoming argument area.
+    return 0;
   } else {
-    if (AFI->getTailCallReservedStack() != 0 &&
-        !MF.getFunction().getAttributes().hasAttrSomewhere(
-            Attribute::SwiftAsync))
-      report_fatal_error("cannot generate ABI-changing tail call for Win64");
     unsigned FixedObjectSize = AFI->getTailCallReservedStack();
 
     // Var args are stored here in the primary function.
@@ -537,6 +552,12 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // are accessed off the frame pointer in both the parent function and the
   // funclets.
   if (MF.hasEHFunclets())
+    return true;
+
+  // Unwinding out of a callee that pops stack arguments we reserved in our
+  // prologue leaves SP higher than our unwind info expects, so on Windows we
+  // must be found via the frame pointer instead.
+  if (AFI.hasWinCallToCalleePopFunction())
     return true;
 
   // When the stack guard is mixed with the frame pointer, a dedicated FP is
@@ -2291,6 +2312,11 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   auto ZPREnd = std::find_if_not(ZPRBegin, RegGroups.end(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd);
 
+  // If the return address is authenticated before the epilogue, it stays in LR
+  // rather than being restored here, as that would replace it with the
+  // unauthenticated value from the stack.
+  bool KeepLR = authenticatesReturnAddressEarly(MF, MBB);
+
   bool PTrueCreated = false;
   for (const RegGroupInfo &RGI : RegGroups) {
     Register Reg1 = RGI.Reg1;
@@ -2343,6 +2369,28 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       PTrueCreated = true;
       BuildMI(MBB, MBBI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
           .setMIFlags(MachineInstr::FrameDestroy);
+    }
+
+    if (KeepLR && RGI.Type == RegGroupInfo::GPR &&
+        (Reg1 == AArch64::LR || Reg2 == AArch64::LR)) {
+      // Windows pairs LR with the register before it, which is the one at the
+      // lower address, so restore just that register. The pair has not been
+      // swapped yet at this point, so that register is Reg1.
+      if (!RGI.isPaired())
+        continue;
+      assert(Reg2 == AArch64::LR && "Expected LR to be the second of the pair");
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXui));
+      MIB.addReg(Reg1, getDefRegState(true));
+      MIB.addReg(AArch64::SP)
+          .addImm(RGI.Offset)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, RGI.FrameIdx),
+          MachineMemOperand::MOLoad, 8, Align(8)));
+      if (NeedsWinCFI)
+        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
+      continue;
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
@@ -2576,16 +2624,19 @@ void AArch64FrameLowering::determineStackHazardSlot(
 void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 BitVector &SavedRegs,
                                                 RegScavenger *RS) const {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC) {
+    AFI->setCalleeSavedStackSize(0);
+    AFI->setSVECalleeSavedStackSize(/*ZPR=*/0, /*PPR=*/0);
     return;
+  }
 
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   Register UnspilledCSGPR;
   Register UnspilledCSGPRPaired;
 

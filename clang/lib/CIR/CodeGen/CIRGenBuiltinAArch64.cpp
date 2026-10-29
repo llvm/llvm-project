@@ -96,11 +96,11 @@ static cir::VectorType getFloatNeonType(CIRGenFunction &cgf,
   int isQuad = intTypeFlags.isQuad();
   switch (intTypeFlags.getEltType()) {
   case NeonTypeFlags::Int16:
-    return cir::VectorType::getFixed(cgf.fP16Ty, (4 << isQuad));
+    return cir::VectorType::getFixed(cgf.fP16Ty, (4ULL << isQuad));
   case NeonTypeFlags::Int32:
-    return cir::VectorType::getFixed(cgf.floatTy, (2 << isQuad));
+    return cir::VectorType::getFixed(cgf.floatTy, (2ULL << isQuad));
   case NeonTypeFlags::Int64:
-    return cir::VectorType::getFixed(cgf.doubleTy, (1 << isQuad));
+    return cir::VectorType::getFixed(cgf.doubleTy, (1ULL << isQuad));
   default:
     llvm_unreachable("Type can't be converted to floating-point!");
   }
@@ -1597,9 +1597,9 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
   case SVETypeFlags::EltTyFloat16:
     return cir::VectorType::getScalable(builder.getFp16Ty(), 8);
   case SVETypeFlags::EltTyBFloat16:
-    return cir::VectorType::getScalable(builder.getBF16Type(), 8);
+    return cir::VectorType::getScalable(builder.getBfloat16Ty(), 8);
   case SVETypeFlags::EltTyFloat32:
-    return cir::VectorType::getScalable(builder.getF32Type(), 4);
+    return cir::VectorType::getScalable(builder.getSingleTy(), 4);
   case SVETypeFlags::EltTyFloat64:
     return cir::VectorType::getScalable(builder.getDoubleTy(), 2);
 

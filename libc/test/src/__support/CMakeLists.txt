@@ -1,4 +1,4 @@
-add_custom_target(libc-support-tests)
+add_libc_testsuite(libc-support-tests)
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
@@ -309,7 +309,7 @@ if(LIBC_TARGET_OS_IS_BAREMETAL AND
   add_libc_test(
     external_startup_link_test
     FULL_BUILD_ONLY
-    NO_RUN_POSTBUILD
+    BUILD_ONLY
     STARTUP
       .minimal_external_crt1_for_test
     SUITE
@@ -321,7 +321,7 @@ endif()
 
 add_libc_test(
   str_to_float_comparison_test
-  NO_RUN_POSTBUILD
+  BUILD_ONLY
   SUITE
     libc-support-tests
   SRCS

@@ -56,6 +56,11 @@ public:
     return tupleSymbols.contains(&symbol) || globalSymbols.contains(&symbol);
   }
 
+  /// Is the canonical symbol captured as a global instead of a tuple entry?
+  bool isAssociatedGlobal(const Fortran::semantics::Symbol &symbol) const {
+    return globalSymbols.contains(&symbol);
+  }
+
 private:
   /// Canonical vector of host associated local symbols.
   llvm::SetVector<const Fortran::semantics::Symbol *> tupleSymbols;

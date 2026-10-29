@@ -290,6 +290,20 @@ private:
         return MergedLines;
     }
 
+    // Optionally merge preceding `break` or `[[fallthrough]]` with case label
+    // when at compatible levels, preserving label's indent.
+    if (Style.CompactCaseLabels &&
+        NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
+        TheLine->Level <= NextLine.Level + 1 &&
+        canJoinWithCaseLabel(TheLine, *NextLine.First)) {
+      IndentTracker.nextLine(NextLine);
+      unsigned MergedLinesInCaseBody =
+          Style.AllowShortCaseLabelsOnASingleLine
+              ? tryMergeShortCaseLabels(I + 1, E, Limit)
+              : 0;
+      return 1 + MergedLinesInCaseBody;
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
 
     // Handle blocks where the brace has already been wrapped.
@@ -672,6 +686,19 @@ private:
     return 0;
   }
 
+  bool canJoinWithCaseLabel(const AnnotatedLine *Line,
+                            const FormatToken &LabelTok) {
+    if (Line->endsWith(tok::semi, tok::kw_break))
+      return true;
+
+    if (Line->startsWith(TT_AttributeLSquare) &&
+        Line->endsWith(tok::semi, TT_AttributeRSquare)) {
+      return !LabelTok.mustBreakAfterAttributes(Style);
+    }
+
+    return false;
+  }
+
   unsigned
   tryMergeSimplePPDirective(ArrayRef<AnnotatedLine *>::const_iterator I,
                             ArrayRef<AnnotatedLine *>::const_iterator E,
@@ -841,10 +868,16 @@ private:
           EndsWithComment) {
         return 0;
       }
+      const auto *J = I + 2 + NumStmts;
+      if (Style.CompactCaseLabels && J != E &&
+          (*J)->First->isOneOf(tok::kw_case, tok::kw_default) &&
+          canJoinWithCaseLabel(Line, *(*J)->First)) {
+        break;
+      }
+
       if (Line->First->is(tok::comment)) {
         if (Level != Line->Level)
           return 0;
-        const auto *J = I + 2 + NumStmts;
         for (; J != E; ++J) {
           Line = *J;
           if (Line->InPPDirective != InPPDirective)

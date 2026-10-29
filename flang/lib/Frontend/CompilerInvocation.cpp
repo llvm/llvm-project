@@ -29,6 +29,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -874,7 +876,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (argValue == "none") {
       columns = 0;
     } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
-      columns = -1;
+      if (!argValue.empty() && llvm::all_of(argValue, llvm::isDigit)) {
+        // Route oversized positive decimals to the large-columns diagnostic.
+        columns = std::numeric_limits<std::int64_t>::max();
+      } else {
+        columns = -1;
+      }
     }
     if (columns < 0) {
       diags.Report(clang::diag::err_drv_negative_columns)
@@ -1328,7 +1335,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
     llvm::SmallVector<unsigned> ompVersions;
     for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
-      ompVersions.push_back(static_cast<unsigned>(v));
+      ompVersions.push_back(v.value());
     }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
@@ -2016,9 +2023,8 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(
-        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
-        fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(getLangOpts().getOpenMPVersion().value(),
+                                    fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(

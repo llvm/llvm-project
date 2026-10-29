@@ -2406,7 +2406,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -2590,11 +2590,15 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
   EStatus.ExtendedDiag = &MSWarning;
-  bool Result = (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
-                    ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx,
-                                                                  *SProxy, this)
-                    : Init->EvaluateAsInitializer(Ctx, this, EStatus,
-                                                  IsConstantInitialization);
+
+  // VarDecl::evaluateValue is used in a great many places, but we only want to
+  // allow AST mutation during the initial check for constant initialization.
+  bool Result =
+      (SProxy && IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+          ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SProxy,
+                                                        this)
+          : Init->EvaluateAsInitializer(Ctx, this, EStatus,
+                                        IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
@@ -4269,7 +4273,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {

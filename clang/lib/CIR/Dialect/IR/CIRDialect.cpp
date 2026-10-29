@@ -258,33 +258,6 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   return success();
 }
 
-bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
-  assert(ty && "isPureCIRType requires a non-null type");
-  {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    auto it = pureCIRTypeCache.find(ty);
-    if (it != pureCIRTypeCache.end())
-      return it->second;
-  }
-  // Records gain members when completed, so a "pure" answer is only stable
-  // when the walk saw no incomplete record. "Impure" answers stay stable.
-  bool sawIncompleteRecord = false;
-  bool result = !ty.walk([&](mlir::Type t) {
-                     if (!t)
-                       return mlir::WalkResult::advance();
-                     if (auto rec = mlir::dyn_cast<cir::RecordType>(t))
-                       sawIncompleteRecord |= rec.isIncomplete();
-                     return mlir::isa<cir::CIRDialect>(t.getDialect())
-                                ? mlir::WalkResult::advance()
-                                : mlir::WalkResult::interrupt();
-                   }).wasInterrupted();
-  if (!result || !sawIncompleteRecord) {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    pureCIRTypeCache[ty] = result;
-  }
-  return result;
-}
-
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
@@ -1295,13 +1268,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
-    case cir::CastKind::integral: {
-      llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
-      auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
-        return mlir::cast<mlir::Attribute>(foldResults[0]);
-      return {};
-    }
+    case cir::CastKind::integral:
     case cir::CastKind::bitcast:
     case cir::CastKind::address_space:
     case cir::CastKind::float_complex:
@@ -2708,7 +2675,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
   } else {
     // Parse constant with initializer, examples:
     //  cir.global @y = 3.400000e+00 : f32
-    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<!s8i x 3>>
     if (parseConstantValue(parser, initialValueAttr).failed())
       return failure();
 
@@ -2923,7 +2890,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::Builder &builder = parser.getBuilder();
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
-  mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr coroutineKindNameAttr = getCoroutineKindAttrName(state.name);
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
@@ -2937,9 +2904,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
-  if (::mlir::succeeded(
-          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
-    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+
+  // Parse optional coroutine kind attribute
+  {
+    static constexpr llvm::StringRef keywords[] = {"coroutine",
+                                                   "flattened_coroutine"};
+    llvm::StringRef keyword;
+    if (parser.parseOptionalKeyword(&keyword, keywords).succeeded())
+      state.addAttribute(
+          coroutineKindNameAttr,
+          cir::CoroutineKindAttr::get(builder.getContext(),
+                                      *cir::symbolizeCoroutineKind(keyword)));
+  }
 
   // Parse optional inline kind attribute
   cir::InlineKindAttr inlineKindAttr;
@@ -3283,8 +3259,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getBuiltin())
     p << " builtin";
 
-  if (getCoroutine())
-    p << " coroutine";
+  if (std::optional<cir::CoroutineKind> coroKind = getCoroutineKind())
+    p << ' ' << cir::stringifyCoroutineKind(*coroKind);
 
   printInlineKindAttr(p, getInlineKindAttr());
 
@@ -3383,7 +3359,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 mlir::LogicalResult cir::FuncOp::verify() {
 
-  if (!isDeclaration() && getCoroutine()) {
+  if (!isDeclaration() && getCoroutineKind() == cir::CoroutineKind::Coroutine) {
     int coroutineOpCount = 0;
     this->walk([&](Operation *op) {
       if (isa<CoroutineOp>(op)) {

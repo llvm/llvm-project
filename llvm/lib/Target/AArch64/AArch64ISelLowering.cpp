@@ -2129,10 +2129,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
-    if (Subtarget->hasSVEBitPerm() &&
-        (Subtarget->isSVEAvailable() ||
-         (Subtarget->isSVEorStreamingSVEAvailable() &&
-          Subtarget->hasSSVE_BitPerm()))) {
+    if (Subtarget->isSVEBitPermAvailable()) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
         setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
       }
@@ -4942,7 +4939,12 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     return SDValue();
   }
 
-  assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
+  assert(VT == MVT::f128 && "Expected fp128 result type");
+  if (!IsStrict && Op0VT == MVT::bf16) {
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Ext);
+  }
   return SDValue();
 }
 
@@ -4954,6 +4956,17 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
   SDNodeFlags Flags = Op->getFlags();
+
+  if (!IsStrict && SrcVT == MVT::f128 && VT == MVT::bf16) {
+    SDLoc DL(Op);
+    // Round inexact results to odd before rounding to bf16 to avoid double
+    // rounding through fp32. Exact conversions do not need the correction.
+    SDValue Narrow =
+        Trunc ? DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, SrcVal,
+                            DAG.getIntPtrConstant(0, DL, true), Flags)
+              : expandRoundInexactToOdd(MVT::f32, SrcVal, DL, DAG);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, Narrow, Op.getOperand(1), Flags);
+  }
 
   if (VT.isScalableVector()) {
     // Let common code split the operation.
@@ -11157,6 +11170,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                 ? alignTo(NumBytes, StackAlign)
                                 : 0;
 
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget->isTargetWindows() && CalleePopBytes != 0)
+    FuncInfo->setHasWinCallToCalleePopFunction(true);
+
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
 
@@ -13996,8 +14013,9 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
   return false;
 }
 
-bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool OptForSize) const {
+TargetLowering::FPImmAction
+AArch64TargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
 
   // If we can not materialize in immediate field for fmov, check if the
@@ -14041,7 +14059,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
                     << " imm value: ";
              Imm.dump(););
-  return IsLegal;
+  return IsLegal ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//
@@ -25841,8 +25859,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
@@ -36586,7 +36604,8 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   // If the vector is scalable, SVE is enabled, implying support for complex
   // numbers. Otherwise, we need to ensure complex number support is available
-  if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
+  if (!VTy->isScalableTy() &&
+      (!Subtarget->hasComplxNum() || !Subtarget->isNeonAvailable()))
     return false;
 
   auto *ScalarTy = VTy->getScalarType();

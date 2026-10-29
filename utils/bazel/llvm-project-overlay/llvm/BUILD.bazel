@@ -857,6 +857,7 @@ cc_library(
     name = "DebugInfoDWARF",
     srcs = glob([
         "lib/DebugInfo/DWARF/*.cpp",
+        "lib/DebugInfo/DWARF/*.h",
     ]),
     hdrs = glob(["include/llvm/DebugInfo/DWARF/*.h"]),
     copts = llvm_copts,
@@ -1784,7 +1785,7 @@ gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/PowerPC/PPC.td",
+    td_file = "lib/Target/PowerPC/PPCTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":PPCTargetTdFiles",

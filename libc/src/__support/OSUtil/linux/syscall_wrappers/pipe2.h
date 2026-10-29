@@ -26,8 +26,9 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> pipe2(int pipefd[2], int flags) {
   ErrorOr<int> result = syscall_checked<int>(SYS_pipe2, pipefd, flags);
-  if (result.has_value())
+  if (result.has_value()) {
     LIBC_MSAN_UNPOISON(pipefd, sizeof(int) * 2);
+  }
   return result;
 }
 

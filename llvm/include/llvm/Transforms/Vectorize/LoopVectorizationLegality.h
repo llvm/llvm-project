@@ -397,7 +397,7 @@ public:
   /// 1 - Address is consecutive.
   /// -1 - Address is consecutive, and decreasing.
   /// NOTE: This method must only be used before modifying the original scalar
-  /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
+  /// loop. Do not use after executing a VPlan (PR34965).
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
@@ -527,9 +527,15 @@ private:
   bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
 
   /// Set up outer loop inductions by checking Phis in outer loop header for
-  /// supported inductions (int inductions). Return false if any of these Phis
-  /// is not a supported induction or if we fail to find an induction.
+  /// supported inductions (int and pointer inductions). Return false if any of
+  /// these Phis is not a supported induction or if we fail to find any
+  /// induction.
   bool setupOuterLoopInductions();
+
+  /// Return true if the widest induction type, used for the canonical IV and
+  /// trip count, can be determined, i.e. there is at least one integer or
+  /// pointer induction. Otherwise report the reason and return false.
+  bool canDetermineWidestInductionType();
 
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.
@@ -574,7 +580,8 @@ private:
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
-  ///   5. The loop does not contain reductions or recurrences.
+  ///   5. The loop does not contain fixed-order recurrences or reductions where
+  ///   the live-out value is used from a non-latch exit..
   ///   6. We can prove at compile-time that loops will not contain faulting
   ///      loads, or that any faulting loads would also occur in a purely
   ///      scalar loop.

@@ -1993,6 +1993,18 @@ def riscv_pmaccsu_halves_00
 def riscv_pmaccsu_halves_11
     : RVSDNode<"PMACCSU_HALVES_11", SDT_RISCVWideningMulAccByHalves>;
 
+// The pwmacc*/pwmaccsu* instructions accumulate into the 64-bit register
+// pair holding rd, represented as a v2i32 on RV32.
+def SDT_RISCVPackedWideningMulAccPair
+    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
+def riscv_pwmacc_h   : RVSDNode<"PWMACC_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+def riscv_pwmaccu_h  : RVSDNode<"PWMACCU_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+def riscv_pwmaccsu_h : RVSDNode<"PWMACCSU_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisSameAs<0, 2>,
@@ -2011,6 +2023,9 @@ def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
 def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
+
+// ComplexPattern for instruction that use 8-bit signed shift amounts like SSHL.
+def shiftMask256 : ComplexPattern<XLenVT, 1, "selectShiftMask<256>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
@@ -2230,6 +2245,13 @@ class PatHorizontalMulAcc<SDPatternOperator OpNode, RVInst Inst,
                           ValueType ResultVT, ValueType SrcVT>
     : Pat<(ResultVT (OpNode (ResultVT GPR:$rd), (SrcVT GPR:$rs1),
                             (SrcVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+class PatHorizontalMulAdd<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (add (ResultVT GPR:$rd),
+                        (binop_oneuse<OpNode> (SrcVT GPR:$rs1),
+                                              (SrcVT GPR:$rs2)))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
@@ -2571,9 +2593,9 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
-  def : PatGprGpr<sshlsat, SSHA>;
-  def : PatGprGpr<ushlsat, SSHL>;
-  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  def : PatGprShiftMask<sshlsat, SSHA, shiftMask256>;
+  def : PatGprShiftMask<ushlsat, SSHL, shiftMask256>;
+  def : PatGprImm<sshlsat, SSLAI, uimm5>;
   // No SSLLI
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
@@ -2605,6 +2627,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, i32, v4i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, i32, v2i16>;
@@ -2637,6 +2663,43 @@ let append Predicates = [IsRV32] in {
             (MACCU_H00 GPR:$rd, zexti16:$rs1, zexti16:$rs2)>;
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
             (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
+
+  // Halfword multiply patterns where an operand is the upper halfword
+  // extracted by a shift right of 16. These have a higher complexity than the
+  // sexti16 patterns above so the shift is folded into the instruction.
+  def : Pat<(i32 (mul sexti16:$rs1, (sra GPR:$rs2, (XLenVT 16)))),
+            (MUL_H01 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul (sra GPR:$rs1, (XLenVT 16)), (sra GPR:$rs2, (XLenVT 16)))),
+            (MUL_H11 GPR:$rs1, GPR:$rs2)>;
+
+  // zexti16 also matches (srl X, 16), so these need extra complexity to be
+  // preferred over the MULU_H00 pattern above and to have MULU_H11 preferred
+  // over MULU_H01.
+  let AddedComplexity = 1 in
+  def : Pat<(i32 (mul zexti16:$rs1, (srl GPR:$rs2, (XLenVT 16)))),
+            (MULU_H01 zexti16:$rs1, GPR:$rs2)>;
+  let AddedComplexity = 2 in
+  def : Pat<(i32 (mul (srl GPR:$rs1, (XLenVT 16)), (srl GPR:$rs2, (XLenVT 16)))),
+            (MULU_H11 GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(i32 (mul (sra GPR:$rs1, (XLenVT 16)), (srl GPR:$rs2, (XLenVT 16)))),
+            (MULSU_H11 GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1,
+                                           (sra GPR:$rs2, (XLenVT 16))))),
+            (MACC_H01 GPR:$rd, sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse zexti16:$rs1,
+                                           (srl GPR:$rs2, (XLenVT 16))))),
+            (MACCU_H01 GPR:$rd, zexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 16)),
+                                           (sra GPR:$rs2, (XLenVT 16))))),
+            (MACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse (srl GPR:$rs1, (XLenVT 16)),
+                                           (srl GPR:$rs2, (XLenVT 16))))),
+            (MACCU_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 16)),
+                                           (srl GPR:$rs2, (XLenVT 16))))),
+            (MACCSU_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
             (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
@@ -2785,6 +2848,17 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
                                      (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  // Packed widening multiply accumulate patterns.
+  def : Pat<(v2i32 (riscv_pwmacc_h (v2i32 GPRPair:$rd),
+                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMACC_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmaccu_h (v2i32 GPRPair:$rd),
+                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMACCU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmaccsu_h (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMACCSU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
@@ -3300,6 +3374,10 @@ let append Predicates = [IsRV64] in {
   // prefer plain mul when both operands are known to be sign/zero-extended.
   def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
             (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W01 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sra GPR:$rs1, (XLenVT 32)), (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
             (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
@@ -3444,6 +3522,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, v2i32, v8i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, v2i32, v4i16>;

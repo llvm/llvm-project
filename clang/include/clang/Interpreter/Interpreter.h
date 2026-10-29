@@ -170,6 +170,11 @@ public:
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
 
+  /// Set the optimization level and size used to emit subsequently parsed
+  /// input. \p OptSize mirrors \c CodeGenOptions::OptimizeSize (1 for -Os,
+  /// 2 for -Oz).
+  void setOptLevel(unsigned OptLevel, unsigned OptSize = 0);
+
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
 

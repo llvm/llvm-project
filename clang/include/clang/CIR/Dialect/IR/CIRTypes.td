@@ -263,7 +263,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     space attribute that specifies the address space of the pointer. If not
     specified, the pointer is assumed to be in the default address space.
 
-    The `!cir.ptr` type can point to any type, including fundamental types,
+    The `!cir.ptr` type can point to any CIR type, including fundamental types,
     records, arrays, vectors, functions, and other pointers. It can also point
     to incomplete types, such as incomplete records.
 
@@ -279,7 +279,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   }];
 
   let parameters = (ins
-    "mlir::Type":$pointee,
+    CIR_DialectType:$pointee,
     OptionalParameter<
         "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
@@ -355,7 +355,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
     containing record.
   }];
 
-  let parameters = (ins "mlir::Type":$member_ty,
+  let parameters = (ins CIR_DialectType:$member_ty,
                         "cir::RecordType":$class_ty);
 
   let builders = [
@@ -988,7 +988,15 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.member_kinds, key.is_class);
+    }
 
     bool isClass() const { return getIsClass(); }
     bool isStruct() const { return !getIsClass(); }
@@ -1079,9 +1087,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 
@@ -1147,7 +1156,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.padding, key.member_kinds);
+    }
 
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }

@@ -1419,7 +1419,8 @@ public:
     /// operands (all operands after the first one).
     ExtractLane,
     /// Explicit user for values in the main VPlan, used by the epilogue vector
-    /// loop.
+    /// loop. Operands are the resume value from the main vector loop and bypass
+    /// value.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
     /// is the default value if no lanes in the masks are active. Conceptually,
@@ -4457,6 +4458,16 @@ struct CastInfo<VPIRMetadata, VPRecipeBase>
     : public ForwardToPointerCast<VPIRMetadata, VPRecipeBase *,
                                   CastInfo<VPIRMetadata, VPRecipeBase *>> {};
 
+/// Support casting from VPSingleDefRecipe -> VPIRMetadata.
+template <>
+struct CastInfo<VPIRMetadata, VPSingleDefRecipe *>
+    : CastInfo<VPIRMetadata, VPRecipeBase *> {};
+template <>
+struct CastInfo<VPIRMetadata, const VPSingleDefRecipe *>
+    : public ConstStrippingForwardingCast<
+          VPIRMetadata, const VPSingleDefRecipe *,
+          CastInfo<VPIRMetadata, VPSingleDefRecipe *>> {};
+
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI
@@ -4878,10 +4889,10 @@ class VPlan {
   friend class VPSlotTracker;
 
   /// VPBasicBlock corresponding to the original preheader. Used to place
-  /// VPExpandSCEV recipes for expressions used during skeleton creation and the
-  /// rest of VPlan execution.
-  /// When this VPlan is used for the epilogue vector loop, the entry will be
-  /// replaced by a new entry block created during skeleton creation.
+  /// VPExpandSCEV recipes for expressions used during VPlan execution.
+  /// When this VPlan is used for the epilogue vector loop, the entry models the
+  /// main plan's entry and its edges move to the epilogue iteration check (see
+  /// VPlanTransforms::modelGeneratedMainLoopBlocks).
   VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.

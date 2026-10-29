@@ -331,8 +331,7 @@ d179176f3e3505044ad14be19ccb3459a70206a9
 EOF
     diff "${BUILD_DIR}/anchors-expected.txt" "${BUILD_DIR}/anchors.txt"
 
-    # Exercise LNT tooling with --dry-run. Doing a real run is time consuming and would
-    # submit to a LNT instance, which we obviously don't want.
+    # Exercise LNT tooling with --dry-run, since doing a real run is time consuming.
     step "Run benchmarks using the LNT flow (dry-run)"
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
         --dry-run -vv \
@@ -345,13 +344,6 @@ EOF
         --filter hash.bench.cpp \
         --output "${BUILD_DIR}/report.json" \
         -- --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}"
-
-    step "Submit a LNT report (dry-run)"
-    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \
-        --dry-run -vv \
-        --lnt-url http://localhost:8000 \
-        --test-suite libcxx \
-        "${BUILD_DIR}/report.json"
 ;;
 #
 # Various Standard modes
@@ -485,7 +477,16 @@ bootstrapping-build)
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DCOMPILER_RT_INCLUDE_TESTS=OFF \
           -DLLVM_ENABLE_ASSERTIONS=ON \
+          -DLLDB_ENABLE_PYTHON=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
+
+    step "Install clang and LLDB to a fake location"
+    # lldb-server is a separate install component, but LLDB needs it to launch
+    # a process on Linux.
+    ${NINJA} -vC "${BUILD_DIR}" install-clang install-lldb install-lldb-server
+
+    # TODO: Find a cleaner way to get the libc++ test suite to grab the just-built LLDB
+    export PATH="${PATH}:${INSTALL_DIR}/bin"
 
     step "Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes

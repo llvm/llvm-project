@@ -4075,9 +4075,9 @@ define <2 x i16> @test_psati_i16x2_max_width(<2 x i16> %a) {
 define <2 x i16> @test_pusati_u16x2(<2 x i16> %a) {
 ; CHECK-LABEL: test_pusati_u16x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pusati.h a0, a0, 0
+; CHECK-NEXT:    pusati.h a0, a0, 1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 0)
+  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 1)
   ret <2 x i16> %res
 }
 
@@ -4148,5 +4148,95 @@ define <2 x i16> @test_pslide1down_v2i16(<2 x i16> %rd, i16 %rs1) {
 ; CHECK-NEXT:    ret
   %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0
   %res = shufflevector <2 x i16> %rd, <2 x i16> %scalar, <2 x i32> <i32 1, i32 2>
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_pslideupx_v4i8(<4 x i8> %rd, <4 x i8> %rs1, i32 %rs2) {
+; RV32-LABEL: test_pslideupx_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    slx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslideupx_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    andi a2, a2, 24
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <4 x i8> %rd to i32
+  %rs1.bits = bitcast <4 x i8> %rs1 to i32
+  %shamt = shl i32 %rs2, 3
+  %res.bits = call i32 @llvm.fshl.i32(i32 %rd.bits, i32 %rs1.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pslidedownx_v4i8(<4 x i8> %rd, <4 x i8> %rs1, i32 %rs2) {
+; RV32-LABEL: test_pslidedownx_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    srx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslidedownx_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    ori a2, a2, 32
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <4 x i8> %rd to i32
+  %rs1.bits = bitcast <4 x i8> %rs1 to i32
+  %shamt = shl i32 %rs2, 3
+  %res.bits = call i32 @llvm.fshr.i32(i32 %rs1.bits, i32 %rd.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <4 x i8>
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_pslideupx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
+                                       i32 %rs2) {
+; RV32-LABEL: test_pslideupx_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    slx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslideupx_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    andi a2, a2, 16
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <2 x i16> %rd to i32
+  %rs1.bits = bitcast <2 x i16> %rs1 to i32
+  %shamt = shl i32 %rs2, 4
+  %res.bits = call i32 @llvm.fshl.i32(i32 %rd.bits, i32 %rs1.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <2 x i16>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pslidedownx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
+                                         i32 %rs2) {
+; RV32-LABEL: test_pslidedownx_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    srx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslidedownx_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    ori a2, a2, 32
+; RV64-NEXT:    srx a0, a1, a2
+; RV64-NEXT:    ret
+  %rd.bits = bitcast <2 x i16> %rd to i32
+  %rs1.bits = bitcast <2 x i16> %rs1 to i32
+  %shamt = shl i32 %rs2, 4
+  %res.bits = call i32 @llvm.fshr.i32(i32 %rs1.bits, i32 %rd.bits, i32 %shamt)
+  %res = bitcast i32 %res.bits to <2 x i16>
   ret <2 x i16> %res
 }

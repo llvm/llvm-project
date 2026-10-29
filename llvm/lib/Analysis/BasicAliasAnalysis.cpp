@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -896,15 +897,6 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
-  switch (F->getIntrinsicID()) {
-  case Intrinsic::experimental_guard:
-  case Intrinsic::experimental_deoptimize:
-    // These intrinsics can read arbitrary memory, and additionally modref
-    // inaccessible memory to model control dependence.
-    return MemoryEffects::readOnly() |
-           MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
-  }
-
   return F->getMemoryEffects();
 }
 
@@ -1640,7 +1632,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
       AssumeInst *Assume = cast<AssumeInst>(Elem);
       OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
-      if (OBU.getTagName() == "separate_storage") {
+      if (getBundleAttrFromOBU(OBU) == BundleAttr::SeparateStorage) {
         assert(OBU.Inputs.size() == 2);
         const Value *Hint1 = OBU.Inputs[0].get();
         const Value *Hint2 = OBU.Inputs[1].get();
@@ -1669,8 +1661,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
           // so strictly more assumptions are valid for them.
           if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
-                                               /* AllowEphemerals */ true)) ||
-              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
+                                               AAQI.AllowEphemerals)) ||
+              (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
+                                        ValidAssumeForPtrContext(V2)))) {
             return AliasResult::NoAlias;
           }
         }

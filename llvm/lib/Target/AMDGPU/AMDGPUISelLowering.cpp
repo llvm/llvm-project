@@ -783,9 +783,11 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return isTypeLegal(VT.getScalarType());
+TargetLowering::FPImmAction
+AMDGPUTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return isTypeLegal(VT.getScalarType()) ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
 }
 
 // We don't want to shrink f64 / f32 constants.
