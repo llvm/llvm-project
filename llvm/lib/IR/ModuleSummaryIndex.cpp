@@ -689,10 +689,14 @@ void ModuleSummaryIndex::exportToDot(
         A.addComment("dsoLocal");
       if (Flags.CanAutoHide)
         A.addComment("canAutoHide");
-      if (Flags.ImportType == GlobalValueSummary::ImportKind::Definition)
+      switch (SummaryIt.second->importType()) {
+      case GlobalValueSummary::ImportKind::Definition:
         A.addComment("definition");
-      else if (Flags.ImportType == GlobalValueSummary::ImportKind::Declaration)
+        break;
+      case GlobalValueSummary::ImportKind::Declaration:
         A.addComment("declaration");
+        break;
+      }
       if (Flags.NoRenameOnPromotion)
         A.addComment("noRenameOnPromotion");
       if (GUIDPreservedSymbols.count(SummaryIt.first))
