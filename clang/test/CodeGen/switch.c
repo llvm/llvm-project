@@ -71,36 +71,6 @@ int foo4t(void) {
   return foo4(111) + foo4(99) + foo4(222) + foo4(601);
 }
 
-// CHECK-LABEL: define{{.*}} void @foo5()
-// CHECK-NOT: switch
-// CHECK: }
-void foo5(void){
-    switch(0){
-    default:
-        if (0) {
-
-        }
-    }
-}
-
-// CHECK-LABEL: define{{.*}} void @foo6()
-// CHECK-NOT: switch
-// CHECK: }
-void foo6(void){
-    switch(0){
-    }
-}
-
-// CHECK-LABEL: define{{.*}} void @foo7()
-// CHECK-NOT: switch
-// CHECK: }
-void foo7(void){
-    switch(0){
-      foo7();
-    }
-}
-
-
 // CHECK-LABEL: define{{.*}} i32 @f8(
 // CHECK: ret i32 3
 // CHECK: }

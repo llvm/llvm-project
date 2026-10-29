@@ -1453,12 +1453,6 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
-  // TODO: LLVM codegen does some early optimization to fold the condition and
-  // only emit live cases. CIR should use MLIR to achieve similar things,
-  // nothing to be done here.
-  // if (ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue))...
-  assert(!cir::MissingFeatures::constantFoldSwitchStatement());
-
   SwitchOp swop;
   auto switchStmtBuilder = [&]() -> mlir::LogicalResult {
     if (s.getInit())

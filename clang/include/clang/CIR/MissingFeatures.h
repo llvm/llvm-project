@@ -205,7 +205,6 @@ struct MissingFeatures {
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
-  static bool constantFoldSwitchStatement() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool coverageMapping() { return false; }
   static bool createInvariantGroup() { return false; }

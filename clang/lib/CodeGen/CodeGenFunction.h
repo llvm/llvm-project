@@ -5378,25 +5378,10 @@ public:
   /// that we can just remove the code.
   static bool ContainsLabel(const Stmt *S, bool IgnoreCaseStmts = false);
 
-  /// containsBreak - Return true if the statement contains a break out of it.
-  /// If the statement (recursively) contains a switch or loop with a break
-  /// inside of it, this is fine.
-  static bool containsBreak(const Stmt *S);
-
-  /// Determine if the given statement might introduce a declaration into the
-  /// current scope, by being a (possibly-labelled) DeclStmt.
-  static bool mightAddDeclToScope(const Stmt *S);
-
   /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
   /// to a constant, or if it does but contains a label, return false.  If it
   /// constant folds return true and set the boolean result in Result.
   bool ConstantFoldsToSimpleInteger(const Expr *Cond, bool &Result,
-                                    bool AllowLabels = false);
-
-  /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
-  /// to a constant, or if it does but contains a label, return false.  If it
-  /// constant folds return true and set the folded value.
-  bool ConstantFoldsToSimpleInteger(const Expr *Cond, llvm::APSInt &Result,
                                     bool AllowLabels = false);
 
   /// Ignore parentheses and logical-NOT to track conditions consistently.
