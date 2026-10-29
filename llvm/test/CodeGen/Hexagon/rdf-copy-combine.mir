@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-aggressive-rdf-copy=true -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -verify-machineinstrs -o - %s | FileCheck %s
 # This test checks that RDF copy propagation works for redundant combine instructions
 # that are feeding values to store instructions.
 # Redundant combine instructions should be removed by RDF dead code elimination.
