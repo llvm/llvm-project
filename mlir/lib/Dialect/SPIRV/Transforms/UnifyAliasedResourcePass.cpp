@@ -574,7 +574,9 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
       unsigned ratio = srcVector.getNumElements() / count;
       unsigned bytes = count * dstVector.getElementTypeBitWidth() / 8;
 
-      // Split the value into stores of the canonical resource's vector type.
+      // Split the value into vectors matching the canonical resource and store
+      // them at consecutive vector indices. Adjust each store's alignment for
+      // its byte offset from the original pointer.
       auto getPart = [&](unsigned i) -> Value {
         if (ratio == 1)
           return value;
