@@ -98,57 +98,57 @@ ldp	q0, q1, [x2, #16]!
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, #4
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, #4
-# CHECK-NEXT:  1      6     0.33    *                   ldr	q0, #4
-# CHECK-NEXT:  1      6     0.33    *                   ldur	b0, [x1, #1]
-# CHECK-NEXT:  1      6     0.33    *                   ldur	h0, [x1, #1]
-# CHECK-NEXT:  1      6     0.33    *                   ldur	s0, [x1, #1]
-# CHECK-NEXT:  1      6     0.33    *                   ldur	d0, [x1, #1]
-# CHECK-NEXT:  1      6     0.33    *                   ldur	q0, [x1, #1]
-# CHECK-NEXT:  3      6     0.50    *                   ldr	b0, [x1], #1
-# CHECK-NEXT:  3      6     0.50    *                   ldr	h0, [x1], #1
-# CHECK-NEXT:  3      6     0.50    *                   ldr	s0, [x1], #1
-# CHECK-NEXT:  3      6     0.50    *                   ldr	d0, [x1], #1
-# CHECK-NEXT:  3      6     0.50    *                   ldr	q0, [x1], #1
-# CHECK-NEXT:  3      6     0.50    *                   ldr	b0, [x1, #1]!
-# CHECK-NEXT:  3      6     0.50    *                   ldr	h0, [x1, #1]!
-# CHECK-NEXT:  3      6     0.50    *                   ldr	s0, [x1, #1]!
-# CHECK-NEXT:  3      6     0.50    *                   ldr	d0, [x1, #1]!
-# CHECK-NEXT:  3      6     0.50    *                   ldr	q0, [x1, #1]!
-# CHECK-NEXT:  1      6     0.33    *                   ldr	b0, [x1, #64]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	h0, [x1, #64]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, [x1, #64]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [x1, #64]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	q0, [x1, #64]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	b0, [x1, x2]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	h0, [x1, x2]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, [x1, x2]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [x1, x2]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	q0, [x1, x2]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, [x1, x2, lsl #2]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [x1, x2, lsl #3]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	h0, [x1, x2, lsl #1]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	q0, [x1, x2, lsl #4]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, [x1, x2, sxtx]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [x1, x2, sxtx]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	h0, [x1, x2, sxtx]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	q0, [x1, x2, sxtx]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	s0, [x1, x2, sxtx #2]
-# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [x1, x2, sxtx #3]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	h0, [x1, x2, sxtx #1]
-# CHECK-NEXT:  2      7     0.33    *                   ldr	q0, [x1, x2, sxtx #4]
-# CHECK-NEXT:  2      6     0.33    *                   ldp	s0, s1, [x2, #16]
-# CHECK-NEXT:  2      6     0.33    *                   ldp	d0, d1, [x2, #16]
-# CHECK-NEXT:  2      6     0.33    *                   ldnp	s0, s1, [x2, #16]
-# CHECK-NEXT:  2      6     0.33    *                   ldnp	d0, d1, [x2, #16]
-# CHECK-NEXT:  3      6     0.67    *                   ldp	q0, q1, [x2, #16]
-# CHECK-NEXT:  4      6     0.50    *                   ldp	s0, s1, [x2], #16
-# CHECK-NEXT:  4      6     0.50    *                   ldp	d0, d1, [x2], #16
-# CHECK-NEXT:  6      6     0.75    *                   ldp	q0, q1, [x2], #16
-# CHECK-NEXT:  4      6     0.50    *                   ldp	s0, s1, [x2, #16]!
-# CHECK-NEXT:  4      6     0.50    *                   ldp	d0, d1, [x2, #16]!
-# CHECK-NEXT:  6      6     0.75    *                   ldp	q0, q1, [x2, #16]!
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, #4
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, #4
+# CHECK-NEXT:  1      5     0.33    *                   ldr	q0, #4
+# CHECK-NEXT:  1      5     0.33    *                   ldur	b0, [x1, #1]
+# CHECK-NEXT:  1      5     0.33    *                   ldur	h0, [x1, #1]
+# CHECK-NEXT:  1      5     0.33    *                   ldur	s0, [x1, #1]
+# CHECK-NEXT:  1      5     0.33    *                   ldur	d0, [x1, #1]
+# CHECK-NEXT:  1      5     0.33    *                   ldur	q0, [x1, #1]
+# CHECK-NEXT:  3      5     0.50    *                   ldr	b0, [x1], #1
+# CHECK-NEXT:  3      5     0.50    *                   ldr	h0, [x1], #1
+# CHECK-NEXT:  3      5     0.50    *                   ldr	s0, [x1], #1
+# CHECK-NEXT:  3      5     0.50    *                   ldr	d0, [x1], #1
+# CHECK-NEXT:  3      5     0.50    *                   ldr	q0, [x1], #1
+# CHECK-NEXT:  3      5     0.50    *                   ldr	b0, [x1, #1]!
+# CHECK-NEXT:  3      5     0.50    *                   ldr	h0, [x1, #1]!
+# CHECK-NEXT:  3      5     0.50    *                   ldr	s0, [x1, #1]!
+# CHECK-NEXT:  3      5     0.50    *                   ldr	d0, [x1, #1]!
+# CHECK-NEXT:  3      5     0.50    *                   ldr	q0, [x1, #1]!
+# CHECK-NEXT:  1      5     0.33    *                   ldr	b0, [x1, #64]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	h0, [x1, #64]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, [x1, #64]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, [x1, #64]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	q0, [x1, #64]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	b0, [x1, x2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	h0, [x1, x2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, [x1, x2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, [x1, x2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	q0, [x1, x2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, [x1, x2, lsl #2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, [x1, x2, lsl #3]
+# CHECK-NEXT:  2      6     0.33    *                   ldr	h0, [x1, x2, lsl #1]
+# CHECK-NEXT:  2      6     0.33    *                   ldr	q0, [x1, x2, lsl #4]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, [x1, x2, sxtx]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, [x1, x2, sxtx]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	h0, [x1, x2, sxtx]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	q0, [x1, x2, sxtx]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	s0, [x1, x2, sxtx #2]
+# CHECK-NEXT:  1      5     0.33    *                   ldr	d0, [x1, x2, sxtx #3]
+# CHECK-NEXT:  2      6     0.33    *                   ldr	h0, [x1, x2, sxtx #1]
+# CHECK-NEXT:  2      6     0.33    *                   ldr	q0, [x1, x2, sxtx #4]
+# CHECK-NEXT:  2      5     0.33    *                   ldp	s0, s1, [x2, #16]
+# CHECK-NEXT:  2      5     0.33    *                   ldp	d0, d1, [x2, #16]
+# CHECK-NEXT:  2      5     0.33    *                   ldnp	s0, s1, [x2, #16]
+# CHECK-NEXT:  2      5     0.33    *                   ldnp	d0, d1, [x2, #16]
+# CHECK-NEXT:  3      5     0.67    *                   ldp	q0, q1, [x2, #16]
+# CHECK-NEXT:  4      5     0.50    *                   ldp	s0, s1, [x2], #16
+# CHECK-NEXT:  4      5     0.50    *                   ldp	d0, d1, [x2], #16
+# CHECK-NEXT:  6      5     0.75    *                   ldp	q0, q1, [x2], #16
+# CHECK-NEXT:  4      5     0.50    *                   ldp	s0, s1, [x2, #16]!
+# CHECK-NEXT:  4      5     0.50    *                   ldp	d0, d1, [x2, #16]!
+# CHECK-NEXT:  6      5     0.75    *                   ldp	q0, q1, [x2, #16]!
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - A78UnitB
@@ -170,7 +170,7 @@ ldp	q0, q1, [x2, #16]!
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]
-# CHECK-NEXT:  -      -      -      -      -      -      -     18.00  18.00  18.00  10.50  10.50  10.50  10.50   -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -     18.00  18.00  18.00  9.50   9.50   9.50   9.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    Instructions:
@@ -198,18 +198,18 @@ ldp	q0, q1, [x2, #16]!
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, [x1, #64]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q0, [x1, #64]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	b0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	h0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	h0, [x1, x2]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	s0, [x1, x2]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, [x1, x2]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	q0, [x1, x2]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q0, [x1, x2]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	s0, [x1, x2, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, [x1, x2, lsl #3]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	h0, [x1, x2, lsl #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	q0, [x1, x2, lsl #4]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	s0, [x1, x2, sxtx]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	h0, [x1, x2, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	q0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	h0, [x1, x2, sxtx]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q0, [x1, x2, sxtx]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	s0, [x1, x2, sxtx #2]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	d0, [x1, x2, sxtx #3]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -     ldr	h0, [x1, x2, sxtx #1]

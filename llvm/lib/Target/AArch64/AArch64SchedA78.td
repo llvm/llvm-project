@@ -100,6 +100,7 @@ def A78Write_12c_1M0 : SchedWriteRes<[A78UnitM0]>  { let Latency = 12;
 def A78Write_20c_1M0 : SchedWriteRes<[A78UnitM0]>  { let Latency = 20;
                                                    let ReleaseAtCycles = [20]; }
 def A78Write_4c_1L   : SchedWriteRes<[A78UnitL]>   { let Latency = 4; }
+def A78Write_5c_1L   : SchedWriteRes<[A78UnitL]>   { let Latency = 5; }
 def A78Write_6c_1L   : SchedWriteRes<[A78UnitL]>   { let Latency = 6; }
 def A78Write_2c_1V   : SchedWriteRes<[A78UnitV]>   { let Latency = 2; }
 def A78Write_3c_1V   : SchedWriteRes<[A78UnitV]>   { let Latency = 3; }
@@ -229,6 +230,11 @@ def A78Write_6c_2V : SchedWriteRes<[A78UnitV, A78UnitV]> {
 
 def A78Write_4c_2L : SchedWriteRes<[A78UnitL, A78UnitL]> {
   let Latency     = 4;
+  let NumMicroOps = 2;
+}
+
+def A78Write_5c_2L : SchedWriteRes<[A78UnitL, A78UnitL]> {
+  let Latency     = 5;
   let NumMicroOps = 2;
 }
 
@@ -460,6 +466,11 @@ def A78Write_10c_2L_2V : SchedWriteRes<[A78UnitL, A78UnitL, A78UnitV, A78UnitV]>
 def A78Write_4c_2M0_2M : SchedWriteRes<[A78UnitM0, A78UnitM0, A78UnitM,
                                        A78UnitM]> {
   let Latency     = 4;
+  let NumMicroOps = 4;
+}
+
+def A78Write_5c_2I_2L : SchedWriteRes<[A78UnitI, A78UnitI, A78UnitL, A78UnitL]> {
+  let Latency     = 5;
   let NumMicroOps = 4;
 }
 
@@ -1157,40 +1168,46 @@ def : SchedAlias<WriteFCopy, A78Write_2c_1V1>;
 
 // Load vector reg, literal, S/D/Q forms
 // Load vector reg, unscaled immed
-def : InstRW<[A78Write_6c_1L], (instregex "^LDR[SDQ]l$",
+def : InstRW<[A78Write_5c_1L], (instregex "^LDR[SDQ]l$",
                                          "^LDUR[BHSDQ]i$")>;
 
 // Load vector reg, immed post-index
 // Load vector reg, immed pre-index
-def : InstRW<[WriteAdr, A78Write_6c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
+def : InstRW<[WriteAdr, A78Write_5c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, unsigned immed
-def : InstRW<[A78Write_6c_1L], (instregex "^LDR[BHSDQ]ui$")>;
+def : InstRW<[A78Write_5c_1L], (instregex "^LDR[BHSDQ]ui$")>;
 
 // Load vector reg, register offset, basic
 // Load vector reg, register offset, scale, S/D-form
 // Load vector reg, register offset, extend
 // Load vector reg, register offset, extend, scale, S/D-form
-def : InstRW<[A78Write_6c_1L, ReadAdrBase], (instregex "^LDR[BSD]ro[WX]$")>;
+def : InstRW<[A78Write_5c_1L, ReadAdrBase], (instregex "^LDR[BSD]ro[WX]$")>;
 
 // Load vector reg, register offset, scale, H/Q-form
 // Load vector reg, register offset, extend, scale, H/Q-form
-def : InstRW<[A78Write_7c_1I_1L, ReadAdrBase], (instregex "^LDR[HQ]ro[WX]$")>;
+def A78IsScaledLDRHQ : MCSchedPredicate<CheckImmOperand<4, 1>>;
+
+def A78Write_ScaledLDRHQ : SchedWriteVariant<[
+  SchedVar<A78IsScaledLoadStore, [A78Write_6c_1I_1L]>,
+  SchedVar<NoSchedPred,          [A78Write_5c_1L]>]>;
+
+def : InstRW<[A78Write_ScaledLDRHQ, ReadAdrBase], (instregex "^LDR[HQ]ro[WX]$")>;
 
 // Load vector pair, immed offset, S/D-form
-def : InstRW<[A78Write_6c_1L, WriteLDHi], (instregex "^LDN?P[SD]i$")>;
+def : InstRW<[A78Write_5c_1L, WriteLDHi], (instregex "^LDN?P[SD]i$")>;
 
 // Load vector pair, immed offset, Q-form
-def : InstRW<[A78Write_6c_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
+def : InstRW<[A78Write_5c_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 
 // Load vector pair, immed post-index, S/D-form
 // Load vector pair, immed pre-index, S/D-form
-def : InstRW<[WriteAdr, A78Write_6c_1I_1L, WriteLDHi],
+def : InstRW<[WriteAdr, A78Write_5c_1I_1L, WriteLDHi],
              (instregex "^LDP[SD](pre|post)$")>;
 
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[WriteAdr, A78Write_6c_2I_2L, WriteLDHi], (instrs LDPQpost,
+def : InstRW<[WriteAdr, A78Write_5c_2I_2L, WriteLDHi], (instrs LDPQpost,
                                                               LDPQpre)>;
 
 // FP store instructions
