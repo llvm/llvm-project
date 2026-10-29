@@ -1812,6 +1812,9 @@ def err_messaging_super_with_direct_method : Error<
   "messaging super with a direct method">;
 def err_messaging_class_with_direct_method : Error<
   "messaging a Class with a method that is possibly direct">;
+def warn_objc_direct_init_subclass : Warning<
+  "direct initializer %0 of %1 leaves subclass %2 partially initialized">,
+  InGroup<ObjCDirectInitSubclass>;
 
 // C++ declarations
 def err_static_assert_expression_is_not_constant : Error<
