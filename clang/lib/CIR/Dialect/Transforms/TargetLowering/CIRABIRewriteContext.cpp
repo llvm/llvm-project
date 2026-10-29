@@ -243,7 +243,7 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
 /// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
-/// for Indirect args in place of llvm.nofpclass and for IndirectAliased args,
+/// in place of llvm.nofpclass for Indirect and IndirectAliased args,
 /// drops llvm.noundef from a coerced Direct arg that passes undefined bits,
 /// gives each field of a Direct+canFlatten argument the argument's attributes,
 /// and gives each field of an Expand argument an empty dict.  Direct and
@@ -330,7 +330,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::IndirectAliased) {
       // llvm.byref(T) records the pre-rewrite arg type, as llvm.byval does.
+      // llvm.nofpclass describes the value and does not apply to a pointer.
       mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoFPClassAttrName());
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
