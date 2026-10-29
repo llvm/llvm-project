@@ -753,10 +753,14 @@ define void @constants_i32_i32_ptr-gep(ptr %ptr0) {
   ret void
 }
 
+; A non-integral pointer has no stable integer representation, so it cannot be
+; packed into an integer lane.
 define void @constants_i64_ptr-nonintegral(ptr addrspace(5) %ptr0) {
 ; CHECK-LABEL: define void @constants_i64_ptr-nonintegral(
 ; CHECK-SAME: ptr addrspace(5) [[PTR0:%.*]]) {
-; CHECK-NEXT:    store <2 x i64> <i64 5, i64 0>, ptr addrspace(5) [[PTR0]], align 4, !sandboxvec [[META45:![0-9]+]]
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(5) [[PTR0]], i64 8
+; CHECK-NEXT:    store i64 5, ptr addrspace(5) [[PTR0]], align 4, !sandboxvec [[META45:![0-9]+]]
+; CHECK-NEXT:    store ptr addrspace(5) null, ptr addrspace(5) [[PTR1]], align 8, !sandboxvec [[META45]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr addrspace(5) %ptr0, i64 8

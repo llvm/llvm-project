@@ -64,18 +64,17 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
   /// Reinterprets \p C as type \p DestTy without changing its bits, e.g.,
-  /// float 1.0 to i32 0x3f800000, or a null pointer to i64 0.
-  ///
-  /// \p DestTy must not be a pointer whose size is unknown.
+  /// float 1.0 to i32 0x3f800000, or a null pointer to i64 0. \returns nullptr
+  /// if \p C or \p DestTy is a non-integral pointer.
   Constant *getEquivalentConstantWithType(Constant *C, Type *DestTy);
 
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
   /// \returns the packed constant vector, or nullptr if some constant cannot
-  /// be converted, e.g., a vector constant that is not yet flattened, or a
-  /// wide constant without a known bit pattern such as a ConstantExpr or a
-  /// global's address.
+  /// be converted, e.g., a vector constant that is not yet flattened, a
+  /// non-integral pointer, or a wide constant without a known bit pattern such
+  /// as a ConstantExpr or a global's address.
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive

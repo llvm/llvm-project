@@ -79,11 +79,11 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
 
 Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
                                                       Type *DestTy) {
-  // A non-integral pointer has no fixed ptrtoint/inttoptr width.
-  if (DestTy->isPointerTy())
-    assert(!DL->isNonIntegralAddressSpace(DestTy->getPointerAddressSpace()) &&
-           "DestTy has no fixed size");
   Type *SrcTy = C->getType();
+  // A non-integral pointer has no fixed ptrtoint/inttoptr representation.
+  if (VecUtils::isNonIntegralPtr(SrcTy, *DL) ||
+      VecUtils::isNonIntegralPtr(DestTy, *DL))
+    return nullptr;
   if (SrcTy == DestTy)
     return C;
 
