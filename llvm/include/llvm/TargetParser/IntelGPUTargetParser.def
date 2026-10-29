@@ -51,7 +51,7 @@
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)
 #endif
 
-INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)
+INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Core)
 INTEL_GPU("xe-nvl-p",    XE_NVL_P,    35, 10,  60, Render)
 INTEL_GPU("xe-nvl-u",    XE_NVL_U,    30, 5,   60, Render)
 INTEL_GPU("xe-nvl-s",    XE_NVL_S,    30, 4,   60, Render)

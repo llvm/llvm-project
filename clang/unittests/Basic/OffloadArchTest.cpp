@@ -42,6 +42,15 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(IntelGPU.isIntelGPU());
   EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
 
+  OffloadArch IGCA = parse("igca_20ca");
+  EXPECT_TRUE(IGCA.isIntelIGCA());
+  EXPECT_FALSE(IGCA.isIntelGPU());
+  EXPECT_FALSE(IGCA.isIntelCPU());
+  EXPECT_TRUE(IGCA.isIntel());
+  EXPECT_FALSE(IGCA.isNVPTX());
+  EXPECT_FALSE(IGCA.isAMDGPU());
+  EXPECT_FALSE(IGCA.isAMDGCNSPIRV());
+
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
   EXPECT_FALSE(Generic.isAMDGPU());
@@ -58,7 +67,8 @@ TEST(OffloadArchTest, Unknown) {
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",
-        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "generic"}) {
+        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "igca_10",
+        "igca_20c", "igca_20ca", "igca_15r", "igca_15ra", "generic"}) {
     OffloadArch A = parse(Name);
     EXPECT_FALSE(A.isUnknown()) << Name;
     EXPECT_STREQ(OffloadArchToString(A), Name);
@@ -104,4 +114,26 @@ TEST(OffloadArchTest, AMDGPUSubArchRoundTrip) {
 
   EXPECT_EQ(getOffloadArchSubArch(OffloadArch::getAMDGCNSPIRV()),
             llvm::Triple::NoSubArch);
+}
+
+// Test equality and ordering of Intel IGCA targets.
+TEST(OffloadArchTest, IntelIGCAComparison) {
+  // Listed in ascending order: by numeric IGCA target, then by feature set.
+  const char *Ordered[] = {"igca_10", "igca_15r", "igca_20c", "igca_20ca",
+                           "igca_35"};
+  for (size_t I = 0; I < std::size(Ordered); ++I) {
+    OffloadArch A = parse(Ordered[I]);
+    ASSERT_TRUE(A.isIntelIGCA()) << Ordered[I];
+    EXPECT_EQ(A, parse(Ordered[I])) << Ordered[I];
+    EXPECT_FALSE(A < A) << Ordered[I];
+    if (I + 1 < std::size(Ordered)) {
+      OffloadArch Next = parse(Ordered[I + 1]);
+      EXPECT_NE(A, Next) << Ordered[I] << " vs " << Ordered[I + 1];
+      EXPECT_TRUE(A < Next) << Ordered[I] << " vs " << Ordered[I + 1];
+      EXPECT_FALSE(Next < A) << Ordered[I] << " vs " << Ordered[I + 1];
+    }
+  }
+
+  // An IGCA target is not the same architecture as a device that runs it.
+  EXPECT_NE(parse("igca_20ca"), parse("xe-pvc"));
 }
