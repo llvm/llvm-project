@@ -10,6 +10,7 @@ tablegen(LLVM AIRGenAIRIntrinsicMappings.inc -gen-searchable-tables)
 add_public_tablegen_target(AIRCommonTableGen)
 
 add_llvm_target(AIRCodeGen
+  AIRAliasAnalysis.cpp
   AIRSystemValues.cpp
   AIRAliasAnnotate.cpp
   AIRArgumentBuffer.cpp

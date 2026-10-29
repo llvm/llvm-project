@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRTargetMachine.h"
+#include "AIRAliasAnalysis.h"
 #include "AIRWriter/AIREmbedderPass.h"
 #include "AIRWriter/AIRWriterPass.h"
 #include "AIR.h"
@@ -252,6 +253,19 @@ struct AIRPortablePass : RequiredPassInfoMixin<AIRPortablePass> {
 void AIRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AIRPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([] { return AIRAA(); });
+  });
+  PB.registerParseAACallback([](StringRef Name, AAManager &AAM) {
+    if (Name != "air-aa")
+      return false;
+    AAM.registerFunctionAnalysis<AIRAA>();
+    return true;
+  });
+}
+
+void AIRTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AIRAA>();
 }
 
 bool AIRTargetMachine::addPassesToEmitFile(
