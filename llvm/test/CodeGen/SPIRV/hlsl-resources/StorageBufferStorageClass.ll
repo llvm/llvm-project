@@ -2,6 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.2-unknown-vulkan-library --spirv-ext=+SPV_KHR_storage_buffer_storage_class %s -o - -filetype=obj | spirv-val --target-env spv1.2 %}
 ; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-vulkan-library %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-unknown-vulkan-library %s -o - -filetype=obj | spirv-val --target-env spv1.3 %}
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-vulkan-library --spirv-ext=+SPV_KHR_storage_buffer_storage_class %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT
 ; RUN: not --crash llc -O0 -mtriple=spirv32v1.2-unknown-vulkan-library %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
 ; StorageBuffer requires SPIR-V 1.3 or SPV_KHR_storage_buffer_storage_class.
