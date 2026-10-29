@@ -7761,14 +7761,18 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return false;
 
   // If either X or Y are local to the owning module, they are only possible to
-  // be the same entity if they are in the same module...
-  if (X->isModuleLocal() || Y->isModuleLocal())
-    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
-      // ... or if they are members of merged class definitions. For example,
-      // the operator() of a lambda closure type instantiated from a variable
-      // template in a shared header).
-      if (!isa<RecordDecl>(X->getDeclContext()))
-        return false;
+  // be the same entity if they are in the same module, or if they are members
+  // of a lambda closure type. Closure types are merged by identity, and a class
+  // definition determines its members, so the members of a merged closure type
+  // are the same entity even if they are module-local to different modules.
+  // Two distinct closure types are still not merged, so their members are never
+  // compared.
+  if (X->isModuleLocal() || Y->isModuleLocal()) {
+    auto *RD = dyn_cast<CXXRecordDecl>(X->getDeclContext());
+    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()) &&
+        !(RD && RD->isLambda()))
+      return false;
+  }
 
   // Two typedefs refer to the same entity if they have the same underlying
   // type.
