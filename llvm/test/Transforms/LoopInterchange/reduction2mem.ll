@@ -103,32 +103,46 @@ exit:
 define void @addr_in_latch(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
 ; CHECK-LABEL: define void @addr_in_latch(
 ; CHECK-SAME: ptr noalias readonly [[A:%.*]], ptr noalias readonly [[B:%.*]], ptr noalias writeonly [[S:%.*]]) {
-; CHECK-NEXT:  [[OUTERLOOP_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:  [[OUTERLOOP_HEADER_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER:.*]]
-; CHECK:       [[OUTERLOOP_HEADER]]:
-; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ 0, %[[OUTERLOOP_HEADER_PREHEADER]] ], [ [[INDEX_I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ]
+; CHECK:       [[OUTERLOOP_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER1:.*]]
+; CHECK:       [[OUTERLOOP_HEADER1]]:
+; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ [[INDEX_I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ], [ 0, %[[OUTERLOOP_HEADER_PREHEADER1]] ]
 ; CHECK-NEXT:    [[INVARIANT_GEP_US:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    [[INVARIANT_GEP32_US:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[INDEX_I]]
+; CHECK-NEXT:    [[ADDR_S:%.*]] = getelementptr inbounds nuw double, ptr [[S]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    br label %[[INNERLOOP_SPLIT1:.*]]
+; CHECK:       [[OUTERLOOP_HEADER]]:
+; CHECK-NEXT:    br label %[[INNERLOOP:.*]]
+; CHECK:       [[INNERLOOP]]:
+; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ [[TMP5:%.*]], %[[INNERLOOP_SPLIT2:.*]] ], [ 0, %[[OUTERLOOP_HEADER]] ]
+; CHECK-NEXT:    [[REDUCTION:%.*]] = phi double [ [[ADD_LCSSA:%.*]], %[[INNERLOOP_SPLIT2]] ], [ 0.000000e+00, %[[OUTERLOOP_HEADER]] ]
+; CHECK-NEXT:    [[FIRST_ITER:%.*]] = phi i1 [ false, %[[INNERLOOP_SPLIT2]] ], [ true, %[[OUTERLOOP_HEADER]] ]
+; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER_PREHEADER1]]
 ; CHECK:       [[INNERLOOP_SPLIT1]]:
-; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ 0, %[[OUTERLOOP_HEADER]] ], [ [[TMP3:%.*]], %[[INNERLOOP_SPLIT1]] ]
-; CHECK-NEXT:    [[REDUCTION:%.*]] = phi double [ 0.000000e+00, %[[OUTERLOOP_HEADER]] ], [ [[ADD:%.*]], %[[INNERLOOP_SPLIT1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
+; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRST_ITER]], double 0.000000e+00, double [[TMP0]]
 ; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[INVARIANT_GEP_US]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
 ; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[INVARIANT_GEP32_US]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADDR_B_J_I]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[ADD]] = fadd fast double [[MUL]], [[REDUCTION]]
-; CHECK-NEXT:    [[TMP3]] = add nuw nsw i64 [[INDEX_J]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nnan nsz arcp contract afn double [[MUL]], [[NEW_VAR]]
+; CHECK-NEXT:    store double [[ADD]], ptr [[ADDR_S]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[INDEX_J]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 100
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[OUTERLOOP_LATCH]], label %[[INNERLOOP_SPLIT1]]
+; CHECK-NEXT:    br label %[[OUTERLOOP_LATCH]]
+; CHECK:       [[INNERLOOP_SPLIT2]]:
+; CHECK-NEXT:    [[ADD_LCSSA]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
+; CHECK-NEXT:    [[TMP5]] = add nuw nsw i64 [[INDEX_J]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 100
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[INNERLOOP_SPLIT:.*]], label %[[INNERLOOP]]
 ; CHECK:       [[OUTERLOOP_LATCH]]:
-; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[INNERLOOP_SPLIT1]] ]
-; CHECK-NEXT:    [[ADDR_S:%.*]] = getelementptr inbounds nuw double, ptr [[S]], i64 [[INDEX_I]]
-; CHECK-NEXT:    store double [[LCSSA]], ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[INDEX_I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[INDEX_I_NEXT]], 100
-; CHECK-NEXT:    br i1 [[COND2]], label %[[INNERLOOP_SPLIT:.*]], label %[[OUTERLOOP_HEADER]]
+; CHECK-NEXT:    br i1 [[COND2]], label %[[INNERLOOP_SPLIT2]], label %[[OUTERLOOP_HEADER1]]
 ; CHECK:       [[INNERLOOP_SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
