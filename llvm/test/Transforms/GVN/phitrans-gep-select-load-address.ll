@@ -123,6 +123,65 @@ exit:
   ret i32 %min.next
 }
 
+; The available address scales its index before the GEP. Decomposition looks
+; through the shift, so the normalized index is not a direct GEP user.
+define i32 @scaled_gep_index(ptr %a, i32 %start, i64 %tc0) {
+; CHECK-LABEL: @scaled_gep_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_EXT:%.*]] = sext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    [[MIN_P0_PHI_TRANS_INSERT:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[START_EXT]]
+; CHECK-NEXT:    [[MIN_P_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[MIN_P0_PHI_TRANS_INSERT]], i64 -4
+; CHECK-NEXT:    [[MIN_V_PRE:%.*]] = load float, ptr [[MIN_P_PHI_TRANS_INSERT]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[MIN_V:%.*]] = phi float [ [[TMP0:%.*]], [[LOOP]] ], [ [[MIN_V_PRE]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[START_EXT]], [[ENTRY]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[TC0:%.*]], [[ENTRY]] ], [ [[CNT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi i64 [ [[START_EXT]], [[ENTRY]] ], [ [[MIN_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[SCALED_IV:%.*]] = shl nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[SCAN_P0:%.*]] = getelementptr i8, ptr [[A]], i64 [[SCALED_IV]]
+; CHECK-NEXT:    [[SCAN_P:%.*]] = getelementptr i8, ptr [[SCAN_P0]], i64 -8
+; CHECK-NEXT:    [[SCAN_V:%.*]] = load float, ptr [[SCAN_P]], align 4
+; CHECK-NEXT:    [[MIN_P0:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[MIN]]
+; CHECK-NEXT:    [[MIN_P:%.*]] = getelementptr i8, ptr [[MIN_P0]], i64 -4
+; CHECK-NEXT:    [[IS_LESS:%.*]] = fcmp fast olt float [[SCAN_V]], [[MIN_V]]
+; CHECK-NEXT:    [[MIN_NEXT]] = select i1 [[IS_LESS]], i64 [[IV_NEXT]], i64 [[MIN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw i64 [[MIN_NEXT]] to i32
+; CHECK-NEXT:    [[CNT_NEXT]] = add nsw i64 [[CNT]], -1
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp sgt i64 [[CNT]], 1
+; CHECK-NEXT:    [[TMP0]] = select i1 [[IS_LESS]], float [[SCAN_V]], float [[MIN_V]]
+; CHECK-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %start.ext = sext i32 %start to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ %start.ext, %entry ]
+  %cnt = phi i64 [ %tc0, %entry ], [ %cnt.next, %loop ]
+  %min = phi i64 [ %start.ext, %entry ], [ %min.next, %loop ]
+  %iv.next = add nsw i64 %iv, -1
+  %scaled.iv = shl nsw i64 %iv, 2
+  %scan.p0 = getelementptr i8, ptr %a, i64 %scaled.iv
+  %scan.p = getelementptr i8, ptr %scan.p0, i64 -8
+  %scan.v = load float, ptr %scan.p, align 4
+  %min.p0 = getelementptr [4 x i8], ptr %a, i64 %min
+  %min.p = getelementptr i8, ptr %min.p0, i64 -4
+  %min.v = load float, ptr %min.p, align 4
+  %is.less = fcmp fast olt float %scan.v, %min.v
+  %min.next = select i1 %is.less, i64 %iv.next, i64 %min
+  %result = trunc nsw i64 %min.next to i32
+  %cnt.next = add nsw i64 %cnt, -1
+  %again = icmp sgt i64 %cnt, 1
+  br i1 %again, label %loop, label %exit
+
+exit:
+  ret i32 %result
+}
+
 ; Negative: without nsw, sext (trunc X) does not fold back to X, so the
 ; translated address cannot be proven equal and the reload stays.
 define i32 @fp_argmin_decreasing_trunc_no_nsw(ptr %a, i32 %start, i64 %tc0) {
