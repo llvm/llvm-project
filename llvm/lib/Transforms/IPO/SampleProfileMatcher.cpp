@@ -807,7 +807,12 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
     // nothing to do with it.
-    if (F.isDeclaration())
+    if (F.isDeclaration() &&
+        // If we are in ThinLTO prelink, a declaration may be an external
+        // function that can be rematched through stale profile matching. Try
+        // loading its profile regardless, and mark it FunctionsWithoutProfile
+        // if no profile is found.
+        (LTOPhase != ThinOrFullLTOPhase::ThinLTOPreLink || F.isIntrinsic()))
       continue;
 
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F.getName());
