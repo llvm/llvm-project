@@ -2387,6 +2387,13 @@ bool CombinerHelper::matchCombineUnmergeConstant(
     MachineInstr &MI, SmallVectorImpl<APInt> &Csts) const {
   unsigned SrcIdx = MI.getNumOperands() - 1;
   Register SrcReg = MI.getOperand(SrcIdx).getReg();
+  // Look through single-use copies without duplicating shared materializations.
+  Register CopySrc;
+  while (mi_match(SrcReg, MRI,
+                  m_OneNonDBGUse(m_Copy(m_OneNonDBGUse(m_Reg(CopySrc))))) &&
+         MRI.getType(CopySrc).isValid())
+    SrcReg = CopySrc;
+
   // Break down the big constant in smaller ones.
   APInt Val;
   if (!mi_match(SrcReg, MRI, m_GConstantOrFConstantBits(Val)))
@@ -8035,15 +8042,16 @@ bool CombinerHelper::matchFoldAPlusC1MinusC2(const MachineInstr &MI,
                                              BuildFnTy &MatchInfo) const {
   // fold (A+C1)-C2 -> A+(C1-C2)
   const GSub *Sub = cast<GSub>(&MI);
-  Register A, C1Reg;
-  if (!mi_match(Sub->getLHSReg(), MRI, m_GAdd(m_Reg(A), m_Reg(C1Reg))))
+  Register A;
+  APInt C1;
+  // m_GAdd is commutative, so C1 can be either operand of the G_ADD.
+  if (!mi_match(Sub->getLHSReg(), MRI, m_GAdd(m_Reg(A), m_ICst(C1))))
     return false;
 
   if (!MRI.hasOneNonDBGUse(Sub->getLHSReg()))
     return false;
 
   APInt C2 = getIConstantFromReg(Sub->getRHSReg(), MRI);
-  APInt C1 = getIConstantFromReg(C1Reg, MRI);
 
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
@@ -8060,15 +8068,16 @@ bool CombinerHelper::matchFoldC2MinusAPlusC1(const MachineInstr &MI,
                                              BuildFnTy &MatchInfo) const {
   // fold C2-(A+C1) -> (C2-C1)-A
   const GSub *Sub = cast<GSub>(&MI);
-  Register A, C1Reg;
-  if (!mi_match(Sub->getRHSReg(), MRI, m_GAdd(m_Reg(A), m_Reg(C1Reg))))
+  Register A;
+  APInt C1;
+  // m_GAdd is commutative, so C1 can be either operand of the G_ADD.
+  if (!mi_match(Sub->getRHSReg(), MRI, m_GAdd(m_Reg(A), m_ICst(C1))))
     return false;
 
   if (!MRI.hasOneNonDBGUse(Sub->getRHSReg()))
     return false;
 
   APInt C2 = getIConstantFromReg(Sub->getLHSReg(), MRI);
-  APInt C1 = getIConstantFromReg(C1Reg, MRI);
 
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);

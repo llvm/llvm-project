@@ -417,14 +417,7 @@ bool AMDGPUPostLegalizerCombinerImpl::isCarryOut(Register Reg) const {
 bool AMDGPUPostLegalizerCombinerImpl::shouldFoldCarryIntoAdd(
     Register Src) const {
   // Let right_identity_zero combine delete this instead.
-  if (mi_match(Src, MRI, m_SpecificICst(0)))
-    return false;
-
-  // When both operands are a carry only the right hand one is folded, so that
-  // the two carries never have to be live at the same time.
-  Register Carry;
-  return !mi_match(Src, MRI, m_GZExt(m_Reg(Carry))) ||
-         !MRI.hasOneNonDBGUse(Src) || !isCarryOut(Carry);
+  return !mi_match(Src, MRI, m_SpecificICst(0));
 }
 
 // Pass boilerplate
