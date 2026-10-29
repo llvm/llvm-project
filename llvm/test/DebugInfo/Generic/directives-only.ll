@@ -3,8 +3,6 @@
 ; RUN: llc -dwarf-version=5 -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
 ; RUN: llc -debugger-tune=lldb -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
 ; RUN: llc -accel-tables=Apple -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
-; RUN: sed 's/emissionKind: DebugDirectivesOnly/emissionKind: DebugDirectivesOnly, nameTableKind: GNU/' %s | llc -filetype=asm -asm-verbose=0 -O0 | FileCheck %s
-; RUN: sed 's/emissionKind: DebugDirectivesOnly/emissionKind: DebugDirectivesOnly, nameTableKind: Apple/' %s | llc -dwarf-version=5 -filetype=asm -asm-verbose=0 -O0 | FileCheck %s
 
 ; Generated with clang from multiline.c:
 ; int v;
@@ -15,14 +13,14 @@
 ; }
 
 
-; CHECK: .file {{[01]}} "/tmp/dbginfo{{.*}}multiline.c"
-; CHECK: .loc {{[01]}} 3 3
-; CHECK: .loc {{[01]}} 3 9
-; CHECK: .loc {{[01]}} 3 15
-; CHECK: .loc {{[01]}} 4 3
-; CHECK: .loc {{[01]}} 4 9
-; CHECK: .loc {{[01]}} 4 15
-; CHECK: .loc {{[01]}} 5 1
+; CHECK: .file 1 "/tmp/dbginfo{{.*}}multiline.c"
+; CHECK: .loc 1 3 3
+; CHECK: .loc 1 3 9
+; CHECK: .loc 1 3 15
+; CHECK: .loc 1 4 3
+; CHECK: .loc 1 4 9
+; CHECK: .loc 1 4 15
+; CHECK: .loc 1 5 1
 
 ; CHECK-NOT: .section{{.*}}debug_
 ; CHECK-NOT: .section{{.*}}apple_
@@ -41,12 +39,14 @@ entry:
   ret void, !dbg !17
 }
 
-declare void @f1(...) #1
+define void @f1() #0 !dbg !25 {
+entry:
+  ret void
+}
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
-!llvm.dbg.cu = !{!0}
+!llvm.dbg.cu = !{!0, !24}
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
@@ -72,3 +72,5 @@ attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 !21 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !22 = !{!23}
 !23 = !DIMacro(type: DW_MACINFO_define, line: 1, name: "FOO", value: "1")
+!24 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 225000) (llvm/trunk 224999)", isOptimized: false, emissionKind: DebugDirectivesOnly, nameTableKind: GNU, file: !1, globals: !19, macros: !22)
+!25 = distinct !DISubprogram(name: "f1", line: 1, isLocal: false, isDefinition: true, isOptimized: false, unit: !24, scopeLine: 1, file: !1, scope: !5, type: !6)
