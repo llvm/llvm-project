@@ -3,7 +3,7 @@
 // RUN: %clang_hwasan %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // https://github.com/llvm/llvm-project/issues/236812
-// XFAIL: android && android-34
+// XFAIL: android-34
 
 #include <pthread.h>
 #include <stdlib.h>

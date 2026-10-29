@@ -1,7 +1,7 @@
 // RUN: %clang_hwasan %s -o %t && %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s --implicit-check-not=0x000000000000
 
 // https://github.com/llvm/llvm-project/issues/236812
-// XFAIL: android && android-34
+// XFAIL: android-34
 
 #include <pthread.h>
 #include <stdlib.h>
