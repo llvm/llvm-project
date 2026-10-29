@@ -4,10 +4,11 @@
 // RUN: %exploded_graph_rewriter %t.dot | FileCheck %s
 
 void escapes(void) {
-  // CHECK: <td align="left"><b>Store: </b> <font color="gray">(0x{{[0-9a-f]*}})</font></td>
+  // CHECK: <font color="cyan3">PostStore</font></td><td align="left">const char *const foo = "foo";</td>
+  // CHECK-SAME: <td align="left"><b>Store: </b> <font color="gray">(0x{{[0-9a-f]*}})</font></td>
   // CHECK-SAME: <td align="left">foo</td><td align="left">0</td>
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
-  // CHECK: <td align="left"><b>Expressions: </b></td>
+  // CHECK-SAME: <td align="left"><b>Expressions: </b></td>
   // CHECK-SAME: <td align="left">"foo"</td>
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
   const char *const foo = "\x66\x6f\x6f";
