@@ -9,7 +9,7 @@ define <4 x i16> @freeze_external_use(i16 %x0, i16 %x1, i16 %x2, i16 %x3, ptr %p
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[X2]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[X3]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i16> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze i16 [[X0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = add i16 [[TMP6]], 1
 ; CHECK-NEXT:    store i16 [[E]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret <4 x i16> [[TMP5]]
@@ -35,9 +35,8 @@ define <4 x i32> @freeze_cast_external_use(i16 %x0, i16 %x1, i16 %x2, i16 %x3, p
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[X2]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[X3]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i16> [[TMP4]]
-; CHECK-NEXT:    [[F0:%.*]] = freeze i16 [[X0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i16 [[F0]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-NEXT:    store i32 [[E]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
