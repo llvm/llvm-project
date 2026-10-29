@@ -12,7 +12,7 @@ llvm.func @depend_diamond(%a : !llvm.ptr, %b : !llvm.ptr) {
     llvm.cond_br %first, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
   ^bb1(%p : !llvm.ptr):
     omp.yield(%p : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
   }
@@ -55,7 +55,7 @@ llvm.func @affinity_split(%a : !llvm.ptr, %b : !llvm.ptr) {
     %e = omp.affinity_entry %p, %len
         : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
     omp.yield(%e : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-  } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+  } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
   omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
     omp.terminator
   }
@@ -93,7 +93,7 @@ llvm.func @depend_inner_loop(%addr : !llvm.ptr) {
   ^exit:
     %p = llvm.getelementptr %addr[%acc] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     omp.yield(%p : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
   }
@@ -130,7 +130,7 @@ llvm.func @depend_2d(%a : !llvm.ptr, %b : !llvm.ptr) {
     llvm.cond_br %lt, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
   ^bb1(%p : !llvm.ptr):
     omp.yield(%p : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
   }
@@ -160,7 +160,7 @@ llvm.func @depend_narrow(%x : !llvm.ptr) {
   ^next(%v: i32):
     llvm.store %v, %x : i32, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -183,7 +183,7 @@ llvm.func @depend_empty_dynamic(%a : !llvm.ptr, %m : i32, %d : i32) {
   ^bb1(%k : i32):
     %p = llvm.getelementptr %a[%k] : (!llvm.ptr, i32) -> !llvm.ptr, i32
     omp.yield(%p : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
   }

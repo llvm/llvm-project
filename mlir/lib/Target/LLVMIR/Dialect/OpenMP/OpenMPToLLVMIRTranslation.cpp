@@ -426,6 +426,31 @@ static omp::PrivateClauseOp findPrivatizer(Operation *from,
   return privatizer;
 }
 
+/// Returns true if \p map, one of its members, or a mapper reachable from them
+/// has map entries with an iterator modifier.
+static bool usesIteratorMapper(Operation *from, Value map,
+                               SmallPtrSetImpl<Operation *> &visited) {
+  auto mapInfo = map.getDefiningOp<omp::MapInfoOp>();
+  if (!mapInfo)
+    return false;
+  if (llvm::any_of(mapInfo.getMembers(), [&](Value member) {
+        return usesIteratorMapper(from, member, visited);
+      }))
+    return true;
+  FlatSymbolRefAttr mapperId = mapInfo.getMapperIdAttr();
+  if (!mapperId)
+    return false;
+  auto mapper = SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+      from, mapperId);
+  if (!mapper || !visited.insert(mapper).second)
+    return false;
+  omp::DeclareMapperInfoOp info = mapper.getDeclareMapperInfo();
+  return !info.getMapIterated().empty() ||
+         llvm::any_of(info.getMapVars(), [&](Value var) {
+           return usesIteratorMapper(from, var, visited);
+         });
+}
+
 /// Check whether translation to LLVM IR for the given operation is currently
 /// supported. If not, descriptive diagnostics will be emitted to let users know
 /// this is a not-yet-implemented feature.
@@ -656,6 +681,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkInReduction(op, result);
         checkMap(op, result);
         checkThreadLimit(op, result);
+        // createTarget cannot report a mapper translation failure.
+        SmallPtrSet<Operation *, 4> visitedMappers;
+        if (llvm::any_of(op.getMapVars(), [&](Value map) {
+              return usesIteratorMapper(op, map, visitedMappers);
+            }))
+          result = todo("mapper with iterator modifier");
       })
       .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
       .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
@@ -2956,6 +2987,8 @@ public:
     steps.resize(dims);
     trips.resize(dims);
 
+    llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+    llvm::OpenMPIRBuilder::LocationDescription loc(builder);
     for (unsigned d = 0; d < dims; ++d) {
       llvm::Value *lb =
           moduleTranslation.lookupValue(itersOp.getLoopLowerBounds()[d]);
@@ -2965,6 +2998,8 @@ public:
           moduleTranslation.lookupValue(itersOp.getLoopSteps()[d]);
       assert(lb && ub && st &&
              "Expect lowerBounds, upperBounds, and steps in IteratorOp");
+      assert(lb->getType() == ub->getType() && lb->getType() == st->getType() &&
+             "Expect matching iterator range types");
       assert((!llvm::isa<llvm::ConstantInt>(st) ||
               !llvm::cast<llvm::ConstantInt>(st)->isZero()) &&
              "Expect non-zero step in IteratorOp");
@@ -2980,10 +3015,9 @@ public:
       llvm::Value *start = builder.CreateSExt(lb, countTy);
       llvm::Value *stop = builder.CreateSExt(ub, countTy);
       llvm::Value *step = builder.CreateSExt(st, countTy);
-      llvm::Value *count =
-          moduleTranslation.getOpenMPBuilder()->calculateCanonicalLoopTripCount(
-              builder, start, stop, step, /*IsSigned=*/true,
-              /*InclusiveStop=*/true);
+      llvm::Value *count = ompBuilder.calculateCanonicalLoopTripCount(
+          loc, start, stop, step, /*IsSigned=*/true, itersOp.getLoopInclusive(),
+          "iterator");
       trips[d] = builder.CreateZExtOrTrunc(count, builder.getInt64Ty());
     }
 
@@ -3119,10 +3153,16 @@ static mlir::LogicalResult convertIteratorRegion(
   llvm::Value *tmp = linearIV;
   for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
     llvm::Value *trip = iterInfo.getTrips()[d];
-    // idx_d = tmp % trip_d
-    llvm::Value *idx = builder.CreateURem(tmp, trip);
-    // tmp = tmp / trip_d
-    tmp = builder.CreateUDiv(tmp, trip);
+    llvm::Value *zero = llvm::ConstantInt::get(trip->getType(), 0);
+    llvm::Value *one = llvm::ConstantInt::get(trip->getType(), 1);
+    // A zero trip count makes the linearized loop empty. Use one in its
+    // unreachable IV decoder so the generated IR contains no division by zero.
+    llvm::Value *divisor =
+        builder.CreateSelect(builder.CreateICmpEQ(trip, zero), one, trip);
+    // idx_d = tmp % divisor_d
+    llvm::Value *idx = builder.CreateURem(tmp, divisor);
+    // tmp = tmp / divisor_d
+    tmp = builder.CreateUDiv(tmp, divisor);
 
     // physIV_d = lb_d + idx_d * step_d
     idx =

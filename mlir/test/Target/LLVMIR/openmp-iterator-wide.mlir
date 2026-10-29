@@ -7,7 +7,7 @@ llvm.func @empty_positive(%x: !llvm.ptr) {
   %st = llvm.mlir.constant(1 : i128) : i128
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -23,7 +23,7 @@ llvm.func @empty_negative(%x: !llvm.ptr) {
   %st = llvm.mlir.constant(-1 : i128) : i128
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -38,7 +38,7 @@ llvm.func @dynamic(%x: !llvm.ptr, %lb: i128, %ub: i128, %st: i128) {
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     llvm.store %i, %x : i128, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -62,7 +62,7 @@ llvm.func @narrow(%x: !llvm.ptr, %lb: i32, %ub: i32, %st: i32) {
   %it = omp.iterator(%i: i32) = (%lb to %ub step %st) {
     llvm.store %i, %x : i32, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -82,7 +82,7 @@ llvm.func @nonempty_positive(%x: !llvm.ptr) {
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     llvm.store %i, %x : i128, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -102,7 +102,7 @@ llvm.func @nonempty_negative(%x: !llvm.ptr) {
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     llvm.store %i, %x : i128, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -122,7 +122,7 @@ llvm.func @wide_step(%x: !llvm.ptr) {
   %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
     llvm.store %i, %x : i128, !llvm.ptr
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
