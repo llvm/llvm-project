@@ -351,8 +351,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -433,8 +432,7 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -514,8 +512,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -545,8 +542,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -695,8 +691,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -726,8 +721,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3645,8 +3639,7 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3658,8 +3651,7 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3823,8 +3815,7 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3836,8 +3827,7 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_CONT:.+]], label %[[LABEL_FAILED:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
