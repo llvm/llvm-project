@@ -415,7 +415,7 @@ createPluginCASDatabases(
 ///
 /// Clients that want to be resilient to unexpected crashes during validation
 /// may call this from a separate process (e.g. via
-/// \c llvm-cas -validate-if-needed) and call \c recoverPluginCASDatabases if
+/// \c llvm-cas validate-if-needed) and call \c recoverPluginCASDatabases if
 /// it fails.
 ///
 /// \param PluginPath path of the dynamic library to load.

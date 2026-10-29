@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -74,34 +75,21 @@ struct CommandOptions {
   bool InProcess;
   bool Verbose;
 
-  static CommandKind getCommandKind(opt::Arg &A) {
-    switch (A.getOption().getID()) {
-    case OPT_cas_dump:
-      return CommandKind::Dump;
-    case OPT_cat_node_data:
-      return CommandKind::CatNodeData;
-    case OPT_make_blob:
-      return CommandKind::MakeBlob;
-    case OPT_make_node:
-      return CommandKind::MakeNode;
-    case OPT_ls_node_refs:
-      return CommandKind::ListObjectReferences;
-    case OPT_import:
-      return CommandKind::Import;
-    case OPT_put_cache_key:
-      return CommandKind::PutCacheKey;
-    case OPT_get_cache_result:
-      return CommandKind::GetCacheResult;
-    case OPT_validate:
-      return CommandKind::Validate;
-    case OPT_validate_object:
-      return CommandKind::ValidateObject;
-    case OPT_validate_if_needed:
-      return CommandKind::ValidateIfNeeded;
-    case OPT_prune:
-      return CommandKind::Prune;
-    }
-    return CommandKind::Invalid;
+  static CommandKind getCommandKind(StringRef SubCommand) {
+    return StringSwitch<CommandKind>(SubCommand)
+        .Case("dump", CommandKind::Dump)
+        .Case("cat-node-data", CommandKind::CatNodeData)
+        .Case("make-blob", CommandKind::MakeBlob)
+        .Case("make-node", CommandKind::MakeNode)
+        .Case("ls-node-refs", CommandKind::ListObjectReferences)
+        .Case("import", CommandKind::Import)
+        .Case("put-cache-key", CommandKind::PutCacheKey)
+        .Case("get-cache-result", CommandKind::GetCacheResult)
+        .Case("validate", CommandKind::Validate)
+        .Case("validate-object", CommandKind::ValidateObject)
+        .Case("validate-if-needed", CommandKind::ValidateIfNeeded)
+        .Case("prune", CommandKind::Prune)
+        .Default(CommandKind::Invalid);
   }
 
   // Command requires input.
@@ -130,6 +118,23 @@ static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
 static int validateIfNeeded(const CommandOptions &Opts, const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
 
+/// Rewrites the legacy option spellings of subcommands, e.g. `--make-blob`
+/// or `-make-blob`, into the subcommand, e.g. `make-blob`, so that the old
+/// style of invoking llvm-cas keeps working.
+static void rewriteLegacySubCommands(const opt::OptTable &T,
+                                     MutableArrayRef<const char *> Args) {
+  for (const char *&Arg : Args) {
+    StringRef Name = Arg;
+    if (!Name.consume_front("-"))
+      continue;
+    Name.consume_front("-");
+    if (any_of(T.getSubCommands(), [&](const opt::OptTable::SubCommand &SC) {
+          return Name == SC.Name;
+        }))
+      Arg = Name.data();
+  }
+}
+
 static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
@@ -138,30 +143,41 @@ static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
     return createStringError("cannot expand response file");
 
   LLVMCASOptTable T;
+  rewriteLegacySubCommands(T, ExpanedArgs);
   unsigned MI, MC;
   opt::InputArgList Args = T.ParseArgs(ExpanedArgs, MI, MC);
+
+  // The first positional argument that is a subcommand name is the
+  // subcommand, the rest are inputs, e.g. `cat-node-data make-blob` has input
+  // `make-blob`.
+  CommandOptions Opts;
+  StringRef SubCommand = Args.getSubCommand(
+      T.getSubCommands(),
+      [](ArrayRef<StringRef>) {
+        llvm_unreachable("later subcommand names are inputs");
+      },
+      [&](ArrayRef<StringRef> Inputs) {
+        Opts.Inputs.assign(Inputs.begin(), Inputs.end());
+      },
+      /*AllowSubCommandNamesAsPositionals=*/true);
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
     llvm::errs() << "ignoring unknown option: " << Arg->getSpelling() << '\n';
   }
 
   if (Args.hasArg(OPT_help)) {
-    T.printHelp(
-        outs(),
-        (std::string(Argv[0]) + " [action] [options] <input files>").c_str(),
-        "llvm-cas tool that performs CAS actions.", false);
+    T.printHelp(outs(),
+                (std::string(Argv[0]) + " <subcommand> [options] <input files>")
+                    .c_str(),
+                "llvm-cas tool that performs CAS actions.",
+                /*ShowHidden=*/false,
+                /*ShowAllAliases=*/false, opt::Visibility(), SubCommand);
     exit(0);
   }
 
-  CommandOptions Opts;
-  for (auto *A : Args.filtered(OPT_grp_action))
-    Opts.Command = CommandOptions::getCommandKind(*A);
-
+  Opts.Command = CommandOptions::getCommandKind(SubCommand);
   if (Opts.Command == CommandKind::Invalid)
-    return createStringError("no command action is specified");
-
-  for (auto *File : Args.filtered(OPT_INPUT))
-    Opts.Inputs.push_back(File->getValue());
+    return createStringError("no subcommand is specified");
   Opts.CASPath = Args.getLastArgValue(OPT_cas_path);
   Opts.CASPluginPath = Args.getLastArgValue(OPT_cas_plugin_path);
   for (StringRef PluginOpt : Args.getAllArgValues(OPT_cas_plugin_option)) {
@@ -406,13 +422,14 @@ static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
   for (const auto &[Name, Value] : Opts.CASPluginOpts)
     PluginOpts.push_back(Name + "=" + Value);
 
-  SmallVector<StringRef> Args{Exec, "--cas", Opts.CASPath};
+  SmallVector<StringRef> Args{Exec, "validate-if-needed", "--cas",
+                              Opts.CASPath};
   if (!Opts.CASPluginPath.empty()) {
     Args.append({"--fcas-plugin-path", Opts.CASPluginPath});
     for (StringRef PluginOpt : PluginOpts)
       Args.append({"--fcas-plugin-option", PluginOpt});
   }
-  Args.append({"--validate-if-needed", "--in-process"});
+  Args.push_back("--in-process");
   if (Opts.CheckHash)
     Args.push_back("--check-hash");
   if (Opts.Force)
