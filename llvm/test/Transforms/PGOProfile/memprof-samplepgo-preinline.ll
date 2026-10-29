@@ -28,7 +28,7 @@
 ; RUN:   -pgo-kind=pgo-sample-use-pipeline -profile-file=%t/sample.prof \
 ; RUN:   -memory-profile-file=%t/memprof.memprofdata \
 ; RUN:   -pass-remarks=inline -pass-remarks-missed=inline -S 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,IGNORE
+; RUN:   | FileCheck %s --check-prefixes=CHECK,IGNORE_PROF
 
 ; RUN: opt < %t/t.ll -passes='thinlto-pre-link<O2>' \
 ; RUN:   -pgo-kind=pgo-sample-use-pipeline -profile-file=%t/sample.prof \
@@ -42,8 +42,8 @@
 ;; When ignoring the profile (the default) it isn't inlined by the pre-inliner
 ;; (nor later by the inliner, which uses a 0 threshold for hot callsites in the
 ;; pre-link).
-; IGNORE: remark: t.cc:5:10: '_Z3barv' not inlined into '_Z3foov' because too costly to inline (cost=200, threshold={{[0-9]+}})
-; IGNORE-NOT: '_Z3barv' inlined into '_Z3foov'
+; IGNORE_PROF: remark: t.cc:5:10: '_Z3barv' not inlined into '_Z3foov' because too costly to inline (cost=200, threshold={{[0-9]+}})
+; IGNORE_PROF-NOT: '_Z3barv' inlined into '_Z3foov'
 
 ;; The out-of-line copy of the allocation is always hinted.
 ; CHECK-LABEL: define {{.*}} @_Z3barv()
@@ -53,7 +53,7 @@
 ;; the memory profile and is not hinted.
 ; CHECK-LABEL: define {{.*}} @_Z3foov()
 ; PROFILE: call {{.*}} @_Znam(i64 10) #[[FOOATTR:[0-9]+]]
-; IGNORE: call {{.*}} @_Z3barv()
+; IGNORE_PROF: call {{.*}} @_Z3barv()
 
 ; CHECK: attributes #[[BARATTR]] = { builtin allocsize(0) "memprof"="cold" }
 ; PROFILE: attributes #[[FOOATTR]] = { builtin allocsize(0) }
