@@ -12,8 +12,8 @@ int *ptr_param_redecl_gnu(int *param) { return param; }
 void void_return(int *param [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
 void void_return_gnu(int *param __attribute__((lifetimebound))); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
 
-int *attr_with_arg(int *param [[clang::lifetimebound(1)]]); // expected-error {{'clang::lifetimebound' attribute takes no arguments}}
-int *attr_with_arg_gnu(int *param __attribute__((lifetimebound(1)))); // expected-error {{'lifetimebound' attribute takes no arguments}}
+int *attr_with_arg(int *param [[clang::lifetimebound(1)]]); // expected-error {{'clang::lifetimebound' attribute requires an identifier}}
+int *attr_with_arg_gnu(int *param __attribute__((lifetimebound(1)))); // expected-error {{'lifetimebound' attribute requires an identifier}}
 
 int attr_on_var [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
 int attr_on_var_gnu __attribute__((lifetimebound)); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}

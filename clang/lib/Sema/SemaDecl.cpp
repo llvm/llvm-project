@@ -7294,7 +7294,13 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
       // The [[lifetimebound]] attribute can be applied to the implicit object
       // parameter of a non-static member function (other than a ctor or dtor)
       // by applying it to the function type.
-      if (const auto *A = ATL.getAttrAs<LifetimeBoundAttr>()) {
+      const Attr *A = ATL.getAttrAs<LifetimeBoundAttr>();
+      bool IsInvalidates = false;
+      if (!A) {
+        A = ATL.getAttrAs<LifetimeInvalidatesAttr>();
+        IsInvalidates = A != nullptr;
+      }
+      if (A) {
         const auto *MD = dyn_cast<CXXMethodDecl>(FD);
         int NoImplicitObjectError = -1;
         if (!MD)
@@ -7305,7 +7311,9 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
           NoImplicitObjectError = 2;
         if (NoImplicitObjectError != -1) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_no_object_param)
-              << NoImplicitObjectError << A->getRange();
+              << NoImplicitObjectError << IsInvalidates << A->getRange();
+        } else if (IsInvalidates) {
+          // `invalidates` is meaningful on any member function.
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
               << isa<CXXDestructorDecl>(MD) << A->getRange();
@@ -15113,7 +15121,8 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   if (!MD || lifetimes::implicitObjectParamIsLifetimeBound(MD))
     return;
-  auto *Attr = LifetimeBoundAttr::CreateImplicit(Context, MD->getLocation());
+  auto *Attr =
+      LifetimeBoundAttr::CreateImplicit(Context, nullptr, 0, MD->getLocation());
   QualType MethodType = MD->getType();
   QualType AttributedType =
       Context.getAttributedType(Attr, MethodType, MethodType);

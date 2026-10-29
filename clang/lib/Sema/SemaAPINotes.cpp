@@ -522,8 +522,8 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
   if (auto Lifetimebound = Info.isLifetimebound())
     handleAPINotedAttribute<LifetimeBoundAttr>(
         S, D, *Lifetimebound, Metadata, [&] {
-          return new (S.Context)
-              LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+          return new (S.Context) LifetimeBoundAttr(
+              S.Context, getPlaceholderAttrInfo(), nullptr, 0);
         });
 
   // Retain count convention
@@ -686,7 +686,7 @@ static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
       !lifetimes::implicitObjectParamIsLifetimeBound(Method)) {
     auto MethodType = Method->getType();
     auto *attr = ::new (S.Context)
-        LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
+        LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo(), nullptr, 0);
     QualType AttributedType =
         S.Context.getAttributedType(attr, MethodType, MethodType);
     TypeLocBuilder TLB;

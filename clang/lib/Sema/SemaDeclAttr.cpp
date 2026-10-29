@@ -4611,6 +4611,193 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Places: [[clang::places]], [[clang::place]], [[clang::lifetimebound(p)]],
+// [[clang::invalidates(p)]].
+//===----------------------------------------------------------------------===//
+
+static bool isInteriorPlaceName(const IdentifierInfo *II) {
+  return II->isStr("interior");
+}
+
+/// Collects the identifier arguments of an attribute whose arguments name
+/// places, rejecting non-identifiers and duplicates. `AllowInterior` permits
+/// the reserved name `interior`, alone.
+static bool
+collectPlaceIdentifiers(Sema &S, const ParsedAttr &AL, bool AllowInterior,
+                        SmallVectorImpl<const IdentifierInfo *> &Places) {
+  for (unsigned I = 0, N = AL.getNumArgs(); I < N; ++I) {
+    if (!AL.isArgIdent(I)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return false;
+    }
+    IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
+    const IdentifierInfo *II = IdLoc->getIdentifierInfo();
+    if (isInteriorPlaceName(II)) {
+      if (!AllowInterior) {
+        S.Diag(IdLoc->getLoc(), diag::err_lifetime_place_reserved)
+            << II->getName();
+        return false;
+      }
+      if (N != 1) {
+        S.Diag(IdLoc->getLoc(), diag::err_lifetime_place_interior_mixed) << AL;
+        return false;
+      }
+    }
+    if (llvm::is_contained(Places, II)) {
+      S.Diag(IdLoc->getLoc(), diag::err_lifetime_place_duplicate)
+          << II->getName();
+      return false;
+    }
+    Places.push_back(II);
+  }
+  return true;
+}
+
+/// Diagnoses a place name that `RD` does not declare, suggesting the closest
+/// declared one.
+static void diagnoseUnknownPlace(Sema &S, const IdentifierInfo *Place,
+                                 SourceLocation Loc, const CXXRecordDecl *RD,
+                                 const LifetimePlacesAttr *Declared) {
+  StringRef Name = Place->getName();
+  const IdentifierInfo *Best = nullptr;
+  unsigned BestDistance = (Name.size() + 1) / 3;
+  for (const IdentifierInfo *Candidate : Declared->places()) {
+    unsigned Distance = Name.edit_distance(Candidate->getName());
+    if (Distance <= BestDistance) {
+      BestDistance = Distance;
+      Best = Candidate;
+    }
+  }
+  {
+    auto D = S.Diag(Loc, diag::err_lifetime_place_unknown) << Name << RD;
+    if (Best)
+      D << FixItHint::CreateReplacement(Loc, Best->getName());
+  }
+  S.Diag(Declared->getLocation(), diag::note_lifetime_place_declared_here)
+      << RD;
+}
+
+bool Sema::CheckLifetimePlaceArgs(
+    const ParsedAttr &AL, const CXXRecordDecl *RD, QualType SubjectType,
+    bool IsImplicitObject, SmallVectorImpl<const IdentifierInfo *> &Places) {
+  if (!collectPlaceIdentifiers(*this, AL, /*AllowInterior=*/true, Places))
+    return false;
+  if (Places.empty())
+    return true;
+
+  // Any class type owns an (anonymous) interior; named places must be
+  // declared on the class. The class is unknown for dependent types, which
+  // are checked when the analysis runs on the instantiation.
+  if (!SubjectType.isNull() && SubjectType->isDependentType())
+    return true;
+  if (!RD) {
+    Diag(AL.getLoc(), diag::err_lifetime_place_requires_class_type)
+        << AL.getAttrName()->getName() << Places.front()->getName()
+        << IsImplicitObject;
+    return false;
+  }
+  if (isInteriorPlaceName(Places.front()))
+    return true;
+  // The class may only be forward-declared here while its places are declared
+  // on its definition later. Be permissive then.
+  const CXXRecordDecl *Def = RD->getDefinition();
+  if (!Def)
+    return true;
+  const auto *Declared = Def->getAttr<LifetimePlacesAttr>();
+  if (!Declared) {
+    Diag(AL.getLoc(), diag::err_lifetime_place_no_places_declared) << Def;
+    return false;
+  }
+  for (unsigned I = 0; I < Places.size(); ++I)
+    if (!llvm::is_contained(Declared->places(), Places[I])) {
+      diagnoseUnknownPlace(*this, Places[I], AL.getArgAsIdent(I)->getLoc(), Def,
+                           Declared);
+      return false;
+    }
+  return true;
+}
+
+const CXXRecordDecl *Sema::getImplicitObjectRecordForDeclarator(Declarator &D) {
+  DeclContext *DC = CurContext;
+  if (D.getCXXScopeSpec().isSet())
+    if (DeclContext *Specified =
+            computeDeclContext(D.getCXXScopeSpec(), /*EnteringContext=*/true))
+      DC = Specified;
+  return dyn_cast_if_present<CXXRecordDecl>(DC);
+}
+
+/// Returns the class whose places an attribute on parameter `PVD` names: the
+/// class the parameter refers to by pointer or reference, or null.
+static const CXXRecordDecl *getPlaceRecordForParam(const ParmVarDecl *PVD) {
+  QualType T = PVD->getType();
+  if (T->isPointerOrReferenceType())
+    T = T->getPointeeType();
+  return T->getAsCXXRecordDecl();
+}
+
+static void handleLifetimeBoundAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  const auto *PVD = cast<ParmVarDecl>(D);
+  SmallVector<const IdentifierInfo *, 2> Places;
+  if (!S.CheckLifetimePlaceArgs(AL, getPlaceRecordForParam(PVD), PVD->getType(),
+                                /*IsImplicitObject=*/false, Places))
+    return;
+  D->addAttr(::new (S.Context) LifetimeBoundAttr(S.Context, AL, Places.data(),
+                                                 Places.size()));
+}
+
+static void handleLifetimeInvalidatesAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  const auto *PVD = cast<ParmVarDecl>(D);
+  QualType T = PVD->getType();
+  // Invalidating what a by-value parameter owns is unobservable to callers.
+  if (!T->isDependentType() && !T->isPointerOrReferenceType()) {
+    S.Diag(AL.getLoc(), diag::err_lifetime_invalidates_param_type)
+        << AL.getRange();
+    return;
+  }
+  SmallVector<const IdentifierInfo *, 2> Places;
+  if (!S.CheckLifetimePlaceArgs(AL, getPlaceRecordForParam(PVD), T,
+                                /*IsImplicitObject=*/false, Places))
+    return;
+  D->addAttr(::new (S.Context) LifetimeInvalidatesAttr(
+      S.Context, AL, Places.data(), Places.size()));
+}
+
+static void handleLifetimePlacesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
+    return;
+  SmallVector<const IdentifierInfo *, 4> Places;
+  if (!collectPlaceIdentifiers(S, AL, /*AllowInterior=*/false, Places))
+    return;
+  D->addAttr(::new (S.Context) LifetimePlacesAttr(S.Context, AL, Places.data(),
+                                                  Places.size()));
+}
+
+static void handleLifetimePlaceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.checkExactlyNumArgs(S, 1))
+    return;
+  SmallVector<const IdentifierInfo *, 1> Places;
+  if (!collectPlaceIdentifiers(S, AL, /*AllowInterior=*/false, Places))
+    return;
+  const auto *FD = cast<FieldDecl>(D);
+  const auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  const auto *Declared = RD ? RD->getAttr<LifetimePlacesAttr>() : nullptr;
+  if (!Declared) {
+    S.Diag(AL.getLoc(), diag::err_lifetime_place_no_places_declared)
+        << FD->getParent();
+    return;
+  }
+  if (!llvm::is_contained(Declared->places(), Places.front())) {
+    diagnoseUnknownPlace(S, Places.front(), AL.getArgAsIdent(0)->getLoc(), RD,
+                         Declared);
+    return;
+  }
+  D->addAttr(::new (S.Context)
+                 LifetimePlaceAttr(S.Context, AL, Places.front()));
+}
+
 static bool isFunctionLike(const Type &T) {
   // Check for explicit function types.
   // 'called_once' is only supported in Objective-C and it has
@@ -7923,6 +8110,18 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_LifetimeCaptureBy:
     handleLifetimeCaptureByAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LifetimeBound:
+    handleLifetimeBoundAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LifetimeInvalidates:
+    handleLifetimeInvalidatesAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LifetimePlaces:
+    handleLifetimePlacesAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LifetimePlace:
+    handleLifetimePlaceAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);

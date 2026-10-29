@@ -79,6 +79,17 @@ inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_field_origin_escape, D->getBeginLoc());
 }
 
+inline bool ShouldCheckPlaceContracts(Sema &S, const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_undeclared_invalidation,
+      diag::warn_lifetime_safety_place_borrow_violation};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
+}
+
 inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -122,6 +133,7 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
          ShouldCheckMisplacedLifetimebound(S, D) ||
          ShouldCheckInapplicableLifetimebound(S, D) ||
          ShouldCheckFieldOriginEscape(S, D) ||
+         ShouldCheckPlaceContracts(S, D) ||
          ShouldSuggestLifetimeAnnotations(S, D);
 }
 
@@ -136,6 +148,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
   LSOpts.CheckInapplicableLifetimebound =
       ShouldCheckInapplicableLifetimebound(S, D);
   LSOpts.CheckFieldOriginEscape = ShouldCheckFieldOriginEscape(S, D);
+  LSOpts.CheckPlaceContracts = ShouldCheckPlaceContracts(S, D);
   return LSOpts;
 }
 
@@ -294,6 +307,16 @@ public:
         PVD->getSourceRange().getBegin(), PVD->getSourceRange(),
         getDiagSubjectDescription(PVD), InvalidationExpr, ExprChain, UseLoc,
         SourceRange());
+  }
+  void
+  reportUseAfterInvalidation(const CXXMethodDecl *MD, const FieldDecl *Field,
+                             const Expr *UseExpr, const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
+    std::string Subject =
+        Field ? getDiagSubjectDescription(Field) + " of 'this'" : "'this'";
+    reportUseAfterInvalidationImpl(
+        MD->getLocation(), MD->getSourceRange(), Subject, InvalidationExpr,
+        ExprChain, UseExpr->getExprLoc(), UseExpr->getSourceRange());
   }
 
   void reportInvalidatedField(const Expr *IssueExpr,
@@ -508,6 +531,45 @@ public:
           << FieldDesc << FD->getSourceRange();
   }
 
+  void reportUndeclaredInvalidation(const CXXMethodDecl *MD,
+                                    const Expr *InvalidationExpr,
+                                    const IdentifierInfo *Place,
+                                    const FieldDecl *Field) override {
+    std::string Declared;
+    bool HasAttr = false;
+    if (const auto *A = getImplicitObjectParamInvalidatesAttr(MD)) {
+      HasAttr = true;
+      llvm::raw_string_ostream OS(Declared);
+      llvm::interleaveComma(A->places(), OS, [&](const IdentifierInfo *II) {
+        OS << II->getName();
+      });
+    }
+    S.Diag(InvalidationExpr->getExprLoc(),
+           diag::warn_lifetime_safety_undeclared_invalidation)
+        << describePlace(Place, Field, /*IsObject=*/false) << MD << HasAttr
+        << Declared << InvalidationExpr->getSourceRange();
+  }
+
+  void reportPlaceBorrowViolation(const CXXMethodDecl *MD,
+                                  const Expr *ReturnExpr,
+                                  const IdentifierInfo *Place,
+                                  const FieldDecl *Field,
+                                  bool IsObject) override {
+    std::string Declared;
+    if (const auto *A = getImplicitObjectParamLifetimeBoundAttr(MD)) {
+      llvm::raw_string_ostream OS(Declared);
+      llvm::interleaveComma(A->places(), OS, [&](const IdentifierInfo *II) {
+        OS << II->getName();
+      });
+    }
+    S.Diag(MD->getLocation(), diag::warn_lifetime_safety_place_borrow_violation)
+        << describePlace(Place, Field, IsObject) << MD << Declared
+        << MD->getNameInfo().getSourceRange();
+    S.Diag(ReturnExpr->getExprLoc(),
+           diag::note_lifetime_safety_borrow_returned_here)
+        << ReturnExpr->getSourceRange();
+  }
+
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                const Expr *EscapeExpr) override {
     S.Diag(ParmWithNoescape->getBeginLoc(),
@@ -618,6 +680,18 @@ private:
       }
     }
     return BestSpelling;
+  }
+
+  /// Describes what of `*this` a place contract refers to.
+  std::string describePlace(const IdentifierInfo *Place, const FieldDecl *Field,
+                            bool IsObject) {
+    if (IsObject)
+      return "the object itself";
+    if (Place)
+      return ("place '" + Place->getName() + "'").str();
+    if (Field)
+      return getDiagSubjectDescription(Field);
+    return "the interior";
   }
 
   void reportInvalidationSite(const Expr *InvalidationExpr,
@@ -752,6 +826,14 @@ private:
       return "allocated object";
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
+    if (isa<CXXThisExpr>(E))
+      return "'this'";
+    // `s.f`, `p->f`, `f` (implicit `this->f`): the field of whatever the base
+    // designates.
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+        return getDiagSubjectDescription(FD) + " of " +
+               getDiagSubjectDescription(ME->getBase());
 
     if (const auto *CE = dyn_cast<CallExpr>(E)) {
       const auto *FD = CE->getDirectCallee();

@@ -2222,6 +2222,20 @@ public:
   // do this lazily instead of processing while parsing the annotation itself.
   void LazyProcessLifetimeCaptureByParams(FunctionDecl *FD);
 
+  /// Checks the place arguments of `[[clang::lifetimebound(...)]]` or
+  /// `[[clang::invalidates(...)]]`: each must be an identifier that is either
+  /// the reserved name `interior` (alone) or a place declared with
+  /// `[[clang::places(...)]]` on `RD`. `RD` is the class whose places are
+  /// named (null when unknown, e.g. dependent), `IsImplicitObject` selects the
+  /// wording of diagnostics. Returns false after diagnosing an error.
+  bool CheckLifetimePlaceArgs(const ParsedAttr &AL, const CXXRecordDecl *RD,
+                              QualType SubjectType, bool IsImplicitObject,
+                              SmallVectorImpl<const IdentifierInfo *> &Places);
+
+  /// Returns the class whose places an attribute on the implicit object
+  /// parameter of the function being declared by `D` names, or null.
+  const CXXRecordDecl *getImplicitObjectRecordForDeclarator(Declarator &D);
+
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
 

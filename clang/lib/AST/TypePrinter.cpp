@@ -1969,8 +1969,22 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
                              ->getExtInfo().getProducesResult())
     return;
 
-  if (T->getAttrKind() == attr::LifetimeBound) {
-    OS << " [[clang::lifetimebound]]";
+  if (T->getAttrKind() == attr::LifetimeBound ||
+      T->getAttrKind() == attr::LifetimeInvalidates) {
+    OS << (T->getAttrKind() == attr::LifetimeBound ? " [[clang::lifetimebound"
+                                                   : " [[clang::invalidates");
+    auto PrintPlaces = [&](auto Places) {
+      if (Places.begin() == Places.end())
+        return;
+      OS << "(";
+      llvm::interleaveComma(Places, OS, [&](auto *II) { OS << II->getName(); });
+      OS << ")";
+    };
+    if (auto *A = dyn_cast_or_null<LifetimeBoundAttr>(T->getAttr()))
+      PrintPlaces(A->places());
+    else if (auto *A = dyn_cast_or_null<LifetimeInvalidatesAttr>(T->getAttr()))
+      PrintPlaces(A->places());
+    OS << "]]";
     return;
   }
   if (T->getAttrKind() == attr::LifetimeCaptureBy) {
@@ -2064,6 +2078,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::SizedByOrNull:
   case attr::LifetimeBound:
   case attr::LifetimeCaptureBy:
+  case attr::LifetimeInvalidates:
   case attr::TypeNonNull:
   case attr::TypeNullable:
   case attr::TypeNullableResult:

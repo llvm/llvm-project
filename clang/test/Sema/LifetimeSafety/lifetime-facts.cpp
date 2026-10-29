@@ -249,7 +249,7 @@ void address_of_array_element(int i) {
   Node *arr[4];
   Node **elem = &arr[i];
 // The element origin names the array, but taking its address never reads it.
-// CHECK:       Dest: {{[0-9]+}} (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr }
+// CHECK:       Dest: {{[0-9]+}} (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr.* }
 // CHECK-NOT:   Use ({{[0-9]+}} (Expr: ArraySubscriptExpr
 }
 
@@ -257,7 +257,7 @@ void address_of_array_element(int i) {
 void read_array_element(int i) {
   Node *arr[4];
   Node *sink = arr[i];
-// CHECK:       Dest: [[O_ELEM:[0-9]+]] (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr }
+// CHECK:       Dest: [[O_ELEM:[0-9]+]] (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr.* }
 // CHECK:   Use ([[O_ELEM]] (Expr: ArraySubscriptExpr, Type : Node *&))
 }
 
@@ -265,21 +265,21 @@ void read_array_element(int i) {
 void write_array_element(int i, Node *p) {
   Node *arr[4];
   arr[i] = p;
-// CHECK:       Dest: [[O_ELEM:[0-9]+]] (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr }
+// CHECK:       Dest: [[O_ELEM:[0-9]+]] (Expr: ArraySubscriptExpr, Type : Node *&) has loans to { arr.* }
 // CHECK:   Use ([[O_ELEM]] (Expr: ArraySubscriptExpr, Type : Node *&))
 }
 
 // CHECK-LABEL: Function: address_of_member
 void address_of_member(Node *p) {
   Node **pnext = &p->next;
-// CHECK:       Dest: {{[0-9]+}} (Expr: MemberExpr, Type : Node *&) has loans to { $p }
+// CHECK:       Dest: {{[0-9]+}} (Expr: MemberExpr, Type : Node *&) has loans to { $p.next }
 // CHECK-NOT:   Use ({{[0-9]+}} (Expr: MemberExpr
 }
 
 // CHECK-LABEL: Function: read_member
 void read_member(Node *p) {
   Node *sink = p->next;
-// CHECK:       Dest: [[O_NEXT:[0-9]+]] (Expr: MemberExpr, Type : Node *&) has loans to { $p }
+// CHECK:       Dest: [[O_NEXT:[0-9]+]] (Expr: MemberExpr, Type : Node *&) has loans to { $p.next }
 // CHECK:   Use ([[O_NEXT]] (Expr: MemberExpr, Type : Node *&))
 }
 

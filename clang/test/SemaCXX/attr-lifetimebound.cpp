@@ -16,7 +16,7 @@ namespace usage_invalid {
     int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
     void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
   };
-  int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
+  int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{requires an identifier}}
 
   void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
   static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}

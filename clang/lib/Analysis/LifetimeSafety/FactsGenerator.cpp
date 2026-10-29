@@ -258,17 +258,18 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   auto *MD = ME->getMemberDecl();
-  if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
+  if (auto *FD = dyn_cast<FieldDecl>(MD); FD && doesDeclHaveStorage(FD)) {
     assert(ME->isGLValue() && "Field member should be GL value");
     OriginList *Dst = getOriginsList(*ME);
     assert(Dst && "Field member should have an origin list as it is GL value");
     OriginList *Src = getOriginsList(*ME->getBase());
     assert(Src && "Base expression should be a pointer/reference type");
-    // The field's glvalue (outermost origin) holds the same loans as the base
-    // expression.
+    // The field's glvalue (outermost origin) borrows the field sub-object of
+    // whatever the base borrows: a loan to `obj` flows in as a loan to
+    // `obj.field`.
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         Dst->getOuterOriginID(), Src->getOuterOriginID(),
-        /*Kill=*/true));
+        /*Kill=*/true, PathElement::getField(*FD)));
   }
 }
 
@@ -323,8 +324,11 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     if (!Dest || isa<VAArgExpr>(SubExpr->IgnoreParens()))
       return;
     assert(Src && "Array expression should have origins as it is GL value");
+    // The decayed pointer points at the array's elements, storage inside the
+    // array: `int *p = arr;` borrows `arr.*`.
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+        Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true,
+        PathElement::getInterior()));
     return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
@@ -788,8 +792,8 @@ void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
   // The destructor may dereference to any depth.
   handleUse(DE->getArgument());
   OriginList *List = getOriginsList(*DE->getArgument());
-  CurrentBlockFacts.push_back(
-      FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
+  CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+      List->getOuterOriginID(), DE, InvalidateOriginFact::Form::Object));
 }
 
 void FactsGenerator::VisitStmtExpr(const StmtExpr *SE) {
@@ -952,23 +956,40 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
 void FactsGenerator::handleInvalidatingCall(const Expr *Call,
                                             const FunctionDecl *FD,
                                             ArrayRef<const Expr *> Args) {
-  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->isInstance())
-    return;
-
-  if (!isInvalidationMethod(*MD))
-    return;
-
-  // Heuristics to turn-down false positives. Skip member field expressions for
-  // now. This is not a perfect filter and will still surface some false
-  // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
-    return;
-
-  OriginList *ThisList = getOriginsList(*Args[0]);
-  if (ThisList)
-    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
-        ThisList->getOuterOriginID(), Call));
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    std::optional<PlaceRef> Invalidated = getArgInvalidation(FD, Args, I);
+    if (!Invalidated)
+      continue;
+    // The outer origin of the argument expression holds the loans to the
+    // argument object: for `v.push_back()` and `Grow(v)` it is the glvalue
+    // `v`, for `pv->push_back()` and `Grow(pv)` it is the pointee of `pv`.
+    OriginList *ArgList = getOriginsList(*Args[I]);
+    if (!ArgList)
+      continue;
+    OriginID OID = ArgList->getOuterOriginID();
+    switch (Invalidated->K) {
+    case PlaceRef::Object:
+      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+          OID, Call, InvalidateOriginFact::Form::Object));
+      break;
+    case PlaceRef::Interior:
+      // The object stays alive; only the storage it owns (buffer, characters,
+      // pointee) is invalidated.
+      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+          OID, Call, InvalidateOriginFact::Form::Interior));
+      break;
+    case PlaceRef::Places: {
+      // The class declaring the places, to find the fields bound to them.
+      QualType T = Args[I]->getType();
+      if (T->isPointerOrReferenceType())
+        T = T->getPointeeType();
+      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+          OID, Call, InvalidateOriginFact::Form::Places, Invalidated->Names,
+          T->getAsCXXRecordDecl()));
+      break;
+    }
+    }
+  }
 }
 
 void FactsGenerator::handleDestructiveCall(const Expr *Call,
@@ -979,7 +1000,7 @@ void FactsGenerator::handleDestructiveCall(const Expr *Call,
   OriginList *ArgList = getOriginsList(*Args[0]);
   if (ArgList)
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
-        ArgList->getOuterOriginID(), Call));
+        ArgList->getOuterOriginID(), Call, InvalidateOriginFact::Form::Object));
 }
 
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
@@ -1049,11 +1070,21 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       continue;
     // For references to pointer-like types, peel the outer origin (the pointer
     // object itself) so that we capture the underlying data (the inner origin).
-    if (QualType ParamType = PVD->getType();
-        (ParamType->isReferenceType() &&
+    QualType ParamType = PVD->getType();
+    if ((ParamType->isReferenceType() &&
          isPointerLikeType(ParamType->getPointeeType())) &&
         CapturedOriginList->getLength() > 1)
       CapturedOriginList = CapturedOriginList->peelOuterOrigin();
+    // The annotation does not say whether the callee stores the owner itself
+    // or a view into it (`const std::string&` kept as `std::string_view`).
+    // Capture "some interior place" of an owner, which any later
+    // modification of the owner conservatively invalidates.
+    std::optional<PathElement> Projection;
+    if (QualType Pointee = ParamType->isPointerOrReferenceType()
+                               ? ParamType->getPointeeType()
+                               : ParamType;
+        isGslOwnerType(Pointee))
+      Projection = PathElement::getInterior();
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
@@ -1077,7 +1108,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       // merged.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
-          /*KillDest=*/false));
+          /*KillDest=*/false, Projection));
     }
   }
 }
@@ -1123,6 +1154,31 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   if (Args.empty())
     return;
   bool KillSrc = true;
+  // Flows the outer origin of tracked argument I into the call result, with
+  // the projection its contract prescribes: `.*` when the result borrows the
+  // argument's interior (what an owner owns), `.place` per named place, none
+  // when it borrows the argument object itself.
+  auto flowTrackedArg = [&](unsigned I, OriginID SrcOID) {
+    PlaceRef Borrow = getTrackedArgBorrow(FD, Args, I);
+    llvm::SmallVector<std::optional<PathElement>, 1> Projections;
+    switch (Borrow.K) {
+    case PlaceRef::Object:
+      Projections.push_back(std::nullopt);
+      break;
+    case PlaceRef::Interior:
+      Projections.push_back(PathElement::getInterior());
+      break;
+    case PlaceRef::Places:
+      for (const IdentifierInfo *Name : Borrow.Names)
+        Projections.push_back(PathElement::getPlace(*Name));
+      break;
+    }
+    for (std::optional<PathElement> P : Projections) {
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(), SrcOID, KillSrc, P));
+      KillSrc = false;
+    }
+  };
   for (unsigned I = 0; I < Args.size(); ++I) {
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
@@ -1136,12 +1192,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = readValue(Args[I]);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // The constructed gsl::Pointer borrows from the Owner's storage, not
-        // from what the Owner itself borrows, so only the outermost origin is
-        // needed.
+        // The constructed gsl::Pointer borrows the Owner's interior (the
+        // storage it owns), not the Owner object nor what the Owner itself
+        // borrows, so only the outermost origin is needed.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc));
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc,
+            PathElement::getInterior()));
         KillSrc = false;
       } else if (ShouldTrackArg) {
         // Only flow the outer origin here. For lifetimebound args in
@@ -1150,10 +1206,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // destination origin lists may have different lengths.
         // FIXME: Handle origin-shape mismatches gracefully so we can also flow
         // inner origins.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc));
-        KillSrc = false;
+        flowTrackedArg(I, ArgList->getOuterOriginID());
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
       assert(ArgList->getLength() >= 2 &&
@@ -1167,9 +1220,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc));
-      KillSrc = false;
+      flowTrackedArg(I, ArgList->getOuterOriginID());
     }
   }
 }

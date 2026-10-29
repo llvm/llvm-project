@@ -9010,13 +9010,40 @@ static void HandleAnnotateTypeAttr(TypeProcessingState &State,
 static void HandleLifetimeBoundAttr(TypeProcessingState &State,
                                     QualType &CurType,
                                     ParsedAttr &Attr) {
+  Sema &S = State.getSema();
   if (State.getDeclarator().isDeclarationOfFunction()) {
+    SmallVector<const IdentifierInfo *, 2> Places;
+    if (!S.CheckLifetimePlaceArgs(
+            Attr, S.getImplicitObjectRecordForDeclarator(State.getDeclarator()),
+            QualType(), /*IsImplicitObject=*/true, Places))
+      return;
     CurType = State.getAttributedType(
-        createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
+        ::new (S.Context)
+            LifetimeBoundAttr(S.Context, Attr, Places.data(), Places.size()),
         CurType, CurType);
     return;
   }
-  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
+  S.Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
+      << Attr << Attr.isRegularKeywordAttribute()
+      << ExpectedParameterOrImplicitObjectParameter;
+}
+
+static void HandleLifetimeInvalidatesAttr(TypeProcessingState &State,
+                                          QualType &CurType, ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+  if (State.getDeclarator().isDeclarationOfFunction()) {
+    SmallVector<const IdentifierInfo *, 2> Places;
+    if (!S.CheckLifetimePlaceArgs(
+            Attr, S.getImplicitObjectRecordForDeclarator(State.getDeclarator()),
+            QualType(), /*IsImplicitObject=*/true, Places))
+      return;
+    CurType = State.getAttributedType(
+        ::new (S.Context) LifetimeInvalidatesAttr(S.Context, Attr,
+                                                  Places.data(), Places.size()),
+        CurType, CurType);
+    return;
+  }
+  S.Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
       << Attr << Attr.isRegularKeywordAttribute()
       << ExpectedParameterOrImplicitObjectParameter;
 }
@@ -9257,6 +9284,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_LifetimeBound:
       if (TAL == TAL_DeclChunk)
         HandleLifetimeBoundAttr(state, type, attr);
+      break;
+    case ParsedAttr::AT_LifetimeInvalidates:
+      if (TAL == TAL_DeclChunk)
+        HandleLifetimeInvalidatesAttr(state, type, attr);
       break;
     case ParsedAttr::AT_LifetimeCaptureBy:
       if (TAL == TAL_DeclChunk)

@@ -3629,6 +3629,29 @@ def warn_deprecated_capture_by_special_entity : Warning<
   "'lifetime_capture_by(%0)' is deprecated; use '%1' instead">,
   InGroup<DeprecatedAttributes>;
 
+// Places: [[clang::places]], [[clang::place]], [[clang::lifetimebound(p)]],
+// [[clang::invalidates(p)]].
+def err_lifetime_place_reserved : Error<
+  "'%0' is a reserved place name">;
+def err_lifetime_place_interior_mixed : Error<
+  "'interior' cannot be combined with named places in %0">;
+def err_lifetime_place_unknown : Error<
+  "unknown place '%0' in %1">;
+def note_lifetime_place_declared_here : Note<
+  "places of %0 are declared here">;
+def err_lifetime_place_no_places_declared : Error<
+  "%0 declares no places; use '[[clang::places(...)]]' on the class">;
+def err_lifetime_place_duplicate : Error<
+  "duplicate place '%0'">;
+def err_lifetime_invalidates_param_type : Error<
+  "'invalidates' attribute only applies to pointer or reference parameters "
+  "and the implicit object parameter">;
+def err_lifetime_place_requires_class_type : Error<
+  "'%0(%1)' requires %select{a parameter of class type (by pointer or "
+  "reference)|an implicit object parameter of class type}2">;
+def err_lifetime_place_attr_on_dependent_type : Error<
+  "cannot name places of the dependent type %0">;
+
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
@@ -10906,7 +10929,7 @@ def warn_null_ret : Warning<
   InGroup<NonNull>;
 
 def err_lifetimebound_no_object_param : Error<
-  "'lifetimebound' attribute cannot be applied; "
+  "'%select{lifetimebound|invalidates}1' attribute cannot be applied; "
   "%select{non-|static |explicit object }0"
   "member function has no implicit object parameter">;
 def err_lifetimebound_ctor_dtor : Error<
@@ -11108,6 +11131,20 @@ def warn_lifetime_safety_inapplicable_lifetimebound
     : Warning<"'lifetimebound' attribute has no effect on parameter of type %0. The attribute only applies to reference types, pointer types, and non-owner record types">,
       InGroup<LifetimeSafetyInapplicableLifetimebound>,
       DefaultIgnore;
+
+// Place contracts: a method of a class annotated with [[clang::places]] or
+// [[clang::invalidates]] is verified against its own contract.
+def warn_lifetime_safety_undeclared_invalidation
+    : Warning<"invalidates %0 of 'this' but %1 %select{is not annotated "
+              "'invalidates'|only declares 'invalidates(%3)'}2">,
+      InGroup<LifetimeSafetyPlaceContract>,
+      DefaultIgnore;
+def warn_lifetime_safety_place_borrow_violation
+    : Warning<"returned value borrows %0 of 'this' but %1 is annotated "
+              "'lifetimebound(%2)'">,
+      InGroup<LifetimeSafetyPlaceContract>,
+      DefaultIgnore;
+def note_lifetime_safety_borrow_returned_here : Note<"returned here">;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;

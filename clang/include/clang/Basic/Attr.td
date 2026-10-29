@@ -2159,8 +2159,54 @@ def ExplicitInit : InheritableAttr {
 def LifetimeBound : DeclOrTypeAttr {
   let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  // Optional: the place of the argument the result borrows. Either the
+  // reserved name `interior` or places declared with [[clang::places]].
+  let Args = [VariadicIdentifierArgument<"Places">];
   let Documentation = [LifetimeBoundDocs];
-  let SimpleHandler = 1;
+  let AdditionalMembers = [{
+    /// `[[clang::lifetimebound]]`: the result borrows the argument object.
+    bool isObjectBorrow() const { return places_size() == 0; }
+    /// `[[clang::lifetimebound(interior)]]`: the result borrows storage owned
+    /// by the argument.
+    bool isInteriorBorrow() const {
+      return places_size() == 1 && (*places_begin())->isStr("interior");
+    }
+    /// `[[clang::lifetimebound(p, ...)]]`: the result borrows the named places.
+    bool isPlaceBorrow() const { return !isObjectBorrow() && !isInteriorBorrow(); }
+  }];
+}
+
+def LifetimeInvalidates : DeclOrTypeAttr {
+  let Spellings = [Clang<"invalidates">];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  // Optional: the places of the argument the call invalidates. Either the
+  // reserved name `interior` or places declared with [[clang::places]].
+  let Args = [VariadicIdentifierArgument<"Places">];
+  let Documentation = [LifetimeInvalidatesDocs];
+  let AdditionalMembers = [{
+    /// `[[clang::invalidates]]`: the argument object itself is destroyed.
+    bool isObject() const { return places_size() == 0; }
+    /// `[[clang::invalidates(interior)]]`: everything the argument owns.
+    bool isInterior() const {
+      return places_size() == 1 && (*places_begin())->isStr("interior");
+    }
+    /// `[[clang::invalidates(p, ...)]]`: the named places.
+    bool isPlaces() const { return !isObject() && !isInterior(); }
+  }];
+}
+
+def LifetimePlaces : InheritableAttr {
+  let Spellings = [Clang<"places">];
+  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
+  let Args = [VariadicIdentifierArgument<"Places">];
+  let Documentation = [LifetimePlacesDocs];
+}
+
+def LifetimePlace : InheritableAttr {
+  let Spellings = [Clang<"place">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [IdentifierArgument<"Place">];
+  let Documentation = [LifetimePlaceDocs];
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {

@@ -225,6 +225,92 @@ or visitors that are only used during the call and not stored.
 
 For more details, see [noescape](AttributeReference.md#noescape).
 
+### Places: Interior Borrows and Invalidation Contracts (experimental)
+
+A pointer can refer to an object itself or to storage the object *owns*: a
+vector's buffer, a string's characters, a `unique_ptr`'s pointee. The analysis
+calls the latter the object's **interior**. The distinction matters because the
+interior can be invalidated while the object is still alive:
+
+```c++
+std::vector<int> v = {1, 2, 3};
+std::vector<int> *pv = &v;        // borrows the object `v`
+int *pe = v.data();               // borrows the interior `v.*`
+v.push_back(4);                   // invalidates `v.*`, not `v`
+pv->size();                       // OK
+*pe;                              // warning: 'v' is later invalidated
+```
+
+Borrows are tracked per **place**: the object, a field (a sub-object that dies
+with the object), the anonymous interior, or a *named place*. Modifying one
+field or place does not invalidate borrows of its siblings.
+
+For standard library owners the analysis knows which accessors hand out
+interior borrows and which operations invalidate them. For your own types, the
+annotations say so explicitly. Both `[[clang::lifetimebound]]` (what a result
+borrows) and `[[clang::invalidates]]` (what a call invalidates) take the same
+optional argument:
+
+| | the object | any interior | named place(s) |
+|---|---|---|---|
+| borrow | `[[clang::lifetimebound]]` | `[[clang::lifetimebound(interior)]]` | `[[clang::lifetimebound(keys)]]` |
+| invalidation | `[[clang::invalidates]]` | `[[clang::invalidates(interior)]]` | `[[clang::invalidates(keys, values)]]` |
+
+```c++
+struct Arena {
+  char *Alloc(unsigned n) [[clang::lifetimebound(interior)]];
+  const Arena &Self() const [[clang::lifetimebound]];
+  void Reset() [[clang::invalidates(interior)]];
+};
+
+void Grow(std::vector<int> &v [[clang::invalidates(interior)]]);
+
+void test(Arena &a) {
+  char *p = a.Alloc(8);
+  const Arena &s = a.Self();
+  a.Reset();      // note: 'a' is invalidated here
+  s.Alloc(1);     // OK: `s` refers to the arena object, which is still alive
+  p[0] = 1;       // warning: parameter 'a' is later invalidated
+}
+```
+
+Named places let a type with several independently invalidated regions avoid
+false positives. They are declared on the class with `[[clang::places]]`; a
+field may be bound to a place with `[[clang::place]]`:
+
+```c++
+struct [[clang::places(keys, values)]] SymbolTable {
+  [[clang::place(keys)]]   std::vector<std::string> key_storage_;
+  [[clang::place(values)]] std::vector<int>         value_storage_;
+
+  std::string_view     Key(int i) const [[clang::lifetimebound(keys)]];
+  std::span<const int> Values()   const [[clang::lifetimebound(values)]];
+
+  int  Intern(std::string_view key) [[clang::invalidates(keys)]];
+  void Clear()                      [[clang::invalidates(interior)]];  // every place
+};
+
+void test(SymbolTable &t) {
+  std::string_view     k = t.Key(0);
+  std::span<const int> v = t.Values();
+  t.Intern("x");  // note: 't' is invalidated here
+  v.size();       // OK: 'values' is a different place
+  k.size();       // warning: parameter 't' is later invalidated
+}
+```
+
+A borrow of an unspecified interior (`lifetimebound(interior)`) is
+conservatively treated as possibly belonging to any place, and
+`invalidates(interior)` invalidates every place.
+
+With `-Wlifetime-safety-experimental-place-contract`, methods of a class that
+declares places (or uses `invalidates`) are verified against their own
+contracts: a method must declare every place of `*this` it invalidates, and a
+method annotated `lifetimebound(place)` must only return borrows of that place.
+
+For more details, see [invalidates](AttributeReference.md#invalidates) and
+[places](AttributeReference.md#places).
+
 ## Checks Performed
 
 ### Use after scope
@@ -524,6 +610,7 @@ enables only the high-confidence subset of these checks.
 
   - `-Wlifetime-safety-experimental-invalidation`: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., `std::unique_ptr::reset`, `std::destroy_at`).
   - `-Wlifetime-safety-experimental-field-origin-escape`: Warns when a member function returns a value derived from a pointer, reference, or view field rather than from `*this` (e.g., `Span::data()`). Owned pointer fields (e.g., `Vector::data()`) are also reported; mark such methods `[[clang::lifetimebound]]` to silence the warning.
+  - `-Wlifetime-safety-experimental-place-contract`: Verifies methods of classes annotated with `[[clang::places]]` or `[[clang::invalidates]]` against their place contracts: every interior invalidation of `*this` must be declared with `[[clang::invalidates]]`, and a method annotated `[[clang::lifetimebound(place)]]` must only return borrows of that place.
 
 ## Limitations
 
