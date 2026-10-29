@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -869,6 +870,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
     if (BinOp->getOpcode() == Instruction::SDiv)
       BinOp->setIsExact(Instr->isExact());
 
+  salvageDebugInfo(*Instr);
   Instr->replaceAllUsesWith(Sext);
   Instr->eraseFromParent();
   return true;
@@ -949,6 +951,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     ExpandedOp = B.CreateZExt(Cmp, Ty, Instr->getName() + ".udiv");
   }
   ExpandedOp->takeName(Instr);
+  salvageDebugInfo(*Instr);
   Instr->replaceAllUsesWith(ExpandedOp);
   Instr->eraseFromParent();
   ++NumUDivURemsNarrowedExpanded;
@@ -989,6 +992,7 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     if (BinOp->getOpcode() == Instruction::UDiv)
       BinOp->setIsExact(Instr->isExact());
 
+  salvageDebugInfo(*Instr);
   Instr->replaceAllUsesWith(Zext);
   Instr->eraseFromParent();
   return true;
