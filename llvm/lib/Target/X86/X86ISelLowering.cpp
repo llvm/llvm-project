@@ -60793,29 +60793,49 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   if (TotalSize < 128 || !isPowerOf2_64(TotalSize))
     return SDValue();
 
-  SDValue X, Y, Acc;
-  if (!sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc))))
+  SDValue X, Y, Acc, ShiftAmt;
+  bool IsHigh = false;
+
+  if (sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc)))){
+    // ADD(MUL(x, y), acc) -> VPMADD52L
+  } else if (sd_match(N, m_Add(m_Srl(m_Mul(m_Value(X), m_Value(Y)), m_Value(ShiftAmt)), m_Value(Acc)))){
+    // ADD(LSHR(MUL(x, y), 52), acc) -> VPMADD52H
+    APInt ShiftCst;
+    if (!ISD::isConstantSplatVector(ShiftAmt.getNode(), ShiftCst) ||
+        ShiftCst != 52)
+      return SDValue();
+    IsHigh = true;
+  } else{
     return SDValue();
+  }
 
   KnownBits KnownX = DAG.computeKnownBits(X);
-  if (KnownX.countMinLeadingZeros() < 12)
-    return SDValue();
   KnownBits KnownY = DAG.computeKnownBits(Y);
-  if (KnownY.countMinLeadingZeros() < 12)
-    return SDValue();
-  KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
-  if (KnownMul.countMinLeadingZeros() < 12)
+  if (KnownX.countMinLeadingZeros() < 12 ||
+      KnownY.countMinLeadingZeros() < 12)
     return SDValue();
 
-  auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
-                            ArrayRef<SDValue> SubOps) {
+  if (IsHigh) {
+    // For VPMADD52H the full 64-bit MUL must be exact, so the 104-bit
+    // product must fit in 64 bits: lz(x) + lz(y) >= 64.
+    if (KnownX.countMinLeadingZeros() + KnownY.countMinLeadingZeros() < 64)
+      return SDValue();
+  } else {
+    // For VPMADD52L, x*y must fit in 52 bits.
+    KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
+    if (KnownMul.countMinLeadingZeros() < 12)
+      return SDValue();
+  }
+
+  unsigned Opc = IsHigh ? X86ISD::VPMADD52H : X86ISD::VPMADD52L;
+  auto VPMADD52Builder = [Opc](SelectionDAG &G, SDLoc DL,
+                               ArrayRef<SDValue> SubOps) {
     EVT SubVT = SubOps[0].getValueType();
     assert(SubVT.getScalarSizeInBits() == 64 &&
            "Unexpected element size, only supports 64bit size");
-    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[1] /*X*/,
+    return G.getNode(Opc, DL, SubVT, SubOps[1] /*X*/,
                      SubOps[2] /*Y*/, SubOps[0] /*Acc*/);
   };
-
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
                           /*CheckBWI*/ false,
                           /*AllowAVX512*/ Subtarget.hasIFMA());
