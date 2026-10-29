@@ -162,8 +162,8 @@ public:
   void replaceAllUsesExcept(Value newValue, Operation *exceptedUser);
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
-  /// returns true.
-  void replaceUsesWithIf(Value newValue,
+  /// returns true. Returns whether any uses were replaced.
+  bool replaceUsesWithIf(Value newValue,
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   /// Returns true if the value is used outside of the given block.

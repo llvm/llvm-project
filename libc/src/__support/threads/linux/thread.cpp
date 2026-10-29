@@ -16,6 +16,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/clone.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/exit.h"
@@ -25,7 +26,6 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
@@ -39,15 +39,12 @@
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/thread_attributes.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sched_macros.h" // For CLONE_* flags.
-#include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include "hdr/types/sigset_t.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <sys/syscall.h> // For syscall numbers.
@@ -510,9 +507,7 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     // Thread is detached so cleanup the resources.
     // Signals must be blocked before unmapping the stack to prevent any signal
     // handler from running without a stack.
-    sigset_t set;
-    inline_memset(&set, 0xff, sizeof(sigset_t));
-    (void)linux_syscalls::rt_sigprocmask(SIG_BLOCK, &set, nullptr);
+    (void)signals::block_all();
 
     cleanup_thread_resources(attrib);
 

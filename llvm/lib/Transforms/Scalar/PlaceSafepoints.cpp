@@ -112,7 +112,7 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
+    Opts = &getScalarOptions(F);
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -245,8 +245,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (!shouldRewriteFunction(F))
     return false;
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Modified = false;
 
   // In various bits below, we rely on the fact that uses are reachable from

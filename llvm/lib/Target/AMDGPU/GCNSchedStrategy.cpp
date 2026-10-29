@@ -2245,9 +2245,8 @@ bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
-  // When trying to increase occupancy (TargetOcc == true) the stage manages
-  // region reverts globally (all or none), so we always return false here.
-  return !TargetOcc && mayCauseSpilling(WavesAfter);
+  return GCNSchedStage::shouldRevertScheduling(WavesAfter) ||
+         mayCauseSpilling(WavesAfter);
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {

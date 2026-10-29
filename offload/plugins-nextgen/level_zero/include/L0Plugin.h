@@ -50,6 +50,8 @@ public:
                          GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
+  Expected<void *> getNativeHandle() override { return ZeContext; }
+
   /// Get kernel indirect access flags from all allocators in this context.
   ze_kernel_indirect_access_flags_t getIndirectFlags() {
     ze_kernel_indirect_access_flags_t Flags = 0;
@@ -90,13 +92,13 @@ class LevelZeroPluginTy final : public GenericPluginTy {
 private:
   struct DeviceInfoTy {
     L0DeviceIdTy Id;
-    L0ContextTy *Driver;
+    L0DriverTy *Driver;
     bool isRoot() const { return Id.SubId < 0 && Id.CCSId < 0; }
   };
   llvm::SmallVector<DeviceInfoTy> DetectedDevices;
 
-  /// Context (and Driver) specific data.
-  std::list<L0ContextTy> ContextList;
+  /// Driver-specific data.
+  std::list<L0DriverTy> DriverList;
 
   /// L0 plugin options.
   L0OptionsTy Options;

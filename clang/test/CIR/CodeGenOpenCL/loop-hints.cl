@@ -13,6 +13,6 @@ kernel void k(int n) {
 }
 
 // CHECK-LABEL: cir.func {{.*}} @k
-// CHECK: } loop_hints < unroll = enable>
-// CHECK: } loop_hints < unroll = disable>
-// CHECK: } loop_hints < unroll_count = 8>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll = enable>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll = disable>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll_count = 8>

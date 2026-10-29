@@ -3264,6 +3264,17 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_os_up.reset();
   GetTarget().ClearAllLoadedSections();
 
+  // StartPrivateStateThread does nothing if the thread is already running, so
+  // publish the state ourselves.
+  auto start_private_state_thread = [this] {
+    if (PrivateStateThreadIsRunning()) {
+      SetPublicState(lldb::eStateAttaching, /*restarted=*/false);
+      SetPublicRunLockToRunning();
+    } else {
+      StartPrivateStateThread(lldb::eStateAttaching, true);
+    }
+  };
+
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
   if (attach_pid == LLDB_INVALID_PROCESS_ID) {
@@ -3291,7 +3302,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
           } else {
             SetNextEventAction(new Process::AttachCompletionHandler(
                 this, attach_info.GetResumeCount()));
-            StartPrivateStateThread(lldb::eStateAttaching, true);
+            start_private_state_thread();
             if (!m_current_private_state_thread_sp) {
               // We are not going to get any further here.  The only way
               // this could fail is if we can't start a host thread, and we're
@@ -3354,7 +3365,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
         SetNextEventAction(new Process::AttachCompletionHandler(
             this, attach_info.GetResumeCount()));
 
-        StartPrivateStateThread(lldb::eStateAttaching, true);
+        start_private_state_thread();
         if (!m_current_private_state_thread_sp) {
           // We are not going to get any further here.  The only way this
           // could fail is if we can't start a host thread, so we're pretty much

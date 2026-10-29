@@ -10,17 +10,12 @@
 #define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testutils {
-
-class FunctionCaller {
-public:
-  virtual ~FunctionCaller() {}
-  virtual void operator()() = 0;
-};
 
 struct ProcessStatus {
   int platform_defined;
@@ -42,7 +37,7 @@ struct ProcessStatus {
   int get_fatal_signal();
 };
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *func,
+ProcessStatus invoke_in_subprocess(cpp::function<void(void)> func,
                                    int timeout_ms = ProcessStatus::TIMEOUT);
 
 const char *signal_as_string(int signum);

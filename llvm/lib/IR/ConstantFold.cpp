@@ -1250,91 +1250,12 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     }
   } else {
     // Evaluate the relation between the two constants, per the predicate.
-    int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
-    switch (evaluateICmpRelation(C1, C2)) {
-    default: llvm_unreachable("Unknown relational!");
-    case ICmpInst::BAD_ICMP_PREDICATE:
-      break;  // Couldn't determine anything about these constants.
-    case ICmpInst::ICMP_EQ:   // We know the constants are equal!
-      // If we know the constants are equal, we can decide the result of this
-      // computation precisely.
-      Result = ICmpInst::isTrueWhenEqual(Predicate);
-      break;
-    case ICmpInst::ICMP_ULT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_ULE:
-        Result = 1; break;
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_UGE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_SLT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SLE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SGE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_UGT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_UGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_ULE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_SGT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SLE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_ULE:
-      if (Predicate == ICmpInst::ICMP_UGT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_ULT || Predicate == ICmpInst::ICMP_ULE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_SLE:
-      if (Predicate == ICmpInst::ICMP_SGT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_SLT || Predicate == ICmpInst::ICMP_SLE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_UGE:
-      if (Predicate == ICmpInst::ICMP_ULT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_UGT || Predicate == ICmpInst::ICMP_UGE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_SGE:
-      if (Predicate == ICmpInst::ICMP_SLT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_SGT || Predicate == ICmpInst::ICMP_SGE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_NE:
-      if (Predicate == ICmpInst::ICMP_EQ)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_NE)
-        Result = 1;
-      break;
+    ICmpInst::Predicate RelPred = evaluateICmpRelation(C1, C2);
+    if (RelPred != ICmpInst::BAD_ICMP_PREDICATE) {
+      if (std::optional<bool> Res =
+              ICmpInst::isImpliedByMatchingCmp(RelPred, Predicate))
+        return ConstantInt::get(ResultTy, *Res);
     }
-
-    // If we evaluated the result, return it now.
-    if (Result != -1)
-      return ConstantInt::get(ResultTy, Result);
 
     if ((!isa<ConstantExpr>(C1) && isa<ConstantExpr>(C2)) ||
         (C1->isNullValue() && !C2->isNullValue())) {

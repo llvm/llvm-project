@@ -6,16 +6,16 @@ cir.func @loops(%c: !cir.bool) {
     cir.condition(%c)
   } do {
     cir.yield
-  // CHECK: } loop_hints < must_progress>
-  } loop_hints < must_progress>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
+  } loop_id distinct[2]<> loop_hints < must_progress>
 
   // CHECK: cir.do {
   cir.do {
     cir.yield
   } while {
     cir.condition(%c)
-  // CHECK: } loop_hints <>
-  } loop_hints <>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints <>
+  } loop_id distinct[3]<> loop_hints <>
 
   // CHECK: cir.for : cond {
   cir.for : cond {
@@ -24,8 +24,8 @@ cir.func @loops(%c: !cir.bool) {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
-  } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  } loop_id distinct[4]<> loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
 
   // CHECK: cir.for : cond {
   cir.for : cond {
@@ -34,7 +34,45 @@ cir.func @loops(%c: !cir.bool) {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
-  } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  } loop_id distinct[5]<> loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+
+  // A loop can have a loop_id without any loop_hints.
+  // CHECK: cir.while {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<>{{$}}
+  } loop_id distinct[6]<>
+
+  // CHECK: cir.for : cond {
+  cir.for : cond {
+    cir.condition(%c)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  // CHECK: } cleanup normal {
+  } cleanup normal {
+    cir.yield
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
+  } loop_id distinct[7]<> loop_hints < must_progress>
+  cir.return
+}
+
+cir.func @branches(%c: !cir.bool) {
+  // CHECK: cir.br ^bb1 loop_id distinct[[[ID0:[0-9]+]]]<> loop_hints < must_progress unroll_count = 4>
+  cir.br ^bb1 loop_id distinct[0]<> loop_hints < must_progress unroll_count = 4>
+^bb1:
+  // CHECK: cir.brcond %{{.*}} ^bb1, ^bb2 loop_id distinct[[[ID0]]]<> loop_hints < must_progress unroll_count = 4>
+  cir.brcond %c ^bb1, ^bb2 loop_id distinct[0]<> loop_hints < must_progress unroll_count = 4>
+^bb2:
+  // CHECK: cir.br ^bb3 loop_id distinct[[[ID1:[0-9]+]]]<>{{$}}
+  cir.br ^bb3 loop_id distinct[1]<>
+^bb3:
+  // CHECK: cir.brcond %{{.*}} ^bb3, ^bb4 loop_id distinct[[[ID1]]]<>{{$}}
+  cir.brcond %c ^bb3, ^bb4 loop_id distinct[1]<>
+^bb4:
   cir.return
 }

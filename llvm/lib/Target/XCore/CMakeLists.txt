@@ -11,6 +11,9 @@ tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM XCoreGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM XCoreGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS XCoreOptions.td)
+tablegen(LLVM XCoreOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(XCoreCommonTableGen)
 
 add_llvm_target(XCoreCodeGen
@@ -36,6 +39,7 @@ add_llvm_target(XCoreCodeGen
   CodeGenTypes
   Core
   MC
+  Option
   SelectionDAG
   Support
   Target

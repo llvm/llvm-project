@@ -928,7 +928,7 @@ let test_builder () =
 
   begin group "parent";
     insist (try
-              ignore (insertion_block (builder context));
+              ignore (insertion_block (builder m));
               false
             with Not_found ->
               true);

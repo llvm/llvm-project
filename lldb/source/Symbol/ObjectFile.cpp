@@ -66,10 +66,11 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 
   if (!extractor_sp || !extractor_sp->HasData()) {
     const bool file_exists = FileSystem::Instance().Exists(*file);
+    const bool module_has_name = !module_sp->GetObjectName().empty();
     // We have an object name which most likely means we have a .o file in
     // a static archive (.a file). Try and see if we have a cached archive
     // first without reading any data first
-    if (file_exists && module_sp->GetObjectName()) {
+    if (file_exists && module_has_name) {
       ObjectFileSP object_file_sp = CreateObjectFromContainer(
           module_sp, file, file_offset, file_size, DataBufferSP(), data_offset);
       if (object_file_sp)
@@ -103,8 +104,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
       file_size = FileSystem::Instance().GetByteSize(archive_file);
       if (file_size > 0) {
         file = &archive_file;
-        module_sp->SetFileSpecAndObjectName(archive_file,
-                                            ConstString(archive_object));
+        module_sp->SetFileSpecAndObjectName(archive_file, archive_object.str());
         // Check if this is a object container by iterating through all
         // object container plugin instances and then trying to get an
         // object file from the container plugins since we had a name.
@@ -824,9 +824,9 @@ uint32_t ObjectFile::GetCacheHash() {
 
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
-    if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(),
-                           object_name.GetString())
+    if (llvm::StringRef object_name = module_sp->GetObjectName();
+        !object_name.empty())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(), object_name)
           .str();
   return GetFileSpec().GetFilename().str();
 }

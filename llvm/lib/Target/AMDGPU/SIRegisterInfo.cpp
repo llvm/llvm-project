@@ -972,16 +972,16 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   if (ST.hasFlatScratchEnabled()) {
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
-        .addReg(OffsetReg, RegState::Kill)
+        .addReg(OffsetReg)
         .addReg(FIReg)
         .setOperandDead(3); // scc
     return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
-    .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg)
-    .addImm(0); // clamp bit
+      .addReg(OffsetReg)
+      .addReg(FIReg)
+      .addImm(0); // clamp bit
 
   return BaseReg;
 }

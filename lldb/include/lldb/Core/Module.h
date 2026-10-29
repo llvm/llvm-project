@@ -127,7 +127,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
+      std::string object_name = std::string(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -525,7 +525,7 @@ public:
 
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  ConstString GetObjectName() const;
+  llvm::StringRef GetObjectName() const;
 
   std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
     return m_memory_module_addr;
@@ -786,7 +786,7 @@ public:
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
-  void SetFileSpecAndObjectName(const FileSpec &file, ConstString object_name);
+  void SetFileSpecAndObjectName(const FileSpec &file, std::string object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -1076,7 +1076,7 @@ protected:
   FileSpec m_symfile_spec;   ///< If this path is valid, then this is the file
                              /// that _will_ be used as the symbol file for this
                              /// module
-  ConstString m_object_name; ///< The name an object within this module that is
+  std::string m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
   std::optional<lldb::addr_t>

@@ -7,6 +7,7 @@ add_object_library(
     file.h
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.func.free
     libc.hdr.stdio_macros
     libc.hdr.types.mode_t
     libc.hdr.sys_stat_macros

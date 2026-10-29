@@ -321,39 +321,46 @@ void RewriterBase::finalizeOpModification(Operation *op) {
 
 void RewriterBase::replaceAllUsesExcept(
     Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
-  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+  replaceUsesWithIf(from, to, [&](OpOperand &use) {
     Operation *user = use.getOwner();
     return !preservedUsers.contains(user);
   });
 }
 
-void RewriterBase::replaceUsesWithIf(Value from, Value to,
+bool RewriterBase::replaceUsesWithIf(Value from, Value to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
+  bool replaced = false;
   bool allReplaced = true;
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
     bool replace = functor(operand);
-    if (replace)
+    if (replace) {
       modifyOpInPlace(operand.getOwner(), [&]() { operand.set(to); });
+      replaced = true;
+    }
     allReplaced &= replace;
   }
   if (allUsesReplaced)
     *allUsesReplaced = allReplaced;
+  return replaced;
 }
 
-void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
+bool RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
   assert(from.size() == to.size() && "incorrect number of replacements");
+  bool replaced = false;
   bool allReplaced = true;
   for (auto it : llvm::zip_equal(from, to)) {
     bool r = true;
-    replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
+    replaced |=
+        replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
+                          /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
     allReplaced &= r;
   }
   if (allUsesReplaced)
     *allUsesReplaced = allReplaced;
+  return replaced;
 }
 
 void RewriterBase::inlineBlockBefore(Block *source, Block *dest,

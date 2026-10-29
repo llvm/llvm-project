@@ -15,7 +15,8 @@
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 4
+      "max-in-flight": 4,
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {
@@ -34,7 +35,8 @@
       "since": "2023-12-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 4
+      "max-in-flight": 4,
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {
@@ -53,7 +55,8 @@
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 8
+      "max-in-flight": 8,
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {

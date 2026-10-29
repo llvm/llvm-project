@@ -899,7 +899,7 @@ private:
     if (module.GetFileSpec().GetFilename().empty())
       return ModuleSP();
     llvm::StringRef name = module.GetFileSpec().GetFilename();
-    auto it = m_name_to_modules.find(ConstString(name));
+    auto it = m_name_to_modules.find(name);
     if (it == m_name_to_modules.end())
       return ModuleSP();
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -912,8 +912,7 @@ private:
 
   void FindModulesInMap(const ModuleSpec &module_spec,
                         ModuleList &matching_module_list) const {
-    auto it = m_name_to_modules.find(
-        ConstString(module_spec.GetFileSpec().GetFilename()));
+    auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
     if (it == m_name_to_modules.end())
       return;
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -927,12 +926,12 @@ private:
     llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
     if (name.empty())
       return;
-    m_name_to_modules[ConstString(name)].push_back(module_sp);
+    m_name_to_modules[name].push_back(module_sp);
   }
 
   void RemoveFromMap(const ModuleWP module_wp, bool if_orphaned = false) {
     if (auto module_sp = module_wp.lock()) {
-      ConstString name = ConstString(module_sp->GetFileSpec().GetFilename());
+      llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
       if (!m_name_to_modules.contains(name))
         return;
       llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
@@ -961,7 +960,7 @@ private:
     if (name.empty())
       return;
 
-    auto it = m_name_to_modules.find(ConstString(name));
+    auto it = m_name_to_modules.find(name);
     if (it == m_name_to_modules.end())
       return;
 
@@ -1023,7 +1022,7 @@ private:
 
   /// A hash map from a module's filename to all the modules that share that
   /// filename, for fast module lookups by name.
-  llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
+  llvm::StringMap<llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
 
   /// The use count of a module held only by m_list and m_name_to_modules.
   static constexpr long kUseCountSharedModuleListOrphaned = 2;

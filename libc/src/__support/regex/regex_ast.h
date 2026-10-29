@@ -55,6 +55,8 @@ enum class ExprKind : uint8_t {
   Concat,
   /// Alternation between two expressions (left or right).
   Alt,
+  /// Zero or more repetitions of a sub-expression (body*).
+  Star,
 };
 
 /// A node in the Regular Expression Abstract Syntax Tree.
@@ -79,6 +81,8 @@ struct Expr {
       ExprId left;
       ExprId right;
     } bin = {INVALID_EXPR_ID, INVALID_EXPR_ID};
+    /// Sub-expression for Star nodes.
+    ExprId body;
     /// Index into ExprPool::byte_sets for ByteSet nodes.
     uint32_t byte_set_id;
     /// Bitmask of AnchorKind flags for Anchor nodes.
@@ -101,6 +105,9 @@ private:
   constexpr Expr(uint32_t bs_id)
       : kind(ExprKind::ByteSet), nullable(false), has_anchors(false),
         byte_set_id(bs_id) {}
+  /// Create a Star node.
+  constexpr Expr(ExprId b, bool anchors)
+      : kind(ExprKind::Star), nullable(true), has_anchors(anchors), body(b) {}
   /// Create a binary node (Concat or Alt).
   constexpr Expr(ExprKind k, bool is_null, bool anchors, ExprId l, ExprId r)
       : kind(k), nullable(is_null), has_anchors(anchors), bin{l, r} {}
@@ -117,6 +124,9 @@ public:
   }
   static constexpr Expr make_anchor(uint8_t mask) { return Expr(mask); }
   static constexpr Expr make_byte_set(uint32_t bs_id) { return Expr(bs_id); }
+  static constexpr Expr make_star(ExprId b, bool anchors = false) {
+    return Expr(b, anchors);
+  }
   static constexpr Expr make_concat(ExprId l, ExprId r, bool is_null = false,
                                     bool anchors = false) {
     return Expr(ExprKind::Concat, is_null, anchors, l, r);
@@ -140,6 +150,8 @@ public:
       return anchor_mask == other.anchor_mask;
     case ExprKind::ByteSet:
       return byte_set_id == other.byte_set_id;
+    case ExprKind::Star:
+      return body == other.body;
     case ExprKind::Concat:
     case ExprKind::Alt:
       return bin.left == other.bin.left && bin.right == other.bin.right;

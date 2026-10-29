@@ -29,6 +29,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <winioctl.h>
+#include <winternl.h>
 
 #undef max
 
@@ -41,6 +42,32 @@ typedef int errno_t;
 #ifdef _MSC_VER
 #pragma comment(lib, "advapi32.lib") // This provides CryptAcquireContextW.
 #pragma comment(lib, "ole32.lib")    // This provides CoTaskMemFree
+#endif
+
+#ifndef __MINGW32__
+// The Windows SDK does not declare these types.
+// The WDK declares the types in `wdm.h` and `NtQueryVolumeInformationFile`
+// in `ntifs.h`.
+// MinGW-w64 declares all three in `winternl.h`.
+typedef enum _FSINFOCLASS { FileFsDeviceInformation = 4 } FS_INFORMATION_CLASS;
+
+typedef struct _FILE_FS_DEVICE_INFORMATION {
+  DEVICE_TYPE DeviceType;
+  ULONG Characteristics;
+} FILE_FS_DEVICE_INFORMATION;
+
+// Exported by `ntdll.dll`.
+extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
+    HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FsInformation,
+    ULONG Length, FS_INFORMATION_CLASS FsInformationClass);
+#endif
+
+// Defined only in `wdm.h` in WDK and MinGW-w64.
+#ifndef FILE_REMOVABLE_MEDIA
+#define FILE_REMOVABLE_MEDIA 0x00000001
+#endif
+#ifndef FILE_REMOTE_DEVICE
+#define FILE_REMOTE_DEVICE 0x00000010
 #endif
 
 using namespace llvm;
@@ -549,16 +576,31 @@ static std::error_code realPathFromHandle(HANDLE H,
   return std::error_code();
 }
 
+static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
+  // Fast path for the common case: an ordinary local disk, one system call on
+  // the handle. Everything else goes through the path-based check below.
+  IO_STATUS_BLOCK IoStatus;
+  FILE_FS_DEVICE_INFORMATION Info;
+  if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
+                                     FileFsDeviceInformation) >= 0 &&
+      (Info.DeviceType == FILE_DEVICE_DISK ||
+       Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+      !(Info.Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE))) {
+    Result = true;
+    return std::error_code();
+  }
+
+  SmallVector<wchar_t, 128> FinalPath;
+  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
+    return EC;
+  return is_local_internal(FinalPath, Result);
+}
+
 std::error_code is_local(int FD, bool &Result) {
   sandbox::violationIfEnabled();
 
-  SmallVector<wchar_t, 128> FinalPath;
   HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
-  return is_local_internal(FinalPath, Result);
+  return is_local_internal(Handle, Result);
 }
 
 static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
@@ -577,12 +619,8 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   // Check if the file is on a network (non-local) drive. If so, don't
   // continue when DeleteFile is true, since it prevents opening the file for
   // writes.
-  SmallVector<wchar_t, 128> FinalPath;
-  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
-    return EC;
-
   bool IsLocal;
-  if (std::error_code EC = is_local_internal(FinalPath, IsLocal))
+  if (std::error_code EC = is_local_internal(Handle, IsLocal))
     return EC;
 
   if (!IsLocal)
@@ -982,6 +1020,13 @@ std::error_code status(file_t FileHandle, file_status &Result) {
   return getStatus(FileHandle.get(), Result);
 }
 
+ErrorOr<uint64_t> file_size(file_t FileHandle) {
+  LARGE_INTEGER FileSize;
+  if (!::GetFileSizeEx(FileHandle.get(), &FileSize))
+    return mapLastWindowsError();
+  return FileSize.QuadPart;
+}
+
 unsigned getUmask() { return 0; }
 
 std::error_code setPermissions(const Twine &Path, perms Permissions) {
@@ -1172,12 +1217,9 @@ void mapped_file_region::unmapImpl() {
         // cases where we do the flushing. Only do the flushing if we aren't
         // sure we are on a local file system.
         bool IsLocal = false;
-        SmallVector<wchar_t, 128> FinalPath;
-        if (!realPathFromHandle(FileHandle.get(), FinalPath)) {
-          // Not checking the return value here - if the check fails, assume the
-          // file isn't local.
-          is_local_internal(FinalPath, IsLocal);
-        }
+        // Not checking the return value here - if the check fails, assume the
+        // file isn't local.
+        is_local_internal(FileHandle.get(), IsLocal);
         DoFlush = !IsLocal;
       }
       if (DoFlush)

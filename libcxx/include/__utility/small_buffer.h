@@ -14,7 +14,6 @@
 #include <__cstddef/size_t.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
-#include <__new/allocate.h>
 #include <__new/launder.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_trivially_constructible.h>
