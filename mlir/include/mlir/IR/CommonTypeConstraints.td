@@ -777,8 +777,6 @@ def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
 def AnyFixedVectorOfAnyRank : FixedVectorOfAnyRank<[AnyType]>;
 
-def AnyScalableVectorOfAnyRank : ScalableVectorOfAnyRank<[AnyType]>;
-
 def AnyScalableVectorOfRank1 : ScalableVectorOfRank1<[AnyType]>;
 
 // Shaped types.
