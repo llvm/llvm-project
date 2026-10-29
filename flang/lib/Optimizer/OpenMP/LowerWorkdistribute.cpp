@@ -986,7 +986,8 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
         /*member_index=*/mlir::ArrayAttr{},
         /*bounds=*/ValueRange(),
         /*mapperId=*/mlir::FlatSymbolRefAttr(),
-        /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false));
+        /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false),
+        rewriter.getBoolAttr(false));
   };
   // Create mapinfo ops.
   auto mapInfoFrom = getMapInfo(mlir::omp::ClauseMapFlags::from,

@@ -41,7 +41,7 @@ end subroutine TestOfCharacter
 !CHECK-SAME: stride(%[[CONST_ONE]] : index) start_idx(%[[CONST_ZERO]] : index) stride_in_bytes(true)
 !CHECK: %[[A1_BOX_ADDR:.*]] = fir.box_offset %[[A1_BOXCHAR_ALLOCA]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 !CHECK: %[[A1_BOXCHAR_MAP:.*]] = omp.map.info var_ptr(%[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to)
-!CHECK-SAME: capture(ByRef) var_ptr_ptr(%[[A1_BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[BOUNDS_A1_BOXCHAR]]) name("") -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+!CHECK-SAME: capture(ByRef) var_ptr_ptr(%[[A1_BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[BOUNDS_A1_BOXCHAR]]) name("") has_attach_ptr(true) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 !CHECK: %[[A1_BOXCHAR_MAP_2:.*]] = omp.map.info var_ptr(%[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>)
 !CHECK-SAME: map_clauses(always, implicit, to) capture(ByRef) members(%[[A1_BOXCHAR_MAP]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) name("") -> !fir.ref<!fir.boxchar<1>>
 !CHECK: %[[A1_BOXCHAR_MAP_3:.*]] = omp.map.info var_ptr(%[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) 
@@ -55,7 +55,7 @@ end subroutine TestOfCharacter
 !CHECK-SAME: stride(%[[CONST_ONE]] : index) start_idx(%[[CONST_ZERO]] : index) stride_in_bytes(true)
 !CHECK: %[[A0_BOX_ADDR:.*]] = fir.box_offset %[[A0_BOXCHAR_ALLOCA]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 !CHECK: %[[A0_BOXCHAR_MAP:.*]] = omp.map.info var_ptr(%[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to)
-!CHECK-SAME: capture(ByRef) var_ptr_ptr(%[[A0_BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%{{.*}}) name("") -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+!CHECK-SAME: capture(ByRef) var_ptr_ptr(%[[A0_BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%{{.*}}) name("") has_attach_ptr(true) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 !CHECK: %[[A0_BOXCHAR_MAP_2:.*]] = omp.map.info var_ptr(%[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, implicit, to)
 !CHECK-SAME: capture(ByRef) members(%[[A0_BOXCHAR_MAP]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) name("") -> !fir.ref<!fir.boxchar<1>>
 !CHECK: %[[A0_BOXCHAR_MAP_3:.*]] = omp.map.info var_ptr(%[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef)
@@ -67,4 +67,3 @@ end subroutine TestOfCharacter
 !CHECK:    %[[UNBOXED_TGT_A0:.*]]:2 = fir.unboxchar %[[TGT_A0_BC_LD]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK:    %[[TGT_A0_DECL:.*]]:2 = hlfir.declare %[[TGT_A0]] typeparams %[[UNBOXED_TGT_A0]]#1 {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 !CHECK:    %[[TGT_A1_DECL:.*]]:2 = hlfir.declare %[[TGT_A1]] typeparams %[[UNBOXED_TGT_A1]]#1 {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-
