@@ -1139,11 +1139,6 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // Classic codegen uses a special class to attempt to replace member
-  // initializers with memcpy. We could possibly defer that to the
-  // lowering or optimization phases to keep the memory accesses more
-  // explicit. For now, we don't insert memcpy at all, though in some
-  // cases the AST contains a call to memcpy.
   AssignmentMemcpyizer AM(*this, assignOp, args);
   for (auto *i : rootCS->body())
     AM.emitAssignment(i);
