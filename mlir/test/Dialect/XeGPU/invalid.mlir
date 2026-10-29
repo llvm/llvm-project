@@ -837,3 +837,27 @@ func.func @create_mem_desc_non_contiguous() {
   %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x32xf16, strided<[64, 1]>, 3> -> !xegpu.mem_desc<16x32xf16>
   return
 }
+
+// -----
+func.func @load_matrix_contiguity_too_small(%arg0: !xegpu.mem_desc<16x64xf16>) {
+  // expected-error@+1 {{contiguity = 1 (must be >= 2)}}
+  %data = xegpu.load_matrix %arg0[8, 8] <{contiguity = 1 : i64}>
+      : !xegpu.mem_desc<16x64xf16> -> vector<8x16xf16>
+  return
+}
+
+// -----
+func.func @store_matrix_contiguity_does_not_divide(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<8x12xf16>) {
+  // expected-error@+1 {{contiguity = 8 (must divide the innermost data dim 12)}}
+  xegpu.store_matrix %arg1, %arg0[8, 8] <{contiguity = 8 : i64}>
+      : vector<8x12xf16>, !xegpu.mem_desc<16x64xf16>
+  return
+}
+
+// -----
+func.func @load_matrix_contiguity_scalar(%arg0: !xegpu.mem_desc<16x64xf16>) {
+  // expected-error@+1 {{contiguity requires a vector payload.}}
+  %data = xegpu.load_matrix %arg0[8, 8] <{contiguity = 2 : i64}>
+      : !xegpu.mem_desc<16x64xf16> -> f16
+  return
+}

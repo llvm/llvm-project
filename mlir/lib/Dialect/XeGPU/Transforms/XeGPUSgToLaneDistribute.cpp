@@ -789,7 +789,7 @@ struct SgToLaneLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
     auto newOp = xegpu::LoadMatrixOp::create(
         rewriter, loc, *distPayloadTyOrFailure, adaptor.getMemDesc(),
         ValueRange(newCoords), newConstOffsetsAttr, op.getSubgroupBlockIoAttr(),
-        xegpu::DistributeLayoutAttr{});
+        xegpu::DistributeLayoutAttr{}, /*contiguity=*/nullptr);
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
@@ -1095,7 +1095,8 @@ struct SgToLaneStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
         castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getData()),
                     distPayloadTyOrFailure.value()),
         adaptor.getMemDesc(), ValueRange(newCoords), newConstOffsetsAttr,
-        op.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
+        op.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{},
+        /*contiguity=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }
@@ -2072,7 +2073,8 @@ struct SgToLaneConvertLayoutViaSLM
             SmallVector<int64_t>(rank, 1));
       xegpu::StoreMatrixOp::create(rewriter, loc, TypeRange{}, data, memDesc,
                                    ValueRange(withBase(coords)), dynamicOffsets,
-                                   nullptr, xegpu::DistributeLayoutAttr{});
+                                   nullptr, xegpu::DistributeLayoutAttr{},
+                                   /*contiguity=*/nullptr);
     }
 
     // The scratch is only exchanged between the lanes of one subgroup, which is
@@ -2101,7 +2103,8 @@ struct SgToLaneConvertLayoutViaSLM
       auto pieceTy = VectorType::get(piece.sizes, elemTy);
       Value loaded = xegpu::LoadMatrixOp::create(
           rewriter, loc, pieceTy, memDesc, ValueRange(withBase(coords)),
-          dynamicOffsets, nullptr, xegpu::DistributeLayoutAttr{});
+          dynamicOffsets, nullptr, xegpu::DistributeLayoutAttr{},
+          /*contiguity=*/nullptr);
       if (!result) {
         result = loaded;
         break;

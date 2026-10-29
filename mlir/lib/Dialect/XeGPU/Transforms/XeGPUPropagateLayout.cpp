@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
@@ -35,6 +36,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1250,8 +1252,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     return;
   VectorType resVecTy = load.getValueType();
   // `contiguity` says how many neighbouring elements one lane may take in a
-  // single access. Absent, only one element per lane is safe.
-  int contigChunkSize = load.getContiguity().value_or(1);
+  // single access. Absent, only one element per lane is safe. The lowering
+  // gates a lane's whole access on one mask bit, so a mask that is not uniform
+  // also limits the access to one element.
+  int contigChunkSize = xegpu::isUniformMask(load.getMask())
+                            ? load.getContiguity().value_or(1)
+                            : 1;
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1301,6 +1307,70 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
+/// Returns the innermost lane_data of the op whose result layout the hardware
+/// fixes and from which `value` is computed through elementwise ops only, or
+/// std::nullopt when there is no such op. Those ops are `dpas`, `dpas_mx`, and
+/// `load_nd`. Other producers, such as broadcasts, reductions, and gather or
+/// matrix loads, can take the layout a consumer asks for, so the walk stops
+/// there.
+///
+/// The lane_data is the op's anchor layout when it has one. Otherwise it is
+/// the native one: 1 for a `dpas` / `dpas_mx` result, and for a plain
+/// `load_nd` the elements one lane packs into the block load's packed format
+/// (2 for an 8-bit type). Several such ops give the gcd of their lane_data.
+///
+/// A store picks its lane_data before propagation reaches the producer. Any
+/// lane_data other than the producer's adds a lane_data repack across lanes on
+/// the producer's result.
+static std::optional<int64_t>
+getFixedProducerLaneData(Value value, const xegpu::uArch::uArch *uArch) {
+  std::optional<int64_t> laneData;
+  auto record = [&](int64_t data) {
+    laneData = laneData ? std::gcd(*laneData, data) : data;
+  };
+  SmallVector<Value> worklist{value};
+  llvm::SmallPtrSet<Operation *, 8> visited;
+  while (!worklist.empty()) {
+    Operation *def = worklist.pop_back_val().getDefiningOp();
+    if (!def || !visited.insert(def).second)
+      continue;
+    if (isa<xegpu::DpasOp, xegpu::DpasMxOp, xegpu::LoadNdOp>(def)) {
+      xegpu::DistributeLayoutAttr anchor =
+          cast<xegpu::AnchorLayoutInterface>(def).getAnchorLayout();
+      SmallVector<int64_t> anchorLaneData =
+          anchor ? anchor.getEffectiveLaneDataAsInt() : SmallVector<int64_t>{};
+      if (!anchorLaneData.empty()) {
+        record(anchorLaneData.back());
+        continue;
+      }
+      auto load = dyn_cast<xegpu::LoadNdOp>(def);
+      if (!load || load.getPacked() || load.getTranspose()) {
+        record(1);
+        continue;
+      }
+      const auto *uArchInstruction =
+          dyn_cast_if_present<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+      unsigned bitWidth =
+          load.getType().getElementType().getIntOrFloatBitWidth();
+      record(uArchInstruction
+                 ? std::max<int64_t>(
+                       1, llvm::divideCeil(
+                              uArchInstruction->getPackedFormatBitSize(),
+                              bitWidth))
+                 : 1);
+      continue;
+    }
+    if (!OpTrait::hasElementwiseMappableTraits(def))
+      continue;
+    for (Value operand : def->getOperands())
+      if (isa<VectorType>(operand.getType()))
+        worklist.push_back(operand);
+  }
+  return laneData;
+}
+
 /// Set the layout for the value, tensor descriptor, offset and mask operands
 /// in the StoreScatterOp.
 void LayoutInfoPropagation::visitStoreScatterOp(
@@ -1315,8 +1385,18 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     return;
   VectorType srcVecTy = storeScatter.getValueType();
   // `contiguity` says how many neighbouring elements one lane may write in a
-  // single access. Absent, only one element per lane is safe.
-  int contigChunkSize = storeScatter.getContiguity().value_or(1);
+  // single access. Absent, only one element per lane is safe. The lowering
+  // gates a lane's whole access on one mask bit, so a mask that is not uniform
+  // also limits the access to one element.
+  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask())
+                            ? storeScatter.getContiguity().value_or(1)
+                            : 1;
+  // Match a fixed-layout producer (see `getFixedProducerLaneData`). Runs of
+  // gcd(contiguity, its lane_data) are still contiguous, and they make the
+  // store take the producer's lane_data when the runs allow it.
+  if (std::optional<int64_t> producerLaneData =
+          getFixedProducerLaneData(storeScatter.getValue(), uArch))
+    contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1393,10 +1473,11 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
         xegpu::uArch::getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
-    int chunkSize =
-        1; // placeHolder for future use when LoadMatrix supports coalescing
+    // `contiguity` says how many neighbouring elements one lane may take in a
+    // single access. Absent, only one element per lane is safe.
+    int contigChunkSize = loadMatrixOp.getContiguity().value_or(1);
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
-        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
+        layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr, uArch);
     loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 }
@@ -1433,14 +1514,19 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
       storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
-    int chunkSize =
-        1; // placeHolder for future use when StoreMatrix supports coalescing
+    // `contiguity` says how many neighbouring elements one lane may write in a
+    // single access. Absent, only one element per lane is safe. Match a
+    // fixed-layout producer the same way as `visitStoreScatterOp` does.
+    int contigChunkSize = storeMatrix.getContiguity().value_or(1);
+    if (std::optional<int64_t> producerLaneData =
+            getFixedProducerLaneData(storeMatrix.getData(), uArch))
+      contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
     auto numSgOrErr =
         getNumSgOrFail(storeMatrix, uArch->getSubgroupSize(), nullptr);
     if (failed(numSgOrErr))
       return;
     requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+        layoutKind, srcVecTy, contigChunkSize, numSgOrErr.value_or(0), uArch);
     if (!requiredAnchorLayoutAttr) {
       markFailure(storeMatrix,
                   "Failed to determine required layout for store matrix.");
@@ -2017,6 +2103,11 @@ struct XeGPUPropagateLayoutPass final
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                       LayoutKind layoutKind,
                                       unsigned indexBitWidth, bool printOnly) {
+  // The memory op visitors turn `contiguity` into `lane_data`, so stamp it
+  // first. Only the inst_data and lane levels pick `lane_data`; the subgroup
+  // level does not need it.
+  if (layoutKind != LayoutKind::Subgroup)
+    runContiguityAnalysis(target);
   RunLayoutInfoPropagation analysis(target, layoutKind, indexBitWidth);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
