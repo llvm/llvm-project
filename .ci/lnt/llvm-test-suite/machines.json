@@ -14,7 +14,7 @@
     "setup": {
       "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
       "xcode-version": "26.6",
-      "llvm-cmake-cache": ".ci/lnt/llvm-test-suite/clang.cmake",
+      "llvm-cmake-cache": ".ci/lnt/llvm-test-suite/clang-macos.cmake",
       "test-suite-version": "747a71e6f80c2cf82e63e64e10539eb235855a66",
       "run-test-suite-args": ["-C", "O3", "--benchmarking-only", "--build-threads", "8"]
     }
