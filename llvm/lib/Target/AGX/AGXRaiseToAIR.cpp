@@ -73,7 +73,8 @@ static cl::opt<std::string> KeepHints(
 
 #define DEBUG_TYPE "agx-raise-to-air"
 
-#include "AGXAIRSoftF64.inc"
+// The soft-f64 library, which the AIR target owns (air-emulate-f64).
+#include "../AIR/AIRSoftF64.inc"
 
 namespace {
 Constant *doubleBits(Constant *C);

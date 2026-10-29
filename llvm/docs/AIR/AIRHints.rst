@@ -59,8 +59,8 @@ it can from that AIR on its own (``recoverAGXOperations`` in
 worth much more than its AIR form and cannot recover it from that form.
 
 * Double precision arithmetic, compares, conversions, ``sqrt``, ``fma``,
-  min / max, rounding: ``soft_f64.c`` (``AGXAIRSoftF64.inc``), doubles as
-  ``i64``. AGX compiles the library (faster than its own software f64 on the
+  min / max, rounding: ``soft_f64.c`` (the AIR target's ``AIRSoftF64.inc``),
+  doubles as ``i64``. AGX compiles the library (faster than its own software f64 on the
   PTX tests, -0.25% geomean; ``ddot`` +11% cycles).
 * Constrained floating point (dynamic rounding, ``.rz``, ``.ftz``): to
   nearest, the AIR operation; directed, ``soft_f64.c``'s ``_r`` functions;
