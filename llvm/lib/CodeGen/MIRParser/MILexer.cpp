@@ -301,6 +301,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
+      .Case("label-must-be-emitted", MIToken::kw_label_must_be_emitted)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("max-bytes-for-alignment", MIToken::kw_max_bytes_for_alignment)
       .Case("noconvergent", MIToken::kw_noconvergent)
