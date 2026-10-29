@@ -66,7 +66,7 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invoke_in_subprocess(cpp::function<void(void)> func,
+ProcessStatus invoke_in_subprocess(cpp::function_ref<void(void)> func,
                                    int timeout_ms) {
   int pipe_fds[2];
   if (LIBC_IMPL::pipe(pipe_fds) == -1)
