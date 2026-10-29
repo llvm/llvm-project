@@ -9,6 +9,8 @@
 ; Each case is a complete module with one invalid SV_PrimitiveID declaration.
 
 ;--- signed.ll
+; The component type is 4 (I32), a signed 32-bit integer. Clang always emits an
+; unsigned component type (U16 or U32) for SV_PrimitiveID, so I32 is rejected.
 ; CHECK-SIGNED: SV_PrimitiveID requires a scalar 16- or 32-bit unsigned integer
 target triple = "dxil-pc-shadermodel6.0-pixel"
 define void @main() #0 { ret void }
