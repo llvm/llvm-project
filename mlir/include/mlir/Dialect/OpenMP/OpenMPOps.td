@@ -1444,7 +1444,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<FlatSymbolRefAttr>:$mapper_id,
                        OptionalAttr<StrAttr>:$name,
-                       DefaultValuedAttr<BoolAttr, "false">:$partial_map);
+                       DefaultValuedAttr<BoolAttr, "false">:$partial_map,
+                       DefaultValuedAttr<BoolAttr, "false">:$has_attach_ptr);
   let results = (outs OpenMP_PointerLikeType:$omp_ptr);
 
   let description = [{
@@ -1507,6 +1508,9 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     - `name`: Holds the name of variable as specified in user clause (including bounds).
     - `partial_map`: The record type being mapped will not be mapped in its entirety,
        it may be used however, in a mapping to bind it's mapped components together.
+    - `has_attach_ptr`: Whether this map entry describes storage reached through
+       an attach pointer and has a companion ATTACH entry linking that pointer to
+       this pointee storage. This is not set on the ATTACH entry itself.
   }];
 
   let assemblyFormat = [{
@@ -1520,6 +1524,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
       | `bounds` `(` $bounds `)`
       | `name` `(` $name `)`
       | `partial_map` `(` $partial_map `)`
+      | `has_attach_ptr` `(` $has_attach_ptr `)`
     ) `->` type($omp_ptr) attr-dict
   }];
 
