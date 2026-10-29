@@ -16,6 +16,7 @@
 
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -281,7 +282,8 @@ public:
       : DT(DT), TTI(TTI),
         ScalarizeVariableInsertExtract(Options.ScalarizeVariableInsertExtract),
         ScalarizeLoadStore(Options.ScalarizeLoadStore),
-        ScalarizeMinBits(Options.ScalarizeMinBits) {}
+        ScalarizeMinBits(Options.ScalarizeMinBits),
+        ScalarizeOpcodes(std::move(Options.ScalarizeOpcodes)) {}
 
   bool visit(Function &F);
 
@@ -334,6 +336,7 @@ private:
   const bool ScalarizeVariableInsertExtract;
   const bool ScalarizeLoadStore;
   const unsigned ScalarizeMinBits;
+  const SmallVector<unsigned, 4> ScalarizeOpcodes;
 };
 
 class ScalarizerLegacyPass : public FunctionPass {
@@ -463,7 +466,9 @@ bool ScalarizerVisitor::visit(Function &F) {
   for (BasicBlock *BB : RPOT) {
     for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
       Instruction *I = &*II;
-      bool Done = InstVisitor::visit(I);
+      bool Done = (ScalarizeOpcodes.empty() ||
+                   is_contained(ScalarizeOpcodes, I->getOpcode())) &&
+                  InstVisitor::visit(I);
       ++II;
       if (Done && I->getType()->isVoidTy()) {
         I->eraseFromParent();
@@ -1141,8 +1146,12 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
       return false;
   }
+  // Only reuse fragments from a call that was actually scalarized.
+  auto It = Scattered.find({Op, VS->SplitTy});
+  if (It == Scattered.end())
+    return false;
+  const ValueVector &Op0 = It->second;
   IRBuilder<> Builder(&EVI);
-  Scatterer Op0 = scatter(&EVI, Op, *VS);
   assert(!EVI.getIndices().empty() && "Make sure an index exists");
   // Note for our use case we only care about the top level index.
   unsigned Index = EVI.getIndices()[0];
