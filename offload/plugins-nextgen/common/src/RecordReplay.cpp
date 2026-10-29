@@ -8,11 +8,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PluginInterface.h"
+#include "RecordReplay.h"
 
+#include "device.h"
+
+#include "OmpAccError.h"
 #include "Shared/APITypes.h"
-
-#include "ErrorReporting.h"
+#include "Shared/Debug.h"
 #include "Shared/Utils.h"
 
 #include "llvm/Support/Error.h"
@@ -26,8 +28,16 @@
 using namespace llvm;
 using namespace omp;
 using namespace target;
-using namespace plugin;
-using namespace error;
+using namespace rr;
+using namespace llvm::omp::target::error;
+
+namespace llvm::offload::tmp {
+void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device);
+Expected<void *> __ol_tgt_AllocWithVirtualAddress(ol_device_handle_t Device,
+                                                  uint64_t Size, void *VAddr);
+Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
+                                         uint64_t Size);
+} // namespace llvm::offload::tmp
 
 RecordReplayTy::InstanceTy::InstanceTy(const KernelInfoTy &Kernel,
                                        uint32_t NumTeams, uint32_t NumThreads,
@@ -41,22 +51,36 @@ RecordReplayTy::InstanceTy::InstanceTy(const KernelInfoTy &Kernel,
                           (stable_hash)SharedMemorySize);
 }
 
+Error RecordReplayTy::retrieveFromDevice(void *HstPtr, void *TgtPtr,
+                                         uint64_t Size) {
+  // Copy synchronously and directly, so the snapshot is not visible to tools
+  // as a program data transfer.
+  if (auto Res = olMemcpy(/*Queue=*/nullptr, HstPtr, /*DstDevice=*/nullptr,
+                          TgtPtr, Device.DeviceHandle, Size))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to retrieve %" PRIu64 " bytes from device: %s",
+                       Size, Res->Details);
+  return Error::success();
+}
+
 Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
   if (!VAddr && isReplaying())
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "VAddr cannot be null when replaying");
+    return createError(ErrorCode::InvalidValue,
+                       "VAddr cannot be null when replaying");
   if (!VAddr)
-    VAddr = Device.getSuggestedVirtualAddress();
+    VAddr = llvm::offload::tmp::__ol_tgt_GetSuggestedVirtualAddress(
+        Device.DeviceHandle);
 
-  auto StartAddrOrErr = Device.allocateWithVirtualAddress(MemSize, VAddr);
+  auto StartAddrOrErr = llvm::offload::tmp::__ol_tgt_AllocWithVirtualAddress(
+      Device.DeviceHandle, MemSize, VAddr);
   if (!StartAddrOrErr)
     return StartAddrOrErr.takeError();
 
   if (!*StartAddrOrErr)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES, "allocating memory");
+    return createError(ErrorCode::BackendFailure, "allocating memory");
   if (isReplaying() && *StartAddrOrErr != VAddr)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "could not reserve recorded virtual address");
+    return createError(ErrorCode::InvalidValue,
+                       "could not reserve recorded virtual address");
 
   StartAddr = *StartAddrOrErr;
   TotalSize = MemSize;
@@ -65,15 +89,15 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
   std::error_code EC;
   std::filesystem::create_directories(OutputDirectory, EC);
   if (EC)
-    return Plugin::error(ErrorCode::HOST_IO, "creating output directory");
+    return createError(ErrorCode::BackendFailure, "creating output directory");
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.DeviceID,
        "%s initialized with starting address %p, "
        "memory size %" PRIu64 " bytes, and output directory in %s\n",
        Status == StatusTy::Recording ? "Record" : "Replay", StartAddr,
        TotalSize, OutputDirectory.string().c_str());
 
-  return Plugin::success();
+  return Error::success();
 }
 
 Error RecordReplayTy::deinit() {
@@ -82,9 +106,10 @@ Error RecordReplayTy::deinit() {
       return Err;
 
   if (StartAddr)
-    return Device.deallocateWithVirtualAddress(StartAddr, TotalSize);
+    return llvm::offload::tmp::__ol_tgt_DeallocWithVirtualAddress(
+        Device.DeviceHandle, StartAddr, TotalSize);
 
-  return Plugin::success();
+  return Error::success();
 }
 
 Error RecordReplayTy::emitInstanceReport() {
@@ -98,7 +123,7 @@ Error RecordReplayTy::emitInstanceReport() {
     std::error_code EC;
     FileOut = std::make_unique<llvm::raw_fd_ostream>(ReportFilepath, EC);
     if (EC)
-      return Plugin::error(ErrorCode::HOST_IO, "saving report file");
+      return createError(ErrorCode::BackendFailure, "saving report file");
     OutStream = FileOut.get();
   }
 
@@ -117,7 +142,7 @@ Error RecordReplayTy::emitInstanceReport() {
         << Inst->Occurrences << "\n";
   *OutStream << "=== End Kernel Record Report ===\n";
 
-  return Plugin::success();
+  return Error::success();
 }
 
 std::pair<const RecordReplayTy::InstanceTy &, bool>
@@ -145,7 +170,7 @@ Error RecordReplayTy::unregisterInstance(const InstanceTy &Instance) {
   // Do not remove it, it may be reused in the future.
   std::lock_guard<std::mutex> LG(InstancesLock);
   Instance.Occurrences = 0;
-  return Plugin::success();
+  return Error::success();
 }
 
 Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
@@ -156,14 +181,14 @@ Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
 
   std::lock_guard<std::mutex> LG(AllocationLock);
   if (CurrentSize + AlignedSize > TotalSize)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "run out of record replay memory");
+    return createError(ErrorCode::BackendFailure,
+                       "run out of record replay memory");
   void *Alloc = (char *)StartAddr + CurrentSize;
   CurrentSize += AlignedSize;
   return Alloc;
 }
 
-Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
+Error RecordReplayTy::deallocate(void *Ptr) { return Error::success(); }
 
 Expected<RecordReplayTy::HandleTy>
 RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
@@ -197,7 +222,7 @@ RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
 Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
                                      HandleTy Handle) {
   if (!Handle.Active)
-    return Plugin::success();
+    return Error::success();
 
   // Stop the timer for the kernel execution.
   const InstanceTy &Instance = *Handle.Instance;
@@ -215,7 +240,7 @@ Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
   if (isReplaying())
     return unregisterInstance(Instance);
 
-  return Plugin::success();
+  return Error::success();
 }
 
 void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
@@ -263,7 +288,7 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
   JsonKernelInfo["LoopTripCount"] = RecordArgs.Tripcount;
-  JsonKernelInfo["DeviceId"] = Device.getDeviceId();
+  JsonKernelInfo["DeviceId"] = Device.RTLDeviceID;
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
@@ -298,10 +323,10 @@ Error NativeRecordReplayTy::recordDescImpl(
   std::error_code EC;
   raw_fd_ostream JsonOS(JsonFilename.c_str(), EC);
   if (EC)
-    return Plugin::error(ErrorCode::HOST_IO, "saving kernel json file");
+    return createError(ErrorCode::BackendFailure, "saving kernel json file");
   JsonOS << json::Value(std::move(JsonKernelInfo));
   JsonOS.close();
-  return Plugin::success();
+  return Error::success();
 }
 
 StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
@@ -343,22 +368,23 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   if (RecordSize) {
     DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
     if (!DeviceMB)
-      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                           "creating MemoryBuffer for device memory");
+      return createError(ErrorCode::BackendFailure,
+                         "creating MemoryBuffer for device memory");
 
-    if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
-                                       RecordSize, nullptr))
+    if (auto Err = retrieveFromDevice(DeviceMB->getBufferStart(), StartAddr,
+                                      RecordSize))
       return Err;
   }
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
-    return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
+    return createError(ErrorCode::BackendFailure,
+                       "saving memory snapshot file");
   if (DeviceMB)
     OS.write(DeviceMB->getBufferStart(), RecordSize);
   OS.close();
-  return Plugin::success();
+  return Error::success();
 }
 
 Error NativeRecordReplayTy::recordImage(const KernelInfoTy &Kernel,
@@ -367,19 +393,19 @@ Error NativeRecordReplayTy::recordImage(const KernelInfoTy &Kernel,
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
-    return Plugin::error(ErrorCode::HOST_IO, "saving image file");
+    return createError(ErrorCode::BackendFailure, "saving image file");
   OS << Kernel.getImage().getBuffer();
   OS.close();
 
   if (!IRImageFilename.empty() && Kernel.hasIRImage()) {
     raw_fd_ostream IROS(IRImageFilename, EC);
     if (EC)
-      return Plugin::error(ErrorCode::HOST_IO, "saving IR image file");
+      return createError(ErrorCode::BackendFailure, "saving IR image file");
     IROS << Kernel.getIRImage().getBuffer();
     IROS.close();
   }
 
-  return Plugin::success();
+  return Error::success();
 }
 
 Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
@@ -403,8 +429,8 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
 
   auto GlobalsMB = WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
   if (!GlobalsMB)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "creating MemoryBuffer for globals memory");
+    return createError(ErrorCode::BackendFailure,
+                       "creating MemoryBuffer for globals memory");
 
   void *BufferPtr = GlobalsMB->getBufferStart();
   *((uint32_t *)(BufferPtr)) = NumGlobals;
@@ -424,8 +450,7 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
     memcpy(BufferPtr, Global.Name.data(), NameLength);
     BufferPtr = utils::advancePtr(BufferPtr, NameLength);
 
-    if (auto Err =
-            Device.dataRetrieve(BufferPtr, Global.Addr, Global.Size, nullptr))
+    if (auto Err = retrieveFromDevice(BufferPtr, Global.Addr, Global.Size))
       return Err;
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
@@ -439,5 +464,5 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
   raw_fd_ostream OS(Filename, EC);
   OS.write(GlobalsMB->getBufferStart(), TotalSize);
   OS.close();
-  return Plugin::success();
+  return Error::success();
 }

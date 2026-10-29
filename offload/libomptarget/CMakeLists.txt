@@ -15,6 +15,7 @@ add_library(omptarget SHARED
   OpenMP/OMPT/Callback.cpp
 
   ${LIBOMPACCSUPPORT_SOURCES}
+  ../plugins-nextgen/common/src/RecordReplay.cpp
 
   KernelLanguage/API.cpp
 )
