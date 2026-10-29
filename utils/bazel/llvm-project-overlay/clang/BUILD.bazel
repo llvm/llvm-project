@@ -2011,6 +2011,7 @@ builtin_headers = glob(
     "lib/Headers/cuda_wrappers/algorithm",
     "lib/Headers/cuda_wrappers/complex",
     "lib/Headers/cuda_wrappers/new",
+    "lib/Headers/meta",
     "lib/Headers/module.modulemap",
     "lib/Headers/openmp_wrappers/cmath",
     "lib/Headers/openmp_wrappers/complex",
