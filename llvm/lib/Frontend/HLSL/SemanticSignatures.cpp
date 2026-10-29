@@ -168,9 +168,7 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
          SemanticInterpretation::NotAllocated},
         {Triple::Geometry, IOType::In, SemanticInterpretation::NotAllocated},
         {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
-        {Triple::Mesh, InOrPatchConstant, SemanticInterpretation::NotAllocated},
-        {Triple::Amplification, IOType::In,
-         SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, IOType::In, SemanticInterpretation::NotAllocated},
     };
     return Stages;
   }

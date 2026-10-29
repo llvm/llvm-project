@@ -639,8 +639,28 @@ void EntrySignature::buildSignatures(mcdxbc::Signature &Input,
   buildSignature(Output, Outputs, false, UseNative16Bit, Legacy);
 }
 
+SmallVector<uint32_t> EntrySignature::getViewIDOutputMask() const {
+  // Each output vector needs four component bits, so one 32-bit word holds
+  // eight vectors. Conservatively mark every written output component as
+  // dependent on the view ID, matching the conservative input/output map.
+  SmallVector<uint32_t> Mask((OutputVectors + 7) / 8, 0);
+  for (const auto &Output : Outputs) {
+    if (!Output.isAllocated())
+      continue;
+    for (unsigned R = 0; R != Output.Rows; ++R)
+      for (unsigned C = 0; C != 4; ++C) {
+        if (!(Output.UsageMask & (1U << C)))
+          continue;
+        unsigned Bit = (Output.StartRow + R) * 4 + C;
+        Mask[Bit / 32] |= 1U << (Bit % 32);
+      }
+  }
+  return Mask;
+}
+
 void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
-                               VersionTuple ValidatorVersion) const {
+                               VersionTuple ValidatorVersion,
+                               bool UsesViewID) const {
   bool Legacy = !ValidatorVersion.empty() &&
                 ValidatorVersion != VersionTuple(0, 0) &&
                 ValidatorVersion < VersionTuple(1, 5);
@@ -649,6 +669,8 @@ void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
   PSV.BaseData.SigInputVectors = InputVectors;
   PSV.BaseData.SigOutputVectors[0] = OutputVectors;
   PSV.InputOutputMap[0] = InputOutputMap;
+  if (UsesViewID)
+    PSV.OutputVectorMasks[0] = getViewIDOutputMask();
   if (Stage == Triple::Vertex)
     PSV.BaseData.StageInfo.VS.OutputPositionPresent =
         llvm::any_of(Outputs, [](const auto &E) {
@@ -664,8 +686,11 @@ void EntrySignature::updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
         });
 }
 
-SmallVector<uint32_t> EntrySignature::getDependencyState() const {
+SmallVector<uint32_t>
+EntrySignature::getDependencyState(bool UsesViewID) const {
   SmallVector<uint32_t> State = {InputVectors * 4, OutputVectors * 4};
+  if (UsesViewID)
+    llvm::append_range(State, getViewIDOutputMask());
   llvm::append_range(State, InputOutputMap);
   return State;
 }

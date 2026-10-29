@@ -1478,6 +1478,16 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def ViewID : DXILOp<138, viewID> {
+  let Doc = "returns the view index";
+  let intrinsics = [IntrinSelect<int_dx_view_id>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_1, [Int32Ty]>];
+  let stages =
+      [Stages<DXIL1_1, [vertex, hull, domain, geometry, pixel, mesh]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def RawBufferLoad : DXILOp<139, rawBufferLoad> {
   let Doc = "reads from a raw buffer and structured buffer";
   // Handle, Coord0, Coord1, Mask, Alignment

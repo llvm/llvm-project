@@ -77,7 +77,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::Barycentrics,
                                            SemanticKind::StartVertexLocation,
                                            SemanticKind::StartInstanceLocation,
-                                           SemanticKind::SampleIndex};
+                                           SemanticKind::SampleIndex,
+                                           SemanticKind::ViewID};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -200,6 +201,26 @@ TEST(HLSLSemanticStagesTest, SampleIndexSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked},
   };
   expectOnlySignaturePoints(SemanticKind::SampleIndex, Valid);
+}
+
+// SV_ViewID is read with a dedicated operation and is never placed in a
+// signature. Valid on the inputs of every graphics stage that consumes it,
+// including hull and domain patch constants, but not on amplification shader
+// inputs, mesh shader primitive outputs, or any output.
+TEST(HLSLSemanticStagesTest, ViewIDSignaturePoints) {
+  constexpr SemanticInterpretation NotAllocated =
+      SemanticInterpretation::NotAllocated;
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, NotAllocated},
+      {Triple::Hull, IOType::In, NotAllocated},
+      {Triple::Hull, IOType::PatchConstantOrPrimitive, NotAllocated},
+      {Triple::Domain, IOType::In, NotAllocated},
+      {Triple::Domain, IOType::PatchConstantOrPrimitive, NotAllocated},
+      {Triple::Geometry, IOType::In, NotAllocated},
+      {Triple::Pixel, IOType::In, NotAllocated},
+      {Triple::Mesh, IOType::In, NotAllocated},
+  };
+  expectOnlySignaturePoints(SemanticKind::ViewID, Valid);
 }
 
 } // namespace

@@ -1103,7 +1103,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.1.
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    addAvailableCaps({Capability::DrawParameters});
+    addAvailableCaps({Capability::DrawParameters, Capability::MultiView});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1179,6 +1179,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       addCoreInSPIRV13Capability(
           Reqs, ST, SPIRV::Capability::DrawParameters,
           SPIRV::Extension::SPV_KHR_shader_draw_parameters);
+      break;
+    case SPIRV::BuiltIn::ViewIndex:
+      addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
+                                 SPIRV::Extension::SPV_KHR_multiview);
       break;
     default:
       Reqs.addRequirements(getSymbolicOperandRequirements(

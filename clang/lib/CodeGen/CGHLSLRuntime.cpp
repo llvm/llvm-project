@@ -1734,6 +1734,21 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return SampleIndex;
     }
     break;
+  case llvm::dxbc::PSV::SemanticKind::ViewID:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Pixel, llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_ViewID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* ViewIndex */ 4440, InterpMode);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_view_id));
+    break;
   case llvm::dxbc::PSV::SemanticKind::StartInstanceLocation:
     assert(Stage == llvm::Triple::Vertex &&
            "SV_StartInstanceLocation is in an unavailable stage and should "
