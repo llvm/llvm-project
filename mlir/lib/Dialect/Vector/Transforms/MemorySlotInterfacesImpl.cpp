@@ -51,7 +51,7 @@ isTransferSlotAccess(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   return blockingUses.size() == 1 &&
          (*blockingUses.begin())->get() == slot.ptr &&
-         xferOp.getBase() == slot.ptr && isa<MemRefType>(slot.ptr.getType());
+         xferOp.getBase() == slot.ptr;
 }
 
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
