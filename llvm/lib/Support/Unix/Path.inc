@@ -1174,7 +1174,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
       if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
-        int ccsid = CCSID_IBM_1047;
+        int ccsid = (Flags & OF_ForceUTF8) ? CCSID_UTF_8 : CCSID_IBM_1047;
         if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
           ccsid = Stat.st_tag.ft_ccsid;
         if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))

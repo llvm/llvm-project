@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -125,8 +126,10 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
-  // Set the file tag to UTF-8 on z/OS, this is a no-op on other platforms
-  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text, /*ForceUTF8=*/true);
+  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
+  // OF_ForceUTF8 has no effect on other platforms.
+  ToolOutputFile OutFile(Filename, EC,
+                         sys::fs::OF_Text | sys::fs::OF_ForceUTF8);
   if (EC)
     return reportError(argv0, "error opening " + Filename + ": " +
                                   EC.message() + "\n");

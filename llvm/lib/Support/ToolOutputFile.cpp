@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
 using namespace llvm;
@@ -39,27 +38,14 @@ CleanupInstaller::~CleanupInstaller() {
 }
 
 ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
-                               sys::fs::OpenFlags Flags, bool ForceUTF8)
+                               sys::fs::OpenFlags Flags)
     : Installer(Filename) {
   if (isStdout(Filename)) {
     OS = &outs();
     EC = std::error_code();
     return;
   }
-
-  if (ForceUTF8 && !sys::fs::exists(Filename)) {
-    int FD = -1;
-    EC = sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_CreateNew, Flags);
-    if (EC) {
-      Installer.Keep = true;
-      return;
-    }
-    EC = setFileTag(sys::fs::convertFDToNativeFile(FD), CCSID_UTF_8,
-                    /*IsText=*/true);
-    OSHolder.emplace(FD, /*shouldClose=*/true);
-  } else
-    OSHolder.emplace(Filename, EC, Flags);
-
+  OSHolder.emplace(Filename, EC, Flags);
   OS = &*OSHolder;
   // If open fails, no cleanup is needed.
   if (EC)
