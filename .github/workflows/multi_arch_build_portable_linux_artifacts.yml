@@ -216,6 +216,7 @@ jobs:
            -DTHEROCK_PACKAGE_VERSION=${{ inputs.rocm_package_version }} \
            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+           -DCMAKE_HIP_COMPILER_LAUNCHER=ccache \
            ${{ inputs.build_variant_cmake_preset && format('--preset={0}', inputs.build_variant_cmake_preset) }} \
            ${{ inputs.external_repo_config != '' && format('-DTHEROCK_{0}_SOURCE_DIR={1}', fromJSON(inputs.external_repo_config).source_package, fromJSON(inputs.external_repo_config).checkout_path) || '' }} \
            ${{ steps.stage_config.outputs.cmake_args }} \
@@ -234,14 +235,32 @@ jobs:
            -DTHEROCK_PACKAGE_VERSION=${{ inputs.rocm_package_version }} \
            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+           -DCMAKE_HIP_COMPILER_LAUNCHER=ccache \
            ${{ inputs.build_variant_cmake_preset && format('--preset={0}', inputs.build_variant_cmake_preset) }} \
            ${{ inputs.external_repo_config != '' && format('-DTHEROCK_{0}_SOURCE_DIR={1}', fromJSON(inputs.external_repo_config).source_package, fromJSON(inputs.external_repo_config).checkout_path) || '' }} \
            ${{ steps.stage_config.outputs.cmake_args }} \
            ${{ env.extra_cmake_options }}
 
+      - name: Reset ccache stats for clean measurement
+        run: |
+          ccache --zero-stats
+          echo "ccache remote_only: $(ccache --get-config remote_only)"
+
       - name: Build stage
         run: |
           cmake --build "${BUILD_DIR}" --target stage-${STAGE_NAME} therock-artifacts -- -k 0
+
+      - name: Show ccache stats for build
+        if: always()
+        run: |
+          echo "========================================="
+          echo "CCache Stats (Build Step Only)"
+          echo "========================================="
+          ccache --show-stats
+          
+          echo ""
+          echo "Key metrics:"
+          ccache --show-stats | grep -E "Cacheable calls|cache hits|Cache misses|hit rate"
 
       - name: Generate failed log summaries
         if: ${{ !cancelled() }}
