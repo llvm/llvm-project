@@ -262,7 +262,7 @@ public:
   bool isKnownNeverNegSubnormal() const { return isKnownNever(fcNegSubnormal); }
 
   /// Return true if it's known this can never be interpreted as a zero. This
-  /// extends isKnownNeverZero to cover the case where the assumed
+  /// extends isKnownNever(fcZero) to cover the case where the assumed
   /// floating-point mode for the function interprets denormals as zero.
   LLVM_ABI bool isKnownNeverLogicalZero(DenormalMode Mode) const;
 
