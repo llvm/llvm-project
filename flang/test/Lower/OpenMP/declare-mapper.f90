@@ -51,7 +51,7 @@ subroutine declare_mapper_1
    !CHECK:        %[[VAL_16:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_15]] : index) extent(%[[VAL_6]]#1 : index) stride(%[[VAL_8]] : index) start_idx(%[[VAL_6]]#0 : index)
    !CHECK:        %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_1]]#0, values : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_19:.*]] = fir.box_offset %[[VAL_18]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-   !CHECK:        %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+   !CHECK:        %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") has_attach_ptr(true) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
    !CHECK:        %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to) capture(ByRef) name("var%[[VAL_22:.*]](1:var%[[VAL_23:.*]])") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_ATTACH:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_21]], %[[VAL_20]] : [1], [1, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("var") -> !fir.ref<[[MY_TYPE]]>
@@ -144,7 +144,7 @@ subroutine declare_mapper_3
    !CHECK:     %[[VAL_16:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_15]] : index) extent(%[[VAL_6]]#1 : index) stride(%[[VAL_8]] : index) start_idx(%[[VAL_6]]#0 : index)
    !CHECK:     %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_1]]#0, values : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_19:.*]] = fir.box_offset %[[VAL_18]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-   !CHECK:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+   !CHECK:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") has_attach_ptr(true) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
    !CHECK:     %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to) capture(ByRef) name("var%[[VAL_22:.*]](1:var%[[VAL_23:.*]])") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) name("var%values(1:var%num_vals)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_21]], %[[VAL_20]] : [1], [1, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("var") -> !fir.ref<[[MY_TYPE]]>
@@ -388,7 +388,7 @@ subroutine declare_mapper_10
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_a") -> !fir.ref<i32>
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_b") -> !fir.ref<i32>
     ! dtype2 (dtype_b) should NOT have mapper applied
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") has_attach_ptr(true) -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype2")
     ! CHECK: omp.target_enter_data
@@ -424,7 +424,7 @@ subroutine declare_mapper_11
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_a") -> !fir.ref<i32>
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_b") -> !fir.ref<i32>
     ! dtype2 (dtype_b) should NOT have mapper - no mapper defined for dtype_b
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") has_attach_ptr(true) -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype2")
     ! CHECK: omp.target_enter_data
@@ -480,7 +480,7 @@ subroutine declare_mapper_12
     ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}name("dtype3")
     ! CHECK: omp.map.info {{.*}} name("dtype3")
     ! dtype4 should NOT have any mapper
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype4") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype4") has_attach_ptr(true) -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype4")
     ! CHECK: omp.target_enter_data

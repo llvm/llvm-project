@@ -94,7 +94,8 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
           builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
           varPtrPtr, varPtrPtrTy, members, membersIndex, bounds, mapperId,
-          builder.getStringAttr(name), builder.getBoolAttr(partialMap));
+          builder.getStringAttr(name), builder.getBoolAttr(partialMap),
+          builder.getBoolAttr(false));
   return op;
 }
 

@@ -154,7 +154,7 @@ class AutomapToTargetDataPass
             /*members_index=*/ArrayAttr{},
             /*bounds=*/SmallVector<Value>{},
             /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
-            builder.getBoolAttr(false));
+            builder.getBoolAttr(false), builder.getBoolAttr(false));
       };
 
       if (isAlloc)
@@ -174,7 +174,7 @@ class AutomapToTargetDataPass
           /*members=*/SmallVector<Value>{},
           /*members_index=*/ArrayAttr{}, bounds,
           /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
-          builder.getBoolAttr(false));
+          builder.getBoolAttr(false), builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
 
       if (!isAlloc)
