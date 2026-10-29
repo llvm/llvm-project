@@ -3,10 +3,17 @@
 // TRIM of a character variable is rewritten to an inline LEN_TRIM and a copy
 // of the substring x(1:LEN_TRIM(x)) into a temporary, removing the runtime
 // call. A constant-length operand within the small-array threshold gets a
-// constant-size stack temporary hoisted to the entry block; other operands
-// get a heap temporary, even under -fstack-arrays, except in device code
-// where the hlfir.char_trim is kept. Expression, polymorphic and volatile
-// operands also keep the hlfir.char_trim.
+// constant-size stack temporary hoisted to the entry block of the function or
+// of the enclosing OpenMP region, as long as the TRIM temporaries of that
+// block together stay within the threshold (or a smaller configured stack
+// limit); other operands get a heap temporary, even under -fstack-arrays,
+// except in device code where the hlfir.char_trim is kept. Expression,
+// polymorphic and volatile operands, and operands that cannot be traced back
+// to a declaration, also keep the hlfir.char_trim.
+
+// Sizes are taken from the data layout, as for the other allocation policy
+// users.
+module attributes {llvm.data_layout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"} {
 
 //  subroutine dummy(x)
 //    character(*) :: x
@@ -118,6 +125,74 @@ func.func @_QPfixed() {
 // CHECK:           hlfir.as_expr %[[T]]#0 move %false{{.*}} : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK-NOT:       hlfir.char_trim
 
+//  subroutine two()
+//    character(8) :: x
+//    call sub2(trim(x), trim(x))
+//  end subroutine
+// Two sites in one statement are live at the same time and get two
+// temporaries.
+func.func @_QPtwo() {
+  %c8 = arith.constant 8 : index
+  %0 = fir.alloca !fir.char<1,8> {bindc_name = "x", uniq_name = "_QFtwoEx"}
+  %1:2 = hlfir.declare %0 typeparams %c8 uniq_name("_QFtwoEx") : (!fir.ref<!fir.char<1,8>>, index) -> (!fir.ref<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>)
+  %2 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,?>>
+  %3 = hlfir.get_length %2 : (!hlfir.expr<!fir.char<1,?>>) -> index
+  %4:3 = hlfir.associate %2 typeparams %3 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  %5 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,?>>
+  %6 = hlfir.get_length %5 : (!hlfir.expr<!fir.char<1,?>>) -> index
+  %7:3 = hlfir.associate %5 typeparams %6 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  fir.call @_QPsub2(%4#0, %7#0) : (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
+  hlfir.end_associate %7#1, %7#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.destroy %5 : !hlfir.expr<!fir.char<1,?>>
+  hlfir.destroy %2 : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+func.func private @_QPsub2(!fir.boxchar<1>, !fir.boxchar<1>)
+// CHECK-LABEL:   func.func @_QPtwo() {
+// CHECK:           %[[TA:.*]] = fir.alloca !fir.char<1,8> <{bindc_name = ".tmp.trim"}>
+// CHECK:           %[[TB:.*]] = fir.alloca !fir.char<1,8> <{bindc_name = ".tmp.trim"}>
+// CHECK-NOT:       .tmp.trim
+// CHECK:           hlfir.declare %{{.*}} uniq_name("_QFtwoEx")
+// CHECK-NOT:       hlfir.char_trim
+// CHECK-DAG:       fir.convert %[[TA]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK-DAG:       fir.convert %[[TB]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:           fir.call @_QPsub2(
+// CHECK-NOT:       hlfir.char_trim
+
+//  subroutine budget()
+//    character(600) :: x
+//    call sub2(trim(x), trim(x))
+//  end subroutine
+// Two sites that fit the threshold individually but not together: the
+// second temporary goes on the heap.
+func.func @_QPbudget() {
+  %c600 = arith.constant 600 : index
+  %0 = fir.alloca !fir.char<1,600> {bindc_name = "x", uniq_name = "_QFbudgetEx"}
+  %1:2 = hlfir.declare %0 typeparams %c600 uniq_name("_QFbudgetEx") : (!fir.ref<!fir.char<1,600>>, index) -> (!fir.ref<!fir.char<1,600>>, !fir.ref<!fir.char<1,600>>)
+  %2 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+  %3 = hlfir.get_length %2 : (!hlfir.expr<!fir.char<1,?>>) -> index
+  %4:3 = hlfir.associate %2 typeparams %3 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  %5 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+  %6 = hlfir.get_length %5 : (!hlfir.expr<!fir.char<1,?>>) -> index
+  %7:3 = hlfir.associate %5 typeparams %6 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  fir.call @_QPsub2(%4#0, %7#0) : (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
+  hlfir.end_associate %7#1, %7#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.destroy %5 : !hlfir.expr<!fir.char<1,?>>
+  hlfir.destroy %2 : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPbudget() {
+// CHECK:           fir.alloca !fir.char<1,600> <{bindc_name = ".tmp.trim"}>
+// CHECK-NOT:       .tmp.trim
+// CHECK:           hlfir.declare %{{.*}} uniq_name("_QFbudgetEx")
+// CHECK-NOT:       hlfir.char_trim
+// CHECK:           fir.allocmem !fir.char<1,?>(%{{.*}} : index) <{bindc_name = ".tmp.trim", uniq_name = ""}>
+// CHECK-NOT:       fir.allocmem
+// CHECK:           fir.call @_QPsub2(
+// CHECK-NOT:       hlfir.char_trim
+
 //  subroutine big()
 //    character(2048) :: x
 //    call sub(trim(x))
@@ -170,6 +245,31 @@ func.func @_QPbig_stack_arrays() attributes {fir.allocation_policy = #fir.alloca
 // CHECK:           %[[MEM:.*]] = fir.allocmem !fir.char<1,?>(%[[LENTRIM:.*]] : index) <{bindc_name = ".tmp.trim", uniq_name = ""}>
 // CHECK:           %[[T:.*]]:2 = hlfir.declare %[[MEM]] typeparams %[[LENTRIM]] uniq_name(".tmp.trim") : (!fir.heap<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.heap<!fir.char<1,?>>)
 // CHECK:           hlfir.as_expr %[[T]]#0 move %true{{.*}} : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK-NOT:       hlfir.char_trim
+
+//  subroutine small_limit()  ! total stack limit below the threshold
+//    character(600) :: x
+//    call sub(trim(x))
+//  end subroutine
+// The cap never raises a smaller configured stack limit: the temporary goes
+// on the heap.
+func.func @_QPsmall_limit() attributes {fir.allocation_policy = #fir.allocation_policy<stack_arrays = false, small_array_threshold = 1024, total_stack_limit = 512>} {
+  %c600 = arith.constant 600 : index
+  %0 = fir.alloca !fir.char<1,600> {bindc_name = "x", uniq_name = "_QFsmall_limitEx"}
+  %1:2 = hlfir.declare %0 typeparams %c600 uniq_name("_QFsmall_limitEx") : (!fir.ref<!fir.char<1,600>>, index) -> (!fir.ref<!fir.char<1,600>>, !fir.ref<!fir.char<1,600>>)
+  %2 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+  %3 = hlfir.get_length %2 : (!hlfir.expr<!fir.char<1,?>>) -> index
+  %4:3 = hlfir.associate %2 typeparams %3 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  fir.call @_QPsub(%4#0) : (!fir.boxchar<1>) -> ()
+  hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.destroy %2 : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPsmall_limit() attributes
+// CHECK-NOT:       hlfir.char_trim
+// CHECK-NOT:       .tmp.trim
+// CHECK:           hlfir.declare %{{.*}} uniq_name("_QFsmall_limitEx")
+// CHECK:           fir.allocmem !fir.char<1,?>(%{{.*}} : index) <{bindc_name = ".tmp.trim", uniq_name = ""}>
 // CHECK-NOT:       hlfir.char_trim
 
 //  subroutine kind4(x)
@@ -271,6 +371,40 @@ func.func @_QPtarget_fixed() {
 // CHECK:             hlfir.as_expr %[[T]]#0 move %false{{.*}} : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK:             omp.terminator
 
+//  subroutine par()
+//    character(8) :: x
+//    !$omp parallel
+//    call sub(trim(x))
+//    !$omp end parallel
+//  end subroutine
+// The temporary is placed in the entry block of the parallel region, not of
+// the function, so each thread has its own.
+func.func @_QPpar() {
+  %c8 = arith.constant 8 : index
+  %0 = fir.alloca !fir.char<1,8> {bindc_name = "x", uniq_name = "_QFparEx"}
+  %1:2 = hlfir.declare %0 typeparams %c8 uniq_name("_QFparEx") : (!fir.ref<!fir.char<1,8>>, index) -> (!fir.ref<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>)
+  omp.parallel {
+    %2 = hlfir.char_trim %1#0 : (!fir.ref<!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,?>>
+    %3 = hlfir.get_length %2 : (!hlfir.expr<!fir.char<1,?>>) -> index
+    %4:3 = hlfir.associate %2 typeparams %3 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+    fir.call @_QPsub(%4#0) : (!fir.boxchar<1>) -> ()
+    hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.char<1,?>>, i1
+    hlfir.destroy %2 : !hlfir.expr<!fir.char<1,?>>
+    omp.terminator
+  }
+  return
+}
+// CHECK-LABEL:   func.func @_QPpar() {
+// CHECK-NOT:       .tmp.trim
+// CHECK:           omp.parallel {
+// CHECK:             %[[TMP:.*]] = fir.alloca !fir.char<1,8> <{bindc_name = ".tmp.trim", pinned}>
+// CHECK-NOT:         hlfir.char_trim
+// CHECK:             fir.iterate_while
+// CHECK:             %[[REF:.*]] = fir.convert %[[TMP]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:             %[[T:.*]]:2 = hlfir.declare %[[REF]] typeparams %{{.*}} uniq_name(".tmp.trim")
+// CHECK:             hlfir.as_expr %[[T]]#0 move %false{{.*}} : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             omp.terminator
+
 //  subroutine target_big()
 //    character(2048) :: x
 //    !$omp target
@@ -301,6 +435,46 @@ func.func @_QPtarget_big() {
 // CHECK:           omp.target
 // CHECK:             hlfir.char_trim %{{.*}} : (!fir.ref<!fir.char<1,2048>>) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK-NOT:         hlfir.designate
+// CHECK:             omp.terminator
+
+//  subroutine target_budget()
+//    character(600) :: x
+//    !$omp target
+//    call sub2(trim(x), trim(x))
+//    !$omp end target
+//  end subroutine
+// Past the shared budget in an offload region, the runtime call is kept.
+func.func @_QPtarget_budget() {
+  %c600 = arith.constant 600 : index
+  %0 = fir.alloca !fir.char<1,600> {bindc_name = "x", uniq_name = "_QFtarget_budgetEx"}
+  %1:2 = hlfir.declare %0 typeparams %c600 uniq_name("_QFtarget_budgetEx") : (!fir.ref<!fir.char<1,600>>, index) -> (!fir.ref<!fir.char<1,600>>, !fir.ref<!fir.char<1,600>>)
+  %2 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.char<1,600>>, !fir.char<1,600>) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<!fir.char<1,600>>
+  omp.target kernel_type(generic) map_entries(%2 -> %arg0 : !fir.ref<!fir.char<1,600>>) {
+    %c600_0 = arith.constant 600 : index
+    %3:2 = hlfir.declare %arg0 typeparams %c600_0 uniq_name("_QFtarget_budgetEx") : (!fir.ref<!fir.char<1,600>>, index) -> (!fir.ref<!fir.char<1,600>>, !fir.ref<!fir.char<1,600>>)
+    %4 = hlfir.char_trim %3#0 : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+    %5 = hlfir.get_length %4 : (!hlfir.expr<!fir.char<1,?>>) -> index
+    %6:3 = hlfir.associate %4 typeparams %5 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+    %7 = hlfir.char_trim %3#0 : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+    %8 = hlfir.get_length %7 : (!hlfir.expr<!fir.char<1,?>>) -> index
+    %9:3 = hlfir.associate %7 typeparams %8 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+    fir.call @_QPsub2(%6#0, %9#0) : (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
+    hlfir.end_associate %9#1, %9#2 : !fir.ref<!fir.char<1,?>>, i1
+    hlfir.end_associate %6#1, %6#2 : !fir.ref<!fir.char<1,?>>, i1
+    hlfir.destroy %7 : !hlfir.expr<!fir.char<1,?>>
+    hlfir.destroy %4 : !hlfir.expr<!fir.char<1,?>>
+    omp.terminator
+  }
+  return
+}
+// CHECK-LABEL:   func.func @_QPtarget_budget() {
+// CHECK:           omp.target
+// CHECK:             fir.alloca !fir.char<1,600> <{bindc_name = ".tmp.trim", pinned}>
+// CHECK-NOT:         .tmp.trim
+// CHECK:             hlfir.declare %{{.*}} uniq_name("_QFtarget_budgetEx")
+// CHECK:             hlfir.char_trim %{{.*}} : (!fir.ref<!fir.char<1,600>>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK-NOT:         hlfir.char_trim
+// CHECK-NOT:         fir.allocmem
 // CHECK:             omp.terminator
 
 //  subroutine nohost(x)
@@ -488,6 +662,8 @@ func.func @_QPvolalloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>, volat
 // CHECK:           %[[A:.*]] = fir.emboxchar %{{.*}}, %{{.*}} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 // CHECK:           hlfir.char_trim %[[A]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK-NOT:       hlfir.designate
+
+}
 
 // -----
 

@@ -57,6 +57,23 @@ subroutine big(x)
   call sub(trim(x))
 end subroutine
 
+! Two sites that fit the threshold individually but not together: one stack
+! temporary, the other on the heap, so the frame does not grow with the
+! number of sites.
+! CHECK-LABEL: func.func @_QPbudget(
+! CHECK:         fir.alloca !fir.char<1,600> {{.*}}.tmp.trim
+! CHECK-NOT:     fir.alloca !fir.char<1,600>
+! CHECK:         fir.allocmem !fir.char<1,?>(%{{.*}} : index) {{.*}}.tmp.trim
+! CHECK-NOT:     fir.allocmem
+! CHECK:         fir.call @_QPsub2(
+! CHECK:         fir.freemem
+! CHECK-NOT:     _FortranATrim
+! CHECK:         return
+subroutine budget(x)
+  character(600) :: x
+  call sub2(trim(x), trim(x))
+end subroutine
+
 ! The stack temporary is hoisted out of a loop that is lowered to a CFG, so
 ! it is allocated once per call of the procedure, not once per iteration.
 ! CHECK-LABEL: func.func @_QPloop(
