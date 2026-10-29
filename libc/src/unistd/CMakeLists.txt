@@ -78,6 +78,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  close_range
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.close_range
+)
+
+add_entrypoint_object(
   dup
   ALIAS
   DEPENDS

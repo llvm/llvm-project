@@ -90,6 +90,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  close_range_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    close_range_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.fcntl.fcntl
+    libc.src.unistd.close
+    libc.src.unistd.close_range
+    libc.src.unistd.pipe
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   dup_test
   SUITE
     libc-unistd-tests

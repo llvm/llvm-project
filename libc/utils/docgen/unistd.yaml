@@ -515,6 +515,8 @@ functions:
     in-latest-posix: ""
   close:
     in-latest-posix: ""
+  close_range:
+    in-latest-posix: ""
   confstr:
     in-latest-posix: ""
   crypt:
