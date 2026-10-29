@@ -10,4 +10,5 @@ void fun1() {
 }
 
 // CHECK: @_ZZ4fun1vE11static_var1 = addrspace(1) externally_initialized global i32 3
-// CHECK: !DIGlobalVariable(name: "static_var1"
+// CHECK: !DIGlobalVariable(name: "static_var1", scope: ![[CU:[0-9]+]]
+// CHECK: ![[CU]] = distinct !DICompileUnit(
