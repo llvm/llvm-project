@@ -1107,6 +1107,15 @@ void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
       // Merge poison-generating flags.
       DstI.andIRFlags(&SrcI);
 
+      // Generalize TBAA so that it is valid for both functions' callers.
+      DstI.setMetadata(
+          LLVMContext::MD_tbaa,
+          MDNode::getMostGenericTBAA(DstI.getMetadata(LLVMContext::MD_tbaa),
+                                     SrcI.getMetadata(LLVMContext::MD_tbaa)));
+      if (DstI.getMetadata(LLVMContext::MD_tbaa_struct) !=
+          SrcI.getMetadata(LLVMContext::MD_tbaa_struct))
+        DstI.setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+
       MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
       MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
       if ((DstProf && isValueProfileMD(DstProf)) ||
